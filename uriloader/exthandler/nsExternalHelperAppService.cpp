@@ -944,7 +944,7 @@ nsresult nsExternalHelperAppService::FillMIMEInfoForMimeTypeFromDS(
   nsCOMPtr<nsIRDFService> rdf = do_GetService(kRDFServiceCID, &rv);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  // Build uri for the handlertype resource.
+  // get lowercase typename & uri for the handlertype resource.
   nsCAutoString typeNodeName(NC_CONTENT_NODE_PREFIX);
   nsCAutoString type(aContentType);
   ToLowerCase(type);
@@ -982,7 +982,7 @@ nsresult nsExternalHelperAppService::FillProtoInfoForSchemeFromDS(
   nsCOMPtr<nsIRDFService> rdf = do_GetService(kRDFServiceCID, &rv);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  // Build uri for the handlertype resource.
+  // get lowercase typename & get uri for the handlertype resource.
   nsCAutoString typeNodeName(NC_SCHEME_NODE_PREFIX);
   nsCAutoString type(aType);
   ToLowerCase(type);
@@ -1480,9 +1480,15 @@ nsExternalHelperAppService::GetProtocolHandlerInfo(const nsACString &aScheme,
   if (!mimeInfo) {
     return NS_ERROR_OUT_OF_MEMORY;    
   }
-
-  NS_ADDREF(*aHandlerInfo = mimeInfo);    
-  return FillProtoInfoForSchemeFromDS(aScheme, *aHandlerInfo);
+  NS_ADDREF(*aHandlerInfo = mimeInfo);
+     
+  nsresult rv = FillProtoInfoForSchemeFromDS(aScheme, *aHandlerInfo);     
+  if (NS_FAILED(rv)) {
+    NS_RELEASE(*aHandlerInfo);
+    return rv;
+  }
+  
+  return NS_OK;
 }
  
 // XPCOM profile change observer

@@ -83,14 +83,19 @@ public:
 
 private:
     nsresult OpenURL();
-
+    void AsyncFinish(nsresult aResult);
+    
     nsCOMPtr<nsIURI> mUrl;
     nsCOMPtr<nsIURI> mOriginalURI;
     nsresult mStatus;
     nsLoadFlags mLoadFlags;
-
+    PRBool mIsPending;
+    PRBool mWasOpened;
+    
     nsCOMPtr<nsIInterfaceRequestor> mCallbacks;
     nsCOMPtr<nsILoadGroup> mLoadGroup;
+    nsCOMPtr<nsIStreamListener> mListener;
+    nsCOMPtr<nsISupports> mContext;
 };
 
 NS_IMPL_THREADSAFE_ADDREF(nsExtProtocolChannel)
@@ -102,7 +107,9 @@ NS_INTERFACE_MAP_BEGIN(nsExtProtocolChannel)
    NS_INTERFACE_MAP_ENTRY(nsIRequest)
 NS_INTERFACE_MAP_END_THREADSAFE
 
-nsExtProtocolChannel::nsExtProtocolChannel() : mStatus(NS_OK)
+nsExtProtocolChannel::nsExtProtocolChannel() : mStatus(NS_OK), 
+                                               mIsPending(PR_FALSE),
+                                               mWasOpened(PR_FALSE)
 {
 }
 
@@ -214,21 +221,21 @@ class nsProtocolRedirect : public nsRunnable {
       nsresult rv = 
         mHandlerInfo->GetPreferredApplicationHandler(getter_AddRefs(handlerApp));
       if (NS_FAILED(rv)) {
-        AbandonOriginalChannel(rv);
-        return NS_OK; 
+        mOriginalChannel->AsyncFinish(rv);
+        return NS_OK;
       }
 
       nsCOMPtr<nsIWebHandlerApp> webHandlerApp = do_QueryInterface(handlerApp,
                                                                    &rv);
       if (NS_FAILED(rv)) {
-        AbandonOriginalChannel(rv);
+        mOriginalChannel->AsyncFinish(rv);
         return NS_OK; 
       }
 
       nsCAutoString uriTemplate;
       rv = webHandlerApp->GetUriTemplate(uriTemplate);
       if (NS_FAILED(rv)) {
-        AbandonOriginalChannel(rv);
+        mOriginalChannel->AsyncFinish(rv);
         return NS_OK; 
       }
             
@@ -236,7 +243,7 @@ class nsProtocolRedirect : public nsRunnable {
       nsCAutoString uriSpecToHandle;
       rv = mURI->GetSpec(uriSpecToHandle);
       if (NS_FAILED(rv)) {
-        AbandonOriginalChannel(rv);
+        mOriginalChannel->AsyncFinish(rv);
         return NS_OK; 
       }
 
@@ -266,7 +273,7 @@ class nsProtocolRedirect : public nsRunnable {
       nsCOMPtr<nsIURI> uriToSend;
       rv = NS_NewURI(getter_AddRefs(uriToSend), uriTemplate);
       if (NS_FAILED(rv)) {
-        AbandonOriginalChannel(rv);
+        mOriginalChannel->AsyncFinish(rv);
         return NS_OK; 
       }
 
@@ -275,9 +282,10 @@ class nsProtocolRedirect : public nsRunnable {
       rv = NS_NewChannel(getter_AddRefs(newChannel), uriToSend, nsnull,
                          mOriginalChannel->mLoadGroup,
                          mOriginalChannel->mCallbacks,
-                         mOriginalChannel->mLoadFlags);
+                         mOriginalChannel->mLoadFlags 
+                         | nsIChannel::LOAD_REPLACE);
       if (NS_FAILED(rv)) {
-        AbandonOriginalChannel(rv);
+        mOriginalChannel->AsyncFinish(rv);
         return NS_OK; 
       }
 
@@ -291,18 +299,18 @@ class nsProtocolRedirect : public nsRunnable {
                                           nsIChannelEventSink::REDIRECT_TEMPORARY |
                                           nsIChannelEventSink::REDIRECT_INTERNAL);
         if (NS_FAILED(rv)) {
-          AbandonOriginalChannel(rv);
+          mOriginalChannel->AsyncFinish(rv);
           return NS_OK;
         }
       }
 
       rv = newChannel->AsyncOpen(mListener, mContext);
       if (NS_FAILED(rv)) {
-        AbandonOriginalChannel(rv);
+        mOriginalChannel->AsyncFinish(rv);
         return NS_OK; 
       }
       
-      mOriginalChannel->mStatus = NS_BINDING_REDIRECTED;
+      mOriginalChannel->AsyncFinish(NS_BINDING_REDIRECTED);
       return NS_OK;
     }
 
@@ -312,31 +320,29 @@ class nsProtocolRedirect : public nsRunnable {
     nsCOMPtr<nsIStreamListener> mListener;
     nsCOMPtr<nsISupports> mContext;
     nsCOMPtr<nsExtProtocolChannel> mOriginalChannel;
-
-    // necko guarantees that after an AsyncOpen has succeeded, OnStartRequest
-    // and OnStopRequest will get called    
-    void AbandonOriginalChannel(const nsresult aStatus)
-    {
-      mOriginalChannel->mStatus = aStatus;
-      (void)mListener->OnStartRequest(mOriginalChannel, mContext);
-      (void)mListener->OnStopRequest(mOriginalChannel, mContext, aStatus);
-
-      return;
-    }
-     
 };
 
 NS_IMETHODIMP nsExtProtocolChannel::AsyncOpen(nsIStreamListener *listener, nsISupports *ctxt)
 {
-  // check whether the scheme is one that we have a web handler for
-  nsCAutoString urlScheme;  
-  nsresult rv = mUrl->GetScheme(urlScheme);
-  NS_ENSURE_SUCCESS(rv, rv);
+  NS_ENSURE_ARG_POINTER(listener);
+  NS_ENSURE_TRUE(!mIsPending, NS_ERROR_IN_PROGRESS);
+  NS_ENSURE_TRUE(!mWasOpened, NS_ERROR_ALREADY_OPENED);
+
+  mWasOpened = PR_TRUE;
+  mListener = listener;
+  mContext = ctxt;
 
   if (!gExtProtSvc) {
     return NS_ERROR_FAILURE;
   }
-    
+
+  nsCAutoString urlScheme;  
+  nsresult rv = mUrl->GetScheme(urlScheme);
+  if (NS_FAILED(rv)) {
+    return rv;
+  }
+
+  // check whether the scheme is one that we have a web handler for
   nsCOMPtr<nsIHandlerInfo> handlerInfo;
   rv = gExtProtSvc->GetProtocolHandlerInfo(urlScheme, 
                                            getter_AddRefs(handlerInfo));
@@ -348,16 +354,24 @@ NS_IMETHODIMP nsExtProtocolChannel::AsyncOpen(nsIStreamListener *listener, nsISu
     // protocol handler, so we use that to decide which path to take...
     if (preferredAction == nsIHandlerInfo::useHelperApp) {
 
-      // redirecting to the web handler involvegs calling OnChannelRedirect
+      // redirecting to the web handler involves calling OnChannelRedirect
       // (which is supposed to happen after AsyncOpen completes) or possibly
       // opening a dialog, so we do it in an event
       nsCOMPtr<nsIRunnable> event = new nsProtocolRedirect(mUrl, handlerInfo,
                                                            listener, ctxt,
                                                            this);
+
       // We don't check if |event| was successfully created because
       // |NS_DispatchToCurrentThread| will do that for us.
       rv = NS_DispatchToCurrentThread(event);
       if (NS_SUCCEEDED(rv)) {
+        mIsPending = PR_TRUE;
+
+        // add ourselves to the load group, since this isn't going to finish
+        // immediately
+        if (mLoadGroup)
+          (void)mLoadGroup->AddRequest(this, nsnull);
+
         return rv;
       }
     }
@@ -366,6 +380,26 @@ NS_IMETHODIMP nsExtProtocolChannel::AsyncOpen(nsIStreamListener *listener, nsISu
   // no protocol info found, just fall back on whatever the OS has to offer
   OpenURL();
   return NS_ERROR_NO_CONTENT; // force caller to abort.
+}
+
+// Finish out what was started in AsyncOpen.  Note that we always call
+// OnStartRequest && OnStopRequest here, since there is no actual work doing by
+// this channel.  This can be called in either the success or the failure case.
+void nsExtProtocolChannel::AsyncFinish(nsresult aStatus)
+{
+  mStatus = aStatus;
+
+  // necko guarantees that if AsyncOpen has succeeds, OnStartRequest
+  // and OnStopRequest will get called    
+  (void)mListener->OnStartRequest(this, mContext);
+  (void)mListener->OnStopRequest(this, mContext, aStatus);
+
+  mIsPending = PR_FALSE;
+  
+  if (mLoadGroup) {
+    (void)mLoadGroup->RemoveRequest(this, nsnull, aStatus);
+  }
+  return;
 }
 
 NS_IMETHODIMP nsExtProtocolChannel::GetLoadFlags(nsLoadFlags *aLoadFlags)
@@ -436,7 +470,7 @@ NS_IMETHODIMP nsExtProtocolChannel::GetName(nsACString &result)
 
 NS_IMETHODIMP nsExtProtocolChannel::IsPending(PRBool *result)
 {
-  *result = PR_TRUE;
+  *result = mIsPending;
   return NS_OK; 
 }
 
