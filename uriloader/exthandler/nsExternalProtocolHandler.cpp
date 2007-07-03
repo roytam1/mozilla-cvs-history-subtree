@@ -383,8 +383,9 @@ NS_IMETHODIMP nsExtProtocolChannel::AsyncOpen(nsIStreamListener *listener, nsISu
 }
 
 // Finish out what was started in AsyncOpen.  Note that we always call
-// OnStartRequest && OnStopRequest here, since there is no actual work doing by
-// this channel.  This can be called in either the success or the failure case.
+// OnStartRequest && OnStopRequest here, since there is no actual work bein
+// done by this channel.  This can be called in either the success or the
+// failure case.
 void nsExtProtocolChannel::AsyncFinish(nsresult aStatus)
 {
   mStatus = aStatus;
