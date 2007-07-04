@@ -386,16 +386,16 @@ NS_IMETHODIMP nsExtProtocolChannel::AsyncOpen(nsIStreamListener *listener, nsISu
  * Finish out what was started in AsyncOpen.  This can be called in either the
  * success or the failure case.  
  *
- * @param aStatus  used to set the channel's status, and, if this is a 
- *                 failure code, OnStartRequest and OnStopRequest will be
- *                 called, since Necko guarantees this will happen unless 
- *                 the redirect took place.
+ * @param aStatus  used to set the channel's status, and, if this set to 
+ *                 anything other than NS_BINDING_REDIRECTED, OnStartRequest
+ *                 and OnStopRequest will be called, since Necko guarantees
+ *                 this will happen unless the redirect took place.
  */
 void nsExtProtocolChannel::Finish(nsresult aStatus)
 {
   mStatus = aStatus;
 
-  if (NS_FAILED(aStatus) && mListener) {
+  if (aStatus != NS_BINDING_REDIRECTED && mListener) {
     (void)mListener->OnStartRequest(this, mContext);
     (void)mListener->OnStopRequest(this, mContext, aStatus);
   }
