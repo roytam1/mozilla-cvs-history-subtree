@@ -41,6 +41,8 @@
 #include "nsReadableUtils.h"
 #include "nsStringEnumerator.h"
 #include "nsIProcess.h"
+#include "nsILocalFile.h"
+#include "nsIFileURL.h"
 
 // nsISupports methods
 NS_IMPL_THREADSAFE_ISUPPORTS2(nsMIMEInfoBase, nsIMIMEInfo, nsIHandlerInfo)
@@ -277,25 +279,46 @@ nsMIMEInfoBase::SetAlwaysAskBeforeHandling(PRBool aAlwaysAsk)
 }
 
 NS_IMETHODIMP
-nsMIMEInfoBase::LaunchWithFile(nsIFile* aFile)
+nsMIMEInfoBase::LaunchWithURI(nsIURI* aURI)
 {
+  nsCOMPtr<nsILocalFile> localFile;
+  nsresult rv;
+  
   if (mPreferredAction == useHelperApp) {
     if (!mPreferredApplication)
       return NS_ERROR_FILE_NOT_FOUND;
 
     nsCOMPtr<nsILocalHandlerApp> localHandler;
-    nsresult rv;
     localHandler = do_QueryInterface(mPreferredApplication, &rv);
-    NS_ENSURE_SUCCESS(rv, rv);
+    if (NS_FAILED(rv)) {
+      nsCOMPtr<nsIWebHandlerApp> webHandler;
+      webHandler = do_QueryInterface(mPreferredApplication, &rv);
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      return LaunchWithWebHandler(webHandler, aURI);         
+    }
         
     nsCOMPtr<nsIFile> executable;
     rv = localHandler->GetExecutable(getter_AddRefs(executable));
     NS_ENSURE_SUCCESS(rv, rv);
     
-    return LaunchWithIProcess(executable, aFile);
+    // make our way from the nsIURI object to the matching nsILocalFile
+    nsCOMPtr<nsIFileURL> fileUrl = do_QueryInterface(aURI, &rv);
+    if (NS_FAILED(rv)) return rv;    
+
+    nsCOMPtr<nsIFile> file;
+    rv = fileUrl->GetFile(getter_AddRefs(file));
+    if (NS_FAILED(rv)) return rv;    
+
+    nsCOMPtr<nsILocalFile> docToLoad = do_QueryInterface(file, &rv);
+    if (NS_FAILED(rv)) return rv;
+
+    return LaunchWithIProcess(executable, localFile);
   }
   else if (mPreferredAction == useSystemDefault) {
-    return LaunchDefaultWithFile(aFile);
+    nsCOMPtr<nsILocalFile> localFile = do_QueryInterface(aURI, &rv);
+    NS_ENSURE_SUCCESS(rv, rv);
+    return LaunchDefaultWithFile(localFile);
   }
 
   return NS_ERROR_INVALID_ARG;
@@ -333,6 +356,13 @@ nsMIMEInfoBase::LaunchWithIProcess(nsIFile* aApp, nsIFile* aFile)
 
   PRUint32 pid;
   return process->Run(PR_FALSE, &strPath, 1, &pid);
+}
+
+/* static */
+nsresult
+nsMIMEInfoBase::LaunchWithWebHandler(nsIWebHandlerApp *aApp, nsIURI *aURI) 
+{
+  return NS_OK;    
 }
 
 // nsMIMEInfoImpl implementation
