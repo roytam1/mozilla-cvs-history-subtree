@@ -84,3 +84,7 @@ include $(topsrcdir)/config/rules.mk
 
 CXXFLAGS        += $(MOZ_GTK_CFLAGS)
 
+ifneq ($(QCONF_OVERRIDE),)
+include $(QCONF_OVERRIDE)
+CXXFLAGS        += -I$(if $(USE_INSTALL_ROOT),$(INSTALL_ROOT_nto),$(USE_ROOT_nto))/usr/include
+endif

@@ -78,6 +78,9 @@
 #include "xlibrgb.h"
 #endif
 
+#if defined(MOZ_WIDGET_PHOTON) && defined (OJI)
+#include "nsPluginInstancePeer.h"
+#endif
 
 ////////////////////////////////////////////////////////////////////////
 // CID's && IID's
@@ -1043,6 +1046,64 @@ nsresult ns4xPluginInstance::InitializePlugin(nsIPluginInstancePeer* peer)
     }
   }
 
+#if defined(MOZ_WIDGET_PHOTON) && defined (OJI)
+  /* our plugins require that "voyager.documentBase"/docbase is present in the array */
+  /* and also the java_code, java_codebase are present */
+  const char **qnames = nsnull, **qvalues = nsnull;
+  if (tagtype == nsPluginTagType_Object || tagtype == nsPluginTagType_Applet ) {
+
+    nsCOMPtr<nsIJVMPluginTagInfo> javataginfo = do_QueryInterface(peer, &rv);
+    if ( NS_SUCCEEDED(rv)) {
+
+      taginfo->GetParameters(count, names, values);
+      const char * tmpvalue;
+      PRUint32 tmpivalue;
+      char widthb[10], heightb[10];
+      int i, c = 0;
+      qnames = (const char **)PR_Calloc(count + 7, sizeof(char *));
+      qvalues = (const char **)PR_Calloc(count + 7, sizeof(char *));
+      if (qnames != nsnull && qvalues != nsnull) {
+
+        if ( javataginfo->GetArchive(&tmpvalue) == NS_OK ) {
+          qnames[c] = "java_archive";
+          qvalues[c++] = tmpvalue;
+        }
+        if ( javataginfo->GetCode(&tmpvalue) == NS_OK ) {
+          qnames[c] = "java_code";
+          qvalues[c++] = tmpvalue;
+        }
+        if ( javataginfo->GetCodeBase(&tmpvalue) == NS_OK ) {
+          qnames[c] = "java_codebase";
+          qvalues[c++] = tmpvalue;
+        }
+        if ( taginfo->GetDocumentBase(&tmpvalue) == NS_OK ) {
+          qnames[c] = "voyager.documentBase";
+          qvalues[c++] = tmpvalue;
+        }
+        if ( taginfo->GetWidth(&tmpivalue) == NS_OK ) {
+          qnames[c] = "width";
+          qvalues[c++] = ltoa(tmpivalue, widthb, 10);
+        }
+        if ( taginfo->GetHeight(&tmpivalue) == NS_OK ) {
+          qnames[c] = "height";
+          qvalues[c++] = ltoa(tmpivalue, heightb, 10);
+        }
+
+        for( i = c; i < count + c; i++) {
+          qnames[i] = names[i-c];
+          qvalues[i] = values[i-c];
+        }
+
+        qnames[i] = nsnull;
+        qvalues[i] = nsnull;
+        names = qnames;
+        values = qvalues;
+        count = i;
+        }
+    }
+  }
+#endif
+
   NS_ENSURE_TRUE(fCallbacks->newp, NS_ERROR_FAILURE);
   
   // XXX Note that the NPPluginType_* enums were crafted to be
@@ -1124,6 +1185,12 @@ nsresult ns4xPluginInstance::InitializePlugin(nsIPluginInstancePeer* peer)
   NPP_PLUGIN_LOG(PLUGIN_LOG_NORMAL,
   ("NPP New called: this=%p, npp=%p, mime=%s, mode=%d, argc=%d, return=%d\n",
   this, &fNPP, mimetype, mode, count, error));
+
+#if defined(MOZ_WIDGET_PHOTON) && defined (OJI)
+  /* free the names[], values[] arrays, since we overriden them */
+  if( qnames ) PR_Free( (void*)qnames );
+  if( qvalues ) PR_Free( (void*)qvalues );
+#endif
 
   if(error != NPERR_NO_ERROR) {
     // since the plugin returned failure, these should not be set
