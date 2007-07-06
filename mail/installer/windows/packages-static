@@ -20,12 +20,12 @@ bin\xpcom_compat.dll
 bin\xpistub.dll
 bin\components\jar50.dll
 bin\components\xpcom_base.xpt
+bin\components\xpcom_system.xpt
 bin\components\xpcom_components.xpt
 bin\components\xpcom_ds.xpt
 bin\components\xpcom_io.xpt
 bin\components\xpcom_thread.xpt
 bin\components\xpcom_xpti.xpt
-bin\components\xpcom_obsolete.xpt
 bin\nspr4.dll
 bin\plc4.dll
 bin\plds4.dll
@@ -36,6 +36,9 @@ bin\Microsoft.VC80.CRT.manifest
 bin\msvcm80.dll
 bin\msvcp80.dll
 bin\msvcr80.dll
+
+; Modules
+bin\modules\*
 
 ; Optional RSS extension
 [newsblog]
@@ -61,6 +64,8 @@ bin\extensions\talkback@mozilla.org\components\talkback.hlp
 
 bin\xpicleanup.exe
 bin\thunderbird.exe
+bin\application.ini
+bin\platform.ini
 bin\LICENSE.txt
 bin\license.html
 bin\README.txt

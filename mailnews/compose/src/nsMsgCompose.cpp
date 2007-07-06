@@ -496,7 +496,7 @@ nsresult nsMsgCompose::TagEmbeddedObjects(nsIEditorMailSupport *aEditor)
 
   // first, convert the rdf original msg uri into a url that represents the message...
   nsCOMPtr <nsIMsgMessageService> msgService;
-  rv = GetMessageServiceFromURI(mOriginalMsgURI.get(), getter_AddRefs(msgService));
+  rv = GetMessageServiceFromURI(mOriginalMsgURI, getter_AddRefs(msgService));
   if (NS_SUCCEEDED(rv))
   {
     rv = msgService->GetUrlForUri(mOriginalMsgURI.get(), getter_AddRefs(originalUrl), nsnull);
@@ -3628,9 +3628,17 @@ nsMsgCompose::LoadDataFromFile(nsILocalFile *file, nsString &sigData,
   {
     nsAutoString metaCharset(NS_LITERAL_STRING("charset="));
     AppendASCIItoUTF16(sigEncoding, metaCharset);
-    PRInt32 offset = sigData.Find(metaCharset, PR_TRUE);
-    if (offset >= 0)
-      sigData.Cut(offset, metaCharset.Length());
+    // When we move to frozen linkage, this should become:
+    // PRInt32 offset = sigData.Find(metaCharset, CaseInsensitiveCompare) ;
+    //  if (offset >= 0)
+    //    sigData.Cut(offset, metaCharset.Length());
+    nsAString::const_iterator realstart, start, end;
+    sigData.BeginReading(start);
+    sigData.EndReading(end);
+    realstart = start;
+    if (FindInReadable(metaCharset, start, end,
+                       nsCaseInsensitiveStringComparator()))
+      sigData.Cut(Distance(realstart, start), Distance(start, end));
   }
 
   return NS_OK;
@@ -4127,7 +4135,7 @@ nsresult nsMsgCompose::BuildMailListArray(nsIAddrDatabase* database, nsIAbDirect
             nsString listName;
             nsString listDescription;
 
-            directory->GetDirName(getter_Copies(listName));
+            directory->GetDirName(listName);
             directory->GetDescription(getter_Copies(listDescription));
 
             nsMsgMailList* mailList = new nsMsgMailList(listName,
@@ -4486,10 +4494,14 @@ NS_IMETHODIMP nsMsgCompose::CheckAndPopulateRecipients(PRBool populateMailList, 
             if (atPos >= 0)
             {
               recipient->mEmail.Right(domain, recipient->mEmail.Length() - atPos - 1);
-              if (plaintextDomains.Find(domain, PR_TRUE) >= 0)
+              // when we move to frozen linkage this should be:
+              // if (plaintextDomains.Find(domain, CaseInsensitiveCompare) >= 0)
+              if (FindInReadable(domain, plaintextDomains, nsCaseInsensitiveStringComparator()))
                 recipient->mPreferFormat = nsIAbPreferMailFormat::plaintext;
               else
-                if (htmlDomains.Find(domain, PR_TRUE) >= 0)
+                // when we move to frozen linkage this should be:
+                // if (htmlDomains.Find(domain, CaseInsensitiveCompare) >= 0)
+                if (FindInReadable(domain, htmlDomains, nsCaseInsensitiveStringComparator()))
                   recipient->mPreferFormat = nsIAbPreferMailFormat::html;
             }
           }

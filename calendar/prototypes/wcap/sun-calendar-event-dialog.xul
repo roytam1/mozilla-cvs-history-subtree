@@ -78,8 +78,6 @@
     <script type="application/x-javascript"
             src="chrome://calendar/content/calUtils.js"/>
     <script type="application/x-javascript"
-            src="chrome://calendar/content/applicationUtil.js"/>
-    <script type="application/x-javascript"
             src="chrome://global/content/globalOverlay.js"/>
     <script type="application/x-javascript"
             src="chrome://global/content/printUtils.js"/>
@@ -854,7 +852,7 @@
                         align="center"
                         flex="1"
                         pack="start">
-            <label value="Importance:"/>
+            <label value="&event.priority.label;"/>
             <image id="button-importance-low"
                    collapsed="true"
                    value="low"/>

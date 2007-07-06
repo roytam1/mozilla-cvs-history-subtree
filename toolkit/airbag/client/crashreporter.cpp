@@ -68,6 +68,22 @@ static string       gExtraFile;
 
 static string kExtraDataExtension = ".extra";
 
+void UIError(const string& message)
+{
+  string errorMessage;
+  if (!gStrings[ST_CRASHREPORTERERROR].empty()) {
+    char buf[2048];
+    UI_SNPRINTF(buf, 2048,
+                gStrings[ST_CRASHREPORTERERROR].c_str(),
+                message.c_str());
+    errorMessage = buf;
+  } else {
+    errorMessage = message;
+  }
+
+  UIError_impl(errorMessage);
+}
+
 static string Unescape(const string& str)
 {
   string ret;
@@ -135,10 +151,15 @@ bool ReadStringsFromFile(const string& path,
                          StringTable& strings,
                          bool unescape)
 {
-  ifstream f(path.c_str(), std::ios::in);
-  if (!f.is_open()) return false;
+  ifstream* f = UIOpenRead(path);
+  bool success = false;
+  if (f->is_open()) {
+    success = ReadStrings(*f, strings, unescape);
+    f->close();
+  }
 
-  return ReadStrings(f, strings, unescape);
+  delete f;
+  return success;
 }
 
 bool WriteStrings(ostream& out,
@@ -167,10 +188,15 @@ bool WriteStringsToFile(const string& path,
                         StringTable& strings,
                         bool escape)
 {
-  ofstream f(path.c_str(), std::ios::out);
-  if (!f.is_open()) return false;
+  ofstream* f = UIOpenWrite(path.c_str());
+  bool success = false;
+  if (f->is_open()) {
+    success = WriteStrings(*f, header, strings, escape);
+    f->close();
+  }
 
-  return WriteStrings(f, header, strings, escape);
+  delete f;
+  return success;
 }
 
 static bool ReadConfig()
@@ -210,14 +236,20 @@ static bool MoveCrashData(const string& toDir,
                           string& extrafile)
 {
   if (!UIEnsurePathExists(toDir)) {
+    UIError(gStrings[ST_ERROR_CREATEDUMPDIR]);
     return false;
   }
 
   string newDump = toDir + UI_DIR_SEPARATOR + Basename(dumpfile);
   string newExtra = toDir + UI_DIR_SEPARATOR + Basename(extrafile);
 
-  if (!UIMoveFile(dumpfile, newDump) ||
-      !UIMoveFile(extrafile, newExtra)) {
+  if (!UIMoveFile(dumpfile, newDump)) {
+    UIError(gStrings[ST_ERROR_DUMPFILEMOVE]);
+    return false;
+  }
+
+  if (!UIMoveFile(extrafile, newExtra)) {
+    UIError(gStrings[ST_ERROR_EXTRAFILEMOVE]);
     return false;
   }
 
@@ -245,27 +277,29 @@ static bool AddSubmittedReport(const string& serverResponse)
   string path = submittedDir + UI_DIR_SEPARATOR +
     responseItems["CrashID"] + ".txt";
 
-  ofstream file(path.c_str());
-  if (!file.is_open())
+  ofstream* file = UIOpenWrite(path);
+  if (!file->is_open()) {
+    delete file;
     return false;
+  }
 
   char buf[1024];
   UI_SNPRINTF(buf, 1024,
               gStrings["CrashID"].c_str(),
               responseItems["CrashID"].c_str());
-  file << buf << "\n";
+  *file << buf << "\n";
 
   if (responseItems.find("ViewURL") != responseItems.end()) {
     UI_SNPRINTF(buf, 1024,
                 gStrings["CrashDetailsURL"].c_str(),
                 responseItems["ViewURL"].c_str());
-    file << buf << "\n";
+    *file << buf << "\n";
   }
 
-  file.close();
+  file->close();
+  delete file;
 
   return true;
-
 }
 
 bool SendCompleted(bool success, const string& serverResponse)
@@ -288,13 +322,52 @@ bool SendCompleted(bool success, const string& serverResponse)
 
 using namespace CrashReporter;
 
+void RewriteStrings(StringTable& queryParameters)
+{
+  // rewrite some UI strings with the values from the query parameters
+  string product = queryParameters["ProductName"];
+  string vendor = queryParameters["Vendor"];
+  if (vendor.empty()) {
+    // Assume Mozilla if no vendor is specified
+    vendor = "Mozilla";
+  }
+
+  char buf[4096];
+  UI_SNPRINTF(buf, sizeof(buf),
+              gStrings[ST_CRASHREPORTERVENDORTITLE].c_str(),
+              vendor.c_str());
+  gStrings[ST_CRASHREPORTERTITLE] = buf;
+
+  // Leave a format specifier for UIError to fill in
+  UI_SNPRINTF(buf, sizeof(buf),
+              gStrings[ST_CRASHREPORTERPRODUCTERROR].c_str(),
+              product.c_str(),
+              "%s");
+  gStrings[ST_CRASHREPORTERERROR] = buf;
+
+  UI_SNPRINTF(buf, sizeof(buf),
+              gStrings[ST_CRASHREPORTERDESCRIPTION].c_str(),
+              product.c_str());
+  gStrings[ST_CRASHREPORTERDESCRIPTION] = buf;
+
+  UI_SNPRINTF(buf, sizeof(buf),
+              gStrings[ST_CHECKSUBMIT].c_str(),
+              vendor.c_str());
+  gStrings[ST_CHECKSUBMIT] = buf;
+
+  UI_SNPRINTF(buf, sizeof(buf),
+              gStrings[ST_RESTART].c_str(),
+              product.c_str());
+  gStrings[ST_RESTART] = buf;
+}
+
 int main(int argc, char** argv)
 {
   gArgc = argc;
   gArgv = argv;
 
   if (!ReadConfig()) {
-    UIError("Couldn't read configuration");
+    UIError("Couldn't read configuration.");
     return 0;
   }
 
@@ -311,36 +384,49 @@ int main(int argc, char** argv)
   } else {
     gExtraFile = GetExtraDataFilename(gDumpFile);
     if (gExtraFile.empty()) {
-      UIError("Couldn't get extra data filename");
+      UIError(gStrings[ST_ERROR_BADARGUMENTS]);
+      return 0;
+    }
+
+    if (!UIFileExists(gExtraFile)) {
+      UIError(gStrings[ST_ERROR_EXTRAFILEEXISTS]);
       return 0;
     }
 
     StringTable queryParameters;
     if (!ReadStringsFromFile(gExtraFile, queryParameters, true)) {
-      UIError("Couldn't read extra data");
+      UIError(gStrings[ST_ERROR_EXTRAFILEREAD]);
       return 0;
     }
 
     if (queryParameters.find("ProductName") == queryParameters.end()) {
-      UIError("No product name specified");
+      UIError(gStrings[ST_ERROR_NOPRODUCTNAME]);
       return 0;
     }
 
+    // There is enough information in the extra file to rewrite strings
+    // to be product specific
+    RewriteStrings(queryParameters);
+
     if (queryParameters.find("ServerURL") == queryParameters.end()) {
-      UIError("No server URL specified");
+      UIError(gStrings[ST_ERROR_NOSERVERURL]);
       return 0;
     }
 
     string product = queryParameters["ProductName"];
     string vendor = queryParameters["Vendor"];
     if (!UIGetSettingsPath(vendor, product, gSettingsPath)) {
-      UIError("Couldn't get settings path");
+      UIError(gStrings[ST_ERROR_NOSETTINGSPATH]);
+      return 0;
+    }
+
+    if (!UIFileExists(gDumpFile)) {
+      UIError(gStrings[ST_ERROR_DUMPFILEEXISTS]);
       return 0;
     }
 
     string pendingDir = gSettingsPath + UI_DIR_SEPARATOR + "pending";
     if (!MoveCrashData(pendingDir, gDumpFile, gExtraFile)) {
-      UIError("Couldn't move crash data");
       return 0;
     }
 
@@ -370,28 +456,6 @@ int main(int argc, char** argv)
       sendURL = urlEnv;
     }
 
-    // rewrite some UI strings with the values from the query parameters
-    char buf[4096];
-    UI_SNPRINTF(buf, sizeof(buf),
-                gStrings[ST_RESTART].c_str(),
-                product.c_str());
-    gStrings[ST_RESTART] = buf;
-
-    UI_SNPRINTF(buf, sizeof(buf),
-                gStrings[ST_CRASHREPORTERDESCRIPTION].c_str(),
-                product.c_str());
-    gStrings[ST_CRASHREPORTERDESCRIPTION] = buf;
-
-    UI_SNPRINTF(buf, sizeof(buf),
-                gStrings[ST_CHECKSUBMIT].c_str(),
-                vendor.empty() ? "Mozilla" : vendor.c_str());
-    gStrings[ST_CHECKSUBMIT] = buf;
-
-    UI_SNPRINTF(buf, sizeof(buf),
-                gStrings[ST_CRASHREPORTERTITLE].c_str(),
-                vendor.empty() ? "Mozilla" : vendor.c_str());
-    gStrings[ST_CRASHREPORTERTITLE] = buf;
-
     UIShowCrashUI(gDumpFile, queryParameters, sendURL, restartArgs);
   }
 
@@ -403,9 +467,14 @@ int main(int argc, char** argv)
 #if defined(XP_WIN) && !defined(__GNUC__)
 // We need WinMain in order to not be a console app.  This function is unused
 // if we are a console application.
-int WINAPI WinMain( HINSTANCE, HINSTANCE, LPSTR args, int )
+int WINAPI wWinMain( HINSTANCE, HINSTANCE, LPSTR args, int )
 {
+  char** argv = static_cast<char**>(malloc(__argc * sizeof(char*)));
+  for (int i = 0; i < __argc; i++) {
+    argv[i] = strdup(WideToUTF8(__wargv[i]).c_str());
+  }
+
   // Do the real work.
-  return main(__argc, __argv);
+  return main(__argc, argv);
 }
 #endif

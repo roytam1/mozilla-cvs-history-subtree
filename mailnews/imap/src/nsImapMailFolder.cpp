@@ -117,6 +117,8 @@
 #include "nsIMsgIdentity.h"
 #include "nsIMsgFolderNotificationService.h"
 #include "nsNativeCharsetUtils.h"
+#include "nsIExternalProtocolService.h"
+#include "nsCExternalHandlerService.h"
 
 static NS_DEFINE_CID(kRDFServiceCID, NS_RDFSERVICE_CID);
 static NS_DEFINE_CID(kCMailDB, NS_MAILDB_CID);
@@ -1809,7 +1811,7 @@ NS_IMETHODIMP nsImapMailFolder::ReadFromFolderCacheElem(nsIMsgFolderCacheElement
       && hierarchyDelimiter != kOnlineHierarchySeparatorUnknown)
     m_hierarchyDelimiter = (PRUnichar) hierarchyDelimiter;
   rv = element->GetStringProperty("onlineName", onlineName);
-  if (NS_SUCCEEDED(rv) && +onlineName.IsEmpty())
+  if (NS_SUCCEEDED(rv) && !onlineName.IsEmpty())
     m_onlineFolderName.Assign(onlineName);
 
   m_aclFlags = -1; // init to invalid value.
@@ -3443,15 +3445,23 @@ NS_IMETHODIMP nsImapMailFolder::FolderPrivileges(nsIMsgWindow *window)
 #endif
   if (!m_adminUrl.IsEmpty())
   {
-    nsCOMPtr <nsIDocShell> docShell;
-    rv = window->GetRootDocShell(getter_AddRefs(docShell));
-    if (NS_SUCCEEDED(rv) && docShell)
+    nsCOMPtr<nsIExternalProtocolService> extProtService = do_GetService(NS_EXTERNALPROTOCOLSERVICE_CONTRACTID);
+    if (extProtService) 
     {
+      nsCAutoString scheme;
       nsCOMPtr<nsIURI> uri;
       if (NS_FAILED(rv = NS_NewURI(getter_AddRefs(uri), m_adminUrl.get())))
         return rv;
-      rv = docShell->LoadURI(uri, nsnull, nsIWebNavigation::LOAD_FLAGS_IS_LINK, PR_FALSE);
-
+      uri->GetScheme(scheme);
+      if (!scheme.IsEmpty()) 
+      {
+        // if the URL scheme does not correspond to an exposed protocol, then we
+        // need to hand this link click over to the external protocol handler.
+        PRBool isExposed;
+        rv = extProtService->IsExposedProtocol(scheme.get(), &isExposed);
+        if (NS_SUCCEEDED(rv) && !isExposed) 
+          return extProtService->LoadUrl(uri);
+      }
     }
   }
   else
@@ -3940,6 +3950,7 @@ nsImapMailFolder::NormalEndMsgWriteStream(nsMsgKey uidOfMessage,
 NS_IMETHODIMP
 nsImapMailFolder::AbortMsgWriteStream()
 {
+  m_offlineHeader = nsnull;
   return NS_ERROR_FAILURE;
 }
 
@@ -5300,6 +5311,8 @@ void nsMsgIMAPFolderACL::BuildInitialACLFromCache()
     myrights += "dt";
   if (startingFlags & IMAP_ACL_ADMINISTER_FLAG)
     myrights += "a";
+  if (startingFlags & IMAP_ACL_EXPUNGE_FLAG)
+    myrights += "e";
 
   if (!myrights.IsEmpty())
     SetFolderRightsForUser(EmptyCString(), myrights);
@@ -5349,6 +5362,11 @@ void nsMsgIMAPFolderACL::UpdateACLCache()
     startingFlags |= IMAP_ACL_ADMINISTER_FLAG;
   else
     startingFlags &= ~IMAP_ACL_ADMINISTER_FLAG;
+
+  if (GetCanIExpungeFolder())
+    startingFlags |= IMAP_ACL_EXPUNGE_FLAG;
+  else
+    startingFlags &= ~IMAP_ACL_EXPUNGE_FLAG;
 
   m_folder->SetAclFlags(startingFlags);
 }
@@ -5524,6 +5542,12 @@ PRBool nsMsgIMAPFolderACL::GetCanIAdministerFolder()
   return GetFlagSetInRightsForUser(EmptyCString(), 'a', PR_TRUE);
 }
 
+PRBool nsMsgIMAPFolderACL::GetCanIExpungeFolder()
+{
+  return GetFlagSetInRightsForUser(EmptyCString(), 'e', PR_TRUE) ||
+    GetFlagSetInRightsForUser(EmptyCString(), 'd', PR_TRUE);
+}
+
 // We use this to see if the ACLs think a folder is shared or not.
 // We will define "Shared" in 5.0 to mean:
 // At least one user other than the currently authenticated user has at least one
@@ -5551,6 +5575,7 @@ PRBool nsMsgIMAPFolderACL::GetDoIHaveFullRightsForFolder()
     GetCanIDeleteInFolder() &&
     GetCanILookupFolder() &&
     GetCanIStoreSeenInFolder() &&
+    GetCanIExpungeFolder() &&
     GetCanIPostToFolder());
 }
 
@@ -5599,6 +5624,13 @@ nsresult nsMsgIMAPFolderACL::CreateACLRightsString(nsAString& aRightsString)
     {
       if (!aRightsString.IsEmpty()) aRightsString.AppendLiteral(", ");
       bundle->GetStringFromID(IMAP_ACL_DELETE_RIGHT, getter_Copies(curRight));
+      aRightsString.Append(curRight);
+    }
+    if (GetCanIExpungeFolder())
+    {
+      if (!aRightsString.IsEmpty())
+        aRightsString.AppendLiteral(", ");
+      bundle->GetStringFromID(IMAP_ACL_EXPUNGE_RIGHT, getter_Copies(curRight));
       aRightsString.Append(curRight);
     }
     if (GetCanICreateSubfolder())
@@ -6829,7 +6861,7 @@ nsImapMailFolder::CopyStreamMessage(nsIMsgDBHdr* message,
   srcFolder->GetUriForMsg(msgHdr, uri);
 
   if (!m_copyState->m_msgService)
-    rv = GetMessageServiceFromURI(uri.get(), getter_AddRefs(m_copyState->m_msgService));
+    rv = GetMessageServiceFromURI(uri, getter_AddRefs(m_copyState->m_msgService));
 
   if (NS_SUCCEEDED(rv) && m_copyState->m_msgService)
   {

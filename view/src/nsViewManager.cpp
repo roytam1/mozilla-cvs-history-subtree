@@ -51,7 +51,6 @@
 #include "nsIScrollableView.h"
 #include "nsView.h"
 #include "nsISupportsArray.h"
-#include "nsICompositeListener.h"
 #include "nsCOMPtr.h"
 #include "nsIServiceManager.h"
 #include "nsGUIEvent.h"
@@ -431,8 +430,6 @@ void nsViewManager::Refresh(nsView *aView, nsIRenderingContext *aContext,
   // move it from widget coordinates into view coordinates
   damageRegion.MoveBy(viewRect.x, viewRect.y);
 
-  // Clip it to the view; shouldn't be necessary, but do it for sanity
-  damageRegion.And(damageRegion, viewRect);
   if (damageRegion.IsEmpty()) {
 #ifdef DEBUG_roc
     nsRect damageRect = damageRegion.GetBounds();
@@ -459,7 +456,8 @@ void nsViewManager::Refresh(nsView *aView, nsIRenderingContext *aContext,
   SetPainting(PR_TRUE);
 
   nsCOMPtr<nsIRenderingContext> localcx;
-
+  NS_ASSERTION(aView->GetWidget(),
+               "Must have a widget to calculate coordinates correctly");
   if (nsnull == aContext)
     {
       localcx = CreateRenderingContext(*aView);
@@ -474,8 +472,6 @@ void nsViewManager::Refresh(nsView *aView, nsIRenderingContext *aContext,
       localcx = aContext;
     }
 
-  // damageRect is the clipped damage area bounds, in twips-relative-to-view-origin
-  nsRect damageRect = damageRegion.GetBounds();
   PRInt32 p2a = mContext->AppUnitsPerDevPixel();
 
   nsRefPtr<gfxContext> ctx =
@@ -487,9 +483,8 @@ void nsViewManager::Refresh(nsView *aView, nsIRenderingContext *aContext,
   ctx->Translate(gfxPoint(gfxFloat(vtowoffset.x) / p2a,
                           gfxFloat(vtowoffset.y) / p2a));
 
-  NS_ASSERTION(!viewRect.x && !viewRect.y, "When exactly is this supposed to be non-zero?");
-  ctx->Translate(gfxPoint(gfxFloat(viewRect.x) / p2a,
-                          gfxFloat(viewRect.y) / p2a));
+  ctx->Translate(gfxPoint(-gfxFloat(viewRect.x) / p2a,
+                          -gfxFloat(viewRect.y) / p2a));
 
   nsRegion opaqueRegion;
   AddCoveringWidgetsToOpaqueRegion(opaqueRegion, mContext, aView);
@@ -729,7 +724,22 @@ nsViewManager::UpdateViewAfterScroll(nsView *aView, const nsRegion& aUpdateRegio
 {
   NS_ASSERTION(RootViewManager()->mScrollCnt > 0,
                "Someone forgot to call WillBitBlit()");
+  // Look at the view's clipped rect. It may be that part of the view is clipped out
+  // in which case we don't need to worry about invalidating the clipped-out part.
+  nsRect damageRect = aView->GetDimensions();
+  if (damageRect.IsEmpty()) {
+    return;
+  }
   nsPoint offset = ComputeViewOffset(aView);
+  damageRect.MoveBy(offset);
+
+  // if this is a floating view, it isn't covered by any widgets other than
+  // its children, which are handled by the widget scroller.
+  if (aView->GetFloating()) {
+    return;
+  }
+
+  UpdateWidgetArea(RootViewManager()->GetRootView(), nsRegion(damageRect), aView);
   if (!aUpdateRegion.IsEmpty()) {
     // XXX We should update the region, not the bounds rect, but that requires
     // a little more work. Fix this when we reshuffle this code.
@@ -1460,25 +1470,6 @@ NS_IMETHODIMP nsViewManager::InsertChild(nsIView *aParent, nsIView *aChild, nsIV
   return NS_OK;
 }
 
-NS_IMETHODIMP nsViewManager::InsertZPlaceholder(nsIView *aParent, nsIView *aChild,
-                                                nsIView *aSibling, PRBool aAfter)
-{
-  nsView* parent = NS_STATIC_CAST(nsView*, aParent);
-  nsView* child = NS_STATIC_CAST(nsView*, aChild);
-
-  NS_PRECONDITION(nsnull != parent, "null ptr");
-  NS_PRECONDITION(nsnull != child, "null ptr");
-
-  nsZPlaceholderView* placeholder = new nsZPlaceholderView(this);
-  // mark the placeholder as "shown" so that it will be included in a built display list
-  placeholder->SetParent(parent);
-  placeholder->SetReparentedView(child);
-  placeholder->SetZIndex(child->GetZIndexIsAuto(), child->GetZIndex(), child->IsTopMost());
-  child->SetZParent(placeholder);
-  
-  return InsertChild(parent, placeholder, aSibling, aAfter);
-}
-
 NS_IMETHODIMP nsViewManager::InsertChild(nsIView *aParent, nsIView *aChild, PRInt32 aZIndex)
 {
   // no-one really calls this with anything other than aZIndex == 0 on a fresh view
@@ -1635,21 +1626,6 @@ PRBool nsViewManager::CanScrollWithBitBlt(nsView* aView, nsPoint aDelta,
 #endif
 }
 
-NS_IMETHODIMP nsViewManager::SetViewCheckChildEvents(nsIView *aView, PRBool aEnable)
-{
-  nsView* view = NS_STATIC_CAST(nsView*, aView);
-
-  NS_ASSERTION(!(nsnull == view), "no view");
-
-  if (aEnable) {
-    view->SetViewFlags(view->GetViewFlags() & ~NS_VIEW_FLAG_DONT_CHECK_CHILDREN);
-  } else {
-    view->SetViewFlags(view->GetViewFlags() | NS_VIEW_FLAG_DONT_CHECK_CHILDREN);
-  }
-
-  return NS_OK;
-}
-
 NS_IMETHODIMP nsViewManager::SetViewFloating(nsIView *aView, PRBool aFloating)
 {
   nsView* view = NS_STATIC_CAST(nsView*, aView);
@@ -1754,11 +1730,6 @@ NS_IMETHODIMP nsViewManager::SetViewZIndex(nsIView *aView, PRBool aAutoZIndex, P
   if (oldidx != aZIndex || oldTopMost != aTopMost ||
       oldIsAuto != aAutoZIndex) {
     UpdateView(view, NS_VMREFRESH_NO_SYNC);
-  }
-
-  nsZPlaceholderView* zParentView = view->GetZParent();
-  if (nsnull != zParentView) {
-    SetViewZIndex(zParentView, aAutoZIndex, aZIndex, aTopMost);
   }
 
   return rv;
@@ -1982,7 +1953,9 @@ void nsViewManager::ViewToWidget(nsView *aView, nsView* aWidgetView, nsRect &aRe
   // account for the view's origin not lining up with the widget's
   aRect.x -= bounds.x;
   aRect.y -= bounds.y;
-  
+
+  aRect += aView->ViewToWidgetOffset();
+
   // finally, convert to device coordinates.
   aRect.ScaleRoundOut(1.0f / mContext->AppUnitsPerDevPixel());
 }

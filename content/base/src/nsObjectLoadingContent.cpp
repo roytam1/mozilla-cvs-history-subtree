@@ -281,7 +281,8 @@ IsSupportedPlugin(const nsCString& aMIMEType)
 }
 
 nsObjectLoadingContent::nsObjectLoadingContent()
-  : mChannel(nsnull)
+  : mPendingInstantiateEvent(nsnull)
+  , mChannel(nsnull)
   , mType(eType_Loading)
   , mInstantiating(PR_FALSE)
   , mUserDisabled(PR_FALSE)
@@ -372,6 +373,13 @@ nsObjectLoadingContent::OnStartRequest(nsIRequest *aRequest, nsISupports *aConte
         mType = newType;
         notifier.Notify();
       }
+
+      // We're loading a document, so we have to set LOAD_DOCUMENT_URI
+      // (especially important for firing onload)
+      nsLoadFlags flags = 0;
+      chan->GetLoadFlags(&flags);
+      flags |= nsIChannel::LOAD_DOCUMENT_URI;
+      chan->SetLoadFlags(flags);
 
       nsCOMPtr<nsIDocShell> docShell;
       rv = mFrameLoader->GetDocShell(getter_AddRefs(docShell));

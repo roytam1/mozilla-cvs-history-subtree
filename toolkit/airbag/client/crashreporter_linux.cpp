@@ -47,6 +47,8 @@
 #include <algorithm>
 #include <cctype>
 
+#include <signal.h>
+
 #include <gtk/gtkhbbox.h>
 #include <gtk/gtkcheckbutton.h>
 #include <gtk/gtkcontainer.h>
@@ -276,6 +278,11 @@ static void EmailChanged(GtkEditable* editable, gpointer userData)
 
 bool UIInit()
 {
+  // breakpad probably left us with blocked signals, unblock them here
+  sigset_t signals, old;
+  sigfillset(&signals);
+  sigprocmask(SIG_UNBLOCK, &signals, &old);
+
   if (gtk_init_check(&gArgc, &gArgv)) {
     gInitialized = true;
     return true;
@@ -412,7 +419,7 @@ void UIShowCrashUI(const string& dumpfile,
   gtk_main();
 }
 
-void UIError(const string& message)
+void UIError_impl(const string& message)
 {
   if (!gInitialized) {
     // Didn't initialize, this is the best we can do
@@ -477,6 +484,16 @@ bool UIEnsurePathExists(const string& path)
   return true;
 }
 
+bool UIFileExists(const string& path)
+{
+  struct stat sb;
+  int ret = stat(path.c_str(), &sb);
+  if (ret == -1 || !(sb.st_mode & S_IFREG))
+    return false;
+
+  return true;
+}
+
 bool UIMoveFile(const string& file, const string& newfile)
 {
   return (rename(file.c_str(), newfile.c_str()) != -1);
@@ -486,3 +503,14 @@ bool UIDeleteFile(const string& file)
 {
   return (unlink(file.c_str()) != -1);
 }
+
+std::ifstream* UIOpenRead(const string& filename)
+{
+  return new std::ifstream(filename.c_str(), std::ios::in);
+}
+
+std::ofstream* UIOpenWrite(const string& filename)
+{
+  return new std::ofstream(filename.c_str(), std::ios::out);
+}
+

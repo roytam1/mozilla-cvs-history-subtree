@@ -137,6 +137,21 @@ nsTableCaptionFrame::GetParentStyleContextFrame(nsPresContext* aPresContext,
                                                   aIsChild);
 }
 
+#ifdef ACCESSIBILITY
+NS_IMETHODIMP nsTableCaptionFrame::GetAccessible(nsIAccessible** aAccessible)
+{
+  *aAccessible = nsnull;
+  if (!GetRect().IsEmpty()) {
+    nsCOMPtr<nsIAccessibilityService> accService = do_GetService("@mozilla.org/accessibilityService;1");
+    if (accService) {
+      return accService->CreateHTMLCaptionAccessible(NS_STATIC_CAST(nsIFrame*, this), aAccessible);
+    }
+  }
+
+  return NS_ERROR_FAILURE;
+}
+#endif
+
 #ifdef NS_DEBUG
 NS_IMETHODIMP
 nsTableCaptionFrame::GetFrameName(nsAString& aResult) const
@@ -165,15 +180,13 @@ nsTableOuterFrame::~nsTableOuterFrame()
 {
 }
 
-nsresult nsTableOuterFrame::QueryInterface(const nsIID& aIID, void** aInstancePtr)
+NS_IMETHODIMP
+nsTableOuterFrame::QueryInterface(const nsIID& aIID, void** aInstancePtr)
 {
-  if (NULL == aInstancePtr) {
-    return NS_ERROR_NULL_POINTER;
-  }
+  NS_PRECONDITION(aInstancePtr, "null out param");
 
-  if (aIID.Equals(NS_GET_IID(nsITableLayout))) 
-  { // note there is no addref here, frames are not addref'd
-    *aInstancePtr = (void*)(nsITableLayout*)this;
+  if (aIID.Equals(NS_GET_IID(nsITableLayout))) {
+    *aInstancePtr = NS_STATIC_CAST(nsITableLayout*, this);
     return NS_OK;
   }
 

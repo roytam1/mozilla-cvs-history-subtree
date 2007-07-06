@@ -52,6 +52,7 @@
 #include "msgCore.h"
 #include "nsMsgI18N.h"
 #include "nsIStringBundle.h"
+#include "nsMsgUtils.h"
 
 #include "plstr.h"
 #include "prmem.h"
@@ -78,7 +79,6 @@
 #include "plbase64.h"
 #include "nsIWindowWatcher.h"
 
-#include "nsEscape.h"
 #include "nsVCard.h"
 #include "nsVCardObj.h"
 #include "nsISupportsPrimitives.h"
@@ -192,34 +192,6 @@ NS_IMETHODIMP nsAddressBook::NewAddressBook(nsIAbDirectoryProperties *aPropertie
 
   rv = parentDir->CreateNewDirectory(aProperties);
   return rv;
-}
-
-NS_IMETHODIMP nsAddressBook::ModifyAddressBook
-(nsIRDFDataSource* aDS, nsIAbDirectory *aParentDir, nsIAbDirectory *aDirectory, nsIAbDirectoryProperties *aProperties)
-{
-  NS_ENSURE_ARG_POINTER(aDS);
-  NS_ENSURE_ARG_POINTER(aParentDir);
-  NS_ENSURE_ARG_POINTER(aDirectory);
-  NS_ENSURE_ARG_POINTER(aProperties);
-
-  nsresult rv;
-  nsCOMPtr<nsISupportsArray> parentArray (do_CreateInstance(NS_SUPPORTSARRAY_CONTRACTID, &rv));
-  NS_ENSURE_SUCCESS(rv, rv);
-  nsCOMPtr<nsISupportsArray> resourceElement (do_CreateInstance(NS_SUPPORTSARRAY_CONTRACTID, &rv));
-  NS_ENSURE_SUCCESS(rv, rv);
-  nsCOMPtr<nsISupportsArray> resourceArray (do_CreateInstance(NS_SUPPORTSARRAY_CONTRACTID, &rv));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  parentArray->AppendElement(aParentDir);
-
-  nsCOMPtr<nsIRDFResource> dirSource(do_QueryInterface(aDirectory, &rv));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  resourceElement->AppendElement(dirSource);
-  resourceElement->AppendElement(aProperties);
-  resourceArray->AppendElement(resourceElement);
-
-  return DoCommand(aDS, NS_LITERAL_CSTRING(NC_RDF_MODIFY), parentArray, resourceArray);
 }
 
 NS_IMETHODIMP nsAddressBook::DeleteAddressBooks
@@ -1107,10 +1079,11 @@ NS_IMETHODIMP nsAddressBook::HandleContent(const char * aContentType,
         const char *startOfVCard = strstr(path.get(), "add?vcard=");
         if (startOfVCard)
         {
-            char *unescapedData = PL_strdup(startOfVCard + strlen("add?vcard="));
-
+            nsCString unescapedData;
+            
             // XXX todo, explain why we is escaped twice
-            nsUnescape(unescapedData);
+            MsgUnescapeString(nsDependentCString(startOfVCard + strlen("add?vcard=")), 
+                                                 0, unescapedData);
 
             if (!aWindowContext)
                 return NS_ERROR_FAILURE;
@@ -1120,7 +1093,7 @@ NS_IMETHODIMP nsAddressBook::HandleContent(const char * aContentType,
                 return NS_ERROR_FAILURE;
 
             nsCOMPtr <nsIAbCard> cardFromVCard;
-            rv = EscapedVCardToAbCard((const char *)unescapedData, getter_AddRefs(cardFromVCard));
+            rv = EscapedVCardToAbCard(unescapedData.get(), getter_AddRefs(cardFromVCard));
             NS_ENSURE_SUCCESS(rv, rv);
 
             nsCOMPtr<nsISupportsInterfacePointer> ifptr =
@@ -1138,8 +1111,6 @@ NS_IMETHODIMP nsAddressBook::HandleContent(const char * aContentType,
                 NS_LITERAL_STRING("chrome,resizable=no,titlebar,modal,centerscreen"),
                 ifptr, getter_AddRefs(dialogWindow));
             NS_ENSURE_SUCCESS(rv, rv);
-
-            PL_strfree(unescapedData);
         }
         rv = NS_OK;
     }
@@ -1217,13 +1188,10 @@ NS_IMETHODIMP nsAddressBook::EscapedVCardToAbCard(const char *aEscapedVCardStr, 
 
     // aEscapedVCardStr will be "" the first time, before you have a vCard
     if (*aEscapedVCardStr != '\0') {
-        char *unescapedData = PL_strdup(aEscapedVCardStr);
-        if (!unescapedData)
-            return NS_ERROR_OUT_OF_MEMORY;
+        nsCString unescapedData;
+        MsgUnescapeString(nsDependentCString(aEscapedVCardStr), 0, unescapedData);
 
-        nsUnescape(unescapedData);
-        VObject *vObj = parse_MIME(unescapedData, strlen(unescapedData));
-        PL_strfree(unescapedData);
+        VObject *vObj = parse_MIME(unescapedData.get(), unescapedData.Length());
         NS_ASSERTION(vObj, "Parse of vCard failed");
 
         convertFromVObject(vObj, cardFromVCard);

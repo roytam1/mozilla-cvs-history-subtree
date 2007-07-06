@@ -503,7 +503,7 @@ NS_IMPL_THREADSAFE_ISUPPORTS1(AsyncWriteThread, nsIRunnable)
 nsresult
 mozStorageService::InitStorageAsyncIO()
 {
-  sqlite3OsVtbl* vtable = sqlite3_os_switch();
+  sqlite3OsVtbl* vtable = &sqlite3Os;
 
   sqliteOrigOpenReadWrite = vtable->xOpenReadWrite;
   sqliteOrigOpenReadOnly = vtable->xOpenReadOnly;
@@ -556,9 +556,6 @@ mozStorageService::InitStorageAsyncIO()
 nsresult
 mozStorageService::FlushAsyncIO()
 {
-  AsyncMessage *message = 0;
-  int rc;
-
   // single threaded? nothing to do.
   if (!AsyncWriteThreadInstance)
     return NS_OK;
@@ -575,7 +572,7 @@ mozStorageService::FlushAsyncIO()
 
   PR_Lock(flushLock);
 
-  rc = AsyncBarrier(flushLock, flushCond);
+  int rc = AsyncBarrier(flushLock, flushCond);
   if (rc == SQLITE_OK) {
     // the async thread will notify us once it reaches
     // the ASYNC_BARRIER operation; only wait if
@@ -1436,6 +1433,15 @@ ProcessOneMessage(AsyncMessage* aMessage)
     case ASYNC_DELETE:
       NS_ASSERTION(sqliteOrigDelete, "No delete pointer");
       rc = sqliteOrigDelete(aMessage->mBuf);
+#ifdef XP_WIN
+      if (SQLITE_IOERR == rc) {
+        NS_WARNING("SQLite returned an error when trying to delete.  "
+                   "See http://www.sqlite.org/cvstrac/tktview?tn=2441.  "
+                   "This warning is safe to ignore on shutdown.");
+        // We now ignore the error, which sucks, and is arguably a bug in sqlite
+        rc = SQLITE_OK;
+      }
+#endif
       break;
 
     case ASYNC_SYNCDIRECTORY:
@@ -1530,8 +1536,18 @@ ProcessAsyncMessages()
       // check for error
       if (rc != SQLITE_OK) {
         AsyncWriteError = rc;
-        NS_NOTREACHED("FILE ERROR");
 
+        nsAutoString logMessage;
+        logMessage.AssignLiteral("mozStorage: error code ");
+        logMessage.AppendInt(rc);
+        logMessage.AppendLiteral(" for database ");
+        if (message->mFile && message->mFile->mFilename)
+          logMessage.Append(NS_ConvertUTF8toUTF16(*message->mFile->mFilename));
+
+#ifdef DEBUG
+        printf("%s\n", NS_ConvertUTF16toUTF8(logMessage).get());
+#endif
+          
         // log error to console
         nsresult rv;
         nsCOMPtr<nsIConsoleService> consoleSvc =
@@ -1539,15 +1555,11 @@ ProcessAsyncMessages()
         if (NS_FAILED(rv)) {
           NS_WARNING("Couldn't get the console service for logging file error");
         } else {
-          nsAutoString logMessage;
-          logMessage.AssignLiteral("mozStorage: error code ");
-          logMessage.AppendInt(rc);
-          logMessage.AppendLiteral(" for database ");
-          if (message->mFile && message->mFile->mFilename)
-            logMessage.Append(NS_ConvertUTF8toUTF16(*message->mFile->mFilename));
           rv = consoleSvc->LogStringMessage(logMessage.get());
           NS_WARN_IF_FALSE(NS_SUCCEEDED(rv), "Couldn't log message on async error");
         }
+
+        NS_NOTREACHED("FILE ERROR");
 
         // tell user to restart
         DisplayAsyncWriteError();

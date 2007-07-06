@@ -784,8 +784,8 @@ function UpdateMailPaneConfig(aMsgWindowInitialized) {
 
   if (aMsgWindowInitialized && msgPaneReRooted)
   {
-    messenger.SetWindow(null, null);
-    messenger.SetWindow(window, msgWindow);
+    messenger.setWindow(null, null);
+    messenger.setWindow(window, msgWindow);
     MsgReload(); 
   }
 
@@ -851,7 +851,7 @@ function delayedOnLoadMessenger()
   verifyAccounts(null);
     
   InitMsgWindow();
-  messenger.SetWindow(window, msgWindow);
+  messenger.setWindow(window, msgWindow);
 
   InitializeDataSources();
   InitPanes();
@@ -933,7 +933,7 @@ function OnUnloadMessenger()
   pref.QueryInterface(Components.interfaces.nsIPrefBranch2);
   pref.removeObserver("mail.pane_config.dynamic", MailPrefObserver);
   pref.removeObserver("mail.showFolderPaneColumns", MailPrefObserver);
-
+  document.getElementById('tabmail').closeTabs();
   // FIX ME - later we will be able to use onload from the overlay
   OnUnloadMsgHeaderPane();
 
@@ -1014,6 +1014,8 @@ function loadStartFolder(initialUri)
       // this is the case where we're trying to auto-subscribe to a folder.
       if (initialUri && !startFolder.parent)
       {
+        // hack to force display of thread pane.
+        ShowingThreadPane();
         messenger.loadURL(window, initialUri);
         return;
       }
@@ -1182,6 +1184,10 @@ function CycleFolderView(aCycleForward)
 
 function OnLoadFolderPane()
 {
+  // want to start up showing the folder pane, in case we shut down
+  // with the 3-pane showing a single message.
+  document.getElementById("folderpane_splitter").collapsed = false;
+  document.getElementById("folderPaneBox").collapsed = false;
   UpdateFolderColumnVisibility();
   var folderUnreadCol = document.getElementById("folderUnreadCol");
   folderUnreadCol.addEventListener("DOMAttrModified", OnFolderUnreadColAttrModified, false);
@@ -1695,7 +1701,6 @@ function EnsureFolderIndex(builder, msgFolder)
 
 function SelectFolder(folderUri)
 {
-  dump("selecting folder " + folderUri + "\n");
   var folderTree = GetFolderTree();
   var folderResource = RDF.GetResource(folderUri);
   var msgFolder = folderResource.QueryInterface(Components.interfaces.nsIMsgFolder);

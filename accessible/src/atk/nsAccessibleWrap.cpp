@@ -309,7 +309,7 @@ nsAccessibleWrap::~nsAccessibleWrap()
                    (mAccWrapCreated-mAccWrapDeleted)));
 }
 
-NS_IMETHODIMP nsAccessibleWrap::Shutdown()
+void nsAccessibleWrap::ShutdownAtkObject()
 {
     if (mAtkObject) {
         if (IS_MAI_OBJECT(mAtkObject)) {
@@ -319,6 +319,11 @@ NS_IMETHODIMP nsAccessibleWrap::Shutdown()
         g_object_unref(mAtkObject);
         mAtkObject = nsnull;
     }
+}
+
+NS_IMETHODIMP nsAccessibleWrap::Shutdown()
+{
+    ShutdownAtkObject();
     return nsAccessible::Shutdown();
 }
 
@@ -788,8 +793,18 @@ GetAttributeSet(nsIAccessible* aAccessible)
     AtkAttributeSet *objAttributeSet = nsnull;
     nsCOMPtr<nsIPersistentProperties> attributes;
     aAccessible->GetAttributes(getter_AddRefs(attributes));
-
+    
     if (attributes) {
+        // Deal with attributes that we only need to expose in ATK
+        PRUint32 state, extraState;
+        aAccessible->GetFinalState(&state, &extraState);
+        if (state & nsIAccessibleStates::STATE_HASPOPUP) {
+          // There is no ATK state for haspopup, must use object attribute to expose the same info
+          nsAutoString oldValueUnused;
+          attributes->SetStringProperty(NS_LITERAL_CSTRING("haspopup"), NS_LITERAL_STRING("true"),
+                                        oldValueUnused);
+        }
+
         nsCOMPtr<nsISimpleEnumerator> propEnum;
         nsresult rv = attributes->Enumerate(getter_AddRefs(propEnum));
         NS_ENSURE_SUCCESS(rv, nsnull);
@@ -1134,6 +1149,12 @@ nsAccessibleWrap::FireAccessibleEvent(nsIAccessibleEvent *aEvent)
         nsRefPtr<nsRootAccessible> rootAccWrap = accWrap->GetRootAccessible();
         if (rootAccWrap && rootAccWrap->mActivated) {
             atk_focus_tracker_notify(atkObj);
+            // Fire state change event for focus
+            nsCOMPtr<nsIAccessibleStateChangeEvent> stateChangeEvent =
+              new nsAccStateChangeEvent(accessible,
+                                        nsIAccessibleStates::STATE_FOCUSED,
+                                        PR_FALSE, PR_TRUE);
+            return FireAtkStateChangeEvent(stateChangeEvent, atkObj);
         }
       } break;
 
@@ -1159,17 +1180,23 @@ nsAccessibleWrap::FireAccessibleEvent(nsIAccessibleEvent *aEvent)
         break;
 
     case nsIAccessibleEvent::EVENT_TEXT_CARET_MOVED:
+      {
         MAI_LOG_DEBUG(("\n\nReceived: EVENT_TEXT_CARET_MOVED\n"));
-        NS_ASSERTION(eventData, "Event needs event data");
-        if (!eventData)
+
+        nsCOMPtr<nsIAccessibleCaretMoveEvent> caretMoveEvent(do_QueryInterface(aEvent));
+        NS_ASSERTION(caretMoveEvent, "Event needs event data");
+        if (!caretMoveEvent)
             break;
 
-        MAI_LOG_DEBUG(("\n\nCaret postion: %d", *(gint *)eventData ));
+        PRInt32 caretOffset = -1;
+        caretMoveEvent->GetCaretOffset(&caretOffset);
+
+        MAI_LOG_DEBUG(("\n\nCaret postion: %d", caretOffset));
         g_signal_emit_by_name(atkObj,
                               "text_caret_moved",
                               // Curent caret position
-                              *(gint *)eventData);
-        break;
+                              caretOffset);
+      } break;
 
     case nsIAccessibleEvent::EVENT_TABLE_MODEL_CHANGED:
         MAI_LOG_DEBUG(("\n\nReceived: EVENT_TABLE_MODEL_CHANGED\n"));
@@ -1264,40 +1291,12 @@ nsAccessibleWrap::FireAccessibleEvent(nsIAccessibleEvent *aEvent)
                               *(gint *)eventData);
         break;
 
-        // Is a superclass of ATK event children_changed
-    case nsIAccessibleEvent::EVENT_REORDER:
-        AtkChildrenChange *pAtkChildrenChange;
+    case nsIAccessibleEvent::EVENT_SHOW:
+        return FireAtkShowHideEvent(aEvent, atkObj, PR_TRUE);
 
-        MAI_LOG_DEBUG(("\n\nReceived: EVENT_REORDER(children_change)\n"));
+    case nsIAccessibleEvent::EVENT_HIDE:
+        return FireAtkShowHideEvent(aEvent, atkObj, PR_FALSE);
 
-        pAtkChildrenChange = NS_REINTERPRET_CAST(AtkChildrenChange *,
-                                                 eventData);
-        nsAccessibleWrap *childAccWrap;
-        if (pAtkChildrenChange && pAtkChildrenChange->child) {
-            childAccWrap = NS_STATIC_CAST(nsAccessibleWrap *,
-                                          pAtkChildrenChange->child);
-            g_signal_emit_by_name (atkObj,
-                                   pAtkChildrenChange->add ? \
-                                   "children_changed::add" : \
-                                   "children_changed::remove",
-                                   pAtkChildrenChange->index,
-                                   childAccWrap->GetAtkObject(),
-                                   NULL);
-        }
-        else {
-            //
-            // EVENT_REORDER is normally fired by "HTML Document".
-            //
-            // In GOK, [only] "children_changed::add" can cause foreground
-            // window accessible to update it children, which will
-            // refresh "UI-Grab" window.
-            //
-            g_signal_emit_by_name (atkObj,
-                                   "children_changed::add",
-                                   -1, NULL, NULL);
-        }
-
-        break;
         /*
          * Because dealing with menu is very different between nsIAccessible
          * and ATK, and the menu activity is important, specially transfer the
@@ -1356,21 +1355,17 @@ nsAccessibleWrap::FireAccessibleEvent(nsIAccessibleEvent *aEvent)
       } break;
 
     case nsIAccessibleEvent::EVENT_MENUPOPUP_START:
-        // fire extra focus event, then go down to EVENT_SHOW
-        atk_focus_tracker_notify(atkObj);
-
-    case nsIAccessibleEvent::EVENT_SHOW:
-        MAI_LOG_DEBUG(("\n\nReceived: EVENT_SHOW\n"));
+        MAI_LOG_DEBUG(("\n\nReceived: EVENT_MENUPOPUP_START\n"));
+        atk_focus_tracker_notify(atkObj); // fire extra focus event
         atk_object_notify_state_change(atkObj, ATK_STATE_VISIBLE, PR_TRUE);
         atk_object_notify_state_change(atkObj, ATK_STATE_SHOWING, PR_TRUE);
         break;
 
-    case nsIAccessibleEvent::EVENT_HIDE:
     case nsIAccessibleEvent::EVENT_MENUPOPUP_END:
-        MAI_LOG_DEBUG(("\n\nReceived: EVENT_HIDE\n"));
+        MAI_LOG_DEBUG(("\n\nReceived: EVENT_MENUPOPUP_END\n"));
         atk_object_notify_state_change(atkObj, ATK_STATE_VISIBLE, PR_FALSE);
         atk_object_notify_state_change(atkObj, ATK_STATE_SHOWING, PR_FALSE);
-        break; 
+        break;
     }
 
     return NS_OK;
@@ -1512,6 +1507,40 @@ nsAccessibleWrap::FireAtkPropChangedEvent(nsIAccessibleEvent *aEvent,
                                     values.property_name, NULL);
     g_signal_emit_by_name(aObject, signal_name, &values, NULL);
     g_free (signal_name);
+
+    return NS_OK;
+}
+
+nsresult
+nsAccessibleWrap::FireAtkShowHideEvent(nsIAccessibleEvent *aEvent,
+                                       AtkObject *aObject, PRBool aIsAdded)
+{
+    if (aIsAdded)
+        MAI_LOG_DEBUG(("\n\nReceived: EVENT_SHOW\n"));
+    else
+        MAI_LOG_DEBUG(("\n\nReceived: EVENT_HIDE\n"));
+
+    nsCOMPtr<nsIAccessible> accessible;
+    aEvent->GetAccessible(getter_AddRefs(accessible));
+    NS_ENSURE_STATE(accessible);
+
+    nsCOMPtr<nsIAccessible> parentAccessible;
+    accessible->GetParent(getter_AddRefs(parentAccessible));
+    NS_ENSURE_STATE(parentAccessible);
+
+    PRInt32 indexInParent = -1;
+    accessible->GetIndexInParent(&indexInParent);
+
+    AtkObject *parentObject = GetAtkObject(parentAccessible);
+    NS_ENSURE_STATE(parentObject);
+
+    g_signal_emit_by_name(parentObject,
+                          aIsAdded ? \
+                          "children_changed::add" : \
+                          "children_changed::remove",
+                          indexInParent,
+                          aObject,
+                          NULL);
 
     return NS_OK;
 }

@@ -130,8 +130,10 @@ static JSObject *
 split_setup(JSContext *cx);
 
 #ifdef EDITLINE
+JS_BEGIN_EXTERN_C
 extern char     *readline(const char *prompt);
 extern void     add_history(char *line);
+JS_END_EXTERN_C
 #endif
 
 static JSBool
@@ -634,7 +636,7 @@ ReadLine(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     from = stdin;
     buflength = 0;
     bufsize = BUFSIZE;
-    buf = JS_malloc(cx, bufsize);
+    buf = (char *) JS_malloc(cx, bufsize);
     if (!buf)
         return JS_FALSE;
 
@@ -651,7 +653,7 @@ ReadLine(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
         /* Else, grow our buffer for another pass. */
         bufsize *= 2;
         if (bufsize > buflength) {
-            tmp = JS_realloc(cx, buf, bufsize);
+            tmp = (char *) JS_realloc(cx, buf, bufsize);
         } else {
             JS_ReportOutOfMemory(cx);
             tmp = NULL;
@@ -673,7 +675,7 @@ ReadLine(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     }
 
     /* Shrink the buffer to the real size. */
-    tmp = JS_realloc(cx, buf, buflength);
+    tmp = (char *) JS_realloc(cx, buf, buflength);
     if (!tmp) {
         JS_free(cx, buf);
         return JS_FALSE;
@@ -698,18 +700,16 @@ ReadLine(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 static JSBool
 Print(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
-    uintN i, n;
+    uintN i;
     JSString *str;
 
-    for (i = n = 0; i < argc; i++) {
+    for (i = 0; i < argc; i++) {
         str = JS_ValueToString(cx, argv[i]);
         if (!str)
             return JS_FALSE;
         fprintf(gOutFile, "%s%s", i ? " " : "", JS_GetStringBytes(str));
     }
-    n++;
-    if (n)
-        fputc('\n', gOutFile);
+    fputc('\n', gOutFile);
     return JS_TRUE;
 }
 
@@ -918,7 +918,7 @@ UpdateSwitchTableBounds(JSScript *script, uintN offset,
     jsint low, high, n;
 
     pc = script->code + offset;
-    op = *pc;
+    op = (JSOp) *pc;
     switch (op) {
       case JSOP_TABLESWITCHX:
         jmplen = JUMPX_OFFSET_LEN;
@@ -1072,8 +1072,9 @@ Notes(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 
 JS_STATIC_ASSERT(JSTN_CATCH == 0);
 JS_STATIC_ASSERT(JSTN_FINALLY == 1);
+JS_STATIC_ASSERT(JSTN_ITER == 2);
 
-static const char* const TryNoteNames[] = { "catch", "finally" };
+static const char* const TryNoteNames[] = { "catch", "finally", "iter" };
 
 static JSBool
 TryNotes(JSContext *cx, JSScript *script)
@@ -1088,7 +1089,7 @@ TryNotes(JSContext *cx, JSScript *script)
     fprintf(gOutFile, "\nException table:\n"
             "kind      stack    start      end\n");
     do {
-        JS_ASSERT(tn->kind == JSTN_CATCH || tn->kind == JSTN_FINALLY);
+        JS_ASSERT(tn->kind < JS_ARRAY_LENGTH(TryNoteNames));
         fprintf(gOutFile, " %-7s %6u %8u %8u\n",
                 TryNoteNames[tn->kind], tn->stackDepth,
                 tn->start, tn->start + tn->length);
@@ -1923,7 +1924,7 @@ split_enumerate(JSContext *cx, JSObject *obj, JSIterateOp enum_op,
 
     switch (enum_op) {
       case JSENUMERATE_INIT:
-        cpx = JS_GetPrivate(cx, obj);
+        cpx = (ComplexObject *) JS_GetPrivate(cx, obj);
 
         if (!cpx->isInner && cpx->inner)
             obj = cpx->inner;
@@ -2008,7 +2009,7 @@ split_mark(JSContext *cx, JSObject *obj, void *arg)
 {
     ComplexObject *cpx;
 
-    cpx = JS_GetPrivate(cx, obj);
+    cpx = (ComplexObject *) JS_GetPrivate(cx, obj);
 
     if (!cpx->isInner && cpx->inner) {
         /* Mark the inner object. */
@@ -2023,7 +2024,7 @@ split_outerObject(JSContext *cx, JSObject *obj)
 {
     ComplexObject *cpx;
 
-    cpx = JS_GetPrivate(cx, obj);
+    cpx = (ComplexObject *) JS_GetPrivate(cx, obj);
     return cpx->isInner ? cpx->outer : obj;
 }
 
@@ -2032,7 +2033,7 @@ split_innerObject(JSContext *cx, JSObject *obj)
 {
     ComplexObject *cpx;
 
-    cpx = JS_GetPrivate(cx, obj);
+    cpx = (ComplexObject *) JS_GetPrivate(cx, obj);
     return !cpx->isInner ? cpx->inner : obj;
 }
 
@@ -2056,7 +2057,7 @@ split_create_outer(JSContext *cx)
     ComplexObject *cpx;
     JSObject *obj;
 
-    cpx = JS_malloc(cx, sizeof *obj);
+    cpx = (ComplexObject *) JS_malloc(cx, sizeof *obj);
     if (!cpx)
         return NULL;
     cpx->outer = NULL;
@@ -2086,7 +2087,7 @@ split_create_inner(JSContext *cx, JSObject *outer)
 
     JS_ASSERT(JS_GET_CLASS(cx, outer) == &split_global_class.base);
 
-    cpx = JS_malloc(cx, sizeof *cpx);
+    cpx = (ComplexObject *) JS_malloc(cx, sizeof *cpx);
     if (!cpx)
         return NULL;
     cpx->outer = outer;
@@ -2099,7 +2100,7 @@ split_create_inner(JSContext *cx, JSObject *outer)
         return NULL;
     }
 
-    outercpx = JS_GetPrivate(cx, outer);
+    outercpx = (ComplexObject *) JS_GetPrivate(cx, outer);
     outercpx->inner = obj;
 
     return obj;
@@ -2110,7 +2111,7 @@ split_get_private(JSContext *cx, JSObject *obj)
 {
     do {
         if (JS_GET_CLASS(cx, obj) == &split_global_class.base)
-            return JS_GetPrivate(cx, obj);
+            return (ComplexObject *) JS_GetPrivate(cx, obj);
         obj = JS_GetParent(cx, obj);
     } while (obj);
 

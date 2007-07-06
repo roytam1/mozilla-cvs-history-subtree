@@ -912,8 +912,12 @@ nsXFormsSubmissionElement::SerializeDataXML(nsIDOMDocument  *data,
 
     // Check for SOAP Envelope and handle SOAP
     nsAutoString nodeName, nodeNS;
-    data->GetLocalName(nodeName);
-    data->GetNamespaceURI(nodeNS);
+    nsCOMPtr<nsIDOMElement> docElem;
+    data->GetDocumentElement(getter_AddRefs(docElem));
+    if (docElem) {
+      docElem->GetLocalName(nodeName);
+      docElem->GetNamespaceURI(nodeNS);
+    }
     if (nodeName.Equals(NS_LITERAL_STRING("Envelope")) &&
         nodeNS.Equals(NS_LITERAL_STRING(NS_NAMESPACE_SOAP_ENVELOPE))) {
       mIsSOAPRequest = PR_TRUE;
@@ -1550,6 +1554,12 @@ nsXFormsSubmissionElement::CopyChildren(nsIModelElementPrivate *aModel,
           return NS_ERROR_ILLEGAL_VALUE;
         }
 
+        // ImportNode does not copy any properties of the currentNode. If the
+        // node has an uploadFileProperty we need to copy it to the submission
+        // document so that local files will be attached properly when the
+        // submission format is multipart-related.
+        aDest->AppendChild(destChild, getter_AddRefs(node));
+
         // If this node has attributes, make sure that we don't copy any
         // that aren't relevant, etc.
         PRBool hasAttrs = PR_FALSE;
@@ -1563,7 +1573,7 @@ nsXFormsSubmissionElement::CopyChildren(nsIModelElementPrivate *aModel,
         
           nsresult rv = NS_OK;
           PRUint32 length;
-          nsCOMPtr<nsIDOMElement> destElem(do_QueryInterface(destChild));
+          nsCOMPtr<nsIDOMElement> destElem(do_QueryInterface(node));
           attrMap->GetLength(&length);
         
           for (PRUint32 run = 0; run < length; ++run) {
@@ -1624,17 +1634,13 @@ nsXFormsSubmissionElement::CopyChildren(nsIModelElementPrivate *aModel,
           }
         }
 
-        // ImportNode does not copy any properties of the currentNode. If the
-        // node has an uploadFileProperty we need to copy it to the submission
-        // document so that local files will be attached properly when the
-        // submission format is multipart-related.
         void* uploadFileProperty = nsnull;
         nsCOMPtr<nsIContent> currentNodeContent(do_QueryInterface(currentNode));
         if (currentNodeContent) {
           uploadFileProperty =
             currentNodeContent->GetProperty(nsXFormsAtoms::uploadFileProperty);
           if (uploadFileProperty) {
-            nsCOMPtr<nsIContent> destChildContent(do_QueryInterface(destChild));
+            nsCOMPtr<nsIContent> destChildContent(do_QueryInterface(node));
             if (destChildContent) {
               // Clone the local file so the same pointer isn't released twice.
               nsIFile *file = NS_STATIC_CAST(nsIFile *, uploadFileProperty);
@@ -1647,8 +1653,6 @@ nsXFormsSubmissionElement::CopyChildren(nsIModelElementPrivate *aModel,
             }
           }
         }
-
-        aDest->AppendChild(destChild, getter_AddRefs(node));
 
         // recurse
         nsCOMPtr<nsIDOMNode> startNode;
@@ -2179,6 +2183,8 @@ nsXFormsSubmissionElement::SendData(const nsCString &uriSpec,
   nsCOMPtr<nsIIOService> ios = do_GetIOService();
   NS_ENSURE_STATE(ios);
 
+  nsCOMPtr<nsIURI> currURI = doc->GetDocumentURI();
+
   // Any parameters appended to uriSpec are already ASCII-encoded per the rules
   // of section 11.6.  Use our standard document charset based canonicalization
   // for any other non-ASCII bytes.  (This might be important for compatibility
@@ -2186,7 +2192,7 @@ nsXFormsSubmissionElement::SendData(const nsCString &uriSpec,
   nsCOMPtr<nsIURI> uri;
   ios->NewURI(uriSpec,
               doc->GetDocumentCharacterSet().get(),
-              doc->GetDocumentURI(),
+              currURI,
               getter_AddRefs(uri));
   NS_ENSURE_STATE(uri);
 
@@ -2290,10 +2296,13 @@ nsXFormsSubmissionElement::SendData(const nsCString &uriSpec,
   NS_ENSURE_STATE(channel);
 
   PRBool ignoreStream = PR_FALSE;
-  nsCOMPtr<nsIHttpChannel> httpChannel;
+  nsCOMPtr<nsIHttpChannel> httpChannel(do_QueryInterface(channel));
+
+  if (httpChannel) {
+    httpChannel->SetReferrer(currURI);
+  }
 
   if (mFormat & METHOD_POST) {
-    httpChannel = do_QueryInterface(channel);
     if (!httpChannel) {
       // The spec doesn't really say how to handle post with anything other
       // than http.  So we are free to make up our own rules.

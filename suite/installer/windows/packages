@@ -59,6 +59,8 @@ bin\README.txt,bin\readme.txt
 bin\LICENSE,bin\license.txt
 bin\jpeg3250.dll
 bin\seamonkey.exe
+bin\application.ini
+bin\platform.ini
 bin\regxpcom.exe
 bin\xpicleanup.exe
 bin\jsj3250.dll
@@ -230,6 +232,7 @@ bin\components\xpautoc.dll
 bin\components\xpautocomplete.xpt
 bin\components\xpc3250.dll
 bin\components\xpcom_base.xpt
+bin\components\xpcom_system.xpt
 bin\components\xpcom_components.xpt
 bin\components\xpcom_ds.xpt
 bin\components\xpcom_io.xpt
@@ -272,6 +275,9 @@ bin\components\pluginGlue.js
 bin\components\txEXSLTRegExFunctions.js
 bin\components\nsAboutAbout.js
 bin\components\nsDefaultCLH.js
+
+; Modules
+bin\modules\*
 
 ; NegotiateAuth
 bin\components\auth.dll
@@ -510,14 +516,6 @@ bin\components\mdn-service.js
 bin\components\nsSetDefaultMail.js
 bin\components\nsUnsetDefaultMail.js
 bin\components\offlineStartup.js
-;these Palm Sync files are conditionally built so would not exist unless built
-bin\extensions\p@m\install.rdf
-bin\extensions\p@m\mozABConduit.dll
-bin\extensions\p@m\PalmSyncInstall.exe
-bin\extensions\p@m\PalmSyncProxy.dll
-bin\extensions\p@m\palmsync.dll
-bin\extensions\p@m\palmsync.xpt
-bin\extensions\p@m\defaults\preferences\palmsync.js
 
 [chatzilla]
 bin\components\chatzilla-service.js
@@ -555,3 +553,16 @@ bin\extensions\inspector@mozilla.org\defaults\preferences\inspector.js
 bin\chrome\reporter.jar
 bin\chrome\reporter.manifest
 
+[debugqa]
+bin\extensions\debugQA@mozilla.org\install.rdf
+bin\extensions\debugQA@mozilla.org\chrome.manifest
+bin\extensions\debugQA@mozilla.org\chrome\debugqa.jar
+
+[palmsync]
+bin\extensions\p@m\install.rdf
+bin\extensions\p@m\mozABConduit.dll
+bin\extensions\p@m\PalmSyncInstall.exe
+bin\extensions\p@m\PalmSyncProxy.dll
+bin\extensions\p@m\palmsync.dll
+bin\extensions\p@m\palmsync.xpt
+bin\extensions\p@m\defaults\preferences\palmsync.js

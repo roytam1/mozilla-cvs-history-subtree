@@ -1053,7 +1053,7 @@ js_InitScriptClass(JSContext *cx, JSObject *obj)
 JS_STATIC_DLL_CALLBACK(int)
 js_compare_strings(const void *k1, const void *k2)
 {
-    return strcmp(k1, k2) == 0;
+    return strcmp((const char *) k1, (const char *) k2) == 0;
 }
 
 /* Shared with jsatom.c to save code space. */
@@ -1076,7 +1076,8 @@ typedef struct ScriptFilenameEntry {
 JS_STATIC_DLL_CALLBACK(JSHashEntry *)
 js_alloc_sftbl_entry(void *priv, const void *key)
 {
-    size_t nbytes = offsetof(ScriptFilenameEntry, filename) + strlen(key) + 1;
+    size_t nbytes = offsetof(ScriptFilenameEntry, filename) +
+                    strlen((const char *) key) + 1;
 
     return (JSHashEntry *) malloc(JS_MAX(nbytes, sizeof(JSHashEntry)));
 }
@@ -1398,15 +1399,15 @@ js_NewScript(JSContext *cx, uint32 length, uint32 nsrcnotes, uint32 ntrynotes)
 JS_FRIEND_API(JSScript *)
 js_NewScriptFromCG(JSContext *cx, JSCodeGenerator *cg, JSFunction *fun)
 {
-    uint32 mainLength, prologLength, nsrcnotes, ntrynotes;
+    uint32 mainLength, prologLength, nsrcnotes;
     JSScript *script;
     const char *filename;
 
     mainLength = CG_OFFSET(cg);
     prologLength = CG_PROLOG_OFFSET(cg);
     CG_COUNT_FINAL_SRCNOTES(cg, nsrcnotes);
-    ntrynotes = (uint32)(cg->tryNext - cg->tryBase);
-    script = js_NewScript(cx, prologLength + mainLength, nsrcnotes, ntrynotes);
+    script = js_NewScript(cx, prologLength + mainLength, nsrcnotes,
+                          cg->ntrynotes);
     if (!script)
         return NULL;
 

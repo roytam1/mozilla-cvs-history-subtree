@@ -69,7 +69,7 @@ interface nsIAbDirectoryProperties : nsISupports {
   attribute long position;
 };
 
-[scriptable, uuid(2f8feba2-23fd-49cf-b154-41432506af8d)]
+[scriptable, uuid(95eb0c05-1c91-4daf-850e-066c495519c4)]
 interface nsIAbDirectory : nsISupports {
 
   // Types of operation
@@ -87,13 +87,16 @@ interface nsIAbDirectory : nsISupports {
   // The supported operations
   readonly attribute long operations;
 
-  // The description of the directory
-  attribute wstring dirName;
+  /**
+   * The description of the directory. If this directory is not a mailing list,
+   * then setting this attribute will send round a "DirName" update via
+   * nsIAddrBookSession.
+   */
+  attribute AString dirName;
 
   // XXX This should really be replaced by a QI or something better
   readonly attribute long dirType;
 
-  // XXX These are readonly for now, until we get nsIAbDirectoryProperties
   // eliminated a bit more.
 
   // The filename for address books within this directory.
@@ -105,17 +108,12 @@ interface nsIAbDirectory : nsISupports {
   // The position of the directory on the display.
   readonly attribute long position;
 
-  // XXX End "readonly XXX"
-
   // will be used for LDAP replication
   attribute unsigned long lastModifiedDate;
 
   // Defines whether this directory is a mail
   // list or not
   attribute PRBool isMailList;
-
-  // Get the directory properties
-  readonly attribute nsIAbDirectoryProperties directoryProperties;
 
   // Get the children directories
   readonly attribute nsISimpleEnumerator childNodes;
@@ -125,10 +123,6 @@ interface nsIAbDirectory : nsISupports {
    * associated with the mailing lists too.
    */
   readonly attribute nsISimpleEnumerator childCards;
-
-  // Modifies a top level directory, 
-  // which also updates the preferences
-  void modifyDirectory(in nsIAbDirectory directory, in nsIAbDirectoryProperties aProperties);
 
   // Deletes either a mailing list or a top
   // level directory, which also updates the

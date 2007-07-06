@@ -112,9 +112,6 @@ function weekPrint_format(aStream, aStart, aEnd, aCount, aItems, aTitle) {
     var weekFormatter = Components.classes["@mozilla.org/calendar/weektitle-service;1"]
                                   .getService(Components.interfaces.calIWeekTitleService);
 
-    // A place to cache the string for "All Day" events later if we need it.
-    var mAllDayString = null;
-
     // Start at the beginning of the week that aStart is in, and loop until
     // we're at aEnd. In the loop we build the HTML table for each day, and
     // get the day's items using getDayTd().
@@ -209,7 +206,8 @@ function weekPrint_getDayTable(aDate, aItems) {
     var mainTd = <td border='1px solid black;' width="50%" valign='top'/>
     var dateFormatter = Components.classes["@mozilla.org/calendar/datetime-formatter;1"]
                                   .getService(Components.interfaces.calIDateTimeFormatter);
-    var dateString = dateFormatter.formatDateLong(aDate);
+    var defaultTimezone = calendarDefaultTimezone();
+    var dateString = dateFormatter.formatDateLong(aDate.getInTimezone(defaultTimezone));
 
     // Add the formatted date string (in its own child HTML table)
     mainTd.appendChild(
@@ -224,6 +222,12 @@ function weekPrint_getDayTable(aDate, aItems) {
     for each (var item in aItems) {
         var sDate = item.startDate || item.entryDate || item.dueDate;
         var eDate = item.endDate || item.dueDate || item.entryDate;
+        if (sDate) {
+            sDate = sDate.getInTimezone(defaultTimezone);
+        }
+        if (eDate) {
+            eDate = eDate.getInTimezone(defaultTimezone);
+        }
 
         // End dates are exclusive. Adjust the eDate accordingly.
         if (sDate && sDate.isDate && eDate) {
@@ -243,29 +247,13 @@ function weekPrint_getDayTable(aDate, aItems) {
             break;
         }
 
-        function getStringForDate(aDate) {
-            if (!aDate.isDate) {
-                return dateFormatter.formatTime(aDate);
-            }
-
-            // We cache the string for "All Day" 'cause we're good like that.
-            if (this.mAllDayString == null) {
-                this.mAllDayString = calGetString("dateFormat", "AllDay");
-            }
-            return this.mAllDayString;
-        }
-
-        var time;
-        if (sDate && eDate) {
-            if (!sDate.isDate) {
-                time = getStringForDate(sDate) + '-' + getStringForDate(eDate);
-            } else {
-                time = getStringForDate(sDate);
-            }
-        } else if (sDate) {
-            time = getStringForDate(sDate);
-        } else if (eDate) {
-            time = getStringForDate(eDate);
+        var time = "";
+        if (sDate && eDate && !sDate.isDate) {
+            time = dateFormatter.formatTime(sDate) + '-' + dateFormatter.formatTime(eDate);
+        } else if (sDate && !sDate.isDate) {
+            time = dateFormatter.formatTime(sDate);
+        } else if (eDate && !eDate.isDate) {
+            time = dateFormatter.formatTime(eDate);
         }
 
         // Get calendar and category colours and apply them to the item's

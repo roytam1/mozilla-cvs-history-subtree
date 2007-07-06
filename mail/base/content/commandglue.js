@@ -348,6 +348,7 @@ function RerootFolder(uri, newFolder, viewType, viewFlags, sortType, sortOrder)
   if (gSearchSession && !gVirtualFolderTerms) // another var might be better...
   {
     viewDebug("doing a xf folder search in rerootFolder\n");
+    gCurrentLoadingFolderURI = ""
     ViewChangeByFolder(newFolder);
     gPreQuickSearchView = null; // don't remember the cross folder search
     ScrollToMessageAfterFolderLoad(newFolder);
@@ -561,10 +562,10 @@ function ConvertColumnIDToSortType(columnID)
       sortKey = nsMsgViewSortType.byDate;
       break;
     case "senderCol":
-    	sortKey = nsMsgViewSortType.byAuthor;
+      sortKey = nsMsgViewSortType.byAuthor;
       break;
     case "recipientCol":
-    	sortKey = nsMsgViewSortType.byRecipient;
+      sortKey = nsMsgViewSortType.byRecipient;
       break;
     case "subjectCol":
       sortKey = nsMsgViewSortType.bySubject;
@@ -603,8 +604,8 @@ function ConvertColumnIDToSortType(columnID)
       sortKey = nsMsgViewSortType.byId;
       break;
     case "attachmentCol":
-	    sortKey = nsMsgViewSortType.byAttachments;
-	    break;
+      sortKey = nsMsgViewSortType.byAttachments;
+      break;
     default:
       
       //no predefined column handler - lets check if there is a custom column handler
@@ -682,9 +683,9 @@ function ConvertSortTypeToColumnID(sortKey)
     case nsMsgViewSortType.byJunkStatus:
       columnID = "junkStatusCol";
       break;
-	  case nsMsgViewSortType.byAttachments:
-	    columnID = "attachmentCol";
-	    break;
+    case nsMsgViewSortType.byAttachments:
+      columnID = "attachmentCol";
+      break;
     case nsMsgViewSortType.byCustom:
 
       //TODO: either change try() catch to if (property exists) or restore the getColumnHandler() check
@@ -889,7 +890,7 @@ function FolderPaneSelectionChange()
         if (msgFolder == gMsgFolderSelected)
            return;
 
-	      gPrevSelectedFolder = gMsgFolderSelected;
+        gPrevSelectedFolder = gMsgFolderSelected;
         gMsgFolderSelected = msgFolder;
         UpdateFolderLocationPicker(gMsgFolderSelected);
         var folderFlags = msgFolder.flags;
@@ -996,6 +997,7 @@ function FolderPaneSelectionChange()
             if (gVirtualFolderTerms)
               gDBView.viewFolder = msgFolder;
         }
+        document.getElementById('tabmail').setTabTitle(null);
     }
     else
     {
@@ -1013,7 +1015,7 @@ function FolderPaneSelectionChange()
         loadStartPage();
         gDisplayStartupPage = false;
         UpdateMailToolbar("gDisplayStartupPage");
-    }    
+    }  
 }
 
 function ClearThreadPane()
@@ -1070,12 +1072,12 @@ function GetSelectTrashUri(folder)
 
 function Undo()
 {
-    messenger.Undo(msgWindow);
+    messenger.undo(msgWindow);
 }
 
 function Redo()
 {
-    messenger.Redo(msgWindow);
+    messenger.redo(msgWindow);
 }
 
 function getSearchTermString(searchTerms)

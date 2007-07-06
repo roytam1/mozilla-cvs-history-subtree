@@ -135,13 +135,23 @@ nsTableCellFrame::NotifyPercentHeight(const nsHTMLReflowState& aReflowState)
     // are based on the height of the cell, since its containing block
     // is the inner cell frame.
 
-    for (const nsHTMLReflowState *rs = aReflowState.parentReflowState;
-         rs != cellRS;
-         rs = rs->parentReflowState) {
-      rs->frame->AddStateBits(NS_FRAME_CONTAINS_RELATIVE_HEIGHT);
-    }
+    // We'll only honor the percent height if sibling-cells/ancestors
+    // have specified/pct height. (Also, siblings only count for this if
+    // both this cell and the sibling cell span exactly 1 row.)
 
-    nsTableFrame::RequestSpecialHeightReflow(*cellRS);
+    if (nsTableFrame::AncestorsHaveStyleHeight(*cellRS) ||
+        (nsTableFrame::GetTableFrame(this)->GetEffectiveRowSpan(*this) == 1 &&
+         (cellRS->parentReflowState->frame->GetStateBits() &
+          NS_ROW_HAS_CELL_WITH_STYLE_HEIGHT))) {
+
+      for (const nsHTMLReflowState *rs = aReflowState.parentReflowState;
+           rs != cellRS;
+           rs = rs->parentReflowState) {
+        rs->frame->AddStateBits(NS_FRAME_CONTAINS_RELATIVE_HEIGHT);
+      }
+      
+      nsTableFrame::RequestSpecialHeightReflow(*cellRS);
+    }
   }
 }
 
@@ -211,6 +221,13 @@ nsTableCellFrame::AttributeChanged(PRInt32         aNameSpaceID,
                                    nsIAtom*        aAttribute,
                                    PRInt32         aModType)
 {
+  // We need to recalculate in this case because of the nowrap quirk in
+  // BasicTableLayoutStrategy
+  if (aNameSpaceID == kNameSpaceID_None && aAttribute == nsGkAtoms::nowrap &&
+      PresContext()->CompatibilityMode() == eCompatibility_NavQuirks) {
+    PresContext()->PresShell()->
+      FrameNeedsReflow(this, nsIPresShell::eTreeChange, NS_FRAME_IS_DIRTY);
+  }
   // let the table frame decide what to do
   nsTableFrame* tableFrame = nsTableFrame::GetTableFrame(this);
   if (tableFrame) {
@@ -894,18 +911,17 @@ NS_METHOD nsTableCellFrame::Reflow(nsPresContext*          aPresContext,
 NS_IMPL_ADDREF_INHERITED(nsTableCellFrame, nsHTMLContainerFrame)
 NS_IMPL_RELEASE_INHERITED(nsTableCellFrame, nsHTMLContainerFrame)
 
-nsresult nsTableCellFrame::QueryInterface(const nsIID& aIID, void** aInstancePtr)
+NS_IMETHODIMP
+nsTableCellFrame::QueryInterface(const nsIID& aIID, void** aInstancePtr)
 {
-  if (NULL == aInstancePtr) {
-    return NS_ERROR_NULL_POINTER;
-  }
+  NS_PRECONDITION(aInstancePtr, "null out param");
 
   if (aIID.Equals(NS_GET_IID(nsITableCellLayout))) {
-    *aInstancePtr = (void*) (nsITableCellLayout *)this;
+    *aInstancePtr = NS_STATIC_CAST(nsITableCellLayout*, this);
     return NS_OK;
   }
   if (aIID.Equals(NS_GET_IID(nsIPercentHeightObserver))) {
-    *aInstancePtr = (void*) (nsIPercentHeightObserver *)this;
+    *aInstancePtr = NS_STATIC_CAST(nsIPercentHeightObserver*, this);
     return NS_OK;
   }
 

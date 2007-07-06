@@ -93,7 +93,6 @@ bin/xpicleanup
 bin/res/cmessage.txt
 ; this is used by gtk embedding clients
 bin/libgtkembedmoz.so
-; This is used by libgfxps
 bin/libgfxpsshar.so
 bin/components/alerts.xpt
 bin/components/libaccessibility.so
@@ -393,6 +392,8 @@ bin/res/html.css
 bin/res/quirk.css
 bin/res/forms.css
 bin/res/EditorOverride.css
+bin/res/contenteditable.css
+bin/res/designmode.css
 bin/res/grabber.gif
 bin/res/table-add-column-after-active.gif
 bin/res/table-add-column-after-hover.gif

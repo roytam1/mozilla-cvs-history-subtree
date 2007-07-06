@@ -924,9 +924,6 @@ nsLineLayout::ReflowFrame(nsIFrame* aFrame,
         else {
           placedFloat = AddFloat(placeholder, aReflowStatus);
         }
-        if (!placedFloat) {
-          aReflowStatus = NS_INLINE_LINE_BREAK_BEFORE();
-        }
         if (outOfFlowFrame->GetType() == nsGkAtoms::letterFrame) {
           SetFlag(LL_FIRSTLETTERSTYLEOK, PR_FALSE);
         }
@@ -2709,25 +2706,4 @@ nsLineLayout::RelativePositionFrames(PerSpanData* psd, nsRect& aCombinedArea)
     frame->FinishAndStoreOverflow(&combinedAreaResult, frame->GetSize());
   }
   aCombinedArea = combinedAreaResult;
-}
-
-PRBool
-nsLineLayout::TreatFrameAsBlock(nsIFrame* aFrame)
-{
-  const nsStyleDisplay* display = aFrame->GetStyleDisplay();
-  if (NS_STYLE_POSITION_ABSOLUTE == display->mPosition) {
-    return PR_FALSE;
-  }
-  if (NS_STYLE_FLOAT_NONE != display->mFloats) {
-    return PR_FALSE;
-  }
-  switch (display->mDisplay) {
-  case NS_STYLE_DISPLAY_BLOCK:
-  case NS_STYLE_DISPLAY_LIST_ITEM:
-  case NS_STYLE_DISPLAY_RUN_IN:
-  case NS_STYLE_DISPLAY_COMPACT:
-  case NS_STYLE_DISPLAY_TABLE:
-    return PR_TRUE;
-  }
-  return PR_FALSE;
 }

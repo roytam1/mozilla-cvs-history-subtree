@@ -3682,6 +3682,7 @@ nsDocument::GetBoxObjectFor(nsIDOMElement* aElement, nsIBoxObject** aResult)
       contractID += "-menu";
     else if (tag == nsGkAtoms::popup ||
              tag == nsGkAtoms::menupopup ||
+             tag == nsGkAtoms::panel ||
              tag == nsGkAtoms::tooltip)
       contractID += "-popup";
     else if (tag == nsGkAtoms::tree)
@@ -5662,6 +5663,14 @@ nsDocument::OnPageHide(PRBool aPersisted)
 }
 
 void
+nsDocument::MayDispatchMutationEvent(nsINode* aTarget)
+{
+  if (mSubtreeModifiedDepth > 0) {
+    mSubtreeModifiedTargets.AppendObject(aTarget);
+  }
+}
+
+void
 nsDocument::WillDispatchMutationEvent(nsINode* aTarget)
 {
   NS_ASSERTION(mSubtreeModifiedDepth != 0 ||
@@ -5669,7 +5678,12 @@ nsDocument::WillDispatchMutationEvent(nsINode* aTarget)
                "mSubtreeModifiedTargets not cleared after dispatching?");
   ++mSubtreeModifiedDepth;
   if (aTarget) {
-    mSubtreeModifiedTargets.AppendObject(aTarget);
+    // MayDispatchMutationEvent is often called just before this method,
+    // so it has already appended the node to mSubtreeModifiedTargets.
+    PRInt32 count = mSubtreeModifiedTargets.Count();
+    if (!count || mSubtreeModifiedTargets[count - 1] != aTarget) {
+      mSubtreeModifiedTargets.AppendObject(aTarget);
+    }
   }
 }
 

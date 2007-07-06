@@ -95,31 +95,14 @@ ContentPrefService.prototype = {
     this._observerSvc.removeObserver(this, "xpcom-shutdown");
 
     // Delete references to XPCOM components to make sure we don't leak them
-    // (although we haven't observed leakage in tests).
-    this.__observerSvc = null;
-    this.__consoleSvc = null;
-    this._grouper = null;
-    this.__stmtSelectPref = null;
-    this.__stmtSelectGlobalPref = null;
-    this.__stmtSelectGroupID = null;
-    this.__stmtInsertGroup = null;
-    this.__stmtSelectSettingID = null;
-    this.__stmtInsertSetting = null;
-    this.__stmtSelectPrefID = null;
-    this.__stmtSelectGlobalPrefID = null;
-    this.__stmtInsertPref = null;
-    this.__stmtUpdatePref = null;
-    this.__stmtDeletePref = null;
-    this.__stmtDeleteSettingIfUnused = null;
-    this.__stmtDeleteGroupIfUnused = null;
-    this.__stmtSelectPrefs = null;
-    this.__stmtSelectGlobalPrefs = null;
-    this._dbConnection = null;
-
-    // Delete references to observers to avoid cycles with those that refer
-    // to us and don't remove themselves from the observer pool.
-    this._observers = {};
-    this._genericObservers = [];
+    // (although we haven't observed leakage in tests).  Also delete references
+    // in _observers and _genericObservers to avoid cycles with those that
+    // refer to us and don't remove themselves from those observer pools.
+    for (var i in this) {
+      try { this[i] = null }
+      // Ignore "setting a property that has only a getter" exceptions.
+      catch(ex) {}
+    }
   },
 
 
@@ -128,11 +111,11 @@ ContentPrefService.prototype = {
 
   observe: function ContentPrefService_observe(subject, topic, data) {
     switch (topic) {
-    case "xpcom-shutdown":
-      this._destroy();
-      break;
-    default:
-      break;
+      case "xpcom-shutdown":
+        this._destroy();
+        break;
+      default:
+        break;
     }
   },
 
@@ -145,8 +128,8 @@ ContentPrefService.prototype = {
       var group = this.grouper.group(aURI);
       return this._selectPref(group, aName);
     }
-    else
-      return this._selectGlobalPref(aName);
+
+    return this._selectGlobalPref(aName);
   },
 
   setPref: function ContentPrefService_setPref(aURI, aName, aValue) {
@@ -230,8 +213,8 @@ ContentPrefService.prototype = {
       var group = this.grouper.group(aURI);
       return this._selectPrefs(group);
     }
-    else
-      return this._selectGlobalPrefs();
+
+    return this._selectGlobalPrefs();
   },
 
   // A hash of arrays of observers, indexed by setting name.
@@ -706,15 +689,7 @@ ContentPrefService.prototype = {
         dbConnection = dbService.openDatabase(dbFile);
 
         // Get the version of the database in the file.
-        var statement, version;
-        try {
-          statement = dbConnection.createStatement("PRAGMA user_version");
-          statement.executeStep();
-          version = statement.getInt32(0);
-        }
-        finally {
-          statement.reset();
-        }
+        var version = dbConnection.schemaVersion;
 
         if (version != this._dbVersion) {
           this._log("database: v" + version + ", application: v" +
@@ -750,7 +725,7 @@ ContentPrefService.prototype = {
       var dbConnection = aDBService.openDatabase(aDBFile);
       for (var table in this._dbSchema)
         dbConnection.createTable(table, this._dbSchema[table]);
-      dbConnection.executeSimpleSQL("PRAGMA user_version = " + this._dbVersion);
+      dbConnection.schemaVersion = this._dbVersion;
       return dbConnection;
   },
 
@@ -802,7 +777,7 @@ ContentPrefService.prototype = {
     aDBConnection.executeSimpleSQL("DROP TABLE keys");
     aDBConnection.executeSimpleSQL("DROP TABLE sites");
 
-    aDBConnection.executeSimpleSQL("PRAGMA user_version = " + this._dbVersion);
+    aDBConnection.schemaVersion = this._dbVersion;
   },
 
   _dbMigrate1To2: function ContentPrefService___dbMigrate1To2(aDBConnection) {
@@ -818,7 +793,7 @@ ContentPrefService.prototype = {
     aDBConnection.executeSimpleSQL("DROP TABLE groupers");
     aDBConnection.executeSimpleSQL("DROP TABLE groupsOld");
 
-    aDBConnection.executeSimpleSQL("PRAGMA user_version = " + this._dbVersion);
+    aDBConnection.schemaVersion = this._dbVersion;
   },
 
 
@@ -837,11 +812,13 @@ ContentPrefService.prototype = {
       var prefBranch = Cc["@mozilla.org/preferences-service;1"].
                        getService(Ci.nsIPrefBranch);
       switch (prefBranch.getPrefType(aPrefName)) {
-      case prefBranch.PREF_STRING:
+        case prefBranch.PREF_STRING:
           return prefBranch.getCharPref(aPrefName);
-      case prefBranch.PREF_INT:
+
+        case prefBranch.PREF_INT:
           return prefBranch.getIntPref(aPrefName);
-      case prefBranch.PREF_BOOL:
+
+        case prefBranch.PREF_BOOL:
           return prefBranch.getBoolPref(aPrefName);
       }
     }

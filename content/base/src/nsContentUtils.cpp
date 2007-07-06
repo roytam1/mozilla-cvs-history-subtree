@@ -138,6 +138,8 @@ static NS_DEFINE_CID(kXTFServiceCID, NS_XTFSERVICE_CID);
 #include "nsIKBStateControl.h"
 #include "nsIMEStateManager.h"
 #include "nsContentErrors.h"
+#include "nsUnicharUtilCIID.h"
+#include "nsICaseConversion.h"
 
 #ifdef IBMBIDI
 #include "nsIBidiKeyboard.h"
@@ -176,6 +178,7 @@ nsIContentPolicy *nsContentUtils::sContentPolicyService;
 PRBool nsContentUtils::sTriedToGetContentPolicy = PR_FALSE;
 nsILineBreaker *nsContentUtils::sLineBreaker;
 nsIWordBreaker *nsContentUtils::sWordBreaker;
+nsICaseConversion *nsContentUtils::sCaseConv;
 nsVoidArray *nsContentUtils::sPtrsToPtrsToRelease;
 nsIJSRuntimeService *nsContentUtils::sJSRuntimeService;
 JSRuntime *nsContentUtils::sJSScriptRuntime;
@@ -270,6 +273,9 @@ nsContentUtils::Init()
   NS_ENSURE_SUCCESS(rv, rv);
   
   rv = CallGetService(NS_WBRK_CONTRACTID, &sWordBreaker);
+  NS_ENSURE_SUCCESS(rv, rv);
+  
+  rv = CallGetService(NS_UNICHARUTIL_CONTRACTID, &sCaseConv);
   NS_ENSURE_SUCCESS(rv, rv);
 
   // Ignore failure and just don't load images
@@ -667,6 +673,7 @@ nsContentUtils::Shutdown()
   NS_IF_RELEASE(sIOService);
   NS_IF_RELEASE(sLineBreaker);
   NS_IF_RELEASE(sWordBreaker);
+  NS_IF_RELEASE(sCaseConv);
 #ifdef MOZ_XTF
   NS_IF_RELEASE(sXTFService);
 #endif
@@ -2049,10 +2056,12 @@ nsContentUtils::SplitExpatName(const PRUnichar *aExpatName, nsIAtom **aPrefix,
 PRBool
 nsContentUtils::CanLoadImage(nsIURI* aURI, nsISupports* aContext,
                              nsIDocument* aLoadingDocument,
+                             nsIPrincipal* aLoadingPrincipal,
                              PRInt16* aImageBlockingStatus)
 {
   NS_PRECONDITION(aURI, "Must have a URI");
   NS_PRECONDITION(aLoadingDocument, "Must have a document");
+  NS_PRECONDITION(aLoadingPrincipal, "Must have a loading principal");
 
   nsresult rv;
 
@@ -2077,9 +2086,10 @@ nsContentUtils::CanLoadImage(nsIURI* aURI, nsISupports* aContext,
 
   if (appType != nsIDocShell::APP_TYPE_EDITOR) {
     // Editor apps get special treatment here, editors can load images
-    // from anywhere.
+    // from anywhere.  This allows editor to insert images from file://
+    // into documents that are being edited.
     rv = sSecurityManager->
-      CheckLoadURIWithPrincipal(aLoadingDocument->NodePrincipal(), aURI,
+      CheckLoadURIWithPrincipal(aLoadingPrincipal, aURI,
                                 nsIScriptSecurityManager::ALLOW_CHROME);
     if (NS_FAILED(rv)) {
       if (aImageBlockingStatus) {
@@ -2091,11 +2101,15 @@ nsContentUtils::CanLoadImage(nsIURI* aURI, nsISupports* aContext,
     }
   }
 
+  nsCOMPtr<nsIURI> loadingURI;
+  rv = aLoadingPrincipal->GetURI(getter_AddRefs(loadingURI));
+  NS_ENSURE_SUCCESS(rv, PR_FALSE);
+
   PRInt16 decision = nsIContentPolicy::ACCEPT;
 
   rv = NS_CheckContentLoadPolicy(nsIContentPolicy::TYPE_IMAGE,
                                  aURI,
-                                 aLoadingDocument->GetDocumentURI(),
+                                 loadingURI,
                                  aContext,
                                  EmptyCString(), //mime guess
                                  nsnull,         //extra
@@ -2112,11 +2126,13 @@ nsContentUtils::CanLoadImage(nsIURI* aURI, nsISupports* aContext,
 // static
 nsresult
 nsContentUtils::LoadImage(nsIURI* aURI, nsIDocument* aLoadingDocument,
-                          nsIURI* aReferrer, imgIDecoderObserver* aObserver,
-                          PRInt32 aLoadFlags, imgIRequest** aRequest)
+                          nsIPrincipal* aLoadingPrincipal, nsIURI* aReferrer,
+                          imgIDecoderObserver* aObserver, PRInt32 aLoadFlags,
+                          imgIRequest** aRequest)
 {
   NS_PRECONDITION(aURI, "Must have a URI");
   NS_PRECONDITION(aLoadingDocument, "Must have a document");
+  NS_PRECONDITION(aLoadingPrincipal, "Must have a principal");
   NS_PRECONDITION(aRequest, "Null out param");
 
   if (!sImgLoader) {
@@ -2128,6 +2144,9 @@ nsContentUtils::LoadImage(nsIURI* aURI, nsIDocument* aLoadingDocument,
   NS_ASSERTION(loadGroup, "Could not get loadgroup; onload may fire too early");
 
   nsIURI *documentURI = aLoadingDocument->GetDocumentURI();
+
+  // We don't use aLoadingPrincipal for anything here yet... but we
+  // will.  See bug 377092.
 
   // XXXbz using "documentURI" for the initialDocumentURI is not quite
   // right, but the best we can do here...
@@ -2959,18 +2978,15 @@ nsContentUtils::HasNonEmptyAttr(nsIContent* aContent, PRInt32 aNameSpaceID,
 /* static */
 PRBool
 nsContentUtils::HasMutationListeners(nsINode* aNode,
-                                     PRUint32 aType)
+                                     PRUint32 aType,
+                                     nsINode* aTargetForSubtreeModified)
 {
   nsIDocument* doc = aNode->GetOwnerDoc();
   if (!doc) {
     return PR_FALSE;
   }
 
-  // To batch DOMSubtreeModified properly, all mutation events should be
-  // processed if one is being processed already.
-  if (doc->MutationEventBeingDispatched()) {
-    return PR_TRUE;
-  }
+  doc->MayDispatchMutationEvent(aTargetForSubtreeModified);
 
   // global object will be null for documents that don't have windows.
   nsCOMPtr<nsPIDOMWindow> window;
@@ -3495,6 +3511,7 @@ nsContentUtils::GetDOMScriptObjectFactory()
 nsresult
 nsContentUtils::HoldScriptObject(PRUint32 aLangID, void *aObject)
 {
+  NS_ASSERTION(aObject, "unexpected null object");
   nsresult rv;
 
   PRUint32 langIndex = NS_STID_INDEX(aLangID);
@@ -3514,6 +3531,8 @@ nsContentUtils::HoldScriptObject(PRUint32 aLangID, void *aObject)
   NS_ENSURE_SUCCESS(rv, rv);
 
   ++sScriptRootCount[langIndex];
+  NS_LOG_ADDREF(sScriptRuntimes[langIndex], sScriptRootCount[langIndex],
+                "HoldScriptObject", sizeof(void*));
 
   return NS_OK;
 }
@@ -3522,7 +3541,10 @@ nsContentUtils::HoldScriptObject(PRUint32 aLangID, void *aObject)
 nsresult
 nsContentUtils::DropScriptObject(PRUint32 aLangID, void *aObject)
 {
+  NS_ASSERTION(aObject, "unexpected null object");
   PRUint32 langIndex = NS_STID_INDEX(aLangID);
+  NS_LOG_RELEASE(sScriptRuntimes[langIndex], sScriptRootCount[langIndex] - 1,
+                 "HoldScriptObject");
   nsresult rv = sScriptRuntimes[langIndex]->DropScriptObject(aObject);
   if (--sScriptRootCount[langIndex] == 0) {
     NS_RELEASE(sScriptRuntimes[langIndex]);

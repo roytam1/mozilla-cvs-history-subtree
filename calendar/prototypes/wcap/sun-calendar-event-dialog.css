@@ -35,7 +35,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 /* we don't want the default padding for dialog windows */
-dialog {
+#sun-calendar-event-dialog {
   padding: 0px;
 }
 
@@ -451,3 +451,18 @@ listbox {
 listboxbody {
   overflow-y: hidden !important;
 }
+
+.selection-bar-left {
+  width: 3px;
+  cursor: w-resize;
+}
+
+.selection-bar-right {
+  width: 3px;
+  cursor: e-resize;
+}
+
+.selection-bar-spacer {
+  cursor: -moz-grab;
+}
+

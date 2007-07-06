@@ -331,13 +331,13 @@ NS_IMETHODIMP
 nsBlockFrame::QueryInterface(const nsIID& aIID, void** aInstancePtr)
 {
   NS_PRECONDITION(aInstancePtr, "null out param");
+
   if (aIID.Equals(kBlockFrameCID)) {
     *aInstancePtr = NS_STATIC_CAST(void*, NS_STATIC_CAST(nsBlockFrame*, this));
     return NS_OK;
   }
   if (aIID.Equals(NS_GET_IID(nsILineIterator)) ||
-      aIID.Equals(NS_GET_IID(nsILineIteratorNavigator)))
-  {
+      aIID.Equals(NS_GET_IID(nsILineIteratorNavigator))) {
     nsLineIterator* it = new nsLineIterator;
     if (!it) {
       *aInstancePtr = nsnull;
@@ -348,13 +348,14 @@ nsBlockFrame::QueryInterface(const nsIID& aIID, void** aInstancePtr)
     nsresult rv = it->Init(mLines,
                            visibility->mDirection == NS_STYLE_DIRECTION_RTL);
     if (NS_FAILED(rv)) {
+      *aInstancePtr = nsnull;
       NS_RELEASE(it);
       return rv;
     }
-    *aInstancePtr = NS_STATIC_CAST(void*,
-            NS_STATIC_CAST(nsILineIteratorNavigator*, it));
+    *aInstancePtr = NS_STATIC_CAST(nsILineIteratorNavigator*, it);
     return NS_OK;
   }
+
   return nsBlockFrameSuper::QueryInterface(aIID, aInstancePtr);
 }
 
@@ -641,26 +642,31 @@ nsBlockFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
   ResolveBidi();
 #endif // IBMBIDI
 
-  PRInt32 lineNumber = 0;
   InlineMinWidthData data;
   for (line_iterator line = begin_lines(), line_end = end_lines();
-       line != line_end; ++line, ++lineNumber)
+       line != line_end; ++line)
   {
 #ifdef DEBUG
     if (gNoisyIntrinsic) {
       IndentBy(stdout, gNoiseIndent);
-      printf("line %d (%s%s)\n", lineNumber,
+      printf("line (%s%s)\n",
              line->IsBlock() ? "block" : "inline",
-             line->IsEmpty() ? ",empty" : "");
+             line->IsEmpty() ? ", empty" : "");
     }
     AutoNoisyIndenter lineindent(gNoisyIntrinsic);
 #endif
     if (line->IsBlock()) {
-      data.Break(aRenderingContext);
+      data.ForceBreak(aRenderingContext);
       data.currentLine = nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
           line->mFirstChild, nsLayoutUtils::MIN_WIDTH);
-      data.Break(aRenderingContext);
+      data.ForceBreak(aRenderingContext);
     } else {
+      if (line == begin_lines() && !GetPrevContinuation()) {
+        const nsStyleCoord &indent = GetStyleText()->mTextIndent;
+        if (indent.GetUnit() == eStyleUnit_Coord)
+          data.currentLine += indent.GetCoordValue();
+      }
+      // XXX Bug NNNNNN Should probably handle percentage text-indent.
 
       nsIFrame *kid = line->mFirstChild;
       for (PRInt32 i = 0, i_end = line->GetChildCount(); i != i_end;
@@ -676,7 +682,7 @@ nsBlockFrame::GetMinWidth(nsIRenderingContext *aRenderingContext)
     }
 #endif
   }
-  data.Break(aRenderingContext);
+  data.ForceBreak(aRenderingContext);
 
   mMinWidth = data.prevLines;
   return mMinWidth;
@@ -702,26 +708,31 @@ nsBlockFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
   ResolveBidi();
 #endif // IBMBIDI
 
-  PRInt32 lineNumber = 0;
   InlinePrefWidthData data;
   for (line_iterator line = begin_lines(), line_end = end_lines();
-       line != line_end; ++line, ++lineNumber)
+       line != line_end; ++line)
   {
 #ifdef DEBUG
     if (gNoisyIntrinsic) {
       IndentBy(stdout, gNoiseIndent);
-      printf("line %d (%s%s)\n", lineNumber,
+      printf("line (%s%s)\n",
              line->IsBlock() ? "block" : "inline",
-             line->IsEmpty() ? ",empty" : "");
+             line->IsEmpty() ? ", empty" : "");
     }
     AutoNoisyIndenter lineindent(gNoisyIntrinsic);
 #endif
     if (line->IsBlock()) {
-      data.Break(aRenderingContext);
+      data.ForceBreak(aRenderingContext);
       data.currentLine = nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
                       line->mFirstChild, nsLayoutUtils::PREF_WIDTH);
-      data.Break(aRenderingContext);
+      data.ForceBreak(aRenderingContext);
     } else {
+      if (line == begin_lines() && !GetPrevContinuation()) {
+        const nsStyleCoord &indent = GetStyleText()->mTextIndent;
+        if (indent.GetUnit() == eStyleUnit_Coord)
+          data.currentLine += indent.GetCoordValue();
+      }
+      // XXX Bug NNNNNN Should probably handle percentage text-indent.
 
       nsIFrame *kid = line->mFirstChild;
       for (PRInt32 i = 0, i_end = line->GetChildCount(); i != i_end;
@@ -737,7 +748,7 @@ nsBlockFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
     }
 #endif
   }
-  data.Break(aRenderingContext);
+  data.ForceBreak(aRenderingContext);
 
   mPrefWidth = data.prevLines;
   return mPrefWidth;
@@ -784,7 +795,7 @@ CalculateContainingBlockSizeForAbsolutes(const nsHTMLReflowState& aReflowState,
     if (aLastRS != &aReflowState) {
       // The wrapper frame should be block-level. If it isn't, how the
       // heck did it end up wrapping this block frame?
-      NS_ASSERTION(aLastRS->frame->GetStyleDisplay()->IsBlockLevel(),
+      NS_ASSERTION(aLastRS->frame->GetStyleDisplay()->IsBlockOutside(),
                    "Wrapping frame should be block-level");
       // Scrollbars need to be specifically excluded, if present, because they are outside the
       // padding-edge. We need better APIs for getting the various boxes from a frame.
@@ -1115,6 +1126,8 @@ nsBlockFrame::Reflow(nsPresContext*          aPresContext,
                                    cbWidthChanged, cbHeightChanged,
                                    &childBounds);
 
+    //XXXfr Why isn't this rv (and others in this file) checked/returned?
+
     // Factor the absolutely positioned child bounds into the overflow area
     aMetrics.mOverflowArea.UnionRect(aMetrics.mOverflowArea, childBounds);
   }
@@ -1262,7 +1275,8 @@ nsBlockFrame::ComputeFinalSize(const nsHTMLReflowState& aReflowState,
         // break.  If our bottom border/padding straddles the break
         // point, then this will increase our height and push the
         // border/padding to the next page/column.
-        aMetrics.height = aReflowState.availableHeight;
+        aMetrics.height = PR_MAX(aReflowState.availableHeight,
+                                 aState.mY + nonCarriedOutVerticalMargin);
         aState.mReflowStatus |= NS_FRAME_NOT_COMPLETE;
       }
     }
@@ -2273,7 +2287,7 @@ nsBlockFrame::PullFrameFrom(nsBlockReflowState& aState,
   NS_ABORT_IF_FALSE(fromLine->GetChildCount(), "empty line");
   NS_ABORT_IF_FALSE(aLine->GetChildCount(), "empty line");
 
-  NS_ASSERTION(fromLine->IsBlock() == fromLine->mFirstChild->GetStyleDisplay()->IsBlockLevel(),
+  NS_ASSERTION(fromLine->IsBlock() == fromLine->mFirstChild->GetStyleDisplay()->IsBlockOutside(),
                "Disagreement about whether it's a block or not");
 
   if (fromLine->IsBlock()) {
@@ -4722,7 +4736,7 @@ nsBlockFrame::AddFrames(nsIFrame* aFrameList,
   // structures to fit.
   nsIFrame* newFrame = aFrameList;
   while (newFrame) {
-    PRBool isBlock = nsLineLayout::TreatFrameAsBlock(newFrame);
+    PRBool isBlock = newFrame->GetStyleDisplay()->IsBlockOutside();
 
     // If the frame is a block frame, or if there is no previous line or if the
     // previous line is a block line we need to make a new line.  We also make

@@ -1142,6 +1142,8 @@ JS_SetGlobalObject(JSContext *cx, JSObject *obj)
 #endif
 }
 
+JS_BEGIN_EXTERN_C
+
 JSObject *
 js_InitFunctionAndObjectClasses(JSContext *cx, JSObject *obj)
 {
@@ -1224,6 +1226,8 @@ out:
     return fun_proto;
 }
 
+JS_END_EXTERN_C
+
 JS_PUBLIC_API(JSBool)
 JS_InitStandardClasses(JSContext *cx, JSObject *obj)
 {
@@ -1267,11 +1271,7 @@ JS_InitStandardClasses(JSContext *cx, JSObject *obj)
            js_InitDateClass(cx, obj);
 }
 
-#define ATOM_OFFSET(name)       offsetof(JSAtomState,name##Atom)
-#define CLASS_ATOM_OFFSET(name) offsetof(JSAtomState,classAtoms[JSProto_##name])
-#define OFFSET_TO_ATOM(rt,off)  (*(JSAtom **)((char*)&(rt)->atomState + (off)))
-#define CLASP(name)             (JSClass *)&js_##name##Class
-
+#define CLASP(name)                 ((JSClass *)&js_##name##Class)
 #define EAGER_ATOM(name)            ATOM_OFFSET(name), NULL
 #define EAGER_CLASS_ATOM(name)      CLASS_ATOM_OFFSET(name), NULL
 #define EAGER_ATOM_AND_CLASP(name)  EAGER_CLASS_ATOM(name), CLASP(name)
@@ -1640,11 +1640,7 @@ JS_EnumerateResolvedStandardClasses(JSContext *cx, JSObject *obj,
     return js_SetIdArrayLength(cx, ida, i);
 }
 
-#undef ATOM_OFFSET
-#undef CLASS_ATOM_OFFSET
-#undef OFFSET_TO_ATOM
 #undef CLASP
-
 #undef EAGER_ATOM
 #undef EAGER_CLASS_ATOM
 #undef EAGER_ATOM_CLASP
@@ -3709,7 +3705,7 @@ JS_ClearScope(JSContext *cx, JSObject *obj)
 
     /* Clear cached class objects on the global object. */
     if (JS_GET_CLASS(cx, obj)->flags & JSCLASS_IS_GLOBAL) {
-        JSProtoKey key;
+        int key;
 
         for (key = JSProto_Null; key < JSProto_LIMIT; key++)
             JS_SetReservedSlot(cx, obj, key, JSVAL_VOID);

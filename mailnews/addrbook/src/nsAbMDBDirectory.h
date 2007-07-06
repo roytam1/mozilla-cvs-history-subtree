@@ -91,13 +91,10 @@ public:
   // nsIAbDirectory methods:
   NS_IMETHOD GetChildNodes(nsISimpleEnumerator* *result);
   NS_IMETHOD GetChildCards(nsISimpleEnumerator* *result);
-  NS_IMETHOD ModifyDirectory(nsIAbDirectory *directory, nsIAbDirectoryProperties *aProperties);
   NS_IMETHOD DeleteDirectory(nsIAbDirectory *directory);
   NS_IMETHOD DeleteCards(nsISupportsArray *cards);
   NS_IMETHOD HasCard(nsIAbCard *cards, PRBool *hasCard);
   NS_IMETHOD HasDirectory(nsIAbDirectory *dir, PRBool *hasDir);
-  NS_IMETHOD CreateNewDirectory(nsIAbDirectoryProperties *aProperties);
-  NS_IMETHOD CreateDirectoryByURI(const PRUnichar *dirName, const char *uri, PRBool migrating);
   NS_IMETHOD AddMailList(nsIAbDirectory *list);
   NS_IMETHOD AddCard(nsIAbCard *card, nsIAbCard **addedCard);
   NS_IMETHOD ModifyCard(nsIAbCard *aModifiedCard);

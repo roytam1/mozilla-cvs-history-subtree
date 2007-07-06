@@ -954,11 +954,13 @@ nsresult nsMsgSearchTerm::MatchString (const char *stringToMatch,
   switch (m_operator)
   {
   case nsMsgSearchOp::Contains:
-    if (utf16StrToMatch.Find(needle, PR_TRUE) >= 0)
+    // When we move to frozen linkage, this should be:
+    // utf16StrToMatch.Find(needle, CaseInsensitiveCompare)  >= 0);
+    if (CaseInsensitiveFindInReadable(needle, utf16StrToMatch))
       result = PR_TRUE;
     break;
   case nsMsgSearchOp::DoesntContain:
-    if (utf16StrToMatch.Find(needle, PR_TRUE) == -1)
+    if (!CaseInsensitiveFindInReadable(needle, utf16StrToMatch))
       result = PR_TRUE;
     break;
   case nsMsgSearchOp::Is:
@@ -1134,22 +1136,27 @@ nsresult nsMsgSearchTerm::MatchAge (PRTime msgDate, PRBool *pResult)
   PRTime cutOffDay;
 
   PRInt64 microSecondsPerSecond, secondsInDays, microSecondsInDays;
-	
-  LL_I2L(microSecondsPerSecond, PR_USEC_PER_SEC);
-  LL_UI2L(secondsInDays, 60 * 60 * 24 * m_value.u.age);
-  LL_MUL(microSecondsInDays, secondsInDays, microSecondsPerSecond);
 
-  LL_SUB(cutOffDay, now, microSecondsInDays); // = now - term->m_value.u.age * 60 * 60 * 24; 
-  // so now cutOffDay is the PRTime cut-off point. Any msg with a time less than that will be past the age .
+  LL_I2L(microSecondsPerSecond, PR_USEC_PER_SEC);
+  LL_I2L(secondsInDays, 60 * 60 * 24 * m_value.u.age);
+  LL_MUL(microSecondsInDays, secondsInDays, microSecondsPerSecond);
+  LL_SUB(cutOffDay, now, microSecondsInDays); // = now - term->m_value.u.age * 60 * 60 * 24;
+
+  PRBool cutOffDayInTheFuture = LL_CMP(m_value.u.age, <, 0);
+
+  // So now cutOffDay is the PRTime cut-off point.
+  // Any msg with a time less than that will be past the age.
 
   switch (m_operator)
   {
-    case nsMsgSearchOp::IsGreaterThan: // is older than 
-      if (LL_CMP(msgDate, <, cutOffDay))
+    case nsMsgSearchOp::IsGreaterThan: // is older than, or more in the future
+      if ((!cutOffDayInTheFuture && LL_CMP(msgDate, <, cutOffDay)) ||
+          (cutOffDayInTheFuture && LL_CMP(msgDate, >, cutOffDay)))
         result = PR_TRUE;
       break;
-    case nsMsgSearchOp::IsLessThan: // is younger than 
-      if (LL_CMP(msgDate, >, cutOffDay))
+    case nsMsgSearchOp::IsLessThan: // is younger than, or less in the future
+      if ((!cutOffDayInTheFuture && LL_CMP(msgDate, >, cutOffDay)) ||
+          (cutOffDayInTheFuture && LL_CMP(msgDate, <, cutOffDay)))
         result = PR_TRUE;
       break;
     case nsMsgSearchOp::Is:

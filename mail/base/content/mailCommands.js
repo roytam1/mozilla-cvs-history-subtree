@@ -237,7 +237,7 @@ function ComposeMessage(type, format, folder, messageArray)
     return;
   }
 
-  messenger.SetWindow(window, msgWindow);
+  messenger.setWindow(window, msgWindow);
 
   var object = null;
 

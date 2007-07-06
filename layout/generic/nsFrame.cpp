@@ -99,7 +99,6 @@
 #include "nsITextControlFrame.h"
 #include "nsINameSpaceManager.h"
 #include "nsIPercentHeightObserver.h"
-#include "nsTextTransformer.h"
 
 #ifdef IBMBIDI
 #include "nsBidiPresUtils.h"
@@ -511,25 +510,26 @@ nsFrame::~nsFrame()
 /////////////////////////////////////////////////////////////////////////////
 // nsISupports
 
-nsresult nsFrame::QueryInterface(const nsIID& aIID, void** aInstancePtr)
+NS_IMETHODIMP
+nsFrame::QueryInterface(const nsIID& aIID, void** aInstancePtr)
 {
   NS_PRECONDITION(aInstancePtr, "null out param");
 
 #ifdef DEBUG
   if (aIID.Equals(NS_GET_IID(nsIFrameDebug))) {
-    *aInstancePtr = NS_STATIC_CAST(void*,NS_STATIC_CAST(nsIFrameDebug*,this));
+    *aInstancePtr = NS_STATIC_CAST(nsIFrameDebug*, this);
     return NS_OK;
   }
 #endif
 
   if (aIID.Equals(NS_GET_IID(nsIFrame)) ||
       aIID.Equals(NS_GET_IID(nsISupports))) {
-    *aInstancePtr = NS_STATIC_CAST(void*,NS_STATIC_CAST(nsIFrame*,this));
+    *aInstancePtr = NS_STATIC_CAST(nsIFrame*, this);
     return NS_OK;
   }
 
   *aInstancePtr = nsnull;
-  return NS_NOINTERFACE;
+  return NS_ERROR_NO_INTERFACE;
 }
 
 nsrefcnt nsFrame::AddRef(void)
@@ -2945,14 +2945,15 @@ nsFrame::AddInlineMinWidth(nsIRenderingContext *aRenderingContext,
     GetParent()->GetStyleText()->WhiteSpaceCanWrap();
   
   if (canBreak)
-    aData->Break(aRenderingContext);
+    aData->OptionallyBreak(aRenderingContext);
   aData->trailingWhitespace = 0;
   aData->skipWhitespace = PR_FALSE;
   aData->trailingTextFrame = nsnull;
   aData->currentLine += nsLayoutUtils::IntrinsicForContainer(aRenderingContext,
                             this, nsLayoutUtils::MIN_WIDTH);
+  aData->atStartOfLine = PR_FALSE;
   if (canBreak)
-    aData->Break(aRenderingContext);
+    aData->OptionallyBreak(aRenderingContext);
 }
 
 /* virtual */ void
@@ -2966,7 +2967,7 @@ nsFrame::AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
 }
 
 void
-nsIFrame::InlineMinWidthData::Break(nsIRenderingContext *aRenderingContext)
+nsIFrame::InlineMinWidthData::ForceBreak(nsIRenderingContext *aRenderingContext)
 {
   currentLine -= trailingWhitespace;
   prevLines = PR_MAX(prevLines, currentLine);
@@ -2985,7 +2986,22 @@ nsIFrame::InlineMinWidthData::Break(nsIRenderingContext *aRenderingContext)
 }
 
 void
-nsIFrame::InlinePrefWidthData::Break(nsIRenderingContext *aRenderingContext)
+nsIFrame::InlineMinWidthData::OptionallyBreak(nsIRenderingContext *aRenderingContext)
+{
+  trailingTextFrame = nsnull;
+
+  // If we can fit more content into a smaller width by staying on this
+  // line (because we're still at a negative offset due to negative
+  // text-indent or negative margin), don't break.  Otherwise, do the
+  // same as ForceBreak.  it doesn't really matter when we accumulate
+  // floats.
+  if (currentLine < 0 || atStartOfLine)
+    return;
+  ForceBreak(aRenderingContext);
+}
+
+void
+nsIFrame::InlinePrefWidthData::ForceBreak(nsIRenderingContext *aRenderingContext)
 {
   if (floats.Count() != 0) {
             // preferred widths accumulated for floats that have already
@@ -4802,9 +4818,9 @@ nsIFrame::PeekOffset(nsPeekOffsetStruct* aPos)
         // Use the hidden preference which is based on operating system behavior.
         // This pref only affects whether moving forward by word should go to the end of this word or start of the next word.
         // When going backwards, the start of the word is always used, on every operating system.
-        nsTextTransformer::Initialize();
-        wordSelectEatSpace = aPos->mDirection == eDirNext && nsTextTransformer::GetWordSelectEatSpaceAfter();
-      }      
+        wordSelectEatSpace = aPos->mDirection == eDirNext &&
+          nsContentUtils::GetBoolPref("layout.word_select.eat_space_to_next_word");
+      }
       
       // sawBeforeType means "we already saw characters of the type
       // before the boundary we're looking for". Examples:
@@ -5721,17 +5737,6 @@ nsIFrame::IsFocusable(PRInt32 *aTabIndex, PRBool aWithMouse)
     const nsStyleVisibility* vis = GetStyleVisibility();
     if (vis->mVisible != NS_STYLE_VISIBILITY_COLLAPSE &&
         vis->mVisible != NS_STYLE_VISIBILITY_HIDDEN) {
-      if (mContent->IsNodeOfType(nsINode::eHTML)) {
-        nsCOMPtr<nsISupports> container(PresContext()->GetContainer());
-        nsCOMPtr<nsIEditorDocShell> editorDocShell(do_QueryInterface(container));
-        if (editorDocShell) {
-          PRBool isEditable;
-          editorDocShell->GetEditable(&isEditable);
-          if (isEditable) {
-            return NS_OK;  // Editor content is not focusable
-          }
-        }
-      }
       const nsStyleUserInterface* ui = GetStyleUserInterface();
       if (ui->mUserFocus != NS_STYLE_USER_FOCUS_IGNORE &&
           ui->mUserFocus != NS_STYLE_USER_FOCUS_NONE) {

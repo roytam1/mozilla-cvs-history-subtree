@@ -75,26 +75,22 @@ nsrefcnt nsTableRowGroupFrame::Release(void)
   return 1;//implementation of nsLineIterator
 }
 
-
-nsresult
+NS_IMETHODIMP
 nsTableRowGroupFrame::QueryInterface(const nsIID& aIID, void** aInstancePtr)
 {
-  if (NULL == aInstancePtr) {
-    return NS_ERROR_NULL_POINTER;
-  }
+  NS_PRECONDITION(aInstancePtr, "null out param");
+
   static NS_DEFINE_IID(kITableRowGroupIID, NS_ITABLEROWGROUPFRAME_IID);
   if (aIID.Equals(kITableRowGroupIID)) {
     *aInstancePtr = (void*)this;
     return NS_OK;
   }
-  else if (aIID.Equals(NS_GET_IID(nsILineIteratorNavigator)))
-  { // note there is no addref here, frames are not addref'd
-    *aInstancePtr = (void*)(nsILineIteratorNavigator*)this;
+  if (aIID.Equals(NS_GET_IID(nsILineIteratorNavigator))) {
+    *aInstancePtr = NS_STATIC_CAST(nsILineIteratorNavigator*, this);
     return NS_OK;
   }
-  else {
-    return nsHTMLContainerFrame::QueryInterface(aIID, aInstancePtr);
-  }
+
+  return nsHTMLContainerFrame::QueryInterface(aIID, aInstancePtr);
 }
 
 /* virtual */ PRBool
@@ -1305,10 +1301,6 @@ nsTableRowGroupFrame::Reflow(nsPresContext*          aPresContext,
   // just set our width to what was available. The table will calculate the width and not use our value.
   aDesiredSize.width = aReflowState.availableWidth;
 
-  // if we have a nextinflow we are not complete
-  if (GetNextInFlow()) {
-    aStatus |= NS_FRAME_NOT_COMPLETE;
-  }
   aDesiredSize.mOverflowArea.UnionRect(aDesiredSize.mOverflowArea, nsRect(0, 0, aDesiredSize.width,
 	                                                                      aDesiredSize.height)); 
   FinishAndStoreOverflow(&aDesiredSize);

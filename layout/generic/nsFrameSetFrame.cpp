@@ -250,12 +250,10 @@ nsHTMLFramesetFrame::~nsHTMLFramesetFrame()
                                          FrameResizePrefCallback, this);
 }
 
-nsresult nsHTMLFramesetFrame::QueryInterface(const nsIID& aIID, 
-                                             void**       aInstancePtr)
+NS_IMETHODIMP
+nsHTMLFramesetFrame::QueryInterface(const nsIID& aIID, void** aInstancePtr)
 {
-  if (NULL == aInstancePtr) {
-    return NS_ERROR_NULL_POINTER;
-  }
+  NS_PRECONDITION(aInstancePtr, "null out param");
 
   if (aIID.Equals(NS_GET_IID(nsHTMLFramesetFrame))) {
     *aInstancePtr = (void*)this;
@@ -1277,6 +1275,9 @@ nsHTMLFramesetFrame::Reflow(nsPresContext*          aPresContext,
   aStatus = NS_FRAME_COMPLETE;
   mDrag.UnSet();
 
+  aDesiredSize.mOverflowArea = nsRect(0, 0,
+                                      aDesiredSize.width, aDesiredSize.height);
+
   NS_FRAME_SET_TRUNCATION(aStatus, aReflowState, aDesiredSize);
   return NS_OK;
 }
@@ -1487,9 +1488,6 @@ nsHTMLFramesetFrame::StartMouseDrag(nsPresContext*            aPresContext,
       viewMan->GrabMouseEvents(view, ignore);
       mDragger = aBorder;
 
-      //XXX This should go away!  Border should have own view instead
-      viewMan->SetViewCheckChildEvents(view, PR_FALSE);
-
       mFirstDragPoint = aEvent->refPoint;
 
       // Store the original frame sizes
@@ -1591,8 +1589,6 @@ nsHTMLFramesetFrame::EndMouseDrag(nsPresContext* aPresContext)
       mDragger = nsnull;
       PRBool ignore;
       viewMan->GrabMouseEvents(nsnull, ignore);
-      //XXX This should go away!  Border should have own view instead
-      viewMan->SetViewCheckChildEvents(view, PR_TRUE);
     }
   }
   gDragInProgress = PR_FALSE;
@@ -1655,6 +1651,8 @@ nsHTMLFramesetBorderFrame::Reflow(nsPresContext*          aPresContext,
   // computed values are.
   SizeToAvailSize(aReflowState, aDesiredSize);
 
+  aDesiredSize.mOverflowArea = nsRect(0, 0,
+                                      aDesiredSize.width, aDesiredSize.height);
   aStatus = NS_FRAME_COMPLETE;
   return NS_OK;
 }
@@ -1728,8 +1726,8 @@ void nsHTMLFramesetBorderFrame::PaintBorder(nsIRenderingContext& aRenderingConte
 
   nscoord x0 = 0;
   nscoord y0 = 0;
-  nscoord x1 = (mVertical) ? x0 : mRect.width;
-  nscoord y1 = (mVertical) ? mRect.height : x0;
+  nscoord x1 = (mVertical) ? 0 : mRect.width;
+  nscoord y1 = (mVertical) ? mRect.height : 0;
 
   nscolor color = WHITE;
   if (mVisibility || mVisibilityOverride) {
@@ -1851,6 +1849,8 @@ nsHTMLFramesetBlankFrame::Reflow(nsPresContext*          aPresContext,
   // computed values are.
   SizeToAvailSize(aReflowState, aDesiredSize);
 
+  aDesiredSize.mOverflowArea = nsRect(0, 0,
+                                      aDesiredSize.width, aDesiredSize.height);
   aStatus = NS_FRAME_COMPLETE;
   return NS_OK;
 }

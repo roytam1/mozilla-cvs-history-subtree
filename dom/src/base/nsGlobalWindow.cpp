@@ -157,7 +157,9 @@
 #include "nsCDefaultURIFixup.h"
 #include "nsEventDispatcher.h"
 #include "nsIObserverService.h"
+#include "nsIXULAppInfo.h"
 #include "nsNetUtil.h"
+#include "nsXULPopupManager.h"
 
 #include "plbase64.h"
 
@@ -192,8 +194,6 @@
 #ifdef PR_LOGGING
 static PRLogModuleInfo* gDOMLeakPRLog;
 #endif
-
-#include "nsBuildID.h"
 
 nsIFactory *nsGlobalWindow::sComputedDOMStyleFactory   = nsnull;
 
@@ -1788,6 +1788,9 @@ nsGlobalWindow::SetDocShell(nsIDocShell* aDocShell)
       }
     }
     mContext = nsnull; // we nuked it above also
+#ifdef DEBUG
+    nsCycleCollector_DEBUG_shouldBeFreed(NS_STATIC_CAST(nsIScriptGlobalObject*, this));
+#endif
   }
 
   mDocShell = aDocShell;        // Weak Reference
@@ -3035,10 +3038,10 @@ nsGlobalWindow::CheckSecurityWidthAndHeight(PRInt32* aWidth, PRInt32* aHeight)
 {
   if (!nsContentUtils::IsCallerTrustedForWrite()) {
     // if attempting to resize the window, hide any open popups
-    nsCOMPtr<nsIPresShell> presShell;
-    mDocShell->GetPresShell(getter_AddRefs(presShell));
-    if (presShell)
-      presShell->HidePopups();
+    nsXULPopupManager* pm = nsXULPopupManager::GetInstance();
+    nsCOMPtr<nsIDocument> doc(do_QueryInterface(mDocument));
+    if (pm && doc)
+      pm->HidePopupsInDocument(doc);
   }
 
   // This one is easy. Just ensure the variable is greater than 100;
@@ -3068,10 +3071,10 @@ nsGlobalWindow::CheckSecurityLeftAndTop(PRInt32* aLeft, PRInt32* aTop)
 
   if (!nsContentUtils::IsCallerTrustedForWrite()) {
     // if attempting to move the window, hide any open popups
-    nsCOMPtr<nsIPresShell> presShell;
-    mDocShell->GetPresShell(getter_AddRefs(presShell));
-    if (presShell)
-      presShell->HidePopups();
+    nsXULPopupManager* pm = nsXULPopupManager::GetInstance();
+    nsCOMPtr<nsIDocument> doc(do_QueryInterface(mDocument));
+    if (pm && doc)
+      pm->HidePopupsInDocument(doc);
 
     PRInt32 screenLeft, screenTop, screenWidth, screenHeight;
     PRInt32 winLeft, winTop, winWidth, winHeight;
@@ -6526,6 +6529,12 @@ nsGlobalWindow::SetTimeoutOrInterval(nsIScriptTimeoutHandler *aHandler,
   FORWARD_TO_INNER(SetTimeoutOrInterval, (aHandler, interval, aIsInterval, aReturn),
                    NS_ERROR_NOT_INITIALIZED);
 
+  // If we don't have a document (we could have been unloaded since
+  // the call to setTimeout was made), do nothing.
+  if (!mDocument) {
+    return NS_OK;
+  }
+
   if (interval < DOM_MIN_TIMEOUT_VALUE) {
     // Don't allow timeouts less than DOM_MIN_TIMEOUT_VALUE from
     // now...
@@ -6669,15 +6678,16 @@ nsGlobalWindow::SetTimeoutOrInterval(PRBool aIsInterval, PRInt32 *aReturn)
                    NS_ERROR_NOT_INITIALIZED);
 
   PRInt32 interval = 0;
+  PRBool isInterval = aIsInterval;
   nsCOMPtr<nsIScriptTimeoutHandler> handler;
   nsresult rv = NS_CreateJSTimeoutHandler(GetContextInternal(),
-                                          aIsInterval,
+                                          &isInterval,
                                           &interval,
                                           getter_AddRefs(handler));
   if (NS_FAILED(rv))
     return (rv == NS_ERROR_DOM_TYPE_ERR) ? NS_OK : rv;
 
-  return SetTimeoutOrInterval(handler, interval, aIsInterval, aReturn);
+  return SetTimeoutOrInterval(handler, interval, isInterval, aReturn);
 }
 
 // static
@@ -8247,8 +8257,18 @@ nsNavigator::GetOnLine(PRBool* aOnline)
 NS_IMETHODIMP
 nsNavigator::GetBuildID(nsAString& aBuildID)
 {
-  aBuildID = NS_LITERAL_STRING(NS_STRINGIFY(NS_BUILD_ID));
+  nsCOMPtr<nsIXULAppInfo> appInfo =
+    do_GetService("@mozilla.org/xre/app-info;1");
+  if (!appInfo)
+    return NS_ERROR_NOT_IMPLEMENTED;
 
+  nsCAutoString buildID;
+  nsresult rv = appInfo->GetAppBuildID(buildID);
+  if (NS_FAILED(rv))
+    return rv;
+
+  aBuildID.Truncate();
+  AppendASCIItoUTF16(buildID, aBuildID);
   return NS_OK;
 }
 
@@ -8499,14 +8519,8 @@ nsNavigator::GetOfflineResources(nsIDOMOfflineResourceList **aList)
     nsresult rv = webNav->GetCurrentURI(getter_AddRefs(uri));
     NS_ENSURE_SUCCESS(rv, rv);
 
-    mOfflineResources = new nsDOMOfflineResourceList();
+    mOfflineResources = new nsDOMOfflineResourceList(uri);
     if (!mOfflineResources) return NS_ERROR_OUT_OF_MEMORY;
-
-    rv = mOfflineResources->Init(uri);
-    if (NS_FAILED(rv)) {
-      mOfflineResources = nsnull;
-      return rv;
-    }
   }
 
   NS_IF_ADDREF(*aList = mOfflineResources);

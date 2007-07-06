@@ -597,7 +597,7 @@ NS_IMETHODIMP nsAccessible::GetParent(nsIAccessible **  aParent)
   nsCOMPtr<nsIAccessibleDocument> docAccessible(GetDocAccessible());
   NS_ENSURE_TRUE(docAccessible, NS_ERROR_FAILURE);
 
-  return docAccessible->GetAccessibleInParentChain(mDOMNode, PR_TRUE, aParent);
+  return docAccessible->GetAccessibleInParentChain(mDOMNode, aParent);
 }
 
 NS_IMETHODIMP nsAccessible::GetCachedParent(nsIAccessible **  aParent)
@@ -1508,7 +1508,7 @@ nsresult nsAccessible::AppendFlatStringFromContentNode(nsIContent *aContent, nsA
         // block's text, so we don't get words jammed together in final name
         // Extra spaces will be trimmed out later
         const nsStyleDisplay* display = frame->GetStyleDisplay();
-        if (display->IsBlockLevel() ||
+        if (display->IsBlockOutside() ||
           display->mDisplay == NS_STYLE_DISPLAY_TABLE_CELL) {
           isHTMLBlock = PR_TRUE;
           if (!aFlatString->IsEmpty()) {
@@ -1730,7 +1730,8 @@ nsresult nsAccessible::GetTextFromRelationID(nsIAtom *aIDAttrib, nsString &aName
 
 nsIContent*
 nsAccessible::FindNeighbourPointingToNode(nsIContent *aForNode,
-                                          nsIAtom *aTagName, nsIAtom *aAttr,
+                                          nsIAtom *aTagName, nsIAtom *aRelationAttr,
+                                          PRUint32 aRelationNameSpaceID,
                                           PRUint32 aAncestorLevelsToSearch)
 {
   nsCOMPtr<nsIContent> binding;
@@ -1785,8 +1786,8 @@ nsAccessible::FindNeighbourPointingToNode(nsIContent *aForNode,
           return nsnull;
 
         if (content != prevSearched) {
-          labelContent = FindDescendantPointingToID(&controlID, content,  aAttr,
-                                                    nsnull, kNameSpaceID_None,
+          labelContent = FindDescendantPointingToID(&controlID, content,  aRelationAttr,
+                                                    aRelationNameSpaceID, nsnull,
                                                     aTagName);
         }
       }
@@ -1794,28 +1795,28 @@ nsAccessible::FindNeighbourPointingToNode(nsIContent *aForNode,
     }
 
     labelContent = FindDescendantPointingToID(&controlID, aForNode,
-                                              aAttr, prevSearched,
-                                              kNameSpaceID_None, aTagName);
+                                              aRelationAttr, aRelationNameSpaceID,
+                                              prevSearched, aTagName);
     prevSearched = aForNode;
   }
 
   return labelContent;
 }
 
-// Pass in aForAttrib == nsnull if any <label> will do
+// Pass in aRelationAttr == nsnull if any <label> will do
 nsIContent*
 nsAccessible::FindDescendantPointingToID(const nsAString *aId,
                                          nsIContent *aLookContent,
-                                         nsIAtom *aForAttrib,
+                                         nsIAtom *aRelationAttr,
+                                         PRUint32 aRelationNameSpaceID,
                                          nsIContent *aExcludeContent,
-                                         PRUint32 aForAttribNameSpace,
                                          nsIAtom *aTagType)
 {
   if (!aTagType || aLookContent->Tag() == aTagType) {
-    if (aForAttrib) {
-      // Check for ID in the attribute aForAttrib, which can be a list
+    if (aRelationAttr) {
+      // Check for ID in the attribute aRelationAttr, which can be a list
       nsAutoString idList;
-      if (aLookContent->GetAttr(aForAttribNameSpace, aForAttrib, idList)) {
+      if (aLookContent->GetAttr(aRelationNameSpaceID, aRelationAttr, idList)) {
         idList.Insert(' ', 0);  // Surround idlist with spaces for search
         idList.Append(' ');
         nsAutoString id(*aId);
@@ -1841,12 +1842,12 @@ nsAccessible::FindDescendantPointingToID(const nsAString *aId,
 
   while ((child = aLookContent->GetChildAt(count++)) != nsnull) {
     if (child != aExcludeContent) {
-      labelContent = FindDescendantPointingToID(aId, child, aForAttrib,
-                                                aExcludeContent,
-                                                aForAttribNameSpace, aTagType);
-    }
-    if (labelContent) {
-      return labelContent;
+      labelContent = FindDescendantPointingToID(aId, child, aRelationAttr,
+                                                aRelationNameSpaceID, aExcludeContent,
+                                                aTagType);
+      if (labelContent) {
+        return labelContent;
+      }
     }
   }
   return nsnull;
@@ -2006,20 +2007,19 @@ PRBool nsAccessible::IsNodeRelevant(nsIDOMNode *aNode)
   return aNode == relevantNode;
 }
 
-NS_IMETHODIMP nsAccessible::FireToolkitEvent(PRUint32 aEvent, nsIAccessible *aTarget, void * aData)
+NS_IMETHODIMP
+nsAccessible::FireToolkitEvent(PRUint32 aEvent, nsIAccessible *aTarget,
+                               void * aData)
 {
-  // Don't fire event for accessible that has been shut down
+  // Don't fire event for accessible that has been shut down.
   if (!mWeakShell)
     return NS_ERROR_FAILURE;
 
-  NS_ENSURE_TRUE(IsNodeRelevant(mDOMNode), NS_ERROR_FAILURE);
+  nsCOMPtr<nsIAccessibleEvent> accEvent =
+    new nsAccEvent(aEvent, aTarget, aData);
+  NS_ENSURE_TRUE(accEvent, NS_ERROR_OUT_OF_MEMORY);
 
-  nsCOMPtr<nsIAccessibleDocument> docAccessible(GetDocAccessible());
-  nsCOMPtr<nsPIAccessible> eventHandlingAccessible(do_QueryInterface(docAccessible));
-  if (eventHandlingAccessible)
-    return eventHandlingAccessible->FireToolkitEvent(aEvent, aTarget, aData);
-
-  return NS_ERROR_FAILURE;
+  return FireAccessibleEvent(accEvent);
 }
 
 NS_IMETHODIMP
@@ -2077,7 +2077,8 @@ nsAccessible::GetAttributes(nsIPersistentProperties **aAttributes)
       attributes->SetStringProperty(NS_LITERAL_CSTRING("xml-roles"), xmlRole, oldValueUnused);          
     }
 
-    char *ariaProperties[] = { "live", "atomic", "relevant", "datatype", "level", "posinset", "setsize", "sort" };
+    char *ariaProperties[] = { "live", "channel", "atomic", "relevant", "datatype", "level",
+                               "posinset", "setsize", "sort", "grab", "dropeffect"};
 
     for (PRUint32 index = 0; index < NS_ARRAY_LENGTH(ariaProperties); index ++) {
       nsAutoString value;
@@ -2089,7 +2090,7 @@ nsAccessible::GetAttributes(nsIPersistentProperties **aAttributes)
     }
   }
 
-  if (!nsAccessibilityUtils::HasAccGroupAttrs(attributes)) {
+  if (!nsAccUtils::HasAccGroupAttrs(attributes)) {
     // The role of an accessible can be pointed by ARIA attribute but ARIA
     // posinset, level, setsize may be skipped. Therefore we calculate here
     // these properties to map them into description.
@@ -2151,9 +2152,8 @@ nsAccessible::GetAttributes(nsIPersistentProperties **aAttributes)
         }
       }
 
-      nsAccessibilityUtils::SetAccGroupAttrs(attributes, groupLevel,
-                                             positionInGroup,
-                                             setSize);
+      nsAccUtils::SetAccGroupAttrs(attributes, groupLevel, positionInGroup,
+                                   setSize);
     }
   }
 
@@ -2206,8 +2206,7 @@ nsAccessible::GroupPosition(PRInt32 *aGroupLevel,
     return NS_ERROR_FAILURE;
   }
   PRInt32 level, posInSet, setSize;
-  nsAccessibilityUtils::GetAccGroupAttrs(attributes,
-                                         &level, &posInSet, &setSize);
+  nsAccUtils::GetAccGroupAttrs(attributes, &level, &posInSet, &setSize);
 
   if (!posInSet && !setSize)
     return NS_OK;
@@ -2531,6 +2530,7 @@ NS_IMETHODIMP nsAccessible::GetAccessibleBelow(nsIAccessible **_retval)
 
 already_AddRefed<nsIDOMNode>
 nsAccessible::FindNeighbourPointingToThis(nsIAtom *aRelationAttr,
+                                          PRUint32 aRelationNameSpaceID,
                                           PRUint32 aAncestorLevelsToSearch)
 {
   nsIContent *content = GetRoleContent(mDOMNode);
@@ -2539,6 +2539,7 @@ nsAccessible::FindNeighbourPointingToThis(nsIAtom *aRelationAttr,
 
   nsIContent* description = FindNeighbourPointingToNode(content, nsnull,
                                                         aRelationAttr,
+                                                        aRelationNameSpaceID,
                                                         aAncestorLevelsToSearch);
 
   if (!description)
@@ -2580,6 +2581,7 @@ NS_IMETHODIMP nsAccessible::GetAccessibleRelated(PRUint32 aRelationType, nsIAcce
       if (relatedID.IsEmpty()) {
         const PRUint32 kAncestorLevelsToSearch = 3;
         relatedNode = FindNeighbourPointingToThis(nsAccessibilityAtoms::labelledby,
+                                                  kNameSpaceID_WAIProperties,
                                                   kAncestorLevelsToSearch);
       }
       break;
@@ -2612,6 +2614,7 @@ NS_IMETHODIMP nsAccessible::GetAccessibleRelated(PRUint32 aRelationType, nsIAcce
       const PRUint32 kAncestorLevelsToSearch = 3;
       relatedNode =
         FindNeighbourPointingToThis(nsAccessibilityAtoms::describedby,
+                                    kNameSpaceID_WAIProperties,
                                     kAncestorLevelsToSearch);
 
       if (!relatedNode && content->Tag() == nsAccessibilityAtoms::description &&
@@ -2626,12 +2629,14 @@ NS_IMETHODIMP nsAccessible::GetAccessibleRelated(PRUint32 aRelationType, nsIAcce
     }
   case nsIAccessibleRelation::RELATION_NODE_CHILD_OF:
     {
-      relatedNode = FindNeighbourPointingToThis(nsAccessibilityAtoms::owns);
+      relatedNode = FindNeighbourPointingToThis(nsAccessibilityAtoms::owns,
+                                                kNameSpaceID_WAIProperties);
       break;
     }
   case nsIAccessibleRelation::RELATION_CONTROLLED_BY:
     {
-      relatedNode = FindNeighbourPointingToThis(nsAccessibilityAtoms::controls);
+      relatedNode = FindNeighbourPointingToThis(nsAccessibilityAtoms::controls,
+                                                kNameSpaceID_WAIProperties);
       break;
     }
   case nsIAccessibleRelation::RELATION_CONTROLLER_FOR:
@@ -2648,7 +2653,8 @@ NS_IMETHODIMP nsAccessible::GetAccessibleRelated(PRUint32 aRelationType, nsIAcce
     }
   case nsIAccessibleRelation::RELATION_FLOWS_FROM:
     {
-      relatedNode = FindNeighbourPointingToThis(nsAccessibilityAtoms::flowto);
+      relatedNode = FindNeighbourPointingToThis(nsAccessibilityAtoms::flowto,
+                                                kNameSpaceID_WAIProperties);
       break;
     }
 
@@ -2722,9 +2728,9 @@ NS_IMETHODIMP nsAccessible::GetAccessibleRelated(PRUint32 aRelationType, nsIAcce
   if (relatedNode) {
     nsCOMPtr<nsIAccessibilityService> accService = GetAccService();
     NS_ENSURE_TRUE(accService, NS_ERROR_FAILURE);
-    return accService->GetAccessibleInWeakShell(relatedNode, mWeakShell, aRelated);
+    accService->GetAccessibleInWeakShell(relatedNode, mWeakShell, aRelated);
   }
-  return NS_ERROR_FAILURE;
+  return NS_OK;
 }
 
 NS_IMETHODIMP

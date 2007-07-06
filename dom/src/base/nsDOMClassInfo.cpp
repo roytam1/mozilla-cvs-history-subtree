@@ -345,6 +345,7 @@
 #include "nsIDOMSVGAElement.h"
 #include "nsIDOMSVGAngle.h"
 #include "nsIDOMSVGAnimatedAngle.h"
+#include "nsIDOMSVGAnimatedBoolean.h"
 #include "nsIDOMSVGAnimatedEnum.h"
 #include "nsIDOMSVGAnimatedInteger.h"
 #include "nsIDOMSVGAnimatedLength.h"
@@ -914,6 +915,8 @@ static nsDOMClassInfoData sClassInfoData[] = {
                            ELEMENT_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(SVGFECompositeElement, nsElementSH,
                            ELEMENT_SCRIPTABLE_FLAGS)
+  NS_DEFINE_CLASSINFO_DATA(SVGFEConvolveMatrixElement, nsElementSH,
+                           ELEMENT_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(SVGFEFloodElement, nsElementSH,
                            ELEMENT_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(SVGFEFuncAElement, nsElementSH,
@@ -993,6 +996,8 @@ static nsDOMClassInfoData sClassInfoData[] = {
   NS_DEFINE_CLASSINFO_DATA(SVGAngle, nsDOMGenericSH,
                            DOM_DEFAULT_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(SVGAnimatedAngle, nsDOMGenericSH,
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
+  NS_DEFINE_CLASSINFO_DATA(SVGAnimatedBoolean, nsDOMGenericSH,
                            DOM_DEFAULT_SCRIPTABLE_FLAGS)
   NS_DEFINE_CLASSINFO_DATA(SVGAnimatedEnumeration, nsDOMGenericSH,
                            DOM_DEFAULT_SCRIPTABLE_FLAGS)
@@ -1239,8 +1244,6 @@ jsval nsDOMClassInfo::sOnkeypress_id      = JSVAL_VOID;
 jsval nsDOMClassInfo::sOnmousemove_id     = JSVAL_VOID;
 jsval nsDOMClassInfo::sOnfocus_id         = JSVAL_VOID;
 jsval nsDOMClassInfo::sOnblur_id          = JSVAL_VOID;
-jsval nsDOMClassInfo::sOnonline_id        = JSVAL_VOID;
-jsval nsDOMClassInfo::sOnoffline_id       = JSVAL_VOID;
 jsval nsDOMClassInfo::sOnsubmit_id        = JSVAL_VOID;
 jsval nsDOMClassInfo::sOnreset_id         = JSVAL_VOID;
 jsval nsDOMClassInfo::sOnchange_id        = JSVAL_VOID;
@@ -1432,8 +1435,6 @@ nsDOMClassInfo::DefineStaticJSVals(JSContext *cx)
   SET_JSVAL_TO_STRING(sOnmousemove_id,     cx, "onmousemove");
   SET_JSVAL_TO_STRING(sOnfocus_id,         cx, "onfocus");
   SET_JSVAL_TO_STRING(sOnblur_id,          cx, "onblur");
-  SET_JSVAL_TO_STRING(sOnoffline_id,       cx, "onoffline");
-  SET_JSVAL_TO_STRING(sOnonline_id,        cx, "ononline");
   SET_JSVAL_TO_STRING(sOnsubmit_id,        cx, "onsubmit");
   SET_JSVAL_TO_STRING(sOnreset_id,         cx, "onreset");
   SET_JSVAL_TO_STRING(sOnchange_id,        cx, "onchange");
@@ -2628,6 +2629,13 @@ nsDOMClassInfo::Init()
     DOM_CLASSINFO_SVG_ELEMENT_MAP_ENTRIES
   DOM_CLASSINFO_MAP_END
 
+  DOM_CLASSINFO_MAP_BEGIN(SVGFEConvolveMatrixElement, nsIDOMSVGFEConvolveMatrixElement)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMSVGFEConvolveMatrixElement)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMSVGFilterPrimitiveStandardAttributes)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMSVGStylable)
+    DOM_CLASSINFO_SVG_ELEMENT_MAP_ENTRIES
+  DOM_CLASSINFO_MAP_END
+
   DOM_CLASSINFO_MAP_BEGIN(SVGFEFloodElement, nsIDOMSVGFEFloodElement)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMSVGFEFloodElement)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMSVGFilterPrimitiveStandardAttributes)
@@ -2872,6 +2880,10 @@ nsDOMClassInfo::Init()
 
   DOM_CLASSINFO_MAP_BEGIN(SVGAnimatedAngle, nsIDOMSVGAnimatedAngle)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMSVGAnimatedAngle)
+  DOM_CLASSINFO_MAP_END
+
+  DOM_CLASSINFO_MAP_BEGIN(SVGAnimatedBoolean, nsIDOMSVGAnimatedBoolean)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMSVGAnimatedBoolean)
   DOM_CLASSINFO_MAP_END
 
   DOM_CLASSINFO_MAP_BEGIN(SVGAnimatedEnumeration, nsIDOMSVGAnimatedEnumeration)
@@ -3873,8 +3885,6 @@ nsDOMClassInfo::ShutDown()
   sOnmousemove_id     = JSVAL_VOID;
   sOnfocus_id         = JSVAL_VOID;
   sOnblur_id          = JSVAL_VOID;
-  sOnoffline_id       = JSVAL_VOID;
-  sOnonline_id        = JSVAL_VOID;
   sOnsubmit_id        = JSVAL_VOID;
   sOnreset_id         = JSVAL_VOID;
   sOnchange_id        = JSVAL_VOID;
@@ -5489,6 +5499,9 @@ nsWindowSH::GlobalResolve(nsGlobalWindow *aWin, JSContext *cx,
   }
 
   if (name_struct->mType == nsGlobalNameStruct::eTypeProperty) {
+    if (name_struct->mPrivilegedOnly && !nsContentUtils::IsCallerChrome())
+      return NS_OK;
+
     nsCOMPtr<nsISupports> native(do_CreateInstance(name_struct->mCID, &rv));
     NS_ENSURE_SUCCESS(rv, rv);
 
@@ -6567,9 +6580,6 @@ nsEventReceiverSH::ReallyIsEventName(jsval id, jschar aFirstChar)
     return (id == sOnkeydown_id      ||
             id == sOnkeypress_id     ||
             id == sOnkeyup_id);
-  case 'o' :
-    return (id == sOnoffline_id      ||
-            id == sOnonline_id);
   case 'u' :
     return id == sOnunload_id;
   case 'm' :
@@ -6600,6 +6610,8 @@ nsEventReceiverSH::AddEventListenerHelper(JSContext *cx, JSObject *obj,
 
     return JS_FALSE;
   }
+
+  OBJ_TO_INNER_OBJECT(cx, obj);
 
   nsCOMPtr<nsIXPConnectWrappedNative> wrapper;
   nsresult rv =

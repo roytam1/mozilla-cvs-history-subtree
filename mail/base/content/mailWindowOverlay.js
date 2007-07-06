@@ -1,4 +1,4 @@
-# -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+# -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 4 -*-
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
 #
@@ -258,7 +258,7 @@ function InitViewSortByMenu()
   setSortByMenuItemCheckState("sortByJunkStatusMenuitem", (sortType == nsMsgViewSortType.byJunkStatus));
   setSortByMenuItemCheckState("sortByFromMenuitem", (sortType == nsMsgViewSortType.byAuthor));
   setSortByMenuItemCheckState("sortByRecipientMenuitem", (sortType == nsMsgViewSortType.byRecipient)); 
-  setSortByMenuItemCheckState("sortByAttachmentsMenuitem", (sortType == nsMsgViewSortType.byAttachments)); 	
+  setSortByMenuItemCheckState("sortByAttachmentsMenuitem", (sortType == nsMsgViewSortType.byAttachments));   
 
   var sortOrder = gDBView.sortOrder;
   var sortTypeSupportsGrouping = (sortType == nsMsgViewSortType.byAuthor 
@@ -414,13 +414,13 @@ function InitViewHeadersMenu()
 
   switch (headerchoice) 
   {
-	case 2:	
-		id = "viewallheaders";
-		break;
-	case 1:	
-	default:
-		id = "viewnormalheaders";
-		break;
+  case 2:  
+    id = "viewallheaders";
+    break;
+  case 1:  
+  default:
+    id = "viewnormalheaders";
+    break;
   }
 
   var menuitem = document.getElementById(id);
@@ -703,7 +703,6 @@ function navDebug(str)
 
 function populateHistoryMenu(menuPopup, isBackMenu)
 {
-  
   // remove existing entries
   while (menuPopup.firstChild)
     menuPopup.removeChild(menuPopup.firstChild);
@@ -1344,6 +1343,322 @@ function MsgOpenNewWindowForFolder(uri, key)
     window.openDialog("chrome://messenger/content/", "_blank", "chrome,all,dialog=no", uriToOpen, keyToSelect);
 }
 
+/** 
+  *saveMailTabInfo - a private helper routine shared by message and folder tab owners to save
+  *                                 the local state of a mail tab
+  * @param aMailTabOwner
+  */
+function saveMailTabInfo(aMailTabOwner)
+{
+  if (aMailTabOwner)
+  {
+    aMailTabOwner.messenger = messenger;
+    aMailTabOwner.dbView = gDBView;
+    aMailTabOwner.searchSession = gSearchSession;
+    var indices = GetSelectedIndices(gDBView);
+    if (indices)
+    {
+      aMailTabOwner.selectedKeys = new Array(indices.length);
+      aMailTabOwner.selectedFolders = new Array(indices.length);
+    }
+    if (gDBView.currentlyDisplayedMessage != -1)
+    {
+      try // there may not be a selected message.
+      {
+          var curMsgHdr = gDBView.hdrForFirstSelectedMessage;
+          aMailTabOwner.selectedMsgId = curMsgHdr.messageId;
+          aMailTabOwner.msgSelectedFolder = curMsgHdr.folder;
+      }
+      catch (ex) {aMailTabOwner.msgSelectedFolder = gMsgFolderSelected};
+    }
+    else
+    {
+      aMailTabOwner.selectedMsgId = null;
+      aMailTabOwner.msgSelectedFolder = null;
+    }
+    if (indices)
+    {
+      for (var i = 0; i < indices.length; i++)
+      {
+        aMailTabOwner.selectedKeys[i] = gDBView.getKeyAt(i);
+        aMailTabOwner.selectedFolders[i] = gDBView.getFolderForViewIndex(i);
+      }
+    }
+  }
+}
+
+/**
+  * setMailTabState - a private helper routine shared by message and folder tab owners for setting up various
+                                     global variables based on the current tab.
+  * @param aMailTabOwner 
+  */
+function setMailTabState(aMailTabOwner)
+{
+  messenger = aMailTabOwner.messenger;
+  gDBView = aMailTabOwner.dbView;
+  gSearchSession = aMailTabOwner.searchSession;
+  if (gDBView)
+  {
+    var folderTree = GetFolderTree();
+    var row = EnsureFolderIndex(folderTree.builderView, gDBView.msgFolder);
+    
+    var folderTreeBoxObj = folderTree.treeBoxObject;
+    var folderTreeSelection = folderTreeBoxObj.view.selection;
+    // make sure that row.value is valid so that it doesn't mess up
+    // the call to ensureRowIsVisible().
+    if((row >= 0) && !folderTreeSelection.isSelected(row))
+    {
+      gMsgFolderSelected = gDBView.msgFolder;
+      folderTreeSelection.selectEventsSuppressed = true;
+      folderTreeSelection.select(row);
+      folderTreeBoxObj.ensureRowIsVisible(row);
+      folderTreeSelection.selectEventsSuppressed = false;
+    }
+    // this sets the thread pane tree's view to the gDBView view.
+    UpdateSortIndicators(gDBView.sortType, gDBView.sortOrder);
+    RerootThreadPane();
+    // we need to restore the selection to what it was when we switched away from this tab.
+    // we need to remember the selected keys, instead of the selected indices, since the view
+    // might have changed. But maybe the selectedIndices adjust as items are added/removed from
+    // the (hidden) view.
+    ClearThreadPaneSelection(); 
+    try
+    {
+      if (aMailTabOwner.selectedMsgId && aMailTabOwner.msgSelectedFolder)
+      {
+        var msgDB = aMailTabOwner.msgSelectedFolder.getMsgDatabase(msgWindow);
+        var msgHdr = msgDB.getMsgHdrForMessageID(aMailTabOwner.selectedMsgId);
+        setTimeout(gDBView.selectFolderMsgByKey, 0, aMailTabOwner.msgSelectedFolder, msgHdr.messageKey);
+      }
+    }
+    catch (ex) {dump(ex);}
+  }
+  else
+  {
+    var tree = GetThreadTree();
+    tree.boxObject.QueryInterface(Components.interfaces.nsITreeBoxObject).view = null;
+    ClearMessagePane();
+  }
+}
+
+function CreateToolbarTooltip(document, event)
+{
+  event.stopPropagation();
+  var tn = document.tooltipNode;
+  if (tn.localName != "tab")
+    return false; // Not a tab, so cancel the tooltip
+  if ("mOverCloseButton" in tn && tn.mOverCloseButton) {
+     event.target.setAttribute("label", tn.getAttribute("closetabtext"));
+     return true;
+  }
+  if (tn.hasAttribute("label")) {
+    event.target.setAttribute("label", tn.getAttribute("label"));
+    return true;
+  }
+  return false;
+}
+
+function DisplayFolderAndThreadPane(show)
+{
+  var collapse = !show;
+  if (gCurrentPaneConfig == kWidePaneConfig)
+  {
+    document.getElementById("mailContent").collapsed = collapse;
+    // if opening a standalone message, need to give the messagepanebox flex.
+    if (collapse)
+      document.getElementById("messagepanebox").flex = 1;
+  }
+
+  document.getElementById("threadpane-splitter").collapsed = collapse;
+  document.getElementById("folderpane_splitter").collapsed = collapse;
+  document.getElementById("folderPaneBox").collapsed = collapse;
+  document.getElementById("messengerBox").collapsed = collapse;
+  try {
+    document.getElementById("search-container").collapsed = collapse;
+  } catch (ex) {}
+  try {
+    document.getElementById("folder-location-container").collapsed = collapse;
+  } catch (ex) {}
+  try {
+    document.getElementById("mailviews-container").collapsed = collapse;
+  } catch (ex) {}
+}
+
+/**
+  * openFolderTab - a private helper method used by folder and message tab owners.
+  * @param aMailTabOwner
+  */
+function openFolderTab(aMailTabOwner)
+{
+  ClearThreadPaneSelection(); 
+  CreateMessenger();
+  messenger.setWindow(window, msgWindow);
+  aMailTabOwner.msgSelectedFolder = gMsgFolderSelected;
+  // clear selection, because context clicking on a folder and opening in a new
+  // tab needs to have SelectFolder think the selection has changed.
+  // We also need to clear these globals to subvert the code that prevents
+  // folder loads when things haven't changed.
+  GetFolderTree().view.selection.clearSelection();
+  GetFolderTree().view.selection.currentIndex = -1;
+  gMsgFolderSelected = null;
+  msgWindow.openFolder = null;
+  // clear thread pane selection - otherwise, the tree tries to impose 
+  // the current selection on the new view.
+  gDBView = null; // clear gDBView so we won't try to close it.
+  SelectFolder(aMailTabOwner.uriToOpen);
+  aMailTabOwner.dbView = gDBView;
+}
+
+function folderTabOwner()
+{
+  saveMailTabInfo(this);
+}
+
+folderTabOwner.prototype =
+{
+  open : function ()
+  {
+    openFolderTab(this);
+  },
+  
+  close : function () 
+  {
+    if (this.dbView)
+      this.dbView.close();
+    if (this.messenger)
+      this.messenger.setWindow(null, null);
+  },
+
+  saveCurrentInfo : function()
+  {
+    saveMailTabInfo(this);
+  },
+
+  onSelect : function(aPreviousTabOwner)
+  {
+    if (aPreviousTabOwner.type != this.type)
+    {
+      ClearMessagePane();
+      DisplayFolderAndThreadPane(true);
+    }
+    setMailTabState(this);
+  },
+
+  onTitleChanged: function(aTab)
+  {
+    // the user may have changed folders, triggering our onTitleChanged callback.
+    // update the appropriate attributes on the tab.
+    aTab.setAttribute('SpecialFolder', GetFolderAttribute(GetFolderTree(), gMsgFolderSelected, 'SpecialFolder'));
+    aTab.setAttribute('ServerType', GetFolderAttribute(GetFolderTree(), gMsgFolderSelected, 'ServerType'));
+    return;
+  },
+
+  get title()
+  {
+    // this only works if we are the owner of the current tab...
+    return gMsgFolderSelected.prettyName;
+  },
+
+  type : "folder",
+};
+
+function messageTabOwner()
+{
+  saveMailTabInfo(this);
+}
+
+messageTabOwner.prototype =
+{
+  open : function ()
+  {
+    openFolderTab(this);
+    gCurrentlyDisplayedMessage = -1;
+    ClearThreadPaneSelection();
+    setTimeout(gDBView.selectFolderMsgByKey, 0, this.hdr.folder, this.hdr.messageKey);
+    // let's try hiding the thread pane and folder pane
+    DisplayFolderAndThreadPane(false);
+  },
+
+  close : function () 
+  {
+    if (this.dbView)
+      this.dbView.close();
+    if (this.messenger)
+      this.messenger.setWindow(null, null);
+  },
+
+  saveCurrentInfo : function()
+  {
+    saveMailTabInfo(this);
+  },
+
+  onSelect : function(aPreviousTabOwner)
+  {
+    if (aPreviousTabOwner.type != this.type)
+    {
+      ClearMessagePane();
+      DisplayFolderAndThreadPane(false);
+    }
+    setMailTabState(this);
+  },
+
+  onTitleChanged: function(aTab)
+  {
+    return;
+  },
+
+  get title()
+  {
+    return this.hdr.mime2DecodedSubject;
+  },
+
+  type : "message",
+};
+
+function MsgOpenNewTabForFolder(uri, key)
+{
+  var uriToOpen = uri;
+  var keyToSelect = key;
+  
+  if (!uriToOpen)
+    // use GetSelectedFolderURI() to find out which message to open instead of
+    // GetLoadedMsgFolder().QueryIntervace(Components.interfaces.nsIRDFResource).value.
+    // This is required because on a right-click, the currentIndex value will be
+    // different from the actual row that is highlighted.  GetSelectedFolderURI()
+    // will return the message that is highlighted.
+    uriToOpen = GetSelectedFolderURI();
+  
+  // set up the first tab, which was previously invisible.
+  // This assumes the first tab is always a 3-pane ui, which
+  // may not be right, especially if we have the ability
+  // to persist your tab setup.
+  var newTab = new folderTabOwner();
+  newTab.uriToOpen = uriToOpen;
+  document.getElementById('tabmail').addTab(newTab);
+}
+
+function MsgOpenNewTabForMessage(messageKey, folderUri)
+{
+  if (!messageKey)
+    messageKey = gDBView.keyForFirstSelectedMessage;
+
+  var hdr = gDBView.hdrForFirstSelectedMessage;
+  if (!folderUri)
+    // use the header's folder - this will open a msg in a virtual folder view
+    // in its real folder, which is needed if the msg wouldn't be in a new
+    // view with the same terms - e.g., it's read and the view is unread only.
+    // If we cloned the view, we wouldn't have to do this.
+    folderUri = hdr.folder.URI;
+  
+  // fix it so we won't try to load the previously loaded message.
+  hdr.folder.lastMessageLoaded = nsMsgKey_None;
+  
+  tab = new messageTabOwner();
+  tab.uriToOpen = folderUri;
+  tab.hdr = hdr;
+  document.getElementById('tabmail').addTab(tab);
+}
+
 // passing in the view, so this will work for search and the thread pane
 function MsgOpenSelectedMessages()
 {
@@ -1383,74 +1698,74 @@ function MsgOpenSelectedMessages()
 
 function MsgOpenSelectedMessageInExistingWindow()
 {
-    var windowID = GetWindowByWindowType("mail:messageWindow");
-    if (!windowID)
-      return false;
-
-    try {
-        var messageURI = gDBView.URIForFirstSelectedMessage;
-        var msgHdr = gDBView.hdrForFirstSelectedMessage;
-
-        // Reset the window's message uri and folder uri vars, and
-        // update the command handlers to what's going to be used.
-        // This has to be done before the call to CreateView().
-        windowID.gCurrentMessageUri = messageURI;
-        windowID.gCurrentFolderUri = msgHdr.folder.URI;
-        windowID.UpdateMailToolbar('MsgOpenExistingWindowForMessage');
-
-        // even if the folder uri's match, we can't use the existing view
-        // (msgHdr.folder.URI == windowID.gCurrentFolderUri)
-        // the reason is quick search and mail views.
-        // see bug #187673
-        //
-        // for the sake of simplicity,
-        // let's always call CreateView(gDBView)
-        // which will clone gDBView
-        windowID.CreateView(gDBView);
-        windowID.LoadMessageByMsgKey(msgHdr.messageKey);
-
-        // bring existing window to front
-        windowID.focus();
-        return true;
-    }
-    catch (ex) {
-        dump("reusing existing standalone message window failed: " + ex + "\n");
-    }
+  var windowID = GetWindowByWindowType("mail:messageWindow");
+  if (!windowID)
     return false;
+
+  try {
+    var messageURI = gDBView.URIForFirstSelectedMessage;
+    var msgHdr = gDBView.hdrForFirstSelectedMessage;
+
+    // Reset the window's message uri and folder uri vars, and
+    // update the command handlers to what's going to be used.
+    // This has to be done before the call to CreateView().
+    windowID.gCurrentMessageUri = messageURI;
+    windowID.gCurrentFolderUri = msgHdr.folder.URI;
+    windowID.UpdateMailToolbar('MsgOpenExistingWindowForMessage');
+
+    // even if the folder uri's match, we can't use the existing view
+    // (msgHdr.folder.URI == windowID.gCurrentFolderUri)
+    // the reason is quick search and mail views.
+    // see bug #187673
+    //
+    // for the sake of simplicity,
+    // let's always call CreateView(gDBView)
+    // which will clone gDBView
+    windowID.CreateView(gDBView);
+    windowID.LoadMessageByMsgKey(msgHdr.messageKey);
+
+    // bring existing window to front
+    windowID.focus();
+    return true;
+  }
+  catch (ex) {
+    dump("reusing existing standalone message window failed: " + ex + "\n");
+  }
+  return false;
 }
 
 const nsIFilePicker = Components.interfaces.nsIFilePicker;
 
 function MsgOpenFromFile()
 {
-   var fp = Components.classes["@mozilla.org/filepicker;1"].createInstance(nsIFilePicker);
+  var fp = Components.classes["@mozilla.org/filepicker;1"].createInstance(nsIFilePicker);
 
-   var strBundleService = Components.classes["@mozilla.org/intl/stringbundle;1"].getService();
-   strBundleService = strBundleService.QueryInterface(Components.interfaces.nsIStringBundleService);
-   var extbundle = strBundleService.createBundle("chrome://messenger/locale/messenger.properties");
-   var filterLabel = extbundle.GetStringFromName("EMLFiles");
-   var windowTitle = extbundle.GetStringFromName("OpenEMLFiles");
+  var strBundleService = Components.classes["@mozilla.org/intl/stringbundle;1"].getService();
+  strBundleService = strBundleService.QueryInterface(Components.interfaces.nsIStringBundleService);
+  var extbundle = strBundleService.createBundle("chrome://messenger/locale/messenger.properties");
+  var filterLabel = extbundle.GetStringFromName("EMLFiles");
+  var windowTitle = extbundle.GetStringFromName("OpenEMLFiles");
 
-   fp.init(window, windowTitle, nsIFilePicker.modeOpen);
-   fp.appendFilter(filterLabel, "*.eml");
+  fp.init(window, windowTitle, nsIFilePicker.modeOpen);
+  fp.appendFilter(filterLabel, "*.eml");
 
-   // Default or last filter is "All Files"
-   fp.appendFilters(nsIFilePicker.filterAll);
+  // Default or last filter is "All Files"
+  fp.appendFilters(nsIFilePicker.filterAll);
 
-  try {
-     var ret = fp.show();
-     if (ret == nsIFilePicker.returnCancel)
-       return;
-   }
-   catch (ex) {
-     dump("filePicker.chooseInputFile threw an exception\n");
-     return;
-   }
+ try {
+    var ret = fp.show();
+    if (ret == nsIFilePicker.returnCancel)
+      return;
+  }
+  catch (ex) {
+    dump("filePicker.chooseInputFile threw an exception\n");
+    return;
+  }
 
-   var uri = fp.fileURL;
-   uri.query = "type=application/x-message-display";
+  var uri = fp.fileURL;
+  uri.query = "type=application/x-message-display";
 
-  window.openDialog( "chrome://messenger/content/messageWindow.xul", "_blank", "all,chrome,dialog=no,status,toolbar", uri, null, null );
+ window.openDialog( "chrome://messenger/content/messageWindow.xul", "_blank", "all,chrome,dialog=no,status,toolbar", uri, null, null );
 }
 
 function MsgOpenNewWindowForMessage(messageUri, folderUri)
@@ -1481,8 +1796,8 @@ function MsgOpenNewWindowForMessage(messageUri, folderUri)
 
 function CloseMailWindow()
 {
-    //dump("\nClose from XUL\nDo something...\n");
-    window.close();
+  //dump("\nClose from XUL\nDo something...\n");
+  window.close();
 }
 
 function MsgJunk()
@@ -1889,7 +2204,7 @@ function getMarkupDocumentViewer()
 function MsgSynchronizeOffline()
 {
   window.openDialog("chrome://messenger/content/msgSynchronize.xul",
-        "", "centerscreen,chrome,modal,titlebar,resizable=yes",{msgWindow:msgWindow}); 		     
+        "", "centerscreen,chrome,modal,titlebar,resizable=yes",{msgWindow:msgWindow});          
 }
 
 
@@ -2131,13 +2446,13 @@ function SetupUndoRedoCommand(command)
 
     if (command == "cmd_undo")
     {
-        canUndoOrRedo = messenger.CanUndo();
-        txnType = messenger.GetUndoTransactionType();
+        canUndoOrRedo = messenger.canUndo();
+        txnType = messenger.getUndoTransactionType();
     }
     else
     {
-        canUndoOrRedo = messenger.CanRedo();
-        txnType = messenger.GetRedoTransactionType();
+        canUndoOrRedo = messenger.canRedo();
+        txnType = messenger.getRedoTransactionType();
     }
 
     if (canUndoOrRedo)
@@ -2190,7 +2505,7 @@ function HandleJunkStatusChanged(folder)
       if (sanitizeJunkMail) // only bother doing this if we are modifying the html for junk mail....
       {
         var moveJunkMail = (folder && folder.server && folder.server.spamSettings) ?
-	                          folder.server.spamSettings.manualMark : false;
+                            folder.server.spamSettings.manualMark : false;
 
         var junkScore = msgHdr.getStringProperty("junkscore"); 
         var isJunk = ((junkScore != "") && (junkScore != "0"));
@@ -2423,6 +2738,10 @@ function OnMsgParsed(aUrl)
   // run the phishing detector on the message
   if (!checkMsgHdrPropertyIsNot("notAPhishMessage", kIsAPhishMessage))
     gPhishingDetector.analyzeMsgForPhishingURLs(aUrl);
+  // notify anyone (e.g., extensions) who's interested in when a message is loaded.
+  var msgURI = GetLoadedMessage();
+  var observerService = Components.classes["@mozilla.org/observer-service;1"].getService(Components.interfaces.nsIObserverService);
+  observerService.notifyObservers(msgWindow.msgHeaderSink, "MsgMsgDisplayed", msgURI);
 }
 
 function OnMsgLoaded(aUrl)

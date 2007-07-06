@@ -182,7 +182,7 @@ js_ConcatStrings(JSContext *cx, JSString *left, JSString *right)
         if (!ldep) {
             JS_free(cx, s);
         } else {
-            s = JS_realloc(cx, ls, (ln + 1) * sizeof(jschar));
+            s = (jschar *) JS_realloc(cx, ls, (ln + 1) * sizeof(jschar));
             if (s)
                 left->chars = s;
         }
@@ -3194,7 +3194,8 @@ js_GetStringBytes(JSContext *cx, JSString *str)
         rt = js_GetGCStringRuntime(str);
     }
 
-    if (!rt->deflatedStringCache) {
+#ifdef JS_THREADSAFE
+    if (!rt->deflatedStringCacheLock) {
         /*
          * Called from last GC (see js_DestroyContext), after runtime string
          * state has been finalized.  We have no choice but to leak here.
@@ -3202,6 +3203,7 @@ js_GetStringBytes(JSContext *cx, JSString *str)
         return js_DeflateString(NULL, JSSTRING_CHARS(str),
                                       JSSTRING_LENGTH(str));
     }
+#endif
 
     JS_ACQUIRE_LOCK(rt->deflatedStringCacheLock);
 
@@ -4557,7 +4559,8 @@ AddCharsToURI(JSContext *cx, JSString *str, const jschar *chars, size_t length)
     if (!str->chars ||
         JS_HOWMANY(total, URI_CHUNK) > JS_HOWMANY(str->length + 1, URI_CHUNK)) {
         total = JS_ROUNDUP(total, URI_CHUNK);
-        newchars = JS_realloc(cx, str->chars, total * sizeof(jschar));
+        newchars = (jschar *) JS_realloc(cx, str->chars,
+                                         total * sizeof(jschar));
         if (!newchars)
             return JS_FALSE;
         str->chars = newchars;

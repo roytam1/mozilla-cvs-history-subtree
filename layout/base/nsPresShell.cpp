@@ -121,8 +121,6 @@
 #include "nsXPCOM.h"
 #include "nsISupportsPrimitives.h"
 #include "nsILayoutHistoryState.h"
-#include "nsIScrollPositionListener.h"
-#include "nsICompositeListener.h"
 #include "nsILineIterator.h" // for ScrollContentIntoView
 #include "nsTimer.h"
 #include "nsWeakPtr.h"
@@ -191,7 +189,7 @@
 #include "nsStyleChangeList.h"
 #include "nsCSSFrameConstructor.h"
 #ifdef MOZ_XUL
-#include "nsIMenuFrame.h"
+#include "nsMenuFrame.h"
 #include "nsITreeBoxObject.h"
 #endif
 #include "nsIMenuParent.h"
@@ -671,7 +669,8 @@ FrameArena::FrameArena(PRUint32 aArenaSize)
 
 FrameArena::~FrameArena()
 {
-  NS_ASSERTION(mFrameCount == 0, "Some frame destructors were not called");
+  NS_ASSERTION(mFrameCount == 0,
+               "Some objects allocated with AllocateFrame were not freed");
  
 #if !defined(DEBUG_TRACEMALLOC_FRAMEARENA)
   // Free the arena in the pool and finish using it
@@ -888,8 +887,6 @@ public:
   virtual already_AddRefed<gfxASurface> RenderSelection(nsISelection* aSelection,
                                                         nsPoint& aPoint,
                                                         nsRect* aScreenRect);
-
-  virtual void HidePopups();
 
   //nsIViewObserver interface
 
@@ -3206,7 +3203,8 @@ PresShell::GetViewToScroll(nsLayoutUtils::Direction aDirection)
   if (focusedContent) {
     nsIFrame* startFrame = GetPrimaryFrameFor(focusedContent);
     if (startFrame) {
-      nsCOMPtr<nsIScrollableViewProvider> svp = do_QueryInterface(startFrame);
+      nsIScrollableViewProvider* svp;
+      CallQueryInterface(startFrame, &svp);
       // If this very frame provides a scroll view, start there instead of frame's
       // closest view, because the scroll view may be inside a child frame.
       // For example, this happens in the case of overflow:scroll.
@@ -5351,7 +5349,7 @@ PresShell::HandleEvent(nsIView         *aView,
       if (shell != this) {
         // Handle the event in the correct shell.
         // Prevent deletion until we're done with event handling (bug 336582).
-        nsRefPtr<nsIPresShell> kungFuDeathGrip(shell);
+        nsCOMPtr<nsIPresShell> kungFuDeathGrip(shell);
         nsIView* subshellRootView;
         shell->GetViewManager()->GetRootView(subshellRootView);
         // We pass the subshell's root view as the view to start from. This is
@@ -5840,18 +5838,6 @@ PresShell::Thaw()
   UnsuppressPainting();
 }
 
-void
-PresShell::HidePopups()
-{
-  nsIViewManager *vm = GetViewManager();
-  if (vm) {
-    nsIView *rootView = nsnull;
-    vm->GetRootView(rootView);
-    if (rootView)
-      HideViewIfPopup(rootView);
-  }
-}
-
 //--------------------------------------------------------
 // Start of protected and private methods on the PresShell
 //--------------------------------------------------------
@@ -6127,7 +6113,6 @@ PresShell::ProcessReflowCommands(PRBool aInterruptible)
     DidDoReflow();
 
 #ifdef DEBUG
-    nsIFrame* rootFrame = FrameManager()->GetRootFrame();
     if (VERIFY_REFLOW_DUMP_COMMANDS & gVerifyReflowFlags) {
       printf("\nPresShell::ProcessReflowCommands() finished: this=%p\n", (void*)this);
     }
@@ -6187,11 +6172,8 @@ ReResolveMenusAndTrees(nsIFrame *aFrame, void *aClosure)
   // sub-content, since doing so slows menus to a crawl.  That means we
   // have to special-case them on a skin switch, and ensure that the
   // popup frames just get destroyed completely.
-  nsCOMPtr<nsIMenuFrame> menuFrame(do_QueryInterface(aFrame));
-  if (menuFrame) {
-    menuFrame->UngenerateMenu();  
-    menuFrame->OpenMenu(PR_FALSE);
-  }
+  if (aFrame && aFrame->GetType() == nsGkAtoms::menuFrame)
+    (NS_STATIC_CAST(nsMenuFrame *, aFrame))->CloseMenu(PR_TRUE);
   return PR_TRUE;
 }
 
@@ -6326,27 +6308,6 @@ PresShell::EnumeratePlugins(nsIDOMDocument *aDocument,
     nsCOMPtr<nsIContent> content = do_QueryInterface(node);
     if (content)
       aCallback(this, content);
-  }
-}
-
-void
-PresShell::HideViewIfPopup(nsIView* aView)
-{
-  nsIFrame* frame = NS_STATIC_CAST(nsIFrame*, aView->GetClientData());
-  if (frame) {
-    nsIMenuParent* parent;
-    CallQueryInterface(frame, &parent);
-    if (parent) {
-      parent->HideChain();
-      // really make sure the view is hidden
-      mViewManager->SetViewVisibility(aView, nsViewVisibility_kHide);
-    }
-  }
-
-  nsIView* child = aView->GetFirstChild();
-  while (child) {
-    HideViewIfPopup(child);
-    child = child->GetNextSibling();
   }
 }
 

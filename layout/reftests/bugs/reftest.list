@@ -121,7 +121,7 @@ random == 328829-1.xhtml 328829-1-ref.xhtml # bug 369046 (intermittent)
 == 335628-1.html 335628-1-ref.html
 != 335628-2.xul 335628-2-ref.xul
 == 336147-1.html 336147-1-ref.html
-fails == 336736-1.html 336736-1-ref.html # something wrong with subpixel horizontal alignment (tracked in bug 336736)
+fails-if(MOZ_WIDGET_TOOLKIT=="cocoa") == 336736-1.html 336736-1-ref.html # something wrong with subpixel horizontal alignment (tracked in bug 336736)
 == 339289-1.html 339289-1-ref.html
 == 341043-1a.html 341043-1-ref.html
 != 341043-1b.html 341043-1-ref.html
@@ -172,10 +172,12 @@ fails-if(MOZ_WIDGET_TOOLKIT=="cocoa") == 359903-1.html 359903-1-ref.html # bug 3
 == 362901-1.html 362901-1-ref.html
 == 363329-1.html 363329-1-ref.html
 == 363329-2.html 363329-2-ref.html
+== 363370-1.html 363370-1-ref.html
 == 363637-1.html 363637-1-ref.html
 == 363874.html 363874-ref.html
 == 363874-max-width.html 363874-max-width-ref.html
 == 364066-1.html 364066-1-ref.html
+== 364318-1.xhtml 364318-1-ref.xhtml
 == 364079-1.html 364079-1-ref.html
 == 364861-1.html 364861-1-ref.html
 == 364862-1.html 364862-1-ref.html
@@ -209,15 +211,33 @@ random-if(MOZ_WIDGET_TOOLKIT=="gtk2") == 368020-2.html 368020-2-ref.html # bug 3
 fails == 368020-3.html 368020-3-ref.html # bug 368085
 fails == 368020-4.html 368020-4-ref.html # bug 368085
 == 368020-5.html 368020-5-ref.html
+== 368155-1.xhtml 368155-1-ref.xhtml
+== 368155-negative-margins-1.html 368155-negative-margins-1-ref.html
 # we can't test this because there's antialiasing involved, and our comparison
 # is too exact
 # == 368247-1.html 368247-1-ref.html
 == 368247-2.html 368247-2-ref.html
 fails == 368504-1.html 368504-1-ref.html # bug 368504
+fails == 368504-2.html 368504-2-ref.html # bug 368504
 == 368622-1.html 368622-1-ref.html
 == 368622-1.html 368622-1-ref.html
+== 368651-1.html 368651-1-ref.html
+== 369975-1.html 369975-1.html
 == 369882.xul 369882-ref.xul
 == 370422-1.html 370422-1-ref.html
+== 370525-1.html 370525-1-ref.html
+!= 370525-1.html 370525-1-notref.html
+== 370525-2.html 370525-2-ref.html
+!= 370525-2.html 370525-2-notref.html
+!= 370525-2.html 370525-2-notref.html
+== 370525-rowspan-1a.html 370525-rowspan-1a-ref.html
+== 370525-rowspan-1b.html 370525-rowspan-1b-ref.html
+== 370525-rowspan-1c.html 370525-rowspan-1c-ref.html
+== 370525-rowspan-2a.html 370525-rowspan-2a-ref.html
+== 370525-rowspan-2b.html 370525-rowspan-2b-ref.html
+== 370525-rowspan-3.html 370525-rowspan-3-ref.html
+== 370525-rowspan-4.html 370525-rowspan-4-ref.html
+== 370525-sib.html 370525-sib-ref.html
 == 370586-1.xhtml 370586-1-ref.xhtml
 == 370629-1.html 370629-1-ref.html
 == 370629-2.html 370629-2-ref.html
@@ -236,8 +256,10 @@ fails-if(MOZ_WIDGET_TOOLKIT=="cocoa") == 372037-1.html 372037-1-ref.html # bug 3
 == 374038-2.xul 374038-2-ref.xul
 == 374193-1.xhtml about:blank
 == 375716-1.html 375716-1-ref.html
+== 375827-1.html 375827-1-ref.html
 == 376484-1.html 376484-1-ref.html
 == 377603-1.html 377603-1-ref.html
+== 377918.html 377918-ref.html
 == 378535-1.html 378535-1-ref.html
 == 379316-1.html 379316-1-ref.html
 random-if(MOZ_WIDGET_TOOLKIT=="cocoa") == 379316-2.html 379316-2-ref.html # bug 379786
@@ -247,3 +269,5 @@ random-if(MOZ_WIDGET_TOOLKIT=="cocoa") == 379316-2.html 379316-2-ref.html # bug 
 == 380842-1.html 380842-1-ref.html
 == 381130-1.html 381130-1-ref.html
 == 381507-1.html 381507-1-ref.html
+== 382600-1.html 382600-1-ref.html
+== 383551-1.html 383551-1-ref.html

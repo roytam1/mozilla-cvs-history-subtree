@@ -3231,7 +3231,7 @@ nsMsgComposeAndSend::Init(
     nsCOMPtr<nsIStringBundleService> bundleService(do_GetService("@mozilla.org/intl/stringbundle;1", &rv));
     NS_ENSURE_SUCCESS(rv, rv);
     nsCOMPtr<nsIStringBundle> bundle;
-    rv = bundleService->CreateBundle("chrome://messenger/locale/localMsgs.properties", getter_AddRefs(mComposeBundle));
+    rv = bundleService->CreateBundle("chrome://messenger/locale/messengercompose/composeMsgs.properties", getter_AddRefs(mComposeBundle));
     NS_ENSURE_SUCCESS(rv, rv);
   }
 
@@ -3754,7 +3754,10 @@ nsMsgComposeAndSend::DoDeliveryExitProcessing(nsIURI * aUri, nsresult aExitCode,
     if (aExitCode == NS_ERROR_SMTP_SEND_FAILED ||
         aExitCode == NS_ERROR_COULD_NOT_LOGIN_TO_SMTP_SERVER ||
         aExitCode == NS_ERROR_COULD_NOT_LOGIN_TO_SMTP_SERVER_WITH_STARTTLS1 ||
-        aExitCode == NS_ERROR_COULD_NOT_LOGIN_TO_SMTP_SERVER_WITH_STARTTLS2)
+        aExitCode == NS_ERROR_COULD_NOT_LOGIN_TO_SMTP_SERVER_WITH_STARTTLS2 ||
+        aExitCode == NS_ERROR_COULD_NOT_LOGIN_TO_SMTP_SERVER_AUTH ||
+        aExitCode == NS_ERROR_COULD_NOT_LOGIN_TO_SMTP_SERVER_INSECAUTH ||
+        aExitCode == NS_ERROR_COULD_NOT_LOGIN_TO_SMTP_SERVER_SECAUTH)
       FormatStringWithSMTPHostNameByID(aExitCode, getter_Copies(eMsg));
     else
       mComposeBundle->GetStringFromID(NS_ERROR_GET_CODE(aExitCode), getter_Copies(eMsg));

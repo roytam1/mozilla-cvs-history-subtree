@@ -22,6 +22,7 @@
  * Contributor(s):
  *   Vladimir Vukicevic <vladimir.vukicevic@oracle.com>
  *   Brett Wilson <brettw@gmail.com>
+ *   Shawn Wilsher <me@shawnwilsher.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -50,7 +51,7 @@ interface nsIFile;
  * creating prepared statements, executing SQL, and examining database
  * errors.
  */
-[scriptable, uuid(77015f88-bfc2-4669-b1c3-cc19fb07cd4e)]
+[scriptable, uuid(43933f76-3376-4999-9096-6f1d545fe5f6)]
 interface mozIStorageConnection : nsISupports {
   /*
    * Initialization and status
@@ -83,6 +84,12 @@ interface mozIStorageConnection : nsISupports {
    * sqlite library).
    */
   readonly attribute AUTF8String lastErrorString;
+
+  /**
+   * The schema version of the database.  This should not be used until the 
+   * database is ready.  The schema will be reported as zero if it is not set.
+   */
+  attribute long schemaVersion;
 
   /*
    * Statement creation
@@ -193,6 +200,25 @@ interface mozIStorageConnection : nsISupports {
   void createFunction(in string aFunctionName,
                       in long aNumArguments,
                       in mozIStorageFunction aFunction);
+
+  /*
+   * Utilities
+   */
+
+  /**
+   * Copies the current database file to the specified parent directory with the
+   * specified file name.  If the parent directory is not specified, it places
+   * the backup in the same directory as the current file.  This function
+   * ensures that the file being created is unique.
+   *
+   * @param aFileName
+   *        The name of the new file to create.
+   * @param [optional] aParentDirectory
+   *        The directory you'd like the file to be placed.
+   * @return The nsIFile representing the backup file.
+   */
+  nsIFile backupDB(in AString aFileName,
+                   [optional] in nsIFile aParentDirectory);
 
   /**
    * This is used to preload the database cache. It loads pages from the

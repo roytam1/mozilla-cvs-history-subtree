@@ -123,6 +123,7 @@
 
 #include "nsCycleCollectionParticipant.h"
 #include "nsCCUncollectableMarker.h"
+#include "nsCycleCollector.h"
 
 #ifdef MOZ_SVG
 PRBool NS_SVG_TestFeature(const nsAString &fstr);
@@ -298,6 +299,28 @@ nsIContent::SetNativeAnonymous(PRBool aAnonymous)
     UnsetFlags(NODE_IS_ANONYMOUS);
     UnsetFlags(NODE_IS_ANONYMOUS_FOR_EVENTS);
   }
+}
+
+PRInt32
+nsIContent::IntrinsicState() const
+{
+  PRBool editable = HasFlag(NODE_IS_EDITABLE);
+  if (!editable) {
+    nsIDocument *doc = GetCurrentDoc();
+    if (doc) {
+      editable = doc->HasFlag(NODE_IS_EDITABLE);
+    }
+  }
+
+  return editable ? NS_EVENT_STATE_MOZ_READWRITE : NS_EVENT_STATE_MOZ_READONLY;
+}
+
+void
+nsIContent::UpdateEditableState()
+{
+  nsIContent *parent = GetParent();
+
+  SetEditableFlag(parent && parent->HasFlag(NODE_IS_EDITABLE));
 }
 
 //----------------------------------------------------------------------
@@ -1067,6 +1090,9 @@ nsGenericElement::~nsGenericElement()
 {
   NS_PRECONDITION(!IsInDoc(),
                   "Please remove this from the document properly");
+#ifdef DEBUG
+  nsCycleCollector_DEBUG_wasFreed(NS_STATIC_CAST(nsINode*, this));
+#endif
 }
 
 NS_IMETHODIMP
@@ -2002,6 +2028,8 @@ nsGenericElement::BindToTree(nsIDocument* aDocument, nsIContent* aParent,
     }
   }
 
+  UpdateEditableState();
+
   // Now recurse into our kids
   PRUint32 i;
   // Don't call GetChildCount() here since that'll make XUL generate
@@ -2080,6 +2108,9 @@ nsGenericElement::UnbindFromTree(PRBool aDeep, PRBool aNullParent)
   }
 
   nsNodeUtils::ParentChainChanged(this);
+#ifdef DEBUG
+  nsCycleCollector_DEBUG_shouldBeFreed(NS_STATIC_CAST(nsINode*, this));
+#endif
 }
 
 nsresult
@@ -2606,7 +2637,7 @@ nsGenericElement::doInsertChildAt(nsIContent* aKid, PRUint32 aIndex,
     }
 
     if (nsContentUtils::HasMutationListeners(aKid,
-          NS_EVENT_BITS_MUTATION_NODEINSERTED)) {
+          NS_EVENT_BITS_MUTATION_NODEINSERTED, container)) {
       nsMutationEvent mutation(PR_TRUE, NS_MUTATION_NODEINSERTED);
       mutation.mRelatedNode = do_QueryInterface(container);
       mozAutoSubtreeModified subtree(container->GetOwnerDoc(), container);
@@ -2657,7 +2688,7 @@ nsGenericElement::doRemoveChildAt(PRUint32 aIndex, PRBool aNotify,
   mozAutoSubtreeModified subtree(nsnull, nsnull);
   if (aNotify &&
       nsContentUtils::HasMutationListeners(aKid,
-        NS_EVENT_BITS_MUTATION_NODEREMOVED)) {
+        NS_EVENT_BITS_MUTATION_NODEREMOVED, container)) {
     nsMutationEvent mutation(PR_TRUE, NS_MUTATION_NODEREMOVED);
     mutation.mRelatedNode = do_QueryInterface(container);
     subtree.UpdateTarget(container->GetOwnerDoc(), container);
@@ -3353,7 +3384,8 @@ nsGenericElement::PostQueryInterface(REFNSIID aIID, void** aInstancePtr)
                                                                 aInstancePtr);
   }
 
-  return NS_NOINTERFACE;
+  *aInstancePtr = nsnull;
+  return NS_ERROR_NO_INTERFACE;
 }
 
 //----------------------------------------------------------------------
@@ -3489,7 +3521,8 @@ nsGenericElement::SetAttr(PRInt32 aNamespaceID, nsIAtom* aName,
   PRBool modification = PR_FALSE;
   PRBool hasListeners = aNotify &&
     nsContentUtils::HasMutationListeners(this,
-                                         NS_EVENT_BITS_MUTATION_ATTRMODIFIED);
+                                         NS_EVENT_BITS_MUTATION_ATTRMODIFIED,
+                                         this);
   
   // If we have no listeners and aNotify is false, we are almost certainly
   // coming from the content sink and will almost certainly have no previous
@@ -3781,7 +3814,8 @@ nsGenericElement::UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
 
   PRBool hasMutationListeners = aNotify &&
     nsContentUtils::HasMutationListeners(this,
-                                         NS_EVENT_BITS_MUTATION_ATTRMODIFIED);
+                                         NS_EVENT_BITS_MUTATION_ATTRMODIFIED,
+                                         this);
 
   // Grab the attr node if needed before we remove it from the attr map
   nsCOMPtr<nsIDOMAttr> attrNode;

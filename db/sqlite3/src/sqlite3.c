@@ -4861,11 +4861,15 @@ extern void (*sqlite3_io_trace)(const char*,...);
 # include <windows.h>
 # define SQLITE_TEMPNAME_SIZE (MAX_PATH+50)
 #elif OS_OS2
+# if (__GNUC__ > 3 || __GNUC__ == 3 && __GNUC_MINOR__ >= 3) && defined(OS2_HIGH_MEMORY)
+#  include <os2safe.h> /* has to be included before os2.h for linking to work */
+# endif
 # define INCL_DOSDATETIME
 # define INCL_DOSFILEMGR
 # define INCL_DOSERRORS
 # define INCL_DOSMISC
 # define INCL_DOSPROCESS
+# define INCL_DOSMODULEMGR
 # include <os2.h>
 # define SQLITE_TEMPNAME_SIZE (CCHMAXPATHCOMP)
 #else
@@ -15791,7 +15795,7 @@ int sqlite3WinOpenExclusive(const char *zFilename, OsFile **pId, int delFlag){
   fileflags = FILE_FLAG_RANDOM_ACCESS;
 #if !OS_WINCE
   if( delFlag ){
-    fileflags |= FILE_ATTRIBUTE_TEMPORARY;// XXX sqlite Issue 2441 | FILE_FLAG_DELETE_ON_CLOSE;
+    fileflags |= FILE_ATTRIBUTE_TEMPORARY | FILE_FLAG_DELETE_ON_CLOSE;
   }
 #endif
   if( isNT() ){

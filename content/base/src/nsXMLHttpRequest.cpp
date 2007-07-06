@@ -998,8 +998,10 @@ nsXMLHttpRequest::OpenRequest(const nsACString& method,
   NS_ENSURE_ARG(!method.IsEmpty());
   NS_ENSURE_ARG(!url.IsEmpty());
 
-  // Disallow HTTP/1.1 TRACE method (see bug 302489).
-  if (method.LowerCaseEqualsASCII("trace")) {
+  // Disallow HTTP/1.1 TRACE method (see bug 302489)
+  // and MS IIS equivalent TRACK (see bug 381264)
+  if (method.LowerCaseEqualsASCII("trace") ||
+      method.LowerCaseEqualsASCII("track")) {
     return NS_ERROR_INVALID_ARG;
   }
 
@@ -1275,28 +1277,19 @@ nsXMLHttpRequest::OnStartRequest(nsIRequest *request, nsISupports *ctxt)
   nsCOMPtr<nsIChannel> channel(do_QueryInterface(request));
   NS_ENSURE_TRUE(channel, NS_ERROR_UNEXPECTED);
 
+  mChannel->SetOwner(mPrincipal);
+
   mReadRequest = request;
   mContext = ctxt;
   mState |= XML_HTTP_REQUEST_PARSEBODY;
   ChangeState(XML_HTTP_REQUEST_LOADED);
 
-  // XXXbz this is probably all wrong when not called from JS... and possibly
-  // even then! Fixing that requires giving XMLHttpRequest some principals
-  // when inited.  Until then, cases when we don't actually parse the
-  // document will give our mDocument he wrong principal.  I'm just not sure
-  // how wrong it can get...  Shouldn't be too bad as long as mScriptContext
-  // is sane, I guess.
-  nsCOMPtr<nsIDocument> doc = GetDocumentFromScriptContext(mScriptContext);
   nsIURI* uri = GetBaseURI();
-  nsIPrincipal* principal = nsnull;
-  if (doc) {
-    principal = doc->NodePrincipal();
-  }
 
   // Create an empty document from it 
   const nsAString& emptyStr = EmptyString();
   nsresult rv = nsContentUtils::CreateDocument(emptyStr, emptyStr, nsnull, uri,
-                                               uri, principal,
+                                               uri, mPrincipal,
                                                getter_AddRefs(mDocument));
   NS_ENSURE_SUCCESS(rv, rv);
 
@@ -1520,6 +1513,18 @@ nsXMLHttpRequest::Send(nsIVariant *aBody)
   //     if there are no event listeners set and we are doing
   //     an asynchronous call.
 
+  nsCOMPtr<nsIDocument> doc =
+    do_QueryInterface(nsContentUtils::GetDocumentFromCaller());
+  if (doc) {
+    mPrincipal = doc->NodePrincipal();
+  }
+  else {
+    nsIScriptSecurityManager *secMan = nsContentUtils::GetSecurityManager();
+    if (secMan) {
+      secMan->GetSubjectPrincipal(getter_AddRefs(mPrincipal));
+    }
+  }
+
   // Ignore argument if method is GET, there is no point in trying to
   // upload anything
   nsCAutoString method;
@@ -1528,18 +1533,11 @@ nsXMLHttpRequest::Send(nsIVariant *aBody)
   if (httpChannel) {
     httpChannel->GetRequestMethod(method); // If GET, method name will be uppercase
 
-    nsCOMPtr<nsIDocument> doc =
-      do_QueryInterface(nsContentUtils::GetDocumentFromCaller());
+    if (mPrincipal) {
+      nsCOMPtr<nsIURI> codebase;
+      mPrincipal->GetURI(getter_AddRefs(codebase));
 
-    if (doc) {
-      nsIPrincipal *principal = doc->NodePrincipal();
-
-      if (principal) {
-        nsCOMPtr<nsIURI> codebase;
-        principal->GetURI(getter_AddRefs(codebase));
-
-        httpChannel->SetReferrer(codebase);
-      }
+      httpChannel->SetReferrer(codebase);
     }
   }
 

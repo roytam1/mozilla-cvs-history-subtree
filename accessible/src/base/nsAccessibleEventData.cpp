@@ -225,3 +225,30 @@ nsAccTextChangeEvent::IsInserted(PRBool *aIsInserted)
   return NS_OK;
 }
 
+// nsAccCaretMoveEvent
+NS_IMPL_ISUPPORTS_INHERITED1(nsAccCaretMoveEvent, nsAccEvent,
+                             nsIAccessibleCaretMoveEvent)
+
+nsAccCaretMoveEvent::
+  nsAccCaretMoveEvent(nsIAccessible *aAccessible, PRInt32 aCaretOffset) :
+  nsAccEvent(::nsIAccessibleEvent::EVENT_TEXT_CARET_MOVED, aAccessible, nsnull),
+  mCaretOffset(aCaretOffset)
+{
+}
+
+nsAccCaretMoveEvent::
+  nsAccCaretMoveEvent(nsIDOMNode *aNode) :
+  nsAccEvent(::nsIAccessibleEvent::EVENT_TEXT_CARET_MOVED, aNode, nsnull),
+  mCaretOffset(-1)
+{
+}
+
+NS_IMETHODIMP
+nsAccCaretMoveEvent::GetCaretOffset(PRInt32* aCaretOffset)
+{
+  NS_ENSURE_ARG_POINTER(aCaretOffset);
+
+  *aCaretOffset = mCaretOffset;
+  return NS_OK;
+}
+

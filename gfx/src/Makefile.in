@@ -69,9 +69,6 @@ endif
 
 ifdef MOZ_ENABLE_POSTSCRIPT
 DIRS        += psshared
-ifndef MOZ_ENABLE_CAIRO_GFX
-DIRS        += ps
-endif
 endif
 
 ifdef MOZ_ENABLE_CAIRO_GFX
@@ -89,7 +86,6 @@ else
 endif
 
 CPPSRCS = \
-        nsBlender.cpp \
         nsColor.cpp \
         nsColorNames.cpp \
         nsDeviceContext.cpp \

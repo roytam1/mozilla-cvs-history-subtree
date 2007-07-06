@@ -57,7 +57,7 @@ class nsIInputStream;
 
 NS_MSG_BASE nsresult GetMessageServiceContractIDForURI(const char *uri, nsCString &contractID);
 
-NS_MSG_BASE nsresult GetMessageServiceFromURI(const char *uri, nsIMsgMessageService **aMessageService);
+NS_MSG_BASE nsresult GetMessageServiceFromURI(const nsACString& uri, nsIMsgMessageService **aMessageService);
 
 NS_MSG_BASE nsresult GetMsgDBHdrFromURI(const char *uri, nsIMsgDBHdr **msgHdr);
 
@@ -174,6 +174,28 @@ NS_MSG_BASE PRBool MsgHostDomainIsTrusted(nsCString &host, nsCString &trustedMai
 NS_MSG_BASE nsresult MsgMailboxGetURI(const char *nativepath, nsCString &mailboxUri);
 
 NS_MSG_BASE void MsgStripQuotedPrintable (unsigned char *src);
+
+/*
+ * Utility functions that call functions from nsINetUtil
+ */
+
+NS_MSG_BASE nsresult MsgEscapeString(const nsACString &aStr, 
+                                 PRUint32 aType, nsACString &aResult);
+
+NS_MSG_BASE nsresult MsgUnescapeString(const nsACString &aStr, 
+                                       PRUint32 aFlags, nsACString &aResult);
+
+NS_MSG_BASE nsresult MsgEscapeURL(const nsACString &aStr, PRUint32 aFlags,
+                                  nsACString &aResult);
+
+/*
+ * Utility functions that got moved from nsEscape
+ */
+
+NS_MSG_BASE char *MsgEscapeHTML(const char *string);
+
+NS_MSG_BASE PRUnichar *MsgEscapeHTML(const PRUnichar *aSourceBuffer,
+                                     PRInt32 aSourceBufferLen);
 
 #endif
 

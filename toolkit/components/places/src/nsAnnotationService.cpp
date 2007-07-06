@@ -49,6 +49,7 @@
 #include "nsIVariant.h"
 #include "nsString.h"
 #include "nsVariant.h"
+#include "nsNavBookmarks.h"
 
 const PRInt32 nsAnnotationService::kAnnoIndex_ID = 0;
 const PRInt32 nsAnnotationService::kAnnoIndex_PageOrItem = 1;
@@ -956,7 +957,7 @@ nsAnnotationService::GetPagesWithAnnotation(const nsACString& aName,
     return NS_OK;
   *aResults = NS_STATIC_CAST(nsIURI**,
                              nsMemory::Alloc(results.Count() * sizeof(nsIURI*)));
-  if (! aResults)
+  if (! *aResults)
     return NS_ERROR_OUT_OF_MEMORY;
   *aResultCount = results.Count();
   for (PRUint32 i = 0; i < *aResultCount; i ++) {
@@ -1027,7 +1028,7 @@ nsAnnotationService::GetItemsWithAnnotation(const nsACString& aName,
 
   *aResults = NS_STATIC_CAST(PRInt64*,
                              nsMemory::Alloc(results.Length() * sizeof(PRInt64)));
-  if (!aResults)
+  if (! *aResults)
     return NS_ERROR_OUT_OF_MEMORY;
 
   *aResultCount = results.Length();
@@ -1624,6 +1625,14 @@ nsAnnotationService::StartSetAnnotation(PRInt64 aFkId,
                                         PRUint16 aType,
                                         mozIStorageStatement** aStatement)
 {
+  // Disallow setting item-annotations on invalid item ids
+  if (aIsItemAnnotation) {
+    nsNavBookmarks* bookmarks = nsNavBookmarks::GetBookmarksService();
+    NS_ENSURE_STATE(bookmarks);
+    if (!bookmarks->ItemExists(aFkId))
+      return NS_ERROR_INVALID_ARG;
+  }
+
   PRBool hasAnnotation;
   PRInt64 annotationID;
   nsresult rv = HasAnnotationInternal(aFkId, aIsItemAnnotation, aName,

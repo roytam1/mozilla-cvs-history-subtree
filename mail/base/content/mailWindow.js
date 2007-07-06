@@ -1,4 +1,4 @@
-# -*- Mode: Java; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+# -*- Mode: Java; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 4 -*-
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
 #
@@ -100,13 +100,11 @@ function OnMailWindowUnload()
   {
     mailSession = mailSession.QueryInterface(Components.interfaces.nsIMsgMailSession);
     if(mailSession)
-    {
       mailSession.RemoveFolderListener(folderListener);
-    }
   }
 
   mailSession.RemoveMsgWindow(msgWindow);
-  messenger.SetWindow(null, null);
+  messenger.setWindow(null, null);
 
   var msgDS;
   var viewDataSources = [accountManagerDataSource, folderDataSource, 
@@ -194,7 +192,6 @@ function InitMsgWindow()
 
 function AddDataSources()
 {
-
   accountManagerDataSource = accountManagerDataSource.QueryInterface(Components.interfaces.nsIRDFDataSource);
   folderDataSource = folderDataSource.QueryInterface(Components.interfaces.nsIRDFDataSource);
   //to move menu item
@@ -484,7 +481,7 @@ function loadStartPage()
     gMessageNotificationBar.clearMsgNotifications();
     var startpageenabled = pref.getBoolPref("mailnews.start_page.enabled");
     // only load the start page if we are online
-    var startpage = getFormattedRegionURL(startPageUrlPref());
+    var startpage = getFormattedURL(startPageUrlPref());
     // load about:blank as the start page if we are offline or we don't have a start page url...
     GetMessagePaneFrame().location.href = startpageenabled && startpage && MailOfflineMgr.isOnline() ? startpage : "about:blank";
     ClearMessageSelection();
@@ -519,7 +516,7 @@ function ShowAccountCentral()
 function ShowingAccountCentral()
 {
   if (!IsFolderPaneCollapsed())
-    GetFolderTree().focus();        
+    GetFolderTree().focus();
 
   gAccountCentralLoaded = true;
 }
@@ -562,20 +559,26 @@ function getBrowser()
   return document.getElementById("messagepane");
 }
 
+var gCurrentDisplayDeckId = "";
 function ObserveDisplayDeckChange(event)
 {
   var selectedPanel = document.getElementById("displayDeck").selectedPanel;
-  var nowSelected = selectedPanel ? selectedPanel.id : "";
-
-  if (nowSelected == "threadPaneBox")
-    ShowingThreadPane();
-  else
-    HidingThreadPane();
-  
-  if (nowSelected == "accountCentralBox")
-    ShowingAccountCentral();
-  else
-    HidingAccountCentral();
+  var nowSelected = selectedPanel ? selectedPanel.id : null;
+  // onselect fires for every mouse click inside the deck, so ObserveDisplayDeckChange is getting called every time we click
+  // on a message in the thread pane. Only show / Hide elements if the selected deck is actually changing.
+  if (nowSelected != gCurrentDisplayDeckId)
+  {
+    if (nowSelected == "threadPaneBox")
+      ShowingThreadPane();
+    else
+      HidingThreadPane();
+    
+    if (nowSelected == "accountCentralBox")
+      ShowingAccountCentral();
+    else
+      HidingAccountCentral();
+    gCurrentDisplayDeckId = nowSelected;
+  }
 }
 
 // Given the server, open the twisty and the set the selection

@@ -897,7 +897,7 @@ NS_IMETHODIMP nsMsgDBView::ReloadMessageWithAllParts()
   nsCAutoString forceAllParts(m_currentlyDisplayedMsgUri);
   forceAllParts += (forceAllParts.FindChar('?') == kNotFound) ? "?" : "&";
   forceAllParts.AppendLiteral("fetchCompleteMessage=true");
-  return mMessengerInstance->OpenURL(forceAllParts.get());
+  return mMessengerInstance->OpenURL(forceAllParts);
 }
 
 NS_IMETHODIMP nsMsgDBView::ReloadMessage()
@@ -905,7 +905,7 @@ NS_IMETHODIMP nsMsgDBView::ReloadMessage()
   if (m_currentlyDisplayedMsgUri.IsEmpty() || mSuppressMsgDisplay)
     return NS_OK;
 
-  return mMessengerInstance->OpenURL(m_currentlyDisplayedMsgUri.get());
+  return mMessengerInstance->OpenURL(m_currentlyDisplayedMsgUri);
 }
 
 nsresult nsMsgDBView::UpdateDisplayMessage(nsMsgViewIndex viewPosition)
@@ -959,7 +959,7 @@ NS_IMETHODIMP nsMsgDBView::LoadMessageByViewIndex(nsMsgViewIndex aViewIndex)
   {
     NS_ENSURE_SUCCESS(rv,rv);
 
-    mMessengerInstance->OpenURL(uri.get());
+    mMessengerInstance->OpenURL(uri);
     m_currentlyDisplayedMsgKey = m_keys[aViewIndex];
     m_currentlyDisplayedMsgUri = uri;
     m_currentlyDisplayedViewIndex = aViewIndex;
@@ -973,7 +973,7 @@ NS_IMETHODIMP nsMsgDBView::LoadMessageByUrl(const char *aUrl)
   NS_ASSERTION(aUrl, "trying to load a null url");
   if (!mSuppressMsgDisplay)
   {
-    mMessengerInstance->LoadURL(NULL, aUrl);
+    mMessengerInstance->LoadURL(NULL, nsDependentCString(aUrl));
     m_currentlyDisplayedMsgKey = nsMsgKey_None;
     m_currentlyDisplayedMsgUri.Truncate();
     m_currentlyDisplayedViewIndex = nsMsgViewIndex_None;
@@ -1499,17 +1499,18 @@ NS_IMETHODIMP nsMsgDBView::GetCellValue(PRInt32 aRow, nsITreeColumn* aCol, nsASt
   msgHdr->GetFlags(&flags);
 
   // provide a string "value" for cells that do not normally have text.
+  // use empty string for the normal states "Read", "Not Starred", "No Attachment" and "Not Junk"
   switch (colID[0])
   {
     case 'a': // attachment column
       aValue.Assign(GetString ((flags & MSG_FLAG_ATTACHMENT) ?
       NS_LITERAL_STRING("messageHasAttachment").get()
-      : NS_LITERAL_STRING("messageHasNoAttachment").get()));
+      : EmptyString().get()));
       break;
     case 'f': // flagged (starred) column
       aValue.Assign(GetString ((flags & MSG_FLAG_MARKED) ?
       NS_LITERAL_STRING("messageHasFlag").get()
-      : NS_LITERAL_STRING("messageHasNoFlag").get()));
+      : EmptyString().get()));
       break;
     case 'j': // junk column
       if (!mIsNews)
@@ -1517,7 +1518,7 @@ NS_IMETHODIMP nsMsgDBView::GetCellValue(PRInt32 aRow, nsITreeColumn* aCol, nsASt
         nsCString junkScoreStr;
         msgHdr->GetStringProperty("junkscore", getter_Copies(junkScoreStr));
         aValue.Assign(GetString((!junkScoreStr.IsEmpty() && (atoi(junkScoreStr.get()) > 50)) ?
-         NS_LITERAL_STRING("messageJunk").get() : NS_LITERAL_STRING("messageNotJunk").get()));
+         NS_LITERAL_STRING("messageJunk").get() : EmptyString().get()));
       }
       break;
     case 't':
@@ -1540,8 +1541,7 @@ NS_IMETHODIMP nsMsgDBView::GetCellValue(PRInt32 aRow, nsITreeColumn* aCol, nsASt
       break;
     case 'u': // read/unread column
       aValue.Assign(GetString ((flags & MSG_FLAG_READ) ?
-      NS_LITERAL_STRING("messageRead").get()
-      : NS_LITERAL_STRING("messageUnread").get()));
+      EmptyString().get() : NS_LITERAL_STRING("messageUnread").get()));
       break;
     default:
       aValue.Assign(colID);
@@ -5324,14 +5324,14 @@ nsresult nsMsgDBView::NavigateFromPos(nsMsgNavigationTypeValue motion, nsMsgView
           PRInt32 relPos = (motion == nsMsgNavigationType::forward)
             ? 1 : (m_currentlyDisplayedMsgKey != nsMsgKey_None) ? -1 : 0;
           PRInt32 curPos;
-          nsresult rv = mMessengerInstance->GetFolderUriAtNavigatePos(relPos, getter_Copies(folderUri));
+          nsresult rv = mMessengerInstance->GetFolderUriAtNavigatePos(relPos, folderUri);
           NS_ENSURE_SUCCESS(rv, rv);
           if (folderUri.Equals(viewFolderUri))
           {
             nsCOMPtr <nsIMsgDBHdr> msgHdr;
-            nsresult rv = mMessengerInstance->GetMsgUriAtNavigatePos(relPos, getter_Copies(msgUri));
+            nsresult rv = mMessengerInstance->GetMsgUriAtNavigatePos(relPos, msgUri);
             NS_ENSURE_SUCCESS(rv, rv);
-            mMessengerInstance->MsgHdrFromURI(msgUri.get(), getter_AddRefs(msgHdr));
+            mMessengerInstance->MsgHdrFromURI(msgUri, getter_AddRefs(msgHdr));
             if (msgHdr)
             {
               mMessengerInstance->GetNavigatePos(&curPos);

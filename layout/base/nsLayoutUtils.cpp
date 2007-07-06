@@ -22,6 +22,7 @@
  *
  * Contributor(s):
  *   L. David Baron <dbaron@dbaron.org>, Mozilla Corporation
+ *   Mats Palmgren <mats.palmgren@bredband.net>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -185,10 +186,10 @@ nsLayoutUtils::GetAfterFrame(nsIFrame* aFrame)
 
 // static
 nsIFrame*
-nsLayoutUtils::GetPageFrame(nsIFrame* aFrame)
+nsLayoutUtils::GetClosestFrameOfType(nsIFrame* aFrame, nsIAtom* aFrameType)
 {
   for (nsIFrame* frame = aFrame; frame; frame = frame->GetParent()) {
-    if (frame->GetType() == nsGkAtoms::pageFrame) {
+    if (frame->GetType() == aFrameType) {
       return frame;
     }
   }
@@ -591,13 +592,13 @@ nsLayoutUtils::GetDOMEventCoordinatesRelativeTo(nsIDOMEvent* aDOMEvent, nsIFrame
 }
 
 nsPoint
-nsLayoutUtils::GetEventCoordinatesRelativeTo(nsEvent* aEvent, nsIFrame* aFrame)
+nsLayoutUtils::GetEventCoordinatesRelativeTo(const nsEvent* aEvent, nsIFrame* aFrame)
 {
   if (!aEvent || (aEvent->eventStructType != NS_MOUSE_EVENT && 
                   aEvent->eventStructType != NS_MOUSE_SCROLL_EVENT))
     return nsPoint(NS_UNCONSTRAINEDSIZE, NS_UNCONSTRAINEDSIZE);
 
-  nsGUIEvent* GUIEvent = NS_STATIC_CAST(nsGUIEvent*, aEvent);
+  const nsGUIEvent* GUIEvent = NS_STATIC_CAST(const nsGUIEvent*, aEvent);
   if (!GUIEvent->widget)
     return nsPoint(NS_UNCONSTRAINEDSIZE, NS_UNCONSTRAINEDSIZE);
 
@@ -952,26 +953,6 @@ nsLayoutUtils::ComputeRepaintRegionForCopy(nsIFrame* aRootFrame,
   AddItemsToRegion(&builder, &list, aCopyRect, rect, aDelta, aRepaintRegion);
   // Flush the list so we don't trigger the IsEmpty-on-destruction assertion
   list.DeleteAll();
-  return NS_OK;
-}
-
-nsresult
-nsLayoutUtils::CreateOffscreenContext(nsIDeviceContext* deviceContext, nsIDrawingSurface* surface,
-                                      const nsRect& aRect, nsIRenderingContext** aResult)
-{
-  nsresult            rv;
-  nsIRenderingContext *context = nsnull;
-
-  rv = deviceContext->CreateRenderingContext(surface, context);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  // always initialize clipping, linux won't draw images otherwise.
-  nsRect clip(0, 0, aRect.width, aRect.height);
-  context->SetClipRect(clip, nsClipCombine_kReplace);
-
-  context->Translate(-aRect.x, -aRect.y);
-  
-  *aResult = context;
   return NS_OK;
 }
 
@@ -1910,7 +1891,7 @@ nsLayoutUtils::MinWidthFromInline(nsIFrame* aFrame,
   nsIFrame::InlineMinWidthData data;
   DISPLAY_MIN_WIDTH(aFrame, data.prevLines);
   aFrame->AddInlineMinWidth(aRenderingContext, &data);
-  data.Break(aRenderingContext);
+  data.ForceBreak(aRenderingContext);
   return data.prevLines;
 }
 
@@ -1921,7 +1902,7 @@ nsLayoutUtils::PrefWidthFromInline(nsIFrame* aFrame,
   nsIFrame::InlinePrefWidthData data;
   DISPLAY_PREF_WIDTH(aFrame, data.prevLines);
   aFrame->AddInlinePrefWidth(aRenderingContext, &data);
-  data.Break(aRenderingContext);
+  data.ForceBreak(aRenderingContext);
   return data.prevLines;
 }
 

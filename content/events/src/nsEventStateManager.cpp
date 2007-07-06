@@ -774,6 +774,7 @@ nsEventStateManager::PreHandleEvent(nsPresContext* aPresContext,
 
             nsEventStatus blurstatus = nsEventStatus_eIgnore;
             nsEvent blurevent(PR_TRUE, NS_BLUR_CONTENT);
+            blurevent.flags |= NS_EVENT_FLAG_CANT_BUBBLE;
 
             nsEventDispatcher::Dispatch(gLastFocusedDocument,
                                         gLastFocusedPresContext,
@@ -837,10 +838,9 @@ nsEventStateManager::PreHandleEvent(nsPresContext* aPresContext,
 
           nsEventStatus status = nsEventStatus_eIgnore;
           nsEvent focusevent(PR_TRUE, NS_FOCUS_CONTENT);
+          focusevent.flags |= NS_EVENT_FLAG_CANT_BUBBLE;
 
           if (gLastFocusedDocument != mDocument) {
-            //XXXsmaug bubbling for now, because in the old event dispatching
-            //         code focus event did bubble from document to window.
             nsEventDispatcher::Dispatch(mDocument, aPresContext,
                                         &focusevent, nsnull, &status);
             if (currentFocus && currentFocus != gLastFocusedContent) {
@@ -921,6 +921,7 @@ nsEventStateManager::PreHandleEvent(nsPresContext* aPresContext,
 
         nsEventStatus status = nsEventStatus_eIgnore;
         nsEvent event(PR_TRUE, NS_BLUR_CONTENT);
+        event.flags |= NS_EVENT_FLAG_CANT_BUBBLE;
 
         if (gLastFocusedDocument && gLastFocusedPresContext) {
           if (gLastFocusedContent) {
@@ -1084,6 +1085,7 @@ nsEventStateManager::PreHandleEvent(nsPresContext* aPresContext,
 
         nsEventStatus status = nsEventStatus_eIgnore;
         nsEvent event(PR_TRUE, NS_BLUR_CONTENT);
+        event.flags |= NS_EVENT_FLAG_CANT_BUBBLE;
 
         if (gLastFocusedContent) {
           nsIPresShell *shell = gLastFocusedDocument->GetPrimaryShell();
@@ -1869,8 +1871,8 @@ nsEventStateManager::DoScrollText(nsPresContext* aPresContext,
   // operation, even if the mouse hasn't moved.
   nsIFrame* lastScrollFrame = nsMouseWheelTransaction::GetTargetFrame();
   if (lastScrollFrame) {
-    nsCOMPtr<nsIScrollableViewProvider> svp =
-      do_QueryInterface(lastScrollFrame);
+    nsIScrollableViewProvider* svp;
+    CallQueryInterface(lastScrollFrame, &svp);
     if (svp) {
       scrollView = svp->GetScrollableView();
       nsMouseWheelTransaction::UpdateTransaction();
@@ -1885,7 +1887,8 @@ nsEventStateManager::DoScrollText(nsPresContext* aPresContext,
        scrollFrame = GetParentFrameToScroll(aPresContext, scrollFrame)) {
     // Check whether the frame wants to provide us with a scrollable view.
     scrollView = nsnull;
-    nsCOMPtr<nsIScrollableViewProvider> svp = do_QueryInterface(scrollFrame);
+    nsIScrollableViewProvider* svp;
+    CallQueryInterface(scrollFrame, &svp);
     if (svp) {
       scrollView = svp->GetScrollableView();
     }
@@ -4180,6 +4183,7 @@ nsEventStateManager::SendFocusBlur(nsPresContext* aPresContext,
           //fire blur
           nsEventStatus status = nsEventStatus_eIgnore;
           nsEvent event(PR_TRUE, NS_BLUR_CONTENT);
+          event.flags |= NS_EVENT_FLAG_CANT_BUBBLE;
 
           EnsureDocument(presShell);
 
@@ -4243,6 +4247,7 @@ nsEventStateManager::SendFocusBlur(nsPresContext* aPresContext,
         window) {
       nsEventStatus status = nsEventStatus_eIgnore;
       nsEvent event(PR_TRUE, NS_BLUR_CONTENT);
+      event.flags |= NS_EVENT_FLAG_CANT_BUBBLE;
 
       // Make sure we're not switching command dispatchers, if so,
       // suppress the blurred one if it isn't already suppressed
@@ -4352,6 +4357,7 @@ nsEventStateManager::SendFocusBlur(nsPresContext* aPresContext,
     //fire focus
     nsEventStatus status = nsEventStatus_eIgnore;
     nsEvent event(PR_TRUE, NS_FOCUS_CONTENT);
+    event.flags |= NS_EVENT_FLAG_CANT_BUBBLE;
 
     if (nsnull != mPresContext) {
       nsCxPusher pusher(aContent);
@@ -4376,6 +4382,7 @@ nsEventStateManager::SendFocusBlur(nsPresContext* aPresContext,
     //see bugzilla bug 93521
     nsEventStatus status = nsEventStatus_eIgnore;
     nsEvent event(PR_TRUE, NS_FOCUS_CONTENT);
+    event.flags |= NS_EVENT_FLAG_CANT_BUBBLE;
 
     if (nsnull != mPresContext && mDocument) {
       nsCxPusher pusher(mDocument);
