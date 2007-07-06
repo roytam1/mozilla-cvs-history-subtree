@@ -39,6 +39,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <libgen.h>
 
 #include <Pt.h>
 #include <photon/PtWebClient.h>
@@ -728,6 +729,11 @@ PtWidget_t *create_browser_window(unsigned window_flags)
 	PtSetArg(&args[n++], Pt_ARG_AREA, &area, 0);
 	PtSetArg(&args[n++], Pt_ARG_ANCHOR_FLAGS, ~0, Pt_RIGHT_ANCHORED_RIGHT | Pt_LEFT_ANCHORED_LEFT | Pt_TOP_ANCHORED_TOP | Pt_BOTTOM_ANCHORED_BOTTOM);
   	info->web = PtCreateWidget(PtMozilla, container, n, args);
+	if (!info->web)
+	{
+		printf("*** ERROR: PtMozilla widget could not be created.\n");
+		exit(-1);
+	}
 
 	PtExtentWidget (container);
 	PtWidgetArea(container, &area);	
@@ -795,9 +801,16 @@ main(int argc, char **argv)
 	unsigned window_flags = ~0;
 	PtWidget_t *win;
 	struct window_info *i;
+	char *argv0 = strdup(argv[0]);
 
 	PtInit(NULL);
 
+	/*
+	 * Set MOZILLA_FIVE_HOME if it is not already set.
+	 */
+	if (!getenv("MOZILLA_FIVE_HOME"))
+		setenv("MOZILLA_FIVE_HOME", dirname(argv0), 0);
+	free(argv0);
 	win = create_browser_window(window_flags);
 	PtGetResource(win, Pt_ARG_POINTER, &i, 0);
 
