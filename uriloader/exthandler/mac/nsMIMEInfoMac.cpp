@@ -23,6 +23,7 @@
  * Contributor(s):
  *   Scott MacGregor <mscott@netscape.com>
  *   Christian Biesinger <cbiesinger@web.de>
+ *   Dan Mosedale <dmose@mozilla.org>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -42,9 +43,10 @@
 
 #include "nsMIMEInfoMac.h"
 #include "nsILocalFileMac.h"
+#include "nsIFileURL.h"
 
 NS_IMETHODIMP
-nsMIMEInfoMac::LaunchWithFile(nsIFile* aFile)
+nsMIMEInfoMac::LaunchWithURI(nsIURI* aURI)
 {
   nsCOMPtr<nsIFile> application;
 
@@ -52,7 +54,13 @@ nsMIMEInfoMac::LaunchWithFile(nsIFile* aFile)
     nsresult rv;
     nsCOMPtr<nsILocalHandlerApp> localHandlerApp =
       do_QueryInterface(mPreferredApplication, &rv);
-    NS_ENSURE_SUCCESS(rv, rv);
+    if (NS_FAILED(rv)) {
+      nsCOMPtr<nsIWebHandlerApp> webHandler;
+      webHandler = do_QueryInterface(mPreferredApplication, &rv);
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      return LaunchWithWebHandler(webHandler, aURI);         
+    }
           
     rv = localHandlerApp->GetExecutable(getter_AddRefs(application));
     NS_ENSURE_SUCCESS(rv, rv);
@@ -66,7 +74,15 @@ nsMIMEInfoMac::LaunchWithFile(nsIFile* aFile)
     nsCOMPtr<nsILocalFileMac> app = do_QueryInterface(application, &rv);
     if (NS_FAILED(rv)) return rv;
 
-    nsCOMPtr<nsILocalFile> docToLoad = do_QueryInterface(aFile, &rv);
+    // make our way from the nsIURI object to the matching nsILocalFile
+    nsCOMPtr<nsIFileURL> fileUrl = do_QueryInterface(aURI, &rv);
+    if (NS_FAILED(rv)) return rv;    
+
+    nsCOMPtr<nsIFile> file;
+    rv = fileUrl->GetFile(getter_AddRefs(file));
+    if (NS_FAILED(rv)) return rv;    
+
+    nsCOMPtr<nsILocalFile> docToLoad = do_QueryInterface(file, &rv);
     if (NS_FAILED(rv)) return rv;
 
     return app->LaunchWithDoc(docToLoad, PR_FALSE); 
@@ -74,7 +90,7 @@ nsMIMEInfoMac::LaunchWithFile(nsIFile* aFile)
 #ifdef XP_MACOSX
   // We didn't get an application to handle the file from aMIMEInfo, ask LaunchServices directly
   nsresult rv;
-  nsCOMPtr <nsILocalFileMac> tempFile = do_QueryInterface(aFile, &rv);
+  nsCOMPtr <nsILocalFileMac> tempFile = do_QueryInterface(aURI, &rv);
   if (NS_FAILED(rv)) return rv;
   
   FSRef tempFileRef;
@@ -87,7 +103,7 @@ nsMIMEInfoMac::LaunchWithFile(nsIFile* aFile)
     if (!app) return NS_ERROR_FAILURE;
     app->InitWithFSRef(&appFSRef);
     
-    nsCOMPtr <nsILocalFile> docToLoad = do_QueryInterface(aFile, &rv);
+    nsCOMPtr <nsILocalFile> docToLoad = do_QueryInterface(aURI, &rv);
     if (NS_FAILED(rv)) return rv;
     
     rv = app->LaunchWithDoc(docToLoad, PR_FALSE); 
