@@ -69,14 +69,14 @@ NS_IMETHODIMP nsMIMEInfoOS2::LaunchWithURI(nsIURI *aURI)
 
   // make our way from the nsIURI object to its native path
   nsCOMPtr<nsIFileURL> fileUrl = do_QueryInterface(aURI, &rv);
-  if (NS_FAILED(rv)) return rv;    
+  NS_ENSURE_SUCCESS(rv, rv);
 
   nsCOMPtr<nsIFile> file;
   rv = fileUrl->GetFile(getter_AddRefs(file));
-  if (NS_FAILED(rv)) return rv;    
+  NS_ENSURE_SUCCESS(rv, rv);
 
   nsCOMPtr<nsILocalFile> localFile = do_QueryInterface(file, &rv);
-  if (NS_FAILED(rv)) return rv;
+  NS_ENSURE_SUCCESS(rv, rv);
 
   nsCAutoString path;
   aFile->GetNativePath(path);

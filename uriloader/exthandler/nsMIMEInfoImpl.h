@@ -137,6 +137,11 @@ class nsMIMEInfoBase : public nsIMIMEInfo {
      */
     static NS_HIDDEN_(nsresult) LaunchWithIProcess(nsIFile* aApp, nsIFile* aFile);
 
+    /**
+     * Used to launch a web-based handler with this URI.
+     * 
+     * @param aUri  The URI to launch with.
+     */
     static NS_HIDDEN_(nsresult) LaunchWithWebHandler(nsIWebHandlerApp *aApp, 
                                                      nsIURI *aUri);
 
@@ -157,8 +162,9 @@ class nsMIMEInfoBase : public nsIMIMEInfo {
  * This is a complete implementation of nsIMIMEInfo, and contains all necessary
  * methods. However, depending on your platform you may want to use a different
  * way of launching applications. This class stores the default application in a
- * member variable and provides a function for setting it. Launching is done
- * using nsIProcess, native path of the file to open as first argument.
+ * member variable and provides a function for setting it. For local
+ * applications, launching is done using nsIProcess, native path of the file to
+ * open as first argument.
  */
 class nsMIMEInfoImpl : public nsMIMEInfoBase {
   public:
