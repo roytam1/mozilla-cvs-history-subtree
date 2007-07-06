@@ -85,7 +85,7 @@ class nsMIMEInfoBase : public nsIMIMEInfo {
     NS_IMETHOD GetPreferredApplicationHandler(nsIHandlerApp * *aPreferredApplicationHandler);
     NS_IMETHOD SetPreferredApplicationHandler(nsIHandlerApp * aPreferredApplicationHandler);
     NS_IMETHOD GetDefaultDescription(nsAString & aDefaultDescription);
-    NS_IMETHOD LaunchWithURI(nsIURI *aURI);
+    NS_IMETHOD LaunchWithFile(nsIFile *aFile);
     NS_IMETHOD GetPreferredAction(nsHandlerInfoAction *aPreferredAction);
     NS_IMETHOD SetPreferredAction(nsHandlerInfoAction aPreferredAction);
     NS_IMETHOD GetAlwaysAskBeforeHandling(PRBool *aAlwaysAskBeforeHandling);
@@ -136,9 +136,6 @@ class nsMIMEInfoBase : public nsIMIMEInfo {
      * @param aFile The file to open in the application
      */
     static NS_HIDDEN_(nsresult) LaunchWithIProcess(nsIFile* aApp, nsIFile* aFile);
-
-    static NS_HIDDEN_(nsresult) LaunchWithWebHandler(nsIWebHandlerApp *aApp, 
-                                                     nsIURI *aUri);
 
     // member variables
     nsCStringArray         mExtensions; ///< array of file extensions associated w/ this MIME obj

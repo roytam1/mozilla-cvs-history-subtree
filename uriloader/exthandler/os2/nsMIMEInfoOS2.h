@@ -46,7 +46,7 @@ class nsMIMEInfoOS2 : public nsMIMEInfoImpl
     nsMIMEInfoOS2(const nsACString& aMIMEType) : nsMIMEInfoImpl(aMIMEType) {}
     virtual ~nsMIMEInfoOS2();
 
-    NS_IMETHOD LaunchWithURI(nsIURI* aURI);
+    NS_IMETHOD LaunchWithFile(nsIFile* aFile);
 
 #ifdef DEBUG
   protected:

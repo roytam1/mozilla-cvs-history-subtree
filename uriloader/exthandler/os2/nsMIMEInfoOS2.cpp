@@ -63,20 +63,9 @@ nsMIMEInfoOS2::~nsMIMEInfoOS2()
 {
 }
 
-NS_IMETHODIMP nsMIMEInfoOS2::LaunchWithURI(nsIURI *aURI)
+NS_IMETHODIMP nsMIMEInfoOS2::LaunchWithFile(nsIFile* aFile)
 {
   nsresult rv = NS_OK;
-
-  // make our way from the nsIURI object to its native path
-  nsCOMPtr<nsIFileURL> fileUrl = do_QueryInterface(aURI, &rv);
-  if (NS_FAILED(rv)) return rv;    
-
-  nsCOMPtr<nsIFile> file;
-  rv = fileUrl->GetFile(getter_AddRefs(file));
-  if (NS_FAILED(rv)) return rv;    
-
-  nsCOMPtr<nsILocalFile> localFile = do_QueryInterface(file, &rv);
-  if (NS_FAILED(rv)) return rv;
 
   nsCAutoString path;
   aFile->GetNativePath(path);
