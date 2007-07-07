@@ -3371,10 +3371,7 @@ IsSpecialContent(nsIContent* aContent,
       aTag == nsXULAtoms::menu ||
       aTag == nsXULAtoms::menuitem ||
       aTag == nsXULAtoms::menubutton ||
-  #ifndef XP_MACOSX
-      // keep this in sync  with ConstructXULFrame especially for the MAC
       aTag == nsXULAtoms::menubar ||
-  #endif
       aTag == nsXULAtoms::popupgroup ||
       aTag == nsXULAtoms::iframe ||
       aTag == nsXULAtoms::editor ||
