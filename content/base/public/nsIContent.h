@@ -224,8 +224,8 @@ public:
    * @param aKid the content to insert
    * @param aIndex the index it is being inserted at (the index it will have
    *        after it is inserted)
-   * @param aNotify whether to notify the document that the insert has
-   *        occurred
+   * @param aNotify whether to notify the document and appropriate 
+   *        mutation event listeners that the insert has occurred
    */
   virtual nsresult InsertChildAt(nsIContent* aKid, PRUint32 aIndex,
                                  PRBool aNotify) = 0;
@@ -234,8 +234,8 @@ public:
    * Append a content node to the end of the child list.
    *
    * @param aKid the content to append
-   * @param aNotify whether to notify the document that the replace has
-   *        occurred
+   * @param aNotify whether to notify the document and appropriate 
+   *        mutation event listeners that the replace has occurred
    */
   virtual nsresult AppendChildTo(nsIContent* aKid, PRBool aNotify) = 0;
 
@@ -243,8 +243,8 @@ public:
    * Remove a child from this content node.
    *
    * @param aIndex the index of the child to remove
-   * @param aNotify whether to notify the document that the replace has
-   *        occurred
+   * @param aNotify whether to notify the document and appropriate
+   *        mutation event listeners that the replace has occurred
    */
   virtual nsresult RemoveChildAt(PRUint32 aIndex, PRBool aNotify) = 0;
 
@@ -277,8 +277,9 @@ public:
    * @param aNameSpaceID the namespace of the attribute
    * @param aName the name of the attribute
    * @param aValue the value to set
-   * @param aNotify specifies how whether or not the document should be
-   *        notified of the attribute change.
+   * @param aNotify specifies how whether or not the document and
+   *        appropriate mutation event listeners should be notified 
+   *        of the attribute change.
    */
   nsresult SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
                    const nsAString& aValue, PRBool aNotify)
@@ -297,8 +298,9 @@ public:
    * @param aName the name of the attribute
    * @param aPrefix the prefix of the attribute
    * @param aValue the value to set
-   * @param aNotify specifies how whether or not the document should be
-   *        notified of the attribute change.
+   * @param aNotify specifies how whether or not the document and
+   *        appropriate mutation event listeners should be notified 
+   *        of the attribute change.
    */
   virtual nsresult SetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
                            nsIAtom* aPrefix, const nsAString& aValue,
@@ -334,8 +336,9 @@ public:
    *
    * @param aNameSpaceID the namespace id of the attribute
    * @param aAttr the name of the attribute to unset
-   * @param aNotify specifies whether or not the document should be
-   * notified of the attribute change
+   * @param aNotify specifies whether or not the document and
+   * appropriate mutation event listeners should be notified of the
+   * attribute change
    */
   virtual nsresult UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aAttr, 
                              PRBool aNotify) = 0;
