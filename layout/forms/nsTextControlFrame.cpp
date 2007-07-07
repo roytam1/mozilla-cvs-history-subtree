@@ -2339,7 +2339,8 @@ NS_IMETHODIMP nsTextControlFrame::SetProperty(nsPresContext* aPresContext, nsIAt
         // has changed.
         SetValueChanged(PR_TRUE);
       }
-      SetValue(aValue);   // set new text value
+      nsresult rv = SetValue(aValue);   // set new text value
+      NS_ENSURE_SUCCESS(rv, rv);
     }
     else if (nsHTMLAtoms::select == aName && mSelCon)
     {
@@ -3091,13 +3092,15 @@ nsTextControlFrame::GetValue(nsAString& aValue, PRBool aIgnoreWrap)
 
 // END IMPLEMENTING NS_IFORMCONTROLFRAME
 
-void
+nsresult
 nsTextControlFrame::SetValue(const nsAString& aValue)
 {
   // XXX this method should actually propagate errors!  It'd make debugging it
   // so much easier...
   if (mEditor && mUseEditor) 
   {
+    nsCOMPtr<nsIEditor> editor = mEditor;
+    nsWeakFrame weakFrame(this);
     nsAutoString currentValue;
     GetValue(currentValue, PR_FALSE);
     if (IsSingleLineTextControl())
@@ -3115,9 +3118,9 @@ nsTextControlFrame::SetValue(const nsAString& aValue)
       nsFormControlHelper::PlatformToDOMLineBreaks(currentValue);
 
       nsCOMPtr<nsIDOMDocument>domDoc;
-      nsresult rv = mEditor->GetDocument(getter_AddRefs(domDoc));
-      if (NS_FAILED(rv)) return;
-      if (!domDoc) return;
+      nsresult rv = editor->GetDocument(getter_AddRefs(domDoc));
+      NS_ENSURE_SUCCESS(rv, rv);
+      NS_ENSURE_STATE(domDoc);
 
       // Time to mess with our security context... See comments in GetValue()
       // for why this is needed.  Note that we have to do this up here, because
@@ -3145,7 +3148,7 @@ nsTextControlFrame::SetValue(const nsAString& aValue)
           stack->Pop(&cx);
           NS_ASSERTION(!cx, "Unexpected JSContext popped!");
         }
-        return;
+        return NS_ERROR_FAILURE;
       }
 
       // Since this code does not handle user-generated changes to the text,
@@ -3162,21 +3165,19 @@ nsTextControlFrame::SetValue(const nsAString& aValue)
       // get the flags, remove readonly and disabled, set the value,
       // restore flags
       PRUint32 flags, savedFlags;
-      mEditor->GetFlags(&savedFlags);
+      editor->GetFlags(&savedFlags);
       flags = savedFlags;
       flags &= ~(nsIPlaintextEditor::eEditorDisabledMask);
       flags &= ~(nsIPlaintextEditor::eEditorReadonlyMask);
-      mEditor->SetFlags(flags);
-
+      editor->SetFlags(flags);
       if (currentValue.Length() < 1)
-        mEditor->DeleteSelection(nsIEditor::eNone);
+        editor->DeleteSelection(nsIEditor::eNone);
       else {
-        nsCOMPtr<nsIPlaintextEditor> textEditor = do_QueryInterface(mEditor);
+        nsCOMPtr<nsIPlaintextEditor> textEditor = do_QueryInterface(editor);
         if (textEditor)
           textEditor->InsertText(currentValue);
       }
-
-      mEditor->SetFlags(savedFlags);
+      editor->SetFlags(savedFlags);
       if (selPriv)
         selPriv->EndBatchChanges();
 
@@ -3186,6 +3187,7 @@ nsTextControlFrame::SetValue(const nsAString& aValue)
         NS_ASSERTION(!cx, "Unexpected JSContext popped!");
       }
 
+      NS_ENSURE_STATE(weakFrame.IsAlive());
       if (outerTransaction)
         mNotifyOnInput = PR_TRUE;
     }
@@ -3207,6 +3209,7 @@ nsTextControlFrame::SetValue(const nsAString& aValue)
       textControl->TakeTextFrameValue(aValue);
     }
   }
+  return NS_OK;
 }
 
 
