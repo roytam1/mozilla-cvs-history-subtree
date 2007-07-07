@@ -401,6 +401,8 @@ PRStatus nsSSLThread::requestClose(nsNSSSocketInfo *si)
       
       close_later = PR_TRUE;
       ssl_thread_singleton->mSocketScheduledToBeDestroyed = si;
+
+      PR_NotifyAllCondVar(ssl_thread_singleton->mCond);
     }
   }
 
@@ -899,8 +901,7 @@ void nsSSLThread::Run(void)
         {
           // no work to do ? let's wait a moment
 
-          PRIntervalTime wait_time = PR_TicksPerSecond() / 4;
-          PR_WaitCondVar(mCond, wait_time);
+          PR_WaitCondVar(mCond, PR_INTERVAL_NO_TIMEOUT);
         }
         
       } while (!pending_work && !mExitRequested && !mSocketScheduledToBeDestroyed);
