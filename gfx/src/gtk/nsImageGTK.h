@@ -186,7 +186,7 @@ private:
 
   inline void TilePixmap(GdkPixmap *src, GdkPixmap *dest, PRInt32 aSXOffset, PRInt32 aSYOffset, 
                          const nsRect &destRect, const nsRect &clipRect, PRBool useClip);
-  inline void CreateOffscreenPixmap(PRInt32 aWidth, PRInt32 aHeight);
+  inline PRBool CreateOffscreenPixmap(PRInt32 aWidth, PRInt32 aHeight);
   inline void SetupGCForAlpha(GdkGC *aGC, PRInt32 aX, PRInt32 aY);
 
   void SlowTile(nsDrawingSurfaceGTK *aSurface, const nsRect &aTileRect,

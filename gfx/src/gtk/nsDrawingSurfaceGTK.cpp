@@ -310,9 +310,14 @@ nsresult nsDrawingSurfaceGTK :: Init(GdkGC *aGC, PRUint32 aWidth,
   // we can draw on this offscreen because it has no parent
   mIsOffscreen = PR_TRUE;
 
+  gdk_error_trap_push();
   mPixmap = ::gdk_pixmap_new(nsnull, mWidth, mHeight, mDepth);
+  gdk_flush();
+  if (gdk_error_trap_pop())
+    mPixmap = nsnull;
 #ifdef MOZ_WIDGET_GTK2
-  gdk_drawable_set_colormap(GDK_DRAWABLE(mPixmap), gdk_rgb_get_colormap());
+  else if (mPixmap)
+    gdk_drawable_set_colormap(GDK_DRAWABLE(mPixmap), gdk_rgb_get_colormap());
 #endif
 
   if (mImage)

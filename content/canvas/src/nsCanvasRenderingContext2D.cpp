@@ -988,7 +988,7 @@ nsCanvasRenderingContext2D::Render(nsIRenderingContext *rc)
     }
 
     if (tx->GetType() & MG_2DSCALE) {
-        sx = sy = dctx->AppUnitsPerCSSPixel();
+        sx = sy = dctx->GetPixelScale();
         tx->TransformNoXLate(&sx, &sy);
     }
 

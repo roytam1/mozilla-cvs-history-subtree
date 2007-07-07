@@ -224,7 +224,7 @@ NS_IMETHODIMP nsDeviceContextGTK::Init(nsNativeWidget aNativeWidget)
 #ifdef DEBUG
   static PRBool once = PR_TRUE;
   if (once) {
-    printf("GFX: dpi=%d t2p=%g p2t=%g depth=%d\n", mDpi, mTwipsToPixels, mPixelsToTwips,mDepth);
+  //  printf("GFX: dpi=%d t2p=%g p2t=%g depth=%d\n", mDpi, mTwipsToPixels, mPixelsToTwips,mDepth);
     once = PR_FALSE;
   }
 #endif
@@ -243,7 +243,7 @@ NS_IMETHODIMP nsDeviceContextGTK::CreateRenderingContext(nsIRenderingContext *&a
 //  }
 #endif
 
-  nsresult             rv;
+  nsresult             rv = NS_OK;
   GtkWidget *w = (GtkWidget*)mWidget;
 
   // to call init for this, we need to have a valid nsDrawingSurfaceGTK created
@@ -270,23 +270,30 @@ NS_IMETHODIMP nsDeviceContextGTK::CreateRenderingContext(nsIRenderingContext *&a
         if (gwin)
           gdk_window_ref(gwin);
         else {
+          gdk_error_trap_push();
           win = gdk_pixmap_new(nsnull,
                                w->allocation.width,
                                w->allocation.height,
                                gdk_rgb_get_visual()->depth);
+          gdk_flush();
+          if (gdk_error_trap_pop() || !win)
+            rv = NS_ERROR_OUT_OF_MEMORY;
 #ifdef MOZ_WIDGET_GTK2
-          gdk_drawable_set_colormap(win, gdk_rgb_get_colormap());
+          else
+            gdk_drawable_set_colormap(win, gdk_rgb_get_colormap());
 #endif
         }
 
-        GdkGC *gc = gdk_gc_new(win);
+        if (NS_OK == rv) {
+          GdkGC *gc = gdk_gc_new(win);
 
-        // init the nsDrawingSurfaceGTK
-        rv = surf->Init(win,gc);
+          // init the nsDrawingSurfaceGTK
+          rv = surf->Init(win,gc);
 
-        if (NS_OK == rv)
-          // Init the nsRenderingContextGTK
-          rv = pContext->Init(this, surf);
+          if (NS_OK == rv)
+            // Init the nsRenderingContextGTK
+            rv = pContext->Init(this, surf);
+        }
       }
     else
       rv = NS_ERROR_OUT_OF_MEMORY;
@@ -467,8 +474,9 @@ NS_IMETHODIMP nsDeviceContextGTK::GetClientRect(nsRect &aRect)
 NS_IMETHODIMP
 nsDeviceContextGTK::InitForPrinting(nsIDeviceContextSpec *aDevice)
 {
-    NS_ENSURE_ARG_POINTER(aDevice);
 /*
+    NS_ENSURE_ARG_POINTER(aDevice);
+
     NS_ADDREF(mDeviceContextSpec = aDevice);
 
     mPrinter = PR_TRUE;
@@ -653,7 +661,16 @@ PRBool nsDeviceContextGTK::CheckDPIChange()
     PRInt32 oldDevPixels = mAppUnitsPerDevPixel;
     PRInt32 oldInches = mAppUnitsPerInch;
 
-    SetDPI();
+    PRInt32 prefDPI = -1;
+    nsresult rv;
+    nsCOMPtr<nsIPref> prefs(do_GetService(NS_PREF_CONTRACTID, &rv));
+    if (NS_SUCCEEDED(rv) && prefs) {
+      rv = prefs->GetIntPref("layout.css.dpi", &prefDPI);
+      if (NS_FAILED(rv)) {
+        prefDPI = -1;
+      }
+    }
+    SetDPI(prefDPI);
 
     return oldDevPixels != mAppUnitsPerDevPixel ||
            oldInches != mAppUnitsPerInch;

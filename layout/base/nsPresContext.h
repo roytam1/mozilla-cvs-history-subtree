@@ -451,6 +451,7 @@ public:
 
   float TextZoom() { return mTextZoom; }
   float FullZoom() { return mFullZoom; }
+  PRBool TrueZoomMode() { return mTrueZoomMode; }
   void SetTextZoomInternal(float aZoom) {
     mTextZoom = aZoom;
     ClearStyleDataAndReflow();
@@ -848,6 +849,7 @@ protected:
 #ifdef DEBUG
   PRBool                mInitialized;
 #endif
+  PRPackedBool          mTrueZoomMode : 1;
 
 
 protected:

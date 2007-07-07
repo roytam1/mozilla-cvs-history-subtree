@@ -61,6 +61,13 @@
 #include "nsIServiceManager.h"
 #include "nsIInterfaceRequestorUtils.h"
 
+#include "imgIContainer.h"
+#include "gfxIImageFrame.h"
+#include "nsIImage.h"
+
+#include "nsIServiceManager.h"
+#include "nsIInterfaceRequestorUtils.h"
+
 #ifdef MOZ_WIDGET_GTK2
 #include <gdk/gdkwindow.h>
 #endif
@@ -92,7 +99,6 @@ nsRenderingContextGTK::nsRenderingContextGTK()
   mCurrentColor = NS_RGB(255, 255, 255);  // set it to white
   mCurrentLineStyle = nsLineStyle_kSolid;
   mTranMatrix = nsnull;
-  //mP2T = 1.0f;
   mClipRegion = nsnull;
   mDrawStringBuf = nsnull;
   mGC = nsnull;
@@ -171,10 +177,18 @@ NS_IMETHODIMP nsRenderingContextGTK::Init(nsIDeviceContext* aContext,
           return NS_ERROR_NULL_POINTER;
       }
 
+      gdk_error_trap_push();
       win = gdk_pixmap_new(nsnull,
                            w->allocation.width,
                            w->allocation.height,
                            gdk_rgb_get_visual()->depth);
+      gdk_flush();
+      if (gdk_error_trap_pop() || !win)
+      {
+        delete mSurface;
+        mSurface = nsnull;
+        return NS_ERROR_OUT_OF_MEMORY;
+      }
 #ifdef MOZ_WIDGET_GTK2
       gdk_drawable_set_colormap(win, gdk_rgb_get_colormap());
 #endif
@@ -210,9 +224,7 @@ NS_IMETHODIMP nsRenderingContextGTK::Init(nsIDeviceContext* aContext,
 
 NS_IMETHODIMP nsRenderingContextGTK::CommonInit()
 {
-  //printf("nsRenderingContextGTK::CommonInit: mU2D:%i\n", mU2D);
   float app2dev = 1.0;
-//  mTranMatrix->AddScale(app2dev, app2dev); //ROMAXA?
   mTranMatrix->AddScale(app2dev, app2dev);
 
   return NS_OK;
@@ -1524,9 +1536,8 @@ NS_IMETHODIMP nsRenderingContextGTK::GetRangeWidth(const char *aText, PRUint32 a
 NS_IMETHODIMP nsRenderingContextGTK::DrawImage(imgIContainer *aImage, const nsRect & twSrcRect, const nsRect & twDestRect)
 {
   UpdateGC();
-#define NS_RECT_FROM_TWIPS_RECT2(_r)   (nsRect(FROM_TWIPS_INT2((_r).x), FROM_TWIPS_INT2((_r).y), FROM_TWIPS_INT2((_r).width), FROM_TWIPS_INT2((_r).height)))
-#define NS_RECT_FROM_TWIPS_RECT3(_r)   (nsRect(FROM_TWIPS_INT((_r).x), FROM_TWIPS_INT((_r).y), FROM_TWIPS_INT((_r).width), FROM_TWIPS_INT((_r).height)))
   nsRect aDestRect = NS_RECT_FROM_TWIPS_RECT(twDestRect);
+  #define NS_RECT_FROM_TWIPS_RECT2(_r)   (nsRect(FROM_TWIPS_INT2((_r).x), FROM_TWIPS_INT2((_r).y), FROM_TWIPS_INT2((_r).width), FROM_TWIPS_INT2((_r).height)))
   nsRect aSrcRect = NS_RECT_FROM_TWIPS_RECT2(twSrcRect);
   //1,2,3... Some problems with images... stipes....;
   nsRect dr = aDestRect;
@@ -1682,4 +1693,5 @@ nsRenderingContextGTK::DrawTile(imgIContainer *aImage,
                        dr);
 
 }
+
 

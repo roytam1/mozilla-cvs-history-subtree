@@ -761,3 +761,4 @@ nsThebesDeviceContext::SetPixelScale(float aScale)
     mPixelScale = aScale;
     return PR_TRUE;
 }
+

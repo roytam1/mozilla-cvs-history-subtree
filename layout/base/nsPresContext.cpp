@@ -180,7 +180,7 @@ nsPresContext::nsPresContext(nsIDocument* aDocument, nsPresContextType aType)
                         NS_FONT_VARIANT_NORMAL, NS_FONT_WEIGHT_NORMAL, 0, 0),
     mCanPaginatedScroll(PR_FALSE),
     mIsRootPaginatedDocument(PR_FALSE),
-		mFullZoom(1.0f)
+    mFullZoom(1.0f), mTrueZoomMode(PR_FALSE)
 {
   // NOTE! nsPresContext::operator new() zeroes out all members, so don't
   // bother initializing members to 0.
@@ -275,6 +275,9 @@ nsPresContext::~nsPresContext()
   delete mBidiUtils;
 #endif // IBMBIDI
   nsContentUtils::UnregisterPrefCallback("layout.css.dpi",
+                                         nsPresContext::PrefChangedCallback,
+                                         this);
+  nsContentUtils::UnregisterPrefCallback("layout.full.true.zoom.mode",
                                          nsPresContext::PrefChangedCallback,
                                          this);
 
@@ -530,6 +533,10 @@ nsPresContext::GetUserPreferences()
   mUnderlineLinks =
     nsContentUtils::GetBoolPref("browser.underline_anchors", mUnderlineLinks);
 
+  // True Zoom Mode
+  mTrueZoomMode =
+    nsContentUtils::GetBoolPref("layout.full.true.zoom.mode", mTrueZoomMode);
+
   nsAdoptingCString colorStr =
     nsContentUtils::GetCharPref("browser.anchor_color");
 
@@ -667,11 +674,17 @@ nsPresContext::PreferenceChanged(const char* aPrefName)
       nsIViewManager* vm = GetViewManager();
       nscoord width = DevPixelsToAppUnits(bounds.width);
       nscoord height = DevPixelsToAppUnits(bounds.height);
-      //vm->SetWindowDimensions(width, height);
-      mShell->FrameNeedsReflow(mShell->GetRootFrame(), nsIPresShell::eStyleChange, NS_FRAME_IS_DIRTY);
-      mShell->ResizeReflow(width, height);
-
-      //ClearStyleDataAndReflow();
+      if (nsContentUtils::GetBoolPref("layout.full.zoom.mode.fast", PR_FALSE)) {
+        /* XXX this way of reflow works 3x faster, but buggy
+          Internal scrolbars also resized (Iframe, textarea...)
+        */
+        mShell->FrameNeedsReflow(mShell->GetRootFrame(), nsIPresShell::eStyleChange, NS_FRAME_IS_DIRTY);
+        mShell->ResizeReflow(width, height);
+      } else {
+        nsIViewManager* vm = GetViewManager();
+        vm->SetWindowDimensions(width, height);
+        ClearStyleDataAndReflow();
+      }
     }
     return;
   }
@@ -696,7 +709,7 @@ nsPresContext::SetFullZoom(float aZoom, PRBool onlyDevice)
 //  mDeviceContext->FlushFontCache();
   nscoord width = DevPixelsToAppUnits(bounds.width);
   nscoord height = DevPixelsToAppUnits(bounds.height);
-  if (nsContentUtils::GetBoolPref("layout.full.zoom.mode.fast", PR_TRUE)) {
+  if (nsContentUtils::GetBoolPref("layout.full.zoom.mode.fast", PR_FALSE)) {
     /* XXX this way of reflow works 3x faster, but buggy
        Internal scrolbars also resized (Iframe, textarea...)
     */
@@ -791,6 +804,9 @@ nsPresContext::Init(nsIDeviceContext* aDeviceContext)
                                        this);
 #endif
   nsContentUtils::RegisterPrefCallback("layout.css.dpi",
+                                       nsPresContext::PrefChangedCallback,
+                                       this);
+  nsContentUtils::RegisterPrefCallback("layout.full.true.zoom.mode",
                                        nsPresContext::PrefChangedCallback,
                                        this);
 

@@ -929,6 +929,13 @@ nsFontMetricsXft::CacheFontMetrics(void)
 nsFontXft *
 nsFontMetricsXft::FindFont(PRUint32 aChar)
 {
+    // If we have an NBSP character, we can treat it as a normal space.
+    // This helps because some fonts don't claim to support NBSP, and we waste
+    // time looking for a font that does.  The only difference is for
+    // line-breaking, and that has already been done for us in layout.
+
+    if (aChar == 0xa0)
+        aChar = ' ';
 
     // If mPattern is null, set up the base bits of it so we can
     // match.  If we need to match later we don't have to set it up
@@ -2192,19 +2199,27 @@ void
 nsAutoDrawSpecBuffer::Flush()
 {
     if (mSpecPos) {
-        // Some Xft libraries will crash if none of the glyphs have any
-        // area.  So before we draw, we scan through the glyphs.  If we
-        // find any that have area, we can draw.
-        for (PRUint32 i = 0; i < mSpecPos; i++) {
-            XftGlyphFontSpec *sp = &mSpecBuffer[i];
-            XGlyphInfo info;
-            XftGlyphExtents(GDK_DISPLAY(), sp->font, &sp->glyph, 1, &info);
-            if (info.width && info.height) {
-                // If we get here it means we found a drawable glyph.  We will
-                // Draw all the remaining glyphs and then break out of the loop
-                XftDrawGlyphFontSpec(mDraw, mColor, mSpecBuffer+i, mSpecPos-i);
-                break;
+        // There are two Xft problems to work around here:
+        // 1.  Some Xft libraries reportedly crash if none of the
+        //     glyphs have any area.
+        // 2.  Because of an apparent X server bug (see bug 252033),
+        //     a glyph with no area may cause all following glyphs to be
+        //     dropped under some circumstances.
+        // For this reason, we manually ship out blocks of glyphs with
+        // area and skip blocks of glyphs with no area.
+        PRUint32 start = 0;
+        while (start < mSpecPos) {
+            PRUint32 i;
+            for (i = start; i < mSpecPos; i++) {
+                XftGlyphFontSpec *sp = &mSpecBuffer[i];
+                XGlyphInfo info;
+                XftGlyphExtents(GDK_DISPLAY(), sp->font, &sp->glyph, 1, &info);
+                if (!info.width || !info.height)
+                    break;
             }
+            if (i > start)
+                XftDrawGlyphFontSpec(mDraw, mColor, mSpecBuffer+start, i-start);
+            start = i + 1;
         }
         mSpecPos = 0;
     }

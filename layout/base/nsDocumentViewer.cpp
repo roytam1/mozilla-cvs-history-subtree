@@ -2734,7 +2734,6 @@ DocumentViewerImpl::GetFullZoom(float* aFullZoom)
   return NS_OK;
 }
 
-
 static void
 SetChildAuthorStyleDisabled(nsIMarkupDocumentViewer* aChild, void* aClosure)
 {

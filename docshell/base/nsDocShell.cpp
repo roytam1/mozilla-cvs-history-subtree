@@ -5396,13 +5396,16 @@ nsDocShell::RestoreFromHistory()
     if (oldMUDV && newMUDV) {
         oldMUDV->GetTextZoom(&zoom);
         newMUDV->GetFullZoom(&fullZoom);
+#ifndef MOZ_XULRUNNER
         newMUDV->SetFullZoom(fullZoom);
+#else
 /*Ups not xulrunner build can't link with presContext....
-        Let see newMUDV->Set or oldMUDV->Set
+        Let see newMUDV->Set or oldMUDV->Set*/
         nsCOMPtr<nsPresContext> presContext;
         GetEldestPresContext(getter_AddRefs(presContext));
         if (presContext)
-            presContext->SetFullZoom(fullZoom, PR_TRUE);*/
+            presContext->SetFullZoom(fullZoom, PR_TRUE);
+#endif
     }
 
     // Protect against mLSHE going away via a load triggered from

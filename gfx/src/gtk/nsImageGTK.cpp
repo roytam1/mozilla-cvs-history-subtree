@@ -360,7 +360,8 @@ void nsImageGTK::UpdateCachedImage()
 
               // promoting an image from no alpha channel to 1-bit, so
               // we need to create/clear the alpha pixmap
-              CreateOffscreenPixmap(mWidth, mHeight);
+              if (!CreateOffscreenPixmap(mWidth, mHeight))
+                break;
 
               XFillRectangle(GDK_WINDOW_XDISPLAY(mAlphaPixmap),
                              GDK_WINDOW_XWINDOW(mAlphaPixmap),
@@ -453,15 +454,16 @@ void nsImageGTK::UpdateCachedImage()
     }
 
     if (mAlphaDepth != 8) {
-      CreateOffscreenPixmap(mWidth, mHeight);
-
+      PRBool mem = CreateOffscreenPixmap(mWidth, mHeight);
+      if (mem) {
       gdk_draw_rgb_image_dithalign(mImagePixmap, sXbitGC, 
-                                   rect->x, rect->y,
-                                   rect->width, rect->height,
-                                   GDK_RGB_DITHER_MAX,
-                                   mImageBits + mRowBytes*rect->y + 3*rect->x,
-                                   mRowBytes,
-                                   0, 0);
+                                     rect->x, rect->y,
+                                     rect->width, rect->height,
+                                     GDK_RGB_DITHER_NONE,
+                                     mImageBits + mRowBytes*rect->y + 3*rect->x,
+                                     mRowBytes,
+                                     0, 0);
+      }
     }
 
     if (mAlphaDepth==1) {
@@ -488,6 +490,13 @@ static PRTime gConvertTime, gAlphaTime, gCopyStart, gCopyEnd, gStartTime, gPixma
 
 #define sign(x) ((x)>0 ? 1:-1)
 
+static void xerrmessage(gint err) {
+ gchar msg[128];
+ XGetErrorText(GDK_DISPLAY(),err,msg,128);
+ fprintf(stderr, "X error code %d was trapped [%s]. Your page will not display correctly.\n",err,msg);
+ fflush(stderr);
+}
+
 static void XlibStretchHorizontal(long x1,long x2,long y1,long y2,
                                   long ymin,long ymax,
                                   long startColumn, long endColumn,
@@ -507,7 +516,7 @@ static void XlibStretchHorizontal(long x1,long x2,long y1,long y2,
 	xd2,yd2 - second point of destination rectangle
   offx, offy - offset to target
 **********************************************************/
-void
+PRBool
 XlibRectStretch(PRInt32 srcWidth, PRInt32 srcHeight,
                 PRInt32 dstWidth, PRInt32 dstHeight,
                 PRInt32 dstOrigX, PRInt32 dstOrigY,
@@ -522,6 +531,7 @@ XlibRectStretch(PRInt32 srcWidth, PRInt32 srcHeight,
   PRBool skipHorizontal=PR_FALSE, skipVertical=PR_FALSE;
   long startColumn, startRow, endColumn, endRow;
   long xs1, ys1, xs2, ys2, xd1, yd1, xd2, yd2;
+  gint err;
 
   xs1 = ys1 = xd1 = yd1 = 0;
   xs2 = srcWidth-1;
@@ -563,16 +573,23 @@ XlibRectStretch(PRInt32 srcWidth, PRInt32 srcHeight,
     gdk_draw_pixmap(aDstImage, gc, aSrcImage,
                     0, 0, srcWidth, srcHeight,
                     dstOrigX, dstOrigY);
-    return;
+    return PR_TRUE;
   }
 
 //  fprintf(stderr, "scaleY Start/End = %d %d\n", scaleStartY, scaleEndY);
 
   if (!skipHorizontal && !skipVertical) {
+    gdk_error_trap_push();
     aTmpImage = gdk_pixmap_new(nsnull,
                                endColumn-startColumn,
                                scaleEndY-scaleStartY,
                                aDepth);
+    gdk_flush();
+    if ((err=gdk_error_trap_pop()) || !aTmpImage) {
+      xerrmessage(err);
+      return PR_FALSE;
+    }
+
 #ifdef MOZ_WIDGET_GTK2
     if (aDepth != 1)
       gdk_drawable_set_colormap(GDK_DRAWABLE(aTmpImage),
@@ -614,6 +631,7 @@ XlibRectStretch(PRInt32 srcWidth, PRInt32 srcHeight,
 
   if (!skipHorizontal && !skipVertical)
     gdk_pixmap_unref(aTmpImage);
+  return PR_TRUE;
 }
 
 /**********************************************************
@@ -685,16 +703,29 @@ nsImageGTK::Draw(nsIRenderingContext &aContext, nsIDrawingSurface* aSurface,
   aContext.GetDeviceContext(*getter_AddRefs(theDeviceContext));
   if (theDeviceContext)
     scale = theDeviceContext->GetPixelScale();
+
+  PRInt32 origDX = aDX, origDY = aDY, origDWidth = aDWidth, origDHeight = aDHeight;
+  PRBool hack = ((aDWidth != aSWidth || aDHeight != aSHeight) && mWidth != aSWidth && aSHeight != mHeight);
+  PRInt32 ssW = aSWidth-aSX, ssH = aSHeight - aSY;
   if (scale != 1.0) {
-    aSWidth = mWidth;
-    aDWidth = NSToIntRound((float)(mWidth) * scale + 2);
+    aSWidth = mWidth - 1;
+    aDWidth = NSToIntRound((float)(mWidth) * scale);
+    aDWidth = origDWidth>aDWidth?origDWidth + 1:aDWidth + 1;
     aDX -= aSX;
     aSX = 0;
-    aSHeight = mHeight;
-    aDHeight = NSToIntRound((float)(mHeight) * scale + 1);
+    aSHeight = mHeight - 1;
+    aDHeight = NSToIntRound((float)(mHeight) * scale);
+    aDHeight = origDHeight>aDHeight?origDHeight + 1:aDHeight + 1;
     aDY -= aSY;
     aSY = 0;
   }
+  else {
+    if (aSX > 0) aSX -= !hack;
+    if (aSY > 0) aSY -= !hack;
+  }
+  // +-1, I guess we have some problems with calculations... same picture draws different on
+  // different layout <h1>H</h1><img> and <p><p><img> will draws different stripes, lines... :(
+  // same for nsRenderingContextGTK.cpp:86
 
 #ifdef TRACE_IMAGE_ALLOCATION
   fprintf(stderr, "nsImageGTK::Draw(%p) s=(%4d %4d %4d %4d) d=(%4d %4d %4d %4d)\n",
@@ -712,8 +743,8 @@ nsImageGTK::Draw(nsIRenderingContext &aContext, nsIDrawingSurface* aSurface,
   PRInt32 srcWidth, srcHeight, dstWidth, dstHeight;
   PRInt32 dstOrigX, dstOrigY;
 
-  srcWidth = aSWidth;
-  srcHeight = aSHeight;
+  srcWidth = mWidth<ssW?mWidth - 1:aSWidth;
+  srcHeight = mHeight<ssH?mHeight - 1:aSHeight;
   dstWidth = aDWidth;
   dstHeight = aDHeight;
   dstOrigX = aDX;
@@ -747,35 +778,78 @@ nsImageGTK::Draw(nsIRenderingContext &aContext, nsIDrawingSurface* aSurface,
     return NS_OK;
   }
 
+  // clip to drawing rect
+  float widthScale = srcWidth/dstWidth;
+  float heightScale = srcHeight/dstHeight;
+  if (scale != 1.0f) {
+    if (aDX + aDWidth > (PRInt32)origDWidth) {
+      z = aDX + aDWidth - origDWidth - origDX;
+      aDWidth -= z;
+      aSWidth -= z*widthScale;
+    }
+
+    if (aDX < origDX) {
+      z = aDX - origDX;
+      aDWidth += z;
+      aSWidth += z*widthScale;
+      aSX -= z*widthScale;
+      aDX = origDX;
+    }
+
+    if (aDY + aDHeight > (PRInt32)origDHeight) {
+      z = aDY + aDHeight - origDHeight - origDY;
+      aDHeight -= z;
+      aSHeight -= z*heightScale;
+    }
+
+    if (aDY < origDY) {
+      z = aDY - origDY;
+      aDHeight += z;
+      aSHeight += z*heightScale;
+      aSY -= z*heightScale;
+      aDY = origDY;
+    }
+  }
+
+  if (aDWidth <= 0 || aDHeight <= 0 || aSWidth <= 0 || aSHeight <= 0) {
+    return NS_OK;
+  }
+
   // clip to drawing surface
   nsDrawingSurfaceGTK *drawing = (nsDrawingSurfaceGTK*)aSurface;
   PRUint32 surfaceWidth, surfaceHeight;
   drawing->GetDimensions(&surfaceWidth, &surfaceHeight);
+  origDWidth = surfaceWidth;
+  origDHeight = surfaceHeight;
+  origDX = 0;
+  origDY = 0;
 
-  if (aDX + aDWidth > (PRInt32)surfaceWidth) {
-    z = aDX + aDWidth - surfaceWidth;
+  if (aDX + aDWidth > (PRInt32)origDWidth) {
+    z = aDX + aDWidth - origDWidth - origDX;
     aDWidth -= z;
-    aSWidth -= z*srcWidth/dstWidth;
+    aSWidth -= z*widthScale;
   }
 
-  if (aDX < 0) {
-    aDWidth += aDX;
-    aSWidth += aDX*srcWidth/dstWidth;
-    aSX -= aDX*srcWidth/dstWidth;
-    aDX = 0;
+  if (aDX < origDX) {
+    z = aDX - origDX;
+    aDWidth += z;
+    aSWidth += z*widthScale;
+    aSX -= z*widthScale;
+    aDX = origDX;
   }
 
-  if (aDY + aDHeight > (PRInt32)surfaceHeight) {
-    z = aDY + aDHeight - surfaceHeight;
+  if (aDY + aDHeight > (PRInt32)origDHeight) {
+    z = aDY + aDHeight - origDHeight - origDY;
     aDHeight -= z;
-    aSHeight -= z*srcHeight/dstHeight;
+    aSHeight -= z*heightScale;
   }
 
-  if (aDY < 0) {
-    aDHeight += aDY;
-    aSHeight += aDY*srcHeight/dstHeight;
-    aSY -= aDY*srcHeight/dstHeight;
-    aDY = 0;
+  if (aDY < origDY) {
+    z = aDY - origDY;
+    aDHeight += z;
+    aSHeight += z*heightScale;
+    aSY -= z*heightScale;
+    aDY = origDY;
   }
 
   if (aDWidth <= 0 || aDHeight <= 0 || aSWidth <= 0 || aSHeight <= 0) {
@@ -786,6 +860,7 @@ nsImageGTK::Draw(nsIRenderingContext &aContext, nsIDrawingSurface* aSurface,
     GdkPixmap *pixmap = 0;
     GdkGC *gc = 0;
     nsRegionGTK clipRgn;
+    gint err;
 
     switch (mAlphaDepth) {
     case 8:
@@ -797,8 +872,17 @@ nsImageGTK::Draw(nsIRenderingContext &aContext, nsIDrawingSurface* aSurface,
                      aDWidth, aDHeight);
       break;
     case 1:
+
+      gdk_error_trap_push();
       pixmap = gdk_pixmap_new(nsnull, dstWidth, dstHeight, 1);
+      gdk_flush();
+      if ((err=gdk_error_trap_pop()) || !pixmap) {
+        xerrmessage(err);
+        return NS_ERROR_OUT_OF_MEMORY;
+      }
+
       if (pixmap) {
+        PRBool mem =
         XlibRectStretch(srcWidth, srcHeight,
                         dstWidth, dstHeight,
                         0, 0,
@@ -806,6 +890,7 @@ nsImageGTK::Draw(nsIRenderingContext &aContext, nsIDrawingSurface* aSurface,
                         dstWidth, dstHeight,
                         mAlphaPixmap, pixmap,
                         s1bitGC, s1bitGC, 1);
+        if (!mem) return NS_ERROR_OUT_OF_MEMORY;
         gc = gdk_gc_new(drawing->GetDrawable());
         if (gc) {
           gdk_gc_set_clip_origin(gc, dstOrigX, dstOrigY);
@@ -860,6 +945,7 @@ nsImageGTK::Draw(nsIRenderingContext &aContext, nsIDrawingSurface* aSurface,
           for (PRUint32 i=0; i<rectSet->mRectsLen; i++) {
             nsRegionRect *rect = &(rectSet->mRects[i]);
             
+            PRBool mem =
             XlibRectStretch(srcWidth, srcHeight,
                             dstWidth, dstHeight,
                             dstOrigX, dstOrigY,
@@ -867,10 +953,12 @@ nsImageGTK::Draw(nsIRenderingContext &aContext, nsIDrawingSurface* aSurface,
                             rect->width, rect->height,
                             mImagePixmap, drawing->GetDrawable(),
                             gc, sXbitGC, gdk_rgb_get_visual()->depth);
+            if (!mem) return NS_ERROR_OUT_OF_MEMORY;
           }
           clipRgn.FreeRects(rectSet);
         } else {
           // only a mask
+          PRBool mem =
           XlibRectStretch(srcWidth, srcHeight,
                           dstWidth, dstHeight,
                           dstOrigX, dstOrigY,
@@ -878,6 +966,7 @@ nsImageGTK::Draw(nsIRenderingContext &aContext, nsIDrawingSurface* aSurface,
                           aDWidth, aDHeight,
                           mImagePixmap, drawing->GetDrawable(),
                           gc, sXbitGC, gdk_rgb_get_visual()->depth);
+          if (!mem) return NS_ERROR_OUT_OF_MEMORY;
         }
       }
 
@@ -904,7 +993,8 @@ nsImageGTK::Draw(nsIRenderingContext &aContext, nsIDrawingSurface* aSurface,
 
         nsMemory::Free(scaledRGB);
       }
-      else
+      else {
+        PRBool mem =
         XlibRectStretch(srcWidth, srcHeight,
                         dstWidth, dstHeight,
                         dstOrigX, dstOrigY,
@@ -912,6 +1002,8 @@ nsImageGTK::Draw(nsIRenderingContext &aContext, nsIDrawingSurface* aSurface,
                         aDWidth, aDHeight,
                         mImagePixmap, drawing->GetDrawable(),
                         gc, sXbitGC, gdk_rgb_get_visual()->depth);
+        if (!mem) return NS_ERROR_OUT_OF_MEMORY;
+      }
       break;
     }
     if (gc)
@@ -1340,13 +1432,17 @@ nsImageGTK::DrawComposited(nsIRenderingContext &aContext,
 //  fprintf(stderr, "readX=%u readY=%u readWidth=%u readHeight=%u destX=%u destY=%u\n\n",
 //          readX, readY, readWidth, readHeight, destX, destY);
 
+  gint err;
+  gdk_error_trap_push();
   XImage *ximage = XGetImage(dpy, drawable,
                              readX, readY, readWidth, readHeight, 
                              AllPlanes, ZPixmap);
-
   NS_ASSERTION((ximage!=NULL), "XGetImage() failed");
-  if (!ximage)
+  gdk_flush();
+  if ((err=gdk_error_trap_pop()) || !ximage) {
+    xerrmessage(err);
     return;
+  }
 
   unsigned char *readData = 
     (unsigned char *)nsMemory::Alloc(3*readWidth*readHeight);
@@ -1505,13 +1601,17 @@ nsImageGTK::DrawCompositeTile(nsIRenderingContext &aContext,
   if ((readHeight <= 0) || (readWidth <= 0))
     return;
 
+  gint err;
+  gdk_error_trap_push();
   XImage *ximage = XGetImage(dpy, drawable,
                              readX, readY, readWidth, readHeight, 
                              AllPlanes, ZPixmap);
-
   NS_ASSERTION((ximage!=NULL), "XGetImage() failed");
-  if (!ximage)
+  gdk_flush();
+  if ((err=gdk_error_trap_pop()) || !ximage) {
+    xerrmessage(err);
     return;
+  }
 
   unsigned char *readData = 
     (unsigned char *)nsMemory::Alloc(3*readWidth*readHeight);
@@ -1612,8 +1712,9 @@ nsImageGTK::DrawCompositeTile(nsIRenderingContext &aContext,
 }
 
 
-void nsImageGTK::CreateOffscreenPixmap(PRInt32 aWidth, PRInt32 aHeight)
+PRBool nsImageGTK::CreateOffscreenPixmap(PRInt32 aWidth, PRInt32 aHeight)
 {
+  gint err;
   // Render unique image bits onto an off screen pixmap only once
   // The image bits can change as a result of ImageUpdated() - for
   // example: animated GIFs.
@@ -1626,8 +1727,17 @@ void nsImageGTK::CreateOffscreenPixmap(PRInt32 aWidth, PRInt32 aHeight)
 #endif
 
     // Create an off screen pixmap to hold the image bits.
+    gdk_error_trap_push();
     mImagePixmap = gdk_pixmap_new(nsnull, aWidth, aHeight,
                                   gdk_rgb_get_visual()->depth);
+    gdk_flush();
+    if ((err=gdk_error_trap_pop()) || !mImagePixmap) {
+      xerrmessage(err);
+      mWidth = 0;
+      mHeight = 0;
+      return PR_FALSE;
+    }
+
 #ifdef MOZ_WIDGET_GTK2
     gdk_drawable_set_colormap(GDK_DRAWABLE(mImagePixmap), gdk_rgb_get_colormap());
 #endif
@@ -1635,7 +1745,15 @@ void nsImageGTK::CreateOffscreenPixmap(PRInt32 aWidth, PRInt32 aHeight)
 
     // Ditto for the clipmask
   if ((!mAlphaPixmap) && (mAlphaDepth==1)) {
+    gdk_error_trap_push();
     mAlphaPixmap = gdk_pixmap_new(nsnull, aWidth, aHeight, 1);
+    gdk_flush();
+    if ((err=gdk_error_trap_pop()) || !mAlphaPixmap) {
+      xerrmessage(err);
+      mWidth = 0;
+      mHeight = 0;
+      return PR_FALSE;
+    }
 
     // Need an XImage for clipmask updates (XPutImage)
     mAlphaXImage = XCreateImage(GDK_WINDOW_XDISPLAY(mAlphaPixmap),
@@ -1669,6 +1787,7 @@ void nsImageGTK::CreateOffscreenPixmap(PRInt32 aWidth, PRInt32 aHeight)
 
   if (!sXbitGC)
     sXbitGC = gdk_gc_new(mImagePixmap);
+  return PR_TRUE;
 }
 
 
@@ -1753,11 +1872,18 @@ void nsImageGTK::SlowTile(nsDrawingSurfaceGTK *aSurface,
 {
   GdkPixmap *tileImg;
   GdkPixmap *tileMask;
+  gint err;
 
   nsRect tmpRect(0,0,aTileRect.width, aTileRect.height);
 
+  gdk_error_trap_push();
   tileImg = gdk_pixmap_new(nsnull, aTileRect.width, 
                            aTileRect.height, aSurface->GetDepth());
+  gdk_flush();
+  if ((err=gdk_error_trap_pop()) || !tileImg) {
+    xerrmessage(err);
+    return;
+  }
 #ifdef MOZ_WIDGET_GTK2
   gdk_drawable_set_colormap(GDK_DRAWABLE(tileImg), gdk_rgb_get_colormap());
 #endif
@@ -1766,8 +1892,14 @@ void nsImageGTK::SlowTile(nsDrawingSurfaceGTK *aSurface,
              tmpRect, PR_FALSE);
 
   // tile alpha mask
+  gdk_error_trap_push();
   tileMask = gdk_pixmap_new(nsnull, aTileRect.width, aTileRect.height,
                             mAlphaDepth);
+  gdk_flush();
+  if ((err=gdk_error_trap_pop()) || !tileMask) {
+    xerrmessage(err);
+    return;
+  }
   TilePixmap(mAlphaPixmap, tileMask, aSXOffset, aSYOffset, tmpRect,
              tmpRect, PR_FALSE);
 
@@ -1994,6 +2126,8 @@ nsresult nsImageGTK::Optimize(nsIDeviceContext* aContext)
 NS_IMETHODIMP
 nsImageGTK::LockImagePixels(PRBool aMaskPixels)
 {
+  gint err;
+
   if (!mOptimized)
     return NS_OK;
 
@@ -2001,10 +2135,16 @@ nsImageGTK::LockImagePixels(PRBool aMaskPixels)
     if (mAlphaDepth != 1 || !mAlphaPixmap)
       return NS_OK;
 
+    gdk_error_trap_push();
     XImage *xmask = XGetImage(GDK_WINDOW_XDISPLAY(mAlphaPixmap),
                               GDK_WINDOW_XWINDOW(mAlphaPixmap),
                               0, 0, mWidth, mHeight,
                               AllPlanes, XYPixmap);
+    gdk_flush();
+    if ((err=gdk_error_trap_pop()) || !xmask) {
+      xerrmessage(err);
+      return NS_OK;
+    }
 
     mAlphaBits = (PRUint8*)calloc(mAlphaRowBytes * mHeight, 1);
     if (!mAlphaBits)
@@ -2033,16 +2173,29 @@ nsImageGTK::LockImagePixels(PRBool aMaskPixels)
   XImage *ximage, *xmask=0;
   unsigned pix;
 
+  gdk_error_trap_push();
   ximage = XGetImage(GDK_WINDOW_XDISPLAY(mImagePixmap),
                      GDK_WINDOW_XWINDOW(mImagePixmap),
                      0, 0, mWidth, mHeight,
                      AllPlanes, ZPixmap);
+  gdk_flush();
+  if ((err=gdk_error_trap_pop()) || !ximage) {
+    xerrmessage(err);
+    return NS_OK;
+  }
 
-  if ((mAlphaDepth==1) && mAlphaPixmap)
+  if ((mAlphaDepth==1) && mAlphaPixmap) {
+    gdk_error_trap_push();
     xmask = XGetImage(GDK_WINDOW_XDISPLAY(mAlphaPixmap),
                       GDK_WINDOW_XWINDOW(mAlphaPixmap),
                       0, 0, mWidth, mHeight,
                       AllPlanes, XYPixmap);
+    gdk_flush();
+    if ((err=gdk_error_trap_pop()) || !ximage) {
+      xerrmessage(err);
+      return NS_OK;
+    }
+  }
 
   mImageBits = (PRUint8*)malloc(mSizeImage);
   if (!mImageBits)

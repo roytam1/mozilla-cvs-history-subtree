@@ -586,7 +586,6 @@ nsNativeThemeGTK::DrawWidgetBackground(nsIRenderingContext* aContext,
   transformMatrix->TransformCoord(&tr.x, &tr.y, &tr.width, &tr.height);
   GdkRectangle gdk_rect = {tr.x, tr.y, tr.width, tr.height};
 
-
   nsRect cr(NS_RECT_FROM_TWIPS_RECT(aClipRect));
   transformMatrix->TransformCoord(&cr.x, &cr.y, &cr.width, &cr.height);
   GdkRectangle gdk_clip = {cr.x, cr.y, cr.width, cr.height};
@@ -600,6 +599,9 @@ nsNativeThemeGTK::DrawWidgetBackground(nsIRenderingContext* aContext,
     gLastXError = 0;
     oldHandler = XSetErrorHandler(NativeThemeErrorHandler);
   }
+
+  if (!(tr.width && tr.height && cr.width &&cr.height))
+    return NS_OK;
 
   moz_gtk_widget_paint(gtkWidgetType, window, &gdk_rect, &gdk_clip, &state,
                        flags);
