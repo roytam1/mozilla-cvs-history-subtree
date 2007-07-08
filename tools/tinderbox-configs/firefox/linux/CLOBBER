@@ -1,1 +1,1 @@
-Clobbering Linux to test the aus2 migration (see http://wiki.mozilla.org/WeeklyUpdates/2007-05-21#Build and http://weblogs.mozillazine.org/preed/2007/05/aus2s_a_movin_can_you_help_us.html) 
+Clobber the new ref platform to get a new nightly build, so we can test the packaging upload changes I just made to the tinder-config.pl.
