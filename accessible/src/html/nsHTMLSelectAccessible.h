@@ -205,6 +205,7 @@ public:
   NS_IMETHOD GetDescription(nsAString& aDescription);
   NS_IMETHOD Shutdown();
   NS_IMETHOD Init();
+  NS_IMETHOD InvalidateChildren();
 
 protected:
   already_AddRefed<nsIAccessible> GetFocusedOptionAccessible();
