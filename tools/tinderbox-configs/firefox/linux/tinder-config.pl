@@ -81,14 +81,14 @@ $StartupPerformanceTest   = 1;  # Ts
 $TestsPhoneHome           = 1;  # Should test report back to server?
 $TestOnlyTinderbox = 1;
 $DownloadBuildFile = 'firefox-3.0a7pre.en-US.linux-i686.tar.bz2';
-$DownloadBuildURL = 'http://stage.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds/fx-linux-tbox-trunk';
+$DownloadBuildURL = 'http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/experimental/linux-newref/latest-trunk/';
 $DownloadBuildDir = 'firefox';
 
 # If TestOnlyTinderbox is enabled, fetch the latest build info from tinderbox in a 
 # parseable format
-$TinderboxServerURL = 'http://tinderbox.mozilla.org/showbuilds.cgi?tree=Firefox&quickparse=1';
-$MatchBuildname = 'Linux fx-linux-tbox Depend Nightly';
-$GraphNameOverride        = "bl-bldlnx03_fx-linux-tbox-HEAD"; # Override name built from ::hostname() and $BuildTag
+$TinderboxServerURL = 'http://tinderbox.mozilla.org/showbuilds.cgi?tree=MozillaExperimental&quickparse=1';
+$MatchBuildname = 'Linux fxnewref-linux-tbox Depend Newref';
+$GraphNameOverride        = "bl-bldlnx03_fxnewref-linux-tbox-HEAD"; # Override name built from ::hostname() and $BuildTag
 
 # $results_server
 #----------------------------------------------------------------------------
@@ -161,7 +161,7 @@ $AliveTestTimeout                 = 5;
 #$ObjDir = '';
 
 # Extra build name, if needed.
-$BuildNameExtra = "fx-linux-tbox perf test";
+$BuildNameExtra = "fxnewref-linux-tbox perf test";
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -176,7 +176,7 @@ $BuildSleep = 1;
 
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
-$BuildTree  = 'MozillaTest';
+$BuildTree  = 'MozillaExperimental';
 
 $BuildTag = 'HEAD';
 #$BuildConfigDir = 'mozilla/config';
