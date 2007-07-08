@@ -1,6 +1,6 @@
 #
-### hostname: bl-bldlnx01.office.mozilla.org
-### uname: Linux bl-bldlnx01.office.mozilla.org 2.6.11-1.1369_FC4 #1 Thu Jun 2 22:55:56 EDT 2005 i686 i686 i386 GNU/Linux
+### hostname: bl-bldlnx03.office.mozilla.org
+### uname: Linux bl-bldlnx03.office.mozilla.org 2.6.11-1.1369_FC4 #1 Thu Jun 2 22:55:56 EDT 2005 i686 i686 i386 GNU/Linux
 ##
 #
 #- tinder-config.pl - Tinderbox configuration file.
@@ -36,7 +36,7 @@
 #$BuildAdministrator = ($ENV{USER} || "cltbld") . "\@" . ($ENV{HOST} || "dhcp");
 
 #- You'll need to change these to suit your machine's needs
-#$DisplayServer = ':0.0';
+#$DisplayServer = ':1';
 
 #- Default values of command-line opts
 #-
@@ -88,7 +88,7 @@ $DownloadBuildDir = 'firefox';
 # parseable format
 $TinderboxServerURL = 'http://tinderbox.mozilla.org/showbuilds.cgi?tree=Firefox&quickparse=1';
 $MatchBuildname = 'Linux fx-linux-tbox Depend Nightly';
-$GraphNameOverride        = "bl-bldlnx01_fx-linux-tbox-HEAD"; # Override name built from ::hostname() and $BuildTag
+$GraphNameOverride        = "bl-bldlnx03_fx-linux-tbox-HEAD"; # Override name built from ::hostname() and $BuildTag
 
 # $results_server
 #----------------------------------------------------------------------------
@@ -176,7 +176,7 @@ $BuildSleep = 1;
 
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
-$BuildTree  = 'Firefox';
+$BuildTree  = 'MozillaTest';
 
 $BuildTag = 'HEAD';
 #$BuildConfigDir = 'mozilla/config';
