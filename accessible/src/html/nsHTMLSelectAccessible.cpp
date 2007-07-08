@@ -804,13 +804,26 @@ NS_IMETHODIMP nsHTMLComboboxAccessible::GetRole(PRUint32 *_retval)
 
 NS_IMETHODIMP nsHTMLComboboxAccessible::Shutdown()
 {
-  nsHTMLSelectableAccessible::Shutdown();
+  // Need to hold these locally while we call Shutdown() on them.
+  nsCOMPtr<nsPIAccessNode> textFieldAcc(do_QueryInterface(mComboboxTextFieldAccessible));
+  nsCOMPtr<nsPIAccessNode> buttonAcc(do_QueryInterface(mComboboxButtonAccessible));
+  nsCOMPtr<nsPIAccessNode> listAcc(do_QueryInterface(mComboboxListAccessible));
 
+  if (listAcc) {
+    listAcc->Shutdown();
+    NS_ASSERTION(mComboboxTextFieldAccessible == nsnull, "why didn't InvalidateChildren clear this?");
+  }
+  if (buttonAcc) {
+    buttonAcc->Shutdown();
+  }
+  if (textFieldAcc) {
+    textFieldAcc->Shutdown();
+  }
   mComboboxTextFieldAccessible = nsnull;
   mComboboxButtonAccessible = nsnull;
   mComboboxListAccessible = nsnull;
 
-  return NS_OK;
+  return nsHTMLSelectableAccessible::Shutdown();
 }
 
 NS_IMETHODIMP nsHTMLComboboxAccessible::Init()
@@ -889,6 +902,7 @@ NS_IMETHODIMP nsHTMLComboboxAccessible::GetFirstChild(nsIAccessible **aFirstChil
     *aFirstChild = mFirstChild;
   }
   else {
+    NS_ASSERTION(!mComboboxTextFieldAccessible, "I already have a text field accessible!");
     nsHTMLComboboxTextFieldAccessible* accessible = 
       new nsHTMLComboboxTextFieldAccessible(this, mDOMNode, mWeakShell);
     *aFirstChild = accessible;
@@ -899,6 +913,14 @@ NS_IMETHODIMP nsHTMLComboboxAccessible::GetFirstChild(nsIAccessible **aFirstChil
   }
   NS_ADDREF(*aFirstChild);
   return NS_OK;
+}
+
+NS_IMETHODIMP nsHTMLComboboxAccessible::InvalidateChildren()
+{
+  mComboboxTextFieldAccessible = nsnull;  
+  mComboboxButtonAccessible = nsnull;  
+  mComboboxListAccessible = nsnull;  
+  return nsAccessible::InvalidateChildren();
 }
 
 NS_IMETHODIMP nsHTMLComboboxAccessible::GetDescription(nsAString& aDescription)
@@ -980,6 +1002,7 @@ NS_IMETHODIMP nsHTMLComboboxTextFieldAccessible::GetNextSibling(nsIAccessible **
     *aNextSibling = accessible;
     if (!*aNextSibling)
       return NS_ERROR_FAILURE;
+    mNextSibling = *aNextSibling;
     accessible->Init();
   }
   NS_ADDREF(*aNextSibling);
@@ -1235,6 +1258,7 @@ NS_IMETHODIMP nsHTMLComboboxButtonAccessible::GetNextSibling(nsIAccessible **aNe
     *aNextSibling = accessible;
     if (!*aNextSibling)
       return NS_ERROR_OUT_OF_MEMORY;
+    mNextSibling = *aNextSibling;
     accessible->Init();
   }
   NS_ADDREF(*aNextSibling);
