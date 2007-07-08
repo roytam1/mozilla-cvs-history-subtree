@@ -201,7 +201,7 @@ $BinaryName = 'firefox-bin';
 # Release build options
 $ReleaseBuild  = 1;
 $shiptalkback  = 1;
-$ReleaseToLatest = 0; # Push the release to latest-<milestone>?
+$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
 $ReleaseToDated = 0; # Push the release to YYYY-MM-DD-HH-<milestone>?
 $build_hour    = 4;
 $package_creation_path = "/browser/installer";
