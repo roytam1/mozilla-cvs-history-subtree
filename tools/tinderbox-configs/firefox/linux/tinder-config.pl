@@ -81,7 +81,7 @@ $StartupPerformanceTest   = 1;  # Ts
 $TestsPhoneHome           = 1;  # Should test report back to server?
 $TestOnlyTinderbox = 1;
 $DownloadBuildFile = 'firefox-3.0a7pre.en-US.linux-i686.tar.bz2';
-$DownloadBuildURL = 'http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/experimental/linux-newref/latest-trunk/';
+$DownloadBuildURL = 'http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/experimental/linux-newref/latest-trunk/';
 $DownloadBuildDir = 'firefox';
 
 # If TestOnlyTinderbox is enabled, fetch the latest build info from tinderbox in a 
