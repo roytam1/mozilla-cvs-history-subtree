@@ -3940,7 +3940,7 @@ nsGenericElement::SetAttr(PRInt32 aNamespaceID, nsIAtom* aName,
   }
 
   if (document) {
-    nsXBLBinding *binding = document->BindingManager()->GetBinding(this);
+    nsRefPtr<nsXBLBinding> binding = document->BindingManager()->GetBinding(this);
     if (binding)
       binding->AttributeChanged(aName, aNamespaceID, PR_FALSE, aNotify);
 
@@ -4074,7 +4074,7 @@ nsGenericElement::UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
   NS_ENSURE_SUCCESS(rv, rv);
 
   if (document) {
-    nsXBLBinding *binding = document->BindingManager()->GetBinding(this);
+    nsRefPtr<nsXBLBinding> binding = document->BindingManager()->GetBinding(this);
     if (binding)
       binding->AttributeChanged(aName, aNameSpaceID, PR_TRUE, aNotify);
 
