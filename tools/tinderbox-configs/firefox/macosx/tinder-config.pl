@@ -69,7 +69,7 @@ $ProductName              = 'Firefox';
 #$EmbedCodesizeTest        = 0;  # mZ, require mozilla/tools/codesigns
 #$MailBloatTest            = 0;
 #$EmbedTest                = 0;  # Assumes you wanted $BuildEmbed=1
-#$LayoutPerformanceTest    = 0;  # Tp
+$LayoutPerformanceTest    = 1;  # Tp
 #$DHTMLPerformanceTest     = 0;  # Tdhtml
 #$QATest                   = 0;  
 #$XULWindowOpenTest        = 0;  # Txul
@@ -87,6 +87,7 @@ $ProductName              = 'Firefox';
 #$results_server           = "build-graphs.mozilla.org";
 
 #$pageload_server          = "spider";  # localhost
+$pageload_server          = "pageload.build.mozilla.org";
 
 #
 # Timeouts, values are in seconds.
