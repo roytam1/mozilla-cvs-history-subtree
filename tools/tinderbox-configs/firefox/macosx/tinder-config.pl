@@ -56,8 +56,8 @@ $CleanProfile             = 1;
 $ProductName              = 'Firefox';
 #$VendorName               = '';
 
-#$RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
-#$RegxpcomTest             = 1;
+$RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
+$RegxpcomTest             = 1;
 #$AliveTest                = 1;
 #$JavaTest                 = 0;
 #$ViewerTest               = 0;
