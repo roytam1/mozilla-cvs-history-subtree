@@ -470,9 +470,17 @@ void
 nsThread::Shutdown()
 {
     if (gMainThread) {
-        // XXX nspr doesn't seem to be calling the main thread's destructor
-        // callback, so let's help it out:
-        nsThread::Exit(NS_STATIC_CAST(nsThread*, gMainThread));
+        // In most recent versions of NSPR the main thread's destructor
+        // callback will get called.
+        // In older versions of NSPR it will not get called,
+        // (unless we call PR_Cleanup).
+        // Because of that we:
+        // - call the function ourselves
+        // - set the data pointer to NULL to ensure the function will
+        //   not get called again by NSPR
+        // The PR_SetThreadPrivate call does both of these.
+        // See also bugs 379550, 362768.
+        PR_SetThreadPrivate(kIThreadSelfIndex, NULL);
         nsrefcnt cnt;
         NS_RELEASE2(gMainThread, cnt);
         NS_WARN_IF_FALSE(cnt == 0, "Main thread being held past XPCOM shutdown.");
