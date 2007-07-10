@@ -181,4 +181,11 @@
 { 0xb9, 0xb8, 0xc8, 0x11, 0x75, 0x95, 0x51, 0x99 } }
 #define NS_HASH_PROPERTY_BAG_CONTRACTID "@mozilla.org/hash-property-bag;1"
 
+/**
+ * A service that wants to be notified before and after event queues
+ * will process events.
+ */
+#define NS_EVENT_QUEUE_LISTENER_CONTRACTID \
+  "@mozilla.org/event-queue-listener;1"
+
 #endif
