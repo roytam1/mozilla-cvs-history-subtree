@@ -2469,6 +2469,7 @@ interrupt:
                 RESTORE_SP(fp);
 
                 /* Restore the calling script's interpreter registers. */
+                obj = NULL;
                 script = fp->script;
                 depth = (jsint) script->depth;
                 pc = fp->pc;
@@ -3925,6 +3926,7 @@ interrupt:
 #ifndef JS_THREADED_INTERP
                 endpc = pc + script->length;
 #endif
+                obj = NULL;
                 inlineCallCount++;
                 JS_RUNTIME_METER(rt, inlineCalls);
 
