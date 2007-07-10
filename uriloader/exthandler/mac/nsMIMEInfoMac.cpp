@@ -74,15 +74,7 @@ nsMIMEInfoMac::LaunchWithURI(nsIURI* aURI)
     nsCOMPtr<nsILocalFileMac> app = do_QueryInterface(application, &rv);
     if (NS_FAILED(rv)) return rv;
 
-    // make our way from the nsIURI object to the matching nsILocalFile
-    nsCOMPtr<nsIFileURL> fileUrl = do_QueryInterface(aURI, &rv);
-    if (NS_FAILED(rv)) return rv;    
-
-    nsCOMPtr<nsIFile> file;
-    rv = fileUrl->GetFile(getter_AddRefs(file));
-    if (NS_FAILED(rv)) return rv;    
-
-    nsCOMPtr<nsILocalFile> docToLoad = do_QueryInterface(file, &rv);
+    rv = GetLocalFileFromURI(aURI, getter_AddRefs(docToLoad));
     if (NS_FAILED(rv)) return rv;
 
     return app->LaunchWithDoc(docToLoad, PR_FALSE); 
@@ -103,7 +95,9 @@ nsMIMEInfoMac::LaunchWithURI(nsIURI* aURI)
     if (!app) return NS_ERROR_FAILURE;
     app->InitWithFSRef(&appFSRef);
     
-    nsCOMPtr <nsILocalFile> docToLoad = do_QueryInterface(aURI, &rv);
+    nsCOMPtr <nsILocalFile> docToLoad;
+
+    rv = GetLocalFileFromURI(aURI, getter_AddRefs(docToLoad);
     if (NS_FAILED(rv)) return rv;
     
     rv = app->LaunchWithDoc(docToLoad, PR_FALSE); 

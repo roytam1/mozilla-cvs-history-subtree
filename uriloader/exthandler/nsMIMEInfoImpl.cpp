@@ -278,10 +278,27 @@ nsMIMEInfoBase::SetAlwaysAskBeforeHandling(PRBool aAlwaysAsk)
   return NS_OK;
 }
 
+/* static */
+nsresult 
+nsMIMEInfoBase::GetLocalFileFromURI(nsIURI *aURI, nsILocalFile **aFile)
+{
+    nsresult rv;
+
+    nsCOMPtr<nsIFileURL> fileUrl = do_QueryInterface(aURI, &rv);
+    if (NS_FAILED(rv)) return rv;
+
+    nsCOMPtr<nsIFile> file;
+    rv = fileUrl->GetFile(getter_AddRefs(file));
+    if (NS_FAILED(rv)) return rv;    
+
+    return CallQueryInterface(file, aFile);
+}
+
+
 NS_IMETHODIMP
 nsMIMEInfoBase::LaunchWithURI(nsIURI* aURI)
 {
-  nsCOMPtr<nsILocalFile> localFile;
+  nsCOMPtr<nsILocalFile> docToLoad;
   nsresult rv;
   
   if (mPreferredAction == useHelperApp) {
@@ -301,24 +318,17 @@ nsMIMEInfoBase::LaunchWithURI(nsIURI* aURI)
     nsCOMPtr<nsIFile> executable;
     rv = localHandler->GetExecutable(getter_AddRefs(executable));
     NS_ENSURE_SUCCESS(rv, rv);
-    
-    // make our way from the nsIURI object to the matching nsILocalFile
-    nsCOMPtr<nsIFileURL> fileUrl = do_QueryInterface(aURI, &rv);
+
+    rv = GetLocalFileFromURI(aURI, getter_AddRefs(docToLoad));
     NS_ENSURE_SUCCESS(rv, rv);
 
-    nsCOMPtr<nsIFile> file;
-    rv = fileUrl->GetFile(getter_AddRefs(file));
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    nsCOMPtr<nsILocalFile> docToLoad = do_QueryInterface(file, &rv);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    return LaunchWithIProcess(executable, localFile);
+    return LaunchWithIProcess(executable, docToLoad);
   }
   else if (mPreferredAction == useSystemDefault) {
-    nsCOMPtr<nsILocalFile> localFile = do_QueryInterface(aURI, &rv);
+    rv = GetLocalFileFromURI(aURI, getter_AddRefs(docToLoad));
     NS_ENSURE_SUCCESS(rv, rv);
-    return LaunchDefaultWithFile(localFile);
+
+    return LaunchDefaultWithFile(docToLoad);
   }
 
   return NS_ERROR_INVALID_ARG;
