@@ -97,7 +97,6 @@ nsMIMEInfoMac::LaunchWithURI(nsIURI* aURI)
     app->InitWithFSRef(&appFSRef);
     
     nsCOMPtr <nsILocalFile> docToLoad;
-
     rv = GetLocalFileFromURI(aURI, getter_AddRefs(docToLoad));
     if (NS_FAILED(rv)) return rv;
     
