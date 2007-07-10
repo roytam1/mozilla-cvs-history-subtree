@@ -121,6 +121,8 @@
 #include "nsIXPCToolsProfiler.h"
 #endif
 
+#include "nsIEventQueueListener.h"
+
 #ifdef XPC_IDISPATCH_SUPPORT
 // This goop was added because of EXCEPINFO in ThrowCOMError
 // This include is here, because it needs to occur before the undefines below
@@ -427,6 +429,7 @@ private:
 // to this rule are noted explicitly.
 
 class nsXPConnect : public nsIXPConnect_MOZILLA_1_8_BRANCH,
+                    public nsIEventQueueListener,
                     public nsSupportsWeakReference
 {
 public:
@@ -434,6 +437,7 @@ public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSIXPCONNECT
     NS_DECL_NSIXPCONNECT_MOZILLA_1_8_BRANCH
+    NS_DECL_NSIEVENTQUEUELISTENER
 
     // non-interface implementation
 public:

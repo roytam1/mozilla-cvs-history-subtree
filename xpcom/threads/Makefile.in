@@ -86,6 +86,7 @@ XPIDLSRCS	= \
 		nsIEventTarget.idl \
 		nsIEventQueue.idl \
 		nsIEventQueueService.idl \
+		nsIEventQueueListener.idl \
 		nsIEnvironment.idl \
 		nsIProcess.idl \
 		nsISupportsPriority.idl \
