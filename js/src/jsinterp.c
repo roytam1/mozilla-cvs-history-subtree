@@ -3869,7 +3869,7 @@ interrupt:
                 if (!JSVAL_IS_OBJECT(vp[1])) {
                     PRIMITIVE_TO_OBJECT(cx, vp[1], obj2);
                     if (!obj2)
-                        goto out;
+                        goto bad_inline_call;
                     vp[1] = OBJECT_TO_JSVAL(obj2);
                 }
                 newifp->frame.thisp =
@@ -3878,10 +3878,8 @@ interrupt:
                                    ? parent
                                    : JSVAL_TO_OBJECT(vp[1]),
                                    newifp->frame.argv);
-                if (!newifp->frame.thisp) {
-                    js_FreeRawStack(cx, newmark);
+                if (!newifp->frame.thisp)
                     goto bad_inline_call;
-                }
 #ifdef DUMP_CALL_TABLE
                 LogCall(cx, *vp, argc, vp + 2);
 #endif
@@ -3908,8 +3906,7 @@ interrupt:
                 /* Scope with a call object parented by the callee's parent. */
                 if (JSFUN_HEAVYWEIGHT_TEST(fun->flags) &&
                     !js_GetCallObject(cx, &newifp->frame, parent)) {
-                    ok = JS_FALSE;
-                    goto out;
+                    goto bad_inline_call;
                 }
 
                 /* Switch to new version if currentVersion wasn't overridden. */
@@ -3935,8 +3932,11 @@ interrupt:
                 DO_OP();
 
               bad_inline_call:
+                RESTORE_SP(fp);
+                JS_ASSERT(fp->pc == pc);
                 script = fp->script;
                 depth = (jsint) script->depth;
+                js_FreeRawStack(cx, newmark);
                 ok = JS_FALSE;
                 goto out;
             }
