@@ -10,7 +10,7 @@
 
 #$ENV{PATH} = "/usr/local/binutils-2.13.2.1/bin:/usr/local/gcc-3.4.3/bin:" . $ENV{PATH};
 
-$MacUniversalBinary = 1;
+#$MacUniversalBinary = 1;
 
 #- PLEASE FILL THIS IN WITH YOUR PROPER EMAIL ADDRESS
 #$BuildAdministrator = "$ENV{USER}\@$ENV{HOST}";
@@ -23,7 +23,7 @@ $DisplayServer = ':0.0';
 #- Default values of command-line opts
 #-
 #$BuildDepend       = 1;      # Depend or Clobber
-#$BuildDebug        = 0;      # Debug or Opt (Darwin)
+$BuildDebug        = 1;      # Debug or Opt (Darwin)
 #$ReportStatus      = 1;      # Send results to server, or not
 #$ReportFinalStatus = 1;      # Finer control over $ReportStatus.
 #$UseTimeStamp      = 1;      # Use the CVS 'pull-by-timestamp' option, or not
@@ -33,7 +33,7 @@ $DisplayServer = ':0.0';
 #$SkipMozilla       = 0;      # Use to debug post-mozilla.pl scripts.
 
 # Tests
-$CleanProfile             = 1;
+$CleanProfile             = 0;
 #$ResetHomeDirForTests     = 1;
 $ProductName               = "Minefield";
 $VendorName                = "";
@@ -72,7 +72,7 @@ $RegxpcomTestTimeout              = 60;
 #$AliveTestTimeout                 = 45;
 #$ViewerTestTimeout                = 45;
 #$EmbedTestTimeout                 = 45;
-$BloatTestTimeout                 = 1800;   # seconds
+$BloatTestTimeout                 = 300;   # seconds
 #$MailBloatTestTimeout             = 120;   # seconds
 #$JavaTestTimeout                  = 45;
 #$DomTestTimeout	                  = 45;    # seconds
@@ -119,7 +119,7 @@ $moz_cvsroot   = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 #$moz_client_mk = 'client.mk';
 
 #- Set if you want to build in a separate object tree
-$ObjDir = '../build/universal';
+$ObjDir = '../build';
 
 # Extra build name, if needed.
 $BuildNameExtra = 'Debug + Leak Test';
