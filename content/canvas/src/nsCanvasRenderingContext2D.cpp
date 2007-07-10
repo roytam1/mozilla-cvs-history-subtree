@@ -883,7 +883,15 @@ nsCanvasRenderingContext2D::Render(nsIRenderingContext *rc)
 {
     nsresult rv = NS_OK;
 
+    if (!mSurface || !mCairo ||
+        cairo_surface_status(mSurface) ||
+        cairo_status(mCairo))
+        return NS_ERROR_FAILURE;
+
 #ifdef MOZ_CAIRO_GFX
+
+    if (!mThebesSurface)
+        return NS_ERROR_FAILURE;
 
     gfxContext* ctx = (gfxContext*) rc->GetNativeGraphicData(nsIRenderingContext::NATIVE_THEBES_CONTEXT);
     nsRefPtr<gfxPattern> pat = new gfxPattern(mThebesSurface);
@@ -1066,6 +1074,9 @@ nsCanvasRenderingContext2D::GetInputStream(const nsACString& aMimeType,
                                            const nsAString& aEncoderOptions,
                                            nsIInputStream **aStream)
 {
+    if (!mSurface || cairo_surface_status(mSurface) != CAIRO_STATUS_SUCCESS)
+        return NS_ERROR_FAILURE;
+
     nsCString conid(NS_LITERAL_CSTRING("@mozilla.org/image/encoder;2?type="));
     conid += aMimeType;
 
@@ -2490,8 +2501,8 @@ CheckSaneImageSize (PRInt32 width, PRInt32 height)
         return PR_FALSE;
 
     /* reject over-wide or over-tall images */
-    const PRInt32 k64KLimit = 0x0000FFFF;
-    if (width > k64KLimit || height > k64KLimit)
+    const PRInt32 kSizeLimit = 0x00007FFF;
+    if (width > kSizeLimit || height > kSizeLimit)
         return PR_FALSE;
 
     return PR_TRUE;
