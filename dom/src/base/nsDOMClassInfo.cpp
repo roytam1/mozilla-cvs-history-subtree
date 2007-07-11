@@ -6715,6 +6715,17 @@ nsEventReceiverSH::AddEventListenerHelper(JSContext *cx, JSObject *obj,
     return JS_FALSE;
   }
 
+  // Can't use the macro OBJ_TO_INNER_OBJECT here due to it using the
+  // non-exported function js_GetSlotThreadSafe().
+  {
+    JSClass *clasp = JS_GET_CLASS(cx, obj);
+    if (clasp->flags & JSCLASS_IS_EXTENDED) {
+      JSExtendedClass *xclasp = (JSExtendedClass*)clasp;
+      if (xclasp->innerObject)
+        obj = xclasp->innerObject(cx, obj);
+    }
+  }
+
   nsCOMPtr<nsIXPConnectWrappedNative> wrapper;
   nsresult rv =
     sXPConnect->GetWrappedNativeOfJSObject(cx, obj, getter_AddRefs(wrapper));

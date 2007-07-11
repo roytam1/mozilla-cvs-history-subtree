@@ -1892,6 +1892,17 @@ nsXPCComponents_Utils::LookupMethod()
 
     JSObject* obj = JSVAL_TO_OBJECT(argv[0]);
 
+    // Can't use the macro OBJ_TO_INNER_OBJECT here due to it using
+    // the non-exported function js_GetSlotThreadSafe().
+    {
+        JSClass *clasp = JS_GET_CLASS(cx, obj);
+        if (clasp->flags & JSCLASS_IS_EXTENDED) {
+            JSExtendedClass *xclasp = (JSExtendedClass*)clasp;
+            if (xclasp->innerObject)
+                obj = xclasp->innerObject(cx, obj);
+        }
+    }
+
     // second param must be a string
     if(!JSVAL_IS_STRING(argv[1]))
         return NS_ERROR_XPC_BAD_CONVERT_JS;
