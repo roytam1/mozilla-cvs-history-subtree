@@ -2241,6 +2241,9 @@ nsChildView::Idle()
 // set the closed hand cursor and record the starting scroll positions
 - (void) startHandScroll:(NSEvent*)theEvent
 {
+  if (!mGeckoChild)
+    return;
+
   mHandScrollStartMouseLoc = [[self window] convertBaseToScreen: [theEvent locationInWindow]];
 
   nsIScrollableView* aScrollableView = [self getScrollableView]; 
@@ -2257,7 +2260,7 @@ nsChildView::Idle()
 - (void) updateHandScroll:(NSEvent*)theEvent
 {
   nsIScrollableView* aScrollableView = [self getScrollableView];
-  if (!aScrollableView)
+  if (!aScrollableView || !mGeckoChild)
     return;
   
   NSPoint newMouseLoc = [[self window] convertBaseToScreen: [theEvent locationInWindow]];
@@ -2289,6 +2292,9 @@ nsChildView::Idle()
 // the hand scroll cursor.
 - (void) setHandScrollCursor:(NSEvent*)theEvent
 {
+  if (!mGeckoChild)
+    return;
+
   BOOL inMouseView = NO;
 
   // check to see if the user has hand scroll modifiers held down; if so, 
@@ -2614,6 +2620,9 @@ nsChildView::Idle()
     [self stopHandScroll:theEvent];
     return;
   }
+  if (!mGeckoChild)
+    return;
+
   nsMouseEvent geckoEvent(PR_TRUE, 0, nsnull, nsMouseEvent::eReal);
   [self convertEvent:theEvent message:NS_MOUSE_LEFT_BUTTON_UP toGeckoEvent:&geckoEvent];
   
@@ -2645,9 +2654,11 @@ nsChildView::Idle()
   // check if we are in a hand scroll or if the user
   // has command and alt held down; if so,  we do not want
   // gecko messing with the cursor.
-  if ([ChildView  areHandScrollModifiers:[theEvent modifierFlags]]) {
+  if ([ChildView  areHandScrollModifiers:[theEvent modifierFlags]])
     return;
-  }
+  if (!mGeckoChild)
+    return;
+
   nsMouseEvent geckoEvent(PR_TRUE, 0, nsnull, nsMouseEvent::eReal);
   [self convertEvent:theEvent message:NS_MOUSE_MOVE toGeckoEvent:&geckoEvent];
 
@@ -2670,11 +2681,14 @@ nsChildView::Idle()
 
 - (void)mouseDragged:(NSEvent*)theEvent
 {
+  if (!mGeckoChild)
+    return;
   // if the handscroll flag is set, steal this event
   if (mInHandScroll) {
     [self updateHandScroll:theEvent];
     return;
   }
+
   nsMouseEvent geckoEvent(PR_TRUE, 0, nsnull, nsMouseEvent::eReal);
   [self convertEvent:theEvent message:NS_MOUSE_MOVE toGeckoEvent:&geckoEvent];
 
@@ -2708,7 +2722,8 @@ nsChildView::Idle()
 {
   // Gecko may have set the cursor to ibeam or link hand, or handscroll may
   // have set it to the open hand cursor. Cocoa won't call this during a drag.
-  mGeckoChild->SetCursor(eCursor_standard);
+  if (mGeckoChild)
+    mGeckoChild->SetCursor(eCursor_standard);
    
   // no need to monitor mouse movements outside of the gecko view,
   // but make sure we are not a plugin view.
@@ -2718,6 +2733,9 @@ nsChildView::Idle()
 
 - (void)rightMouseDown:(NSEvent *)theEvent
 {
+  if (!mGeckoChild)
+    [super rightMouseDown:theEvent];
+
   // The right mouse went down.  Fire off a right mouse down and
   // then send the context menu event.
   nsMouseEvent geckoEvent(PR_TRUE, 0, nsnull, nsMouseEvent::eReal);
@@ -2740,6 +2758,9 @@ nsChildView::Idle()
 
 - (void)rightMouseUp:(NSEvent *)theEvent
 {
+  if (!mGeckoChild)
+    [super rightMouseUp:theEvent];
+
   nsMouseEvent geckoEvent(PR_TRUE, 0, nsnull, nsMouseEvent::eReal);
   [self convertEvent:theEvent message:NS_MOUSE_RIGHT_BUTTON_UP toGeckoEvent:&geckoEvent];
 
@@ -2760,6 +2781,9 @@ nsChildView::Idle()
 
 - (void)otherMouseDown:(NSEvent *)theEvent
 {
+  if (!mGeckoChild)
+    return;
+
   nsMouseEvent geckoEvent(PR_TRUE, 0, nsnull, nsMouseEvent::eReal);
   [self convertEvent:theEvent message:NS_MOUSE_MIDDLE_BUTTON_DOWN toGeckoEvent:&geckoEvent];
   geckoEvent.clickCount = [theEvent clickCount];
@@ -2773,6 +2797,9 @@ nsChildView::Idle()
 
 - (void)otherMouseUp:(NSEvent *)theEvent
 {
+  if (!mGeckoChild)
+    return;
+
   nsMouseEvent geckoEvent(PR_TRUE, 0, nsnull, nsMouseEvent::eReal);
   [self convertEvent:theEvent message:NS_MOUSE_MIDDLE_BUTTON_UP toGeckoEvent:&geckoEvent];
   
@@ -2789,6 +2816,9 @@ nsChildView::Idle()
 //
 -(void)scrollWheel:(NSEvent*)theEvent forAxis:(enum nsMouseScrollEvent::nsMouseScrollFlags)inAxis
 {
+  if (!mGeckoChild)
+    return;
+
   float scrollDelta;
 
   if (inAxis & nsMouseScrollEvent::kIsVertical)
@@ -2874,7 +2904,7 @@ nsChildView::Idle()
 
 -(NSMenu*)menuForEvent:(NSEvent*)theEvent
 {
-  if ([self getIsPluginView])
+  if ([self getIsPluginView] || !mGeckoChild)
     return nil;
   
   // Fire the context menu event into Gecko.
@@ -3018,6 +3048,9 @@ static void ConvertCocoaKeyEventToMacEvent(NSEvent* cocoaEvent, EventRecord& mac
 
 - (nsRect)sendCompositionEvent:(PRInt32) aEventType
 {
+  if (!mGeckoChild)
+    return nsRect(0, 0, 0, 0);
+
 #ifdef DEBUG_IME
   NSLog(@"****in sendCompositionEvent; type = %d", aEventType);
 #endif
@@ -3035,6 +3068,9 @@ static void ConvertCocoaKeyEventToMacEvent(NSEvent* cocoaEvent, EventRecord& mac
                       markedRange:(NSRange) markRange
                       doCommit:(BOOL) doCommit
 {
+  if (!mGeckoChild)
+    return;
+
 #ifdef DEBUG_IME
   NSLog(@"****in sendTextEvent; string = '%@'", aString);
   NSLog(@" markRange = %d, %d;  selRange = %d, %d", markRange.location, markRange.length, selRange.location, selRange.length);
@@ -3057,6 +3093,9 @@ static void ConvertCocoaKeyEventToMacEvent(NSEvent* cocoaEvent, EventRecord& mac
 
 - (void)insertText:(id)insertString
 {
+  if (!mGeckoChild)
+    return;
+
 #if DEBUG_IME
   NSLog(@"****in insertText: '%@'", insertString);
   NSLog(@" markRange = %d, %d;  selRange = %d, %d", mMarkedRange.location, mMarkedRange.length, mSelectedRange.location, mSelectedRange.length);
@@ -3210,6 +3249,9 @@ static void ConvertCocoaKeyEventToMacEvent(NSEvent* cocoaEvent, EventRecord& mac
 
 - (NSAttributedString *) attributedSubstringFromRange:(NSRange)theRange
 {
+  if (!mGeckoChild)
+    return nil;
+
 #if DEBUG_IME
   NSLog(@"****in attributedSubstringFromRange");
   NSLog(@" theRange      = %d, %d", theRange.location, theRange.length);
@@ -3323,7 +3365,7 @@ static void ConvertCocoaKeyEventToMacEvent(NSEvent* cocoaEvent, EventRecord& mac
   // since we have no character, there isn't any point to generating
   // a gecko event until they have dead key events
   BOOL nonDeadKeyPress = [[theEvent characters] length] > 0;
-  if (!isARepeat && nonDeadKeyPress)
+  if (!isARepeat && nonDeadKeyPress && mGeckoChild)
   {
     // Fire a key down. We'll fire key presses via -insertText:
     nsKeyEvent geckoEvent(PR_TRUE, 0, nsnull);
@@ -3351,7 +3393,7 @@ static void ConvertCocoaKeyEventToMacEvent(NSEvent* cocoaEvent, EventRecord& mac
     return;
   }
     
-  if (nonDeadKeyPress)
+  if (nonDeadKeyPress && mGeckoChild)
   {
     nsKeyEvent geckoEvent(PR_TRUE, 0, nsnull);
     geckoEvent.point.x = geckoEvent.point.y = 0;
@@ -3385,7 +3427,7 @@ static void ConvertCocoaKeyEventToMacEvent(NSEvent* cocoaEvent, EventRecord& mac
 - (void)keyUp:(NSEvent*)theEvent
 {
   // if we don't have any characters we can't generate a keyUp event
-  if (0 == [[theEvent characters] length])
+  if (!mGeckoChild || [[theEvent characters] length] == 0)
     return;
 
   // Fire a key up.
@@ -3407,6 +3449,9 @@ static void ConvertCocoaKeyEventToMacEvent(NSEvent* cocoaEvent, EventRecord& mac
 // Fire key up/down events for the modifier keys (shift, alt, ctrl, command).
 - (void)flagsChanged:(NSEvent*)theEvent
 {
+  if (!mGeckoChild)
+    return;
+
   if ([theEvent type] == NSFlagsChanged) {
     unsigned int modifiers =
       [theEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask;
