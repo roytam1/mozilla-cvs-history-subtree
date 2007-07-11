@@ -504,7 +504,7 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
 
 - (void)setAllowedActionHosts:(NSArray*)actionHosts forHost:(NSString*)host
 {
-  [mAllowedActionHosts setValue:actionHosts forKey:host];
+  [mAllowedActionHosts setObject:actionHosts forKey:host];
   [mAllowedActionHosts writeToFile:[self allowedActionHostsFile] atomically:YES];
 }
 
