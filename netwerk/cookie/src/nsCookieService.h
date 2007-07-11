@@ -171,8 +171,10 @@ class nsCookieService : public nsICookieService
     void                          PrefChanged(nsIPrefBranch *aPrefBranch);
     nsresult                      Read();
     nsresult                      Write();
-    PRBool                        SetCookieInternal(nsIURI *aHostURI, nsIChannel *aChannel, nsDependentCString &aCookieHeader, nsInt64 aServerTime, nsCookieStatus aStatus, nsCookiePolicy aPolicy);
-    void                          AddInternal(nsCookie *aCookie, nsInt64 aCurrentTime, nsIURI *aHostURI, const char *aCookieHeader);
+    nsresult                      GetCookieInternal(nsIURI *aHostURI, nsIURI *aFirstURI, nsIChannel *aChannel, PRBool aHttpBound, char **aCookie);
+    nsresult                      SetCookieStringInternal(nsIURI *aHostURI, nsIURI *aFirstURI, nsIPrompt *aPrompt, const char *aCookieHeader, const char *aServerTime, nsIChannel *aChannel, PRBool aFromHttp);
+    PRBool                        SetCookieInternal(nsIURI *aHostURI, nsIChannel *aChannel, nsDependentCString &aCookieHeader, nsInt64 aServerTime, PRBool aFromHttp, nsCookieStatus aStatus, nsCookiePolicy aPolicy);
+    void                          AddInternal(nsCookie *aCookie, nsInt64 aCurrentTime, nsIURI *aHostURI, const char *aCookieHeader, PRBool aFromHttp);
     void                          RemoveCookieFromList(nsListIter &aIter);
     PRBool                        AddCookieToList(nsCookie *aCookie);
     static PRBool                 GetTokenValue(nsASingleFragmentCString::const_char_iterator &aIter, nsASingleFragmentCString::const_char_iterator &aEndIter, nsDependentCSubstring &aTokenString, nsDependentCSubstring &aTokenValue, PRBool &aEqualsFound);

@@ -75,6 +75,12 @@
  * useful types & constants
  ******************************************************************************/
 
+// XXX_hack. See bug 178993.
+// This is a hack to hide HttpOnly cookies from older browsers
+//
+
+static const char kHttpOnlyPrefix[] = "#HttpOnly_";
+
 static const char kCookieFileName[] = "cookies.txt";
 
 static const PRUint32 kLazyWriteTimeout = 5000; //msec
@@ -124,6 +130,7 @@ struct nsCookieAttributes
   nsInt64 expiryTime;
   PRBool isSession;
   PRBool isSecure;
+  PRBool isHttpOnly;
 };
 
 // stores linked list iteration state, and provides a rudimentary
@@ -238,7 +245,8 @@ LogSuccess(PRBool aSetCookie, nsIURI *aHostURI, const char *aCookieString, nsCoo
   }
 
   nsCAutoString spec;
-  aHostURI->GetAsciiSpec(spec);
+  if (aHostURI)
+    aHostURI->GetAsciiSpec(spec);
 
   PR_LOG(sCookieLog, PR_LOG_DEBUG,
     ("%s%s%s\n", "===== ", aSetCookie ? "COOKIE ACCEPTED" : "COOKIE SENT", " ====="));
@@ -259,14 +267,13 @@ LogSuccess(PRBool aSetCookie, nsIURI *aHostURI, const char *aCookieString, nsCoo
     PR_LOG(sCookieLog, PR_LOG_DEBUG,("%s: %s\n", aCookie->IsDomain() ? "domain" : "host", aCookie->Host().get()));
     PR_LOG(sCookieLog, PR_LOG_DEBUG,("path: %s\n", aCookie->Path().get()));
 
-    if (!aCookie->IsSession()) {
-      PR_ExplodeTime(aCookie->Expiry() * USEC_PER_SEC, PR_GMTParameters, &explodedTime);
-      PR_FormatTimeUSEnglish(timeString, 40, "%c GMT", &explodedTime);
-    }
-
+    PR_ExplodeTime(aCookie->Expiry() * USEC_PER_SEC, PR_GMTParameters, &explodedTime);
+    PR_FormatTimeUSEnglish(timeString, 40, "%c GMT", &explodedTime);
     PR_LOG(sCookieLog, PR_LOG_DEBUG,
-      ("expires: %s", aCookie->IsSession() ? "at end of session" : timeString));
+      ("expires: %s%s", timeString, aCookie->IsSession() ? " (at end of session)" : ""));
+
     PR_LOG(sCookieLog, PR_LOG_DEBUG,("is secure: %s\n", aCookie->IsSecure() ? "true" : "false"));
+    PR_LOG(sCookieLog, PR_LOG_DEBUG,("is httpOnly: %s\n", aCookie->IsHttpOnly() ? "true" : "false"));
   }
   PR_LOG(sCookieLog, PR_LOG_DEBUG,("\n"));
 }
@@ -482,30 +489,14 @@ nsCookieService::Observe(nsISupports     *aSubject,
   return NS_OK;
 }
 
-NS_IMETHODIMP
-nsCookieService::GetCookieString(nsIURI     *aHostURI,
-                                 nsIChannel *aChannel,
-                                 char       **aCookie)
-{
-  // try to determine first party URI
-  nsCOMPtr<nsIURI> firstURI;
-  if (aChannel) {
-    nsCOMPtr<nsIHttpChannelInternal> httpInternal = do_QueryInterface(aChannel);
-    if (httpInternal)
-      httpInternal->GetDocumentURI(getter_AddRefs(firstURI));
-  }
-
-  return GetCookieStringFromHttp(aHostURI, firstURI, aChannel, aCookie);
-}
-
 // helper function for GetCookieStringFromHttp
 static inline PRBool ispathdelimiter(char c) { return c == '/' || c == '?' || c == '#' || c == ';'; }
 
-NS_IMETHODIMP
-nsCookieService::GetCookieStringFromHttp(nsIURI     *aHostURI,
-                                         nsIURI     *aFirstURI,
-                                         nsIChannel *aChannel,
-                                         char       **aCookie)
+nsresult nsCookieService::GetCookieInternal(nsIURI     *aHostURI,
+                                            nsIURI     *aFirstURI,
+                                            nsIChannel *aChannel,
+                                            PRBool     aHttpBound,
+                                            char       **aCookie)
 {
   *aCookie = nsnull;
 
@@ -562,6 +553,12 @@ nsCookieService::GetCookieStringFromHttp(nsIURI     *aHostURI,
     for (; cookie; cookie = cookie->Next()) {
       // if the cookie is secure and the host scheme isn't, we can't send it
       if (cookie->IsSecure() && !isSecure) {
+        continue;
+      }
+
+      // if the cookie is httpOnly and it's not going directly to the HTTP
+      // connection, don't send it
+      if (cookie->IsHttpOnly() && !aHttpBound) {
         continue;
       }
 
@@ -644,6 +641,31 @@ nsCookieService::GetCookieStringFromHttp(nsIURI     *aHostURI,
 }
 
 NS_IMETHODIMP
+nsCookieService::GetCookieString(nsIURI     *aHostURI,
+                                 nsIChannel *aChannel,
+                                 char       **aCookie)
+{
+  // try to determine first party URI
+  nsCOMPtr<nsIURI> firstURI;
+  if (aChannel) {
+    nsCOMPtr<nsIHttpChannelInternal> httpInternal = do_QueryInterface(aChannel);
+    if (httpInternal)
+      httpInternal->GetDocumentURI(getter_AddRefs(firstURI));
+  }
+
+  return GetCookieInternal(aHostURI, firstURI, aChannel, PR_FALSE, aCookie);
+}
+
+NS_IMETHODIMP
+nsCookieService::GetCookieStringFromHttp(nsIURI     *aHostURI,
+                                         nsIURI     *aFirstURI,
+                                         nsIChannel *aChannel,
+                                         char       **aCookie)
+{
+  return GetCookieInternal(aHostURI, aFirstURI, aChannel, PR_TRUE, aCookie);
+}
+
+NS_IMETHODIMP
 nsCookieService::SetCookieString(nsIURI     *aHostURI,
                                  nsIPrompt  *aPrompt,
                                  const char *aCookieHeader,
@@ -658,7 +680,7 @@ nsCookieService::SetCookieString(nsIURI     *aHostURI,
       httpInternal->GetDocumentURI(getter_AddRefs(firstURI));
   }
 
-  return SetCookieStringFromHttp(aHostURI, firstURI, aPrompt, aCookieHeader, nsnull, aChannel);
+  return SetCookieStringInternal(aHostURI, firstURI, aPrompt, aCookieHeader, nsnull, aChannel, PR_FALSE);
 }
 
 NS_IMETHODIMP
@@ -668,6 +690,18 @@ nsCookieService::SetCookieStringFromHttp(nsIURI     *aHostURI,
                                          const char *aCookieHeader,
                                          const char *aServerTime,
                                          nsIChannel *aChannel) 
+{
+  return SetCookieStringInternal(aHostURI, aFirstURI, aPrompt, aCookieHeader, aServerTime, aChannel, PR_TRUE);
+}
+
+nsresult
+nsCookieService::SetCookieStringInternal(nsIURI     *aHostURI,
+                                         nsIURI     *aFirstURI,
+                                         nsIPrompt  *aPrompt,
+                                         const char *aCookieHeader,
+                                         const char *aServerTime,
+                                         nsIChannel *aChannel,
+                                         PRBool      aFromHttp) 
 {
   if (!aHostURI) {
     COOKIE_LOGFAILURE(SET_COOKIE, nsnull, aCookieHeader, "host URI is null");
@@ -701,7 +735,7 @@ nsCookieService::SetCookieStringFromHttp(nsIURI     *aHostURI,
   // switch to a nice string type now, and process each cookie in the header
   nsDependentCString cookieHeader(aCookieHeader);
   while (SetCookieInternal(aHostURI, aChannel,
-                           cookieHeader, serverTime,
+                           cookieHeader, serverTime, aFromHttp,
                            cookieStatus, cookiePolicy));
 
   // write out the cookie file
@@ -852,13 +886,14 @@ nsCookieService::Add(const nsACString &aDomain,
                      currentTime,
                      aIsSession,
                      aIsSecure,
+                     PR_FALSE,
                      nsICookie::STATUS_UNKNOWN,
                      nsICookie::POLICY_UNKNOWN);
   if (!cookie) {
     return NS_ERROR_OUT_OF_MEMORY;
   }
 
-  AddInternal(cookie, currentTime, nsnull, nsnull);
+  AddInternal(cookie, currentTime, nsnull, nsnull, PR_TRUE);
   return NS_OK;
 }
 
@@ -916,11 +951,11 @@ nsCookieService::Read()
 
   nsCAutoString buffer;
   PRBool isMore = PR_TRUE;
-  PRInt32 hostIndex = 0, isDomainIndex, pathIndex, secureIndex, expiresIndex, nameIndex, cookieIndex;
+  PRInt32 hostIndex, isDomainIndex, pathIndex, secureIndex, expiresIndex, nameIndex, cookieIndex;
   nsASingleFragmentCString::char_iterator iter;
   PRInt32 numInts;
   PRInt64 expires;
-  PRBool isDomain;
+  PRBool isDomain, isHttpOnly = PR_FALSE;
   nsInt64 currentTime = NOW_IN_SECONDS;
   // we use lastAccessedCounter to keep cookies in recently-used order,
   // so we start by initializing to currentTime (somewhat arbitrary)
@@ -940,11 +975,26 @@ nsCookieService::Read()
    *         most-recently used come first; least-recently-used come last.
    */
 
-  while (isMore && NS_SUCCEEDED(lineInputStream->ReadLine(buffer, &isMore))) {
-    if (buffer.IsEmpty() || buffer.First() == '#') {
-      continue;
-    }
+  /*
+   * ...but due to bug 178933, we hide HttpOnly cookies from older code
+   * in a comment, so they don't expose HttpOnly cookies to JS.
+   *
+   * The format for HttpOnly cookies is
+   *
+   * #HttpOnly_host \t isDomain \t path \t secure \t expires \t name \t cookie
+   *
+   */
 
+  while (isMore && NS_SUCCEEDED(lineInputStream->ReadLine(buffer, &isMore))) {
+    if (StringBeginsWith(buffer, NS_LITERAL_CSTRING(kHttpOnlyPrefix))) {
+      isHttpOnly = PR_TRUE;
+      hostIndex = sizeof(kHttpOnlyPrefix) - 1;
+    } else if (buffer.IsEmpty() || buffer.First() == '#') {
+      continue;
+    } else {
+      isHttpOnly = PR_FALSE;
+      hostIndex = 0;
+    }
     // this is a cheap, cheesy way of parsing a tab-delimited line into
     // string indexes, which can be lopped off into substrings. just for
     // purposes of obfuscation, it also checks that each token was found.
@@ -987,6 +1037,7 @@ nsCookieService::Read()
                        lastAccessedCounter,
                        PR_FALSE,
                        Substring(buffer, secureIndex, expiresIndex - secureIndex - 1).EqualsLiteral(kTrue),
+                       isHttpOnly,
                        nsICookie::STATUS_UNKNOWN,
                        nsICookie::POLICY_UNKNOWN);
     if (!newCookie) {
@@ -1082,6 +1133,11 @@ nsCookieService::Write()
    * note 2: cookies are written in order of lastAccessed time:
    *         most-recently used come first; least-recently-used come last.
    */
+
+  /*
+   * XXX but see above in ::Read for the HttpOnly hack
+   */
+   
   nsCookie *cookie;
   nsInt64 currentTime = NOW_IN_SECONDS;
   char dateString[22];
@@ -1094,6 +1150,10 @@ nsCookieService::Write()
       continue;
     }
 
+    // XXX hack for HttpOnly. see bug 178993.
+    if (cookie->IsHttpOnly()) {
+      bufferedOutputStream->Write(kHttpOnlyPrefix, sizeof(kHttpOnlyPrefix) - 1, &rv);
+    }
     bufferedOutputStream->Write(cookie->Host().get(), cookie->Host().Length(), &rv);
     if (cookie->IsDomain()) {
       bufferedOutputStream->Write(kTrue, sizeof(kTrue) - 1, &rv);
@@ -1143,6 +1203,7 @@ nsCookieService::SetCookieInternal(nsIURI             *aHostURI,
                                    nsIChannel         *aChannel,
                                    nsDependentCString &aCookieHeader,
                                    nsInt64            aServerTime,
+                                   PRBool             aFromHttp,
                                    nsCookieStatus     aStatus,
                                    nsCookiePolicy     aPolicy)
 {
@@ -1199,6 +1260,7 @@ nsCookieService::SetCookieInternal(nsIURI             *aHostURI,
                      currentTime,
                      cookieAttributes.isSession,
                      cookieAttributes.isSecure,
+                     cookieAttributes.isHttpOnly,
                      aStatus,
                      aPolicy);
   if (!cookie) {
@@ -1229,7 +1291,7 @@ nsCookieService::SetCookieInternal(nsIURI             *aHostURI,
   }
 
   // add the cookie to the list. AddInternal() takes care of logging.
-  AddInternal(cookie, NOW_IN_SECONDS, aHostURI, cookieHeader);
+  AddInternal(cookie, NOW_IN_SECONDS, aHostURI, cookieHeader, aFromHttp);
   return newCookie;
 }
 
@@ -1242,8 +1304,15 @@ void
 nsCookieService::AddInternal(nsCookie   *aCookie,
                              nsInt64    aCurrentTime,
                              nsIURI     *aHostURI,
-                             const char *aCookieHeader)
+                             const char *aCookieHeader,
+                             PRBool     aFromHttp)
 {
+  // if the new cookie is httponly, make sure we're not coming from script
+  if (!aFromHttp && aCookie->IsHttpOnly()) {
+    COOKIE_LOGFAILURE(SET_COOKIE, aHostURI, aCookieHeader, "cookie is httponly; coming from script");
+    return;
+  }
+
   nsListIter matchIter;
   const PRBool foundCookie =
     FindCookie(aCookie->Host(), aCookie->Name(), aCookie->Path(), matchIter);
@@ -1251,6 +1320,13 @@ nsCookieService::AddInternal(nsCookie   *aCookie,
   nsRefPtr<nsCookie> oldCookie;
   if (foundCookie) {
     oldCookie = matchIter.current;
+
+    // if the old cookie is httponly, make sure we're not coming from script
+    if (!aFromHttp && oldCookie->IsHttpOnly()) {
+      COOKIE_LOGFAILURE(SET_COOKIE, aHostURI, aCookieHeader, "previously stored cookie is httponly; coming from script");
+      return;
+    }
+
     RemoveCookieFromList(matchIter);
 
     // check if the cookie has expired
@@ -1343,6 +1419,9 @@ nsCookieService::AddInternal(nsCookie   *aCookie,
        trivial case, but allows the flexibility of setting only a cookie <VALUE>
        with a blank <NAME> and is required by some sites (see bug 169091).
 
+    6. Attribute "HttpOnly", not covered in the RFCs, is supported
+       (see bug 178993).
+
  ** Begin BNF:
     token         = 1*<any allowed-chars except separators>
     value         = token-value | quoted-string
@@ -1377,6 +1456,7 @@ nsCookieService::AddInternal(nsCookie   *aCookie,
                   | "Comment" "=" value
                   | "Version" "=" value
                   | "Secure"
+                  | "HttpOnly"
 
 ******************************************************************************/
 
@@ -1483,6 +1563,7 @@ nsCookieService::ParseAttributes(nsDependentCString &aCookieHeader,
   static const char kExpires[] = "expires";
   static const char kMaxage[]  = "max-age";
   static const char kSecure[]  = "secure";
+  static const char kHttpOnly[]  = "httponly";
 
   nsASingleFragmentCString::const_char_iterator tempBegin, tempEnd;
   nsASingleFragmentCString::const_char_iterator cookieStart, cookieEnd;
@@ -1490,6 +1571,8 @@ nsCookieService::ParseAttributes(nsDependentCString &aCookieHeader,
   aCookieHeader.EndReading(cookieEnd);
 
   aCookieAttributes.isSecure = PR_FALSE;
+
+  aCookieAttributes.isHttpOnly = PR_FALSE;
 
   nsDependentCSubstring tokenString(cookieStart, cookieStart);
   nsDependentCSubstring tokenValue (cookieStart, cookieStart);
@@ -1537,6 +1620,11 @@ nsCookieService::ParseAttributes(nsDependentCString &aCookieHeader,
     // ignore any tokenValue for isSecure; just set the boolean
     else if (tokenString.LowerCaseEqualsLiteral(kSecure))
       aCookieAttributes.isSecure = PR_TRUE;
+
+    // ignore any tokenValue for isHttpOnly (see bug 178993);
+    // just set the boolean
+    else if (tokenString.LowerCaseEqualsLiteral(kHttpOnly))
+      aCookieAttributes.isHttpOnly = PR_TRUE;
   }
 
   // rebind aCookieHeader, in case we need to process another cookie
