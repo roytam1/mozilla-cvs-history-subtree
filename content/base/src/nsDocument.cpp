@@ -978,7 +978,7 @@ NS_IMPL_RELEASE(nsDocument)
 nsresult
 nsDocument::Init()
 {
-  if (mBindingManager || mCSSLoader || mNodeInfoManager) {
+  if (mBindingManager || mCSSLoader || mNodeInfoManager || mScriptLoader) {
     return NS_ERROR_ALREADY_INITIALIZED;
   }
 
@@ -1000,6 +1000,10 @@ nsDocument::Init()
   // Assume we're not HTML and not quirky, until we know otherwise
   mCSSLoader->SetCaseSensitive(PR_TRUE);
   mCSSLoader->SetCompatibilityMode(eCompatibility_FullStandards);
+
+  mScriptLoader = new nsScriptLoader();
+  NS_ENSURE_TRUE(mScriptLoader, NS_ERROR_OUT_OF_MEMORY);
+  mScriptLoader->Init(this);
 
   mNodeInfoManager = new nsNodeInfoManager();
   NS_ENSURE_TRUE(mNodeInfoManager, NS_ERROR_OUT_OF_MEMORY);
@@ -2202,14 +2206,6 @@ nsDocument::GetWindow()
 nsIScriptLoader *
 nsDocument::GetScriptLoader()
 {
-  if (!mScriptLoader) {
-    mScriptLoader = new nsScriptLoader();
-    if (!mScriptLoader) {
-      return nsnull;
-    }
-    mScriptLoader->Init(this);
-  }
-
   return mScriptLoader;
 }
 
