@@ -1,6 +1,6 @@
 #
-### hostname: bl-bldlnx01.office.mozilla.org
-### uname: Linux bl-bldlnx01.office.mozilla.org 2.6.11-1.1369_FC4 #1 Thu Jun 2 22:55:56 EDT 2005 i686 i686 i386 GNU/Linux
+### hostname: bl-bldlnx03.office.mozilla.org
+### uname: Linux bl-bldlnx03.office.mozilla.org 2.6.18-1.2798.fc6 #1 SMP Mon Oct 16 14:54:20 EDT 2006 i686 i686 i386 GNU/Linux
 ##
 #
 #- tinder-config.pl - Tinderbox configuration file.
