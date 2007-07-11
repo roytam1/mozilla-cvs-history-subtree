@@ -82,6 +82,7 @@
 #include "nsIContentPolicy.h"
 #include "nsContentPolicyUtils.h"
 #include "nsContentErrors.h"
+#include "nsLayoutStatics.h"
 
 static const char* kLoadAsData = "loadAsData";
 #define LOADSTR NS_LITERAL_STRING("load")
@@ -276,6 +277,7 @@ GetDocumentFromScriptContext(nsIScriptContext *aScriptContext)
 nsXMLHttpRequest::nsXMLHttpRequest()
   : mState(XML_HTTP_REQUEST_UNINITIALIZED)
 {
+  nsLayoutStatics::AddRef();
 }
 
 nsXMLHttpRequest::~nsXMLHttpRequest()
@@ -291,6 +293,7 @@ nsXMLHttpRequest::~nsXMLHttpRequest()
 
   // Needed to free the two arrays.
   ClearEventListeners();
+  nsLayoutStatics::Release();
 }
 
 
