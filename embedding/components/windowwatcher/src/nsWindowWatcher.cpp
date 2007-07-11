@@ -53,7 +53,6 @@
 #include "nsIDocShellLoadInfo.h"
 #include "nsIDocShellTreeItem.h"
 #include "nsIDocShellTreeOwner.h"
-#include "nsIDocumentLoader.h"
 #include "nsIDocument.h"
 #include "nsIDOMDocument.h"
 #include "nsIDOMWindow.h"
@@ -1727,19 +1726,6 @@ nsWindowWatcher::ReadyOpenedDocShellItem(nsIDocShellTreeItem *aOpenedItem,
       branchWindow->SetOpenerWindow(internalParent, aWindowIsNew); // damnit
 
       if (aWindowIsNew) {
-#ifdef DEBUG
-        // Assert that we're not loading things right now.  If we are, when
-        // that load completes it will clobber whatever principals we set up
-        // on this new window!
-        nsCOMPtr<nsIDocumentLoader> docloader =
-          do_QueryInterface(aOpenedItem);
-        NS_ASSERTION(docloader, "How can we not have a docloader here?");
-
-        nsCOMPtr<nsIChannel> chan;
-        docloader->GetDocumentChannel(getter_AddRefs(chan));
-        NS_ASSERTION(!chan, "Why is there a document channel?");
-#endif
-
         nsCOMPtr<nsIDocument_MOZILLA_1_8_BRANCH2> doc =
           do_QueryInterface(branchWindow->GetExtantDocument());
         if (doc) {
