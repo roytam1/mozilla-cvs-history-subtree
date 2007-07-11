@@ -3289,8 +3289,8 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
                 ok = js_NewNumberValue(cx, d, &rtmp);                         \
                 if (!ok)                                                      \
                     goto out;                                                 \
-                *vp = rtmp;                                                   \
             }                                                                 \
+            *vp = rtmp;                                                       \
             (cs->format & JOF_INC) ? d++ : d--;                               \
             ok = js_NewNumberValue(cx, d, &rval);                             \
         } else {                                                              \
