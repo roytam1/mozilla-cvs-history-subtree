@@ -88,7 +88,7 @@ $DownloadBuildDir = 'firefox';
 # parseable format
 $TinderboxServerURL = 'http://tinderbox.mozilla.org/showbuilds.cgi?tree=Firefox&quickparse=1';
 $MatchBuildname = 'Linux fx-linux-tbox Depend Nightly';
-$GraphNameOverride        = "bl-bldlnx01_fx-linux-tbox-HEAD"; # Override name built from ::hostname() and $BuildTag
+$GraphNameOverride        = "bl-bldlnx03_fx-linux-tbox-HEAD"; # Override name built from ::hostname() and $BuildTag
 
 # $results_server
 #----------------------------------------------------------------------------
@@ -176,7 +176,7 @@ $BuildSleep = 1;
 
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
-$BuildTree  = 'Firefox';
+$BuildTree  = 'MozillaExperimental';
 
 $BuildTag = 'HEAD';
 #$BuildConfigDir = 'mozilla/config';
