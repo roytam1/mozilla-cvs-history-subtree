@@ -785,6 +785,7 @@ NS_IMPL_RELEASE_USING_AGGREGATOR(nsXPathDocumentTearoff, mDocument)
 
 nsDocument::nsDocument()
   : nsIDocument(),
+    nsIDocument_MOZILLA_1_8_BRANCH2(),
     mVisible(PR_TRUE)
 {
   nsLayoutStatics::AddRef();
@@ -921,6 +922,7 @@ PRBool gHaveXPathDOM = PR_FALSE;
 NS_INTERFACE_MAP_BEGIN(nsDocument)
   NS_INTERFACE_MAP_ENTRY(nsIDocument)
   NS_INTERFACE_MAP_ENTRY(nsIDocument_MOZILLA_1_8_0_BRANCH)
+  NS_INTERFACE_MAP_ENTRY(nsIDocument_MOZILLA_1_8_BRANCH2)
   NS_INTERFACE_MAP_ENTRY(nsIDOMDocument)
   NS_INTERFACE_MAP_ENTRY(nsIDOMNSDocument)
   NS_INTERFACE_MAP_ENTRY(nsIDOMDocumentEvent)

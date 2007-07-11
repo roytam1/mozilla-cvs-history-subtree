@@ -236,10 +236,8 @@ nsresult nsJSThunk::EvaluateScript(nsIChannel *aChannel)
         if (!principal)
             return NS_ERROR_FAILURE;
 
-        //-- Don't run if the script principal is different from the
-        //   principal of the context, with two exceptions: we allow
-        //   the script to run if the script has the system principal
-        //   or the context is about:blank.
+        //-- Don't run if the script principal is different from the principal
+        //   of the context, unless the script has the system principal.
         nsCOMPtr<nsIPrincipal> objectPrincipal;
         rv = securityManager->GetObjectPrincipal(
                                 (JSContext*)scriptContext->GetNativeContext(),

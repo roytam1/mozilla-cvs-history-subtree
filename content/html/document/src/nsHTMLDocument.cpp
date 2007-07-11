@@ -2031,9 +2031,23 @@ nsHTMLDocument::OpenCommon(const nsACString& aContentType, PRBool aReplace)
     // Remember the old scope in case the call to SetNewDocument changes it.
     nsCOMPtr<nsIScriptGlobalObject> oldScope(do_QueryReferent(mScopeObject));
 
+    // If callerPrincipal doesn't match our principal. make sure that
+    // SetNewDocument gives us a new inner window and clears our scope.
+    NS_ENSURE_TRUE(GetPrincipal(), NS_ERROR_OUT_OF_MEMORY);
+    if (!callerPrincipal ||
+        NS_FAILED(nsContentUtils::GetSecurityManager()->
+          CheckSameOriginPrincipal(callerPrincipal, GetPrincipal()))) {
+      SetIsInitialDocument(PR_FALSE);
+    }      
+
     rv = mScriptGlobalObject->SetNewDocument((nsDocument *)this, nsnull,
                                              PR_FALSE, PR_FALSE);
     NS_ENSURE_SUCCESS(rv, rv);
+
+    // Now make sure we're not flagged as the initial document anymore, now
+    // that we've had stuff done to us.  From now on, if anyone tries to
+    // document.open() us, they get a new inner window.
+    SetIsInitialDocument(PR_FALSE);
 
     nsCOMPtr<nsIScriptGlobalObject> newScope(do_QueryReferent(mScopeObject));
     if (oldScope && newScope != oldScope) {
@@ -2369,36 +2383,6 @@ nsHTMLDocument::ScriptWriteCommon(PRBool aNewlineTerminate)
   nsresult rv = nsContentUtils::XPConnect()->
     GetCurrentNativeCallContext(getter_AddRefs(ncc));
   NS_ENSURE_SUCCESS(rv, rv);
-
-  nsCAutoString spec;
-
-  if (mDocumentURI) {
-    rv = mDocumentURI->GetSpec(spec);
-    NS_ENSURE_SUCCESS(rv, rv);
-  }
-
-  if (!mDocumentURI || spec.EqualsLiteral("about:blank")) {
-    // The current document's URI and principal are empty or "about:blank".
-    // By writing to this document, the script acquires responsibility for the
-    // document for security purposes. Thus a document.write of a script tag
-    // ends up producing a script with the same principals as the script
-    // that performed the write.
-    nsIScriptSecurityManager *secMan = nsContentUtils::GetSecurityManager();
-
-    nsCOMPtr<nsIPrincipal> subject;
-    rv = secMan->GetSubjectPrincipal(getter_AddRefs(subject));
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    if (subject) {
-      nsCOMPtr<nsIURI> subjectURI;
-      subject->GetURI(getter_AddRefs(subjectURI));
-
-      if (subjectURI) {
-        mDocumentURI = subjectURI;
-        mPrincipal = subject;
-      }
-    }
-  }
 
   if (ncc) {
     // We're called from JS, concatenate the extra arguments into
