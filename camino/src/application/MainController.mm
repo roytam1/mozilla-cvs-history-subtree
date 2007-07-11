@@ -1315,9 +1315,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
   if (!browserController)
     return;
 
-  float height = [[browserController bookmarkToolbar] frame].size.height;
-  BOOL showToolbar = (BOOL)(!(height > 0));
-
+  BOOL showToolbar = ![[browserController bookmarkToolbar] isVisible];
   [[browserController bookmarkToolbar] setVisible:showToolbar];
 
   // save prefs here
