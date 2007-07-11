@@ -6124,6 +6124,12 @@ nsGlobalWindow::SetTimeoutOrInterval(PRBool aIsInterval, PRInt32 *aReturn)
     return ncc->SetExceptionWasThrown(PR_TRUE);
   }
 
+  // If we don't have a document (we could have been unloaded since
+  // the call to setTimeout was made), do nothing.
+  if (!mDocument) {
+    return NS_OK;
+  }
+
   if (interval < DOM_MIN_TIMEOUT_VALUE) {
     // Don't allow timeouts less than DOM_MIN_TIMEOUT_VALUE from
     // now...
