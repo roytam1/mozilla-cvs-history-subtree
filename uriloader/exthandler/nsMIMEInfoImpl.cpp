@@ -305,16 +305,18 @@ nsMIMEInfoBase::LaunchWithURI(nsIURI* aURI)
     if (!mPreferredApplication)
       return NS_ERROR_FILE_NOT_FOUND;
 
-    nsCOMPtr<nsILocalHandlerApp> localHandler;
-    localHandler = do_QueryInterface(mPreferredApplication, &rv);
-    if (NS_FAILED(rv)) {
-      nsCOMPtr<nsIWebHandlerApp> webHandler;
-      webHandler = do_QueryInterface(mPreferredApplication, &rv);
-      NS_ENSURE_SUCCESS(rv, rv);
-
+    // check for and possibly launch with web application
+    nsCOMPtr<nsIWebHandlerApp> webHandler = 
+      do_QueryInterface(mPreferredApplication, &rv);
+    if (NS_SUCCEEDED(rv)) {
       return LaunchWithWebHandler(webHandler, aURI);         
     }
-        
+
+    // ok, we must have a local handler app
+    nsCOMPtr<nsILocalHandlerApp> localHandler = 
+      do_QueryInterface(mPreferredApplication, &rv);
+    NS_ENSURE_SUCCESS(rv, rv);
+    
     nsCOMPtr<nsIFile> executable;
     rv = localHandler->GetExecutable(getter_AddRefs(executable));
     NS_ENSURE_SUCCESS(rv, rv);
