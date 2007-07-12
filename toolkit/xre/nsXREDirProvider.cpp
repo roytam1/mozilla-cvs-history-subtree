@@ -740,12 +740,23 @@ nsXREDirProvider::GetUpdateRootDir(nsIFile* *aResult)
   nsCString longPath;
   longPath.SetLength(MAXPATHLEN);
   char *buf = longPath.BeginWriting();
-  DWORD len = GetLongPathName(appPath.get(), buf, MAXPATHLEN);
-  // Failing GetLongPathName() is not fatal.
-  if (len <= 0 || len >= MAXPATHLEN)
+
+  DWORD (WINAPI *pGetLongPathName)(LPCTSTR, LPTSTR, DWORD);
+  // GetLongPathName() is not present on WinNT 4.0
+  *(FARPROC *)&pGetLongPathName =
+   GetProcAddress(GetModuleHandle("kernel32.dll"), "GetLongPathNameA");
+ 
+  if (pGetLongPathName) {
+    DWORD len = pGetLongPathName(appPath.get(), buf, MAXPATHLEN);
+    // Failing GetLongPathName() is not fatal.
+    if (len <= 0 || len >= MAXPATHLEN)
+      longPath.Assign(appPath);
+    else
+      longPath.SetLength(len);
+  }
+  else {
     longPath.Assign(appPath);
-  else
-    longPath.SetLength(len);
+  }
 
   // Use <UserLocalDataDir>\updates\<relative path to app dir from
   // Program Files> if app dir is under Program Files to avoid the

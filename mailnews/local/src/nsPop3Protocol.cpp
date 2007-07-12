@@ -178,6 +178,14 @@ put_hash(PLHashTable* table, const char* key, char value, PRTime dateReceived)
 }
 
 
+static PRIntn PR_CALLBACK
+net_pop3_copy_hash_entries(PLHashEntry* he, PRIntn msgindex, void *arg)
+{
+  Pop3UidlEntry *uidlEntry = (Pop3UidlEntry *) he->value;
+  put_hash((PLHashTable *) arg, uidlEntry->uidl, uidlEntry->status, uidlEntry->dateReceived);
+  return HT_ENUMERATE_NEXT;
+}
+
 
 static void * PR_CALLBACK
 AllocUidlTable(void * /* pool */, PRSize size)
@@ -934,7 +942,10 @@ nsPop3Protocol::WaitForStartOfConnectionResponse(nsIInputStream* aInputStream,
   char * line = nsnull;
   PRUint32 line_length = 0;
   PRBool pauseForMoreData = PR_FALSE;
-  line = m_lineStreamBuffer->ReadNextLine(aInputStream, line_length, pauseForMoreData);
+  nsresult rv;
+  line = m_lineStreamBuffer->ReadNextLine(aInputStream, line_length, pauseForMoreData, &rv);
+  if (NS_FAILED(rv))
+    return -1;
 
   PR_LOG(POP3LOGMODULE, PR_LOG_ALWAYS,("RECV: %s", line));
 
@@ -983,7 +994,10 @@ nsPop3Protocol::WaitForResponse(nsIInputStream* inputStream, PRUint32 length)
   char * line;
   PRUint32 ln = 0;
   PRBool pauseForMoreData = PR_FALSE;
-  line = m_lineStreamBuffer->ReadNextLine(inputStream, ln, pauseForMoreData);
+  nsresult rv;
+  line = m_lineStreamBuffer->ReadNextLine(inputStream, ln, pauseForMoreData, &rv);
+  if (NS_FAILED(rv))
+    return -1;
   
   if(pauseForMoreData || !line)
   {
@@ -1162,7 +1176,9 @@ PRInt32 nsPop3Protocol::AuthResponse(nsIInputStream* inputStream,
     }
     
     PRBool pauseForMoreData = PR_FALSE;
-    line = m_lineStreamBuffer->ReadNextLine(inputStream, ln, pauseForMoreData);
+    line = m_lineStreamBuffer->ReadNextLine(inputStream, ln, pauseForMoreData, &rv);
+    if (NS_FAILED(rv))
+      return -1;
 
     if(pauseForMoreData || !line) 
     {
@@ -1249,7 +1265,10 @@ PRInt32 nsPop3Protocol::CapaResponse(nsIInputStream* inputStream,
     }
 
     PRBool pauseForMoreData = PR_FALSE;
-    line = m_lineStreamBuffer->ReadNextLine(inputStream, ln, pauseForMoreData);
+    nsresult rv;
+    line = m_lineStreamBuffer->ReadNextLine(inputStream, ln, pauseForMoreData, &rv);
+    if (NS_FAILED(rv))
+      return -1;
 
     if(pauseForMoreData || !line) 
     {
@@ -2103,7 +2122,10 @@ nsPop3Protocol::GetList(nsIInputStream* inputStream,
     return(Error(POP3_LIST_FAILURE));
   
   PRBool pauseForMoreData = PR_FALSE;
-  line = m_lineStreamBuffer->ReadNextLine(inputStream, ln, pauseForMoreData);
+  nsresult rv;
+  line = m_lineStreamBuffer->ReadNextLine(inputStream, ln, pauseForMoreData, &rv);
+  if (NS_FAILED(rv))
+    return -1;
   
   if(pauseForMoreData || !line)
   {
@@ -2200,9 +2222,9 @@ PRInt32 nsPop3Protocol::GetFakeUidlTop(nsIInputStream* inputStream,
   * but it's alright since command_succeeded
   * will remain constant
   */
+  nsresult rv;
   if(!m_pop3ConData->command_succeeded) 
   {
-    nsresult rv;
     
     /* UIDL, XTND and TOP are all unsupported for this mail server.
        Tell the user to join the 20th century.
@@ -2247,7 +2269,9 @@ PRInt32 nsPop3Protocol::GetFakeUidlTop(nsIInputStream* inputStream,
   }
   
   PRBool pauseForMoreData = PR_FALSE;
-  line = m_lineStreamBuffer->ReadNextLine(inputStream, ln, pauseForMoreData);
+  line = m_lineStreamBuffer->ReadNextLine(inputStream, ln, pauseForMoreData, &rv);
+  if (NS_FAILED(rv))
+    return -1;
   
   if(pauseForMoreData || !line)
   {
@@ -2457,7 +2481,10 @@ nsPop3Protocol::GetXtndXlstMsgid(nsIInputStream* inputStream,
   }        
   
   PRBool pauseForMoreData = PR_FALSE;
-  line = m_lineStreamBuffer->ReadNextLine(inputStream, ln, pauseForMoreData);
+  nsresult rv;
+  line = m_lineStreamBuffer->ReadNextLine(inputStream, ln, pauseForMoreData, &rv);
+  if (NS_FAILED(rv))
+    return -1;
   
   if(pauseForMoreData || !line)
   {
@@ -2571,7 +2598,10 @@ PRInt32 nsPop3Protocol::GetUidlList(nsIInputStream* inputStream,
     }
     
     PRBool pauseForMoreData = PR_FALSE;
-    line = m_lineStreamBuffer->ReadNextLine(inputStream, ln, pauseForMoreData);
+    nsresult rv;
+    line = m_lineStreamBuffer->ReadNextLine(inputStream, ln, pauseForMoreData, &rv);
+   if (NS_FAILED(rv))
+     return -1;
 
     if(pauseForMoreData || !line)
     {
@@ -2926,9 +2956,7 @@ nsPop3Protocol::GetMsg()
             }
           }
       }
-      if ((m_pop3ConData->next_state != POP3_SEND_DELE) || 
-        m_pop3ConData->next_state == POP3_GET_MSG ||
-        m_pop3ConData->next_state == POP3_SEND_TOP) 
+      if (m_pop3ConData->next_state != POP3_SEND_DELE) 
       { 
         
         /* This is a message we have decided to keep on the server.  Notate
@@ -3158,6 +3186,9 @@ nsPop3Protocol::RetrResponse(nsIInputStream* inputStream,
 
     PRBool pauseForMoreData = PR_FALSE;
     char *line = m_lineStreamBuffer->ReadNextLine(inputStream, status, pauseForMoreData, &rv, PR_TRUE);
+    if (NS_FAILED(rv))
+      return -1;
+
     PR_LOG(POP3LOGMODULE, PR_LOG_ALWAYS,("RECV: %s", line));
     buffer_size = status;
 
@@ -3505,11 +3536,37 @@ nsPop3Protocol::CommitState(PRBool remove_last_entry)
     }
   }
   
+  // only use newuidl if we successfully finished looping through all the
+  // messages in the inbox.
   if (m_pop3ConData->newuidl)
   {
-    PL_HashTableDestroy(m_pop3ConData->uidlinfo->hash);
-    m_pop3ConData->uidlinfo->hash = m_pop3ConData->newuidl;
-    m_pop3ConData->newuidl = NULL;
+    if (m_pop3ConData->last_accessed_msg >= m_pop3ConData->number_of_messages)
+    {
+      PL_HashTableDestroy(m_pop3ConData->uidlinfo->hash);
+      m_pop3ConData->uidlinfo->hash = m_pop3ConData->newuidl;
+      m_pop3ConData->newuidl = nsnull;
+    }
+    else
+    {
+      /* If we are leaving messages on the server, pull out the last
+        uidl from the hash, because it might have been put in there before
+        we got it into the database.
+      */
+      if (remove_last_entry && m_pop3ConData->msg_info &&
+          !m_pop3ConData->only_uidl && m_pop3ConData->newuidl->nentries > 0)
+      {
+        Pop3MsgInfo* info = m_pop3ConData->msg_info + m_pop3ConData->last_accessed_msg;
+        if (info && info->uidl)
+        {
+          PRBool val = PL_HashTableRemove(m_pop3ConData->newuidl, info->uidl);
+          NS_ASSERTION(val, "uidl not in hash table");
+        }
+      }
+
+      // Add the entries in newuidl to m_pop3ConData->uidlinfo->hash to keep
+      // track of the messages we *did* download in this session.
+      PL_HashTableEnumerateEntries(m_pop3ConData->newuidl, net_pop3_copy_hash_entries, (void *)m_pop3ConData->uidlinfo->hash);
+    }
   }
   
   if (!m_pop3ConData->only_check_for_new_mail) 

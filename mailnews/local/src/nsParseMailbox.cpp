@@ -475,6 +475,7 @@ nsParseMailMessageState::nsParseMailMessageState()
 {
   m_position = 0;
   m_IgnoreXMozillaStatus = PR_FALSE;
+  m_useReceivedDate = PR_FALSE;
   m_state = nsIMsgParseMailMsgState::ParseBodyState;
 
   // setup handling of custom db headers, headers that are added to .msf files
@@ -497,6 +498,7 @@ nsParseMailMessageState::nsParseMailMessageState()
        if (!m_customDBHeaderValues)
          m_customDBHeaders.Clear();
      }
+     pPrefBranch->GetBoolPref("mailnews.use_received_date", &m_useReceivedDate);
   }
   Clear();
 
@@ -547,6 +549,7 @@ NS_IMETHODIMP nsParseMailMessageState::Clear()
   ClearAggregateHeader (m_ccList);
   m_headers.ResetWritePos();
   m_envelope.ResetWritePos();
+  m_receivedTime = LL_ZERO;
   for (PRInt32 i = 0; i < m_customDBHeaders.Count(); i++)
     m_customDBHeaderValues[i].length = 0;
 
@@ -876,6 +879,7 @@ int nsParseMailMessageState::ParseHeaders ()
     char *end;
     char *value = 0;
     struct message_header *header = 0;
+    struct message_header receivedBy;
     
     if (! colon)
       break;
@@ -929,6 +933,11 @@ int nsParseMailMessageState::ParseHeaders ()
         header = &m_mdn_dnt;
       else if (!nsCRT::strncasecmp("Reply-To", buf, end - buf))
         header = &m_replyTo;
+      else if (!PL_strncasecmp("Received", buf, end - buf))
+      {
+        header = &receivedBy;
+        header->length = 0;
+      }
       break;
     case 'S': case 's':
       if (!nsCRT::strncasecmp ("Subject", buf, end - buf))
@@ -1032,9 +1041,26 @@ SEARCH_NEWLINE:
       while (header->length > 0 &&
         IS_SPACE (header->value [header->length - 1]))
         ((char *) header->value) [--header->length] = 0;
-    }
+      if (header == &receivedBy && LL_IS_ZERO(m_receivedTime))
+      {
+        // parse Received: header for date.
+        // We trust the first header as that is closest to recipient,
+        // and less likely to be spoofed.
+        nsCAutoString receivedHdr(header->value, header->length);
+        PRInt32 lastSemicolon = receivedHdr.RFindChar(';');
+        if (lastSemicolon != kNotFound)
+        {
+          nsCAutoString receivedDate;
+          receivedHdr.Right(receivedDate, receivedHdr.Length() - lastSemicolon - 1);
+          receivedDate.Trim(" \t\b\r\n");
+          PRTime resultTime;
+          if (PR_ParseTimeString (receivedDate.get(), PR_FALSE, &resultTime) == PR_SUCCESS)
+            m_receivedTime = resultTime;
         }
-        return 0;
+      }
+    }
+  }
+  return 0;
 }
 
 int nsParseMailMessageState::ParseEnvelope (const char *line, PRUint32 line_size)
@@ -1420,12 +1446,21 @@ int nsParseMailMessageState::FinalizeHeaders()
         else if (inReplyTo != nsnull)
           m_newMsgHdr->SetReferences(inReplyTo->value);
         
-        if (date) {
-          PRTime resultTime;
-          PRStatus timeStatus = PR_ParseTimeString (date->value, PR_FALSE, &resultTime);
-          if (PR_SUCCESS == timeStatus)
-            m_newMsgHdr->SetDate(resultTime);
+        if (!LL_IS_ZERO(m_receivedTime) && (!date || m_useReceivedDate))
+          m_newMsgHdr->SetDate(m_receivedTime);
+        else
+        {
+          // if there's no date, or it's mal-formed, use now as the time.
+          // PR_ParseTimeString won't touch resultTime unless it succeeds.
+          // (this doesn't affect local messages, because we use the envelope
+          // date if there's no Date: header, but it would affect IMAP msgs
+          // w/o a Date: hdr or Received: headers)
+          PRTime resultTime = PR_Now();
+          if (date)
+            PR_ParseTimeString (date->value, PR_FALSE, &resultTime);
+          m_newMsgHdr->SetDate(resultTime);
         }
+
         if (priority)
           m_newMsgHdr->SetPriorityString(priority->value);
         else if (priorityFlags == nsMsgPriority::notSet)
@@ -1892,7 +1927,7 @@ NS_IMETHODIMP nsParseNewMailState::ApplyFilterHit(nsIMsgFilter *filter, nsIMsgWi
             nsCOMPtr<nsIMsgCopyService> copyService =
               do_GetService(NS_MSGCOPYSERVICE_CONTRACTID, &rv);
             NS_ENSURE_SUCCESS(rv, rv);
-            rv = copyService->CopyMessages(m_rootFolder, messageArray, dstFolder,
+            rv = copyService->CopyMessages(m_downloadFolder, messageArray, dstFolder,
                                            PR_FALSE, nsnull, msgWindow, PR_FALSE);
             NS_ENSURE_SUCCESS(rv, rv);
           }

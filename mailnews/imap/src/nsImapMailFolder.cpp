@@ -4333,7 +4333,8 @@ nsImapMailFolder::NormalEndMsgWriteStream(nsMsgKey uidOfMessage,
 NS_IMETHODIMP
 nsImapMailFolder::AbortMsgWriteStream()
 {
-    return NS_ERROR_FAILURE;
+  m_offlineHeader = nsnull;
+  return NS_ERROR_FAILURE;
 }
 
     // message move/copy related methods

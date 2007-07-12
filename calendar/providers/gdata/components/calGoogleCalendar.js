@@ -14,7 +14,7 @@
  * The Original Code is Google Calendar Provider code.
  *
  * The Initial Developer of the Original Code is
- *   Philipp Kewisch (mozilla@kewis.ch)
+ *   Philipp Kewisch <mozilla@kewis.ch>
  * Portions created by the Initial Developer are Copyright (C) 2006
  * the Initial Developer. All Rights Reserved.
  *
@@ -99,23 +99,10 @@ calGoogleCalendar.prototype = {
     /**
      * readonly attribute googleCalendarName
      * Google's Calendar name. This represents the <calendar name> in
-     * http://www.google.com/calendar/feeds/<calendar name>/private/full
+     * http[s]://www.google.com/calendar/feeds/<calendar name>/private/full
      */
     get googleCalendarName() {
         return this.mCalendarName;
-    },
-
-    /**
-     * readonly attribute isDefaultCalendar
-     * Returns true if this is the default calendar of the user.
-     */
-    get isDefaultCalendar() {
-        // If there is no session, use the non-default calendar identifier as a
-        // fallback.
-        return ((this.mSession &&
-                 this.mCalendarName == this.mSession.googleUser) ||
-                (!this.mSession &&
-                 this.mCalendarName.indexOf("group.calendar.google.com") < 0));
     },
 
     /**
@@ -240,17 +227,9 @@ calGoogleCalendar.prototype = {
         // Set internal Calendar Name
         this.mCalendarName = decodeURIComponent(matches[2]);
 
-        var ioService = Cc["@mozilla.org/network/io-service;1"].
-                        getService(Ci.nsIIOService);
-
-        // Set normalized url. We need the full xml stream and private
-        // access. We need private visibility and full projection
-        this.mFullUri = ioService.newURI("http://www.google.com" +
-                                         "/calendar/feeds/" +
-                                         matches[2] +
-                                         "/private/full",
-                                         null,
-                                         null);
+        // Set normalized url. We need private visibility and full projection
+        this.mFullUri = aUri.clone();
+        this.mFullUri.path = "/calendar/feeds/" + matches[2] + "/private/full";
 
         // Remember the uri as it was passed, in case the calendar manager
         // relies on it.
@@ -295,6 +274,9 @@ calGoogleCalendar.prototype = {
             if (!this.mSession) {
                 this.findSession();
             }
+
+            // Add the calendar to the item, for later use.
+            aItem.calendar = this;
 
             this.mSession.addItem(this,
                                   aItem,
@@ -351,7 +333,7 @@ calGoogleCalendar.prototype = {
             // to google. This saves network traffic.
             if (relevantFieldsMatch(aOldItem, aNewItem)) {
                 LOG("Not requesting item modification for " + aOldItem.id +
-                "(" + aOldItem.title + "), relevant fields match");
+                    "(" + aOldItem.title + "), relevant fields match");
 
                 if (aListener != null) {
                     aListener.onOperationComplete(this,
@@ -369,6 +351,7 @@ calGoogleCalendar.prototype = {
             var extradata = { olditem: aOldItem, listener: aListener };
 
             this.mSession.modifyItem(this,
+                                     aOldItem,
                                      aNewItem,
                                      this.modifyItem_response,
                                      extradata);
@@ -565,8 +548,7 @@ calGoogleCalendar.prototype = {
         var item = this.general_response(Ci.calIOperationListener.MODIFY,
                                          aResult,
                                          aStatus,
-                                         aRequest.extraData.listener,
-                                         aRequest);
+                                         aRequest.extraData.listener);
         // Notify Observers
         if (item) {
             this.notifyObservers("onModifyItem",
@@ -640,7 +622,7 @@ calGoogleCalendar.prototype = {
         this.general_response(Ci.calIOperationListener.GET,
                               aResult,
                               aStatus,
-                              aRequest.extraData.listener);
+                              aRequest.extraData);
     },
 
     /**

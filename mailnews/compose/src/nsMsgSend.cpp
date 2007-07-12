@@ -4640,6 +4640,7 @@ nsMsgComposeAndSend::MimeDoFCC(nsFileSpec       *input_file,
         goto FAIL;
       }
     }
+    n = tempOutfile.write(X_MOZILLA_KEYWORDS, sizeof(X_MOZILLA_KEYWORDS) - 1);
   }
 
   // Write out the FCC and BCC headers.

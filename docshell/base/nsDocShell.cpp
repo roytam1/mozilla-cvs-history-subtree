@@ -3204,21 +3204,20 @@ nsDocShell::Reload(PRUint32 aReloadFlags)
         rv = LoadHistoryEntry(mLSHE, type);
     }
     else {
+        nsCOMPtr<nsIDOMDocument> domDoc(do_GetInterface(GetAsSupports(this)));
+        nsCOMPtr<nsIDocument> doc(do_QueryInterface(domDoc));
+
+        nsIPrincipal* principal = nsnull;
         nsAutoString contentTypeHint;
-        nsCOMPtr<nsIDOMWindow> window(do_GetInterface((nsIDocShell*)this));
-        if (window) {
-            nsCOMPtr<nsIDOMDocument> document;
-            window->GetDocument(getter_AddRefs(document));
-            nsCOMPtr<nsIDOMNSDocument> doc(do_QueryInterface(document));
-            if (doc) {
-                doc->GetContentType(contentTypeHint);
-            }
+        if (doc) {
+            principal = doc->GetPrincipal();
+            doc->GetContentType(contentTypeHint);
         }
 
         rv = InternalLoad(mCurrentURI,
                           mReferrerURI,
-                          nsnull,         // No owner
-                          INTERNAL_LOAD_FLAGS_INHERIT_OWNER, // Inherit owner from document
+                          principal,
+                          INTERNAL_LOAD_FLAGS_NONE, // Do not inherit owner from document
                           nsnull,         // No window target
                           NS_LossyConvertUCS2toASCII(contentTypeHint).get(),
                           nsnull,         // No post data
@@ -4851,7 +4850,38 @@ nsDocShell::EnsureContentViewer()
     if (mIsBeingDestroyed)
         return NS_ERROR_FAILURE;
 
-    return CreateAboutBlankContentViewer();
+    nsIPrincipal* principal = nsnull;
+
+    nsCOMPtr<nsPIDOMWindow_MOZILLA_1_8_BRANCH2> piDOMWindow =
+      do_QueryInterface(mScriptGlobal);
+    if (piDOMWindow) {
+        principal = piDOMWindow->GetOpenerScriptPrincipal();
+    }
+
+    if (!principal) {
+        principal = GetInheritedPrincipal(PR_FALSE);
+    }
+
+    nsresult rv = CreateAboutBlankContentViewer();
+
+    if (NS_SUCCEEDED(rv)) {
+        nsCOMPtr<nsIDOMDocument> domDoc;
+        mContentViewer->GetDOMDocument(getter_AddRefs(domDoc));
+        nsCOMPtr<nsIDocument> doc(do_QueryInterface(domDoc));
+        nsCOMPtr<nsIDocument_MOZILLA_1_8_BRANCH2> doc_MOZILLA_1_8_BRANCH2 =
+            do_QueryInterface(domDoc);
+        NS_ASSERTION(doc && doc_MOZILLA_1_8_BRANCH2,
+                     "Should have doc if CreateAboutBlankContentViewer "
+                     "succeeded!");
+
+        doc_MOZILLA_1_8_BRANCH2->SetIsInitialDocument(PR_TRUE);
+
+        if (principal) {
+            doc->SetPrincipal(principal);
+        }
+    }
+
+    return rv;
 }
 
 NS_IMETHODIMP
@@ -5158,6 +5188,12 @@ nsDocShell::BeginRestore(nsIContentViewer *aContentViewer, PRBool aTop)
     }
 
     if (!aTop) {
+        // This point corresponds to us having gotten OnStartRequest or
+        // STATE_START, so do the same thing that CreateContentViewer does at
+        // this point to ensure that unload/pagehide events for this document
+        // will fire when it's unloaded again.
+        mFiredUnloadEvent = PR_FALSE;
+        
         // For non-top frames, there is no notion of making sure that the
         // previous document is in the domwindow when STATE_START notifications
         // happen.  We can just call BeginRestore for all of the child shells
@@ -6292,12 +6328,28 @@ nsDocShell::InternalLoad(nsIURI * aURI,
 
     nsCOMPtr<nsISupports> owner(aOwner);
     //
-    // Get an owner from the current document if necessary, but only
-    // if this is not an external load.
+    // Get an owner from the current document if necessary.  Note that we only
+    // do this for URIs that inherit a security context; in particular we do
+    // NOT do this for about:blank.  This way, random about:blank loads that
+    // have no owner (which basically means they were done by someone from
+    // chrome manually messing with our nsIWebNavigation or by C++ setting
+    // document.location) don't get a funky principal.  If callers want
+    // something interesting to happen with the about:blank principal in this
+    // case, they should pass an owner in.
     //
     if (aLoadType != LOAD_NORMAL_EXTERNAL && !owner &&
-        (aFlags & INTERNAL_LOAD_FLAGS_INHERIT_OWNER))
-        GetCurrentDocumentOwner(getter_AddRefs(owner));
+        (aFlags & INTERNAL_LOAD_FLAGS_INHERIT_OWNER)) {
+        PRBool inherits;
+        PRBool isScheme;
+        inherits =
+            (NS_SUCCEEDED(aURI->SchemeIs("javascript", &isScheme)) &&
+             isScheme) ||
+            (NS_SUCCEEDED(aURI->SchemeIs("data", &isScheme)) &&
+             isScheme);
+        if (inherits) {
+            owner = GetInheritedPrincipal(PR_TRUE);
+        }
+    }
 
     //
     // Resolve the window target before going any further...
@@ -6692,42 +6744,51 @@ nsDocShell::InternalLoad(nsIURI * aURI,
     return rv;
 }
 
-void
-nsDocShell::GetCurrentDocumentOwner(nsISupports ** aOwner)
+nsIPrincipal*
+nsDocShell::GetInheritedPrincipal(PRBool aConsiderCurrentDocument)
 {
-    *aOwner = nsnull;
     nsCOMPtr<nsIDocument> document;
-    //-- Get the current document
-    if (mContentViewer) {
+
+    if (aConsiderCurrentDocument && mContentViewer) {
         nsCOMPtr<nsIDocumentViewer>
             docViewer(do_QueryInterface(mContentViewer));
         if (!docViewer)
-            return;
+            return nsnull;
         docViewer->GetDocument(getter_AddRefs(document));
     }
-    else //-- If there's no document loaded yet, look at the parent (frameset)
-    {
+
+    if (!document) {
         nsCOMPtr<nsIDocShellTreeItem> parentItem;
         GetSameTypeParent(getter_AddRefs(parentItem));
-        if (!parentItem)
-            return;
-        nsCOMPtr<nsIDOMWindowInternal>
-            parentWindow(do_GetInterface(parentItem));
-        if (!parentWindow)
-            return;
-        nsCOMPtr<nsIDOMDocument> parentDomDoc;
-        parentWindow->GetDocument(getter_AddRefs(parentDomDoc));
-        if (!parentDomDoc)
-            return;
-        document = do_QueryInterface(parentDomDoc);
+        if (parentItem) {
+            nsCOMPtr<nsIDOMDocument> parentDomDoc(do_GetInterface(parentItem));
+            document = do_QueryInterface(parentDomDoc);
+        }
+    }
+
+    if (!document) {
+        if (!aConsiderCurrentDocument) {
+            return nsnull;
+        }
+
+        // Make sure we end up with _something_ as the principal no matter
+        // what.
+        EnsureContentViewer();  // If this fails, we'll just get a null
+                                // docViewer and bail.
+
+        nsCOMPtr<nsIDocumentViewer>
+            docViewer(do_QueryInterface(mContentViewer));
+        if (!docViewer)
+            return nsnull;
+        docViewer->GetDocument(getter_AddRefs(document));
     }
 
     //-- Get the document's principal
     if (document) {
-        *aOwner = document->GetPrincipal();
+        return document->GetPrincipal();
     }
 
-    NS_IF_ADDREF(*aOwner);
+    return nsnull;
 }
 
 nsresult
@@ -6894,7 +6955,12 @@ nsDocShell::DoURILoad(nsIURI * aURI,
     // Set the owner of the channel - only for javascript and data channels.
     //
     // XXX: Is seems wrong that the owner is ignored - even if one is
-    //      supplied) unless the URI is javascript or data.
+    //      supplied) unless the URI is javascript or data or about:blank.
+    // XXX: If this is ever changed, check all callers for what owners they're
+    //      passing in.  In particular, see the code and comments in LoadURI
+    //      where we fall back on inheriting the owner if called
+    //      from chrome.  That would be very wrong if this code changed
+    //      anything but channels that can't provide their own security context!
     //
     //      (Currently chrome URIs set the owner when they are created!
     //      So setting a NULL owner would be bad!)
@@ -6904,7 +6970,7 @@ nsDocShell::DoURILoad(nsIURI * aURI,
     if (!isJSOrData) {
       aURI->SchemeIs("data", &isJSOrData);
     }
-    if (isJSOrData) {
+    if (isJSOrData || IsAboutBlank(aURI)) {
         channel->SetOwner(aOwner);
     }
 
@@ -8729,3 +8795,21 @@ nsDocShell::GetAuthPrompt(PRUint32 aPromptReason, nsIAuthPrompt **aResult)
 
     return wwatch->GetNewAuthPrompter(window, aResult);
 }
+
+/* static */
+PRBool
+nsDocShell::IsAboutBlank(nsIURI* aURI)
+{
+    NS_PRECONDITION(aURI, "Must have URI");
+    
+    // GetSpec can be expensive for some URIs, so check the scheme first.
+    PRBool isAbout = PR_FALSE;
+    if (NS_FAILED(aURI->SchemeIs("about", &isAbout)) || !isAbout) {
+        return PR_FALSE;
+    }
+    
+    nsCAutoString str;
+    aURI->GetSpec(str);
+    return str.EqualsLiteral("about:blank");
+}
+                                     

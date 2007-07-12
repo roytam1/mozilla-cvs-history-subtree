@@ -303,9 +303,16 @@ function makeHTMLWeek(date, sortedList, targetMonth) {
                             <td valign='top' align='left'>{date.day}</td>
                         </tr>
         innerTable.appendChild(dateLabel);
+        var defaultTimezone = calendarDefaultTimezone();
         for each (var item in sortedList) {
             var sDate = item.startDate || item.entryDate || item.dueDate;
             var eDate = item.endDate || item.dueDate || item.entryDate;
+            if (sDate) {
+                sDate = sDate.getInTimezone(defaultTimezone);
+            }
+            if (eDate) {
+                eDate = eDate.getInTimezone(defaultTimezone);
+            }
 
             // end dates are exclusive
             if (sDate.isDate) {
@@ -323,19 +330,9 @@ function makeHTMLWeek(date, sortedList, targetMonth) {
             var dateFormatter = 
                     Components.classes["@mozilla.org/calendar/datetime-formatter;1"]
                               .getService(Components.interfaces.calIDateTimeFormatter);
-
-
-            function getStringForDate(date) {
-                var dstring;
-                if (!date.isDate) {
-                    return dateFormatter.formatTime(sDate);
-                }
-                return calGetString("dateFormat", "AllDay");
-            }
-
-            var time;
-            if (sDate) {
-                time = getStringForDate(sDate);
+            var time = "";
+            if (!sDate.isDate) {
+                time = dateFormatter.formatTime(sDate);
             }
 
             var calMgr = Components.classes["@mozilla.org/calendar/manager;1"]

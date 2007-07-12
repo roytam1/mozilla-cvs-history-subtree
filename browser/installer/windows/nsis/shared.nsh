@@ -137,7 +137,7 @@
   ${StrFilter} "$8" "+" "" "" $8
 
   StrCpy $0 "SOFTWARE\Classes"
-  StrCpy $2 "$8 -url $\"%1$\" -requestPending"
+  StrCpy $2 "$8 -requestPending -osint -url $\"%1$\""
 
   ; Associate the file handlers with FirefoxHTML
   WriteRegStr SHCTX "$0\.htm"   "" "FirefoxHTML"
@@ -171,8 +171,7 @@
   ${StrFilter} "${FileMainEXE}" "+" "" "" $R9
 
   StrCpy $0 "Software\Clients\StartMenuInternet\$R9"
-  ; Remove existing keys so we only have our settings
-  DeleteRegKey HKLM "$0"
+
   WriteRegStr HKLM "$0" "" "${BrandFullName}"
 
   WriteRegStr HKLM "$0\DefaultIcon" "" "$8,0"
@@ -351,7 +350,7 @@
   ; Store the command to open the app with an url in a register for easy access.
   GetFullPathName /SHORT $8 "$INSTDIR\${FileMainEXE}"
   ${StrFilter} "$8" "+" "" "" $8
-  StrCpy $1 "$8 -url $\"%1$\" -requestPending"
+  StrCpy $1 "$8 -requestPending -osint -url $\"%1$\""
 
   ; Always set the file and protocol handlers since they may specify a
   ; different path and the path is used by Vista when setting associations.

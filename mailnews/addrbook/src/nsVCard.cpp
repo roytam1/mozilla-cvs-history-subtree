@@ -1150,7 +1150,7 @@ static int yylex() {
 		p = lexGetStrUntil(";\n");
 #endif
 		}
-	    if (p) {
+	    if (p && (*p || lexLookahead() != EOF)) {
 		DBG_(("db: STRING: '%s'\n", p));
 		yylval.str = p;
 		return STRING;

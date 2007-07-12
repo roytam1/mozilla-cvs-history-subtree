@@ -148,9 +148,11 @@ public:
   struct message_header m_return_path;
   struct message_header m_mdn_dnt; /* MDN Disposition-Notification-To: header */
   
+  PRTime m_receivedTime;
   PRUint16              m_body_lines;
   
   PRBool                m_IgnoreXMozillaStatus;
+  PRBool                m_useReceivedDate;
   // this enables extensions to add the values of particular headers to 
   // the .msf file as properties of nsIMsgHdr. It is initialized from a
   // pref, mailnews.customDBHeaders

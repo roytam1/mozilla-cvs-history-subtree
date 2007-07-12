@@ -44,6 +44,7 @@
 
 #include "nsGfxDefs.h"
 #include <stdlib.h>
+#include <new> // for new(std::nothrow)
 
 #include "nsImageOS2.h"
 #include "nsRenderingContextOS2.h"
@@ -140,7 +141,9 @@ nsresult nsImageOS2::Init( PRInt32 aWidth, PRInt32 aHeight, PRInt32 aDepth,
    // Work out size of bitmap to allocate
    mRowBytes = RASWIDTH(aWidth,aDepth);
 
-   mImageBits = new PRUint8 [ aHeight * mRowBytes ];
+   mImageBits = new(std::nothrow) PRUint8 [aHeight * mRowBytes];
+   if (!mImageBits) 
+     return NS_ERROR_OUT_OF_MEMORY;
 
    // Set up bitmapinfo header
    int cols = -1;
@@ -185,7 +188,11 @@ nsresult nsImageOS2::Init( PRInt32 aWidth, PRInt32 aHeight, PRInt32 aDepth,
       // 32-bit align each row
       mARowBytes = RASWIDTH (aWidth, mAlphaDepth);
 
-      mAlphaBits = new PRUint8 [ aHeight * mARowBytes];
+      mAlphaBits = new(std::nothrow) PRUint8 [aHeight * mARowBytes];
+      if (!mAlphaBits) {
+        // deallocation is done in ::CleanUp() from the destructor
+        return NS_ERROR_OUT_OF_MEMORY;
+      }
    }
 
    return NS_OK;
@@ -255,8 +262,8 @@ PRBool nsImageOS2::GetIsImageComplete() {
   return mInfo &&
          mDecodedRect.x == 0 &&
          mDecodedRect.y == 0 &&
-         mDecodedRect.width == mInfo->cx &&
-         mDecodedRect.height == mInfo->cy;
+         mDecodedRect.width == (PRInt32)mInfo->cx &&
+         mDecodedRect.height == (PRInt32)mInfo->cy;
 }
 
 void nsImageOS2::BuildBlenderLookup (void)
@@ -914,7 +921,7 @@ NS_IMETHODIMP nsImageOS2::UpdateImageBits( HPS aPS )
   rawInfo.cBitCount = mInfo->cBitCount;
 
   int RawDataSize = mInfo->cy * RASWIDTH (mInfo->cx, mInfo->cBitCount);
-  PRUint8* pRawBitData = new PRUint8 [RawDataSize];
+  PRUint8* pRawBitData = new(std::nothrow) PRUint8 [RawDataSize];
 
   if (pRawBitData)
   {

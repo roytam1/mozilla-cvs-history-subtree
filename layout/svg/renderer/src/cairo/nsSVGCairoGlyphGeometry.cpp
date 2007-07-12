@@ -60,6 +60,7 @@
 #include "nsIDOMSVGRect.h"
 #include "nsSVGTypeCIDs.h"
 #include "nsIComponentManager.h"
+#include "nsSVGUtils.h"
 
 extern cairo_surface_t *gSVGCairoDummySurface;
 
@@ -592,12 +593,11 @@ nsSVGCairoGlyphGeometry::GetCoveredRegion(nsISVGRendererRegion **_retval)
     }
     
     cairo_stroke_extents(ctx, &xmin, &ymin, &xmax, &ymax);
+    nsSVGUtils::UserToDeviceBBox(ctx, &xmin, &ymin, &xmax, &ymax);
   } else {
+    cairo_identity_matrix(ctx);
     cairo_fill_extents(ctx, &xmin, &ymin, &xmax, &ymax);
   }
-
-  cairo_user_to_device(ctx, &xmin, &ymin);
-  cairo_user_to_device(ctx, &xmax, &ymax);
 
   cairo_destroy(ctx);
 
@@ -783,10 +783,8 @@ nsSVGCairoGlyphGeometry::GetBoundingBox(nsIDOMSVGRect * *aBoundingBox)
 
   delete [] cp;
 
+  cairo_identity_matrix(ctx);
   cairo_fill_extents(ctx, &xmin, &ymin, &xmax, &ymax);
-
-  cairo_user_to_device(ctx, &xmin, &ymin);
-  cairo_user_to_device(ctx, &xmax, &ymax);
 
   cairo_destroy(ctx);
 

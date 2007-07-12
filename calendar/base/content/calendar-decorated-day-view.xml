@@ -68,14 +68,15 @@
             <method name="goToDay">
                 <parameter name="aDate"/>
                 <body><![CDATA[
-                    var viewElement = document.getAnonymousElementByAttribute(this, "anonid", "view-element");
+                    var viewElement = this.viewElem;
                     viewElement.tasksInView = this.mTasksInView;
+                    viewElement.showCompleted = this.mShowCompleted;
 
                     aDate = aDate.getInTimezone(viewElement.timezone);
-                    viewElement.setDateRange(aDate, aDate);
-                    viewElement.selectedDay = aDate;
 
                     this.setNavLabels(aDate)
+                    viewElement.setDateRange(aDate, aDate);
+                    viewElement.selectedDay = aDate;
                 ]]></body>
             </method>
             <method name="moveView">

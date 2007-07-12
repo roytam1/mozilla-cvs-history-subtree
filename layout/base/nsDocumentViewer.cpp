@@ -1044,6 +1044,7 @@ DocumentViewerImpl::LoadComplete(nsresult aStatus)
   // Now that the document has loaded, we can tell the presshell
   // to unsuppress painting.
   if (mPresShell && !mStopped) {
+    nsCOMPtr<nsIPresShell> shellDeathGrip(mPresShell); // bug 378682
     mPresShell->UnsuppressPainting();
   }
 
@@ -1581,6 +1582,7 @@ DocumentViewerImpl::Stop(void)
 
   if (!mLoaded && mPresShell) {
     // Well, we might as well paint what we have so far.
+    nsCOMPtr<nsIPresShell> shellDeathGrip(mPresShell); // bug 378682
     mPresShell->UnsuppressPainting();
   }
 
@@ -1934,6 +1936,7 @@ DocumentViewerImpl::Show(void)
     // window is shown because some JS on the page caused it to be
     // shown...
 
+    nsCOMPtr<nsIPresShell> shellDeathGrip(mPresShell); // bug 378682
     mPresShell->UnsuppressPainting();
   }
 

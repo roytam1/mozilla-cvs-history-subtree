@@ -315,6 +315,7 @@ SessionStoreService.prototype = {
           delete aBrowser.parentNode.__SS_data;
         });
       });
+      this._lastWindowClosed = null;
       this._clearDisk();
       // also clear all data about closed tabs
       for (ix in this._windows) {

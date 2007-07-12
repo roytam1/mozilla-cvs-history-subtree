@@ -107,4 +107,5 @@ TX_ATOM(now, "now")
 TX_ATOM(property, "property")
 TX_ATOM(seconds, "seconds")
 TX_ATOM(secondsFromDateTime, "seconds-from-dateTime")
+TX_ATOM(current, "current")
 #endif

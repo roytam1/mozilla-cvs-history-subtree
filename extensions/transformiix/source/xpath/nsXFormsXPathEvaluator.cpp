@@ -78,6 +78,7 @@ nsXFormsXPathEvaluator::~nsXFormsXPathEvaluator()
 NS_IMETHODIMP
 nsXFormsXPathEvaluator::CreateExpression(const nsAString & aExpression, 
                                          nsIDOMNode *aResolverNode,
+                                         nsIDOMNode *aOrigCtxt,
                                          nsIDOMNSXPathExpression **aResult)
 {
   nsresult rv = NS_OK;
@@ -91,7 +92,7 @@ nsXFormsXPathEvaluator::CreateExpression(const nsAString & aExpression,
     mRecycler = recycler;
   }
 
-  XFormsParseContextImpl pContext(aResolverNode); 
+  XFormsParseContextImpl pContext(aResolverNode, aOrigCtxt);
                                   
   nsAutoPtr<Expr> expression;
   rv = txExprParser::createExpr(PromiseFlatString(aExpression), &pContext,
@@ -119,6 +120,7 @@ nsXFormsXPathEvaluator::Evaluate(const nsAString & aExpression,
                                  PRUint32 aPosition,
                                  PRUint32 aSize,
                                  nsIDOMNode *aResolverNode,
+                                 nsIDOMNode *aOrigCtxt,
                                  PRUint16 aType,
                                  nsISupports *aInResult,
                                  nsISupports **aResult)
@@ -127,7 +129,7 @@ nsXFormsXPathEvaluator::Evaluate(const nsAString & aExpression,
   //   QI'ing a document.
 
   nsCOMPtr<nsIDOMNSXPathExpression> expression;
-  nsresult rv = CreateExpression(aExpression, aResolverNode,
+  nsresult rv = CreateExpression(aExpression, aResolverNode, aOrigCtxt,
                                  getter_AddRefs(expression));
   NS_ENSURE_SUCCESS(rv, rv);
 
@@ -243,6 +245,10 @@ nsXFormsXPathEvaluator::XFormsParseContextImpl::resolveFunctionCall(
     }
     else if (aName == txXPathAtoms::secondsFromDateTime) {
       aFnCall = new XFormsFunctionCall(XFormsFunctionCall::SECONDSFROMDATETIME);
+    }
+    else if (aName == txXPathAtoms::current) {
+      aFnCall = new XFormsFunctionCall(XFormsFunctionCall::CURRENT,
+                                       mOriginalContext);
     }
     else {
       // didn't find functioncall here, aFnCall should be null

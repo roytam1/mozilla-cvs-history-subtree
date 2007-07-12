@@ -39,6 +39,7 @@
 #include "nsEventQueue.h"
 #include "nsIEventQueueService.h"
 #include "nsIThread.h"
+#include "nsIEventQueueListener.h"
 
 #include "nsIServiceManager.h"
 #include "nsIObserverService.h"
@@ -65,6 +66,31 @@ static PRThread *gEventQueueLogThread = 0;
 // in a real system, these would be members in a header class...
 static const char gActivatedNotification[] = "nsIEventQueueActivated";
 static const char gDestroyedNotification[] = "nsIEventQueueDestroyed";
+
+class ListenerCaller {
+public:
+  ListenerCaller(nsIEventQueue* aQueue, nsresult* rv) : mQueue(aQueue)
+  {
+    mListener = do_GetService(NS_EVENT_QUEUE_LISTENER_CONTRACTID);
+    // There might be no listener...  but if so, warn
+    if (mListener) {
+      *rv = mListener->WillProcessEvents(mQueue);
+    } else {
+      NS_WARNING("No event queue listener?");
+      *rv = NS_OK;
+    }
+  }
+
+  ~ListenerCaller() {
+    if (mListener) {
+      mListener->DidProcessEvents(mQueue);
+    }
+  }
+  
+private:
+  nsIEventQueue* mQueue;
+  nsCOMPtr<nsIEventQueueListener> mListener;
+};
 
 nsEventQueueImpl::nsEventQueueImpl()
 {
@@ -402,6 +428,11 @@ nsEventQueueImpl::ProcessPendingEvents()
 
   if (!correctThread)
     return NS_ERROR_FAILURE;
+
+  nsresult rv;
+  ListenerCaller caller(this, &rv);
+  NS_ENSURE_SUCCESS(rv, rv);
+  
 #if defined(PR_LOGGING) && defined(DEBUG_danm)
   ++gEventQueueLogPPLevel;
   if ((gEventQueueLogQueue != mEventQueue || gEventQueueLogThread != PR_GetCurrentThread() ||
@@ -471,6 +502,10 @@ nsEventQueueImpl::HandleEvent(PLEvent* aEvent)
   if (!correctThread)
     return NS_ERROR_FAILURE;
 
+  nsresult rv;
+  ListenerCaller caller(this, &rv);
+  NS_ENSURE_SUCCESS(rv, rv);
+  
 #if defined(PR_LOGGING) && defined(DEBUG_danm)
   PR_LOG(gEventQueueLog, PR_LOG_DEBUG,
          ("EventQueue: handle event [queue=%lx, accept=%d, could=%d]",

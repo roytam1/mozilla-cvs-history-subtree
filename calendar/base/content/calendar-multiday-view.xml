@@ -26,6 +26,7 @@
    -   Dan Mosedale <dan.mosedale@oracle.com>
    -   Michael Büttner <michael.buettner@sun.com>
    -   Philipp Kewisch <mozilla@kewis.ch>
+   -   Markus Adrario <MarkusAdrario@web.de>
    -
    - Alternatively, the contents of this file may be used under the terms of
    - either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -149,14 +150,19 @@
               theMin += dur;
               if (dur == 0) dur = 60;
 
+              // calculate duration pixel as the difference between
+              // start pixel and end pixel to avoid rounding errors.
+              var startPix = Math.round(theMin * this.mPixPerMin);
+              var endPix   = Math.round((theMin + dur) * this.mPixPerMin);
+              var durPix   = endPix - startPix;
               var box;
               if (dur != 60) {
-                  box = makeTimeBox("", dur * this.mPixPerMin);
+                  box = makeTimeBox("", durPix);
               } else {
                   timeString = formatter.FormatTime("",
                                                     Ci.nsIScriptableDateFormat.timeFormatNoSeconds,
                                                     theHour, 0, 0);
-                  box = makeTimeBox(timeString, dur * this.mPixPerMin);
+                  box = makeTimeBox(timeString, durPix);
               }
 
               box.setAttribute("class", "calendar-time-bar-box-" + (theHour % 2 == 0 ? "even" : "odd"));
@@ -255,7 +261,7 @@
       <xul:stack anonid="boxstack" flex="1" style="min-width: 1px; min-height: 1px">
         <xul:box anonid="bgbox" flex="1" style="min-width: 1px; min-height: 1px"/>
         <xul:box xbl:inherits="context" anonid="topbox" flex="1" equalsize="always" style="min-width: 1px; min-height: 1px"/>
-        <xul:box anonid="fgbox" flex="1" class="fgdragcontainer" style="min-width: 1px; min-height: 1px">
+        <xul:box anonid="fgbox" flex="1" class="fgdragcontainer" style="min-width: 1px; min-height: 1px; overflow:hidden;">
           <xul:box anonid="fgdragspacer" style="display: inherit; overflow: hidden;">
             <xul:spacer flex="1"/>
             <xul:label anonid="fgdragbox-startlabel" class="fgdragbox-label"/>
@@ -1107,8 +1113,13 @@
               }
           }
 
+          var dragDay = col.mDate;
+
           if (dragState.dragType == "modify-start" ||
               dragState.dragType == "new") {
+              newStart.day = dragDay.day;
+              newStart.month = dragDay.month;
+              newStart.year = dragDay.year;
               newStart.hour = 0;
               newStart.minute = dragState.startMin + col.mStartMin;
               newStart.normalize();
@@ -1116,6 +1127,9 @@
 
           if (dragState.dragType == "modify-end" ||
               dragState.dragType == "new") {
+              newEnd.day = dragDay.day;
+              newEnd.month = dragDay.month;
+              newEnd.year = dragDay.year;
               newEnd.hour = 0;
               newEnd.minute = dragState.endMin + col.mStartMin;
               newEnd.normalize();
@@ -1774,9 +1788,86 @@
     </handlers>
   </binding>
 
+  <binding id="calendar-day-label">
+    <content>
+      <xul:hbox anonid="mainbox" flex="1">
+        <xul:spacer flex="1"/>
+        <xul:vbox>
+          <xul:label anonid="dateName" class="calendar-day-label-date"/>
+          <xul:label anonid="longWeekdayName" class="calendar-day-label-name"/>
+          <xul:label anonid="shortWeekdayName" class="calendar-day-label-name" hidden="true"/>
+        </xul:vbox>
+        <xul:spacer flex="1"/>
+      </xul:hbox>
+    </content>
+    <implementation>
+      <field name="longWeekdayPixels">0</field>
+      <field name="mDate">null</field>
+
+      <property name="date">
+        <getter><![CDATA[
+          return this.mDate;
+        ]]></getter>
+        <setter><![CDATA[
+          this.mDate = val;
+          var df = Cc["@mozilla.org/calendar/datetime-formatter;1"].
+                     getService(Ci.calIDateTimeFormatter);
+
+          var shortName = document.getAnonymousElementByAttribute(this, "anonid", "shortWeekdayName");
+          var longName = document.getAnonymousElementByAttribute(this, "anonid", "longWeekdayName");
+          var day = document.getAnonymousElementByAttribute(this, "anonid", "dateName");
+
+          longName.setAttribute("value", calGetString("dateFormat","day." + (val.weekday + 1) + ".name"));
+          shortName.setAttribute("value", calGetString("dateFormat","day." + (val.weekday + 1) + ".Mmm"));
+          day.setAttribute("value", df.formatDateWithoutYear(val));
+
+          return val;
+        ]]></setter>
+      </property>
+
+      <property name="shortWeekNames">
+        <getter><![CDATA[
+          return document.getAnonymousElementByAttribute(this, "anonid", "shortWeekdayName").hasAttribute("hidden");
+        ]]></getter>
+        <setter><![CDATA[
+          var shortName = document.getAnonymousElementByAttribute(this, "anonid", "shortWeekdayName");
+          var longName = document.getAnonymousElementByAttribute(this, "anonid", "longWeekdayName");
+
+          // cache before change, in case we are switching to short
+          this.cacheLongWeekdayPixels(longName);
+
+          if (val) {
+            longName.setAttribute("hidden","true");
+            shortName.removeAttribute("hidden");
+          } else {
+            longName.removeAttribute("hidden");
+            shortName.setAttribute("hidden","true");
+          }
+
+          // cache after change, in case we are switching from short
+          this.cacheLongWeekdayPixels(longName);
+
+          return val;
+        ]]></setter>
+      </property>
+
+      <method name="cacheLongWeekdayPixels">
+        <parameter name="longName"/>
+        <body><![CDATA[
+          // Only do this if the long weekdays are visible and we haven't already cached.
+          if (!this.longWeekdayPixels && !longName.hasAttribute("hidden")) {
+            this.longWeekdayPixels = longName.boxObject.width +
+                                     parseInt(document.defaultView.getComputedStyle(longName, null).getPropertyValue("margin-left")) +
+                                     parseInt(document.defaultView.getComputedStyle(longName, null).getPropertyValue("margin-right"));
+          }
+        ]]></body>
+      </method>
+    </implementation>
+  </binding>
+
   <binding id="calendar-multiday-view">
     <content>
-      <xul:box anonid="mainbox" flex="1">
+      <xul:box anonid="mainbox" flex="1" onoverflow="adjustWeekdayLength();">
         <!-- these boxes are tricky: width or height in CSS depend on orient -->
         <xul:box anonid="labelbox">
           <xul:box anonid="labeltimespacer">
@@ -1794,9 +1885,7 @@
                    flex="1" equalsize="always" />
           <xul:box anonid="headerscrollbarspacer"/>
         </xul:box>
-        <xul:scrollbox anonid="childbox" flex="1" 
-                       onoverflow="adjustScrollBarSpacers();" 
-                       onunderflow="adjustScrollBarSpacers();">
+        <xul:scrollbox anonid="childbox" flex="1">
           <!-- the orient of the calendar-time-bar needs to be the opposite of the parent -->
           <xul:calendar-time-bar xbl:inherits="orient" anonid="timebar"/>
           <xul:box anonid="daybox" class="calendar-day-box" flex="1"
@@ -1832,6 +1921,13 @@
             this.mCalendar.removeObserver(this.mObserver);
       ]]></destructor>
 
+      <property name="daysInView" readonly="true">
+        <getter><![CDATA[
+          var labeldaybox = document.getAnonymousElementByAttribute(this, "anonid", "labeldaybox");
+          return labeldaybox.childNodes && labeldaybox.childNodes.length;
+        ]]></getter>
+      </property>
+
       <method name="onResize">
         <parameter name="aRealSelf"/>
         <body><![CDATA[
@@ -1847,12 +1943,15 @@
             size = childbox.boxObject.height;
           }
           var ppm = size / self.mVisibleMinutes;
-          ppm = Math.floor(ppm * 10) / 10;
+          ppm = Math.floor(ppm * 1000) / 1000;
           if (ppm < self.mMinPixelsPerMinute) {
             ppm = self.mMinPixelsPerMinute;
           }
           self.pixelsPerMinute = ppm;
           setTimeout(function(){self.scrollToMinute(self.mFirstVisibleMinute)}, 1);
+
+          // Fit the weekday labels while scrolling.
+          self.adjustWeekdayLength();
         ]]></body>
       </method>
 
@@ -1882,6 +1981,7 @@
       <field name="mBatchCount">0</field>
       <field name="mPixPerMin">0.6</field>
       <field name="mMinPixelsPerMinute">0.1</field>
+      <field name="mLongWeekdayTotalPixels">0</field>
       <field name="mSelectedItems">[]</field>
       <field name="mSelectedDayCol">null</field>
       <field name="mSelectedDay">null</field>
@@ -1892,6 +1992,7 @@
       <field name="mDayEndMin">17*60</field>
       <field name="mVisibleMinutes">9*60</field>
       <field name="mTasksInView">false</field>
+      <field name="mShowCompleted">false</field>
       <field name="mDisplayDaysOff">true</field>
       <field name="mDaysOffArray">[0,6]</field>
       <field name="mTimezone">"UTC"</field>
@@ -1928,12 +2029,16 @@
                     return;
                 }
 
-                if (isToDo(aItem) && (!aItem.entryDate || !aItem.dueDate)) {
-                    return;
-                }
-
-                if (isToDo(aItem) && !this.calView.mTasksInView) {
-                    return;
+                if (isToDo(aItem)) {
+                    if (!aItem.entryDate || !aItem.dueDate) {
+                        return;
+                    }
+                    if(!this.calView.mTasksInView){
+                        return;
+                    }
+                    if (aItem.isCompleted && !this.calView.mShowCompleted) {
+                        return;
+                    }
                 }
 
                 var occs = aItem.getOccurrencesBetween(this.calView.startDate,
@@ -1966,9 +2071,13 @@
                         this.calView.doDeleteEvent(occ);
                     }
                 }
-                if (isToDo(aNewItem) &&
-                    (!aNewItem.entryDate || !aNewItem.dueDate || !this.calView.mTasksInView)) {
-                    return;
+                if (isToDo(aNewItem)) {
+                    if (!aNewItem.entryDate || !aNewItem.dueDate || !this.calView.mTasksInView) {
+                        return;
+                    }
+                    if (aNewItem.isCompleted && !this.calView.mShowCompleted) {
+                        return;
+                    }
                 }
 
                 occs = aNewItem.getOccurrencesBetween(this.calView.startDate,
@@ -1983,12 +2092,16 @@
                     return;
                 }
 
-                if (isToDo(aItem) && !this.calView.mTasksInView) {
-                    return;
-                }
-
-                if (isToDo(aItem) && (!aItem.entryDate || !aItem.dueDate)) {
-                    return;
+                if (isToDo(aItem)) {
+                    if (!this.calView.mTasksInView) {
+                        return;
+                    }
+                    if (!aItem.entryDate || !aItem.dueDate) {
+                        return;
+                    }
+                    if (aItem.isCompleted && !this.calView.mShowCompleted) {
+                        return;
+                    }
                 }
 
                 var occs = aItem.getOccurrencesBetween(this.calView.startDate,
@@ -2119,6 +2232,16 @@
         ]]></getter>
         <setter><![CDATA[
           this.mTasksInView = val;
+          return val;
+        ]]></setter>
+      </property>
+
+      <property name="showCompleted">
+        <getter><![CDATA[
+          return this.mShowCompleted;
+        ]]></getter>
+        <setter><![CDATA[
+          this.mShowCompleted = val;
           return val;
         ]]></setter>
       </property>
@@ -2518,8 +2641,12 @@
           // we get all the items, and just filter out the ones we don't
           // care about in addItem
 
-          var filter = this.mCalendar.ITEM_FILTER_COMPLETED_ALL |
-                       this.mCalendar.ITEM_FILTER_CLASS_OCCURRENCES;
+          var filter = this.mCalendar.ITEM_FILTER_CLASS_OCCURRENCES;
+          if (this.mShowCompleted) {
+            filter |= this.mCalendar.ITEM_FILTER_COMPLETED_ALL;
+          } else {
+            filter |= this.mCalendar.ITEM_FILTER_COMPLETED_NO;
+          }
 
           if(this.mTasksInView) 
             filter |= this.mCalendar.ITEM_FILTER_TYPE_ALL;
@@ -2601,6 +2728,7 @@
           // get today's date
           var today = this.today();
           var counter = 0;
+          var maxDayWidth = 0;
           var dayboxkids = daybox.childNodes;
           var headerboxkids = headerdaybox.childNodes;
           var labelboxkids = labeldaybox.childNodes;
@@ -2655,26 +2783,17 @@
                        getService(Ci.calIDateTimeFormatter);
               if (counter < labelboxkids.length) {
                   labelbox = labelboxkids[counter];
-                  labelbox.firstChild.setAttribute("value", df.formatDateWithoutYear(d));
-                  labelbox.childNodes[1].setAttribute("value", calGetString("dateFormat", "day."+ (d.weekday+1)+ ".Mmm"));
+                  labelbox.date = d;
+                  labelbox.shortWeekNames = false;
               } else {
-                  labelbox = createXULElement("vbox");
+                  labelbox = createXULElement("calendar-day-label");
                   labelbox.setAttribute("flex", "1");
-                  labelbox.setAttribute("class", "calendar-day-label-box");
-
-                  var label = createXULElement("label");
-                  label.setAttribute("value", df.formatDateWithoutYear(d));
-                  label.setAttribute("class", "calendar-day-label-date");
-                  labelbox.appendChild(label);
                   labeldaybox.appendChild(labelbox);
 
-                  label = createXULElement("label");
-                  label.setAttribute("value", calGetString("dateFormat", "day."+ (d.weekday+1)+ ".Mmm"));
-                  label.setAttribute("class", "calendar-day-label-name");
-                  labelbox.appendChild(label);
-              
-                  labeldaybox.appendChild(labelbox);
+                  labelbox.date = d;
+                  labelbox.shortWeekNames = false;
               }
+              maxDayWidth = Math.max(maxDayWidth, labelbox.longWeekdayPixels);
             
               // We don't want to actually mess with our original dates, plus
               // they're likely to be immutable.
@@ -2694,6 +2813,9 @@
           removeExtraKids(daybox);
           removeExtraKids(headerdaybox);
           removeExtraKids(labeldaybox);
+
+          // Cache weekday length, give a 10 px grace period.
+          this.mLongWeekdayTotalPixels = maxDayWidth * labeldaybox.childNodes.length + 10;
 
           // fix pixels-per-minute
           this.onResize();
@@ -2861,6 +2983,36 @@
           date = date.getInTimezone(this.mTimezone);
           date.isDate = true;
           return date;
+        ]]></body>
+      </method>
+
+      <method name="adjustWeekdayLength">
+        <body><![CDATA[
+          // This function is called from the resize handler and also from the
+          // overflow event of the mainbox. The latter guarantees that the
+          // labels are clipped in the instance that the overflow occurrs,
+          // avoiding horizontal scrollbars from showing up for a short period.
+
+          var labeldaybox = document.getAnonymousElementByAttribute(this, "anonid", "labeldaybox");
+          var labeldayboxkids = labeldaybox.childNodes;
+          if (!labeldayboxkids || !labeldayboxkids[0]) {
+            // This happens in rotated view. Don't do anything there.
+            return;
+          }
+
+          if (labeldayboxkids[0].boxObject.width * this.daysInView > this.mLongWeekdayTotalPixels) {
+            // We have an underflow. Since the boxes all have equal width, we
+            // can use the first boxes' width and multiply bu the number of
+            // days in the view.
+            for each (var kid in labeldayboxkids) {
+              kid.shortWeekNames = false;
+            }
+          } else {
+            // We have an overflow
+            for each (var kid in labeldayboxkids) {
+              kid.shortWeekNames = true;
+            }
+          }
         ]]></body>
       </method>
       

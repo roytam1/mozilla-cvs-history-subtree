@@ -438,7 +438,7 @@ nsXFormsUtils::EvaluateXPath(const nsAString        &aExpression,
   NS_ENSURE_STATE(eval);
 
   nsCOMPtr<nsIDOMNSXPathExpression> expression;
-  nsresult rv = eval->CreateExpression(aExpression, aResolverNode,
+  nsresult rv = eval->CreateExpression(aExpression, aResolverNode, aContextNode,
                          getter_AddRefs(expression));
   PRBool throwException = PR_FALSE;
   if (!expression) {
@@ -462,7 +462,7 @@ nsXFormsUtils::EvaluateXPath(const nsAString        &aExpression,
       /// @see http://bugzilla.mozilla.org/show_bug.cgi?id=265212
       if (aSet) {
         nsXFormsXPathParser parser;
-        nsXFormsXPathAnalyzer analyzer(eval, aResolverNode);
+        nsXFormsXPathAnalyzer analyzer(eval, aResolverNode, aContextNode);
         nsAutoPtr<nsXFormsXPathNode> xNode(parser.Parse(aExpression));
         rv = analyzer.Analyze(aContextNode,
                               xNode,

@@ -147,6 +147,9 @@ nsSSLSocketThreadData::nsSSLSocketThreadData()
 , mSSLRemainingReadResultData(nsnull)
 , mSSLResultRemainingBytes(0)
 , mReplacedSSLFileDesc(nsnull)
+, mOneBytePendingFromEarlierWrite(PR_FALSE)
+, mThePendingByte(0)
+, mOriginalRequestedTransferAmount(0)
 {
 }
 

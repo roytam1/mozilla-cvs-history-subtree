@@ -50,6 +50,8 @@ class nsFrameList;
 class nsIDOMSVGLength;
 class nsIDOMSVGMatrix;
 
+typedef struct _cairo cairo_t;
+
 class nsSVGUtils
 {
 public:
@@ -104,6 +106,14 @@ public:
   HitTestRect(nsIDOMSVGMatrix *aMatrix,
               float aRX, float aRY, float aRWidth, float aRHeight,
               float aX, float aY);
+
+  /*
+   * Convert a rectangle from cairo user space to device space.
+   */
+  static void
+  UserToDeviceBBox(cairo_t *ctx,
+                   double *xmin, double *ymin,
+                   double *xmax, double *ymax);
 };
 
 #endif

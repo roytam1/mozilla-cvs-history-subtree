@@ -49,7 +49,7 @@
 #include "nsISelectionController.h"
 
 nsHTMLTextAccessible::nsHTMLTextAccessible(nsIDOMNode* aDomNode, nsIWeakReference* aShell, nsIFrame *aFrame):
-nsTextAccessibleWrap(aDomNode, aShell), mFrame(aFrame)
+nsTextAccessibleWrap(aDomNode, aShell)
 { 
 }
 
@@ -74,27 +74,6 @@ NS_IMETHODIMP nsHTMLTextAccessible::GetName(nsAString& aName)
   }
   aName = name;
   return rv;
-}
-
-nsIFrame* nsHTMLTextAccessible::GetFrame()
-{
-  if (!mWeakShell) {
-    return nsnull;
-  }
-  if (!mFrame) {
-    mFrame = nsTextAccessible::GetFrame();
-  }
-  return mFrame;
-}
-
-NS_IMETHODIMP nsHTMLTextAccessible::FireToolkitEvent(PRUint32 aEvent,
-                                                     nsIAccessible *aTarget,
-                                                     void *aData)
-{
-  if (aEvent == nsIAccessibleEvent::EVENT_HIDE) {
-    mFrame = nsnull;  // Invalidate cached frame
-  }
-  return nsTextAccessibleWrap::FireToolkitEvent(aEvent, aTarget, aData);
 }
 
 NS_IMETHODIMP nsHTMLTextAccessible::GetState(PRUint32 *aState)

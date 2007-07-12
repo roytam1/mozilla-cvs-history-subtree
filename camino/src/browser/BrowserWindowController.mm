@@ -601,7 +601,6 @@ enum BWCOpenDest {
     mThrobberImages = nil;
     mThrobberHandler = nil;
     mURLFieldEditor = nil;
-    mProgressSuperview = nil;
   
     // register for services
     NSArray* sendTypes = [NSArray arrayWithObjects:NSStringPboardType, nil];
@@ -825,7 +824,6 @@ enum BWCOpenDest {
   // superclass dealloc takes care of our child NSView's, which include the 
   // BrowserWrappers and their child CHBrowserViews.
   
-  [mProgress release];
   [self stopThrobber];
   [mThrobberImages release];
   [mURLFieldEditor release];
@@ -874,18 +872,6 @@ enum BWCOpenDest {
       mStatus = nil;
     }
     else {
-      // Retain with a single extra refcount. This allows us to remove
-      // the progress meter from its superview without having to worry
-      // about retaining and releasing it. Cache the superview of the
-      // progress. Dynamically fetch the superview so as not to burden
-      // someone rearranging the nib with this detail. Note that this
-      // needs to be in a subview from the status bar because if the
-      // window resizes while it is hidden, its position wouldn't get updated.
-      // Having it in a separate view that stays visible (and is thus
-      // involved in the layout process) solves this.
-      [mProgress retain];
-      mProgressSuperview = [mProgress superview];
-      
       // due to a cocoa issue with it updating the bounding box of two rects
       // that both needing updating instead of just the two individual rects
       // (radar 2194819), we need to make the text area opaque.
@@ -1138,7 +1124,7 @@ enum BWCOpenDest {
 
 - (void)windowDidResize:(NSNotification *)aNotification
 {
-  [self updateWindowTitle:[mBrowserView displayTitle]];
+  [self updateWindowTitle:[mBrowserView pageTitle]];
 
   // Update the cached windowframe unless we are zooming the window
   if (!mShouldZoom)
@@ -1814,14 +1800,14 @@ enum BWCOpenDest {
   {
     [self startThrobber];
     [mProgress setIndeterminate:YES];
-    [self showProgressIndicator];
+    [mProgress setHidden:NO];
     [mProgress startAnimation:self];
   }
   else
   {
     [self stopThrobber];
     [mProgress stopAnimation:self];
-    [self hideProgressIndicator];
+    [mProgress setHidden:YES];
     [mProgress setIndeterminate:YES];
     [[[self window] toolbar] validateVisibleItems];
   }
@@ -2110,7 +2096,7 @@ enum BWCOpenDest {
 
 - (void)updateFromFrontmostTab
 {
-  [self updateWindowTitle:[mBrowserView displayTitle]];
+  [self updateWindowTitle:[mBrowserView pageTitle]];
   [self setLoadingActive:[mBrowserView isBusy]];
   [self setLoadingProgress:[mBrowserView loadingProgress]];
   [self showSecurityState:[mBrowserView securityState]];
@@ -2391,13 +2377,13 @@ enum BWCOpenDest {
     return;
   }
 
-  // look for bookmarks keywords match
-  NSArray *resolvedURLs = [[BookmarkManager sharedBookmarkManager] resolveBookmarksKeyword:theURL];
+  // look for bookmarks shortcut match
+  NSArray *resolvedURLs = [[BookmarkManager sharedBookmarkManager] resolveBookmarksShortcut:theURL];
 
   NSString* targetURL = nil;
   if (!resolvedURLs || [resolvedURLs count] == 1) {
     targetURL = resolvedURLs ? [resolvedURLs lastObject] : theURL;
-    BOOL allowPopups = resolvedURLs ? YES : NO; //Allow popups if it's a bookmark keyword
+    BOOL allowPopups = resolvedURLs ? YES : NO; //Allow popups if it's a bookmark shortcut
     if (inDest == kDestinationNewTab)
       [self openNewTabWithURL:targetURL referrer:nil loadInBackground:inLoadInBG allowPopups:allowPopups setJumpback:NO];
     else if (inDest == kDestinationNewWindow)
@@ -2414,7 +2400,7 @@ enum BWCOpenDest {
 
   // global history needs to know the user typed this url so it can present it
   // in autocomplete. We use the URI fixup service to strip whitespace and remove
-  // invalid protocols, etc. Don't save keyword-expanded urls.
+  // invalid protocols, etc. Don't save shortcut-expanded urls.
   if (!resolvedURLs &&
       mDataOwner &&
       mDataOwner->mGlobalHistory &&
@@ -2869,7 +2855,7 @@ enum BWCOpenDest {
   NSString* itemURL = [browserWrapper currentURI];
 
   NS_ASSERTION([browserWrapper isBookmarkable], "Bookmarking an innappropriate URI");
-  [parentFolder addBookmark:itemTitle url:itemURL inPosition:[parentFolder count] isSeparator:NO];
+  [parentFolder appendChild:[Bookmark bookmarkWithTitle:itemTitle url:itemURL]];
   [bookmarkManager setLastUsedBookmarkFolder:parentFolder];
 }
 
@@ -2887,9 +2873,8 @@ enum BWCOpenDest {
     if (![browserWrapper isBookmarkable])
       continue;
 
-    Bookmark *bookmark = [newTabGroup addBookmark];
-    [bookmark setTitle:[browserWrapper pageTitle]];
-    [bookmark setUrl:[browserWrapper currentURI]];
+    [newTabGroup appendChild:[Bookmark bookmarkWithTitle:[browserWrapper pageTitle]
+                                                     url:[browserWrapper currentURI]]];
 
     if (browserWrapper == currentBrowserWrapper)
       primaryTabTitle = [browserWrapper pageTitle];
@@ -4382,12 +4367,12 @@ enum BWCOpenDest {
 
   [inMenu insertItem:[NSMenuItem separatorItem] atIndex:dictionaryItemsInsertBase];
 
-  [inMenu insertItemWithTitle:NSLocalizedString(@"Ignore Spelling", nil) 
+  [inMenu insertItemWithTitle:NSLocalizedString(@"IgnoreSpelling", nil) 
                        action:@selector(ignoreWord:) 
                 keyEquivalent:@"" 
                       atIndex:(dictionaryItemsInsertBase + 1)];
 
-  [inMenu insertItemWithTitle:NSLocalizedString(@"Learn Spelling", nil) 
+  [inMenu insertItemWithTitle:NSLocalizedString(@"LearnSpelling", nil) 
                        action:@selector(learnWord:) 
                 keyEquivalent:@"" 
                       atIndex:(dictionaryItemsInsertBase + 2)];
@@ -4618,22 +4603,6 @@ enum BWCOpenDest {
   return mPersonalToolbar;
 }
 
-- (NSProgressIndicator*)progressIndicator
-{
-  return mProgress;
-}
-
-- (void)showProgressIndicator
-{
-  // note we do nothing to check if the progress indicator is already there.
-  [mProgressSuperview addSubview:mProgress];
-}
-
-- (void)hideProgressIndicator
-{
-  [mProgress removeFromSuperview];
-}
-
 - (BOOL)windowClosesQuietly
 {
   return mWindowClosesQuietly;
@@ -4810,7 +4779,7 @@ enum BWCOpenDest {
   unsigned int bookmarkBarCount = [bookmarkBarChildren count];
   unsigned int i;
   int loadableItemIndex = -1;
-  BookmarkItem* item;
+  BookmarkItem* item = nil;
 
   // We cycle through all the toolbar items.  When we've skipped enough loadable items
   // (i.e., loadableItemIndex == inIndex), we've gotten there and |item| is the bookmark we want to load.

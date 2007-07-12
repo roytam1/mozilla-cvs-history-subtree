@@ -1556,6 +1556,9 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
  * common ATOM_TO_STRING(atom) here and near the call sites.
  */
 #define ATOM_IS_IDENTIFIER(atom) js_IsIdentifier(ATOM_TO_STRING(atom))
+#define ATOM_IS_KEYWORD(atom)                                                 \
+            (js_CheckKeyword(JSSTRING_CHARS(ATOM_TO_STRING(atom)),            \
+                             JSSTRING_LENGTH(ATOM_TO_STRING(atom))) != TOK_EOF)
 
 /*
  * Given an atom already fetched from jp->script's atom map, quote/escape its
@@ -3863,7 +3866,12 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                               rval);
 #else
                 if (lastop == JSOP_GETTER || lastop == JSOP_SETTER) {
-                    if (strncmp(rval, js_function_str, 8) || rval[8] != ' ') {
+                    if (!atom || !ATOM_IS_STRING(atom) ||
+                        !ATOM_IS_IDENTIFIER(atom) ||
+                        ATOM_IS_KEYWORD(atom) ||
+                        ((ss->opcodes[ss->top+1] != JSOP_ANONFUNOBJ ||
+                          strncmp(rval, js_function_str, 8) != 0) &&
+                         ss->opcodes[ss->top+1] != JSOP_NAMEDFUNOBJ)) {
                         todo = Sprint(&ss->sprinter, "%s%s%s%s%s:%s", lval,
                                       (lval[1] != '\0') ? ", " : "", xval,
                                       (lastop == JSOP_GETTER ||
@@ -3899,8 +3907,10 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                 xval = POP_STR();
                 lval = POP_STR();
                 sn = js_GetSrcNote(jp->script, pc);
-                if (sn && SN_TYPE(sn) == SRC_INITPROP)
+                if (sn && SN_TYPE(sn) == SRC_INITPROP) {
+                    atom = NULL;
                     goto do_initprop;
+                }
                 todo = Sprint(&ss->sprinter, "%s%s%s",
                               lval,
                               (lval[1] != '\0' || *xval != '0') ? ", " : "",

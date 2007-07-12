@@ -273,7 +273,7 @@ nsScriptSecurityManager::SecurityCompareURIs(nsIURI* aSourceURI,
         return NS_OK;
     }
 
-    if (!aTargetURI) 
+    if (!aTargetURI || !aSourceURI) 
     {
         // return false
         return NS_OK;
@@ -863,8 +863,14 @@ nsScriptSecurityManager::CheckSameOriginPrincipalInternal(nsIPrincipal* aSubject
     if (aSubject == aObject)
         return NS_OK;
 
+    // These booleans are only used when !aIsCheckConnect.  Default
+    // them to false, and change if that turns out wrong.
+    PRBool subjectSetDomain = PR_FALSE;
+    PRBool objectSetDomain = PR_FALSE;
+    
     nsCOMPtr<nsIURI> subjectURI;
     nsCOMPtr<nsIURI> objectURI;
+
     if (aIsCheckConnect)
     {
         // Don't use domain for CheckConnect calls, since that's called for
@@ -875,12 +881,18 @@ nsScriptSecurityManager::CheckSameOriginPrincipalInternal(nsIPrincipal* aSubject
     else
     {
         aSubject->GetDomain(getter_AddRefs(subjectURI));
-        if (!subjectURI)
+        if (!subjectURI) {
             aSubject->GetURI(getter_AddRefs(subjectURI));
+        } else {
+            subjectSetDomain = PR_TRUE;
+        }
 
         aObject->GetDomain(getter_AddRefs(objectURI));
-        if (!objectURI)
+        if (!objectURI) {
             aObject->GetURI(getter_AddRefs(objectURI));
+        } else {
+            objectSetDomain = PR_TRUE;
+        }
     }
 
     PRBool isSameOrigin = PR_FALSE;
@@ -899,23 +911,10 @@ nsScriptSecurityManager::CheckSameOriginPrincipalInternal(nsIPrincipal* aSubject
         if (aIsCheckConnect)
             return NS_OK;
 
-        nsCOMPtr<nsIURI> subjectDomain;
-        aSubject->GetDomain(getter_AddRefs(subjectDomain));
-
-        nsCOMPtr<nsIURI> objectDomain;
-        aObject->GetDomain(getter_AddRefs(objectDomain));
-
         // If both or neither explicitly set their domain, allow the access
-        if (!subjectDomain == !objectDomain)
+        if (subjectSetDomain == objectSetDomain)
             return NS_OK;
     }
-
-    // Allow access to about:blank
-    nsXPIDLCString origin;
-    rv = aObject->GetOrigin(getter_Copies(origin));
-    NS_ENSURE_SUCCESS(rv, rv);
-    if (nsCRT::strcasecmp(origin, "about:blank") == 0)
-        return NS_OK;
 
     /*
     ** Access tests failed, so now report error.
@@ -1360,7 +1359,8 @@ nsScriptSecurityManager::CheckLoadURIWithPrincipal(nsIPrincipal* aPrincipal,
         { "datetime",        DenyProtocol   },
         { "finger",          AllowProtocol  },
         { "res",             DenyProtocol   },
-        { "x-jsd",           ChromeProtocol }
+        { "x-jsd",           ChromeProtocol },
+        { "wyciwyg",         DenyProtocol   }
     };
 
     NS_NAMED_LITERAL_STRING(errorTag, "CheckLoadURIError");

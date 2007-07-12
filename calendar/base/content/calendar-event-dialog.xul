@@ -65,7 +65,6 @@
   <script type="application/x-javascript" src="chrome://calendar/content/calendar-event-dialog.js"/>
   <script type="application/x-javascript" src="chrome://calendar/content/calendar-dialog-utils.js"/>
   <script type="application/x-javascript" src="chrome://calendar/content/calUtils.js"/>
-  <script type="application/x-javascript" src="chrome://calendar/content/applicationUtil.js"/>
 
   <!-- Used for the button to show/hide details -->
   <script type="application/x-javascript">
@@ -110,7 +109,7 @@
           <textbox id="item-location"/>
         </row>
 
-        <row align ="center">
+        <row align="center">
           <hbox align="center">
             <label value="&newevent.from.label;" class="event-only"
                    accesskey="&newevent.from.accesskey;"
@@ -342,7 +341,7 @@
           </hbox>
         </row>
 
-        <row class="todo-only" details="true">
+        <row align="center" class="todo-only" details="true">
           <label id="todo-status-label" value="&newevent.status.label;"/>
           <hbox align="center">
             <menulist id="todo-status" class="todo-only"

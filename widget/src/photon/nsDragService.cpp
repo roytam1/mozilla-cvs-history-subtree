@@ -263,7 +263,7 @@ NS_IMETHODIMP nsDragService::GetData (nsITransferable * aTransferable, PRUint32 
 			this_len = ( ( this_len + 3 ) / 4 ) * 4;
 			char *raw_data = flavorStr + strlen( flavorStr ) + 1;
 
-			if( d[0] == aItemIndex && !strcmp( mFlavourStr, flavorStr ) ) {
+			if( d[0] == aItemIndex && mFlavourStr && !strcmp( mFlavourStr, flavorStr ) ) {
 				nsPrimitiveHelpers::CreatePrimitiveForData( flavorStr, raw_data, d[1], getter_AddRefs( genericDataWrapper ) );
 				rv = aTransferable->SetTransferData( flavorStr, genericDataWrapper, d[1] );
 				break;

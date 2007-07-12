@@ -569,10 +569,9 @@ function addFolder(bundle, BMSVC, prefix, folder, location)
 // XPCOM Scaffolding code
 
 // component defined in this file
-const EXTENSION_ID="{73a6fe31-595d-460b-a920-fcc0f8843233}";
-const SERVICE_NAME="CCK Service";
-const SERVICE_ID="{31aec909-8e86-4397-9380-63a59e0c5ff6}";
-const SERVICE_CTRID = "@mozilla.org/cck-service;1";
+const SERVICE_NAME="CCK Service - %OrganizationName%";
+const SERVICE_ID="%uuid%";
+const SERVICE_CTRID = "@mozilla.org/cck-service-%OrganizationName%;1";
 const SERVICE_CONSTRUCTOR=CCKService;
 
 const SERVICE_CID = Components.ID(SERVICE_ID);

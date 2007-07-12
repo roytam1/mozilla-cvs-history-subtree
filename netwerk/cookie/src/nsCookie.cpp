@@ -89,6 +89,7 @@ nsCookie::Create(const nsACString &aName,
                  nsInt64          aLastAccessed,
                  PRBool           aIsSession,
                  PRBool           aIsSecure,
+                 PRBool           aIsHttpOnly,
                  nsCookieStatus   aStatus,
                  nsCookiePolicy   aPolicy)
 {
@@ -111,7 +112,8 @@ nsCookie::Create(const nsACString &aName,
   // construct the cookie. placement new, oh yeah!
   return new (place) nsCookie(name, value, host, path, end,
                               aExpiry, aLastAccessed, ++gLastCreationTime,
-                              aIsSession, aIsSecure, aStatus, aPolicy);
+                              aIsSession, aIsSecure, aIsHttpOnly,
+                              aStatus, aPolicy);
 }
 
 /******************************************************************************
@@ -129,6 +131,7 @@ NS_IMETHODIMP nsCookie::GetExpiry(PRInt64 *aExpiry)        { *aExpiry = Expiry()
 NS_IMETHODIMP nsCookie::GetIsSession(PRBool *aIsSession)   { *aIsSession = IsSession(); return NS_OK; }
 NS_IMETHODIMP nsCookie::GetIsDomain(PRBool *aIsDomain)     { *aIsDomain = IsDomain();   return NS_OK; }
 NS_IMETHODIMP nsCookie::GetIsSecure(PRBool *aIsSecure)     { *aIsSecure = IsSecure();   return NS_OK; }
+NS_IMETHODIMP nsCookie::GetIsHttpOnly(PRBool *aHttpOnly)   { *aHttpOnly = IsHttpOnly(); return NS_OK; }
 NS_IMETHODIMP nsCookie::GetStatus(nsCookieStatus *aStatus) { *aStatus = Status();       return NS_OK; }
 NS_IMETHODIMP nsCookie::GetPolicy(nsCookiePolicy *aPolicy) { *aPolicy = Policy();       return NS_OK; }
 
@@ -145,4 +148,4 @@ nsCookie::GetExpires(PRUint64 *aExpires)
   return NS_OK;
 }
 
-NS_IMPL_ISUPPORTS2(nsCookie, nsICookie2, nsICookie)
+NS_IMPL_ISUPPORTS3(nsCookie, nsICookie2, nsICookie, nsICookie2_MOZILLA_1_8_BRANCH)

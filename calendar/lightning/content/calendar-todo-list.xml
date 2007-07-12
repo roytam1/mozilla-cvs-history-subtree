@@ -83,7 +83,8 @@
                 if (!(aItem instanceof Components.interfaces.calITodo) ||
                     this.mBatchCount)
                     return;
-                this.todoList.addTodo(aItem);
+                if (this.todoList.mShowCompleted || !aItem.isCompleted)
+                    this.todoList.addTodo(aItem);
             },
             
             onDeleteItem: function onDeleteItem(aItem)
@@ -91,7 +92,8 @@
                 if (!(aItem instanceof Components.interfaces.calITodo) ||
                     this.mBatchCount)
                     return;
-                this.todoList.removeTodo(aItem);
+                if (this.todoList.mShowCompleted || !aItem.isCompleted)
+                    this.todoList.removeTodo(aItem);
             },
             
             onModifyItem: function onModifyItem(aNewItem, aOldItem)
@@ -100,7 +102,8 @@
                     this.mBatchCount)
                     return;
                 this.todoList.removeTodo(aOldItem);
-                this.todoList.addTodo(aNewItem);
+                if (this.todoList.mShowCompleted || !aNewItem.isCompleted)
+                    this.todoList.addTodo(aNewItem);
             },
 
             onError: function onError(aErrNo, aMessage)
@@ -188,6 +191,12 @@
         <method name="addTodo">
             <parameter name="aTodo"/>
             <body><![CDATA[
+                for (var i=0; i < this.childNodes.length; i++) {
+                    var elem = this.childNodes[i];
+                    if (elem.todo.hasSameIds(aTodo)) {
+                        return;
+                    }
+                }
                 void("adding new todo " + aTodo.title + "\n");
                 var newTodoElt = document.createElement("calendar-todo-item");
                 newTodoElt.setAttribute("item-calendar", aTodo.calendar.uri.spec);

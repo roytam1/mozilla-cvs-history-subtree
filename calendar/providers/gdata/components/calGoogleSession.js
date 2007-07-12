@@ -431,13 +431,17 @@ calGoogleSession.prototype = {
      *
      * @param   aCalendar               An instance of calIGoogleCalendar this
      *                                  request belongs to.
-     * @param   aNewItem                An instance of calIEvent to modify
+     * @param   aOldItem                The instance of calIEvent before
+     *                                  modification.
+     * @param   aNewItem                The instance of calIEvent after
+     *                                  modification.
      * @param   aResponseListener       The function in aCalendar to call at
      *                                  completion.
      * @param   aExtraData              Extra data to be passed to the response
      *                                  listener
      */
     modifyItem: function cGS_modifyItem(aCalendar,
+                                        aOldItem,
                                         aNewItem,
                                         aResponseListener,
                                         aExtraData) {
@@ -449,7 +453,7 @@ calGoogleSession.prototype = {
                                       this.googleFullName);
 
         request.type = request.MODIFY;
-        request.uri = getItemEditURI(aNewItem);
+        request.uri = getItemEditURI(aOldItem);
         request.setUploadData("application/atom+xml; charset=UTF-8", xmlEntry);
         request.setResponseListener(aCalendar, aResponseListener);
         request.extraData = aExtraData;

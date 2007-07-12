@@ -39,10 +39,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <libgen.h>
 
 #include <Pt.h>
 #include <photon/PtWebClient.h>
 #include <photon/PtProgress.h>
+#include "prtypes.h"
 #include "../src/PtMozilla.h"
 
 int window_count = 0;
@@ -206,7 +208,7 @@ int back_cb(PtWidget_t *widget, void *data, PtCallbackInfo_t *cbinfo)
 	PtArg_t args[1];
 	struct window_info *info;
 	PtGetResource(PtFindDisjoint(widget), Pt_ARG_POINTER, &info, 0);
-	PtSetArg(&args[0], Pt_ARG_MOZ_NAVIGATE_PAGE, WWW_DIRECTION_BACK, 0);
+	PtSetArg(&args[0], Pt_ARG_MOZ_NAVIGATE_PAGE, Pt_WEB_DIRECTION_BACK, 0);
 	PtSetResources(info->web, 1, args);
 	return (Pt_CONTINUE);
 }
@@ -216,7 +218,7 @@ int forward_cb(PtWidget_t *widget, void *data, PtCallbackInfo_t *cbinfo)
 	PtArg_t args[1];
 	struct window_info *info;
 	PtGetResource(PtFindDisjoint(widget), Pt_ARG_POINTER, &info, 0);
-	PtSetArg(&args[0], Pt_ARG_MOZ_NAVIGATE_PAGE, WWW_DIRECTION_FWD, 0);
+	PtSetArg(&args[0], Pt_ARG_MOZ_NAVIGATE_PAGE, Pt_WEB_DIRECTION_FWD, 0);
 	PtSetResources(info->web, 1, args);
 	return (Pt_CONTINUE);
 }
@@ -245,7 +247,7 @@ int save_cb(PtWidget_t *widget, void *data, PtCallbackInfo_t *cbinfo)
 	PtFileSelection(info->window, NULL, "Save Page As", home, "*.html", \
 		NULL, NULL, NULL, &i, Pt_FSR_NO_FCHECK);
 
-	MozSavePageAs(info->web, i.path, Pt_MOZ_SAVEAS_HTML);
+	//MozSavePageAs(info->web, i.path, Pt_MOZ_SAVEAS_HTML);
 	
 	return (Pt_CONTINUE);
 }
@@ -374,14 +376,14 @@ int moz_url_cb(PtWidget_t *widget, void *data, PtCallbackInfo_t *cbinfo)
 		// disable or enable the forward and back buttons accordingly
 		if (i->back)
 		{
-			if (*nflags & (1 << WWW_DIRECTION_BACK))
+			if (*nflags & (1 << Pt_WEB_DIRECTION_BACK))
 				PtSetResource(i->back, Pt_ARG_FLAGS, 0, Pt_BLOCKED|Pt_GHOST);
 			else
 				PtSetResource(i->back, Pt_ARG_FLAGS, ~0, Pt_BLOCKED|Pt_GHOST);
 		}
 		if (i->forward)
 		{
-			if (*nflags & (1 << WWW_DIRECTION_FWD))
+			if (*nflags & (1 << Pt_WEB_DIRECTION_FWD))
 				PtSetResource(i->forward, Pt_ARG_FLAGS, 0, Pt_BLOCKED|Pt_GHOST);
 			else
 				PtSetResource(i->forward, Pt_ARG_FLAGS, ~0, Pt_BLOCKED|Pt_GHOST);
@@ -487,7 +489,7 @@ int moz_dialog_cb(PtWidget_t *widget, void *data, PtCallbackInfo_t *cbinfo)
 			break;
 		case Pt_MOZ_DIALOG_ALERT_CHECK:
 			printf("Alert Check\n");
-			printf("\tMessage: %s\n", d->message);
+			printf("\tMessage: %s\n", d->checkbox_message);
 			break;
 		case Pt_MOZ_DIALOG_CONFIRM:
 			if (PtAskQuestion(NULL, "JS Confirm", (d->text) ? d->text : "Confirm Message.", \
@@ -502,7 +504,7 @@ int moz_dialog_cb(PtWidget_t *widget, void *data, PtCallbackInfo_t *cbinfo)
 			break;
 		case Pt_MOZ_DIALOG_CONFIRM_CHECK:
 			printf("Confirm Check\n");
-			printf("\tMessage: %s\n", d->message);
+			printf("\tMessage: %s\n", d->checkbox_message);
 			break;
 	}
 
@@ -727,6 +729,11 @@ PtWidget_t *create_browser_window(unsigned window_flags)
 	PtSetArg(&args[n++], Pt_ARG_AREA, &area, 0);
 	PtSetArg(&args[n++], Pt_ARG_ANCHOR_FLAGS, ~0, Pt_RIGHT_ANCHORED_RIGHT | Pt_LEFT_ANCHORED_LEFT | Pt_TOP_ANCHORED_TOP | Pt_BOTTOM_ANCHORED_BOTTOM);
   	info->web = PtCreateWidget(PtMozilla, container, n, args);
+	if (!info->web)
+	{
+		printf("*** ERROR: PtMozilla widget could not be created.\n");
+		exit(-1);
+	}
 
 	PtExtentWidget (container);
 	PtWidgetArea(container, &area);	
@@ -794,9 +801,16 @@ main(int argc, char **argv)
 	unsigned window_flags = ~0;
 	PtWidget_t *win;
 	struct window_info *i;
+	char *argv0 = strdup(argv[0]);
 
 	PtInit(NULL);
 
+	/*
+	 * Set MOZILLA_FIVE_HOME if it is not already set.
+	 */
+	if (!getenv("MOZILLA_FIVE_HOME"))
+		setenv("MOZILLA_FIVE_HOME", dirname(argv0), 0);
+	free(argv0);
 	win = create_browser_window(window_flags);
 	PtGetResource(win, Pt_ARG_POINTER, &i, 0);
 

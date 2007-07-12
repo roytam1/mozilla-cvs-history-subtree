@@ -126,7 +126,11 @@ public:
   virtual void PostCreateFrames();
 
   // Utility methods to set current widget state
-  void SetValue(const nsAString& aValue);
+
+  // Be careful when using this method.
+  // Calling it may cause |this| to be deleted.
+  // In that case the method returns an error value.
+  nsresult SetValue(const nsAString& aValue);
   NS_IMETHOD SetInitialChildList(nsPresContext* aPresContext,
                                   nsIAtom*        aListName,
                                   nsIFrame*       aChildList);

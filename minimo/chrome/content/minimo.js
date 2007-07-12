@@ -276,6 +276,8 @@ nsBrowserStatusHandler.prototype =
       }
     }
     
+    BrowserResizeFix();
+    
     BrowserUpdateBackForwardState();
     
     BrowserUpdateFeeds();
@@ -943,6 +945,17 @@ function BrowserLinkAdded(event) {
     } 
 
   }
+}
+
+function BrowserResizeFix() {
+
+	/* This is to present pages in bigger view than the device view. 
+	   Talk with doug and marcio about this. We want to move this probably 
+	   to enable disable in pref */
+	   
+	gBrowser.contentDocument.body.style.width="800px";
+	gBrowser.contentDocument.body.style.height="600px";
+
 }
 
 function BrowserUpdateFeeds() {

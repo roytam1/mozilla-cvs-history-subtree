@@ -2101,10 +2101,11 @@ static PRBool LineHasClear(nsLineBox* aLine) {
  */
 void
 nsBlockFrame::ReparentFloats(nsIFrame* aFirstFrame,
-                             nsBlockFrame* aOldParent, PRBool aFromOverflow) {
+                             nsBlockFrame* aOldParent, PRBool aFromOverflow,
+                             PRBool aReparentSiblings) {
   nsFrameList list;
   nsIFrame* tail = nsnull;
-  aOldParent->CollectFloats(aFirstFrame, list, &tail, aFromOverflow);
+  aOldParent->CollectFloats(aFirstFrame, list, &tail, aFromOverflow, aReparentSiblings);
   if (list.NotEmpty()) {
     for (nsIFrame* f = list.FirstChild(); f; f = f->GetNextSibling()) {
       ReparentFrame(f, aOldParent, this);
@@ -2505,7 +2506,7 @@ nsBlockFrame::ReflowDirtyLines(nsBlockReflowState& aState, PRBool aTryPull)
       lastFrame->SetNextSibling(nsnull);
 
       // Reparent floats whose placeholders are in the line.
-      ReparentFloats(toMove->mFirstChild, nextInFlow, collectOverflowFloats);
+      ReparentFloats(toMove->mFirstChild, nextInFlow, collectOverflowFloats, PR_TRUE);
 
       // Add line to our line list
       if (aState.mPrevChild) {
@@ -2973,7 +2974,7 @@ nsBlockFrame::PullFrameFrom(nsBlockReflowState& aState,
 
       // The frame might have (or contain) floats that need to be
       // brought over too.
-      ReparentFloats(frame, aFromContainer, aFromOverflowLine);
+      ReparentFloats(frame, aFromContainer, aFromOverflowLine, PR_TRUE);
     }
 
     // Stop pulling because we found a frame to pull
@@ -4720,7 +4721,7 @@ nsBlockFrame::PushLines(nsBlockReflowState&  aState,
     // Remove floats in the lines from mFloats
     nsFrameList floats;
     nsIFrame* tail = nsnull;
-    CollectFloats(overBegin->mFirstChild, floats, &tail, PR_FALSE);
+    CollectFloats(overBegin->mFirstChild, floats, &tail, PR_FALSE, PR_TRUE);
 
     if (floats.NotEmpty()) {
       // Push the floats onto the front of the overflow out-of-flows list
@@ -7532,7 +7533,7 @@ nsBlockFrame::ReflowBullet(nsBlockReflowState& aState,
 // floats from whatever list they might be in. We only search the
 // inline descendants. The floats must be children of 'this'.
 void nsBlockFrame::CollectFloats(nsIFrame* aFrame, nsFrameList& aList, nsIFrame** aTail,
-                                 PRBool aFromOverflow) {
+                                 PRBool aFromOverflow, PRBool aCollectSiblings) {
   while (aFrame) {
     // Don't descend into float containing blocks.
     if (!aFrame->IsFloatContainingBlock()) {
@@ -7555,9 +7556,11 @@ void nsBlockFrame::CollectFloats(nsIFrame* aFrame, nsFrameList& aList, nsIFrame*
         *aTail = outOfFlowFrame;
       }
 
-      CollectFloats(aFrame->GetFirstChild(nsnull), aList, aTail, aFromOverflow);
+      CollectFloats(aFrame->GetFirstChild(nsnull), aList, aTail, aFromOverflow,
+    		        PR_TRUE);
     }
-    
+    if (!aCollectSiblings)
+      break;
     aFrame = aFrame->GetNextSibling();
   }
 }

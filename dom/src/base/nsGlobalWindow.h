@@ -136,7 +136,7 @@ class WindowStateHolder;
 // belonging to the same outer window, but that's an unimportant
 // side effect of inheriting PRCList).
 
-class nsGlobalWindow : public nsPIDOMWindow_MOZILLA_1_8_BRANCH,
+class nsGlobalWindow : public nsPIDOMWindow_MOZILLA_1_8_BRANCH2,
                        public nsIScriptGlobalObject,
                        public nsIDOMJSWindow,
                        public nsIScriptObjectPrincipal,
@@ -247,6 +247,10 @@ public:
   virtual NS_HIDDEN_(void) EnterModalState();
   virtual NS_HIDDEN_(void) LeaveModalState();
 
+  // nsPIDOMWindow_MOZILLA_1_8_BRANCH2
+  virtual NS_HIDDEN_(void) SetOpenerScriptPrincipal(nsIPrincipal* aPrincipal);
+  virtual NS_HIDDEN_(nsIPrincipal*) GetOpenerScriptPrincipal();
+  
   // nsIDOMViewCSS
   NS_DECL_NSIDOMVIEWCSS
 
@@ -327,8 +331,6 @@ protected:
                           PRBool aRemoveEventListeners,
                           PRBool aClearScopeHint,
                           PRBool aIsInternalCall);
-
-  PRBool WouldReuseInnerWindow(nsIDocument *aNewDocument, PRBool useDocURI);
 
   // Get the parent, returns null if this is a toplevel window
   nsIDOMWindowInternal *GetParentInternal();
@@ -540,6 +542,8 @@ protected:
   nsCOMPtr<nsIDOMStorageList>   gGlobalStorageList;
 
   nsCOMPtr<nsIXPConnectJSObjectHolder> mInnerWindowHolder;
+  nsCOMPtr<nsIPrincipal> mOpenerScriptPrincipal; // strong; used to determine
+                                                 // whether to clear scope
 
   // These member variable are used only on inner windows.
   nsCOMPtr<nsIEventListenerManager> mListenerManager;

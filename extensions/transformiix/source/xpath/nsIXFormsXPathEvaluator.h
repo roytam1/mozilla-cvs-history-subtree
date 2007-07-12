@@ -51,20 +51,20 @@ class nsIDOMNSXPathExpression; /* forward declaration */
 
 /* starting interface:    nsIXFormsXPathEvaluator */
 #define NS_XFORMS_XPATH_EVALUATOR_CONTRACTID "@mozilla.org/dom/xforms-xpath-evaluator;1"
-/* 4cdd884f-f949-4d82-bb78-b8edd9f1420c */
+/* afa3deb0-0c89-4f75-b3ff-94e31e69e4d7 */
 #define TRANSFORMIIX_XFORMS_XPATH_EVALUATOR_CID   \
-{ 0x4cdd884f, 0xf949, 0x4d82, \
-  {0xbb, 0x78, 0xb8, 0xed, 0xd9, 0xf1, 0x42, 0x0c} }
+{ 0xafa3deb0, 0x0c89, 0x4f75, \
+  {0xb3, 0xff, 0x94, 0xe3, 0x1e, 0x69, 0xe4, 0xd7} }
 
-/* 61e5a446-73f7-432e-a2d6-d94d4a51aed8 */
+/* 207bd514-9804-4fc7-9a71-e98348fff13a */
 #define TRANSFORMIIX_XFORMS_XPATH_EVALUATOR_IID   \
-{ 0x61e5a446, 0x73f7, 0x432e, \
-  {0xa2, 0xd6, 0xd9, 0x4d, 0x4a, 0x51, 0xae, 0xd8} }
+{ 0x207bd514, 0x9804, 0x4fc7, \
+  {0x9a, 0x71, 0xe9, 0x83, 0x48, 0xff, 0xf1, 0x3a} }
 
 /* Use this macro when declaring classes that implement this interface. */
 #define NS_DECL_NSIXFORMXPATHEVALUATOR \
-  NS_IMETHOD CreateExpression(const nsAString & aExpression, nsIDOMNode *aResolverNode, nsIDOMNSXPathExpression **aResult); \
-  NS_IMETHOD Evaluate(const nsAString & aExpression, nsIDOMNode *aContextNode, PRUint32 aContextPosition, PRUint32 aContextSize, nsIDOMNode *aResolverNode, PRUint16 aType, nsISupports *aInResult, nsISupports **aResult); 
+  NS_IMETHOD CreateExpression(const nsAString & aExpression, nsIDOMNode *aResolverNode, nsIDOMNode *aOrigCtxt, nsIDOMNSXPathExpression **aResult); \
+  NS_IMETHOD Evaluate(const nsAString & aExpression, nsIDOMNode *aContextNode, PRUint32 aContextPosition, PRUint32 aContextSize, nsIDOMNode *aResolverNode, nsIDOMNode *aOrigCtxt, PRUint16 aType, nsISupports *aInResult, nsISupports **aResult); 
 
 /**
  * Private interface implemented by the nsXFormsXPathEvaluator in Transformiix
@@ -83,16 +83,20 @@ class NS_NO_VTABLE nsIXFormsXPathEvaluator : public nsISupports {
   /**
    * Function to create a nsIDOMNSXPathExpression from the provided expression
    * string.  aResolverNode is the xforms node that the expression is
-   * associated with.
+   * associated with.  aOrigCtxt is the original context node that will be
+   * used to evaluate this expression.  We need to remember it so that the
+   * current() XForms XPath function has access to it.  This represents the
+   * parse context.  The other context that XForms functions have access to is
+   * the evaluation context, but that won't help current().
    */
-  NS_IMETHOD CreateExpression(const nsAString & aExpression, nsIDOMNode *aResolverNode, nsIDOMNSXPathExpression **aResult) = 0;
+  NS_IMETHOD CreateExpression(const nsAString & aExpression, nsIDOMNode *aResolverNode, nsIDOMNode *aOrigCtxt, nsIDOMNSXPathExpression **aResult) = 0;
 
   /**
    * Function to evaluate the given expression.  aResolverNode is the xforms
    * node that the expression is associated with.  The other parameters are as
    * required by DOM's XPathEvaluator.
    */
-  NS_IMETHOD Evaluate(const nsAString & aExpression, nsIDOMNode *aContextNode, PRUint32 aContextPosition, PRUint32 aContextSize, nsIDOMNode *aResolverNode, PRUint16 aType, nsISupports *aInResult, nsISupports **aResult) = 0;
+  NS_IMETHOD Evaluate(const nsAString & aExpression, nsIDOMNode *aContextNode, PRUint32 aContextPosition, PRUint32 aContextSize, nsIDOMNode *aResolverNode, nsIDOMNode *aOrigCtxt, PRUint16 aType, nsISupports *aInResult, nsISupports **aResult) = 0;
 
 };
 

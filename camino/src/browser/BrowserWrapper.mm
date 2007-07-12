@@ -51,12 +51,12 @@
 #import "KeychainService.h"
 #import "AutoCompleteTextField.h"
 #import "RolloverImageButton.h"
+#import "CHPermissionManager.h"
 
 #include "CHBrowserService.h"
 #include "ContentClickListener.h"
 
 #include "nsCOMPtr.h"
-#include "nsIServiceManager.h"
 
 #ifdef MOZILLA_1_8_BRANCH
 #include "nsIArray.h"
@@ -80,7 +80,6 @@
 #include "nsIDOMEventReceiver.h"
 #include "nsIWebProgressListener.h"
 #include "nsIBrowserDOMWindow.h"
-#include "nsIPermissionManager.h"
 #include "nsIScriptSecurityManager.h"
 
 class nsIDOMPopupBlockedEvent;
@@ -332,14 +331,9 @@ enum StatusPriority {
   return mIsBusy;
 }
 
-- (NSString*)displayTitle
-{
-  return mDisplayTitle;
-}
-
 - (NSString*)pageTitle
 {
-  return [mBrowserView pageTitle];
+  return mDisplayTitle;
 }
 
 - (NSImage*)siteIcon
@@ -522,7 +516,7 @@ enum StatusPriority {
   [(BrowserTabViewItem*)mTabItem stopLoadAnimation];
 
   NSString *urlString = [self currentURI];
-  NSString *titleString = [self pageTitle];
+  NSString *titleString = [mBrowserView pageTitle];
   
   // If we never got a page title, then the tab title will be stuck at "Loading..."
   // so be sure to set the title here
@@ -1156,15 +1150,9 @@ enum StatusPriority {
 
 - (BOOL)popupsAreBlacklistedForURL:(NSString*)inURL
 {
-  nsCOMPtr<nsIURI> uri;
-  NS_NewURI(getter_AddRefs(uri), [inURL UTF8String]);
-  nsCOMPtr<nsIPermissionManager> pm(do_GetService(NS_PERMISSIONMANAGER_CONTRACTID));
-  if (pm && uri) {
-    PRUint32 permission;
-    pm->TestPermission(uri, "popup", &permission);
-    return (permission == nsIPermissionManager::DENY_ACTION);
-  }
-  return NO;
+  int policy = [[CHPermissionManager permissionManager] policyForURI:inURL
+                                                                type:CHPermissionTypePopup];
+  return (policy == CHPermissionDeny);
 }
 
 //

@@ -74,6 +74,7 @@
 #include "nsIDOMHTMLHtmlElement.h"
 #include "nsIDOMHTMLIFrameElement.h"
 #include "nsIDOMHTMLInputElement.h"
+#include "nsIDOMHTMLTextAreaElement.h"
 #include "nsIDOMHTMLMapElement.h"
 #include "nsIDOMHTMLOptionElement.h"
 #include "nsIDOMHTMLSelectElement.h"

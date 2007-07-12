@@ -83,7 +83,6 @@ var nsDefaultCLH = {
   /* nsICommandLineHandler */
 
   handle : function clh_handle(cmdLine) {
-    dump('Handling command line!\n');
 
     var printDir;
     while (printDir = cmdLine.handleFlagWithParam("print-xpcom-dir", false)) {

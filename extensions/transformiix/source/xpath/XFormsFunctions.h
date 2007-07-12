@@ -66,7 +66,8 @@ public:
         NOW,                  // now()
         PROPERTY,             // property()
         SECONDS,              // seconds()
-        SECONDSFROMDATETIME   // seconds-from-dateTime()
+        SECONDSFROMDATETIME,  // seconds-from-dateTime()
+        CURRENT               // current()
     };
 
     /*
@@ -78,7 +79,10 @@ public:
 
 private:
     XFormsFunctions mType;
-    nsCOMPtr<nsIDOMNode> mResolverNode;
+
+    // mNode could be either the resolver node or the original context node from
+    // the expression, depending what node the XForms XPath function requires.
+    nsCOMPtr<nsIDOMNode> mNode;
 };
 
 #endif

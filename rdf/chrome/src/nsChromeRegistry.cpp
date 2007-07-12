@@ -1586,6 +1586,10 @@ nsChromeRegistry::WriteInfoToDataSource(const char *aDocURI,
   nsCOMPtr<nsIRDFRemoteDataSource> remote = do_QueryInterface(dataSource, &rv);
   if (NS_SUCCEEDED(rv)) {
     rv = remote->Flush();
+    // Explicitly ignore permissions failure since we sometimes try to write to
+    // global chrome when we shouldn't.
+    if (rv == NS_ERROR_FILE_ACCESS_DENIED)
+      rv = NS_OK;
   }
 
   return rv;
@@ -1951,6 +1955,10 @@ nsChromeRegistry::SetProviderForPackage(const nsACString& aProvider,
   //   assert the data source only when we are not setting runtime-only provider
   if (!mBatchInstallFlushes && !mRuntimeProvider)
     rv = remote->Flush();
+  // Explicitly ignore permissions failure since we sometimes try to write to
+  // global chrome when we shouldn't.
+  if (rv == NS_ERROR_FILE_ACCESS_DENIED)
+    rv = NS_OK;
 
   return rv;
 }
@@ -2604,6 +2612,10 @@ nsChromeRegistry::InstallProvider(const nsACString& aProviderType,
 
   if (!mBatchInstallFlushes) {
     rv = remoteInstall->Flush();
+    // Explicitly ignore permissions failure since we sometimes try to write to
+    // global chrome when we shouldn't.
+    if (rv == NS_ERROR_FILE_ACCESS_DENIED)
+      rv = NS_OK;
     if (NS_SUCCEEDED(rv) && aProviderType.Equals("package"))
       rv = FlagXPCNativeWrappers();
   }
@@ -2641,6 +2653,11 @@ NS_IMETHODIMP nsChromeRegistry::SetAllowOverlaysForPackage(const PRUnichar *aPac
   if (NS_FAILED(rv)) return rv;
 
   rv = remote->Flush();
+  // Explicitly ignore permissions failure since we sometimes try to write to
+  // global chrome when we shouldn't.
+  if (rv == NS_ERROR_FILE_ACCESS_DENIED)
+    rv = NS_OK;
+
   return rv;
 }
 

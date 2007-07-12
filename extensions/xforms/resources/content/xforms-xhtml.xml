@@ -196,13 +196,11 @@
 
             set value(val) {
               if (val != null) {
-                this._explicitContent.style.display = 'none';
-                this._implicitContent.style.removeProperty('display');
                 this._implicitContent.textContent = val;
+                this._explicitContent.style.display = 'none';
               } else {
-                this._explicitContent.style.removeProperty('display');
-                this._implicitContent.style.display = 'none';
                 this._implicitContent.textContent = '';
+                this._explicitContent.style.removeProperty('display');
               }
             },
 
@@ -260,9 +258,8 @@
               var textnode = null;
 
               if (val != null) {
-                this._explicitContent.style.display = 'none';
-                this._implicitContent.style.display = 'inline';
                 this._implicitContent.textContent = val;
+                this._explicitContent.style.display = 'none';
                 textnode = this._implicitContent.firstChild;
               } else {
                 // XXX: How should we handle underlining if label contains
@@ -275,15 +272,13 @@
                   }
                 }
                 if (!underline) {
-                  this._explicitContent.style.display = 'inline';
-                  this._implicitContent.style.display = 'none';
                   this._implicitContent.textContent = '';
+                  this._explicitContent.style.display = 'inline';
                   return;
                 }
 
-                this._explicitContent.style.display = 'none';
-                this._implicitContent.style.display = 'inline';
                 this._implicitContent.textContent = this._labelControl.textContent;
+                this._explicitContent.style.display = 'none';
                 textnode = this._implicitContent.firstChild;
               }
 

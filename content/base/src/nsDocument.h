@@ -366,6 +366,7 @@ private:
 // the interface.
 class nsDocument : public nsIDocument,
                    public nsIDocument_MOZILLA_1_8_0_BRANCH,
+                   public nsIDocument_MOZILLA_1_8_BRANCH2,
                    public nsIDOMXMLDocument, // inherits nsIDOMDocument
                    public nsIDOMNSDocument,
                    public nsIDOMDocumentEvent,

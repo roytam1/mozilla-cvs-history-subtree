@@ -34,8 +34,10 @@
  */
 
 #include <stdio.h>
+#include <float.h>
 #include "cairoint.h"
 #include "cairo-os2-private.h"
+#include "fontconfig/fontconfig.h"
 
 /* Forward declaration */
 static const cairo_surface_backend_t cairo_os2_surface_backend;
@@ -50,23 +52,66 @@ static const cairo_surface_backend_t cairo_os2_surface_backend;
 BOOL APIENTRY GpiEnableYInversion(HPS hps, LONG lHeight);
 LONG APIENTRY GpiQueryYInversion(HPS hps);
 
-#ifdef __WATCOMC__
-/* Function declaration for GpiDrawBits() (missing from OpenWatcom headers) */
-LONG APIENTRY GpiDrawBits(HPS hps,
-                          PVOID pBits,
-                          PBITMAPINFO2 pbmiInfoTable,
-                          LONG lCount,
-                          PPOINTL aptlPoints,
-                          LONG lRop,
-                          ULONG flOptions);
+/* Initialization counter: */
+static int cairo_os2_initialization_count = 0;
+
+static void inline
+DisableFPUException (void)
+{
+  unsigned short usCW;
+
+  /* Some OS/2 PM API calls modify the FPU Control Word,
+   * but forget to restore it.
+   *
+   * This can result in XCPT_FLOAT_INVALID_OPCODE exceptions,
+   * so to be sure, we disable Invalid Opcode FPU exception
+   * before using FPU stuffs.
+   */
+  usCW = _control87 (0, 0);
+  usCW = usCW | EM_INVALID | 0x80;
+  _control87 (usCW, MCW_EM | 0x80);
+}
+
+void cairo_os2_initialize (void)
+{
+  /* This may initialize some stuffs */
+
+  cairo_os2_initialization_count++;
+  if (cairo_os2_initialization_count > 1) return;
+
+  DisableFPUException ();
+
+  /* Initialize FontConfig */
+  FcInit ();
+}
+
+void cairo_os2_uninitialize (void)
+{
+  /* This has to uninitialize some stuffs */
+
+  if (cairo_os2_initialization_count <= 0) return;
+  cairo_os2_initialization_count--;
+  if (cairo_os2_initialization_count > 0) return;
+
+  DisableFPUException ();
+
+  /* Free allocated memories! */
+  /* (Check cairo_debug_reset_static_date () for an example of this!) */
+  _cairo_font_reset_static_data ();
+#ifdef CAIRO_HAS_FT_FONT
+  _cairo_ft_font_reset_static_data ();
 #endif
+
+  /* Uninitialize FontConfig */
+  FcFini ();
+}
 
 static void _cairo_os2_surface_blit_pixels(cairo_os2_surface_t *pOS2Surface,
                                            HPS hpsBeginPaint,
                                            PRECTL prclBeginPaintRect)
 {
   POINTL aptlPoints[4];
-  LONG lOldYInversion;
+  LONG lOldYInversion, rc = GPI_OK;
 
   /* Enable Y Inversion for the HPS, so the
    * GpiDrawBits will work with upside-top image, not with upside-down image!
@@ -129,13 +174,61 @@ static void _cairo_os2_surface_blit_pixels(cairo_os2_surface_t *pOS2Surface,
       }
   }
   */
-  GpiDrawBits(hpsBeginPaint,
-              pOS2Surface->pchPixels,
-              &(pOS2Surface->bmi2BitmapInfo),
-              4,
-              aptlPoints,
-              ROP_SRCCOPY,
-              BBO_IGNORE);
+  rc = GpiDrawBits (hpsBeginPaint,
+                    pOS2Surface->pchPixels,
+                    &(pOS2Surface->bmi2BitmapInfo),
+                    4,
+                    aptlPoints,
+                    ROP_SRCCOPY,
+                    BBO_IGNORE);
+
+  if (rc != GPI_OK) {
+    /* if GpiDrawBits () failed then this is most likely because the
+     * display driver could not handle a 32bit bitmap. So we need to
+     * - create a buffer that only contains 3 bytes per pixel
+     * - change the bitmap info header to contain 24bit
+     * - pass the new buffer to GpiDrawBits () again
+     * - clean up the new buffer
+     */
+    BITMAPINFOHEADER2 bmpheader;
+    unsigned char *pchPixBuf, *pchPixSource;
+    void *pBufStart;
+    unsigned int iPixels;
+
+    /* allocate temporary pixel buffer */
+    pchPixBuf = (unsigned char *) malloc (3 * pOS2Surface->bmi2BitmapInfo.cx *
+                                          pOS2Surface->bmi2BitmapInfo.cy);
+    pchPixSource = pOS2Surface->pchPixels; /* start at beginning of pixel buffer */
+    pBufStart = pchPixBuf; /* remember beginning of the new pixel buffer */
+
+    /* copy the first three bytes for each pixel but skip over the fourth */
+    for (iPixels = 0; iPixels < pOS2Surface->bmi2BitmapInfo.cx * pOS2Surface->bmi2BitmapInfo.cy; iPixels++)
+    {
+      memcpy (pchPixBuf, pchPixSource, 3); /* copy BGR */
+      pchPixSource += 4; /* jump over BGR and alpha channel in source buffer */
+      pchPixBuf += 3; /* just advance over BGR in target buffer */
+    }
+
+    /* jump back to start of the buffer for display and cleanup */
+    pchPixBuf = pBufStart;
+
+    /* set up the bitmap header, but this time with 24bit depth only */
+    memset (&bmpheader, 0, sizeof (bmpheader));
+    bmpheader.cbFix = sizeof (BITMAPINFOHEADER2);
+    bmpheader.cx = pOS2Surface->bmi2BitmapInfo.cx;
+    bmpheader.cy = pOS2Surface->bmi2BitmapInfo.cy;
+    bmpheader.cPlanes = pOS2Surface->bmi2BitmapInfo.cPlanes;
+    bmpheader.cBitCount = 24;
+    rc = GpiDrawBits (hpsBeginPaint,
+                      pchPixBuf,
+                      (PBITMAPINFO2)&bmpheader,
+                      4,
+                      aptlPoints,
+                      ROP_SRCCOPY,
+                      BBO_IGNORE);
+
+    free (pchPixBuf);
+  }
 
   /* Restore Y inversion */
   GpiEnableYInversion(hpsBeginPaint, lOldYInversion);

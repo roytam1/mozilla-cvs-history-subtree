@@ -60,6 +60,7 @@
 #include "nsSVGTypeCIDs.h"
 #include "nsIComponentManager.h"
 #include "nsISVGPathFlatten.h"
+#include "nsSVGUtils.h"
 
 extern cairo_surface_t *gSVGCairoDummySurface;
 
@@ -493,8 +494,7 @@ nsSVGCairoPathGeometry::GetCoveredRegion(nsISVGRendererRegion **_retval)
     // need to use user_to_device instead of setting the identity_matrix
     // to make sure stroke-width is interpreted in the right coordinate space
     cairo_stroke_extents(ctx, &xmin, &ymin, &xmax, &ymax);
-    cairo_user_to_device(ctx, &xmin, &ymin);
-    cairo_user_to_device(ctx, &xmax, &ymax);
+    nsSVGUtils::UserToDeviceBBox(ctx, &xmin, &ymin, &xmax, &ymax);
   } else {
     cairo_identity_matrix(ctx);
     cairo_fill_extents(ctx, &xmin, &ymin, &xmax, &ymax);
@@ -567,6 +567,7 @@ nsSVGCairoPathGeometry::GetBoundingBox(nsIDOMSVGRect * *aBoundingBox)
   cairo_t *ctx = cairo_create(gSVGCairoDummySurface);
   GeneratePath(ctx, nsnull);
 
+  cairo_identity_matrix(ctx);
   cairo_fill_extents(ctx, &xmin, &ymin, &xmax, &ymax);
 
   /* cairo_fill_extents doesn't work on degenerate paths */
@@ -578,9 +579,6 @@ nsSVGCairoPathGeometry::GetBoundingBox(nsIDOMSVGRect * *aBoundingBox)
     cairo_set_line_width(ctx, 0.0001);
     cairo_stroke_extents(ctx, &xmin, &ymin, &xmax, &ymax);
   }
-
-  cairo_user_to_device(ctx, &xmin, &ymin);
-  cairo_user_to_device(ctx, &xmax, &ymax);
 
   cairo_destroy(ctx);
 

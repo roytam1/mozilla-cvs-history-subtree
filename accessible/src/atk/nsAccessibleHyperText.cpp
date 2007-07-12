@@ -91,6 +91,8 @@ void nsAccessibleHyperText::Shutdown()
 
 PRBool nsAccessibleHyperText::GetAllTextChildren(nsPresContext *aPresContext, nsIFrame *aCurFrame, nsIDOMNode* aNode, PRBool &bSave)
 {
+  NS_ENSURE_TRUE(mTextChildren, PR_FALSE);
+
   while (aCurFrame) {
 
     nsIAtom* frameType = aCurFrame->GetType();
@@ -143,6 +145,8 @@ PRInt32 nsAccessibleHyperText::GetIndex()
 
 nsIDOMNode* nsAccessibleHyperText::FindTextNodeByOffset(PRInt32 aOffset, PRInt32& aBeforeLength)
 {
+  NS_ENSURE_TRUE(mTextChildren, nsnull);
+
   aBeforeLength = 0;
 
   PRUint32 index, count;
@@ -183,6 +187,8 @@ nsresult nsAccessibleHyperText::GetTextHelper(EGetTextType aType, nsAccessibleTe
 /* attribute long caretOffset; */
 NS_IMETHODIMP nsAccessibleHyperText::GetCaretOffset(PRInt32 *aCaretOffset)
 {
+  NS_ENSURE_TRUE(mTextChildren, NS_ERROR_FAILURE);
+
   *aCaretOffset = 0;
 
   PRInt32 charCount, caretOffset;
@@ -209,6 +215,8 @@ NS_IMETHODIMP nsAccessibleHyperText::GetCaretOffset(PRInt32 *aCaretOffset)
 
 NS_IMETHODIMP nsAccessibleHyperText::SetCaretOffset(PRInt32 aCaretOffset)
 {
+  NS_ENSURE_TRUE(mTextChildren, NS_ERROR_FAILURE);
+
   PRInt32 beforeLength;
   nsIDOMNode* domNode = FindTextNodeByOffset(aCaretOffset, beforeLength);
   if (domNode) {
@@ -222,6 +230,8 @@ NS_IMETHODIMP nsAccessibleHyperText::SetCaretOffset(PRInt32 aCaretOffset)
 /* readonly attribute long characterCount; */
 NS_IMETHODIMP nsAccessibleHyperText::GetCharacterCount(PRInt32 *aCharacterCount)
 {
+  NS_ENSURE_TRUE(mTextChildren, NS_ERROR_FAILURE);
+
   *aCharacterCount = 0;
 
   PRInt32 charCount;
@@ -240,6 +250,8 @@ NS_IMETHODIMP nsAccessibleHyperText::GetCharacterCount(PRInt32 *aCharacterCount)
 /* readonly attribute long selectionCount; */
 NS_IMETHODIMP nsAccessibleHyperText::GetSelectionCount(PRInt32 *aSelectionCount)
 {
+  NS_ENSURE_TRUE(mTextChildren, NS_ERROR_FAILURE);
+
   *aSelectionCount = 0;
 
   PRInt32 selCount;
@@ -258,6 +270,8 @@ NS_IMETHODIMP nsAccessibleHyperText::GetSelectionCount(PRInt32 *aSelectionCount)
 /* AString getText (in long startOffset, in long endOffset); */
 NS_IMETHODIMP nsAccessibleHyperText::GetText(PRInt32 aStartOffset, PRInt32 aEndOffset, nsAString & aText)
 {
+  NS_ENSURE_TRUE(mTextChildren, NS_ERROR_FAILURE);
+
   if (aEndOffset == -1)
     GetCharacterCount(&aEndOffset);
 
@@ -392,6 +406,8 @@ NS_IMETHODIMP nsAccessibleHyperText::RemoveSelection(PRInt32 aSelectionNum)
 // ------- nsIAccessibleHyperText ---------------
 /* readonly attribute long links; */NS_IMETHODIMP nsAccessibleHyperText::GetLinks(PRInt32 *aLinks)
 {
+  NS_ENSURE_TRUE(mTextChildren, NS_ERROR_FAILURE);
+
   *aLinks = 0;
 
   PRUint32 index, count;
@@ -409,6 +425,8 @@ NS_IMETHODIMP nsAccessibleHyperText::RemoveSelection(PRInt32 aSelectionNum)
 /* nsIAccessibleHyperLink getLink (in long index); */
 NS_IMETHODIMP nsAccessibleHyperText::GetLink(PRInt32 aIndex, nsIAccessibleHyperLink **aLink)
 {
+  NS_ENSURE_TRUE(mTextChildren, NS_ERROR_FAILURE);
+
   PRUint32 index, count, linkCount = 0;
   mTextChildren->GetLength(&count);
   for (index = 0; index < count; index++) {
@@ -456,6 +474,8 @@ NS_IMETHODIMP nsAccessibleHyperText::GetLink(PRInt32 aIndex, nsIAccessibleHyperL
 /* long getLinkIndex (in long charIndex); */
 NS_IMETHODIMP nsAccessibleHyperText::GetLinkIndex(PRInt32 aCharIndex, PRInt32 *aLinkIndex)
 {
+  NS_ENSURE_TRUE(mTextChildren, NS_ERROR_FAILURE);
+
   *aLinkIndex = -1;
   PRInt32 beforeLength_unused;
   PRUint32 nodeIndex;
@@ -476,6 +496,8 @@ NS_IMETHODIMP nsAccessibleHyperText::GetLinkIndex(PRInt32 aCharIndex, PRInt32 *a
 /* long getSelectedLinkIndex (); */
 NS_IMETHODIMP nsAccessibleHyperText::GetSelectedLinkIndex(PRInt32 *aSelectedLinkIndex)
 {
+  NS_ENSURE_TRUE(mTextChildren, NS_ERROR_FAILURE);
+
   *aSelectedLinkIndex = -1;
 
   PRUint32 count;
@@ -503,6 +525,8 @@ NS_IMETHODIMP nsAccessibleHyperText::GetSelectedLinkIndex(PRInt32 *aSelectedLink
 
 nsresult nsAccessibleHyperText::GetBounds(nsIWeakReference *aWeakShell, PRInt32 *x, PRInt32 *y, PRInt32 *width, PRInt32 *height)
 {
+  NS_ENSURE_TRUE(mTextChildren, NS_ERROR_FAILURE);
+
   *x = *y = *width = *height = 0;
 
   nsRect unionRectTwips;

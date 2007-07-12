@@ -21,6 +21,7 @@
  *
  * Contributor(s):
  *   David Haas <haasd@cae.wisc.edu>
+ *   Stuart Morgan <stuart.morgan@alumni.case.edu>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -100,12 +101,10 @@ static int BookmarkItemSort(id firstItem, id secondItem, void* context)
 // ways to add a new bookmark
 - (BOOL)addBookmarkFromNativeDict:(NSDictionary *)aDict;
 - (BOOL)addBookmarkFromSafariDict:(NSDictionary *)aDict;
-- (BOOL)addBookmarkFromXML:(CFXMLTreeRef)aTreeRef;
 
 // ways to add a new bookmark folder
 - (BOOL)addBookmarkFolderFromNativeDict:(NSDictionary *)aDict; //read in - adds sequentially
 - (BOOL)addBookmarkFolderFromSafariDict:(NSDictionary *)aDict;
-- (BOOL)addBookmarkFolderFromXML:(CFXMLTreeRef)aTreeRef settingToolbar:(BOOL)setupToolbar;
 
 // deletes the bookmark or bookmark array
 - (BOOL)deleteBookmark:(Bookmark *)childBookmark;
@@ -481,6 +480,10 @@ static int BookmarkItemSort(id firstItem, id secondItem, void* context)
 
 - (void)insertChild:(BookmarkItem *)aChild atIndex:(unsigned)aPosition isMove:(BOOL)inIsMove
 {
+  // Ensure that only folders are added to the root.
+  if ([self isRoot] && ![aChild isKindOfClass:[BookmarkFolder class]])
+    return;
+
   [aChild setParent:self];
   unsigned insertPoint = [mChildArray count];
   if (insertPoint > aPosition)
@@ -618,73 +621,41 @@ static int BookmarkItemSort(id firstItem, id secondItem, void* context)
 // Adding bookmarks
 //
 
-// XXX fix to nicely autorelease etc.
 - (Bookmark *)addBookmark
 {
-  if (![self isRoot]) {
-    Bookmark* theBookmark = [[Bookmark alloc] init];
-    [self appendChild:theBookmark];
-    [theBookmark release]; //retained on insert
-    return theBookmark;
-  }
-  return nil;
+  if ([self isRoot])
+    return nil;
+
+  Bookmark* theBookmark = [[[Bookmark alloc] init] autorelease];
+  [self appendChild:theBookmark];
+  return theBookmark;
 }
 
 // adding from native plist
 - (BOOL)addBookmarkFromNativeDict:(NSDictionary *)aDict
 {
-  return [[self addBookmark] readNativeDictionary:aDict];
+  if ([self isRoot])
+    return NO;
+
+  Bookmark* theBookmark = [Bookmark bookmarkWithNativeDictionary:aDict];
+  if (!theBookmark)
+    return NO;
+
+  [self appendChild:theBookmark];
+  return YES;
 }
 
 - (BOOL)addBookmarkFromSafariDict:(NSDictionary *)aDict
 {
-  return [[self addBookmark] readSafariDictionary:aDict];
-}
+  if ([self isRoot])
+    return NO;
 
-// add from camino xml
-- (BOOL)addBookmarkFromXML:(CFXMLTreeRef)aTreeRef
-{
-  return [[self addBookmark] readCaminoXML:aTreeRef settingToolbar:NO];
-}
+  Bookmark* theBookmark = [Bookmark bookmarkWithSafariDictionary:aDict];
+  if (!theBookmark)
+    return NO;
 
-- (Bookmark *)addBookmark:(NSString *)aTitle url:(NSString *)aURL inPosition:(unsigned)aIndex isSeparator:(BOOL)aBool
-{
-  if ([aTitle length] == 0)
-    aTitle = aURL;
-  return [self addBookmark:aTitle
-                inPosition:aIndex
-                   keyword:@""
-                       url:aURL
-               description:@""
-                 lastVisit:[NSDate date]
-                    status:kBookmarkOKStatus
-               isSeparator:aBool];
-}
-
-// full bodied addition
-- (Bookmark *)addBookmark:(NSString *)aTitle
-               inPosition:(unsigned)aPosition
-                  keyword:(NSString *)aKeyword
-                      url:(NSString *)aURL
-              description:(NSString *)aDescription
-                lastVisit:(NSDate *)aDate
-                   status:(unsigned)aStatus
-              isSeparator:(BOOL)aSeparator
-{
-  if (![self isRoot]) {
-    Bookmark *theBookmark = [[Bookmark alloc] init];
-    [theBookmark setTitle:aTitle];
-    [theBookmark setKeyword:aKeyword];
-    [theBookmark setUrl:aURL];
-    [theBookmark setItemDescription:aDescription];
-    [theBookmark setLastVisit:aDate];
-    [theBookmark setStatus:aStatus];
-    [theBookmark setIsSeparator:aSeparator];
-    [self insertChild:theBookmark atIndex:aPosition isMove:NO];
-    [theBookmark release];
-    return theBookmark;
-  }
-  return nil;
+  [self appendChild:theBookmark];
+  return YES;
 }
 
 //
@@ -708,11 +679,6 @@ static int BookmarkItemSort(id firstItem, id secondItem, void* context)
 - (BOOL)addBookmarkFolderFromSafariDict:(NSDictionary *)aDict
 {
   return [[self addBookmarkFolder] readSafariDictionary:aDict];
-}
-
-- (BOOL)addBookmarkFolderFromXML:(CFXMLTreeRef)aTreeRef settingToolbar:(BOOL)setupToolbar
-{
-  return [[self addBookmarkFolder] readCaminoXML:aTreeRef settingToolbar:setupToolbar];
 }
 
 // normal add while programming running
@@ -979,15 +945,15 @@ static int BookmarkItemSort(id firstItem, id secondItem, void* context)
 }
 
 //
-// searching/keywords processing
+// searching/shortcut processing
 //
-- (NSArray*)resolveKeyword:(NSString *)keyword withArgs:(NSString *)args
+- (NSArray*)resolveShortcut:(NSString *)shortcut withArgs:(NSString *)args
 {
-  if (!keyword)
+  if (!shortcut)
     return nil;
 
   // see if it's us
-  if ([[self keyword] caseInsensitiveCompare:keyword] == NSOrderedSame) {
+  if ([[self shortcut] caseInsensitiveCompare:shortcut] == NSOrderedSame) {
     NSMutableArray *urlArray = (NSMutableArray *)[self childURLs];
     int i, j = [urlArray count];
     for (i = 0; i < j; i++) {
@@ -1001,12 +967,12 @@ static int BookmarkItemSort(id firstItem, id secondItem, void* context)
   id aKid;
   while ((aKid = [enumerator nextObject])) {
     if ([aKid isKindOfClass:[Bookmark class]]) {
-      if ([[aKid keyword] caseInsensitiveCompare:keyword] == NSOrderedSame)
+      if ([[aKid shortcut] caseInsensitiveCompare:shortcut] == NSOrderedSame)
         return [NSArray arrayWithObject:[self expandURL:[aKid url] withString:args]];
     }
     else if ([aKid isKindOfClass:[BookmarkFolder class]]) {
       // recurse into sub-folders
-      NSArray *childArray = [aKid resolveKeyword:keyword withArgs:args];
+      NSArray *childArray = [aKid resolveShortcut:shortcut withArgs:args];
       if (childArray)
         return childArray;
     }
@@ -1033,9 +999,9 @@ static int BookmarkItemSort(id firstItem, id secondItem, void* context)
   return url;
 }
 
-- (NSSet*)bookmarksWithString:(NSString *)searchString inFieldWithTag:(int)tag
+- (NSArray*)bookmarksWithString:(NSString*)searchString inFieldWithTag:(int)tag
 {
-  NSMutableSet *foundSet = [NSMutableSet set];
+  NSMutableArray *matchingBookmarks = [NSMutableArray array];
 
   // see if our kids match
   NSEnumerator *enumerator = [[self childArray] objectEnumerator];
@@ -1043,15 +1009,15 @@ static int BookmarkItemSort(id firstItem, id secondItem, void* context)
   while ((childItem = [enumerator nextObject])) {
     if ([childItem isKindOfClass:[Bookmark class]]) {
       if ([childItem matchesString:searchString inFieldWithTag:tag])
-        [foundSet addObject:childItem];
+        [matchingBookmarks addObject:childItem];
     }
     else if ([childItem isKindOfClass:[BookmarkFolder class]]) {
-      // recurse, adding found items to the existing set
-      NSSet *childFoundSet = [childItem bookmarksWithString:searchString inFieldWithTag:tag];
-      [foundSet unionSet:childFoundSet];
+      // recurse, adding found items to the existing matches
+      NSArray *matchingDescendents = [childItem bookmarksWithString:searchString inFieldWithTag:tag];
+      [matchingBookmarks addObjectsFromArray:matchingDescendents];
     }
   }
-  return foundSet;
+  return matchingBookmarks;
 }
 
 - (BOOL)containsChildItem:(BookmarkItem*)inItem
@@ -1129,7 +1095,7 @@ static int BookmarkItemSort(id firstItem, id secondItem, void* context)
 {
   [self setTitle:[aDict objectForKey:BMTitleKey]];
   [self setItemDescription:[aDict objectForKey:BMFolderDescKey]];
-  [self setKeyword:[aDict objectForKey:BMFolderKeywordKey]];
+  [self setShortcut:[aDict objectForKey:BMFolderShortcutKey]];
   [self setUUID:[aDict objectForKey:BMUUIDKey]];
 
   unsigned int flag = [[aDict objectForKey:BMFolderTypeKey] unsignedIntValue];
@@ -1175,61 +1141,6 @@ static int BookmarkItemSort(id firstItem, id secondItem, void* context)
 
   if ([[aDict objectForKey:SafariAutoTab] boolValue])
     [self setIsGroup:YES];
-
-  return success;
-}
-
-- (BOOL)readCaminoXML:(CFXMLTreeRef)aTreeRef settingToolbar:(BOOL)setupToolbar
-{
-  BOOL success = YES;
-  CFXMLNodeRef myNode = CFXMLTreeGetNode(aTreeRef);
-  if (myNode) {
-    // Process our info - we load info into tempMuteString,
-    // then send a cleaned up version to temp string, which gets
-    // dropped into appropriate variable
-    if (CFXMLNodeGetTypeCode(myNode) == kCFXMLNodeTypeElement) {
-      CFXMLElementInfo* elementInfoPtr = (CFXMLElementInfo*)CFXMLNodeGetInfoPtr(myNode);
-      if (elementInfoPtr) {
-        NSDictionary* attribDict = (NSDictionary*)elementInfoPtr->attributes;
-        [self setTitle:[[attribDict objectForKey:CaminoNameKey] stringByRemovingAmpEscapes]];
-        [self setItemDescription:[[attribDict objectForKey:CaminoDescKey] stringByRemovingAmpEscapes]];
-
-        if ([[attribDict objectForKey:CaminoTypeKey] isEqualToString:CaminoToolbarKey] && setupToolbar) {
-          // we move the toolbar folder to its correct location later
-          [self setIsToolbar:YES];
-        }
-
-        if ([[attribDict objectForKey:CaminoGroupKey] isEqualToString:CaminoTrueKey])
-          [self setIsGroup:YES];
-
-        // Process children
-        unsigned int i = 0;
-        CFXMLTreeRef childTreeRef;
-        while ((childTreeRef = CFTreeGetChildAtIndex(aTreeRef, i++)) && success) {
-          CFXMLNodeRef childNodeRef = CFXMLTreeGetNode(childTreeRef);
-          if (childNodeRef) {
-            NSString *tempString = (NSString *)CFXMLNodeGetString(childNodeRef);
-            if ([tempString isEqualToString:CaminoBookmarkKey])
-              success = [self addBookmarkFromXML:childTreeRef];
-            else if ([tempString isEqualToString:CaminoFolderKey])
-              success = [self addBookmarkFolderFromXML:childTreeRef settingToolbar:setupToolbar];
-          }
-        }
-      }
-      else  {
-        NSLog(@"BookmarkFolder: readCaminoXML- elementInfoPtr null - children not imported");
-        success = NO;
-      }
-    }
-    else {
-      NSLog(@"BookmarkFolder: readCaminoXML - should be, but isn't a CFXMLNodeTypeElement");
-      success = NO;
-    }
-  }
-  else {
-    NSLog(@"BookmarkFolder: readCaminoXML - myNode null - bookmark not imported");
-    success = NO;
-  }
 
   return success;
 }
@@ -1293,8 +1204,8 @@ static int BookmarkItemSort(id firstItem, id secondItem, void* context)
   if ([[self itemDescription] length])
     [folderDict setObject:[self itemDescription] forKey:BMFolderDescKey];
 
-  if ([[self keyword] length])
-    [folderDict setObject:[self keyword] forKey:BMFolderKeywordKey];
+  if ([[self shortcut] length])
+    [folderDict setObject:[self shortcut] forKey:BMFolderShortcutKey];
 
   return folderDict;
 }

@@ -303,13 +303,28 @@ static const char kDOMSecurityWarningsBundleURL[] = "chrome://global/locale/dom/
 static const char kCryptoContractID[] = NS_CRYPTO_CONTRACTID;
 static const char kPkcs11ContractID[] = NS_PKCS11_CONTRACTID;
 
+static PRBool
+IsAboutBlank(nsIURI* aURI)
+{
+  NS_PRECONDITION(aURI, "Must have URI");
+    
+  // GetSpec can be expensive for some URIs, so check the scheme first.
+  PRBool isAbout = PR_FALSE;
+  if (NS_FAILED(aURI->SchemeIs("about", &isAbout)) || !isAbout) {
+    return PR_FALSE;
+  }
+    
+  nsCAutoString str;
+  aURI->GetSpec(str);
+  return str.EqualsLiteral("about:blank");  
+}
 
 //*****************************************************************************
 //***    nsGlobalWindow: Object Management
 //*****************************************************************************
 
 nsGlobalWindow::nsGlobalWindow(nsGlobalWindow *aOuterWindow)
-  : nsPIDOMWindow_MOZILLA_1_8_BRANCH(aOuterWindow),
+  : nsPIDOMWindow_MOZILLA_1_8_BRANCH2(aOuterWindow),
     mIsFrozen(PR_FALSE),
     mFullScreen(PR_FALSE),
     mIsClosed(PR_FALSE), 
@@ -563,6 +578,7 @@ NS_INTERFACE_MAP_BEGIN(nsGlobalWindow)
   NS_INTERFACE_MAP_ENTRY(nsIDOMNSEventTarget)
   NS_INTERFACE_MAP_ENTRY(nsPIDOMWindow)
   NS_INTERFACE_MAP_ENTRY(nsPIDOMWindow_MOZILLA_1_8_BRANCH)
+  NS_INTERFACE_MAP_ENTRY(nsPIDOMWindow_MOZILLA_1_8_BRANCH2)
   NS_INTERFACE_MAP_ENTRY(nsIDOMViewCSS)
   NS_INTERFACE_MAP_ENTRY(nsIDOMAbstractView)
   NS_INTERFACE_MAP_ENTRY(nsIDOMStorageWindow)
@@ -625,70 +641,52 @@ nsGlobalWindow::GetContext()
 PRBool
 nsGlobalWindow::WouldReuseInnerWindow(nsIDocument *aNewDocument)
 {
-  return WouldReuseInnerWindow(aNewDocument, PR_TRUE);
-}
-
-PRBool
-nsGlobalWindow::WouldReuseInnerWindow(nsIDocument *aNewDocument, PRBool useDocURI)
-{
   // We reuse the inner window when:
-  // a. We are currently at about:blank
+  // a. We are currently at our original document.
   // b. At least one of the following conditions are true:
   // -- We are not currently a content window (i.e., we're currently a chrome
   //    window).
   // -- The new document is the same as the old document. This means that we're
   //    getting called from document.open().
-  // -- The new URI has the same origin as the script opener uri for our current
-  //    window.
+  // -- The new document has the same origin as what we have loaded right now.
 
   nsCOMPtr<nsIDocument> curDoc(do_QueryInterface(mDocument));
-  if (!curDoc || !aNewDocument) {
+  nsCOMPtr<nsIDocument_MOZILLA_1_8_BRANCH2> curDoc_MOZILLA_1_8_BRANCH2 =
+    do_QueryInterface(mDocument);
+  if (!curDoc || !curDoc_MOZILLA_1_8_BRANCH2 || !aNewDocument) {
     return PR_FALSE;
   }
 
-  nsCOMPtr<nsIURI> newURI;
-  if (useDocURI) {
-    newURI = aNewDocument->GetDocumentURI();
-  } else {
-    nsCOMPtr<nsIWebNavigation> webNav(do_QueryInterface(mDocShell));
-
-    if (webNav) {
-      webNav->GetCurrentURI(getter_AddRefs(newURI));
-    }
-  }
-
-  nsIURI* curURI = curDoc->GetDocumentURI();
-  if (!curURI || !newURI) {
+  nsIPrincipal* newPrincipal = aNewDocument->GetPrincipal();
+  if (!newPrincipal) {
+    // Play it safe
     return PR_FALSE;
   }
-
-  PRBool isAbout;
-  if (NS_FAILED(curURI->SchemeIs("about", &isAbout)) || !isAbout) {
-    return PR_FALSE;
-  }
-
-  nsCAutoString uri;
-  curURI->GetSpec(uri);
-  if (!uri.EqualsLiteral("about:blank")) {
+    
+  if (!curDoc_MOZILLA_1_8_BRANCH2->IsInitialDocument()) {
     return PR_FALSE;
   }
   
-  // Great, we're an about:blank document, check for one of the other
-  // conditions.
+  NS_ASSERTION(IsAboutBlank(curDoc->GetDocumentURI()),
+               "How'd this happen?");
+  
+  // Great, we're the original document, check for one of the other
   if (curDoc == aNewDocument) {
     // aClearScopeHint is false.
     return PR_TRUE;
   }
 
-  if (mOpenerScriptURL) {
-    if (sSecMan) {
-      PRBool isSameOrigin = PR_FALSE;
-      sSecMan->SecurityCompareURIs(mOpenerScriptURL, newURI, &isSameOrigin);
-      if (isSameOrigin) {
-        // The origin is the same.
-        return PR_TRUE;
-      }
-    }
+  nsIPrincipal* curPrincipal = curDoc->GetPrincipal();
+  if (!curPrincipal) {
+    // Play it safe
+    return PR_FALSE;
+  }
+ 
+  if (nsContentUtils::GetSecurityManager() &&
+      NS_SUCCEEDED(nsContentUtils::GetSecurityManager()->
+        CheckSameOriginPrincipal(curPrincipal, newPrincipal))) {
+    // The origin is the same.
+    return PR_TRUE;
   }
 
   nsCOMPtr<nsIDocShellTreeItem> treeItem(do_QueryInterface(mDocShell));
@@ -708,9 +706,49 @@ nsGlobalWindow::WouldReuseInnerWindow(nsIDocument *aNewDocument, PRBool useDocUR
 void
 nsGlobalWindow::SetOpenerScriptURL(nsIURI* aURI)
 {
-  FORWARD_TO_OUTER_VOID(SetOpenerScriptURL, (aURI));
+}
 
-  mOpenerScriptURL = aURI;
+void
+nsGlobalWindow::SetOpenerScriptPrincipal(nsIPrincipal* aPrincipal)
+{
+  FORWARD_TO_OUTER_VOID(SetOpenerScriptPrincipal, (aPrincipal));
+
+  nsCOMPtr<nsIDocument> curDoc(do_QueryInterface(mDocument));
+  nsCOMPtr<nsIDocument_MOZILLA_1_8_BRANCH2> curDoc_MOZILLA_1_8_BRANCH2 =
+    do_QueryInterface(mDocument);
+  if (curDoc && curDoc_MOZILLA_1_8_BRANCH2) {
+    if (!curDoc_MOZILLA_1_8_BRANCH2->IsInitialDocument()) {
+      // We have a document already, and it's not the original one.  Bail out.
+      // Do NOT set mOpenerScriptPrincipal in this case, just to be safe.
+      return;
+    }
+    
+#ifdef DEBUG
+    // We better have an about:blank document loaded at this point.  Otherwise,
+    // something is really weird.
+    if (curDoc->GetPrincipal()) {
+      nsCOMPtr<nsIURI> uri;
+      curDoc->GetPrincipal()->GetURI(getter_AddRefs(uri));
+      NS_ASSERTION(uri && IsAboutBlank(uri) &&
+                   IsAboutBlank(curDoc->GetDocumentURI()),
+                   "Unexpected original document");
+    }
+#endif
+    
+    // Set the opener principal on our document; given the above check, this
+    // is safe.
+    curDoc->SetPrincipal(aPrincipal);
+  }
+
+  mOpenerScriptPrincipal = aPrincipal;
+}
+
+nsIPrincipal*
+nsGlobalWindow::GetOpenerScriptPrincipal()
+{
+  FORWARD_TO_OUTER(GetOpenerScriptPrincipal, (), nsnull);
+
+  return mOpenerScriptPrincipal;
 }
 
 PopupControlState
@@ -995,7 +1033,7 @@ nsGlobalWindow::SetNewDocument(nsIDOMDocument* aDocument,
   // check xpc here.
   nsIXPConnect *xpc = nsContentUtils::XPConnect();
 
-  PRBool reUseInnerWindow = WouldReuseInnerWindow(newDoc, PR_FALSE);
+  PRBool reUseInnerWindow = WouldReuseInnerWindow(newDoc);
 
   // XXX We used to share event listeners between inner windows in special
   // circumstances (that were remarkably close to the conditions that we set
@@ -3602,6 +3640,7 @@ nsGlobalWindow::Focus()
   if (mDocShell) {
     // Don't look for a presshell if we're a root chrome window that's got
     // about:blank loaded.  We don't want to focus our widget in that case.
+    // XXXbz should we really be checking for IsInitialDocument() instead?
     PRBool lookForPresShell = PR_TRUE;
     PRInt32 itemType = nsIDocShellTreeItem::typeContent;
     nsCOMPtr<nsIDocShellTreeItem> treeItem(do_QueryInterface(mDocShell));
@@ -3613,12 +3652,8 @@ nsGlobalWindow::Focus()
       nsCOMPtr<nsIDocument> doc(do_QueryInterface(mDocument));
       NS_ASSERTION(doc, "Bogus doc?");
       nsIURI* ourURI = doc->GetDocumentURI();
-      PRBool isAbout;
-      if (ourURI && NS_SUCCEEDED(ourURI->SchemeIs("about", &isAbout)) &&
-          isAbout) {
-        nsCAutoString spec;
-        ourURI->GetSpec(spec);
-        lookForPresShell = !spec.EqualsLiteral("about:blank");
+      if (ourURI) {
+        lookForPresShell = !IsAboutBlank(ourURI);
       }
     }
       
@@ -6217,65 +6252,41 @@ nsGlobalWindow::OpenInternal(const nsAString& aUrl, const nsAString& aName,
 
   // success!
 
-  if (domReturn) {
-    // Save the principal of the calling script
-    // We need it to decide whether to clear the scope in SetNewDocument
-    NS_ASSERTION(sSecMan, "No Security Manager Found!");
-    // Note that the opener script URL is not relevant for openDialog
-    // callers, since those already have chrome privileges.  So we
-    // only want to do this wen aDoJSFixups is true.
-    if (aDoJSFixups && sSecMan) {
-      nsCOMPtr<nsIPrincipal> principal;
-      sSecMan->GetSubjectPrincipal(getter_AddRefs(principal));
-      if (principal) {
-        nsCOMPtr<nsIURI> subjectURI;
-        principal->GetURI(getter_AddRefs(subjectURI));
-        if (subjectURI) {
-          nsCOMPtr<nsPIDOMWindow> domReturnPrivate(do_QueryInterface(domReturn));
-          domReturnPrivate->SetOpenerScriptURL(subjectURI);
-        }
-      }
-    }
+  domReturn.swap(*aReturn);
 
-    domReturn.swap(*aReturn);
-  }
-
-  if (NS_SUCCEEDED(rv)) {
-    if (aDoJSFixups) {      
-      nsCOMPtr<nsIDOMChromeWindow> chrome_win(do_QueryInterface(*aReturn));
-      if (!chrome_win) {
-        // A new non-chrome window was created from a call to
-        // window.open() from JavaScript, make sure there's a document in
-        // the new window. We do this by simply asking the new window for
-        // its document, this will synchronously create an empty document
-        // if there is no document in the window.
-        // XXXbz should this just use EnsureInnerWindow()?
+  if (aDoJSFixups) {      
+    nsCOMPtr<nsIDOMChromeWindow> chrome_win(do_QueryInterface(*aReturn));
+    if (!chrome_win) {
+      // A new non-chrome window was created from a call to
+      // window.open() from JavaScript, make sure there's a document in
+      // the new window. We do this by simply asking the new window for
+      // its document, this will synchronously create an empty document
+      // if there is no document in the window.
 #ifdef DEBUG_jst
-        {
-          nsCOMPtr<nsPIDOMWindow> pidomwin(do_QueryInterface(*aReturn));
+      {
+        nsCOMPtr<nsPIDOMWindow> pidomwin(do_QueryInterface(*aReturn));
 
-          nsIDOMDocument *temp = pidomwin->GetExtantDocument();
+        nsIDOMDocument *temp = pidomwin->GetExtantDocument();
 
-          NS_ASSERTION(temp, "No document in new window!!!");
-        }
+        NS_ASSERTION(temp, "No document in new window!!!");
+      }
 #endif
 
-        nsCOMPtr<nsIDOMDocument> doc;
-        (*aReturn)->GetDocument(getter_AddRefs(doc));
-      }
+      nsCOMPtr<nsIDOMDocument> doc;
+      (*aReturn)->GetDocument(getter_AddRefs(doc));
     }
+  }
     
-    if (checkForPopup) {
-      if (abuseLevel >= openControlled) {
-        nsGlobalWindow *opened = NS_STATIC_CAST(nsGlobalWindow *, *aReturn);
-        if (!opened->IsPopupSpamWindow()) {
-          opened->SetPopupSpamWindow(PR_TRUE);
-          ++gOpenPopupSpamCount;
-        }
+  if (checkForPopup) {
+    if (abuseLevel >= openControlled) {
+      nsGlobalWindow *opened = NS_STATIC_CAST(nsGlobalWindow *, *aReturn);
+      if (!opened->IsPopupSpamWindow()) {
+        opened->SetPopupSpamWindow(PR_TRUE);
+        ++gOpenPopupSpamCount;
       }
-      if (abuseLevel >= openAbused)
-        FireAbuseEvents(PR_FALSE, PR_TRUE, aUrl, aOptions);
     }
+    if (abuseLevel >= openAbused)
+      FireAbuseEvents(PR_FALSE, PR_TRUE, aUrl, aOptions);
   }
 
   // copy the session storage data over to the new window if
@@ -6439,6 +6450,12 @@ nsGlobalWindow::SetTimeoutOrInterval(PRBool aIsInterval, PRInt32 *aReturn)
                      aIsInterval ? kSetIntervalStr : kSetTimeoutStr);
 
     return ncc->SetExceptionWasThrown(PR_TRUE);
+  }
+
+  // If we don't have a document (we could have been unloaded since
+  // the call to setTimeout was made), do nothing.
+  if (!mDocument) {
+    return NS_OK;
   }
 
   if (interval < DOM_MIN_TIMEOUT_VALUE) {

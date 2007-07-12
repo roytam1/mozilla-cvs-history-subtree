@@ -841,7 +841,7 @@ protected:
   PRUint32 mPartID;
 };
 
-// IID for the nsIDocument interface
+// IID for the nsIDocument_MOZILLA_1_8_0_BRANCH interface
 #define NS_IDOCUMENT_MOZILLA_1_8_0_BRANCH_IID      \
 { 0x7d001ad2, 0x01ac, 0x4bf2, \
   { 0xb8, 0x3a, 0x50, 0xaa, 0xed, 0xc6, 0x1d, 0xfa } }
@@ -868,6 +868,46 @@ public:
    *        occurred
    */
   virtual nsresult RemoveChildAt(PRUint32 aIndex, PRBool aNotify) = 0;
+};
+
+// IID for the nsIDocument_MOZILLA_1_8_BRANCH2 interface
+#define NS_IDOCUMENT_MOZILLA_1_8_BRANCH2_IID      \
+{ 0x095024b5, 0x57d1, 0x4117, \
+ { 0xb6, 0x02, 0x5c, 0x6d, 0xf2, 0x81, 0xe0, 0xba } }
+
+class nsIDocument_MOZILLA_1_8_BRANCH2 : public nsISupports
+{
+public:
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IDOCUMENT_MOZILLA_1_8_BRANCH2_IID)
+
+  nsIDocument_MOZILLA_1_8_BRANCH2() :
+    mIsInitialDocumentInWindow(PR_FALSE)
+  {
+  }
+
+  /**
+   * Ask this document whether it's the initial document in its window.
+   */
+  PRBool IsInitialDocument() const
+  {
+    return mIsInitialDocumentInWindow;
+  }
+  
+  /**
+   * Tell this document that it's the initial document in its window.  See
+   * comments on mIsInitialDocumentInWindow for when this should be called.
+   */
+  void SetIsInitialDocument(PRBool aIsInitialDocument)
+  {
+    mIsInitialDocumentInWindow = aIsInitialDocument;
+  }
+
+protected:   
+  // True if this document is the initial document for a window.  This should
+  // basically be true only for documents that exist in newly-opened windows or
+  // documents created to satisfy a GetDocument() on a window when there's no
+  // document in it.
+  PRBool mIsInitialDocumentInWindow;
 };
 
 /**

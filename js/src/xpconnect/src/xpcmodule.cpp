@@ -41,6 +41,7 @@
 /* Module level methods. */
 
 #include "xpcprivate.h"
+#include "nsXPCOMCID.h"
 #ifdef MOZ_JSLOADER
 #include "mozJSLoaderConstructors.h"
 #endif
@@ -90,7 +91,8 @@ static const nsModuleComponentInfo components[] = {
   {NS_SCRIPTERROR_CLASSNAME, NS_SCRIPTERROR_CID, NS_SCRIPTERROR_CONTRACTID,    nsScriptErrorConstructor      },
   {nsnull, SCRIPTABLE_INTERFACES_CID,            NS_SCRIPTABLE_INTERFACES_CONTRACTID,        nsXPCComponents_InterfacesConstructor },
   {nsnull, XPCVARIANT_CID,                       XPCVARIANT_CONTRACTID,        nsnull, nsnull, nsnull, nsnull, NS_CI_INTERFACE_GETTER_NAME(XPCVariant), nsnull, &NS_CLASSINFO_NAME(XPCVariant)},
-  {nsnull, NS_XPC_JSCONTEXT_STACK_ITERATOR_CID,  XPC_JSCONTEXT_STACK_ITERATOR_CONTRACTID, nsXPCJSContextStackIteratorConstructor }
+  {nsnull, NS_XPC_JSCONTEXT_STACK_ITERATOR_CID,  XPC_JSCONTEXT_STACK_ITERATOR_CONTRACTID, nsXPCJSContextStackIteratorConstructor },
+  {nsnull, NS_XPCONNECT_CID,                     NS_EVENT_QUEUE_LISTENER_CONTRACTID,     nsIXPConnectConstructor       }
 
 #ifdef MOZ_JSLOADER
   // jsloader stuff

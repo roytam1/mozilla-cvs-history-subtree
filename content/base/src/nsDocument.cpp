@@ -785,6 +785,7 @@ NS_IMPL_RELEASE_USING_AGGREGATOR(nsXPathDocumentTearoff, mDocument)
 
 nsDocument::nsDocument()
   : nsIDocument(),
+    nsIDocument_MOZILLA_1_8_BRANCH2(),
     mVisible(PR_TRUE)
 {
   nsLayoutStatics::AddRef();
@@ -921,6 +922,7 @@ PRBool gHaveXPathDOM = PR_FALSE;
 NS_INTERFACE_MAP_BEGIN(nsDocument)
   NS_INTERFACE_MAP_ENTRY(nsIDocument)
   NS_INTERFACE_MAP_ENTRY(nsIDocument_MOZILLA_1_8_0_BRANCH)
+  NS_INTERFACE_MAP_ENTRY(nsIDocument_MOZILLA_1_8_BRANCH2)
   NS_INTERFACE_MAP_ENTRY(nsIDOMDocument)
   NS_INTERFACE_MAP_ENTRY(nsIDOMNSDocument)
   NS_INTERFACE_MAP_ENTRY(nsIDOMDocumentEvent)
@@ -976,7 +978,7 @@ NS_IMPL_RELEASE(nsDocument)
 nsresult
 nsDocument::Init()
 {
-  if (mBindingManager || mCSSLoader || mNodeInfoManager) {
+  if (mBindingManager || mCSSLoader || mNodeInfoManager || mScriptLoader) {
     return NS_ERROR_ALREADY_INITIALIZED;
   }
 
@@ -998,6 +1000,10 @@ nsDocument::Init()
   // Assume we're not HTML and not quirky, until we know otherwise
   mCSSLoader->SetCaseSensitive(PR_TRUE);
   mCSSLoader->SetCompatibilityMode(eCompatibility_FullStandards);
+
+  mScriptLoader = new nsScriptLoader();
+  NS_ENSURE_TRUE(mScriptLoader, NS_ERROR_OUT_OF_MEMORY);
+  mScriptLoader->Init(this);
 
   mNodeInfoManager = new nsNodeInfoManager();
   NS_ENSURE_TRUE(mNodeInfoManager, NS_ERROR_OUT_OF_MEMORY);
@@ -2200,14 +2206,6 @@ nsDocument::GetWindow()
 nsIScriptLoader *
 nsDocument::GetScriptLoader()
 {
-  if (!mScriptLoader) {
-    mScriptLoader = new nsScriptLoader();
-    if (!mScriptLoader) {
-      return nsnull;
-    }
-    mScriptLoader->Init(this);
-  }
-
   return mScriptLoader;
 }
 

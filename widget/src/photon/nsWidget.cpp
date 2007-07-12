@@ -1011,7 +1011,8 @@ inline PRBool nsWidget::HandleEvent( PtWidget_t *widget, PtCallbackInfo_t* aCbIn
 				/* there should be no reason to do this - mozilla should figure out how to call SetFocus */
 				/* this though fixes the problem with the plugins capturing the focus */
 				PtWidget_t *disjoint = PtFindDisjoint( widget );
- 				if( PtWidgetIsClassMember( disjoint, PtServer ) )
+ 				if( PtWidgetIsClassMember( disjoint, PtServer ) || //mozserver
+ 					PtWidgetIsClassMember( disjoint, PtContainer ) ) //TestPhEmbed
 					PtContainerGiveFocus( widget, aCbInfo->event );
 
         if( ptrev ) {

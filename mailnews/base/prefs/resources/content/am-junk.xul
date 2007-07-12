@@ -152,10 +152,8 @@
 
     <hbox align="center" class="indent">
       <checkbox id="server.purgeSpam" genericattr="true" pref="true" wsm_persist="true" preftype="bool"
-                observes="broadcaster_moveMode"
                 prefstring="mail.server.%serverkey%.purgeSpam" accesskey="&purge1.accesskey;" label="&purge1.label;"/>
       <textbox  size="3" id="server.purgeSpamInterval" genericattr="true" pref="true" wsm_persist="true" preftype="int"
-                observes="broadcaster_moveMode"
                 prefstring="mail.server.%serverkey%.purgeSpamInterval"/>
       <label id="purgeLabel" value="&purge2.label;" observes="broadcaster_moveMode" control="server.purgeSpamInterval"/>
     </hbox>
