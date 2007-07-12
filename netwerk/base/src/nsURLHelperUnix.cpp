@@ -112,6 +112,8 @@ net_GetFileFromURLSpec(const nsACString &aURL, nsIFile **result)
     }
     
     NS_UnescapeURL(path);
+    if (path.Length() != strlen(path.get()))
+        return NS_ERROR_FILE_INVALID_PATH;
 
     // assuming path is encoded in the native charset
     rv = localFile->InitWithNativePath(path);
