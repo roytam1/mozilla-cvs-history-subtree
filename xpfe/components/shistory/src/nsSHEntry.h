@@ -59,7 +59,7 @@
 #include "nsSupportsArray.h"
 #include "nsIDocumentObserver.h"
 
-class nsSHEntry : public nsISHEntry,
+class nsSHEntry : public nsISHEntry_MOZILLA_1_8_BRANCH,
                   public nsISHContainer,
                   public nsIDocumentObserver
 {
@@ -70,6 +70,7 @@ public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSIHISTORYENTRY
   NS_DECL_NSISHENTRY
+  NS_DECL_NSISHENTRY_MOZILLA_1_8_BRANCH
   NS_DECL_NSISHCONTAINER
   NS_DECL_NSIDOCUMENTOBSERVER
 
@@ -104,6 +105,7 @@ private:
   nsRect                          mViewerBounds;
   nsCOMArray<nsIDocShellTreeItem> mChildShells;
   nsCOMPtr<nsISupportsArray>      mRefreshURIList;
+  nsCOMPtr<nsISupports>           mOwner;
 };
 
 #endif /* nsSHEntry_h */
