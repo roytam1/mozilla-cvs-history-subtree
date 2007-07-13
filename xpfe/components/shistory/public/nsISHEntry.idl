@@ -182,6 +182,23 @@ interface nsISHEntry : nsIHistoryEntry
     nsIContentViewer getAnyContentViewer(out nsISHEntry ownerEntry);
 };
 
+[scriptable, uuid(ab044652-b327-4108-b7ba-f72c4b4fec9d)]
+interface nsISHEntry_MOZILLA_1_8_BRANCH : nsISHEntry
+{
+    void create_MOZILLA_1_8_BRANCH(in nsIURI URI, in AString title,
+                                   in nsIInputStream inputStream,
+                                   in nsILayoutHistoryState layoutHistoryState,
+                                   in nsISupports cacheKey,
+                                   in ACString contentType,
+                                   in nsISupports owner);
+
+    /**
+     * Get the owner, if any, that was associated with the channel
+     * that the document that was loaded to create this history entry
+     * came from.
+     */
+    readonly attribute nsISupports owner;
+};
 
 %{ C++
 // {BFD1A791-AD9F-11d3-BDC7-0050040A9B44}
