@@ -1,6 +1,6 @@
 #
-### hostname: bl-bldlnx01.office.mozilla.org
-### uname: Linux bl-bldlnx01.office.mozilla.org 2.6.11-1.1369_FC4 #1 Thu Jun 2 22:55:56 EDT 2005 i686 i686 i386 GNU/Linux
+### hostname: bl-bldlnx03.office.mozilla.org
+### uname: Linux bl-bldlnx03.office.mozilla.org 2.6.18-1.2798.fc6 #1 SMP Mon Oct 16 14:54:20 EDT 2006 i686 i686 i386 GNU/Linux
 ##
 #
 #- tinder-config.pl - Tinderbox configuration file.
@@ -81,14 +81,14 @@ $StartupPerformanceTest   = 1;  # Ts
 $TestsPhoneHome           = 1;  # Should test report back to server?
 $TestOnlyTinderbox = 1;
 $DownloadBuildFile = 'firefox-3.0a7pre.en-US.linux-i686.tar.bz2';
-$DownloadBuildURL = 'http://stage.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds/fx-linux-tbox-trunk';
+$DownloadBuildURL = 'http://stage.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds/fxnewref-linux-tbox-trunk';
 $DownloadBuildDir = 'firefox';
 
 # If TestOnlyTinderbox is enabled, fetch the latest build info from tinderbox in a 
 # parseable format
 $TinderboxServerURL = 'http://tinderbox.mozilla.org/showbuilds.cgi?tree=Firefox&quickparse=1';
-$MatchBuildname = 'Linux fx-linux-tbox Depend Nightly';
-$GraphNameOverride        = "bl-bldlnx01_fx-linux-tbox-HEAD"; # Override name built from ::hostname() and $BuildTag
+$MatchBuildname = 'Linux fxnewref-linux-tbox Depend Nightly';
+$GraphNameOverride        = "bl-bldlnx03_fxnewref-linux-tbox-HEAD"; # Override name built from ::hostname() and $BuildTag
 
 # $results_server
 #----------------------------------------------------------------------------
@@ -161,7 +161,7 @@ $AliveTestTimeout                 = 5;
 #$ObjDir = '';
 
 # Extra build name, if needed.
-$BuildNameExtra = "fx-linux-tbox perf test";
+$BuildNameExtra = "fxnewref-linux-tbox perf test";
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
