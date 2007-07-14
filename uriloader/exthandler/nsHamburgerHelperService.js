@@ -36,30 +36,55 @@
 
 const Ci = Components.interfaces;
 const Cc = Components.classes;
-const Cr = Components.results;
 const Cu = Components.utils;
+const Cr = Components.results;
+
+
+// namespace prefix
+const NC_NS                 = "http://home.netscape.com/NC-rdf#";
+
+// type list properties
+
+const NC_MIME_TYPES         = NC_NS + "MIME-types";
+const NC_PROTOCOL_SCHEMES   = NC_NS + "Protocol-Schemes";
+
+// content type ("type") properties
+
+const NC_EDITABLE           = NC_NS + "editable";
+
+// nsIMIMEInfo::MIMEType
+const NC_VALUE              = NC_NS + "value";
+
+// references nsIHandlerInfo record
+const NC_HANDLER_INFO       = NC_NS + "handlerProp";
+
+// handler info ("info") properties
+
+// nsIHandlerInfo::preferredAction
+const NC_SAVE_TO_DISK       = NC_NS + "saveToDisk";
+const NC_HANDLE_INTERNALLY  = NC_NS + "handleInternal";
+const NC_USE_SYSTEM_DEFAULT = NC_NS + "useSystemDefault";
+
+// nsIHandlerInfo::alwaysAskBeforeHandling
+const NC_ALWAYS_ASK         = NC_NS + "alwaysAsk";
+
+// references nsIHandlerApp record
+const NC_PREFERRED_APP      = NC_NS + "externalApplication";
+
+// handler app ("handler") properties
+
+// nsIHandlerApp::name
+const NC_PRETTY_NAME        = NC_NS + "prettyName";
+
+// nsILocalHandlerApp::executable
+const NC_PATH               = NC_NS + "path";
+
+// nsIWebHandlerApp::uriTemplate
+const NC_URI_TEMPLATE       = NC_NS + "uriTemplate";
+
 
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 
-// RDF properties
-
-const NC_NS                 = "http://home.netscape.com/NC-rdf#";
-
-// nsIHandlerInfo
-const NC_PREFERRED_APP      = NC_NS + "externalApplication";
-const NC_SAVE_TO_DISK       = NC_NS + "saveToDisk";
-const NC_HANDLE_INTERNALLY  = NC_NS + "handleInternal"; // sic: adverbally challenged!
-const NC_USE_SYSTEM_DEFAULT = NC_NS + "useSystemDefault";
-const NC_ALWAYS_ASK         = NC_NS + "alwaysAsk";
-
-// nsIHandlerApp
-const NC_PRETTY_NAME        = NC_NS + "prettyName";
-
-// nsILocalHandlerApp
-const NC_PATH               = NC_NS + "path";
-
-// nsIWebHandlerApp
-const NC_URI_TEMPLATE       = NC_NS + "uriTemplate";
 
 function HamburgerHelperService() {}
 
@@ -75,10 +100,54 @@ HamburgerHelperService.prototype = {
   //**************************************************************************//
   // nsIHamburgerHelperService
 
-  setPreferredHandler: function HHS_setPreferredHandler(aContentType,
+  setPreferredAction: function HHS_setPreferredAction(aHandlerInfo,
+                                                      aPreferredAction) {
+    this._ensureRecordsForType(aHandlerInfo);
+
+    var infoID = this._getInfoID(aHandlerInfo);
+
+    switch(aPreferredAction) {
+      case Ci.nsIHandlerInfo.saveToDisk:
+        this._setLiteral(infoID, NC_SAVE_TO_DISK, "true");
+        this._removeValue(infoID, NC_HANDLE_INTERNALLY);
+        this._removeValue(infoID, NC_USE_SYSTEM_DEFAULT);
+        break;
+
+      case Ci.nsIHandlerInfo.handleInternally:
+        this._setLiteral(infoID, NC_HANDLE_INTERNALLY, "true");
+        this._removeValue(infoID, NC_SAVE_TO_DISK);
+        this._removeValue(infoID, NC_USE_SYSTEM_DEFAULT);
+        break;
+
+      case Ci.nsIHandlerInfo.useSystemDefault:
+        this._setLiteral(infoID, NC_USE_SYSTEM_DEFAULT, "true");
+        this._removeValue(infoID, NC_SAVE_TO_DISK);
+        this._removeValue(infoID, NC_HANDLE_INTERNALLY);
+        break;
+
+      // This value is indicated in the datastore either by the absence of
+      // the three properties or by setting them all "false".  Of these two
+      // options, the former seems preferable, because it reduces the size
+      // of the RDF file and thus the amount of stuff we have to parse.
+      case Ci.nsIHandlerInfo.useHelperApp:
+      // XXX Should we throw instead of assuming the default if we don't
+      // recognize the value?
+      default:
+        this._removeValue(infoID, NC_SAVE_TO_DISK);
+        this._removeValue(infoID, NC_HANDLE_INTERNALLY);
+        this._removeValue(infoID, NC_USE_SYSTEM_DEFAULT);
+        break;
+    }
+
+    // XXX Should we also update aHandlerInfo::preferredAction?
+  },
+
+  setPreferredHandler: function HHS_setPreferredHandler(aHandlerInfo,
                                                         aPreferredHandler) {
-    var typeID = this._getTypeID(aContentType);
-    var handlerID = this._getPreferredHandlerID(aContentType);
+    this._ensureRecordsForType(aHandlerInfo);
+
+    var infoID = this._getInfoID(aHandlerInfo);
+    var handlerID = this._getPreferredHandlerID(aHandlerInfo);
 
     // FIXME: when we switch from RDF to something with transactions (like
     // SQLite), enclose the following changes in a transaction so they all
@@ -100,67 +169,30 @@ HamburgerHelperService.prototype = {
       this._removeValue(handlerID, NC_PATH);
     }
 
-    // Finally, make the handler app be the preferred app for the handler info.
+    // Finally, make the handler app be the preferred app for the type.
     // Note: at least some code completely ignores this setting and assumes
-    // the preferred app is the one whose RDF URI follows the correct pattern
-    // (i.e. |urn:(mimetype|scheme):externalApplication:<type>|).
-    this._setResource(typeID, NC_PREFERRED_APP, handlerID);
+    // the preferred app is the one whose URI follows the pattern
+    // |urn:(mimetype|scheme):externalApplication:<type>|.
+    this._setResource(infoID, NC_PREFERRED_APP, handlerID);
 
-    // XXX Should we also update aContentType to take the change into account?
+    // XXX Should we also update aHandlerInfo::preferredApplicationHandler?
   },
 
-  setPreferredAction: function HHS_setPreferredAction(aContentType,
-                                                      aPreferredAction) {
-    var typeID = this._getTypeID(aContentType);
+  setAlwaysAsk: function HHS_setAlwaysAsk(aHandlerInfo, aAlwaysAsk) {
+    this._ensureRecordsForType(aHandlerInfo);
 
-    switch(aPreferredAction) {
-      case Ci.nsIHandlerInfo.saveToDisk:
-        this._setLiteral(typeID, NC_SAVE_TO_DISK, "true");
-        this._removeValue(typeID, NC_HANDLE_INTERNALLY);
-        this._removeValue(typeID, NC_USE_SYSTEM_DEFAULT);
-        break;
+    var infoID = this._getInfoID(aHandlerInfo);
+    this._setLiteral(infoID, NC_ALWAYS_ASK, aAlwaysAsk ? "true" : "false");
 
-      case Ci.nsIHandlerInfo.handleInternally:
-        this._setLiteral(typeID, NC_HANDLE_INTERNALLY, "true");
-        this._removeValue(typeID, NC_SAVE_TO_DISK);
-        this._removeValue(typeID, NC_USE_SYSTEM_DEFAULT);
-        break;
-
-      case Ci.nsIHandlerInfo.useSystemDefault:
-        this._setLiteral(typeID, NC_USE_SYSTEM_DEFAULT, "true");
-        this._removeValue(typeID, NC_SAVE_TO_DISK);
-        this._removeValue(typeID, NC_HANDLE_INTERNALLY);
-        break;
-
-      // This value is indicated in the datastore either by the absence of
-      // the three properties or by setting them all "false".  Of these two
-      // options, the former seems preferable, because it reduces the size
-      // of the RDF file and thus the amount of stuff we have to parse.
-      case Ci.nsIHandlerInfo.useHelperApp:
-      // XXX Should we throw instead if we don't recognize the value?
-      default:
-        this._removeValue(typeID, NC_SAVE_TO_DISK);
-        this._removeValue(typeID, NC_HANDLE_INTERNALLY);
-        this._removeValue(typeID, NC_USE_SYSTEM_DEFAULT);
-        break;
-    }
-
-    // XXX Should we also update aContentType to take the change into account?
+    // XXX Should we also update aHandlerInfo::alwaysAskBeforeHandling?
   },
 
-  setAlwaysAsk: function HHS_setAlwaysAsk(aContentType, aAlwaysAsk) {
-    var typeID = this._getTypeID(aContentType);
-    this._setLiteral(typeID, NC_ALWAYS_ASK, aAlwaysAsk ? "true" : "false");
-
-    // XXX Should we also update aContentType to take the change into account?
-  },
-
-  addPossibleHandler: function HHS_addPossibleHandler(aContentType,
+  addPossibleHandler: function HHS_addPossibleHandler(aHandlerInfo,
                                                       aPossibleHandler) {
     throw Cr.NS_ERROR_NOT_IMPLEMENTED;
   },
 
-  removePossibleHandler: function HHS_removePossibleHandler(aContentType,
+  removePossibleHandler: function HHS_removePossibleHandler(aHandlerInfo,
                                                             aPossibleHandler) {
     throw Cr.NS_ERROR_NOT_IMPLEMENTED;
   },
@@ -176,6 +208,15 @@ HamburgerHelperService.prototype = {
       this.__rdf = Cc["@mozilla.org/rdf/rdf-service;1"].
                    getService(Ci.nsIRDFService);
     return this.__rdf;
+  },
+
+  // RDF Container Utils
+  __containerUtils: null,
+  get _containerUtils() {
+    if (!this.__containerUtils)
+      this.__containerUtils = Cc["@mozilla.org/rdf/container-utils;1"].
+                              getService(Ci.nsIRDFContainerUtils);
+    return this.__containerUtils;
   },
 
   // RDF datasource containing content handling config (i.e. mimeTypes.rdf)
@@ -198,51 +239,165 @@ HamburgerHelperService.prototype = {
   },
 
   /**
-   * Return the unique identifier for a content type record, which for the
-   * RDF-based datastore is a URI of the form: |urn:(mimetype|scheme):<type>|.
-   *
+   * Get the string value identifying the given content type (i.e. the MIME
+   * type or protocol scheme).
+   * 
    * FIXME: this should be a property of nsIHandlerInfo.
-   *
-   * @param aContentType {nsIHandlerInfo} the type for which to get the ID
+   * 
+   * @param aHandlerInfo {nsIHandlerInfo} the type for which to get the string
    */
-  _getTypeID: function HHS__getTypeID(aContentType) {
+  _getType: function HHS__getType(aHandlerInfo) {
     // FIXME: once nsIHandlerInfo supports retrieving the scheme
-    // (and differentiating between MIME and protocol infos), implement
-    // support for protocol handlers.
-    var mimeInfo = aContentType.QueryInterface(Ci.nsIMIMEInfo);
-    try       { var mimeType = mimeInfo.MIMEType }
+    // (and differentiating between MIME and protocol content types),
+    // implement support for protocols.
+    var mimeInfo = aHandlerInfo.QueryInterface(Ci.nsIMIMEInfo);
+    try       { var type = mimeInfo.MIMEType }
     catch(ex) { throw Cr.NS_ERROR_NOT_IMPLEMENTED }
 
-    var id = "urn:mimetype:" + mimeType;
+    return type;
+  },
+
+  /**
+   * Return the unique identifier for a content type record, which stores
+   * the editable and value fields plus a reference to the type's handler.
+   * 
+   * FIXME: the ID should be a property of nsIHandlerInfo.
+   * 
+   * |urn:(mimetype|scheme):<type>|
+   * 
+   * @param aHandlerInfo {nsIHandlerInfo} the type for which to get the ID
+   */
+  _getTypeID: function HHS__getTypeID(aHandlerInfo) {
+    // FIXME: once nsIHandlerInfo supports retrieving the scheme
+    // (and differentiating between MIME and protocol content types),
+    // implement support for protocols.
+
+    var id = "urn:mimetype:" + this._getType(aHandlerInfo);
 
     return id;
   },
 
   /**
-   * Return the unique identifier for a content type record, which for the
-   * RDF-based datastore is a URI of the form: |urn:(mimetype|scheme):<type>|.
-   *
-   * FIXME: this should be a property of nsIHandlerApp, and we should retrieve
-   * the preferred handler for a given content type via the
-   * NC:externalApplication property rather than counting on preferred handlers
-   * to have URIs of a specific form (i.e. handlers should have arbitrary
-   * unique IDs that don't change depending on whether or not they are preferred
-   * handlers for one or more content types).
+   * Return the unique identifier for a type info record, which stores
+   * the preferredAction and alwaysAsk fields plus a reference to the preferred
+   * handler.  Roughly equivalent to the nsIHandlerInfo interface.
    * 
-   * @param aContentType {nsIHandlerInfo} the type for which to get the ID
+   * FIXME: the type info record should be merged into the type record,
+   * since there's a one to one relationship between them, and this record
+   * merely stores additional attributes of a content type.
+   * 
+   * |urn:(mimetype|scheme):handler:<type>|
+   * 
+   * @param aHandlerInfo {nsIHandlerInfo} the type for which to get the ID
    */
-  _getPreferredHandlerID: function HHS__getPreferredHandlerID(aContentType) {
+  _getInfoID: function HHS__getInfoID(aHandlerInfo) {
     // FIXME: once nsIHandlerInfo supports retrieving the scheme
-    // (and differentiating between MIME and protocol types), implement
-    // support for protocol handlers by constructing the handlerID
-    // based on whether the handler is for a MIME type or a protocol.
-    var mimeInfo = aContentType.QueryInterface(Ci.nsIMIMEInfo);
-    try       { var mimeType = mimeInfo.MIMEType }
-    catch(ex) { throw Cr.NS_ERROR_NOT_IMPLEMENTED }
+    // (and differentiating between MIME and protocol content types),
+    // implement support for protocols.
 
-    var id = "urn:mimetype:externalApplication:" + mimeType;
+    var id = "urn:mimetype:handler:" + this._getType(aHandlerInfo);
 
     return id;
+  },
+
+  /**
+   * Return the unique identifier for a preferred handler record, which stores
+   * information about the preferred handler for a given content type, including
+   * its human-readable name and the path to its executable (for a local app)
+   * or its URI template (for a web app).
+   * 
+   * |urn:(mimetype|scheme):externalApplication:<type>|
+   *
+   * FIXME: this should be a property of nsIHandlerApp.
+   *
+   * FIXME: this should be an arbitrary ID, and we should retrieve it from
+   * the datastore for a given content type via the NC:ExternalApplication
+   * property rather than looking for a specific ID, so a handler doesn't
+   * have to change IDs when it goes from being a possible handler to being
+   * the preferred one.
+   * 
+   * @param aHandlerInfo {nsIHandlerInfo} the type for which to get the ID
+   */
+  _getPreferredHandlerID: function HHS__getPreferredHandlerID(aHandlerInfo) {
+    // FIXME: once nsIHandlerInfo supports retrieving the scheme
+    // (and differentiating between MIME and protocol content types),
+    // implement support for protocols.
+
+    var id = "urn:mimetype:externalApplication:" + this._getType(aHandlerInfo);
+
+    return id;
+  },
+
+  _getTypeList: function HHS__getTypeList(aHandlerInfo) {
+    // FIXME: once nsIHandlerInfo supports retrieving the scheme
+    // (and differentiating between MIME and protocol content types),
+    // implement support for protocols.
+
+    var source = this._rdf.GetResource("urn:mimetypes");
+    var property = this._rdf.GetResource(NC_MIME_TYPES);
+    var target = this._rdf.GetResource("urn:mimetypes:root");
+
+    // Make sure we have an arc from the source to the target.
+    if (!this._ds.HasAssertion(source, property, target, true))
+      this._ds.Assert(source, property, target, true);
+
+    // Make sure the target is a container.
+    if (!this._containerUtils.IsContainer(this._ds, target))
+      this._containerUtils.MakeSeq(this._ds, target);
+
+    // Get the type list as an RDF container.
+    var typeList = Cc["@mozilla.org/rdf/container;1"].
+                   createInstance(Ci.nsIRDFContainer);
+    typeList.Init(this._ds, target);
+
+    return typeList;
+  },
+
+  /**
+   * Make sure there are records in the datasource for the given content type
+   * by creating them if they don't already exist.  We have to do this before
+   * storing any data via nsIHamburgerHelperService methods, because we can't
+   * assume the presence of the records (the nsIHandlerInfo object might have
+   * been created from the OS), and the records have to all be there in order
+   * for the helper app service to properly construct an nsIHandlerInfo object
+   * for the type.
+   *
+   * Based on old downloadactions.js::_ensureMIMERegistryEntry.
+   *
+   * @param aHandlerInfo {nsIHandlerInfo} the type to make sure has a record
+   */
+  _ensureRecordsForType: function HHS__ensureRecordsForType(aHandlerInfo) {
+    // Get the list of types.
+    var typeList = this._getTypeList(aHandlerInfo);
+
+    // If there's already a record in the datastore for this type, then we
+    // don't need to do anything more.
+    var typeID = this._getTypeID(aHandlerInfo);
+    var type = this._rdf.GetResource(typeID);
+    if (typeList.IndexOf(type) != -1)
+      return;
+
+    // Create a basic type record for this type.
+    typeList.AppendElement(type);
+    this._setLiteral(typeID, NC_EDITABLE, "true");
+    this._setLiteral(typeID, NC_VALUE, this._getType(aHandlerInfo));
+    
+    // Create an basic info record for this type.
+    var infoID = this._getInfoID(aHandlerInfo);
+    this._setLiteral(infoID, NC_ALWAYS_ASK, "false");
+    this._setResource(typeID, NC_HANDLER_INFO, infoID);
+    // XXX Shouldn't we set preferredAction to useSystemDefault?
+    // That's what it is if there's no record in the datastore; why should it
+    // change to useHelperApp just because we add a record to the datastore?
+    
+    // Create a basic preferred handler record for this type.
+    // XXX Not sure this is necessary, since preferred handlers are optional,
+    // and nsExternalHelperAppService::FillHandlerInfoForTypeFromDS doesn't seem
+    // to require the record , but downloadactions.js::_ensureMIMERegistryEntry
+    // used to create it, so we'll do the same.
+    var preferredHandlerID = this._getPreferredHandlerID(aHandlerInfo);
+    this._setLiteral(preferredHandlerID, NC_PATH, "");
+    this._setResource(infoID, NC_PREFERRED_APP, preferredHandlerID);
   },
 
   /**

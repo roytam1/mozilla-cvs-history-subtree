@@ -43,49 +43,48 @@ interface nsIHandlerApp;
 interface nsIHamburgerHelperService : nsISupports
 {
   /**
-   * Set the preferred handler for a given content type.
-   *
-   * @param aContentType      {nsIHandlerInfo}  the content type
-   * @param aPreferredHandler {nsIHandlerApp}   the preferred handler
-   */
-  void setPreferredHandler(in nsIHandlerInfo aContentType,
-                           in nsIHandlerApp aPreferredHandler);
-
-  /**
    * Set the preferred action for a given content type.
    *
-   * @param aContentType      {nsIHandlerInfo}  the content type
+   * @param aHandlerInfo      {nsIHandlerInfo}  the content type
    * @param aPreferredAction  {integer}         the preferred action
    *        (one of the constants defined in nsIHandlerInfo)
    */
-  void setPreferredAction(in nsIHandlerInfo aContentType,
+  void setPreferredAction(in nsIHandlerInfo aHandlerInfo,
                           in long aPreferredAction);
+
+  /**
+   * Set the preferred handler for a given content type.
+   *
+   * @param aHandlerInfo      {nsIHandlerInfo}  the content type
+   * @param aPreferredHandler {nsIHandlerApp}   the preferred handler
+   */
+  void setPreferredHandler(in nsIHandlerInfo aHandlerInfo,
+                           in nsIHandlerApp aPreferredHandler);
 
   /**
    * Set the "always ask" flag for a given content type, which indicates
    * whether or not to always prompt the user before handling the type.
    *
-   * @param aContentType  {nsIHandlerInfo}  the content type
+   * @param aHandlerInfo  {nsIHandlerInfo}  the content type
    * @param aAlwaysAsk    {boolean}         whether or not to always ask
    */
-  void setAlwaysAsk(in nsIHandlerInfo aContentType, in boolean aAlwaysAsk);
+  void setAlwaysAsk(in nsIHandlerInfo aHandlerInfo, in boolean aAlwaysAsk);
 
   /**
    * Add a handler to the list of possible handlers for the given content type.
    *
-   * @param aContentType      {nsIHandlerInfo}  the content type
+   * @param aHandlerInfo      {nsIHandlerInfo}  the content type
    * @param aPossibleHandler  {nsIHandlerApp}   the possible handler
    */
-  void addPossibleHandler(in nsIHandlerInfo aContentType,
+  void addPossibleHandler(in nsIHandlerInfo aHandlerInfo,
                           in nsIHandlerApp aPossibleHandler);
 
   /**
-   * Remove a handler from the list of possible handlers for the given content
-   * type.
+   * Remove a handler from the list of possible handlers for the given type.
    *
-   * @param aContentType      {nsIHandlerInfo}  the content type
+   * @param aHandlerInfo      {nsIHandlerInfo}  the content type
    * @param aPossibleHandler  {nsIHandlerApp}   the possible handler
    */
-  void removePossibleHandler(in nsIHandlerInfo aContentType,
+  void removePossibleHandler(in nsIHandlerInfo aHandlerInfo,
                              in nsIHandlerApp aPossibleHandler);
 };
