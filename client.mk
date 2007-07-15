@@ -1291,9 +1291,6 @@ ZAP_BRANCH_MODIFIED_FILES = \
 
 
 ZAP_BRANCH_NEW_FILES = \
-	js/src/xpconnect/idl/xpcIJSWeakRef.idl \
-	js/src/xpconnect/src/xpcJSWeakRef.h \
-	js/src/xpconnect/src/xpcJSWeakRef.cpp \
 	netwerk/base/public/nsIUDPSocket.idl \
 	netwerk/base/src/nsUDPSocket.cpp \
 	netwerk/base/src/nsUDPSocket.h \

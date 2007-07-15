@@ -998,7 +998,7 @@ WeakHash.fun(
   function set(key, value) {
     if (++this._hashSize > this.reapThreshold)
       this.reapStaleReferences();
-    hashset(this, key, Components.utils.getWeakRef(value));
+    hashset(this, key, Components.utils.getWeakReference(value));
   });
 
 WeakHash.fun(
