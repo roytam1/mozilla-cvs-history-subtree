@@ -126,6 +126,8 @@
 #include "nsIXPCToolsProfiler.h"
 #endif
 
+#include "nsIThreadInternal.h"
+
 #ifdef XPC_IDISPATCH_SUPPORT
 // This goop was added because of EXCEPINFO in ThrowCOMError
 // This include is here, because it needs to occur before the undefines below
@@ -426,6 +428,7 @@ const PRBool OBJ_IS_NOT_GLOBAL = PR_FALSE;
 struct JSObjectRefcounts;
 
 class nsXPConnect : public nsIXPConnect,
+                    public nsIThreadObserver,
                     public nsSupportsWeakReference,
                     public nsCycleCollectionLanguageRuntime,
                     public nsCycleCollectionParticipant
@@ -434,6 +437,7 @@ public:
     // all the interface method declarations...
     NS_DECL_ISUPPORTS
     NS_DECL_NSIXPCONNECT
+    NS_DECL_NSITHREADOBSERVER
 
     // non-interface implementation
 public:
@@ -672,7 +676,7 @@ public:
 
     void DebugDump(PRInt16 depth);
 
-    void SystemIsBeingShutDown(XPCCallContext* ccx);
+    void SystemIsBeingShutDown(JSContext* cx);
 
     PRThread* GetThreadRunningGC() const {return mThreadRunningGC;}
 
@@ -1130,10 +1134,13 @@ public:
                         JSBool OKIfNotInitialized = JS_FALSE);
 
     static void
-    SystemIsBeingShutDown(XPCCallContext& ccx);
+    SystemIsBeingShutDown(JSContext* cx);
 
     static void
     TraceJS(JSTracer* trc, XPCJSRuntime* rt);
+
+    static void
+    SuspectAllWrappers(XPCJSRuntime* rt);
 
     static void
     FinishedMarkPhaseOfGC(JSContext* cx, XPCJSRuntime* rt);
@@ -1765,7 +1772,7 @@ public:
 
     void JSProtoObjectFinalized(JSContext *cx, JSObject *obj);
 
-    void SystemIsBeingShutDown(XPCCallContext& ccx);
+    void SystemIsBeingShutDown(JSContext* cx);
 
     void DebugDump(PRInt16 depth);
 
@@ -2023,7 +2030,7 @@ public:
 
     void FlatJSObjectFinalized(JSContext *cx, JSObject *obj);
 
-    void SystemIsBeingShutDown(XPCCallContext& ccx);
+    void SystemIsBeingShutDown(JSContext* cx);
 
 #ifdef XPC_DETECT_LEADING_UPPERCASE_ACCESS_ERRORS
     // This will try to find a member that is of the form "camelCased"

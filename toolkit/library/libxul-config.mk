@@ -191,7 +191,7 @@ endif
 endif
 
 ifeq (,$(filter beos os2 mac photon cocoa windows,$(MOZ_WIDGET_TOOLKIT)))
-ifdef MOZ_RDF
+ifdef MOZ_XUL
 ifdef MOZ_XPFE_COMPONENTS
 COMPONENT_LIBS += fileview
 DEFINES += -DMOZ_FILEVIEW
@@ -322,6 +322,10 @@ COMPONENT_LIBS += \
 	zap_netutils \
 	zmk \
 	$(NULL)
+endif
+
+ifneq (,$(filter layout-debug,$(MOZ_EXTENSIONS)))
+COMPONENT_LIBS += gkdebug
 endif
 
 ifdef GC_LEAK_DETECTOR

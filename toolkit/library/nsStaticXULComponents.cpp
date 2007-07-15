@@ -160,6 +160,12 @@
 #define SYSTEMPREF_MODULES
 #endif
 
+#ifdef MOZ_ENABLE_EXTENSION_LAYOUT_DEBUG
+#define LAYOUT_DEBUG_MODULE MODULE(nsLayoutDebugModule)
+#else
+#define LAYOUT_DEBUG_MODULE
+#endif
+
 #ifdef MOZ_PLUGINS
 #define PLUGINS_MODULES \
     MODULE(nsPluginModule)
@@ -204,7 +210,7 @@
 #define JSDEBUGGER_MODULES
 #endif
 
-#if defined(MOZ_FILEVIEW) && defined(MOZ_XPFE_COMPONENTS)
+#if defined(MOZ_FILEVIEW) && defined(MOZ_XPFE_COMPONENTS) && defined(MOZ_XUL)
 #define FILEVIEW_MODULE MODULE(nsFileViewModule)
 #else
 #define FILEVIEW_MODULE
@@ -302,6 +308,7 @@
     MODULE(NSS)                              \
     SYSTEMPREF_MODULES                       \
     SPELLCHECK_MODULE                        \
+    LAYOUT_DEBUG_MODULE                      \
     ZAP_MODULES                              \
     /* end of list */
 
