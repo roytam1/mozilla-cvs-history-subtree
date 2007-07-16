@@ -139,7 +139,7 @@ $AliveTest                = 1;
 # Note that win32 may not need \@, depends on ' or ".
 # :pserver:$ENV{USER}%netscape.com@cvs.mozilla.org:/cvsroot
 
-#$moz_cvsroot   = $ENV{CVSROOT};
+# CONFIG: $moz_cvsroot   = '%mozillaCvsroot%';
 $moz_cvsroot   = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 
 $MofoRoot   = ":ext:cltbld\@cvs.mozilla.org:/mofo";
@@ -173,7 +173,9 @@ $BuildNameExtra = 'Tb-Release';
 $BuildTree  = 'MozillaRelease';
 
 #$BuildName = '';
+# CONFIG: $BuildTag = '%productTag%_RELEASE';
 $BuildTag = 'THUNDERBIRD_2_0_0_4_RELEASE';
+
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -202,12 +204,15 @@ $package_creation_path = "/mail/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
 $mac_bundle_path = "/mail/app";
 $ssh_version   = "2";
+# CONFIG: $ssh_user = "%sshUser%";
 $ssh_user      = "cltbld";
+# CONFIG: $ssh_server = "%sshServer%";
 $ssh_server    = "stage.mozilla.org";
 $ftp_path      = "/home/ftp/pub/thunderbird/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly";
 $tbox_ftp_path = "/home/ftp/pub/thunderbird/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/tinderbox-builds";
+# CONFIG: $milestone     = 'thunderbird%version%';
 $milestone     = "thunderbird2.0.0.4";
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
