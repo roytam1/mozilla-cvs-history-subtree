@@ -86,27 +86,41 @@ const NC_URI_TEMPLATE       = NC_NS + "uriTemplate";
 Cu.import("resource://gre/modules/XPCOMUtils.jsm");
 
 
-function HamburgerHelperService() {}
+function HandlerService() {}
 
-HamburgerHelperService.prototype = {
+HandlerService.prototype = {
   //**************************************************************************//
   // XPCOM Plumbing
 
-  classDescription: "Hamburger Helper Service",
+  classDescription: "Handler Service",
   classID:          Components.ID("{32314cc8-22f7-4f7f-a645-1a45453ba6a6}"),
-  contractID:       "@mozilla.org/uriloader/hamburger-helper-service;1",
-  QueryInterface:   XPCOMUtils.generateQI([Ci.nsIHamburgerHelperService]),
+  contractID:       "@mozilla.org/uriloader/handler-service;1",
+  QueryInterface:   XPCOMUtils.generateQI([Ci.nsIHandlerService]),
+
 
   //**************************************************************************//
-  // nsIHamburgerHelperService
+  // nsIHandlerService
 
-  setPreferredAction: function HHS_setPreferredAction(aHandlerInfo,
-                                                      aPreferredAction) {
+  store: function HS_store(aHandlerInfo) {
+    // FIXME: when we switch from RDF to something with transactions (like
+    // SQLite), enclose the following changes in a transaction so they all
+    // get rolled back if any of them fail and we don't leave the datastore
+    // in an inconsistent state.
+
     this._ensureRecordsForType(aHandlerInfo);
+    this._storePreferredAction(aHandlerInfo);
+    this._storePreferredHandler(aHandlerInfo);
+    this._storeAlwaysAsk(aHandlerInfo);
+  },
 
+
+  //**************************************************************************//
+  // Storage Methods
+
+  _storePreferredAction: function HS__storePreferredAction(aHandlerInfo) {
     var infoID = this._getInfoID(aHandlerInfo);
 
-    switch(aPreferredAction) {
+    switch(aHandlerInfo.preferredAction) {
       case Ci.nsIHandlerInfo.saveToDisk:
         this._setLiteral(infoID, NC_SAVE_TO_DISK, "true");
         this._removeValue(infoID, NC_HANDLE_INTERNALLY);
@@ -138,68 +152,44 @@ HamburgerHelperService.prototype = {
         this._removeValue(infoID, NC_USE_SYSTEM_DEFAULT);
         break;
     }
-
-    // XXX Should we also update aHandlerInfo::preferredAction?
   },
 
-  setPreferredHandler: function HHS_setPreferredHandler(aHandlerInfo,
-                                                        aPreferredHandler) {
-    this._ensureRecordsForType(aHandlerInfo);
-
+  _storePreferredHandler: function HS__storePreferredHandler(aHandlerInfo) {
     var infoID = this._getInfoID(aHandlerInfo);
     var handlerID = this._getPreferredHandlerID(aHandlerInfo);
-
-    // FIXME: when we switch from RDF to something with transactions (like
-    // SQLite), enclose the following changes in a transaction so they all
-    // get rolled back if any of them fail and we don't leave the datastore
-    // in an inconsistent state.
+    var handler = aHandlerInfo.preferredApplicationHandler;
 
     // First add a record for the preferred app to the datasource.  In the
     // process we also need to remove any vestiges of an existing record, so
     // we remove any properties that we aren't overwriting.
-    this._setLiteral(handlerID, NC_PRETTY_NAME, aPreferredHandler.name);
+    this._setLiteral(handlerID, NC_PRETTY_NAME, handler.name);
     try {
-      aPreferredHandler.QueryInterface(Ci.nsILocalHandlerApp);
-      this._setLiteral(handlerID, NC_PATH, aPreferredHandler.executable.path);
+      handler.QueryInterface(Ci.nsILocalHandlerApp);
+      this._setLiteral(handlerID, NC_PATH, handler.executable.path);
       this._removeValue(handlerID, NC_URI_TEMPLATE);
     }
     catch(ex) {
-      aPreferredHandler.QueryInterface(Ci.nsIWebHandlerApp);
-      this._setLiteral(handlerID, NC_URI_TEMPLATE, aPreferredHandler.uriTemplate);
+      handler.QueryInterface(Ci.nsIWebHandlerApp);
+      this._setLiteral(handlerID, NC_URI_TEMPLATE, handler.uriTemplate);
       this._removeValue(handlerID, NC_PATH);
     }
 
-    // Finally, make the handler app be the preferred app for the type.
+    // Finally, make the handler app be the preferred app for the handler info.
     // Note: at least some code completely ignores this setting and assumes
-    // the preferred app is the one whose URI follows the pattern
-    // |urn:(mimetype|scheme):externalApplication:<type>|.
+    // the preferred app is the one whose URI follows the appropriate pattern.
     this._setResource(infoID, NC_PREFERRED_APP, handlerID);
-
-    // XXX Should we also update aHandlerInfo::preferredApplicationHandler?
   },
 
-  setAlwaysAsk: function HHS_setAlwaysAsk(aHandlerInfo, aAlwaysAsk) {
-    this._ensureRecordsForType(aHandlerInfo);
-
+  _storeAlwaysAsk: function HS__storeAlwaysAsk(aHandlerInfo) {
     var infoID = this._getInfoID(aHandlerInfo);
-    this._setLiteral(infoID, NC_ALWAYS_ASK, aAlwaysAsk ? "true" : "false");
-
-    // XXX Should we also update aHandlerInfo::alwaysAskBeforeHandling?
-  },
-
-  addPossibleHandler: function HHS_addPossibleHandler(aHandlerInfo,
-                                                      aPossibleHandler) {
-    throw Cr.NS_ERROR_NOT_IMPLEMENTED;
-  },
-
-  removePossibleHandler: function HHS_removePossibleHandler(aHandlerInfo,
-                                                            aPossibleHandler) {
-    throw Cr.NS_ERROR_NOT_IMPLEMENTED;
+    this._setLiteral(infoID,
+                     NC_ALWAYS_ASK,
+                     aHandlerInfo.alwaysAskBeforeHandling ? "true" : "false");
   },
 
 
   //**************************************************************************//
-  // Helper Methods
+  // Storage Utils
 
   // RDF Service
   __rdf: null,
@@ -246,7 +236,7 @@ HamburgerHelperService.prototype = {
    * 
    * @param aHandlerInfo {nsIHandlerInfo} the type for which to get the string
    */
-  _getType: function HHS__getType(aHandlerInfo) {
+  _getType: function HS__getType(aHandlerInfo) {
     // FIXME: once nsIHandlerInfo supports retrieving the scheme
     // (and differentiating between MIME and protocol content types),
     // implement support for protocols.
@@ -267,7 +257,7 @@ HamburgerHelperService.prototype = {
    * 
    * @param aHandlerInfo {nsIHandlerInfo} the type for which to get the ID
    */
-  _getTypeID: function HHS__getTypeID(aHandlerInfo) {
+  _getTypeID: function HS__getTypeID(aHandlerInfo) {
     // FIXME: once nsIHandlerInfo supports retrieving the scheme
     // (and differentiating between MIME and protocol content types),
     // implement support for protocols.
@@ -290,7 +280,7 @@ HamburgerHelperService.prototype = {
    * 
    * @param aHandlerInfo {nsIHandlerInfo} the type for which to get the ID
    */
-  _getInfoID: function HHS__getInfoID(aHandlerInfo) {
+  _getInfoID: function HS__getInfoID(aHandlerInfo) {
     // FIXME: once nsIHandlerInfo supports retrieving the scheme
     // (and differentiating between MIME and protocol content types),
     // implement support for protocols.
@@ -318,7 +308,7 @@ HamburgerHelperService.prototype = {
    * 
    * @param aHandlerInfo {nsIHandlerInfo} the type for which to get the ID
    */
-  _getPreferredHandlerID: function HHS__getPreferredHandlerID(aHandlerInfo) {
+  _getPreferredHandlerID: function HS__getPreferredHandlerID(aHandlerInfo) {
     // FIXME: once nsIHandlerInfo supports retrieving the scheme
     // (and differentiating between MIME and protocol content types),
     // implement support for protocols.
@@ -328,7 +318,7 @@ HamburgerHelperService.prototype = {
     return id;
   },
 
-  _getTypeList: function HHS__getTypeList(aHandlerInfo) {
+  _getTypeList: function HS__getTypeList(aHandlerInfo) {
     // FIXME: once nsIHandlerInfo supports retrieving the scheme
     // (and differentiating between MIME and protocol content types),
     // implement support for protocols.
@@ -356,17 +346,16 @@ HamburgerHelperService.prototype = {
   /**
    * Make sure there are records in the datasource for the given content type
    * by creating them if they don't already exist.  We have to do this before
-   * storing any data via nsIHamburgerHelperService methods, because we can't
-   * assume the presence of the records (the nsIHandlerInfo object might have
-   * been created from the OS), and the records have to all be there in order
-   * for the helper app service to properly construct an nsIHandlerInfo object
-   * for the type.
+   * storing any specific data, because we can't assume the presence
+   * of the records (the nsIHandlerInfo object might have been created
+   * from the OS), and the records have to all be there in order for the helper
+   * app service to properly construct an nsIHandlerInfo object for the type.
    *
    * Based on old downloadactions.js::_ensureMIMERegistryEntry.
    *
    * @param aHandlerInfo {nsIHandlerInfo} the type to make sure has a record
    */
-  _ensureRecordsForType: function HHS__ensureRecordsForType(aHandlerInfo) {
+  _ensureRecordsForType: function HS__ensureRecordsForType(aHandlerInfo) {
     // Get the list of types.
     var typeList = this._getTypeList(aHandlerInfo);
 
@@ -382,7 +371,7 @@ HamburgerHelperService.prototype = {
     this._setLiteral(typeID, NC_EDITABLE, "true");
     this._setLiteral(typeID, NC_VALUE, this._getType(aHandlerInfo));
     
-    // Create an basic info record for this type.
+    // Create a basic info record for this type.
     var infoID = this._getInfoID(aHandlerInfo);
     this._setLiteral(infoID, NC_ALWAYS_ASK, "false");
     this._setResource(typeID, NC_HANDLER_INFO, infoID);
@@ -407,7 +396,7 @@ HamburgerHelperService.prototype = {
    * @param propertyURI {string} the URI of the property
    * @param value       {string} the literal value
    */
-  _setLiteral: function HHS__setLiteral(sourceURI, propertyURI, value) {
+  _setLiteral: function HS__setLiteral(sourceURI, propertyURI, value) {
     var source = this._rdf.GetResource(sourceURI);
     var property = this._rdf.GetResource(propertyURI);
     var target = this._rdf.GetLiteral(value);
@@ -422,7 +411,7 @@ HamburgerHelperService.prototype = {
    * @param propertyURI {string} the URI of the property
    * @param resourceURI {string} the URI of the resource
    */
-  _setResource: function HHS__setResource(sourceURI, propertyURI, resourceURI) {
+  _setResource: function HS__setResource(sourceURI, propertyURI, resourceURI) {
     var source = this._rdf.GetResource(sourceURI);
     var property = this._rdf.GetResource(propertyURI);
     var target = this._rdf.GetResource(resourceURI);
@@ -439,7 +428,7 @@ HamburgerHelperService.prototype = {
    * @param property  {nsIRDFResource}  the property
    * @param value     {nsIRDFNode}      the target
    */
-  _setTarget: function HHS__setTarget(source, property, target) {
+  _setTarget: function HS__setTarget(source, property, target) {
     if (this._ds.hasArcOut(source, property)) {
       var oldTarget = this._ds.GetTarget(source, property, true);
       this._ds.Change(source, property, oldTarget, target);
@@ -454,7 +443,7 @@ HamburgerHelperService.prototype = {
    * @param sourceURI   {string} the URI of the source
    * @param propertyURI {string} the URI of the property
    */
-  _removeValue: function HHS__removeValue(sourceURI, propertyURI) {
+  _removeValue: function HS__removeValue(sourceURI, propertyURI) {
     var source = this._rdf.GetResource(sourceURI);
     var property = this._rdf.GetResource(propertyURI);
 
@@ -511,7 +500,7 @@ HamburgerHelperService.prototype = {
     if (!this._getAppPref("browser.contentHandling.log", false))
       return;
 
-    aMessage = "*** HamburgerHelperService: " + aMessage;
+    aMessage = "*** HandlerService: " + aMessage;
     dump(aMessage + "\n");
     this._consoleSvc.logStringMessage(aMessage);
   }
@@ -519,8 +508,8 @@ HamburgerHelperService.prototype = {
 
 
 //****************************************************************************//
-// XPCOM Plumbing
+// More XPCOM Plumbing
 
 function NSGetModule(compMgr, fileSpec) {
-  return XPCOMUtils.generateModule([HamburgerHelperService]);
+  return XPCOMUtils.generateModule([HandlerService]);
 }

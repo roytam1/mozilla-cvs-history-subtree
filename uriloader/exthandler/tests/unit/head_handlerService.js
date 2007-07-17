@@ -41,7 +41,7 @@ const Ci = Components.interfaces;
 const Cr = Components.results;
 const Cu = Components.utils;
 
-var HamburgerHelperServiceTest = {
+var HandlerServiceTest = {
   //**************************************************************************//
   // Convenience Getters
 
@@ -67,7 +67,7 @@ var HamburgerHelperServiceTest = {
   
   interfaces: [Ci.nsIDirectoryServiceProvider, Ci.nsISupports],
 
-  QueryInterface: function HamburgerHelperServiceTest_QueryInterface(iid) {
+  QueryInterface: function HandlerServiceTest_QueryInterface(iid) {
     if (!this.interfaces.some( function(v) { return iid.equals(v) } ))
       throw Cr.NS_ERROR_NO_INTERFACE;
     return this;
@@ -77,7 +77,7 @@ var HamburgerHelperServiceTest = {
   //**************************************************************************//
   // nsIDirectoryServiceProvider
 
-  getFile: function HamburgerHelperServiceTest_getFile(property, persistent) {
+  getFile: function HandlerServiceTest_getFile(property, persistent) {
     this.log("getFile: requesting " + property);
 
     persistent.value = true;
@@ -92,7 +92,7 @@ var HamburgerHelperServiceTest = {
     // service asks us first for CurProcD and MozBinD.  I wish there was a way
     // to suppress those errors.
     this.log("the following NS_ERROR_FAILURE exception in " +
-             "nsIDirectoryServiceProvider::getFile is is expected, " +
+             "nsIDirectoryServiceProvider::getFile is expected, " +
              "as we don't provide the '" + property + "' file");
     throw Cr.NS_ERROR_FAILURE;
   },
@@ -105,7 +105,7 @@ var HamburgerHelperServiceTest = {
    * Get the datasource file, registering ourselves as a provider
    * of that directory if necessary.
    */
-  getDatasourceFile: function HamburgerHelperServiceTest_getDatasourceFile() {
+  getDatasourceFile: function HandlerServiceTest_getDatasourceFile() {
     var datasourceFile;
 
     try {
@@ -121,7 +121,7 @@ var HamburgerHelperServiceTest = {
     return datasourceFile;
   },
 
-  deleteDatasourceFile: function HamburgerHelperServiceTest_deleteDatasourceFile() {
+  deleteDatasourceFile: function HandlerServiceTest_deleteDatasourceFile() {
     try {
       var file = this.getDatasourceFile();
       if (file.exists())
@@ -135,17 +135,17 @@ var HamburgerHelperServiceTest = {
   /**
    * Log a message to the console and the test log.
    */
-  log: function HamburgerHelperServiceTest_log(message) {
-    message = "*** HamburgerHelperServiceTest: " + message;
+  log: function HandlerServiceTest_log(message) {
+    message = "*** HandlerServiceTest: " + message;
     this._consoleSvc.logStringMessage(message);
     print(message);
   }
 
 };
 
-HamburgerHelperServiceTest.getDatasourceFile();
-//HamburgerHelperServiceTest.deleteDatasourceFile();
-//HamburgerHelperServiceTest.createDatasourceFile();
+HandlerServiceTest.getDatasourceFile();
+//HandlerServiceTest.deleteDatasourceFile();
+//HandlerServiceTest.createDatasourceFile();
 
 // Turn on logging so we can troubleshoot problems with the tests.
 var prefBranch = Cc["@mozilla.org/preferences-service;1"].
