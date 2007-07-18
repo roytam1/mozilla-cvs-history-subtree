@@ -137,8 +137,8 @@ $BuildNameExtra = 'Debug + Leak Test';
 
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
-$BuildTree  = 'MozillaTest';
-#$BuildTree  = 'Firefox';
+#$BuildTree  = 'MozillaTest';
+$BuildTree  = 'Firefox';
 
 #$BuildName = '';
 #$BuildTag = '';
