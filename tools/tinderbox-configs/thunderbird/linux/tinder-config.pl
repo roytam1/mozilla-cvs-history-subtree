@@ -122,7 +122,7 @@ $ProductName              = "Thunderbird";
 #$moz_cvsroot   = $ENV{CVSROOT};
 
 # CONFIG: $moz_cvsroot = '%mozillaCvsroot%';
-$moz_cvsroot = '%mozillaCvsroot%';
+$moz_cvsroot = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 
 #- Set these proper values for your tinderbox server
 #$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
@@ -146,9 +146,9 @@ $ConfigureOnly = 1;
 $LocalizationVersionFile = 'mail/config/version.txt';
 %WGetFiles = (
 # CONFIG:	      "http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/%version%-candidates/rc%rc%/thunderbird-%version%.en-US.linux-i686.tar.gz" =>
-	      "http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/2.0.0.4-candidates/rc1/thunderbird-2.0.0.4.en-US.linux-i686.tar.gz" =>
+"http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/2.0.0.5-candidates/rc1/thunderbird-2.0.0.5.en-US.linux-i686.tar.gz" =>
 # CONFIG: 	      "/builds/tinderbox/Tb-Mozilla1.8-l10n-Release/%l10n_buildPlatform%/thunderbird.tar.gz"
-	      "/builds/tinderbox/Tb-Mozilla1.8-l10n-Release/Linux_2.4.20-28.8_Depend/thunderbird.tar.gz"
+"/builds/tinderbox/Tb-Mozilla1.8-l10n-Release/Linux_2.4.20-28.8_Depend/thunderbird.tar.gz"
 	      );
 
 # CONFIG: $BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Tb-Mozilla1.8-l10n-Release/%l10n_buildPlatform%/thunderbird.tar.gz";
@@ -167,7 +167,7 @@ $BuildTree  = 'Mozilla1.8-l10n';
 
 #$BuildName = '';
 # CONFIG: $BuildTag = '%productTag%_RELEASE';
-$BuildTag = 'THUNDERBIRD_2_0_0_4_RELEASE';
+$BuildTag = 'THUNDERBIRD_2_0_0_5_RELEASE';
 #$BuildTag = 'AVIARY_1_0_1_20050124_BRANCH';
 #$BuildTag = 'FIREFOX_1_0_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
@@ -210,7 +210,7 @@ $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly";
 $tbox_ftp_path = "/home/ftp/pub/thunderbird/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/tinderbox-builds";
 # CONFIG: $milestone     = "thunderbird%version%-l10n";
-$milestone     = "thunderbird2.0.0.4-l10n";
+$milestone     = "thunderbird2.0.0.5-l10n";
 $notify_list   = "build-announce\@mozilla.org";
 $stub_installer = 0;
 $sea_installer = 0;
