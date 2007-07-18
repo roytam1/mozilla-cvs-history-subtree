@@ -259,7 +259,7 @@ MODULES_all :=                                  \
 CAMINO_CO_TAG        = CAMINO_1_5_BRANCH
 MOZ_CO_TAG           = MOZILLA_1_8_BRANCH
 NSPR_CO_TAG          = NSPR_4_6_7_RTM
-NSS_CO_TAG           = NSS_3_11_5_RTM
+NSS_CO_TAG           = NSS_3_11_5_WITH_CKBI_1_64_RTM
 LDAPCSDK_CO_TAG      = MOZILLA_1_8_BRANCH
 LOCALES_CO_TAG       = MOZILLA_1_8_BRANCH
 
