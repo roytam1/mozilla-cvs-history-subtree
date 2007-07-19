@@ -86,7 +86,7 @@ REQUIRES += tracemalloc
 endif
 
 ifdef MOZ_AIRBAG
-REQUIRES += airbag
+REQUIRES += crashreporter
 endif
 
 FORCE_STATIC_LIB = 1
@@ -142,7 +142,11 @@ else
 ifeq ($(MOZ_WIDGET_TOOLKIT),beos)
 CPPSRCS += nsNativeAppSupportBeOS.cpp
 else
+ifeq ($(MOZ_WIDGET_TOOLKIT),gtk2)
+CPPSRCS += nsNativeAppSupportUnix.cpp
+else
 CPPSRCS += nsNativeAppSupportDefault.cpp
+endif
 endif
 endif
 endif

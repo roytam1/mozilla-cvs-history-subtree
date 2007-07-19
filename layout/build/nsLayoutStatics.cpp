@@ -87,6 +87,10 @@
 #include "nsXULElement.h"
 #include "nsXULPrototypeCache.h"
 #include "nsXULTooltipListener.h"
+
+#ifndef MOZ_NO_INSPECTOR_APIS
+#include "inDOMView.h"
+#endif
 #endif
 
 #ifdef MOZ_MATHML
@@ -96,10 +100,6 @@
 
 #ifdef MOZ_SVG
 PRBool NS_SVGEnabled();
-#endif
-
-#ifndef MOZ_NO_INSPECTOR_APIS
-#include "inDOMView.h"
 #endif
 
 #ifndef MOZILLA_PLAINTEXT_EDITOR_ONLY
@@ -170,16 +170,17 @@ nsLayoutStatics::Initialize()
     return rv;
   }
 
-#ifndef MOZ_NO_INSPECTOR_APIS
-  inDOMView::InitAtoms();
-#endif
-
 #ifdef MOZ_XUL
   rv = nsXULContentUtils::Init();
   if (NS_FAILED(rv)) {
     NS_ERROR("Could not initialize nsXULContentUtils");
     return rv;
   }
+
+#ifndef MOZ_NO_INSPECTOR_APIS
+  inDOMView::InitAtoms();
+#endif
+
 #endif
 
 #ifdef MOZ_MATHML
@@ -201,7 +202,7 @@ nsLayoutStatics::Initialize()
 #endif
   nsDOMAttribute::Initialize();
 
-  rv = txMozillaXSLTProcessor::Init();
+  rv = txMozillaXSLTProcessor::Startup();
   if (NS_FAILED(rv)) {
     NS_ERROR("Could not initialize txMozillaXSLTProcessor");
     return rv;

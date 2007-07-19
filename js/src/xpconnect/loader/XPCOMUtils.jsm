@@ -42,7 +42,7 @@
  * loader.
  *
  * Import into a JS component using
- * 'Components.utils.import("rel:XPCOMUtils.jsm");'
+ * 'Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");'
  *
  * Exposing a JS 'class' as a component using these utility methods consists
  * of several steps:
@@ -59,7 +59,7 @@
  *
  *    // [optional] custom factory (an object implementing nsIFactory). If not
  *    // provided, the default factory is used, which returns
- *    // |(new MyComponent()).QueryInterface(iid)| in its createInterface().
+ *    // |(new MyComponent()).QueryInterface(iid)| in its createInstance().
  *    _xpcom_factory: { ... }
  *
  *    // QueryInterface implementation, e.g. using the generateQI helper
@@ -83,8 +83,6 @@
 
 
 EXPORTED_SYMBOLS = [ "XPCOMUtils" ];
-
-debug("*** loading XPCOMUtils\n");
 
 const Ci = Components.interfaces;
 
@@ -148,10 +146,11 @@ var XPCOMUtils = {
       },
 
       registerSelf: function(compMgr, fileSpec, location, type) {
+        var componentCount = 0;
         debug("*** registering " + fileSpec.leafName + ": [ ");
         compMgr.QueryInterface(Ci.nsIComponentRegistrar);
         for each (let classDesc in classes) {
-          debug(classDesc.cid + " ");
+          debug((componentCount++ ? ", " : "") + classDesc.className);
           compMgr.registerFactoryLocation(classDesc.cid,
                                           classDesc.className,
                                           classDesc.contractID,
@@ -162,20 +161,21 @@ var XPCOMUtils = {
 
         if (postRegister)
           postRegister(compMgr, fileSpec, componentsArray);
-        debug("]\n");
+        debug(" ]\n");
       },
 
       unregisterSelf: function(compMgr, fileSpec, location) {
+        var componentCount = 0;
         debug("*** unregistering " + fileSpec.leafName + ": [ ");
         compMgr.QueryInterface(Ci.nsIComponentRegistrar);
         if (preUnregister)
           preUnregister(compMgr, fileSpec, componentsArray);
 
         for each (let classDesc in classes) {
-          debug(classDesc.className + " ");
+          debug((componentCount++ ? ", " : "") + classDesc.className);
           compMgr.unregisterFactoryLocation(classDesc.cid, fileSpec);
         }
-        debug("]\n");
+        debug(" ]\n");
       },
 
       canUnload: function(compMgr) {

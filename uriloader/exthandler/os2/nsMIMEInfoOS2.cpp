@@ -63,7 +63,7 @@ nsMIMEInfoOS2::~nsMIMEInfoOS2()
 {
 }
 
-NS_IMETHODIMP nsMIMEInfoOS2::LaunchWithURI(nsIURI *aURI)
+NS_IMETHODIMP nsMIMEInfoOS2::LaunchWithURI(nsIURI* aURI)
 {
   nsresult rv = NS_OK;
 
@@ -73,10 +73,15 @@ NS_IMETHODIMP nsMIMEInfoOS2::LaunchWithURI(nsIURI *aURI)
 
   nsCAutoString path;
   docToLoad->GetNativePath(path);
-
-  nsIFile* application;
+  
+  nsCOMPtr<nsIFile> application;
   if (mPreferredAction == useHelperApp) {
-    application = mPreferredApplication;
+    nsCOMPtr<nsILocalHandlerApp> localHandlerApp =
+      do_QueryInterface(mPreferredApplication, &rv);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    rv = localHandlerApp->GetExecutable(getter_AddRefs(application));
+    NS_ENSURE_SUCCESS(rv, rv);
   } else if (mPreferredAction == useSystemDefault) {
     application = mDefaultApplication;
   } else {
@@ -129,7 +134,7 @@ NS_IMETHODIMP nsMIMEInfoOS2::LaunchWithURI(nsIURI *aURI)
             saltedTempLeafName.Append(table[(rand()%TABLE_SIZE)]);
           }
           AppendASCIItoUTF16(suffix, saltedTempLeafName);
-          nsresult rv = docToLoad->MoveTo(nsnull, saltedTempLeafName);
+          rv = docToLoad->MoveTo(nsnull, saltedTempLeafName);
       } while (NS_FAILED(rv));
       helperAppService->DeleteTemporaryFileOnExit(docToLoad);
       docToLoad->GetNativePath(path);

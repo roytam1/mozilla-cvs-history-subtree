@@ -42,7 +42,6 @@
 #include "nsAccessibilityUtils.h"
 #include "nsCURILoader.h"
 #include "nsDocAccessible.h"
-#include "nsHTMLAreaAccessible.h"
 #include "nsHTMLImageAccessibleWrap.h"
 #include "nsHTMLLinkAccessible.h"
 #include "nsHTMLSelectAccessible.h"
@@ -125,7 +124,7 @@ nsAccessibilityService::nsAccessibilityService()
   observerService->AddObserver(this, NS_XPCOM_SHUTDOWN_OBSERVER_ID, PR_FALSE);
   nsCOMPtr<nsIWebProgress> progress(do_GetService(NS_DOCUMENTLOADER_SERVICE_CONTRACTID));
   if (progress) {
-    progress->AddProgressListener(NS_STATIC_CAST(nsIWebProgressListener*,this),
+    progress->AddProgressListener(static_cast<nsIWebProgressListener*>(this),
                                   nsIWebProgress::NOTIFY_STATE_DOCUMENT |
                                   nsIWebProgress::NOTIFY_LOCATION);
   }
@@ -155,7 +154,7 @@ nsAccessibilityService::Observe(nsISupports *aSubject, const char *aTopic,
     }
     nsCOMPtr<nsIWebProgress> progress(do_GetService(NS_DOCUMENTLOADER_SERVICE_CONTRACTID));
     if (progress) {
-      progress->RemoveProgressListener(NS_STATIC_CAST(nsIWebProgressListener*,this));
+      progress->RemoveProgressListener(static_cast<nsIWebProgressListener*>(this));
     }
     nsAccessNodeWrap::ShutdownAccessibility();
   }
@@ -279,7 +278,7 @@ nsresult
 nsAccessibilityService::GetInfo(nsISupports* aFrame, nsIFrame** aRealFrame, nsIWeakReference** aShell, nsIDOMNode** aNode)
 {
   NS_ASSERTION(aFrame,"Error -- 1st argument (aFrame) is null!!");
-  *aRealFrame = NS_STATIC_CAST(nsIFrame*, aFrame);
+  *aRealFrame = static_cast<nsIFrame*>(aFrame);
   nsCOMPtr<nsIContent> content = (*aRealFrame)->GetContent();
   nsCOMPtr<nsIDOMNode> node(do_QueryInterface(content));
   if (!content || !node)
@@ -405,19 +404,6 @@ nsAccessibilityService::CreateHTML4ButtonAccessible(nsISupports *aFrame, nsIAcce
     return rv;
 
   *_retval = new nsHTML4ButtonAccessible(node, weakShell);
-  if (! *_retval) 
-    return NS_ERROR_OUT_OF_MEMORY;
-
-  NS_ADDREF(*_retval);
-  return NS_OK;
-}
-
-NS_IMETHODIMP
-nsAccessibilityService::CreateHTMLAreaAccessible(nsIWeakReference *aShell, nsIDOMNode *aDOMNode, nsIAccessible *aParent, 
-                                                               nsIAccessible **_retval)
-{
-  *_retval = new nsHTMLAreaAccessible(aDOMNode, aParent, aShell);
-
   if (! *_retval) 
     return NS_ERROR_OUT_OF_MEMORY;
 
@@ -651,7 +637,7 @@ nsAccessibilityService::CreateHTMLObjectFrameAccessible(nsObjectFrame *aFrame,
   nsCOMPtr<nsIDOMNode> node;
   nsCOMPtr<nsIWeakReference> weakShell;
   nsIFrame *frame;
-  GetInfo(NS_STATIC_CAST(nsIFrame*, aFrame), &frame, getter_AddRefs(weakShell), getter_AddRefs(node));
+  GetInfo(static_cast<nsIFrame*>(aFrame), &frame, getter_AddRefs(weakShell), getter_AddRefs(node));
 
   *aAccessible = nsnull;
   if (!frame || frame->GetRect().IsEmpty()) {
@@ -763,7 +749,7 @@ nsAccessibilityService::CreateHTMLTableHeadAccessible(nsIDOMNode *aDOMNode, nsIA
 
   NS_ENSURE_TRUE(accTableHead, NS_ERROR_OUT_OF_MEMORY);
 
-  *_retval = NS_STATIC_CAST(nsIAccessible *, accTableHead);
+  *_retval = static_cast<nsIAccessible *>(accTableHead);
   NS_IF_ADDREF(*_retval);
 
   return rv;
@@ -922,7 +908,7 @@ NS_IMETHODIMP nsAccessibilityService::GetCachedAccessNode(nsIDOMNode *aNode,
     return NS_ERROR_FAILURE;
   }
 
-  return accessibleDoc->GetCachedAccessNode(NS_STATIC_CAST(void*, aNode), aAccessNode);
+  return accessibleDoc->GetCachedAccessNode(static_cast<void*>(aNode), aAccessNode);
 }
 
 NS_IMETHODIMP
@@ -1009,26 +995,38 @@ nsAccessibilityService::GetStringStates(PRUint32 aStates, PRUint32 aExtraStates,
     stringStates->Add(NS_LITERAL_STRING("checkable"));
 
   //extraStates
+  if (aExtraStates & nsIAccessibleStates::EXT_STATE_SUPPORTS_AUTOCOMPLETION)
+    stringStates->Add(NS_LITERAL_STRING("autocompletion"));
+  if (aExtraStates & nsIAccessibleStates::EXT_STATE_DEFUNCT)
+    stringStates->Add(NS_LITERAL_STRING("defunct"));
   if (aExtraStates & nsIAccessibleStates::EXT_STATE_SELECTABLE_TEXT)
     stringStates->Add(NS_LITERAL_STRING("selectable text"));
   if (aExtraStates & nsIAccessibleStates::EXT_STATE_EDITABLE)
     stringStates->Add(NS_LITERAL_STRING("editable"));
   if (aExtraStates & nsIAccessibleStates::EXT_STATE_ACTIVE)
     stringStates->Add(NS_LITERAL_STRING("active"));
-  if (aExtraStates & nsIAccessibleStates::EXT_STATE_EXPANDABLE)
-    stringStates->Add(NS_LITERAL_STRING("expandable"));
   if (aExtraStates & nsIAccessibleStates::EXT_STATE_MODAL)
     stringStates->Add(NS_LITERAL_STRING("modal"));
   if (aExtraStates & nsIAccessibleStates::EXT_STATE_MULTI_LINE)
     stringStates->Add(NS_LITERAL_STRING("multi line"));
-  if (aExtraStates & nsIAccessibleStates::EXT_STATE_SENSITIVE)
-    stringStates->Add(NS_LITERAL_STRING("sensitive"));
+  if (aExtraStates & nsIAccessibleStates::EXT_STATE_HORIZONTAL)
+    stringStates->Add(NS_LITERAL_STRING("horizontal"));
+  if (aExtraStates & nsIAccessibleStates::EXT_STATE_OPAQUE)
+    stringStates->Add(NS_LITERAL_STRING("opaque"));
   if (aExtraStates & nsIAccessibleStates::EXT_STATE_SINGLE_LINE)
     stringStates->Add(NS_LITERAL_STRING("single line"));
   if (aExtraStates & nsIAccessibleStates::EXT_STATE_TRANSIENT)
     stringStates->Add(NS_LITERAL_STRING("transient"));
   if (aExtraStates & nsIAccessibleStates::EXT_STATE_VERTICAL)
     stringStates->Add(NS_LITERAL_STRING("vertical"));
+  if (aExtraStates & nsIAccessibleStates::EXT_STATE_STALE)
+    stringStates->Add(NS_LITERAL_STRING("stale"));
+  if (aExtraStates & nsIAccessibleStates::EXT_STATE_ENABLED)
+    stringStates->Add(NS_LITERAL_STRING("enabled"));
+  if (aExtraStates & nsIAccessibleStates::EXT_STATE_SENSITIVE)
+    stringStates->Add(NS_LITERAL_STRING("sensitive"));
+  if (aExtraStates & nsIAccessibleStates::EXT_STATE_EXPANDABLE)
+    stringStates->Add(NS_LITERAL_STRING("expandable"));
 
   //unknown states
   PRUint32 stringStatesLength = 0;
@@ -1386,7 +1384,8 @@ NS_IMETHODIMP nsAccessibilityService::GetAccessible(nsIDOMNode *aNode,
     }
 
     if (tryFrame) {
-      if (frame->GetRect().IsEmpty()) {
+      if (frame->GetType() != nsAccessibilityAtoms::placeholderFrame &&
+          frame->GetRect().IsEmpty()) {
         *aIsHidden = PR_TRUE;
         return NS_OK;
       }
@@ -1642,6 +1641,9 @@ nsresult nsAccessibilityService::GetAccessibleByType(nsIDOMNode *aNode,
     case nsIAccessibleProvider::XULTooltip:
       *aAccessible = new nsXULTooltipAccessible(aNode, weakShell);
       break;
+    case nsIAccessibleProvider::XULToolbarButton:
+      *aAccessible = new nsXULToolbarButtonAccessible(aNode, weakShell);
+      break;
 #endif // MOZ_XUL
 
 #ifndef DISABLE_XFORMS_HOOKS
@@ -1724,7 +1726,7 @@ NS_IMETHODIMP nsAccessibilityService::AddNativeRootAccessible(void * aAtkAccessi
   nsNativeRootAccessibleWrap* rootAccWrap =
     new nsNativeRootAccessibleWrap((AtkObject*)aAtkAccessible);
 
-  *aRootAccessible = NS_STATIC_CAST(nsIAccessible*, rootAccWrap);
+  *aRootAccessible = static_cast<nsIAccessible*>(rootAccWrap);
   NS_ADDREF(*aRootAccessible);
 
   nsRefPtr<nsApplicationAccessibleWrap> appRoot =

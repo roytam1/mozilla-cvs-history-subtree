@@ -37,7 +37,6 @@
 
 #include "gfxTextRunWordCache.h"
 
-
 /**
  * Cache individual "words" (strings delimited by white-space or white-space-like
  * characters that don't involve kerning or ligatures) in textruns.
@@ -92,6 +91,20 @@ protected:
         PRUint32     mAppUnitsPerDevUnit;
         PRUint32     mStringHash;
         PRPackedBool mIsDoubleByteText;
+        PRPackedBool mIsRTL;
+        PRPackedBool mEnabledOptionalLigatures;
+        
+        CacheHashKey(gfxTextRun *aBaseTextRun, void *aFontOrGroup,
+                     PRUint32 aStart, PRUint32 aLength, PRUint32 aHash)
+            : mFontOrGroup(aFontOrGroup), mString(aBaseTextRun->GetTextAt(aStart)),
+              mLength(aLength),
+              mAppUnitsPerDevUnit(aBaseTextRun->GetAppUnitsPerDevUnit()),
+              mStringHash(aHash),
+              mIsDoubleByteText((aBaseTextRun->GetFlags() & gfxTextRunFactory::TEXT_IS_8BIT) == 0),
+              mIsRTL(aBaseTextRun->IsRightToLeft()),
+              mEnabledOptionalLigatures((aBaseTextRun->GetFlags() & gfxTextRunFactory::TEXT_DISABLE_OPTIONAL_LIGATURES) == 0)
+        {
+        }
     };
 
     class CacheHashEntry : public PLDHashEntryHdr {
@@ -219,11 +232,7 @@ TextRunWordCache::LookupWord(gfxTextRun *aTextRun, gfxFont *aFirstFont,
     if (aEnd <= aStart)
         return PR_TRUE;
 
-    PRUint32 length = aEnd - aStart;
-    CacheHashKey key =
-        { aFirstFont, aTextRun->GetTextAt(aStart),
-          length, aTextRun->GetAppUnitsPerDevUnit(), aHash,
-          (aTextRun->GetFlags() & gfxTextRunFactory::TEXT_IS_8BIT) == 0 };
+    CacheHashKey key(aTextRun, aFirstFont, aStart, aEnd - aStart, aHash);
     CacheHashEntry *fontEntry = mCache.PutEntry(key);
     if (!fontEntry)
         return PR_FALSE;
@@ -302,10 +311,8 @@ TextRunWordCache::FinishTextRun(gfxTextRun *aTextRun, gfxTextRun *aNewRun,
             // keyed off the fontgroup.
             if (!aSuccessful ||
                 GetWordFontOrGroup(aNewRun, word->mSourceOffset, word->mLength) != font) {
-                CacheHashKey key =
-                    { font, aTextRun->GetTextAt(word->mDestOffset),
-                      word->mLength, aTextRun->GetAppUnitsPerDevUnit(), word->mHash,
-                      (aTextRun->GetFlags() & gfxTextRunFactory::TEXT_IS_8BIT) == 0 };
+                CacheHashKey key(aTextRun, font, word->mDestOffset, word->mLength,
+                                 word->mHash);
                 NS_ASSERTION(mCache.GetEntry(key),
                              "This entry should have been added previously!");
                 mCache.RemoveEntry(key);
@@ -503,17 +510,15 @@ TextRunWordCache::RemoveWord(gfxTextRun *aTextRun, PRUint32 aStart,
         return;
 
     PRUint32 length = aEnd - aStart;
-    CacheHashKey key =
-        { GetWordFontOrGroup(aTextRun, aStart, length), aTextRun->GetTextAt(aStart),
-          length, aTextRun->GetAppUnitsPerDevUnit(), aHash,
-          (aTextRun->GetFlags() & gfxTextRunFactory::TEXT_IS_8BIT) == 0 };
+    CacheHashKey key(aTextRun, GetWordFontOrGroup(aTextRun, aStart, length),
+                     aStart, length, aHash);
     CacheHashEntry *entry = mCache.GetEntry(key);
     if (entry && entry->mTextRun == aTextRun) {
         // XXX would like to use RawRemoveEntry here plus some extra method
         // that conditionally shrinks the hashtable
         mCache.RemoveEntry(key);
         PR_LOG(gWordCacheLog, PR_LOG_DEBUG, ("%p(%d-%d,%d): removed using %s",
-            aTextRun, aStart, aEnd - aStart, aHash,
+            aTextRun, aStart, length, aHash,
             key.mFontOrGroup == aTextRun->GetFontGroup() ? "fontgroup" : "font"));
     }
 }
@@ -565,8 +570,8 @@ static void *
 GetFontOrGroup(gfxFontGroup *aFontGroup, PRBool aUseFont)
 {
     return aUseFont
-        ? NS_STATIC_CAST(void *, aFontGroup->GetFontAt(0))
-        : NS_STATIC_CAST(void *, aFontGroup);
+        ? static_cast<void *>(aFontGroup->GetFontAt(0))
+        : static_cast<void *>(aFontGroup);
 }
 
 PRBool
@@ -579,7 +584,9 @@ TextRunWordCache::CacheHashEntry::KeyEquals(const KeyTypePointer aKey) const
     gfxFontGroup *fontGroup = mTextRun->GetFontGroup();
     if (!IsWordEnd(mTextRun, mWordOffset + length) ||
         GetFontOrGroup(fontGroup, mHashedByFont) != aKey->mFontOrGroup ||
-        aKey->mAppUnitsPerDevUnit != mTextRun->GetAppUnitsPerDevUnit())
+        aKey->mAppUnitsPerDevUnit != mTextRun->GetAppUnitsPerDevUnit() ||
+        aKey->mIsRTL != mTextRun->IsRightToLeft() ||
+        aKey->mEnabledOptionalLigatures != ((mTextRun->GetFlags() & gfxTextRunFactory::TEXT_DISABLE_OPTIONAL_LIGATURES) == 0))
         return PR_FALSE;
 
     if (mTextRun->GetFlags() & gfxFontGroup::TEXT_IS_8BIT) {
@@ -587,12 +594,12 @@ TextRunWordCache::CacheHashEntry::KeyEquals(const KeyTypePointer aKey) const
         if (!aKey->mIsDoubleByteText)
             return memcmp(text, aKey->mString, length) == 0;
         return CompareDifferentWidthStrings(text,
-                                            NS_STATIC_CAST(const PRUnichar *, aKey->mString), length);
+                                            static_cast<const PRUnichar *>(aKey->mString), length);
     } else {
         const PRUnichar *text = mTextRun->GetTextUnicode() + mWordOffset;
         if (aKey->mIsDoubleByteText)
             return memcmp(text, aKey->mString, length*sizeof(PRUnichar)) == 0;
-        return CompareDifferentWidthStrings(NS_STATIC_CAST(const PRUint8 *, aKey->mString),
+        return CompareDifferentWidthStrings(static_cast<const PRUint8 *>(aKey->mString),
                                             text, length);
     }
 }
@@ -601,7 +608,7 @@ PLDHashNumber
 TextRunWordCache::CacheHashEntry::HashKey(const KeyTypePointer aKey)
 {
     return aKey->mStringHash + (long)aKey->mFontOrGroup + aKey->mAppUnitsPerDevUnit +
-        aKey->mIsDoubleByteText;
+        aKey->mIsDoubleByteText + aKey->mIsRTL*2 + aKey->mEnabledOptionalLigatures*4;
 }
 
 static TextRunWordCache *gTextRunWordCache = nsnull;

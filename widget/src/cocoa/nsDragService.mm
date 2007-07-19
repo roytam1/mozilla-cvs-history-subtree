@@ -69,6 +69,10 @@ extern NSPasteboard* globalDragPboard;
 extern NSView* globalDragView;
 extern NSEvent* globalDragEvent;
 
+// This global makes the transferable array available to Cocoa's promised
+// file destination callback.
+nsISupportsArray *gDraggedTransferables = nsnull;
+
 NSString* const kWildcardPboardType = @"MozillaWildcard";
 
 NS_IMPL_ADDREF_INHERITED(nsDragService, nsBaseDragService)
@@ -129,6 +133,9 @@ static nsresult SetUpDragClipboard(nsISupportsArray* aTransferableArray)
       }
       else if (currentKey == NSTIFFPboardType) {
         [dragPBoard setData:currentValue forType:currentKey];
+      }
+      else if (currentKey == NSFilesPromisePboardType) {
+        [dragPBoard setPropertyList:currentValue forType:currentKey];        
       }
     }
   }
@@ -262,7 +269,11 @@ nsDragService::InvokeDragSession(nsIDOMNode* aDOMNode, nsISupportsArray* aTransf
   point = [[globalDragView window] convertScreenToBase: point];
   NSPoint localPoint = [globalDragView convertPoint:point fromView:nil];
  
+  // Save the transferables away in case a promised file callback is invoked.
+  gDraggedTransferables = aTransferableArray;
+
   nsBaseDragService::StartDragSession();
+
   [globalDragView dragImage:image
                          at:localPoint
                      offset:NSMakeSize(0,0)
@@ -331,7 +342,7 @@ nsDragService::GetData(nsITransferable* aTransferable, PRUint32 aItemIndex)
     nsXPIDLCString flavorStr;
     currentFlavor->ToString(getter_Copies(flavorStr));
 
-    // printf("looking for clipboard data of type %s\n", flavorStr.get());
+    PR_LOG(sCocoaLog, PR_LOG_ALWAYS, ("nsDragService::GetData: looking for clipboard data of type %s\n", flavorStr.get()));
 
     if (flavorStr.EqualsLiteral(kFileMime)) {
       NSArray* pFiles = [globalDragPboard propertyListForType:NSFilenamesPboardType];

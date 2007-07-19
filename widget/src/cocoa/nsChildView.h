@@ -69,6 +69,12 @@
 #import <Carbon/Carbon.h>
 #import <Cocoa/Cocoa.h>
 
+#ifdef MOZ_LOGGING
+// make sure that logging is enabled before including prlog.h
+#define FORCE_PR_LOG
+#include "prlog.h"
+#endif
+
 class gfxASurface;
 class nsChildView;
 union nsPluginPort;
@@ -295,12 +301,9 @@ public:
   NS_IMETHOD        EndDrawPlugin();
   
   // Mac specific methods
-  virtual void      CalcWindowRegions();
-
   virtual PRBool    PointInWidget(Point aThePoint);
   
   virtual PRBool    DispatchWindowEvent(nsGUIEvent& event);
-  virtual PRBool    DispatchWindowEvent(nsGUIEvent &event,nsEventStatus &aStatus);
   virtual void      AcceptFocusOnClick(PRBool aBool) { mAcceptFocusOnClick = aBool;};
   PRBool            AcceptFocusOnClick() { return mAcceptFocusOnClick;};
   

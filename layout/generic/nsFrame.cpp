@@ -216,8 +216,6 @@ nsIFrameDebug::GetVerifyTreeEnable()
     if (nsnull == gFrameVerifyTreeLogModuleInfo) {
       gFrameVerifyTreeLogModuleInfo = PR_NewLogModule("frameverifytree");
       gFrameVerifyTreeEnable = 0 != gFrameVerifyTreeLogModuleInfo->level;
-      printf("Note: frameverifytree is %sabled\n",
-             gFrameVerifyTreeEnable ? "en" : "dis");
     }
   }
   return gFrameVerifyTreeEnable;
@@ -240,8 +238,6 @@ nsIFrameDebug::GetVerifyStyleTreeEnable()
     if (nsnull == gStyleVerifyTreeLogModuleInfo) {
       gStyleVerifyTreeLogModuleInfo = PR_NewLogModule("styleverifytree");
       gStyleVerifyTreeEnable = 0 != gStyleVerifyTreeLogModuleInfo->level;
-      printf("Note: styleverifytree is %sabled\n",
-             gStyleVerifyTreeEnable ? "en" : "dis");
     }
   }
   return gStyleVerifyTreeEnable;
@@ -517,14 +513,14 @@ nsFrame::QueryInterface(const nsIID& aIID, void** aInstancePtr)
 
 #ifdef DEBUG
   if (aIID.Equals(NS_GET_IID(nsIFrameDebug))) {
-    *aInstancePtr = NS_STATIC_CAST(nsIFrameDebug*, this);
+    *aInstancePtr = static_cast<nsIFrameDebug*>(this);
     return NS_OK;
   }
 #endif
 
   if (aIID.Equals(NS_GET_IID(nsIFrame)) ||
       aIID.Equals(NS_GET_IID(nsISupports))) {
-    *aInstancePtr = NS_STATIC_CAST(nsIFrame*, this);
+    *aInstancePtr = static_cast<nsIFrame*>(this);
     return NS_OK;
   }
 
@@ -694,8 +690,8 @@ nsIFrame::GetUsedMargin() const
 
   nsMargin margin(0, 0, 0, 0);
   if (!GetStyleMargin()->GetMargin(margin)) {
-    nsMargin *m = NS_STATIC_CAST(nsMargin*,
-                    GetProperty(nsGkAtoms::usedMarginProperty));
+    nsMargin *m = static_cast<nsMargin*>
+                             (GetProperty(nsGkAtoms::usedMarginProperty));
     NS_ASSERTION(m, "used margin property missing (out of memory?)");
     if (m) {
       margin = *m;
@@ -712,7 +708,7 @@ nsIFrame::GetUsedBorder() const
                "cannot call on a dirty frame not currently being reflowed");
 
   // Theme methods don't use const-ness.
-  nsIFrame *mutable_this = NS_CONST_CAST(nsIFrame*, this);
+  nsIFrame *mutable_this = const_cast<nsIFrame*>(this);
 
   const nsStyleDisplay *disp = GetStyleDisplay();
   if (mutable_this->IsThemed(disp)) {
@@ -741,7 +737,7 @@ nsIFrame::GetUsedPadding() const
   nsMargin padding(0, 0, 0, 0);
 
   // Theme methods don't use const-ness.
-  nsIFrame *mutable_this = NS_CONST_CAST(nsIFrame*, this);
+  nsIFrame *mutable_this = const_cast<nsIFrame*>(this);
 
   const nsStyleDisplay *disp = GetStyleDisplay();
   if (mutable_this->IsThemed(disp)) {
@@ -758,8 +754,8 @@ nsIFrame::GetUsedPadding() const
     }
   }
   if (!GetStylePadding()->GetPadding(padding)) {
-    nsMargin *p = NS_STATIC_CAST(nsMargin*,
-                    GetProperty(nsGkAtoms::usedPaddingProperty));
+    nsMargin *p = static_cast<nsMargin*>
+                             (GetProperty(nsGkAtoms::usedPaddingProperty));
     NS_ASSERTION(p, "used padding property missing (out of memory?)");
     if (p) {
       padding = *p;
@@ -1388,11 +1384,9 @@ nsIFrame::BuildDisplayListForStackingContext(nsDisplayListBuilder* aBuilder,
   resultList.AppendToTop(set.BlockBorderBackgrounds());
   // 5: floats
   resultList.AppendToTop(set.Floats());
-  // 6: general content
+  // 7: general content
   resultList.AppendToTop(set.Content());
-  // 7, 8: non-negative z-index children
-  resultList.AppendToTop(set.PositionedDescendants());
-  // 9: outlines, in content tree order. We need to sort by content order
+  // 7.5: outlines, in content tree order. We need to sort by content order
   // because an element with outline that breaks and has children with outline
   // might have placed child outline items between its own outline items.
   // The element's outline items need to all come before any child outline
@@ -1402,7 +1396,8 @@ nsIFrame::BuildDisplayListForStackingContext(nsDisplayListBuilder* aBuilder,
   DisplayDebugBorders(aBuilder, this, set);
 #endif
   resultList.AppendToTop(set.Outlines());
-
+  // 8, 9: non-negative z-index children
+  resultList.AppendToTop(set.PositionedDescendants());
 
   if (applyAbsPosClipping) {
     nsAbsPosClipWrapper wrapper(absPosClip);
@@ -1456,7 +1451,7 @@ nsIFrame::BuildDisplayListForChild(nsDisplayListBuilder*   aBuilder,
 
   nsIAtom* childType = aChild->GetType();
   if (childType == nsGkAtoms::placeholderFrame) {
-    nsPlaceholderFrame* placeholder = NS_STATIC_CAST(nsPlaceholderFrame*, aChild);
+    nsPlaceholderFrame* placeholder = static_cast<nsPlaceholderFrame*>(aChild);
     aChild = placeholder->GetOutOfFlowFrame();
     NS_ASSERTION(aChild, "No out of flow frame?");
     if (!aChild)
@@ -1470,8 +1465,8 @@ nsIFrame::BuildDisplayListForChild(nsDisplayListBuilder*   aBuilder,
     // Recheck NS_FRAME_IS_FLOWABLE
     if (aChild->GetStateBits() & NS_FRAME_IS_UNFLOWABLE)
       return NS_OK;
-    nsRect* savedDirty = NS_STATIC_CAST(nsRect*,
-        aChild->GetProperty(nsGkAtoms::outOfFlowDirtyRectProperty));
+    nsRect* savedDirty = static_cast<nsRect*>
+                                    (aChild->GetProperty(nsGkAtoms::outOfFlowDirtyRectProperty));
     if (savedDirty) {
       dirty = *savedDirty;
     } else {
@@ -1604,8 +1599,8 @@ nsIFrame::BuildDisplayListForChild(nsDisplayListBuilder*   aBuilder,
     list.AppendToTop(pseudoStack.BlockBorderBackgrounds());
     list.AppendToTop(pseudoStack.Floats());
     list.AppendToTop(pseudoStack.Content());
+    list.AppendToTop(pseudoStack.Outlines());
     extraPositionedDescendants.AppendToTop(pseudoStack.PositionedDescendants());
-    aLists.Outlines()->AppendToTop(pseudoStack.Outlines());
 #ifdef NS_DEBUG
     DisplayDebugBorders(aBuilder, aChild, aLists);
 #endif
@@ -1680,7 +1675,7 @@ nsFrame::HandleEvent(nsPresContext* aPresContext,
   }
 
   if (aEvent->eventStructType == NS_MOUSE_EVENT &&
-      NS_STATIC_CAST(nsMouseEvent*, aEvent)->button == nsMouseEvent::eLeftButton) {
+      static_cast<nsMouseEvent*>(aEvent)->button == nsMouseEvent::eLeftButton) {
     if (aEvent->message == NS_MOUSE_BUTTON_DOWN) {
       HandlePress(aPresContext, aEvent, aEventStatus);
     } else if (aEvent->message == NS_MOUSE_BUTTON_UP) {
@@ -2127,7 +2122,7 @@ nsFrame::HandleMultiplePress(nsPresContext* aPresContext,
   if (!theFrame)
     return NS_ERROR_FAILURE;
 
-  nsFrame* frame = NS_STATIC_CAST(nsFrame*, theFrame);
+  nsFrame* frame = static_cast<nsFrame*>(theFrame);
 
   return frame->PeekBackwardAndForward(beginAmount, endAmount,
                                        offsets.offset, aPresContext,
@@ -2426,7 +2421,7 @@ NS_IMETHODIMP nsFrame::HandleRelease(nsPresContext* aPresContext,
   // trickle down here. Make sure that document's frame selection is notified.
   // Note, this may cause the current nsFrame object to be deleted, bug 336592.
   if (activeFrame != this &&
-      NS_STATIC_CAST(nsFrame*, activeFrame)->DisplaySelection(activeFrame->PresContext())
+      static_cast<nsFrame*>(activeFrame)->DisplaySelection(activeFrame->PresContext())
         != nsISelectionController::SELECTION_OFF) {
     nsRefPtr<nsFrameSelection> frameSelection =
       activeFrame->GetFrameSelection();
@@ -2874,7 +2869,7 @@ nsIFrame::ContentOffsets nsIFrame::GetContentOffsetsFromPoint(nsPoint aPoint,
     return offsets;
   }
   nsPoint pt = aPoint - closest.frame->GetOffsetTo(this);
-  return NS_STATIC_CAST(nsFrame*, closest.frame)->CalcContentOffsetsFromFramePoint(pt);
+  return static_cast<nsFrame*>(closest.frame)->CalcContentOffsetsFromFramePoint(pt);
 
   // XXX should I add some kind of offset standardization?
   // consider <b>xxxxx</b><i>zzzzz</i>; should any click between the last
@@ -2974,7 +2969,7 @@ nsIFrame::InlineMinWidthData::ForceBreak(nsIRenderingContext *aRenderingContext)
   currentLine = trailingWhitespace = 0;
 
   for (PRInt32 i = 0, i_end = floats.Count(); i != i_end; ++i) {
-    nsIFrame *floatFrame = NS_STATIC_CAST(nsIFrame*, floats[i]);
+    nsIFrame *floatFrame = static_cast<nsIFrame*>(floats[i]);
     nscoord float_min =
       nsLayoutUtils::IntrinsicForContainer(aRenderingContext, floatFrame,
                                            nsLayoutUtils::MIN_WIDTH);
@@ -3013,7 +3008,7 @@ nsIFrame::InlinePrefWidthData::ForceBreak(nsIRenderingContext *aRenderingContext
             floats_cur_right = 0;
 
     for (PRInt32 i = 0, i_end = floats.Count(); i != i_end; ++i) {
-      nsIFrame *floatFrame = NS_STATIC_CAST(nsIFrame*, floats[i]);
+      nsIFrame *floatFrame = static_cast<nsIFrame*>(floats[i]);
       const nsStyleDisplay *floatDisp = floatFrame->GetStyleDisplay();
       if (floatDisp->mBreakType == NS_STYLE_CLEAR_LEFT ||
           floatDisp->mBreakType == NS_STYLE_CLEAR_RIGHT ||
@@ -3452,7 +3447,7 @@ nsIFrame::GetView() const
 
   NS_ENSURE_SUCCESS(rv, nsnull);
   NS_ASSERTION(value, "frame state bit was set but frame has no view");
-  return NS_STATIC_CAST(nsIView*, value);
+  return static_cast<nsIView*>(value);
 }
 
 /* virtual */ nsIView*
@@ -3761,7 +3756,7 @@ nsIFrame::GetOverflowRect() const
   // of child frames. That's OK because any reflow that updates these
   // areas will invalidate the appropriate area, so any (mis)uses of
   // this method will be fixed up.
-  nsRect* storedOA = NS_CONST_CAST(nsIFrame*, this)
+  nsRect* storedOA = const_cast<nsIFrame*>(this)
     ->GetOverflowAreaProperty(PR_FALSE);
   if (storedOA) {
     return *storedOA;
@@ -3891,10 +3886,10 @@ nsFrame::List(FILE* out, PRInt32 aIndent) const
   IndentBy(out, aIndent);
   ListTag(out);
 #ifdef DEBUG_waterson
-  fprintf(out, " [parent=%p]", NS_STATIC_CAST(void*, mParent));
+  fprintf(out, " [parent=%p]", static_cast<void*>(mParent));
 #endif
   if (HasView()) {
-    fprintf(out, " [view=%p]", NS_STATIC_CAST(void*, GetView()));
+    fprintf(out, " [view=%p]", static_cast<void*>(GetView()));
   }
   fprintf(out, " {%d,%d,%d,%d}", mRect.x, mRect.y, mRect.width, mRect.height);
   if (0 != mState) {
@@ -3903,13 +3898,13 @@ nsFrame::List(FILE* out, PRInt32 aIndent) const
   nsIFrame* prevInFlow = GetPrevInFlow();
   nsIFrame* nextInFlow = GetNextInFlow();
   if (nsnull != prevInFlow) {
-    fprintf(out, " prev-in-flow=%p", NS_STATIC_CAST(void*, prevInFlow));
+    fprintf(out, " prev-in-flow=%p", static_cast<void*>(prevInFlow));
   }
   if (nsnull != nextInFlow) {
-    fprintf(out, " next-in-flow=%p", NS_STATIC_CAST(void*, nextInFlow));
+    fprintf(out, " next-in-flow=%p", static_cast<void*>(nextInFlow));
   }
-  fprintf(out, " [content=%p]", NS_STATIC_CAST(void*, mContent));
-  nsFrame* f = NS_CONST_CAST(nsFrame*, this);
+  fprintf(out, " [content=%p]", static_cast<void*>(mContent));
+  nsFrame* f = const_cast<nsFrame*>(this);
   nsRect* overflowArea = f->GetOverflowAreaProperty(PR_FALSE);
   if (overflowArea) {
     fprintf(out, " [overflow=%d,%d,%d,%d]", overflowArea->x, overflowArea->y,
@@ -5291,7 +5286,7 @@ DestroyRectFunc(void*    aFrame,
                 void*    aPropertyValue,
                 void*    aDtorData)
 {
-  delete NS_STATIC_CAST(nsRect*, aPropertyValue);
+  delete static_cast<nsRect*>(aPropertyValue);
 }
 
 nsRect*
@@ -5439,8 +5434,8 @@ GetIBSpecialSibling(nsPresContext* aPresContext,
    * interested in.
    */
   nsresult rv;
-  nsIFrame *specialSibling = NS_STATIC_CAST(nsIFrame*,
-                             aPresContext->PropertyTable()->GetProperty(aFrame,
+  nsIFrame *specialSibling = static_cast<nsIFrame*>
+                                        (aPresContext->PropertyTable()->GetProperty(aFrame,
                                nsGkAtoms::IBSplitSpecialPrevSibling, &rv));
 
   if (NS_PROPTABLE_PROP_NOT_THERE == rv) {
@@ -5504,7 +5499,9 @@ nsFrame::CorrectStyleParentFrame(nsIFrame* aProspectiveParent,
     return aProspectiveParent;
   }
 
-  // Otherwise, walk up out of all anon boxes
+  // Otherwise, walk up out of all anon boxes.  For placeholder frames, walk ot
+  // of all pseudo-elements a well.  Otherwise ReParentStyleContext could cause
+  // style data to be out of sync with the frame tree.
   nsIFrame* parent = aProspectiveParent;
   do {
     if (parent->GetStateBits() & NS_FRAME_IS_SPECIAL) {
@@ -5526,7 +5523,13 @@ nsFrame::CorrectStyleParentFrame(nsIFrame* aProspectiveParent,
     }
       
     nsIAtom* parentPseudo = parent->GetStyleContext()->GetPseudoType();
-    if (!parentPseudo || !nsCSSAnonBoxes::IsAnonBox(parentPseudo)) {
+    if (!parentPseudo ||
+        (!nsCSSAnonBoxes::IsAnonBox(parentPseudo) &&
+         // nsPlaceholderFrame pases in nsGkAtoms::placeholderFrame for
+         // aChildPseudo (even though that's not a valid pseudo-type) just to
+         // trigger this behavior of walking up to the nearest non-pseudo
+         // ancestor.
+         aChildPseudo != nsGkAtoms::placeholderFrame)) {
       return parent;
     }
 
@@ -5589,7 +5592,7 @@ nsFrame::DoGetParentStyleContextFrame(nsPresContext* aPresContext,
     GetCorrectedParent(aPresContext, this, aProviderFrame);
     return NS_ERROR_FAILURE;
   }
-  return NS_STATIC_CAST(nsFrame*, placeholder)->
+  return static_cast<nsFrame*>(placeholder)->
     GetParentStyleContextFrame(aPresContext, aProviderFrame, aIsChild);
 }
 
@@ -5875,7 +5878,7 @@ nsFrame::RefreshSizeCache(nsBoxLayoutState& aState)
     metrics->mBlockMinSize.height = 0;
     // ok we need the max ascent of the items on the line. So to do this
     // ask the block for its line iterator. Get the max ascent.
-    nsCOMPtr<nsILineIterator> lines = do_QueryInterface(NS_STATIC_CAST(nsIFrame*, this));
+    nsCOMPtr<nsILineIterator> lines = do_QueryInterface(static_cast<nsIFrame*>(this));
     if (lines) 
     {
       metrics->mBlockMinSize.height = 0;
@@ -6373,7 +6376,7 @@ nsBoxLayoutMetrics*
 nsFrame::BoxMetrics() const
 {
   nsBoxLayoutMetrics* metrics =
-    NS_STATIC_CAST(nsBoxLayoutMetrics*, GetProperty(nsGkAtoms::boxMetricsProperty));
+    static_cast<nsBoxLayoutMetrics*>(GetProperty(nsGkAtoms::boxMetricsProperty));
   NS_ASSERTION(metrics, "A box layout method was called but InitBoxMetrics was never called");
   return metrics;
 }
@@ -6406,7 +6409,7 @@ DeleteBoxMetrics(void    *aObject,
                  void    *aPropertyValue,
                  void    *aData)
 {
-  delete NS_STATIC_CAST(nsBoxLayoutMetrics*, aPropertyValue);
+  delete static_cast<nsBoxLayoutMetrics*>(aPropertyValue);
 }
 
 void

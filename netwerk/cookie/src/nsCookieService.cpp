@@ -314,8 +314,8 @@ compareCookiesForSending(const void *aElement1,
                          const void *aElement2,
                          void       *aData)
 {
-  const nsCookie *cookie1 = NS_STATIC_CAST(const nsCookie*, aElement1);
-  const nsCookie *cookie2 = NS_STATIC_CAST(const nsCookie*, aElement2);
+  const nsCookie *cookie1 = static_cast<const nsCookie*>(aElement1);
+  const nsCookie *cookie2 = static_cast<const nsCookie*>(aElement2);
 
   // compare by cookie path length in accordance with RFC2109
   int rv = cookie2->Path().Length() - cookie1->Path().Length();
@@ -446,34 +446,22 @@ nsCookieService::InitDB()
   } else {
     // table already exists; check the schema version before reading
     PRInt32 dbSchemaVersion;
-    {
-      // scope the statement, so the write lock is released when finished
-      nsCOMPtr<mozIStorageStatement> stmt;
-      rv = mDBConn->CreateStatement(NS_LITERAL_CSTRING("PRAGMA user_version"),
-                                    getter_AddRefs(stmt));
+    rv = mDBConn->GetSchemaVersion(&dbSchemaVersion);
+    NS_ENSURE_SUCCESS(rv, rv);
+    
+    if (dbSchemaVersion == 0) {
+      NS_WARNING("couldn't get schema version!");
+        
+      // the table may be usable; someone might've just clobbered the schema
+      // version. we can treat this case like a downgrade using the codepath
+      // below, by verifying the columns we care about are all there. for now,
+      // re-set the schema version in the db, in case the checks succeed (if
+      // they don't, we're dropping the table anyway).
+      rv = mDBConn->SetSchemaVersion(COOKIES_SCHEMA_VERSION);
       NS_ENSURE_SUCCESS(rv, rv);
 
-      PRBool hasResult;
-      rv = stmt->ExecuteStep(&hasResult);
-      if (NS_SUCCEEDED(rv) && hasResult) {
-        dbSchemaVersion = stmt->AsInt32(0);
-      } else {
-        NS_WARNING("couldn't get schema version!");
-        stmt = nsnull;
-        
-        // the table may be usable; someone might've just clobbered the schema
-        // version. we can treat this case like a downgrade using the codepath
-        // below, by verifying the columns we care about are all there. for now,
-        // re-set the schema version in the db, in case the checks succeed (if
-        // they don't, we're dropping the table anyway).
-        nsCAutoString stmtString(NS_LITERAL_CSTRING("PRAGMA user_version="));
-        stmtString.AppendInt(COOKIES_SCHEMA_VERSION);
-        rv = mDBConn->ExecuteSimpleSQL(stmtString);
-        NS_ENSURE_SUCCESS(rv, rv);
-
-        // set this to a large number, to force the downgrade codepath
-        dbSchemaVersion = PR_INT32_MAX;
-      }
+      // set this to a large number, to force the downgrade codepath
+      dbSchemaVersion = PR_INT32_MAX;
     }
 
     if (dbSchemaVersion != COOKIES_SCHEMA_VERSION) {
@@ -542,9 +530,7 @@ nsresult
 nsCookieService::CreateTable()
 {
   // set the schema version, before creating the table
-  nsCAutoString stmtString(NS_LITERAL_CSTRING("PRAGMA user_version="));
-  stmtString.AppendInt(COOKIES_SCHEMA_VERSION);
-  nsresult rv = mDBConn->ExecuteSimpleSQL(stmtString);
+  nsresult rv = mDBConn->SetSchemaVersion(COOKIES_SCHEMA_VERSION);
   if (NS_FAILED(rv)) return rv;
 
   // create the table
@@ -764,7 +750,7 @@ COMArrayCallback(nsCookieEntry *aEntry,
                  void          *aArg)
 {
   for (nsCookie *cookie = aEntry->Head(); cookie; cookie = cookie->Next()) {
-    NS_STATIC_CAST(nsCOMArray<nsICookie>*, aArg)->AppendObject(cookie);
+    static_cast<nsCOMArray<nsICookie>*>(aArg)->AppendObject(cookie);
   }
   return PL_DHASH_NEXT;
 }
@@ -1171,7 +1157,7 @@ nsCookieService::GetCookieInternal(nsIURI      *aHostURI,
   nsCAutoString cookieData;
   PRInt32 count = foundCookieList.Count();
   for (PRInt32 i = 0; i < count; ++i) {
-    cookie = NS_STATIC_CAST(nsCookie*, foundCookieList.ElementAt(i));
+    cookie = static_cast<nsCookie*>(foundCookieList.ElementAt(i));
 
     // check if we have anything to write
     if (!cookie->Name().IsEmpty() || !cookie->Value().IsEmpty()) {
@@ -1274,7 +1260,7 @@ nsCookieService::SetCookieInternal(nsIURI             *aHostURI,
     // needs one to prompt, so right now it has to fend for itself to get one
     mPermissionService->CanSetCookie(aHostURI,
                                      aChannel,
-                                     NS_STATIC_CAST(nsICookie2*, NS_STATIC_CAST(nsCookie*, cookie)),
+                                     static_cast<nsICookie2*>(static_cast<nsCookie*>(cookie)),
                                      &cookieAttributes.isSession,
                                      &cookieAttributes.expiryTime,
                                      &permission);
@@ -1307,6 +1293,12 @@ nsCookieService::AddInternal(nsCookie   *aCookie,
                              const char *aCookieHeader,
                              PRBool      aFromHttp)
 {
+  // if the new cookie is httponly, make sure we're not coming from script
+  if (!aFromHttp && aCookie->IsHttpOnly()) {
+    COOKIE_LOGFAILURE(SET_COOKIE, aHostURI, aCookieHeader, "cookie is httponly; coming from script");
+    return;
+  }
+
   // start a transaction on the storage db, to optimize deletions/insertions.
   // transaction will automically commit on completion. if we already have a
   // transaction (e.g. from SetCookie*()), this will have no effect. 
@@ -1339,12 +1331,6 @@ nsCookieService::AddInternal(nsCookie   *aCookie,
     // check if cookie has already expired
     if (aCookie->Expiry() <= aCurrentTime) {
       COOKIE_LOGFAILURE(SET_COOKIE, aHostURI, aCookieHeader, "cookie has already expired");
-      return;
-    }
-
-    // if the new cookie is httponly, make sure we're not coming from script
-    if (!aFromHttp && aCookie->IsHttpOnly()) {
-      COOKIE_LOGFAILURE(SET_COOKIE, aHostURI, aCookieHeader, "cookie is httponly; coming from script");
       return;
     }
 
@@ -2012,7 +1998,7 @@ PLDHashOperator PR_CALLBACK
 removeExpiredCallback(nsCookieEntry *aEntry,
                       void          *aArg)
 {
-  const PRInt64 &currentTime = *NS_STATIC_CAST(PRInt64*, aArg);
+  const PRInt64 &currentTime = *static_cast<PRInt64*>(aArg);
   for (nsListIter iter(aEntry, nsnull, aEntry->Head()); iter.current; ) {
     if (iter.current->Expiry() <= currentTime)
       // remove from list. this takes care of updating the iterator for us
@@ -2040,7 +2026,7 @@ nsCookieService::CookieExists(nsICookie2 *aCookie,
 
   // just a placeholder
   nsEnumerationData data(PR_Now() / PR_USEC_PER_SEC, LL_MININT);
-  nsCookie *cookie = NS_STATIC_CAST(nsCookie*, aCookie);
+  nsCookie *cookie = static_cast<nsCookie*>(aCookie);
 
   *aFoundCookie = FindCookie(cookie->Host(), cookie->Name(), cookie->Path(), data.iter);
   return NS_OK;
@@ -2220,7 +2206,7 @@ PR_STATIC_CALLBACK(PLDHashOperator)
 findOldestCallback(nsCookieEntry *aEntry,
                    void          *aArg)
 {
-  nsEnumerationData *data = NS_STATIC_CAST(nsEnumerationData*, aArg);
+  nsEnumerationData *data = static_cast<nsEnumerationData*>(aArg);
   for (nsListIter iter(aEntry, nsnull, aEntry->Head()); iter.current; ++iter) {
     // check if we've found the oldest cookie so far
     if (data->oldestID > iter.current->CreationID()) {

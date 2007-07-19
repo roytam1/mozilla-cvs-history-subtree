@@ -80,7 +80,6 @@ var gDetachLabelAccesskey;
 var gDeleteLabelAccesskey;
 var gMessengerBundle;
 var gProfileDirURL;
-var gIOService;
 var gShowCondensedEmailAddresses = true; // show the friendly display names for people I know instead of the name + email address
 var gPersonalAddressBookDirectory; // used for determining if we want to show just the display name in email address nodes
 
@@ -977,7 +976,7 @@ function useDisplayNameForAddress(emailAddress)
   }
 
   // look up the email address in the database
-  return gPersonalAddressBookDirectory.hasCardForEmailAddress(emailAddress);
+  return gPersonalAddressBookDirectory.cardForEmailAddress(emailAddress);
 }
 
 function AddNodeToAddressBook (emailAddressNode)

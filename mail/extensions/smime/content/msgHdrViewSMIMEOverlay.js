@@ -125,8 +125,12 @@ var smimeHeaderSink =
       gEncryptedURIService.rememberEncrypted(gMyLastEncryptedURI);
     }
 
-    if (nsICMSMessageErrors.SUCCESS != aEncryptionStatus)
+    switch (aEncryptionStatus)
     {
+    case nsICMSMessageErrors.SUCCESS:
+    case nsICMSMessageErrors.ENCRYPT_INCOMPLETE:
+      break;
+    default:
       var brand = gBrandBundle.getString("brandShortName");
       var title = gSMIMEBundle.getString("CantDecryptTitle").replace(/%brand%/g,brand);
       var body = gSMIMEBundle.getString("CantDecryptBody").replace(/%brand%/g,brand);
@@ -142,7 +146,7 @@ var smimeHeaderSink =
        title+"</font></center><br>\n"+
        body+"\n"+
        "</td></tr></table></center></body></html>", false);
-
+      break;
     }
   },
 
@@ -230,6 +234,10 @@ function msgHdrViewSMIMEOnUnload(event)
   document.removeEventListener("smartcard-insert", onSmartCardChange, false);
   document.removeEventListener("smartcard-remove", onSmartCardChange, false);
   forgetEncryptedURI();
+  removeEventListener('messagepane-loaded', msgHdrViewSMIMEOnLoad, true);
+  removeEventListener('messagepane-unloaded', msgHdrViewSMIMEOnUnload, true);
+  removeEventListener('messagepane-hide', msgHdrViewSMIMEOnMessagePaneHide, true);
+  removeEventListener('messagepane-unhide', msgHdrViewSMIMEOnMessagePaneUnhide, true);
 }
 
 function msgHdrViewSMIMEOnMessagePaneHide()

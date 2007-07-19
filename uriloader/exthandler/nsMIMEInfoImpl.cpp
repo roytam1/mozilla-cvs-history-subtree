@@ -282,16 +282,16 @@ nsMIMEInfoBase::SetAlwaysAskBeforeHandling(PRBool aAlwaysAsk)
 nsresult 
 nsMIMEInfoBase::GetLocalFileFromURI(nsIURI *aURI, nsILocalFile **aFile)
 {
-    nsresult rv;
+  nsresult rv;
 
-    nsCOMPtr<nsIFileURL> fileUrl = do_QueryInterface(aURI, &rv);
-    if (NS_FAILED(rv)) return rv;
+  nsCOMPtr<nsIFileURL> fileUrl = do_QueryInterface(aURI, &rv);
+  if (NS_FAILED(rv)) return rv;
 
-    nsCOMPtr<nsIFile> file;
-    rv = fileUrl->GetFile(getter_AddRefs(file));
-    if (NS_FAILED(rv)) return rv;    
+  nsCOMPtr<nsIFile> file;
+  rv = fileUrl->GetFile(getter_AddRefs(file));
+  if (NS_FAILED(rv)) return rv;    
 
-    return CallQueryInterface(file, aFile);
+  return CallQueryInterface(file, aFile);
 }
 
 
@@ -316,7 +316,7 @@ nsMIMEInfoBase::LaunchWithURI(nsIURI* aURI)
     nsCOMPtr<nsILocalHandlerApp> localHandler = 
       do_QueryInterface(mPreferredApplication, &rv);
     NS_ENSURE_SUCCESS(rv, rv);
-    
+
     nsCOMPtr<nsIFile> executable;
     rv = localHandler->GetExecutable(getter_AddRefs(executable));
     NS_ENSURE_SUCCESS(rv, rv);

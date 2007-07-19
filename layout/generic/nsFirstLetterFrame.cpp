@@ -78,6 +78,10 @@ public:
                                  InlineMinWidthData *aData);
   virtual void AddInlinePrefWidth(nsIRenderingContext *aRenderingContext,
                                   InlinePrefWidthData *aData);
+  virtual nsSize ComputeSize(nsIRenderingContext *aRenderingContext,
+                             nsSize aCBSize, nscoord aAvailableWidth,
+                             nsSize aMargin, nsSize aBorder, nsSize aPadding,
+                             PRBool aShrinkWrap);
   NS_IMETHOD Reflow(nsPresContext*          aPresContext,
                     nsHTMLReflowMetrics&     aDesiredSize,
                     const nsHTMLReflowState& aReflowState,
@@ -223,6 +227,21 @@ nsFirstLetterFrame::GetPrefWidth(nsIRenderingContext *aRenderingContext)
   return nsLayoutUtils::PrefWidthFromInline(this, aRenderingContext);
 }
 
+/* virtual */ nsSize
+nsFirstLetterFrame::ComputeSize(nsIRenderingContext *aRenderingContext,
+                                nsSize aCBSize, nscoord aAvailableWidth,
+                                nsSize aMargin, nsSize aBorder, nsSize aPadding,
+                                PRBool aShrinkWrap)
+{
+  if (GetPrevInFlow()) {
+    // We're wrapping the text *after* the first letter, so behave like an
+    // inline frame.
+    return nsSize(NS_UNCONSTRAINEDSIZE, NS_UNCONSTRAINEDSIZE);
+  }
+  return nsFirstLetterFrameSuper::ComputeSize(aRenderingContext,
+      aCBSize, aAvailableWidth, aMargin, aBorder, aPadding, aShrinkWrap);
+}
+
 NS_IMETHODIMP
 nsFirstLetterFrame::Reflow(nsPresContext*          aPresContext,
                            nsHTMLReflowMetrics&     aMetrics,
@@ -291,7 +310,7 @@ nsFirstLetterFrame::Reflow(nsPresContext*          aPresContext,
     nsIFrame* kidNextInFlow = kid->GetNextInFlow();
     if (kidNextInFlow) {
       // Remove all of the childs next-in-flows
-      NS_STATIC_CAST(nsContainerFrame*, kidNextInFlow->GetParent())
+      static_cast<nsContainerFrame*>(kidNextInFlow->GetParent())
         ->DeleteNextInFlowChild(aPresContext, kidNextInFlow);
     }
   }

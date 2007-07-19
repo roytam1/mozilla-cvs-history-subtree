@@ -86,7 +86,7 @@ public:
   static nsGenericHTMLElement* FromContent(nsIContent *aContent)
   {
     if (aContent->IsNodeOfType(eHTML))
-      return NS_STATIC_CAST(nsGenericHTMLElement*, aContent);
+      return static_cast<nsGenericHTMLElement*>(aContent);
     return nsnull;
   }
 
@@ -810,21 +810,16 @@ protected:
 
 private:
   /**
-   * Returns whether this element is an editable root. An editable root is
-   * defined as an element that is editable and whose parent is either a
-   * non-editable element or an editable document (so if the whole document is
-   * editable, then there is only one editable root, namely the
-   * documentElement).
+   * Returns whether this element is an editable root. There are two types of
+   * editable roots:
+   *   1) the documentElement if the whole document is editable (for example for
+   *      desginMode=on)
+   *   2) an element that is marked editable with contentEditable=true and that
+   *      doesn't have a parent or whose parent is not editable.
+   * Note that this doesn't return input and textarea elements that haven't been
+   * made editable through contentEditable or designMode.
    */
   PRBool IsEditableRoot() const;
-
-  /**
-   * Returns the first node amongst this node and its ancestors that is an
-   * editable root.
-   *
-   * @see IsEditableRoot for a definition of an editable root.
-   */
-  nsIContent* FindEditableRoot();
 
   void ChangeEditableState(PRInt32 aChange);
 };
@@ -1103,7 +1098,7 @@ NS_NewHTML##_elementName##Element(nsINodeInfo *aNodeInfo, PRBool aFromParser)\
     if (NS_SUCCEEDED(rv))                                                     \
       return rv;                                                              \
                                                                               \
-    rv = DOMQueryInterface(NS_STATIC_CAST(_base_if *, this), aIID,            \
+    rv = DOMQueryInterface(static_cast<_base_if *>(this), aIID,               \
                            aInstancePtr);                                     \
                                                                               \
     if (NS_SUCCEEDED(rv))                                                     \
@@ -1134,7 +1129,7 @@ NS_NewHTML##_elementName##Element(nsINodeInfo *aNodeInfo, PRBool aFromParser)\
     if (NS_SUCCEEDED(rv))                                                     \
       return rv;                                                              \
                                                                               \
-    rv = DOMQueryInterface(NS_STATIC_CAST(_base_if *, this), aIID,            \
+    rv = DOMQueryInterface(static_cast<_base_if *>(this), aIID,               \
                            aInstancePtr);                                     \
                                                                               \
     if (NS_SUCCEEDED(rv))                                                     \

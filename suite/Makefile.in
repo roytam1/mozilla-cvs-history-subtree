@@ -43,9 +43,12 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
+# XXX Disable for release builds
+DIRS += debugQA
+
 # if you add DIRS here, care that app is always at the bottom of the list
 # as it packages up the built files on mac...
-DIRS		= \
+DIRS		+= \
 		branding \
 		browser \
 		common \
@@ -55,26 +58,9 @@ DIRS		= \
 		app \
 		$(NULL)
 
-# XXX Disable for release builds
-DIRS += debugQA
-
 ifeq ($(OS_ARCH),WINNT)
 ifdef MOZ_INSTALLER
 DIRS += installer/windows
-endif
-endif
-
-ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
-README_FILE = $(call EXPAND_LOCALE_SRCDIR,suite/locales)/installer/mac/README.txt
-else
-ifeq ($(OS_ARCH),OS2)
-README_FILE = $(call EXPAND_LOCALE_SRCDIR,suite/locales)/installer/os2/README.txt
-else
-ifeq ($(OS_ARCH),WINNT)
-README_FILE = $(call EXPAND_LOCALE_SRCDIR,suite/locales)/installer/windows/README.txt
-else
-README_FILE = $(call EXPAND_LOCALE_SRCDIR,suite/locales)/installer/unix/README
-endif
 endif
 endif
 
@@ -83,7 +69,6 @@ include $(topsrcdir)/config/rules.mk
 # For Windows build the uninstaller during the application build since the
 # uninstaller is included with the application for mar file generation.
 libs::
-	$(INSTALL) $(README_FILE) $(DIST)/bin
 ifeq ($(OS_ARCH),WINNT)
 ifdef MOZ_INSTALLER
 	$(MAKE) -C installer/windows uninstaller

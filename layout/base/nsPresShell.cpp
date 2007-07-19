@@ -941,22 +941,10 @@ public:
   virtual void EndUpdate(nsIDocument* aDocument, nsUpdateType aUpdateType);
   virtual void BeginLoad(nsIDocument* aDocument);
   virtual void EndLoad(nsIDocument* aDocument);
-  virtual void CharacterDataChanged(nsIDocument* aDocument,
-                                    nsIContent* aContent,
-                                    CharacterDataChangeInfo* aInfo);
   virtual void ContentStatesChanged(nsIDocument* aDocument,
                                     nsIContent* aContent1,
                                     nsIContent* aContent2,
                                     PRInt32 aStateMask);
-  virtual void AttributeChanged(nsIDocument* aDocument, nsIContent* aContent,
-                                PRInt32 aNameSpaceID, nsIAtom* aAttribute,
-                                PRInt32 aModType);
-  virtual void ContentAppended(nsIDocument* aDocument, nsIContent* aContainer,
-                               PRInt32 aNewIndexInContainer);
-  virtual void ContentInserted(nsIDocument* aDocument, nsIContent* aContainer,
-                               nsIContent* aChild, PRInt32 aIndexInContainer);
-  virtual void ContentRemoved(nsIDocument* aDocument, nsIContent* aContainer,
-                              nsIContent* aChild, PRInt32 aIndexInContainer);
   virtual void StyleSheetAdded(nsIDocument* aDocument,
                                nsIStyleSheet* aStyleSheet,
                                PRBool aDocumentSheet);
@@ -976,6 +964,13 @@ public:
   virtual void StyleRuleRemoved(nsIDocument* aDocument,
                                 nsIStyleSheet* aStyleSheet,
                                 nsIStyleRule* aStyleRule);
+
+  // nsIMutationObserver
+  NS_DECL_NSIMUTATIONOBSERVER_CHARACTERDATACHANGED
+  NS_DECL_NSIMUTATIONOBSERVER_ATTRIBUTECHANGED
+  NS_DECL_NSIMUTATIONOBSERVER_CONTENTAPPENDED
+  NS_DECL_NSIMUTATIONOBSERVER_CONTENTINSERTED
+  NS_DECL_NSIMUTATIONOBSERVER_CONTENTREMOVED
 
   NS_DECL_NSIOBSERVER
 
@@ -1284,25 +1279,25 @@ nsIPresShell::GetVerifyReflowEnable()
 
     if (VERIFY_REFLOW_ON & gVerifyReflowFlags) {
       gVerifyReflowEnabled = PR_TRUE;
-    }
-    printf("Note: verifyreflow is %sabled",
-           gVerifyReflowEnabled ? "en" : "dis");
-    if (VERIFY_REFLOW_NOISY & gVerifyReflowFlags) {
-      printf(" (noisy)");
-    }
-    if (VERIFY_REFLOW_ALL & gVerifyReflowFlags) {
-      printf(" (all)");
-    }
-    if (VERIFY_REFLOW_DUMP_COMMANDS & gVerifyReflowFlags) {
-      printf(" (show reflow commands)");
-    }
-    if (VERIFY_REFLOW_NOISY_RC & gVerifyReflowFlags) {
-      printf(" (noisy reflow commands)");
-      if (VERIFY_REFLOW_REALLY_NOISY_RC & gVerifyReflowFlags) {
-        printf(" (REALLY noisy reflow commands)");
+
+      printf("Note: verifyreflow is enabled");
+      if (VERIFY_REFLOW_NOISY & gVerifyReflowFlags) {
+        printf(" (noisy)");
       }
+      if (VERIFY_REFLOW_ALL & gVerifyReflowFlags) {
+        printf(" (all)");
+      }
+      if (VERIFY_REFLOW_DUMP_COMMANDS & gVerifyReflowFlags) {
+        printf(" (show reflow commands)");
+      }
+      if (VERIFY_REFLOW_NOISY_RC & gVerifyReflowFlags) {
+        printf(" (noisy reflow commands)");
+        if (VERIFY_REFLOW_REALLY_NOISY_RC & gVerifyReflowFlags) {
+          printf(" (REALLY noisy reflow commands)");
+        }
+      }
+      printf("\n");
     }
-    printf("\n");
   }
 #endif
   return gVerifyReflowEnabled;
@@ -2455,7 +2450,7 @@ PresShell::InitialReflow(nscoord aWidth, nscoord aHeight)
 void
 PresShell::sPaintSuppressionCallback(nsITimer *aTimer, void* aPresShell)
 {
-  PresShell* self = NS_STATIC_CAST(PresShell*, aPresShell);
+  PresShell* self = static_cast<PresShell*>(aPresShell);
   if (self)
     self->UnsuppressPainting();
 }
@@ -2538,7 +2533,7 @@ PresShell::KillResizeEventTimer()
 void
 PresShell::sResizeEventCallback(nsITimer *aTimer, void* aPresShell)
 {
-  PresShell* self = NS_STATIC_CAST(PresShell*, aPresShell);
+  PresShell* self = static_cast<PresShell*>(aPresShell);
   if (self) {
     self->FireResizeEvent();  
   }
@@ -2807,6 +2802,42 @@ PresShell::CompleteMove(PRBool aForward, PRBool aExtend)
 nsresult
 PresShell::CompleteMoveInner(PRBool aForward, PRBool aExtend, PRBool aScrollIntoView)
 {
+  nsIContent* root = mSelection->GetAncestorLimiter();
+  if (root) {
+    // make the caret be either at the very beginning (0) or the very end
+    nsIContent* node = root;
+    PRInt32 offset = 0;
+    nsFrameSelection::HINT hint = nsFrameSelection::HINTLEFT;
+    if (aForward) {
+      nsIContent* next = node;
+      PRUint32 count;
+      while ((count = next->GetChildCount()) > 0) {
+        node = next;
+        offset = count;
+        next = next->GetChildAt(count - 1);
+      }
+
+      if (offset > 0 && node->GetChildAt(offset - 1)->Tag() == nsGkAtoms::br) {
+        --offset;
+        hint = nsFrameSelection::HINTRIGHT; // for bug 106855
+      }
+    }
+
+    mSelection->HandleClick(node, offset, offset, aExtend, PR_FALSE, hint);
+
+    // HandleClick resets ancestorLimiter, so set it again.
+    mSelection->SetAncestorLimiter(root);
+
+    if (aScrollIntoView) {
+      return
+        ScrollSelectionIntoView(nsISelectionController::SELECTION_NORMAL, 
+                                nsISelectionController::SELECTION_FOCUS_REGION,
+                                PR_TRUE);
+    }
+
+    return NS_OK;
+  }
+
   nsIScrollableView *scrollableView;
   if (!mViewManager) 
     return NS_ERROR_UNEXPECTED;
@@ -3130,7 +3161,7 @@ PresShell::FrameNeedsReflow(nsIFrame *aFrame, IntrinsicDirty aIntrinsicDirty,
 
     while (stack.Count() != 0) {
       nsIFrame *f =
-        NS_STATIC_CAST(nsIFrame*, stack.FastElementAt(stack.Count() - 1));
+        static_cast<nsIFrame*>(stack.FastElementAt(stack.Count() - 1));
       stack.RemoveElementAt(stack.Count() - 1);
 
       PRInt32 childListIndex = 0;
@@ -3613,6 +3644,113 @@ PresShell::GoToAnchor(const nsAString& aAnchorName, PRBool aScroll)
   return rv;
 }
 
+/*
+ * Helper (per-continuation) for ScrollContentIntoView.
+ *
+ * @param aFrame [in] Frame whose bounds should be unioned
+ * @param aVPercent [in] same as for ScrollContentIntoView
+ * @param aRect [inout] rect into which its bounds should be unioned
+ * @param aHaveRect [inout] whether aRect contains data yet
+ * @param aClosestScrolledView [inout] the view to which aRect is relative.
+ *   If null, should be filled in appropriately.  If non-null, the function
+ *   will no-op if the closest scrolling view doesn't match.
+ */
+static void
+UnionRectForClosestScrolledView(nsIFrame* aFrame,
+                                PRIntn aVPercent,
+                                nsRect& aRect,
+                                PRBool& aHaveRect,
+                                nsIView*& aClosestScrolledView)
+{
+  nsRect  frameBounds = aFrame->GetRect();
+  nsPoint offset;
+  nsIView* closestView;
+  aFrame->GetOffsetFromView(offset, &closestView);
+  frameBounds.MoveTo(offset);
+
+  // If this is an inline frame and either the bounds height is 0 (quirks
+  // layout model) or aVPercent is not NS_PRESSHELL_SCROLL_ANYWHERE, we need to
+  // change the top of the bounds to include the whole line.
+  if (frameBounds.height == 0 || aVPercent != NS_PRESSHELL_SCROLL_ANYWHERE) {
+    nsIAtom* frameType = NULL;
+    nsIFrame *prevFrame = aFrame;
+    nsIFrame *f = aFrame;
+
+    while (f &&
+           (frameType = f->GetType()) == nsGkAtoms::inlineFrame) {
+      prevFrame = f;
+      f = prevFrame->GetParent();
+    }
+
+    if (f != aFrame &&
+        f &&
+        frameType == nsGkAtoms::blockFrame) {
+      // find the line containing aFrame and increase the top of |offset|.
+      nsCOMPtr<nsILineIterator> lines(do_QueryInterface(f));
+
+      if (lines) {
+        PRInt32 index = -1;
+        lines->FindLineContaining(prevFrame, &index);
+        if (index >= 0) {
+          nsIFrame *trash1;
+          PRInt32 trash2;
+          nsRect lineBounds;
+          PRUint32 trash3;
+
+          if (NS_SUCCEEDED(lines->GetLine(index, &trash1, &trash2,
+                                          lineBounds, &trash3))) {
+            nsPoint blockOffset;
+            nsIView* blockView;
+            f->GetOffsetFromView(blockOffset, &blockView);
+
+            if (blockView == closestView) {
+              // XXX If views not equal, this is hard.  Do we want to bother?
+              nscoord newoffset = lineBounds.y + blockOffset.y;
+
+              if (newoffset < frameBounds.y)
+                frameBounds.y = newoffset;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  NS_ASSERTION(closestView && !closestView->ToScrollableView(),
+               "What happened to the scrolled view?  "
+               "The frame should not be directly in the scrolling view!");
+  
+  // Walk up the view hierarchy.  Make sure to add the view's position
+  // _after_ we get the parent and see whether it's scrollable.  We want to
+  // make sure to get the scrolled view's position after it has been scrolled.
+  while (closestView) {
+    nsIView* parent = closestView->GetParent();
+    if (parent && parent->ToScrollableView())
+      break;
+    frameBounds += closestView->GetPosition();
+    closestView = parent;
+  }
+
+  if (!aClosestScrolledView)
+    aClosestScrolledView = closestView;
+
+  if (aClosestScrolledView == closestView) {
+    if (aHaveRect) {
+      // We can't use nsRect::UnionRect since it drops empty rects on
+      // the floor, and we need to include them.  (Thus we need
+      // aHaveRect to know when to drop the initial value on the floor.)
+      nscoord x = PR_MIN(aRect.x, frameBounds.x),
+              y = PR_MIN(aRect.y, frameBounds.y),
+          xmost = PR_MAX(aRect.XMost(), frameBounds.XMost()),
+          ymost = PR_MAX(aRect.YMost(), frameBounds.YMost());
+      aRect.SetRect(x, y, xmost - x, ymost - y);
+    } else {
+      aHaveRect = PR_TRUE;
+      aRect = frameBounds;
+    }
+  }
+}
+
 /**
  * This function takes a scrolling view, a rect, and a scroll position and
  * attempts to scroll that rect to that position in that view.  The rect
@@ -3759,64 +3897,14 @@ PresShell::ScrollContentIntoView(nsIContent* aContent,
   // Step 2: Walk the views that are parents of the frame and scroll them
   //         appropriately.
   
-  nsRect  frameBounds = frame->GetRect();
-  nsPoint offset;
-  nsIView* closestView;
-  frame->GetOffsetFromView(offset, &closestView);
-  frameBounds.MoveTo(offset);
+  nsIView *closestView = nsnull;
+  nsRect frameBounds;
+  PRBool haveRect = PR_FALSE;
+  do {
+    UnionRectForClosestScrolledView(frame, aVPercent, frameBounds, haveRect,
+                                    closestView);
+  } while ((frame = frame->GetNextContinuation()));
 
-  // If this is an inline frame and either the bounds height is 0 (quirks
-  // layout model) or aVPercent is not NS_PRESSHELL_SCROLL_ANYWHERE, we need to
-  // change the top of the bounds to include the whole line.
-  if (frameBounds.height == 0 || aVPercent != NS_PRESSHELL_SCROLL_ANYWHERE) {
-    nsIAtom* frameType = NULL;
-    nsIFrame *prevFrame = frame;
-    nsIFrame *f = frame;
-
-    while (f &&
-           (frameType = f->GetType()) == nsGkAtoms::inlineFrame) {
-      prevFrame = f;
-      f = prevFrame->GetParent();
-    }
-
-    if (f != frame &&
-        f &&
-        frameType == nsGkAtoms::blockFrame) {
-      // find the line containing aFrame and increase the top of |offset|.
-      nsCOMPtr<nsILineIterator> lines(do_QueryInterface(f));
-
-      if (lines) {
-        PRInt32 index = -1;
-        lines->FindLineContaining(prevFrame, &index);
-        if (index >= 0) {
-          nsIFrame *trash1;
-          PRInt32 trash2;
-          nsRect lineBounds;
-          PRUint32 trash3;
-
-          if (NS_SUCCEEDED(lines->GetLine(index, &trash1, &trash2,
-                                          lineBounds, &trash3))) {
-            nsPoint blockOffset;
-            nsIView* blockView;
-            f->GetOffsetFromView(blockOffset, &blockView);
-
-            if (blockView == closestView) {
-              // XXX If views not equal, this is hard.  Do we want to bother?
-              nscoord newoffset = lineBounds.y + blockOffset.y;
-
-              if (newoffset < frameBounds.y)
-                frameBounds.y = newoffset;
-            }
-          }
-        }
-      }
-    }
-  }
-
-  NS_ASSERTION(closestView && !closestView->ToScrollableView(),
-               "What happened to the scrolled view?  "
-               "The frame should not be directly in the scrolling view!");
-  
   // Walk up the view hierarchy.  Make sure to add the view's position
   // _after_ we get the parent and see whether it's scrollable.  We want to
   // make sure to get the scrolled view's position after it has been scrolled.
@@ -3829,7 +3917,7 @@ PresShell::ScrollContentIntoView(nsIContent* aContent,
         ScrollViewToShowRect(scrollingView, frameBounds, aVPercent, aHPercent);
       }
     }
-    frameBounds += closestView->GetPosition();;
+    frameBounds += closestView->GetPosition();
     closestView = parent;
   }
 
@@ -4381,10 +4469,12 @@ PresShell::ContentStatesChanged(nsIDocument* aDocument,
   NS_PRECONDITION(!mIsDocumentGone, "Unexpected ContentStatesChanged");
   NS_PRECONDITION(aDocument == mDocument, "Unexpected aDocument");
 
-  WillCauseReflow();
-  mFrameConstructor->ContentStatesChanged(aContent1, aContent2, aStateMask);
-  VERIFY_STYLE_TREE;
-  DidCauseReflow();
+  if (mDidInitialReflow) {
+    WillCauseReflow();
+    mFrameConstructor->ContentStatesChanged(aContent1, aContent2, aStateMask);
+    VERIFY_STYLE_TREE;
+    DidCauseReflow();
+  }
 }
 
 
@@ -4393,7 +4483,8 @@ PresShell::AttributeChanged(nsIDocument* aDocument,
                             nsIContent*  aContent,
                             PRInt32      aNameSpaceID,
                             nsIAtom*     aAttribute,
-                            PRInt32      aModType)
+                            PRInt32      aModType,
+                            PRUint32     aStateMask)
 {
   NS_PRECONDITION(!mIsDocumentGone, "Unexpected AttributeChanged");
   NS_PRECONDITION(aDocument == mDocument, "Unexpected aDocument");
@@ -4404,7 +4495,7 @@ PresShell::AttributeChanged(nsIDocument* aDocument,
   if (mDidInitialReflow) {
     WillCauseReflow();
     mFrameConstructor->AttributeChanged(aContent, aNameSpaceID,
-                                        aAttribute, aModType);
+                                        aAttribute, aModType, aStateMask);
     VERIFY_STYLE_TREE;
     DidCauseReflow();
   }
@@ -4633,8 +4724,8 @@ PresShell::ComputeRepaintRegionForCopy(nsIView*      aRootView,
                                        nsRegion*     aRepaintRegion)
 {
   return nsLayoutUtils::ComputeRepaintRegionForCopy(
-      NS_STATIC_CAST(nsIFrame*, aRootView->GetClientData()),
-      NS_STATIC_CAST(nsIFrame*, aMovingView->GetClientData()),
+      static_cast<nsIFrame*>(aRootView->GetClientData()),
+      static_cast<nsIFrame*>(aMovingView->GetClientData()),
       aDelta, aCopyRect, aRepaintRegion);
 }
 
@@ -4842,7 +4933,7 @@ PresShell::CreateRangePaintInfo(nsIDOMRange* aRange,
     if (!ancestor || !ancestor->IsNodeOfType(nsINode::eCONTENT))
       return nsnull;
 
-    nsIContent* ancestorContent = NS_STATIC_CAST(nsIContent*, ancestor);
+    nsIContent* ancestorContent = static_cast<nsIContent*>(ancestor);
     ancestorFrame = GetPrimaryFrameFor(ancestorContent);
 
     // use the nearest ancestor frame that includes all continuations as the
@@ -5101,7 +5192,7 @@ PresShell::Paint(nsIView*             aView,
 
   NS_ASSERTION(!(nsnull == aView), "null view");
 
-  frame = NS_STATIC_CAST(nsIFrame*, aView->GetClientData());
+  frame = static_cast<nsIFrame*>(aView->GetClientData());
   nscolor backgroundColor;
   mViewManager->GetDefaultBackgroundColor(&backgroundColor);
   for (nsIView *view = aView; view; view = view->GetParent()) {
@@ -5290,7 +5381,7 @@ PresShell::HandleEvent(nsIView         *aView,
     return NS_OK;
   }
   
-  nsIFrame* frame = NS_STATIC_CAST(nsIFrame*, aView->GetClientData());
+  nsIFrame* frame = static_cast<nsIFrame*>(aView->GetClientData());
 
   PRBool dispatchUsingCoordinates =
       !NS_IS_KEY_EVENT(aEvent) && !NS_IS_IME_EVENT(aEvent) &&
@@ -5308,7 +5399,7 @@ PresShell::HandleEvent(nsIView         *aView,
     
     if (targetView) {
       aView = targetView;
-      frame = NS_STATIC_CAST(nsIFrame*, aView->GetClientData());
+      frame = static_cast<nsIFrame*>(aView->GetClientData());
     }
   }
 
@@ -5326,16 +5417,20 @@ PresShell::HandleEvent(nsIView         *aView,
     // list.
     if (framePresContext == rootPresContext &&
         frame == FrameManager()->GetRootFrame()) {
-      const nsTArray<nsIFrame*>& popups = rootPresContext->GetActivePopups();
-      PRInt32 i;
-      // Search from top to bottom
-      for (i = popups.Length() - 1; i >= 0; i--) {
-        nsIFrame* popup = popups[i];
-        if (popup->GetOverflowRect().Contains(
-                nsLayoutUtils::GetEventCoordinatesRelativeTo(aEvent, popup))) {
-          // The event should target the popup
-          frame = popup;
-          break;
+
+      nsXULPopupManager* pm = nsXULPopupManager::GetInstance();
+      if (pm) {
+        nsTArray<nsIFrame*> popups = pm->GetOpenPopups();
+        PRInt32 i;
+        // Search from top to bottom
+        for (i = 0; i < popups.Length(); i++) {
+          nsIFrame* popup = popups[i];
+          if (popup->GetOverflowRect().Contains(
+              nsLayoutUtils::GetEventCoordinatesRelativeTo(aEvent, popup))) {
+            // The event should target the popup
+            frame = popup;
+            break;
+          }
         }
       }
     }
@@ -5345,7 +5440,7 @@ PresShell::HandleEvent(nsIView         *aView,
     nsIFrame* targetFrame = nsLayoutUtils::GetFrameForPoint(frame, eventPoint);
     if (targetFrame) {
       PresShell* shell =
-          NS_STATIC_CAST(PresShell*, targetFrame->PresContext()->PresShell());
+          static_cast<PresShell*>(targetFrame->PresContext()->PresShell());
       if (shell != this) {
         // Handle the event in the correct shell.
         // Prevent deletion until we're done with event handling (bug 336582).
@@ -5547,7 +5642,7 @@ inline PRBool
 IsSynthesizedMouseMove(nsEvent* aEvent)
 {
   return aEvent->eventStructType == NS_MOUSE_EVENT &&
-         NS_STATIC_CAST(nsMouseEvent*, aEvent)->reason != nsMouseEvent::eReal;
+         static_cast<nsMouseEvent*>(aEvent)->reason != nsMouseEvent::eReal;
 }
 
 nsresult
@@ -5557,7 +5652,7 @@ PresShell::HandleEventInternal(nsEvent* aEvent, nsIView *aView,
 #ifdef ACCESSIBILITY
   if (aEvent->eventStructType == NS_ACCESSIBLE_EVENT)
   {
-    NS_STATIC_CAST(nsAccessibleEvent*, aEvent)->accessible = nsnull;
+    static_cast<nsAccessibleEvent*>(aEvent)->accessible = nsnull;
     nsCOMPtr<nsIAccessibilityService> accService = 
       do_GetService("@mozilla.org/accessibilityService;1");
     if (accService) {
@@ -5574,7 +5669,7 @@ PresShell::HandleEventInternal(nsEvent* aEvent, nsIView *aView,
       // Addref this - it's not a COM Ptr
       // We'll make sure the right number of Addref's occur before
       // handing this back to the accessibility client
-      NS_STATIC_CAST(nsAccessibleEvent*, aEvent)->accessible = acc;
+      static_cast<nsAccessibleEvent*>(aEvent)->accessible = acc;
       // Ensure this is set in case a11y was activated before any
       // nsPresShells existed to observe "a11y-init-or-shutdown" topic
       gIsAccessibilityActive = PR_TRUE;
@@ -6087,7 +6182,7 @@ PresShell::ProcessReflowCommands(PRBool aInterruptible)
       do {
         // Send an incremental reflow notification to the target frame.
         PRInt32 idx = mDirtyRoots.Count() - 1;
-        nsIFrame *target = NS_STATIC_CAST(nsIFrame*, mDirtyRoots[idx]);
+        nsIFrame *target = static_cast<nsIFrame*>(mDirtyRoots[idx]);
         mDirtyRoots.RemoveElementAt(idx);
 
         if (!NS_SUBTREE_DIRTY(target)) {
@@ -6173,14 +6268,14 @@ ReResolveMenusAndTrees(nsIFrame *aFrame, void *aClosure)
   // have to special-case them on a skin switch, and ensure that the
   // popup frames just get destroyed completely.
   if (aFrame && aFrame->GetType() == nsGkAtoms::menuFrame)
-    (NS_STATIC_CAST(nsMenuFrame *, aFrame))->CloseMenu(PR_TRUE);
+    (static_cast<nsMenuFrame *>(aFrame))->CloseMenu(PR_TRUE);
   return PR_TRUE;
 }
 
 PR_STATIC_CALLBACK(PRBool)
 ReframeImageBoxes(nsIFrame *aFrame, void *aClosure)
 {
-  nsStyleChangeList *list = NS_STATIC_CAST(nsStyleChangeList*, aClosure);
+  nsStyleChangeList *list = static_cast<nsStyleChangeList*>(aClosure);
   if (aFrame->GetType() == nsGkAtoms::imageBoxFrame) {
     list->AppendChange(aFrame, aFrame->GetContent(),
                        NS_STYLE_HINT_FRAMECHANGE);
@@ -6478,12 +6573,12 @@ CompareTrees(nsPresContext* aFirstPresContext, nsIFrame* aFirstFrame,
 
         // verify that neither frame has a space manager,
         // or they both do and the space managers are equivalent
-        nsSpaceManager *sm1 = NS_STATIC_CAST(nsSpaceManager*,
-                         k1->GetProperty(nsGkAtoms::spaceManagerProperty));
+        nsSpaceManager *sm1 = static_cast<nsSpaceManager*>
+                                         (k1->GetProperty(nsGkAtoms::spaceManagerProperty));
 
         // look at the test frame
-        nsSpaceManager *sm2 = NS_STATIC_CAST(nsSpaceManager*,
-                         k2->GetProperty(nsGkAtoms::spaceManagerProperty));
+        nsSpaceManager *sm2 = static_cast<nsSpaceManager*>
+                                         (k2->GetProperty(nsGkAtoms::spaceManagerProperty));
 
         // now compare the space managers
         if (((nsnull == sm1) && (nsnull != sm2)) ||

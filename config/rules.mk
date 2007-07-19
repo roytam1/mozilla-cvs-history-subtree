@@ -201,10 +201,17 @@ ifndef GNU_CC
 #
 # Changes to the PDBFILE naming scheme should also be reflected in HOST_PDBFILE
 # 
+ifdef LIBRARY_NAME
+PDBFILE=$(LIBRARY_NAME).pdb
+ifdef MOZ_DEBUG
+CODFILE=$(LIBRARY_NAME).cod
+endif
+else
 PDBFILE=$(basename $(@F)).pdb
 ifdef MOZ_DEBUG
 CODFILE=$(basename $(@F)).cod
 endif
+endif # LIBRARY_NAME
 
 ifdef MOZ_MAPINFO
 ifdef LIBRARY_NAME
@@ -429,7 +436,7 @@ ifdef SHARED_LIBRARY
 ifdef IS_COMPONENT
 EXTRA_DSO_LDOPTS	+= -bundle
 else
-EXTRA_DSO_LDOPTS	+= -dynamiclib -install_name @executable_path/$(SHARED_LIBRARY) -compatibility_version 1 -current_version 1
+EXTRA_DSO_LDOPTS	+= -dynamiclib -install_name @executable_path/$(SHARED_LIBRARY) -compatibility_version 1 -current_version 1 -single_module
 endif
 endif
 endif
@@ -1288,10 +1295,16 @@ $(OBJ_PREFIX)%.$(OBJ_SUFFIX): %.m Makefile Makefile.in
 %.s: %.cpp
 	$(CCC) -S $(COMPILE_CXXFLAGS) $(_VPATH_SRCS)
 
+%.s: %.cc
+	$(CCC) -S $(COMPILE_CXXFLAGS) $(_VPATH_SRCS)
+
 %.s: %.c
 	$(CC) -S $(COMPILE_CFLAGS) $(_VPATH_SRCS)
 
 %.i: %.cpp
+	$(CCC) -C -E $(COMPILE_CXXFLAGS) $(_VPATH_SRCS) > $*.i
+
+%.i: %.cc
 	$(CCC) -C -E $(COMPILE_CXXFLAGS) $(_VPATH_SRCS) > $*.i
 
 %.i: %.c

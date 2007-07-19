@@ -762,8 +762,8 @@ nsWindow::QueryInterface(const nsIID& aIID, void** aInstancePtr)
   NS_PRECONDITION(aInstancePtr, "null out param");
 
   if (aIID.Equals(NS_GET_IID(nsIKBStateControl))) {
-    *aInstancePtr = NS_STATIC_CAST(nsIKBStateControl*, this);
-    NS_ADDREF(NS_STATIC_CAST(nsBaseWidget*, this));
+    *aInstancePtr = static_cast<nsIKBStateControl*>(this);
+    NS_ADDREF(static_cast<nsBaseWidget*>(this));
     return NS_OK;
   }
 
@@ -1636,9 +1636,20 @@ NS_METHOD nsWindow::Destroy()
 NS_IMETHODIMP nsWindow::SetParent(nsIWidget *aNewParent)
 {
   if (aNewParent) {
+    nsCOMPtr<nsIWidget> kungFuDeathGrip(this);
+
+    nsIWidget* parent = GetParent();
+    if (parent) {
+      parent->RemoveChild(this);
+    }
+
     HWND newParent = (HWND)aNewParent->GetNativeData(NS_NATIVE_WINDOW);
     NS_ASSERTION(newParent, "Parent widget has a null native window handle");
-    ::SetParent(mWnd, newParent);
+    if (newParent && mWnd) {
+      ::SetParent(mWnd, newParent);
+    }
+
+    aNewParent->AddChild(this);
 
     return NS_OK;
   }
@@ -2709,10 +2720,10 @@ HBITMAP nsWindow::DataToBitmap(PRUint8* aImageData,
     head.bV4AlphaMask = 0xFF000000;
 
     HBITMAP bmp = ::CreateDIBitmap(dc,
-                                   NS_REINTERPRET_CAST(CONST BITMAPINFOHEADER*, &head),
+                                   reinterpret_cast<CONST BITMAPINFOHEADER*>(&head),
                                    CBM_INIT,
                                    aImageData,
-                                   NS_REINTERPRET_CAST(CONST BITMAPINFO*, &head),
+                                   reinterpret_cast<CONST BITMAPINFO*>(&head),
                                    DIB_RGB_COLORS);
 
     ::SelectObject(dc, oldbits);

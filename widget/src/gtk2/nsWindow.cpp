@@ -429,7 +429,7 @@ nsWindow::Destroy(void)
 
     // ungrab if required
     nsCOMPtr<nsIWidget> rollupWidget = do_QueryReferent(gRollupWindow);
-    if (NS_STATIC_CAST(nsIWidget *, this) == rollupWidget.get()) {
+    if (static_cast<nsIWidget *>(this) == rollupWidget.get()) {
         if (gRollupListener)
             gRollupListener->Rollup();
         gRollupWindow = nsnull;
@@ -509,7 +509,7 @@ nsWindow::SetParent(nsIWidget *aNewParent)
     NS_ENSURE_ARG_POINTER(aNewParent);
 
     GdkWindow* newParentWindow =
-        NS_STATIC_CAST(GdkWindow*, aNewParent->GetNativeData(NS_NATIVE_WINDOW));
+        static_cast<GdkWindow*>(aNewParent->GetNativeData(NS_NATIVE_WINDOW));
     NS_ASSERTION(newParentWindow, "Parent widget has a null native window handle");
 
     if (!mShell && mDrawingarea) {
@@ -653,7 +653,7 @@ nsWindow::SetZIndex(PRInt32 aZIndex)
     } else {
         // All the siblings before us need to be below our widget. 
         for (nsWindow* w = this; w;
-             w = NS_STATIC_CAST(nsWindow*, w->GetPrevSibling())) {
+             w = static_cast<nsWindow*>(w->GetPrevSibling())) {
             if (w->mDrawingarea)
                 gdk_window_lower(w->mDrawingarea->clip_window);
         }
@@ -716,8 +716,8 @@ SetUserTimeAndStartupIDForActivatedWindow(GtkWidget* aWindow)
     if (!toolkit)
         return;
 
-    nsGTKToolkit* GTKToolkit = NS_STATIC_CAST(nsGTKToolkit*,
-        NS_STATIC_CAST(nsIToolkit*, toolkit));
+    nsGTKToolkit* GTKToolkit = static_cast<nsGTKToolkit*>
+                                          (static_cast<nsIToolkit*>(toolkit));
     nsCAutoString desktopStartupID;
     GTKToolkit->GetDesktopStartupID(&desktopStartupID);
     if (desktopStartupID.IsEmpty()) {
@@ -1241,7 +1241,7 @@ nsWindow::Scroll(PRInt32  aDx,
         kid->GetBounds(bounds);
         bounds.x += aDx;
         bounds.y += aDy;
-        NS_STATIC_CAST(nsBaseWidget*, kid)->SetBounds(bounds);
+        static_cast<nsBaseWidget*>(kid)->SetBounds(bounds);
     }
 
     // Process all updates so that everything is drawn.
@@ -1291,7 +1291,7 @@ nsWindow::GetNativeData(PRUint32 aDataType)
 
     case NS_NATIVE_GRAPHIC: {
         NS_ASSERTION(nsnull != mToolkit, "NULL toolkit, unable to get a GC");
-        return (void *)NS_STATIC_CAST(nsGTKToolkit *, mToolkit)->GetSharedGC();
+        return (void *)static_cast<nsGTKToolkit *>(mToolkit)->GetSharedGC();
         break;
     }
 
@@ -1480,8 +1480,8 @@ nsWindow::CaptureRollupEvents(nsIRollupListener *aListener,
 
     if (aDoCapture) {
         gRollupListener = aListener;
-        gRollupWindow = do_GetWeakReference(NS_STATIC_CAST(nsIWidget*,
-                                                           this));
+        gRollupWindow = do_GetWeakReference(static_cast<nsIWidget*>
+                                                       (this));
         // real grab is only done when there is no dragging
         if (!nsWindow::DragInProgress()) {
             gtk_grab_add(widget);
@@ -1631,6 +1631,9 @@ nsWindow::OnExposeEvent(GtkWidget *aWidget, GdkEventExpose *aEvent)
     GdkRectangle *rects;
     gint nrects;
     gdk_region_get_rectangles(aEvent->region, &rects, &nrects);
+    if (NS_UNLIKELY(!rects)) // OOM
+        return FALSE;
+
     LOGDRAW(("sending expose event [%p] %p 0x%lx (rects follow):\n",
              (void *)this, (void *)aEvent->window,
              GDK_WINDOW_XWINDOW(aEvent->window)));
@@ -1643,6 +1646,10 @@ nsWindow::OnExposeEvent(GtkWidget *aWidget, GdkEventExpose *aEvent)
     }
 
     nsCOMPtr<nsIRenderingContext> rc = getter_AddRefs(GetRenderingContext());
+    if (NS_UNLIKELY(!rc)) {
+        g_free(rects);
+        return FALSE;
+    }
 
     PRBool translucent;
     GetWindowTranslucency(translucent);
@@ -1747,16 +1754,20 @@ nsWindow::OnExposeEvent(GtkWidget *aWidget, GdkEventExpose *aEvent)
                 nsRefPtr<gfxImageSurface> img =
                     new gfxImageSurface(gfxIntSize(boundsRect.width, boundsRect.height),
                                         gfxImageSurface::ImageFormatA8);
-                img->SetDeviceOffset(gfxPoint(-boundsRect.x, -boundsRect.y));
+                if (img && !img->CairoStatus()) {
+                    img->SetDeviceOffset(gfxPoint(-boundsRect.x, -boundsRect.y));
             
-                nsRefPtr<gfxContext> imgCtx = new gfxContext(img);
-                imgCtx->SetPattern(pattern);
-                imgCtx->SetOperator(gfxContext::OPERATOR_SOURCE);
-                imgCtx->Paint();
-        
-                UpdateTranslucentWindowAlphaInternal(nsRect(boundsRect.x, boundsRect.y,
-                                                            boundsRect.width, boundsRect.height),
-                                                     img->Data(), img->Stride());
+                    nsRefPtr<gfxContext> imgCtx = new gfxContext(img);
+                    if (imgCtx) {
+                        imgCtx->SetPattern(pattern);
+                        imgCtx->SetOperator(gfxContext::OPERATOR_SOURCE);
+                        imgCtx->Paint();
+                    }
+
+                    UpdateTranslucentWindowAlphaInternal(nsRect(boundsRect.x, boundsRect.y,
+                                                                boundsRect.width, boundsRect.height),
+                                                         img->Data(), img->Stride());
+                }
             } else {
 #ifdef MOZ_ENABLE_GLITZ
                 ctx->PopGroupToSource();
@@ -4062,7 +4073,7 @@ get_window_for_gtk_widget(GtkWidget *widget)
     if (!user_data)
         return nsnull;
 
-    return NS_STATIC_CAST(nsWindow *, user_data);
+    return static_cast<nsWindow *>(user_data);
 }
 
 /* static */
@@ -4075,7 +4086,7 @@ get_window_for_gdk_window(GdkWindow *window)
     if (!user_data)
         return nsnull;
 
-    return NS_STATIC_CAST(nsWindow *, user_data);
+    return static_cast<nsWindow *>(user_data);
 }
 
 /* static */
@@ -4807,7 +4818,7 @@ nsWindow::FireDragLeaveTimer(void)
 guint
 nsWindow::DragMotionTimerCallback(gpointer aClosure)
 {
-    nsRefPtr<nsWindow> window = NS_STATIC_CAST(nsWindow *, aClosure);
+    nsRefPtr<nsWindow> window = static_cast<nsWindow *>(aClosure);
     window->FireDragMotionTimer();
     return FALSE;
 }
@@ -4816,7 +4827,7 @@ nsWindow::DragMotionTimerCallback(gpointer aClosure)
 void
 nsWindow::DragLeaveTimerCallback(nsITimer *aTimer, void *aClosure)
 {
-    nsRefPtr<nsWindow> window = NS_STATIC_CAST(nsWindow *, aClosure);
+    nsRefPtr<nsWindow> window = static_cast<nsWindow *>(aClosure);
     window->FireDragLeaveTimer();
 }
 
@@ -5584,7 +5595,7 @@ IM_preedit_changed_cb(GtkIMContext *aContext,
     }
 
     if (uniStrLen) {
-        window->IMEComposeText(NS_STATIC_CAST(const PRUnichar *, uniStr),
+        window->IMEComposeText(static_cast<const PRUnichar *>(uniStr),
                                uniStrLen, preedit_string, cursor_pos, feedback_list);
     }
 
@@ -5685,7 +5696,7 @@ IM_set_text_range(const PRInt32 aLen,
 
     PangoAttrIterator * aFeedbackIterator;
     aFeedbackIterator = pango_attr_list_get_iterator((PangoAttrList*)aFeedback);
-    //(NS_REINTERPRET_CAST(PangoAttrList*, aFeedback));
+    //(reinterpret_cast<PangoAttrList*>(aFeedback));
     // Since some compilers don't permit this casting -- from const to un-const
     if (aFeedbackIterator == NULL) return;
 
@@ -5829,7 +5840,12 @@ nsWindow::GetThebesSurface()
                  GDK_WINDOW_XWINDOW(d),
                  GDK_VISUAL_XVISUAL(gdk_drawable_get_visual(d)),
                  gfxIntSize(width, height));
-            gfxPlatformGtk::GetPlatform()->SetSurfaceGdkWindow(mThebesSurface, GDK_WINDOW(d));
+            if (mThebesSurface && !mThebesSurface->CairoStatus()) {
+                gfxPlatformGtk::GetPlatform()->SetSurfaceGdkWindow(mThebesSurface, GDK_WINDOW(d));
+            }
+            else {
+                mThebesSurface = nsnull;
+            }
         } else {
 #ifdef MOZ_ENABLE_GLITZ
             glitz_surface_t *gsurf;

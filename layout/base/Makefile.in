@@ -42,6 +42,10 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
+ifdef MOZ_MOCHITEST
+DIRS		+= tests
+endif
+
 MODULE		= layout
 XPIDL_MODULE	= layout_base
 GRE_MODULE	= 1
@@ -74,6 +78,7 @@ REQUIRES	= xpcom \
 		  windowwatcher \
 		  accessibility \
 		  shistory \
+		  caps \
 		  $(NULL)
 
 ifdef MOZ_ENABLE_CAIRO_GFX

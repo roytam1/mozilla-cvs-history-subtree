@@ -72,7 +72,7 @@ XPI_PKGNAME            = xforms
 USE_EXTENSION_MANIFEST = 1
 NO_JAR_AUTO_REG        = 1
 INSTALL_EXTENSION_ID   = {cf2812dc-6a7c-4402-b639-4d277dac4c36}
-PACKAGE_VERSION        = 0.8.0.2
+PACKAGE_VERSION        = 0.8.0.3
 
 # We want to strip the XPI
 STRIP_XPI = 1
@@ -229,9 +229,3 @@ include $(topsrcdir)/config/rules.mk
 
 # Temporary files that will be deleted on f.x. make clean
 GARBAGE		+= install.js install.template
-
-# Create install.js script for suite
-install.js:	install.jst
-		@echo Creating install.js...
-		rm -f install.js
-		$(PERL) $(topsrcdir)/toolkit/mozapps/installer/makejs.pl $(srcdir)/install.jst $(PACKAGE_VERSION) $(FINAL_TARGET)

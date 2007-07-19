@@ -180,13 +180,13 @@ protected:
   nsresult getFolderArcLabelsOut(nsISupportsArray **arcs);
   
   nsresult DoDeleteFromFolder(nsIMsgFolder *folder,
-							  nsISupportsArray *arguments, nsIMsgWindow *msgWindow, PRBool reallyDelete);
+                nsISupportsArray *arguments, nsIMsgWindow *msgWindow, PRBool reallyDelete);
 
   nsresult DoCopyToFolder(nsIMsgFolder *dstFolder, nsISupportsArray *arguments,
-						  nsIMsgWindow *msgWindow, PRBool isMove);
+              nsIMsgWindow *msgWindow, PRBool isMove);
 
   nsresult DoFolderCopyToFolder(nsIMsgFolder *dstFolder, nsISupportsArray *arguments,
-						  nsIMsgWindow *msgWindow, PRBool isMoveFolder);
+              nsIMsgWindow *msgWindow, PRBool isMoveFolder);
 
   nsresult DoNewFolder(nsIMsgFolder *folder, nsISupportsArray *arguments, 
                         nsIMsgWindow *window);
@@ -207,6 +207,7 @@ protected:
   nsresult OnUnreadMessagePropertyChanged(nsIRDFResource *folderResource, PRInt32 oldValue, PRInt32 newValue);
   nsresult OnTotalMessagePropertyChanged(nsIRDFResource *folderResource, PRInt32 oldValue, PRInt32 newValue);
   nsresult OnFolderSizePropertyChanged(nsIRDFResource *folderResource, PRInt32 oldValue, PRInt32 newValue);
+  nsresult OnFolderSortOrderPropertyChanged(nsIRDFResource *folderResource, PRInt32 oldValue, PRInt32 newValue);
   nsresult NotifyFolderTreeNameChanged(nsIMsgFolder *folder, nsIRDFResource *folderResource, PRInt32 aUnreadMessages);
   nsresult NotifyFolderTreeSimpleNameChanged(nsIMsgFolder *folder, nsIRDFResource *folderResource);
   nsresult NotifyFolderNameChanged(nsIMsgFolder *folder, nsIRDFResource *folderResource);
@@ -283,6 +284,7 @@ protected:
   static nsIAtom* kTotalUnreadMessagesAtom;
   static nsIAtom* kFolderSizeAtom;
   static nsIAtom* kBiffStateAtom;
+  static nsIAtom* kSortOrderAtom;
   static nsIAtom* kNewMessagesAtom;
   static nsIAtom* kNameAtom;
   static nsIAtom* kSynchronizeAtom;

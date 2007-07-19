@@ -463,7 +463,7 @@ nsXULPopupListener::LaunchPopup(nsIDOMEvent* aEvent, nsIContent* aTargetContent)
 
   // XXXndeakin this is temporary. It is needed to grab the mouse location details
   //            used by the spellchecking popup. See bug 383930.
-  pm->SetMouseLocation(aEvent);
+  pm->SetMouseLocation(aEvent, popup);
 
   // if the popup has an anchoring attribute, anchor it to the element,
   // otherwise just open it at the screen position where the mouse was clicked.
@@ -502,7 +502,7 @@ NS_NewXULPopupListener(nsIDOMElement* aElement, PRBool aIsContext,
     if (!pl)
       return NS_ERROR_OUT_OF_MEMORY;
 
-    *aListener = NS_STATIC_CAST(nsIDOMMouseListener *, pl);
+    *aListener = static_cast<nsIDOMMouseListener *>(pl);
     NS_ADDREF(*aListener);
     return NS_OK;
 }

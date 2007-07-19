@@ -365,7 +365,7 @@ void nsCSSValue::StartImageLoad(nsIDocument* aDocument) const
                           mValue.mURL->mOriginPrincipal,
                           aDocument);
   if (image) {
-    nsCSSValue* writable = NS_CONST_CAST(nsCSSValue*, this);
+    nsCSSValue* writable = const_cast<nsCSSValue*>(this);
     writable->SetImageValue(image);
   }
 }
@@ -383,7 +383,7 @@ nsCSSValue::BufferFromString(const nsString& aValue)
   PRUnichar length = aValue.Length();
   buffer = nsStringBuffer::Alloc((length + 1) * sizeof(PRUnichar));
   if (NS_LIKELY(buffer != 0)) {
-    PRUnichar* data = NS_STATIC_CAST(PRUnichar*, buffer->Data());
+    PRUnichar* data = static_cast<PRUnichar*>(buffer->Data());
     nsCharTraits<PRUnichar>::copy(data, aValue.get(), length);
     // Null-terminate.
     data[length] = 0;
@@ -422,9 +422,24 @@ nsCSSValue::URL::operator==(const URL& aOther) const
            (mURI && aOther.mURI &&
             NS_SUCCEEDED(mURI->Equals(aOther.mURI, &eq)) &&
             eq)) &&
-          NS_SUCCEEDED(mOriginPrincipal->Equals(aOther.mOriginPrincipal,
-                                                &eq)) &&
-          eq;
+          (mOriginPrincipal == aOther.mOriginPrincipal ||
+           (NS_SUCCEEDED(mOriginPrincipal->Equals(aOther.mOriginPrincipal,
+                                                  &eq)) && eq));
+}
+
+PRBool
+nsCSSValue::URL::URIEquals(const URL& aOther) const
+{
+  PRBool eq;
+  // Worth comparing mURI to aOther.mURI and mOriginPrincipal to
+  // aOther.mOriginPrincipal, because in the (probably common) case when this
+  // value was one of the ones that in fact did not change this will be our
+  // fast path to equality
+  return (mURI == aOther.mURI ||
+          (NS_SUCCEEDED(mURI->Equals(aOther.mURI, &eq)) && eq)) &&
+         (mOriginPrincipal == aOther.mOriginPrincipal ||
+          (NS_SUCCEEDED(mOriginPrincipal->Equals(aOther.mOriginPrincipal,
+                                                 &eq)) && eq));
 }
 
 nsCSSValue::Image::Image(nsIURI* aURI, nsStringBuffer* aString,

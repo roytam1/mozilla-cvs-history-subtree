@@ -96,6 +96,7 @@ nsEditingSession::nsEditingSession()
 : mDoneSetup(PR_FALSE)
 , mCanCreateEditor(PR_FALSE)
 , mInteractive(PR_FALSE)
+, mMakeWholeDocumentEditable(PR_TRUE)
 , mScriptsEnabled(PR_TRUE)
 , mPluginsEnabled(PR_TRUE)
 , mProgressListenerRegistered(PR_FALSE)
@@ -150,20 +151,10 @@ nsEditingSession::MakeWindowEditable(nsIDOMWindow *aWindow,
   nsIDocShell *docShell = GetDocShellFromWindow(aWindow);
   if (!docShell) return NS_ERROR_FAILURE;
 
-  nsresult rv;
-  if (aMakeWholeDocumentEditable) {
-    nsCOMPtr<nsIDOMDocument> domDoc;
-    rv = aWindow->GetDocument(getter_AddRefs(domDoc));
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    nsCOMPtr<nsIDocument> doc = do_QueryInterface(domDoc, &rv);
-    NS_ENSURE_SUCCESS(rv, rv);
-
-    doc->SetEditableFlag(PR_TRUE);
-  }
-
   mInteractive = aInteractive;
+  mMakeWholeDocumentEditable = aMakeWholeDocumentEditable;
 
+  nsresult rv;
   if (!mInteractive) {
     // Disable JavaScript in this document:
     PRBool tmp;
@@ -214,7 +205,7 @@ nsEditingSession::MakeWindowEditable(nsIDOMWindow *aWindow,
   // the first is an editor controller
   rv = SetupEditorCommandController("@mozilla.org/editor/editorcontroller;1",
                                     aWindow,
-                                    NS_STATIC_CAST(nsIEditingSession*, this),
+                                    static_cast<nsIEditingSession*>(this),
                                     &mBaseCommandControllerId);
   if (NS_FAILED(rv)) return rv;
 
@@ -222,7 +213,7 @@ nsEditingSession::MakeWindowEditable(nsIDOMWindow *aWindow,
   // such as creation and "dirty flag"
   rv = SetupEditorCommandController("@mozilla.org/editor/editordocstatecontroller;1",
                                     aWindow,
-                                    NS_STATIC_CAST(nsIEditingSession*, this),
+                                    static_cast<nsIEditingSession*>(this),
                                     &mDocStateControllerId);
   if (NS_FAILED(rv)) return rv;
 
@@ -349,6 +340,9 @@ nsEditingSession::SetupEditorOnWindow(nsIDOMWindow *aWindow)
     nsCOMPtr<nsIDocument> document(do_QueryInterface(doc));
     if (document) {
       document->FlushPendingNotifications(Flush_Frames);
+      if (mMakeWholeDocumentEditable) {
+        document->SetEditableFlag(PR_TRUE);
+      }
     }
   }
   PRBool needHTMLController = PR_FALSE;
@@ -388,7 +382,7 @@ nsEditingSession::SetupEditorOnWindow(nsIDOMWindow *aWindow)
   // make the UI state maintainer
   nsComposerCommandsUpdater *stateMaintainer;
   NS_NEWXPCOM(stateMaintainer, nsComposerCommandsUpdater);
-  mStateMaintainer = NS_STATIC_CAST(nsISelectionListener*, stateMaintainer);
+  mStateMaintainer = static_cast<nsISelectionListener*>(stateMaintainer);
 
   if (!mStateMaintainer) return NS_ERROR_OUT_OF_MEMORY;
 
@@ -461,7 +455,7 @@ nsEditingSession::SetupEditorOnWindow(nsIDOMWindow *aWindow)
   // Set up as a doc state listener
   // Important! We must have this to broadcast the "obs_documentCreated" message
   rv = editor->AddDocumentStateListener(
-      NS_STATIC_CAST(nsIDocumentStateListener*, stateMaintainer));
+      static_cast<nsIDocumentStateListener*>(stateMaintainer));
   if (NS_FAILED(rv)) return rv;
 
   // XXXbz we really shouldn't need a presShell here!
@@ -487,8 +481,8 @@ nsEditingSession::SetupEditorOnWindow(nsIDOMWindow *aWindow)
   nsCOMPtr<nsITransactionManager> txnMgr;
   editor->GetTransactionManager(getter_AddRefs(txnMgr));
   if (txnMgr)
-    txnMgr->AddListener(NS_STATIC_CAST(nsITransactionListener*,
-                        stateMaintainer));
+    txnMgr->AddListener(static_cast<nsITransactionListener*>
+                                   (stateMaintainer));
 
   // Set context on all controllers to be the editor
   rv = SetEditorOnControllers(aWindow, editor);
@@ -634,19 +628,32 @@ nsEditingSession::TearDownEditorOnWindow(nsIDOMWindow *aWindow,
     mHTMLCommandControllerId = 0;
   }
 
-  if (aStopEditing && !mInteractive) {
-    // Make things the way they were before we started editing.
-    if (mScriptsEnabled) {
-      docShell->SetAllowJavascript(PR_TRUE);
+  if (aStopEditing) {
+    if (!mInteractive) {
+      // Make things the way they were before we started editing.
+      if (mScriptsEnabled) {
+        docShell->SetAllowJavascript(PR_TRUE);
+      }
+
+      if (mPluginsEnabled) {
+        docShell->SetAllowPlugins(PR_TRUE);
+      }
+
+      nsCOMPtr<nsIDOMWindowUtils> utils(do_GetInterface(aWindow));
+      if (utils)
+        utils->SetImageAnimationMode(mImageAnimationMode);
     }
 
-    if (mPluginsEnabled) {
-      docShell->SetAllowPlugins(PR_TRUE);
-    }
+    if (mMakeWholeDocumentEditable) {
+      nsCOMPtr<nsIDOMDocument> domDoc;
+      rv = aWindow->GetDocument(getter_AddRefs(domDoc));
+      NS_ENSURE_SUCCESS(rv, rv);
 
-    nsCOMPtr<nsIDOMWindowUtils> utils(do_GetInterface(aWindow));
-    if (utils)
-      utils->SetImageAnimationMode(mImageAnimationMode);
+      nsCOMPtr<nsIDocument> doc = do_QueryInterface(domDoc, &rv);
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      doc->SetEditableFlag(PR_FALSE);
+    }
   }
 
   return rv;
@@ -1083,16 +1090,6 @@ nsEditingSession::EndDocumentLoad(nsIWebProgress *aWebProgress,
                                           10, nsITimer::TYPE_ONE_SHOT);
         }
       }
-
-      // XXX This should move somewhere else!
-      nsCOMPtr<nsIDOMDocument> domDoc;
-      rv = domWindow->GetDocument(getter_AddRefs(domDoc));
-      NS_ENSURE_SUCCESS(rv, rv);
-
-      nsCOMPtr<nsIDocument> doc = do_QueryInterface(domDoc, &rv);
-      NS_ENSURE_SUCCESS(rv, rv);
-
-      doc->SetEditableFlag(PR_TRUE);
     }
   }
   return rv;

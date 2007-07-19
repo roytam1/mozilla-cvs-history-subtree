@@ -133,7 +133,7 @@ nsComputedDOMStyle::Shutdown()
   // already did that manually in doDestroyComputedDOMStyle(),
   // so cast our cached object to something that doesn't know
   // about our dtor.
-  delete NS_REINTERPRET_CAST(char*, sCachedComputedDOMStyle);
+  delete reinterpret_cast<char*>(sCachedComputedDOMStyle);
   sCachedComputedDOMStyle = nsnull;
 }
 
@@ -431,7 +431,7 @@ nsComputedDOMStyle::GetBinding(nsIDOMCSSValue** aValue)
   const nsStyleDisplay* display = GetStyleDisplay();
 
   if (display->mBinding) {
-    val->SetURI(display->mBinding);
+    val->SetURI(display->mBinding->mURI);
   } else {
     val->SetIdent(nsGkAtoms::none);
   }

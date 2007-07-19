@@ -42,9 +42,7 @@
 // sucks.
 
 const SERVER_PORT = 8888;
-const SERVER_PORT_OTHER_DOMAIN = 8889;
 var server; // for use in the shutdown handler, if necessary
-var otherDomainServer; // for use in the shutdown handler, if necessary
 
 //
 // HTML GENERATION
@@ -138,17 +136,13 @@ function runServer()
   serverBasePath.append("mochitest");
   server = new nsHttpServer();
   server.registerDirectory("/", serverBasePath);
-  otherDomainServer = new nsHttpServer();
-  otherDomainServer.registerDirectory("/", serverBasePath);
 
   if (environment["CLOSE_WHEN_DONE"])
     server.registerPathHandler("/server/shutdown", serverShutdown);
 
   server.setIndexHandler(defaultDirHandler);
   server.start(SERVER_PORT);
-  otherDomainServer.setIndexHandler(defaultDirHandler);
-  otherDomainServer.start(SERVER_PORT_OTHER_DOMAIN);
-  
+
   // touch a file in the profile directory to indicate we're alive
   var foStream = Cc["@mozilla.org/network/file-output-stream;1"]
                    .createInstance(Ci.nsIFileOutputStream);
@@ -276,11 +270,14 @@ function list(requestPath, directory, recurse)
  * is a test case to be executed in the harness, or just
  * a supporting file.
  */
-function isTest(filename)
+function isTest(filename, pattern)
 {
-  return  (filename.indexOf("test_") > -1 &&
-           filename.indexOf(".js") == -1 &&
-           filename.indexOf(".css") == -1);
+  if (pattern)
+    return pattern.test(filename);
+
+  return filename.indexOf("test_") > -1 &&
+         filename.indexOf(".js") == -1 &&
+         filename.indexOf(".css") == -1;
 }
 
 /**
@@ -309,7 +306,7 @@ function linksToListItems(links)
     if ((bug_title == null) || (bug_num == null)) {
       response += LI({class: classVal}, A({href: link}, link), children);
     } else {
-      var bug_url = "http://bugzilla.mozilla.org/show_bug.cgi?id="+bug_num;
+      var bug_url = "https://bugzilla.mozilla.org/show_bug.cgi?id="+bug_num;
       response += LI({class: classVal}, A({href: link}, link), " - ", A({href: bug_url}, "Bug "+bug_num), children);
     }
 
@@ -339,24 +336,23 @@ function linksToTableRows(links)
   return response;
 }
 
+function arrayOfTestFiles(linkArray, fileArray, testPattern) {
+  for (var [link, value] in linkArray) {
+    if (value instanceof Object) {
+      arrayOfTestFiles(value, fileArray, testPattern);
+    } else if (isTest(link, testPattern)) {
+      fileArray.push(link)
+    }
+  }
+}
 /**
  * Produce a flat array of test file paths to be executed in the harness.
  */
 function jsonArrayOfTestFiles(links)
 {
   var testFiles = [];
-  function arrayOfTestFiles(linkArray) {
-    for (var [link, value] in linkArray) {
-      if (value instanceof Object) {
-        arrayOfTestFiles(value);
-      } else {
-        testFiles.push(link)
-      }
-    }
-  }
-  arrayOfTestFiles(links);
-  var testFiles = ['"' + file + '"' for each(file in testFiles)
-                   if (isTest(file))];
+  arrayOfTestFiles(links, testFiles);
+  testFiles = ['"' + file + '"' for each(file in testFiles)];
   return "[" + testFiles.join(",\n") + "]";
 }
 
@@ -405,6 +401,8 @@ function testListing(metadata, response)
                  src: "/tests/SimpleTest/TestRunner.js"}),
         SCRIPT({type: "text/javascript",
                  src: "/tests/SimpleTest/MozillaFileLogger.js"}),
+        SCRIPT({type: "text/javascript",
+                 src: "/tests/SimpleTest/cross-domain.js"}),
         SCRIPT({type: "text/javascript",
                  src: "/tests/SimpleTest/quit.js"}),
         SCRIPT({type: "text/javascript",

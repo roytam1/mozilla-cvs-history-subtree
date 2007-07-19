@@ -1261,7 +1261,7 @@ nsNavHistory::GetNow()
 
 void nsNavHistory::expireNowTimerCallback(nsITimer* aTimer, void* aClosure)
 {
-  nsNavHistory* history = NS_STATIC_CAST(nsNavHistory*, aClosure);
+  nsNavHistory* history = static_cast<nsNavHistory*>(aClosure);
   history->mNowValid = PR_FALSE;
   history->mExpireNowTimer = nsnull;
 }
@@ -1353,12 +1353,6 @@ nsNavHistory::GetUpdateRequirements(const nsCOMArray<nsNavHistoryQuery>& aQuerie
       break;
   }
 
-  // Whenever there is a maximum number of results, we must requery. This
-  // is because we can't generally know if any given addition/change causes
-  // the item to be in the top N items in the database.
-  if (aOptions->MaxResults() > 0)
-    return QUERYUPDATE_COMPLEX;
-
   PRBool nonTimeBasedItems = PR_FALSE;
   for (i = 0; i < aQueries.Count(); i ++) {
     nsNavHistoryQuery* query = aQueries[i];
@@ -1373,6 +1367,13 @@ nsNavHistory::GetUpdateRequirements(const nsCOMArray<nsNavHistoryQuery>& aQuerie
         query->Uri() != nsnull)
       nonTimeBasedItems = PR_TRUE;
   }
+
+  // Whenever there is a maximum number of results, 
+  // and we are not a bookmark query we must requery. This
+  // is because we can't generally know if any given addition/change causes
+  // the item to be in the top N items in the database.
+  if (aOptions->MaxResults() > 0)
+    return QUERYUPDATE_COMPLEX;
 
   if (aQueries.Count() == 1 && ! nonTimeBasedItems)
     return QUERYUPDATE_TIME;
@@ -2122,6 +2123,22 @@ nsNavHistory::GetQueryResults(nsNavHistoryQueryResultNode *aResultNode,
       break;
     case nsINavHistoryQueryOptions::SORT_BY_VISITCOUNT_DESCENDING:
       queryString += NS_LITERAL_CSTRING(" ORDER BY 5 DESC"); // h.visit_count
+      break;
+    case nsINavHistoryQueryOptions::SORT_BY_DATEADDED_ASCENDING:
+      if (aOptions->QueryType() == nsINavHistoryQueryOptions::QUERY_TYPE_BOOKMARKS)
+        queryString += NS_LITERAL_CSTRING(" ORDER BY 10 ASC"); // dateAdded
+      break;
+    case nsINavHistoryQueryOptions::SORT_BY_DATEADDED_DESCENDING:
+      if (aOptions->QueryType() == nsINavHistoryQueryOptions::QUERY_TYPE_BOOKMARKS)
+        queryString += NS_LITERAL_CSTRING(" ORDER BY 10 DESC"); // dateAdded
+      break;
+    case nsINavHistoryQueryOptions::SORT_BY_LASTMODIFIED_ASCENDING:
+      if (aOptions->QueryType() == nsINavHistoryQueryOptions::QUERY_TYPE_BOOKMARKS)
+        queryString += NS_LITERAL_CSTRING(" ORDER BY 11 ASC"); // b.lastModified
+      break;
+    case nsINavHistoryQueryOptions::SORT_BY_LASTMODIFIED_DESCENDING:
+      if (aOptions->QueryType() == nsINavHistoryQueryOptions::QUERY_TYPE_BOOKMARKS)
+        queryString += NS_LITERAL_CSTRING(" ORDER BY 11 DESC"); // b.lastModified
       break;
     default:
       NS_NOTREACHED("Invalid sorting mode");
@@ -2983,7 +3000,7 @@ nsNavHistory::SetURIGeckoFlags(nsIURI* aURI, PRUint32 aFlags)
 PLDHashOperator PR_CALLBACK nsNavHistory::ExpireNonrecentRedirects(
     nsCStringHashKey::KeyType aKey, RedirectInfo& aData, void* aUserArg)
 {
-  PRInt64* threshold = NS_REINTERPRET_CAST(PRInt64*, aUserArg);
+  PRInt64* threshold = reinterpret_cast<PRInt64*>(aUserArg);
   if (aData.mTimeCreated < *threshold)
     return PL_DHASH_REMOVE;
   return PL_DHASH_NEXT;
@@ -3011,7 +3028,7 @@ nsNavHistory::AddDocumentRedirect(nsIChannel *aOldChannel,
     // expire out-of-date ones
     PRInt64 threshold = PR_Now() - RECENT_EVENT_THRESHOLD;
     mRecentRedirects.Enumerate(ExpireNonrecentRedirects,
-                               NS_REINTERPRET_CAST(void*, &threshold));
+                               reinterpret_cast<void*>(&threshold));
   }
 
   RedirectInfo info;
@@ -3149,7 +3166,7 @@ nsNavHistory::AddLazyMessage(const LazyMessage& aMessage)
 void // static
 nsNavHistory::LazyTimerCallback(nsITimer* aTimer, void* aClosure)
 {
-  nsNavHistory* that = NS_STATIC_CAST(nsNavHistory*, aClosure);
+  nsNavHistory* that = static_cast<nsNavHistory*>(aClosure);
   that->mLazyTimerSet = PR_FALSE;
   that->mLazyTimerDeferments = 0;
   that->CommitLazyMessages();
@@ -3527,7 +3544,7 @@ nsNavHistory::RecursiveGroup(nsNavHistoryQueryResultNode *aResultNode,
 
   if (aGroupCount > 1) {
     // Sort another level: We need to copy the array since we want the output
-    // to be our level's destionation arrays.
+    // to be our level's destination arrays.
     for (PRInt32 i = 0; i < aDest->Count(); i ++) {
       nsNavHistoryResultNode* curNode = (*aDest)[i];
       if (curNode->IsContainer()) {
@@ -3856,7 +3873,7 @@ ExpireNonrecentEventsCallback(nsCStringHashKey::KeyType aKey,
                               PRInt64& aData,
                               void* userArg)
 {
-  PRInt64* threshold = NS_REINTERPRET_CAST(PRInt64*, userArg);
+  PRInt64* threshold = reinterpret_cast<PRInt64*>(userArg);
   if (aData < *threshold)
     return PL_DHASH_REMOVE;
   return PL_DHASH_NEXT;
@@ -3866,7 +3883,7 @@ nsNavHistory::ExpireNonrecentEvents(RecentEventHash* hashTable)
 {
   PRInt64 threshold = GetNow() - RECENT_EVENT_THRESHOLD;
   hashTable->Enumerate(ExpireNonrecentEventsCallback,
-                       NS_REINTERPRET_CAST(void*, &threshold));
+                       reinterpret_cast<void*>(&threshold));
 }
 
 
@@ -4366,61 +4383,28 @@ nsNavHistory::AddPageWithVisit(nsIURI *aURI,
     NS_ENSURE_SUCCESS(rv, rv);
   }
 
-  return NS_OK;  
+  return NS_OK;
 }
 
 nsresult
 nsNavHistory::RemoveDuplicateURIs()
 {
-  nsCOMPtr<mozIStorageStatement> statement;
-  nsresult rv = mDBConn->CreateStatement(
-      NS_LITERAL_CSTRING("SELECT id, url FROM moz_places ORDER BY url"),
-      getter_AddRefs(statement));
+  // this must be in a transaction because it is made up of 2 related DELETEs
+  mozStorageTransaction transaction(mDBConn, PR_FALSE);
+
+  // remove all duplicates related visits from history and visit tables.
+  nsresult rv = mDBConn->ExecuteSimpleSQL(
+      NS_LITERAL_CSTRING("DELETE FROM moz_historyvisits WHERE place_id IN "
+      "(SELECT id FROM moz_places GROUP BY url HAVING( COUNT(url) > 1))"));
   NS_ENSURE_SUCCESS(rv, rv);
 
-  nsTArray<PRInt64> duplicates;
-  nsCAutoString lastURI;
-  PRBool hasMore;
-  while (NS_SUCCEEDED(statement->ExecuteStep(&hasMore)) && hasMore) {
-    nsCAutoString uri;
-    statement->GetUTF8String(1, uri);
-    if (uri.Equals(lastURI)) {
-      duplicates.AppendElement(statement->AsInt64(0));
-    } else {
-      lastURI = uri;
-    }
-  }
-
-  // Now remove all of the duplicates from the history and visit tables.
-  rv = mDBConn->CreateStatement(
-      NS_LITERAL_CSTRING("DELETE FROM moz_places WHERE id = ?1"),
-      getter_AddRefs(statement));
+  // then remove duplicate URIs from places table
+  rv = mDBConn->ExecuteSimpleSQL(
+      NS_LITERAL_CSTRING("DELETE FROM moz_places WHERE id IN "
+      "(SELECT id FROM moz_places GROUP BY url HAVING( COUNT(url) > 1))"));
   NS_ENSURE_SUCCESS(rv, rv);
 
-  nsCOMPtr<mozIStorageStatement> visitDelete;
-  rv = mDBConn->CreateStatement(
-      NS_LITERAL_CSTRING("DELETE FROM moz_historyvisits WHERE place_id = ?1"),
-      getter_AddRefs(visitDelete));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  for (PRUint32 i = 0; i < duplicates.Length(); ++i) {
-    PRInt64 id = duplicates[i];
-    {
-      mozStorageStatementScoper scope(statement);
-      rv = statement->BindInt64Parameter(0, id);
-      NS_ENSURE_SUCCESS(rv, rv);
-      rv = statement->Execute();
-      NS_ENSURE_SUCCESS(rv, rv);
-    }
-    {
-      mozStorageStatementScoper scope(visitDelete);
-      rv = visitDelete->BindInt64Parameter(0, id);
-      NS_ENSURE_SUCCESS(rv, rv);
-      rv = visitDelete->Execute();
-      NS_ENSURE_SUCCESS(rv, rv);
-    }
-  }
-  return NS_OK;
+  return transaction.Commit();
 }
 
 // Local function **************************************************************

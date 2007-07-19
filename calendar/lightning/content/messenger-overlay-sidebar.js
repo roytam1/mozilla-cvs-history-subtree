@@ -300,7 +300,7 @@ function ltnOnLoad(event)
     // lives inside of the left pane.
     var folderPaneBox = document.getElementById("folderPaneBox");
     var contentPanel = document.getElementById("contentPanel");
-    contentPanel.insertBefore(folderPaneBox,contentPanel.firstChild);
+    contentPanel.insertBefore(folderPaneBox, contentPanel.firstChild);
 
     // we're taking care of the mode toolbar (that's the small toolbar on
     // the lower left with the 'mail', 'calendar', 'task' buttons on it).
@@ -365,7 +365,7 @@ function ltnOnLoad(event)
         var bag = retrieveToolbarProperties(modeToolbox);
         if(aEvent.newValue == "top" && aEvent.prevValue == "bottom") {
           // place the mode toolbox at the top of the left pane
-          modeToolbox = contentPanel.parentNode.insertBefore(modeToolbox,contentPanel);
+          modeToolbox = contentPanel.parentNode.insertBefore(modeToolbox, contentPanel);
           modeToolbox.palette = palette;
           var toolbar = document.getElementById("mode-toolbar");
         } else if(aEvent.newValue == "bottom" && aEvent.prevValue == "top") {
@@ -384,7 +384,7 @@ function ltnOnLoad(event)
     if(modeToolbox.getAttribute("location") != "bottom") {
       var palette = modeToolbox.palette;
       var bag = retrieveToolbarProperties(modeToolbox);
-      modeToolbox = contentPanel.parentNode.insertBefore(modeToolbox,contentPanel);
+      modeToolbox = contentPanel.parentNode.insertBefore(modeToolbox, contentPanel);
       modeToolbox.palette = palette;
       restoreToolbarProperties(modeToolbox,bag);
     }
@@ -517,6 +517,7 @@ function showCalendarView(type)
 
         var tasksMenu = document.getElementById("ltn-tasks-in-view")
         view.tasksInView = (tasksMenu.getAttribute("checked") == 'true');
+        view.showCompleted = document.getElementById("completed-tasks-checkbox").checked;
     }
 
     document.getElementById("displayDeck").selectedPanel =  calendarViewBox;
@@ -527,6 +528,18 @@ function showCalendarView(type)
     nextCommand.setAttribute("label", nextCommand.getAttribute("label-"+type));
     var previousCommand = document.getElementById("context_previous")
     previousCommand.setAttribute("label", previousCommand.getAttribute("label-"+type));
+
+    // Set up the commands
+    var availableViews = getViewDeck();
+    for (var i = 0; i < availableViews.childNodes.length; i++) {
+        var view = availableViews.childNodes[i];
+        var command = document.getElementById(view.id+"-command");
+        if (view.id == type+"-view") {
+           command.setAttribute("checked", true);
+        } else {
+           command.removeAttribute("checked");
+        }
+    }
 }
 
 function goToToday()
@@ -535,6 +548,23 @@ function goToToday()
     // note, that the current view in the calendar-view-box is automatically updated
     var currentDay = today();
     document.getElementById("ltnMinimonth").value = currentDay.jsDate;
+}
+
+
+function toggleTodayPaneinMailMode()
+{
+  var oTodayPane = document.getElementById("today-pane-box");
+  var todayPaneCommand = document.getElementById('cmd_toggleTodayPane');
+  if (oTodayPane.hasAttribute("collapsed")) {
+    oTodayPane.removeAttribute("collapsed");
+    oTodayPane.removeAttribute("collapsedinMailMode");
+    todayPaneCommand.setAttribute("checked","true");
+  }
+  else {
+    oTodayPane.setAttribute("collapsed", true);
+    oTodayPane.setAttribute("collapsedinMailMode", "true");
+    todayPaneCommand.setAttribute("checked", "false");
+  }
 }
 
 function selectedCalendarPane(event)

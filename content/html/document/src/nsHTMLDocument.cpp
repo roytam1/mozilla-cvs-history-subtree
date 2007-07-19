@@ -229,7 +229,7 @@ public:
   }
 
   nsIContent* GetIdContent() {
-    return NS_STATIC_CAST(nsIContent*, mIdContentList.SafeElementAt(0));
+    return static_cast<nsIContent*>(mIdContentList.SafeElementAt(0));
   }
 
   PRBool AddIdContent(nsIContent* aContent);
@@ -292,8 +292,8 @@ IdAndNameHashMatchEntry(PLDHashTable *table, const PLDHashEntryHdr *entry,
                         const void *key)
 {
   const IdAndNameMapEntry *e =
-    NS_STATIC_CAST(const IdAndNameMapEntry *, entry);
-  const nsIAtom *atom = NS_STATIC_CAST(const nsIAtom *, key);
+    static_cast<const IdAndNameMapEntry *>(entry);
+  const nsIAtom *atom = static_cast<const nsIAtom *>(key);
 
   return atom == e->mKey;
 }
@@ -301,7 +301,7 @@ IdAndNameHashMatchEntry(PLDHashTable *table, const PLDHashEntryHdr *entry,
 PR_STATIC_CALLBACK(void)
 IdAndNameHashClearEntry(PLDHashTable *table, PLDHashEntryHdr *entry)
 {
-  IdAndNameMapEntry *e = NS_STATIC_CAST(IdAndNameMapEntry *, entry);
+  IdAndNameMapEntry *e = static_cast<IdAndNameMapEntry *>(entry);
 
   // An entry is being cleared, let the entry do its own cleanup.
   e->~IdAndNameMapEntry();
@@ -311,8 +311,8 @@ PR_STATIC_CALLBACK(PRBool)
 IdAndNameHashInitEntry(PLDHashTable *table, PLDHashEntryHdr *entry,
                        const void *key)
 {
-  nsIAtom *atom = NS_CONST_CAST(nsIAtom *,
-                                NS_STATIC_CAST(const nsIAtom*, key));
+  nsIAtom *atom = const_cast<nsIAtom *>
+                            (static_cast<const nsIAtom*>(key));
 
   // Inititlize the entry with placement new
   new (entry) IdAndNameMapEntry(atom);
@@ -348,8 +348,8 @@ IdAndNameMapEntryTraverse(PLDHashTable *table, PLDHashEntryHdr *hdr,
                           PRUint32 number, void *arg)
 {
   nsCycleCollectionTraversalCallback *cb =
-    NS_STATIC_CAST(nsCycleCollectionTraversalCallback*, arg);
-  IdAndNameMapEntry *entry = NS_STATIC_CAST(IdAndNameMapEntry*, hdr);
+    static_cast<nsCycleCollectionTraversalCallback*>(arg);
+  IdAndNameMapEntry *entry = static_cast<IdAndNameMapEntry*>(hdr);
 
   if (entry->mNameContentList != NAME_NOT_VALID)
     cb->NoteXPCOMChild(entry->mNameContentList);
@@ -628,14 +628,11 @@ CheckSameOrigin(nsINode* aNode1, nsINode* aNode2)
   NS_PRECONDITION(aNode1, "Null node?");
   NS_PRECONDITION(aNode2, "Null node?");
 
-  nsIScriptSecurityManager* secMan = nsContentUtils::GetSecurityManager();
-  if (!secMan) {
-    return PR_FALSE;
-  }
-
+  PRBool equal;
   return
-    NS_SUCCEEDED(secMan->CheckSameOriginPrincipal(aNode1->NodePrincipal(),
-                                                  aNode2->NodePrincipal()));
+    NS_SUCCEEDED(aNode1->NodePrincipal()->
+                   Equals(aNode2->NodePrincipal(), &equal)) &&
+    equal;
 }
 
 PRBool
@@ -1121,7 +1118,7 @@ nsHTMLDocument::DocumentWriteTerminationFunc(nsISupports *aRef)
   nsCOMPtr<nsIParser> parser = do_QueryElementAt(arr, 1);
   NS_ASSERTION(parser, "Must have parser!");
 
-  nsHTMLDocument *htmldoc = NS_STATIC_CAST(nsHTMLDocument*, doc.get());
+  nsHTMLDocument *htmldoc = static_cast<nsHTMLDocument*>(doc.get());
 
   // Check whether htmldoc still has the same parser.  If not, it's
   // not for us to mess with it.
@@ -1184,7 +1181,7 @@ nsHTMLDocument::EndLoad()
           nsCOMPtr<nsIMutableArray> arr =
             do_CreateInstance(NS_ARRAY_CONTRACTID, &rv);
           if (NS_SUCCEEDED(rv)) {
-            rv = arr->AppendElement(NS_STATIC_CAST(nsIDocument*, this),
+            rv = arr->AppendElement(static_cast<nsIDocument*>(this),
                                     PR_FALSE);
             if (NS_SUCCEEDED(rv)) {
               rv = arr->AppendElement(mParser, PR_FALSE);
@@ -1391,7 +1388,8 @@ nsHTMLDocument::AttributeWillChange(nsIContent* aContent, PRInt32 aNameSpaceID,
 void
 nsHTMLDocument::AttributeChanged(nsIDocument* aDocument,
                                  nsIContent* aContent, PRInt32 aNameSpaceID,
-                                 nsIAtom* aAttribute, PRInt32 aModType)
+                                 nsIAtom* aAttribute, PRInt32 aModType,
+                                 PRUint32 aStateMask)
 {
   NS_ASSERTION(aDocument == this, "unexpected doc");
 
@@ -2033,7 +2031,7 @@ nsHTMLDocument::OpenCommon(const nsACString& aContentType, PRBool aReplace)
     return NS_OK;
   }
 
-  if (!nsContentUtils::CanCallerAccess(NS_STATIC_CAST(nsIDOMHTMLDocument*, this))) {
+  if (!nsContentUtils::CanCallerAccess(static_cast<nsIDOMHTMLDocument*>(this))) {
     nsPIDOMWindow *win = GetWindow();
     if (win) {
       nsCOMPtr<nsIDOMElement> frameElement;
@@ -2146,9 +2144,10 @@ nsHTMLDocument::OpenCommon(const nsACString& aContentType, PRBool aReplace)
 
     // If callerPrincipal doesn't match our principal. make sure that
     // SetNewDocument gives us a new inner window and clears our scope.
+    PRBool samePrincipal;
     if (!callerPrincipal ||
-        NS_FAILED(nsContentUtils::GetSecurityManager()->
-          CheckSameOriginPrincipal(callerPrincipal, NodePrincipal()))) {
+        NS_FAILED(callerPrincipal->Equals(NodePrincipal(), &samePrincipal)) ||
+        !samePrincipal) {
       SetIsInitialDocument(PR_FALSE);
     }      
 
@@ -2272,7 +2271,7 @@ nsHTMLDocument::OpenCommon(const nsACString& aContentType, PRBool aReplace)
     docshell->GetContentViewer(getter_AddRefs(cv));
     nsCOMPtr<nsIDocumentViewer> docViewer = do_QueryInterface(cv);
     if (docViewer) {
-      docViewer->LoadStart(NS_STATIC_CAST(nsIHTMLDocument *, this));
+      docViewer->LoadStart(static_cast<nsIHTMLDocument *>(this));
     }
   }
 
@@ -2493,8 +2492,8 @@ nsHTMLDocument::ScriptWriteCommon(PRBool aNewlineTerminate)
       JSString *jsstr = JS_ValueToString(cx, argv[0]);
       NS_ENSURE_TRUE(jsstr, NS_ERROR_OUT_OF_MEMORY);
 
-      nsDependentString str(NS_REINTERPRET_CAST(const PRUnichar *,
-                                              ::JS_GetStringChars(jsstr)),
+      nsDependentString str(reinterpret_cast<const PRUnichar *>
+                                            (::JS_GetStringChars(jsstr)),
                           ::JS_GetStringLength(jsstr));
 
       return WriteCommon(str, aNewlineTerminate);
@@ -2509,8 +2508,8 @@ nsHTMLDocument::ScriptWriteCommon(PRBool aNewlineTerminate)
         JSString *str = JS_ValueToString(cx, argv[i]);
         NS_ENSURE_TRUE(str, NS_ERROR_OUT_OF_MEMORY);
 
-        string_buffer.Append(NS_REINTERPRET_CAST(const PRUnichar *,
-                                                 ::JS_GetStringChars(str)),
+        string_buffer.Append(reinterpret_cast<const PRUnichar *>
+                                             (::JS_GetStringChars(str)),
                              ::JS_GetStringLength(str));
       }
 
@@ -2549,8 +2548,8 @@ nsHTMLDocument::GetElementById(const nsAString& aElementId,
   // us being notified (all removals notify immediately, as far as I can tell).
   // So do the lookup first.
   IdAndNameMapEntry *entry =
-    NS_STATIC_CAST(IdAndNameMapEntry *,
-                   PL_DHashTableOperate(&mIdAndNameHashTable, idAtom,
+    static_cast<IdAndNameMapEntry *>
+               (PL_DHashTableOperate(&mIdAndNameHashTable, idAtom,
                                         PL_DHASH_ADD));
   NS_ENSURE_TRUE(entry, NS_ERROR_OUT_OF_MEMORY);
 
@@ -2573,8 +2572,8 @@ nsHTMLDocument::GetElementById(const nsAString& aElementId,
       // entry again, adding if necessary (the adding may be necessary in case
       // the flush actually deleted entries).
       entry =
-        NS_STATIC_CAST(IdAndNameMapEntry *,
-                       PL_DHashTableOperate(&mIdAndNameHashTable, idAtom,
+        static_cast<IdAndNameMapEntry *>
+                   (PL_DHashTableOperate(&mIdAndNameHashTable, idAtom,
                                             PL_DHASH_ADD));
       NS_ENSURE_TRUE(entry, NS_ERROR_OUT_OF_MEMORY);
     }
@@ -2673,7 +2672,7 @@ nsHTMLDocument::MatchNameAttribute(nsIContent* aContent, PRInt32 aNamespaceID,
                                    nsIAtom* aAtom, void* aData)
 {
   NS_PRECONDITION(aContent, "Must have content node to work with!");
-  nsString* elementName = NS_STATIC_CAST(nsString*, aData);
+  nsString* elementName = static_cast<nsString*>(aData);
   return aContent->AttrValueIs(kNameSpaceID_None, nsGkAtoms::name,
                                *elementName, eCaseMatters);
 }
@@ -3023,7 +3022,7 @@ ReportUseOfDeprecatedMethod(nsHTMLDocument* aDoc, const char* aWarning)
   nsContentUtils::ReportToConsole(nsContentUtils::eDOM_PROPERTIES,
                                   aWarning,
                                   nsnull, 0,
-                                  NS_STATIC_CAST(nsIDocument*, aDoc)->
+                                  static_cast<nsIDocument*>(aDoc)->
                                     GetDocumentURI(),
                                   EmptyString(), 0, 0,
                                   nsIScriptError::warningFlag,
@@ -3103,8 +3102,8 @@ ReserveNameInHash(const char* aName, PLDHashTable *aHash)
   NS_ENSURE_TRUE(atom, NS_ERROR_OUT_OF_MEMORY);
   
   IdAndNameMapEntry *entry =
-    NS_STATIC_CAST(IdAndNameMapEntry *,
-                   PL_DHashTableOperate(aHash, atom, PL_DHASH_ADD));
+    static_cast<IdAndNameMapEntry *>
+               (PL_DHashTableOperate(aHash, atom, PL_DHASH_ADD));
 
   NS_ENSURE_TRUE(entry, NS_ERROR_OUT_OF_MEMORY);
 
@@ -3192,8 +3191,8 @@ nsHTMLDocument::UpdateNameTableEntry(nsIAtom* aName,
   "nsHTMLDocument::UpdateNameTableEntry Don't call me on an XHTML document!!!");
 
   IdAndNameMapEntry *entry =
-    NS_STATIC_CAST(IdAndNameMapEntry *,
-                   PL_DHashTableOperate(&mIdAndNameHashTable, aName,
+    static_cast<IdAndNameMapEntry *>
+               (PL_DHashTableOperate(&mIdAndNameHashTable, aName,
                                         PL_DHASH_LOOKUP));
 
   if (PL_DHASH_ENTRY_IS_FREE(entry)) {
@@ -3223,8 +3222,8 @@ nsHTMLDocument::UpdateIdTableEntry(nsIAtom* aId, nsIContent *aContent)
   PRBool liveTable = IdTableIsLive();
   PLDHashOperator op = liveTable ? PL_DHASH_ADD : PL_DHASH_LOOKUP;
   IdAndNameMapEntry *entry =
-    NS_STATIC_CAST(IdAndNameMapEntry *,
-                   PL_DHashTableOperate(&mIdAndNameHashTable, aId,
+    static_cast<IdAndNameMapEntry *>
+               (PL_DHashTableOperate(&mIdAndNameHashTable, aId,
                                         op));
 
   NS_ENSURE_TRUE(entry, NS_ERROR_OUT_OF_MEMORY);
@@ -3245,8 +3244,8 @@ nsHTMLDocument::RemoveFromNameTable(nsIAtom* aName, nsIContent *aContent)
   "nsHTMLDocument::RemoveFromNameTable Don't call me on an XHTML document!!!");
 
   IdAndNameMapEntry *entry =
-    NS_STATIC_CAST(IdAndNameMapEntry *,
-                   PL_DHashTableOperate(&mIdAndNameHashTable, aName,
+    static_cast<IdAndNameMapEntry *>
+               (PL_DHashTableOperate(&mIdAndNameHashTable, aName,
                                         PL_DHASH_LOOKUP));
 
   if (PL_DHASH_ENTRY_IS_BUSY(entry) && entry->mNameContentList &&
@@ -3267,8 +3266,8 @@ nsHTMLDocument::RemoveFromIdTable(nsIContent *aContent)
   }
 
   IdAndNameMapEntry *entry =
-    NS_STATIC_CAST(IdAndNameMapEntry *,
-                   PL_DHashTableOperate(&mIdAndNameHashTable, id,
+    static_cast<IdAndNameMapEntry *>
+               (PL_DHashTableOperate(&mIdAndNameHashTable, id,
                                         PL_DHASH_LOOKUP));
 
   if (PL_DHASH_ENTRY_IS_FREE(entry)) {
@@ -3403,8 +3402,8 @@ nsHTMLDocument::ResolveName(const nsAString& aName,
   // be updated as content is added and removed.
 
   IdAndNameMapEntry *entry =
-    NS_STATIC_CAST(IdAndNameMapEntry *,
-                   PL_DHashTableOperate(&mIdAndNameHashTable, name,
+    static_cast<IdAndNameMapEntry *>
+               (PL_DHashTableOperate(&mIdAndNameHashTable, name,
                                         PL_DHASH_ADD));
   NS_ENSURE_TRUE(entry, NS_ERROR_OUT_OF_MEMORY);
 
@@ -3432,8 +3431,8 @@ nsHTMLDocument::ResolveName(const nsAString& aName,
     // entry again, adding if necessary (the adding may be necessary in case
     // the flush actually deleted entries).
     entry =
-      NS_STATIC_CAST(IdAndNameMapEntry *,
-                     PL_DHashTableOperate(&mIdAndNameHashTable, name,
+      static_cast<IdAndNameMapEntry *>
+                 (PL_DHashTableOperate(&mIdAndNameHashTable, name,
                                           PL_DHASH_ADD));
     NS_ENSURE_TRUE(entry, NS_ERROR_OUT_OF_MEMORY);
   }
@@ -3763,24 +3762,24 @@ nsHTMLDocument::ChangeContentEditableCount(nsIContent *aElement,
       NS_ENSURE_SUCCESS(rv, rv);
 
       nsCOMPtr<nsIEditor> editor;
-      rv = editorDocShell->GetEditor(getter_AddRefs(editor));
-      NS_ENSURE_SUCCESS(rv, rv);
-
-      nsCOMPtr<nsIDOMRange> range;
-      rv = NS_NewRange(getter_AddRefs(range));
-      NS_ENSURE_SUCCESS(rv, rv);
-
-      rv = range->SelectNode(node);
-      NS_ENSURE_SUCCESS(rv, rv);
-
-      nsCOMPtr<nsIInlineSpellChecker> spellChecker;
-      rv = editor->GetInlineSpellChecker(PR_FALSE,
-                                         getter_AddRefs(spellChecker));
-      NS_ENSURE_SUCCESS(rv, rv);
-
-      if (spellChecker) {
-        rv = spellChecker->SpellCheckRange(range);
+      editorDocShell->GetEditor(getter_AddRefs(editor));
+      if (editor) {
+        nsCOMPtr<nsIDOMRange> range;
+        rv = NS_NewRange(getter_AddRefs(range));
         NS_ENSURE_SUCCESS(rv, rv);
+
+        rv = range->SelectNode(node);
+        NS_ENSURE_SUCCESS(rv, rv);
+
+        nsCOMPtr<nsIInlineSpellChecker> spellChecker;
+        rv = editor->GetInlineSpellChecker(PR_FALSE,
+                                           getter_AddRefs(spellChecker));
+        NS_ENSURE_SUCCESS(rv, rv);
+
+        if (spellChecker) {
+          rv = spellChecker->SpellCheckRange(range);
+          NS_ENSURE_SUCCESS(rv, rv);
+        }
       }
     }
   }
@@ -3822,10 +3821,6 @@ nsHTMLDocument::TurnEditingOff()
     do_QueryInterface(docshell, &rv);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  nsCOMPtr<nsIEditor> editor;
-  rv = editorDocShell->GetEditor(getter_AddRefs(editor));
-  NS_ENSURE_SUCCESS(rv, rv);
-
   nsCOMPtr<nsIEditingSession> editSession = do_GetInterface(docshell, &rv);
   NS_ENSURE_SUCCESS(rv, rv);
 
@@ -3833,13 +3828,16 @@ nsHTMLDocument::TurnEditingOff()
   rv = editSession->TearDownEditorOnWindow(window, PR_TRUE);
   NS_ENSURE_SUCCESS(rv, rv);
 
-  nsCOMPtr<nsIEditorStyleSheets> editorss = do_QueryInterface(editor, &rv);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  if (!HasFlag(NODE_IS_EDITABLE)) {
+  nsCOMPtr<nsIEditor> editor;
+  editorDocShell->GetEditor(getter_AddRefs(editor));
+  nsCOMPtr<nsIEditorStyleSheets> editorss = do_QueryInterface(editor);
+  if (editorss) {
     editorss->RemoveOverrideStyleSheet(NS_LITERAL_STRING("resource:/res/contenteditable.css"));
-    editorss->RemoveOverrideStyleSheet(NS_LITERAL_STRING("resource:/res/designmode.css"));
+    if (mEditingState == eDesignMode)
+      editorss->RemoveOverrideStyleSheet(NS_LITERAL_STRING("resource:/res/designmode.css"));
+  }
 
+  if (mEditingState == eDesignMode) {
     rv = docshell->SetAllowJavascript(mScriptsEnabled);
     NS_ENSURE_SUCCESS(rv, rv);
 
@@ -3908,8 +3906,9 @@ nsHTMLDocument::EditingStateChanged()
   NS_ENSURE_SUCCESS(rv, rv);
 
   nsCOMPtr<nsIEditor> editor;
-  rv = editorDocShell->GetEditor(getter_AddRefs(editor));
-  NS_ENSURE_SUCCESS(rv, rv);
+  editorDocShell->GetEditor(getter_AddRefs(editor));
+  if (!editor)
+    return NS_ERROR_FAILURE;
 
   nsCOMPtr<nsIEditorStyleSheets> editorss = do_QueryInterface(editor, &rv);
   NS_ENSURE_SUCCESS(rv, rv);
@@ -4018,8 +4017,11 @@ nsHTMLDocument::SetDesignMode(const nsAString & aDesignMode)
     rv = secMan->GetSubjectPrincipal(getter_AddRefs(subject));
     NS_ENSURE_SUCCESS(rv, rv);
     if (subject) {
-      rv = secMan->CheckSameOriginPrincipal(subject, NodePrincipal());
+      PRBool subsumes;
+      rv = subject->Subsumes(NodePrincipal(), &subsumes);
       NS_ENSURE_SUCCESS(rv, rv);
+
+      NS_ENSURE_TRUE(subsumes, NS_ERROR_DOM_PROP_ACCESS_DENIED);
     }
   }
 

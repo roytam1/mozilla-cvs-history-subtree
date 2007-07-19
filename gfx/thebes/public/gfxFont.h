@@ -468,7 +468,8 @@ public:
          */
         TEXT_ENABLE_HYPHEN_BREAKS    = 0x0040,
         /**
-         * When set, the text has no characters above 255.
+         * When set, the text has no characters above 255 and it is stored
+         * in the textrun in 8-bit format.
          */
         TEXT_IS_8BIT                 = 0x0080,
         /**
@@ -485,9 +486,10 @@ public:
          */
         TEXT_NEED_BOUNDING_BOX       = 0x0200,
         /**
-         * When set, ligatures are disabled.
+         * When set, optional ligatures are disabled. Ligatures that are
+         * required for legible text should still be enabled.
          */
-        TEXT_DISABLE_LIGATURES       = 0x0400
+        TEXT_DISABLE_OPTIONAL_LIGATURES = 0x0400
     };
 
     /**
@@ -811,8 +813,8 @@ public:
     { return (mFlags & gfxTextRunFactory::TEXT_IS_8BIT) ? nsnull : mText.mDouble; }
     const void *GetTextAt(PRUint32 aIndex) {
         return (mFlags & gfxTextRunFactory::TEXT_IS_8BIT)
-            ? NS_STATIC_CAST(const void *, mText.mSingle + aIndex)
-            : NS_STATIC_CAST(const void *, mText.mDouble + aIndex);
+            ? static_cast<const void *>(mText.mSingle + aIndex)
+            : static_cast<const void *>(mText.mDouble + aIndex);
     }
     const PRUnichar GetChar(PRUint32 i) const
     { return (mFlags & gfxTextRunFactory::TEXT_IS_8BIT) ? mText.mSingle[i] : mText.mDouble[i]; }
@@ -996,6 +998,21 @@ public:
         PRUint32    mEndOffset;
     };
 
+    class GlyphRunOffsetComparator {
+    public:
+        PRBool Equals(const GlyphRun& a,
+                      const GlyphRun& b) const
+        {
+            return a.mCharacterOffset == b.mCharacterOffset;
+        }
+
+        PRBool LessThan(const GlyphRun& a,
+                        const GlyphRun& b) const
+        {
+            return a.mCharacterOffset < b.mCharacterOffset;
+        }
+    };
+
     friend class GlyphRunIterator;
     friend class FontSelector;
 
@@ -1011,9 +1028,18 @@ public:
      * only during initialization when font substitution has been computed.
      * Call it before setting up the glyphs for the characters in this run;
      * SetMissingGlyph requires that the correct glyphrun be installed.
+     *
+     * If aForceNewRun, a new glyph run will be added, even if the
+     * previously added run uses the same font.  If glyph runs are
+     * added out of strictly increasing aStartCharIndex order (via
+     * force), then SortGlyphRuns must be called after all glyph runs
+     * are added before any further operations are performed with this
+     * TextRun.
      */
-    nsresult AddGlyphRun(gfxFont *aFont, PRUint32 aStartCharIndex);
+    nsresult AddGlyphRun(gfxFont *aFont, PRUint32 aStartCharIndex, PRBool aForceNewRun = PR_FALSE);
     void ResetGlyphRuns() { mGlyphRuns.Clear(); }
+    void SortGlyphRuns();
+
     // Call the following glyph-setters during initialization or during reshaping
     // only. It is OK to overwrite existing data for a character.
     /**
@@ -1150,7 +1176,7 @@ public:
     }
 
     virtual gfxFont *GetFontAt(PRInt32 i) {
-        return NS_STATIC_CAST(gfxFont*, mFonts[i]);
+        return static_cast<gfxFont*>(mFonts[i]);
     }
     virtual PRUint32 FontListLength() const {
         return mFonts.Length();

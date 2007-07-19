@@ -81,7 +81,7 @@ interface nsIHandlerInfo : nsISupports {
      * useHelperApp or useSystemDefault.
      *
      * @param aURI The URI to launch this application with; this may or may
-     *              not be a local file or may not.
+     *              not be a local file.
      *
      * @throw NS_ERROR_INVALID_ARG if action is not valid for this function.
      * Other exceptions may be thrown.

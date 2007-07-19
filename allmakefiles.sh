@@ -639,27 +639,10 @@ MAKEFILES_string="$MAKEFILES_xpcom"
 
 MAKEFILES_xpinstall="
 xpinstall/Makefile
-xpinstall/packager/Makefile
-xpinstall/packager/unix/Makefile
-xpinstall/packager/windows/Makefile
-xpinstall/packager/os2/Makefile
 xpinstall/public/Makefile
 xpinstall/res/Makefile
 xpinstall/src/Makefile
 xpinstall/stub/Makefile
-xpinstall/wizard/libxpnet/Makefile
-xpinstall/wizard/libxpnet/src/Makefile
-xpinstall/wizard/libxpnet/test/Makefile
-xpinstall/wizard/unix/src2/Makefile
-xpinstall/wizard/windows/builder/Makefile
-xpinstall/wizard/windows/nsinstall/Makefile
-xpinstall/wizard/windows/nsztool/Makefile
-xpinstall/wizard/windows/uninstall/Makefile
-xpinstall/wizard/windows/setup/Makefile
-xpinstall/wizard/windows/setuprsc/Makefile
-xpinstall/wizard/windows/ren8dot3/Makefile
-xpinstall/wizard/windows/ds32/Makefile
-xpinstall/wizard/windows/GetShortPathName/Makefile
 "
 
 MAKEFILES_xpfe="
@@ -696,7 +679,6 @@ xpfe/components/related/Makefile
 xpfe/components/related/src/Makefile
 xpfe/components/related/public/Makefile
 xpfe/components/search/Makefile
-xpfe/components/search/datasets/Makefile
 xpfe/components/search/public/Makefile
 xpfe/components/search/src/Makefile
 xpfe/components/sidebar/Makefile

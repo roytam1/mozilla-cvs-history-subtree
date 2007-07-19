@@ -235,8 +235,7 @@ nsPrincipal::GetSecurityPolicy(void** aSecurityPolicy)
 NS_IMETHODIMP
 nsPrincipal::SetSecurityPolicy(void* aSecurityPolicy)
 {
-  DomainPolicy *newPolicy = NS_REINTERPRET_CAST(
-                              DomainPolicy *, aSecurityPolicy);
+  DomainPolicy *newPolicy = reinterpret_cast<DomainPolicy *>(aSecurityPolicy);
   if (newPolicy)
     newPolicy->Hold();
  
@@ -619,12 +618,12 @@ nsPrincipal::GetHashValue(PRUint32* aValue)
 
   // If there is a certificate, it takes precendence over the codebase.
   if (mCert) {
-    *aValue = nsCRT::HashCode(mCert->fingerprint.get(), nsnull);
+    *aValue = nsCRT::HashCode(mCert->fingerprint.get());
   }
   else {
     nsCAutoString str;
     mCodebase->GetSpec(str);
-    *aValue = nsCRT::HashCode(str.get(), nsnull);
+    *aValue = nsCRT::HashCode(str.get());
   }
 
   return NS_OK;
@@ -932,7 +931,7 @@ nsPrincipal::Read(nsIObjectInputStream* aStream)
       return rv;
     }
 
-    if (!mAnnotations.InsertElementAt(NS_REINTERPRET_CAST(void*, ht), i)) {
+    if (!mAnnotations.InsertElementAt(reinterpret_cast<void*>(ht), i)) {
       delete ht;
       return NS_ERROR_OUT_OF_MEMORY;
     }
@@ -977,7 +976,7 @@ nsPrincipal::Write(nsIObjectOutputStream* aStream)
   }
 
   for (PRInt32 i = 0, n = PRInt32(annotationCount); i < n; i++) {
-    nsHashtable *ht = NS_REINTERPRET_CAST(nsHashtable *, mAnnotations[i]);
+    nsHashtable *ht = reinterpret_cast<nsHashtable *>(mAnnotations[i]);
     rv = ht->Write(aStream, WriteScalarValue);
     if (NS_FAILED(rv)) {
       return rv;

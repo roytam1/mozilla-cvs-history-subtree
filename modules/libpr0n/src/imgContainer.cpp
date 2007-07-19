@@ -157,12 +157,17 @@ NS_IMETHODIMP imgContainer::GetNumFrames(PRUint32 *aNumFrames)
 /* gfxIImageFrame getFrameAt (in unsigned long index); */
 NS_IMETHODIMP imgContainer::GetFrameAt(PRUint32 index, gfxIImageFrame **_retval)
 {
-  NS_ENSURE_ARG(index < NS_STATIC_CAST(PRUint32, mFrames.Count()));
-  
   NS_ASSERTION(_retval, "imgContainer::GetFrameAt; Invalid Arg");
   if (!_retval)
     return NS_ERROR_INVALID_POINTER;
 
+  if (!mFrames.Count()) {
+    *_retval = nsnull;
+    return NS_OK;
+  }
+
+  NS_ENSURE_ARG(index < static_cast<PRUint32>(mFrames.Count()));
+  
   if (!(*_retval = mFrames[index]))
     return NS_ERROR_FAILURE;
 
@@ -327,7 +332,7 @@ NS_IMETHODIMP imgContainer::StartAnimation()
     
     // The only way animating becomes true is if the timer is created
     mAnim->animating = PR_TRUE;
-    mAnim->timer->InitWithCallback(NS_STATIC_CAST(nsITimerCallback*, this),
+    mAnim->timer->InitWithCallback(static_cast<nsITimerCallback*>(this),
                                    timeout, nsITimer::TYPE_REPEATING_SLACK);
   }
   

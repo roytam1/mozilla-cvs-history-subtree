@@ -232,6 +232,14 @@ public:
       mValue.mURL->mURI : mValue.mImage->mURI;
   }
 
+  URL* GetURLStructValue() const
+  {
+    // Not allowing this for Image values, because if the caller takes
+    // a ref to them they won't be able to delete them properly.
+    NS_ASSERTION(mUnit == eCSSUnit_URL, "not a URL value");
+    return mValue.mURL;
+  }
+
   const PRUnichar* GetOriginalURLValue() const
   {
     NS_ASSERTION(mUnit == eCSSUnit_URL || mUnit == eCSSUnit_Image,
@@ -388,6 +396,12 @@ public:
 
     NS_HIDDEN_(PRBool) operator==(const URL& aOther) const;
 
+    // URIEquals only compares URIs and principals (unlike operator==, which
+    // also compares the original strings).  URIEquals also assumes that the
+    // mURI member of both URL objects is non-null.  Do NOT call this method
+    // unless you're sure this is the case.
+    NS_HIDDEN_(PRBool) URIEquals(const URL& aOther) const;
+
     nsCOMPtr<nsIURI> mURI; // null == invalid URL
     nsStringBuffer* mString; // Could use nsRefPtr, but it'd add useless
                              // null-checks; this is never null.
@@ -420,7 +434,7 @@ public:
 
 private:
   static const PRUnichar* GetBufferValue(nsStringBuffer* aBuffer) {
-    return NS_STATIC_CAST(PRUnichar*, aBuffer->Data());
+    return static_cast<PRUnichar*>(aBuffer->Data());
   }
 
 protected:

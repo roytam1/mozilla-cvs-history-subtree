@@ -86,12 +86,22 @@ public:
     return u == 0x0020 || u == 0x200b/*ZWSP*/ || u == '\n' || u == '\t';
   }
 
+  static inline PRBool IsComplexASCIIChar(PRUnichar u)
+  {
+    return !((0x0030 <= u && u <= 0x0039) ||
+             (0x0041 <= u && u <= 0x005A) ||
+             (0x0061 <= u && u <= 0x007A));
+  }
+
   static inline PRBool IsComplexChar(PRUnichar u)
   {
-    return (0x1100 <= u && u <= 0x11ff) ||
-           (0x2e80 <= u && u <= 0xd7ff) ||
-           (0xf900 <= u && u <= 0xfaff) ||
-           (0xff00 <= u && u <= 0xffef);
+    return IsComplexASCIIChar(u) ||
+           (0x0e01 <= u && u <= 0x0edf) || // Thai & Lao
+           (0x1100 <= u && u <= 0x11ff) || // Hangul Jamo
+           (0x2000 <= u && u <= 0x21ff) || // Punctuations and Symbols
+           (0x2e80 <= u && u <= 0xd7ff) || // several CJK blocks
+           (0xf900 <= u && u <= 0xfaff) || // CJK Compatibility Idographs
+           (0xff00 <= u && u <= 0xffef);   // Halfwidth and Fullwidth Forms
   }
 
   // Normally, break opportunities exist at the end of each run of whitespace

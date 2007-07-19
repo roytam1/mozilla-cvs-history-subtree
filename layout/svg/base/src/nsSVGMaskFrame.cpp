@@ -105,11 +105,11 @@ nsSVGMaskFrame::ComputeMaskAlpha(nsSVGRenderState *aContext,
   {
     nsIFrame *frame;
     CallQueryInterface(aParent, &frame);
-    nsSVGElement *parent = NS_STATIC_CAST(nsSVGElement*, frame->GetContent());
+    nsSVGElement *parent = static_cast<nsSVGElement*>(frame->GetContent());
 
     float x, y, width, height;
 
-    nsSVGMaskElement *mask = NS_STATIC_CAST(nsSVGMaskElement*, mContent);
+    nsSVGMaskElement *mask = static_cast<nsSVGMaskElement*>(mContent);
 
     nsSVGLength2 *tmpX, *tmpY, *tmpWidth, *tmpHeight;
     tmpX = &mask->mLengthAttributes[nsSVGMaskElement::X];
@@ -203,7 +203,7 @@ nsSVGMaskFrame::ComputeMaskAlpha(nsSVGRenderState *aContext,
 
   nsRefPtr<gfxImageSurface> image =
     new gfxImageSurface(surfaceSize, gfxASurface::ImageFormatARGB32);
-  if (!image || !image->Data())
+  if (!image || image->CairoStatus())
     return nsnull;
 
   gfxContext transferCtx(image);
@@ -211,23 +211,21 @@ nsSVGMaskFrame::ComputeMaskAlpha(nsSVGRenderState *aContext,
   transferCtx.SetSource(surface, -clipExtents.pos);
   transferCtx.Paint();
 
-  PRUint32 width  = surfaceSize.width;
-  PRUint32 height = surfaceSize.height;
   PRUint8 *data   = image->Data();
   PRInt32  stride = image->Stride();
 
-  nsRect rect(0, 0, width, height);
+  nsRect rect(0, 0, surfaceSize.width, surfaceSize.height);
   nsSVGUtils::UnPremultiplyImageDataAlpha(data, stride, rect);
   nsSVGUtils::ConvertImageDataToLinearRGB(data, stride, rect);
 
-  for (PRUint32 y = 0; y < height; y++)
-    for (PRUint32 x = 0; x < width; x++) {
+  for (PRUint32 y = 0; y < surfaceSize.height; y++)
+    for (PRUint32 x = 0; x < surfaceSize.width; x++) {
       PRUint8 *pixel = data + stride * y + 4 * x;
 
       /* linearRGB -> intensity */
       PRUint8 alpha =
-        NS_STATIC_CAST(PRUint8,
-                       (pixel[GFX_ARGB32_OFFSET_R] * 0.2125 +
+        static_cast<PRUint8>
+                   ((pixel[GFX_ARGB32_OFFSET_R] * 0.2125 +
                         pixel[GFX_ARGB32_OFFSET_G] * 0.7154 +
                         pixel[GFX_ARGB32_OFFSET_B] * 0.0721) *
                        (pixel[GFX_ARGB32_OFFSET_A] / 255.0) * aOpacity);
@@ -257,7 +255,7 @@ nsSVGMaskFrame::GetCanvasTM()
   nsCOMPtr<nsIDOMSVGMatrix> canvasTM = mMaskParentMatrix;
 
   /* object bounding box? */
-  nsSVGMaskElement *mask = NS_STATIC_CAST(nsSVGMaskElement*, mContent);
+  nsSVGMaskElement *mask = static_cast<nsSVGMaskElement*>(mContent);
 
   PRUint16 contentUnits;
   mask->mMaskContentUnits->GetAnimVal(&contentUnits);

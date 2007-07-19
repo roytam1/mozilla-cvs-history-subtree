@@ -119,6 +119,7 @@ void nsXBLSpecialDocInfo::LoadDocInfo()
   }
   xblService->LoadBindingDocumentInfo(nsnull, nsnull,
                                       bindingURI,
+                                      nsnull,
                                       PR_TRUE, 
                                       getter_AddRefs(mHTMLBindings));
 
@@ -132,6 +133,7 @@ void nsXBLSpecialDocInfo::LoadDocInfo()
 
     xblService->LoadBindingDocumentInfo(nsnull, nsnull,
                                         bindingURI,
+                                        nsnull,
                                         PR_TRUE, 
                                         getter_AddRefs(mUserHTMLBindings));
   }
@@ -292,7 +294,7 @@ GetEditorKeyBindings()
 static void
 DoCommandCallback(const char *aCommand, void *aData)
 {
-  nsIControllers *controllers = NS_STATIC_CAST(nsIControllers*, aData);
+  nsIControllers *controllers = static_cast<nsIControllers*>(aData);
   if (controllers) {
     nsCOMPtr<nsIController> controller;
     controllers->GetControllerForCommand(aCommand, getter_AddRefs(controller));

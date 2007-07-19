@@ -60,7 +60,10 @@
   <binding id="autocomplete-result-popup" extends="chrome://global/content/autocomplete.xml#autocomplete-result-popup">
     <content>
       <xul:tree anonid="tree" class="autocomplete-tree plain" flex="1">
-        <xul:treecols anonid="treecols"/>
+        <xul:treecols anonid="treecols">
+          <xul:treecol class="autocomplete-treecol" id="treecolAutoCompleteValue" flex="2"/>
+          <xul:treecol class="autocomplete-treecol" id="treecolAutoCompleteComment" flex="1" hidden="true"/>
+        </xul:treecols>
         <xul:treechildren anonid="treebody" class="autocomplete-treebody" flex="1"/>
       </xul:tree>
       <xul:box role="search-box" class="autocomplete-search-box"/>
@@ -84,17 +87,6 @@
         }
       ]]></destructor>
 
-      <property name="selectedIndex"
-                onget="return this.textbox.view.selectedIndex;">
-        <setter>
-          this.mSelectedIndex = val;
-          if (val == -1)
-            this.mSearchBox.selectedIndex = -1;
-            
-          return val;
-        </setter>
-     </property>
-
       <property name="showSearch" onget="return this.mShowSearch;">
         <setter><![CDATA[
           this.mShowSearch = val;
@@ -108,13 +100,6 @@
         ]]></setter>
       </property>
       
-      <property name="mSelectedIndex">
-        <setter>
-          this.textbox.view.selectedIndex = val;
-          return val;
-        </setter>
-     </property>
-
       <property name="defaultSearchEngine"
                 onget="return this.textbox.getAttribute('defaultSearchEngine') == 'true';"
                 onset="this.textbox.setAttribute('defaultSearchEngine', val); return val;"/>
@@ -305,8 +290,8 @@
               return -1;
           } 
           
-          sel = this.getNextIndex(aReverse, aPage, this.selectedIndex, this.textbox.view.rowCount - 1);
-          this.mSelectedIndex = sel;
+          sel = this.getNextIndex(aReverse, aPage, this.selectedIndex, this.view.rowCount - 1);
+          this.selectedIndex = sel;
           if (sel == -1 && !aReverse)
             this.mSearchBox.selectBy(aReverse, aPage);
           else if (this.mSearchBox.selectedIndex != -1)
@@ -354,10 +339,12 @@
         var text = this.getAttribute("searchvalue");
         if (text)
           this.searchValue = text;
-        
-        this.mSelectedIndex = -1;
       ]]></constructor>
-      
+
+      <field name="mSelectedIndex">
+        -1
+      </field>
+
       <field name="parentMouseoverListener">
         // ensure that if a result menuitem is moused-over, any
         // search selection is cleared

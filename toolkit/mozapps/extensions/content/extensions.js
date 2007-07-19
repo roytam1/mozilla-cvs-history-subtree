@@ -44,6 +44,7 @@ const nsIFilePicker          = Components.interfaces.nsIFilePicker;
 const nsIIOService           = Components.interfaces.nsIIOService;
 const nsIFileProtocolHandler = Components.interfaces.nsIFileProtocolHandler;
 const nsIURL                 = Components.interfaces.nsIURL;
+const nsIAppStartup          = Components.interfaces.nsIAppStartup;
 
 var gView             = null;
 var gExtensionManager = null;
@@ -151,8 +152,7 @@ var AddonsViewBuilder = {
   updateView: function(aRulesList, aURI, aBindingList, aActionList)
   {
     this._bindingList = aBindingList;
-    if (!aActionList)
-      this._actionList = aBindingList;
+    this._actionList = aActionList ? aActionList : aBindingList;
 
     this.clearChildren(gExtensionsView);
     var template = document.createElementNS(kXULNSURI, "template");
@@ -313,7 +313,8 @@ function showView(aView) {
                       ["updateURL", "?updateURL"],
                       ["version", "?version"],
                       ["typeName", "update"] ];
-      types = [ [ ["availableUpdateVersion", "?availableUpdateVersion", null] ] ];
+      types = [ [ ["availableUpdateVersion", "?availableUpdateVersion", null],
+                  [ "updateable", "true", null ] ] ];
       break;
     case "installs":
       document.getElementById("installs-view").hidden = false;
@@ -461,24 +462,62 @@ function getIDFromResourceURI(aURI)
 
 function openURL(aURL)
 {
-# If we're not a browser, use the external protocol service to load the URI.
-#ifndef MOZ_PHOENIX
-  var uri = Components.classes["@mozilla.org/network/io-service;1"]
-                      .getService(nsIIOService).newURI(aURL, null, null);
+  const nsILoadGroup = Components.interfaces.nsILoadGroup;
+  var ios = Components.classes["@mozilla.org/network/io-service;1"]
+                            .getService(nsIIOService);
+  var uri = ios.newURI(aURL, null, null);
 
   var protocolSvc = Components.classes["@mozilla.org/uriloader/external-protocol-service;1"]
                               .getService(Components.interfaces.nsIExternalProtocolService);
-  protocolSvc.loadUrl(uri);
-# If we're a browser, open a new browser window instead.    
-#else
-  // bug 262575
-  if (window.opener && window.opener.openUILinkIn) {
-    var newWindowPref = gPref.getIntPref("browser.link.open_newwindow");
-    var where = newWindowPref == 3 ? "tab" : "window";
-    window.opener.openUILinkIn(aURL, where);
-  } else
-    openDialog("chrome://browser/content/browser.xul", "_blank", "chrome,all,dialog=no", aURL, null, null);
-#endif
+
+  if (!protocolSvc.isExposedProtocol(uri.scheme)) {
+    // If we're not a browser, use the external protocol service to load the URI.
+    protocolSvc.loadUrl(uri);
+  }
+  else {
+    var loadgroup = Components.classes["@mozilla.org/network/load-group;1"]
+                              .createInstance(nsILoadGroup);
+    var appstartup = Components.classes["@mozilla.org/toolkit/app-startup;1"]
+                               .getService(nsIAppStartup);
+
+    var loadListener = {
+      onStartRequest: function ll_start(aRequest, aContext) {
+        appstartup.enterLastWindowClosingSurvivalArea();
+      },
+      onStopRequest: function ll_stop(aRequest, aContext, aStatusCode) {
+        appstartup.exitLastWindowClosingSurvivalArea();
+      },
+      QueryInterface: function ll_QI(iid) {
+        if (iid.equals(Components.interfaces.nsISupports) ||
+            iid.equals(Components.interfaces.nsIRequestObserver) ||
+            iid.equals(Components.interfaces.nsISupportsWeakReference))
+          return this;
+        throw Components.results.NS_ERROR_NO_INTERFACE;
+      }
+    }
+    loadgroup.groupObserver = loadListener;
+
+    var uriListener = {
+      onStartURIOpen: function(uri) { return false; },
+      doContent: function(ctype, preferred, request, handler) { return false; },
+      isPreferred: function(ctype, desired) { return false; },
+      canHandleContent: function(ctype, preferred, desired) { return false; },
+      loadCookie: null,
+      parentContentListener: null,
+      getInterface: function(iid) {
+        if (iid.equals(Components.interfaces.nsIURIContentListener))
+          return this;
+        if (iid.equals(nsILoadGroup))
+          return loadgroup;
+        throw Components.results.NS_ERROR_NO_INTERFACE;
+      }
+    }
+
+    var channel = ios.newChannelFromURI(uri);
+    var uriLoader = Components.classes["@mozilla.org/uriloader;1"]
+                              .getService(Components.interfaces.nsIURILoader);
+    uriLoader.openURI(channel, true, uriListener);
+  }
 }
 
 function showProgressBar() {
@@ -605,6 +644,11 @@ function Startup()
     catch (e) {
       if (window.arguments[0] == "updates-only") {
         gUpdatesOnly = true;
+#ifdef MOZ_PHOENIX
+        // If we are Firefox when updating on startup don't display context
+        // menuitems that can open a browser window.
+        gUpdateContextMenus = gUpdateContextMenusNoBrowser;
+#endif
         document.getElementById("viewGroup").hidden = true;
         document.getElementById("extensionsView").setAttribute("norestart", "");
         showView("updates");
@@ -1023,8 +1067,10 @@ var gAddonContextMenus = ["menuitem_useTheme", "menuitem_options", "menuitem_hom
                           "menuitem_cancelUninstall", "menuitem_checkUpdate",
                           "menuitem_enable", "menuitem_disable"];
 var gUpdateContextMenus = ["menuitem_homepage", "menuitem_about", "menuseparator_1",
-                           "menuitem_installUpdate", "menuitem_includeUpdate"]
-var gInstallContextMenus = ["menuitem_homepage", "menuitem_about"]
+                           "menuitem_installUpdate", "menuitem_includeUpdate"];
+// For browsers don't display context menuitems that can open a browser window.
+var gUpdateContextMenusNoBrowser = ["menuitem_installUpdate", "menuitem_includeUpdate"];
+var gInstallContextMenus = ["menuitem_homepage", "menuitem_about"];
 
 function buildContextMenu(aEvent)
 {
@@ -1346,8 +1392,13 @@ function updateOptionalViews() {
     if (!showUpdates) {
       var updateURLArc = rdfs.GetResource(PREFIX_NS_EM + "availableUpdateURL");
       var updateURL = ds.GetTarget(e, updateURLArc, true);
-      if (updateURL)
-        var showUpdates = true;
+      if (updateURL) {
+        var updateableArc = rdfs.GetResource(PREFIX_NS_EM + "updateable");
+        var updateable = ds.GetTarget(e, updateableArc, true);
+        updateable = updateable.QueryInterface(Components.interfaces.nsIRDFLiteral);
+        if (updateable.Value == "true")
+          var showUpdates = true;
+      }
     }
 
     if (showInstalls)
@@ -1401,8 +1452,10 @@ function checkUpdatesAll() {
   // To support custom views we check the add-ons displayed in the list
   var items = [];
   var children = gExtensionsView.children;
-  for (var i = 0; i < children.length; ++i)
-    items.push(gExtensionManager.getItemForID(getIDFromResourceURI(children[i].id)));
+  for (var i = 0; i < children.length; ++i) {
+    if (children[i].getAttribute("updateable") != "false")
+      items.push(gExtensionManager.getItemForID(getIDFromResourceURI(children[i].id)));
+  }
 
   if (items.length > 0) {
     showProgressBar();
@@ -1443,7 +1496,6 @@ function installUpdatesAll() {
 }
 
 function restartApp() {
-  const nsIAppStartup = Components.interfaces.nsIAppStartup;
 
   // Notify all windows that an application quit has been requested.
   var os = Components.classes["@mozilla.org/observer-service;1"]
@@ -1459,15 +1511,6 @@ function restartApp() {
   // Notify all windows that an application quit has been granted.
   os.notifyObservers(null, "quit-application-granted", null);
 
-  // Enumerate all windows and call shutdown handlers
-  var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
-                     .getService(Components.interfaces.nsIWindowMediator);
-  var windows = wm.getEnumerator(null);
-  while (windows.hasMoreElements()) {
-    var win = windows.getNext();
-    if (("tryToClose" in win) && !win.tryToClose())
-      return;
-  }
   Components.classes["@mozilla.org/toolkit/app-startup;1"].getService(nsIAppStartup)
             .quit(nsIAppStartup.eRestart | nsIAppStartup.eAttemptQuit);
 }
@@ -1758,6 +1801,7 @@ var gExtensionsViewController = {
       gExtensionsViewController.onCommandUpdate();
       updateGlobalCommands();
       gExtensionsView.selectedItem.focus();
+      updateOptionalViews();
     },
 
     cmd_disable: function (aSelectedItem)
@@ -1790,6 +1834,7 @@ var gExtensionsViewController = {
       gExtensionManager.disableItem(id);
       gExtensionsViewController.onCommandUpdate();
       gExtensionsView.selectedItem.focus();
+      updateOptionalViews();
     },
     
     cmd_enable: function (aSelectedItem)
@@ -1797,6 +1842,7 @@ var gExtensionsViewController = {
       gExtensionManager.enableItem(getIDFromResourceURI(aSelectedItem.id));
       gExtensionsViewController.onCommandUpdate();
       gExtensionsView.selectedItem.focus();
+      updateOptionalViews();
     }
   }
 };

@@ -58,6 +58,7 @@
 #include "xptcall.h"
 #include "prprf.h"
 #include "nsTArray.h"
+#include "nsCSSValue.h"
 
 // JavaScript includes
 #include "jsapi.h"
@@ -430,6 +431,11 @@
 #include "nsIDOMStorageItem.h"
 #include "nsIDOMStorageEvent.h"
 #include "nsIDOMToString.h"
+
+// Offline includes
+#include "nsIDOMLoadStatusList.h"
+#include "nsIDOMLoadStatus.h"
+#include "nsIDOMLoadStatusEvent.h"
 
 static NS_DEFINE_CID(kCPluginManagerCID, NS_PLUGINMANAGER_CID);
 static NS_DEFINE_CID(kDOMSOF_CID, NS_DOM_SCRIPT_OBJECT_FACTORY_CID);
@@ -1179,6 +1185,13 @@ static nsDOMClassInfoData sClassInfoData[] = {
 
   NS_DEFINE_CLASSINFO_DATA(OfflineResourceList, nsOfflineResourceListSH,
                            ARRAY_SCRIPTABLE_FLAGS)
+
+  NS_DEFINE_CLASSINFO_DATA(LoadStatusList, nsLoadStatusListSH,
+                           ARRAY_SCRIPTABLE_FLAGS)
+  NS_DEFINE_CLASSINFO_DATA(LoadStatus, nsDOMGenericSH,
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
+  NS_DEFINE_CLASSINFO_DATA(LoadStatusEvent, nsDOMGenericSH,
+                           DOM_DEFAULT_SCRIPTABLE_FLAGS)
 };
 
 // Objects that shuld be constructable through |new Name();|
@@ -1563,8 +1576,8 @@ nsDOMClassInfo::~nsDOMClassInfo()
 {
   if (IS_EXTERNAL(mData->mCachedClassInfo)) {
     // Some compilers don't like delete'ing a const nsDOMClassInfo*
-    nsDOMClassInfoData* data = NS_CONST_CAST(nsDOMClassInfoData*, mData);
-    delete NS_STATIC_CAST(nsExternalDOMClassInfoData*, data);
+    nsDOMClassInfoData* data = const_cast<nsDOMClassInfoData*>(mData);
+    delete static_cast<nsExternalDOMClassInfoData*>(data);
   }
 }
 
@@ -3196,6 +3209,20 @@ nsDOMClassInfo::Init()
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMOfflineResourceList)
   DOM_CLASSINFO_MAP_END
 
+  DOM_CLASSINFO_MAP_BEGIN(LoadStatusList, nsIDOMLoadStatusList)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMLoadStatusList)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMEventTarget)
+  DOM_CLASSINFO_MAP_END
+
+  DOM_CLASSINFO_MAP_BEGIN(LoadStatus, nsIDOMLoadStatus)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMLoadStatus)
+  DOM_CLASSINFO_MAP_END
+
+  DOM_CLASSINFO_MAP_BEGIN(LoadStatusEvent, nsIDOMLoadStatusEvent)
+    DOM_CLASSINFO_MAP_ENTRY(nsIDOMLoadStatusEvent)
+    DOM_CLASSINFO_EVENT_MAP_ENTRIES
+  DOM_CLASSINFO_MAP_END
+
   DOM_CLASSINFO_MAP_BEGIN(TextRectangle, nsIDOMTextRectangle)
     DOM_CLASSINFO_MAP_ENTRY(nsIDOMTextRectangle)
    DOM_CLASSINFO_MAP_END
@@ -3312,12 +3339,12 @@ nsDOMClassInfo::GetInterfaces(PRUint32 *aCount, nsIID ***aArray)
     return NS_OK;
   }
 
-  *aArray = NS_STATIC_CAST(nsIID **, nsMemory::Alloc(count * sizeof(nsIID *)));
+  *aArray = static_cast<nsIID **>(nsMemory::Alloc(count * sizeof(nsIID *)));
   NS_ENSURE_TRUE(*aArray, NS_ERROR_OUT_OF_MEMORY);
 
   PRUint32 i;
   for (i = 0; i < count; i++) {
-    nsIID *iid = NS_STATIC_CAST(nsIID *, nsMemory::Clone(mData->mInterfaces[i],
+    nsIID *iid = static_cast<nsIID *>(nsMemory::Clone(mData->mInterfaces[i],
                                                          sizeof(nsIID)));
 
     if (!iid) {
@@ -3336,7 +3363,7 @@ NS_IMETHODIMP
 nsDOMClassInfo::GetHelperForLanguage(PRUint32 language, nsISupports **_retval)
 {
   if (language == nsIProgrammingLanguage::JAVASCRIPT) {
-    *_retval = NS_STATIC_CAST(nsIXPCScriptable *, this);
+    *_retval = static_cast<nsIXPCScriptable *>(this);
 
     NS_ADDREF(*_retval);
   } else {
@@ -4885,7 +4912,7 @@ public:
 
     JSBool ok =
       ::JS_DefineUCProperty(cx, target,
-                            NS_REINTERPRET_CAST(const jschar *, mClassName),
+                            reinterpret_cast<const jschar *>(mClassName),
                             nsCRT::strlen(mClassName), thisAsVal, nsnull,
                             nsnull, 0);
 
@@ -5194,8 +5221,8 @@ nsWindowSH::GlobalResolve(nsGlobalWindow *aWin, JSContext *cx,
     // direct DOM class, create a constructor object...
 
     nsRefPtr<nsDOMConstructor> constructor =
-      new nsDOMConstructor(NS_REINTERPRET_CAST(PRUnichar *,
-                                               ::JS_GetStringChars(str)),
+      new nsDOMConstructor(reinterpret_cast<PRUnichar *>
+                                           (::JS_GetStringChars(str)),
                            name_struct);
     if (!constructor) {
       return NS_ERROR_OUT_OF_MEMORY;
@@ -5255,8 +5282,8 @@ nsWindowSH::GlobalResolve(nsGlobalWindow *aWin, JSContext *cx,
       }
     }
 
-    const PRUnichar *name = NS_REINTERPRET_CAST(PRUnichar *,
-                                                ::JS_GetStringChars(str));
+    const PRUnichar *name = reinterpret_cast<PRUnichar *>
+                                            (::JS_GetStringChars(str));
     nsRefPtr<nsDOMConstructor> constructor =
       new nsDOMConstructor(name, name_struct);
     if (!constructor) {
@@ -5793,7 +5820,7 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 
       const jschar *chars = ::JS_GetStringChars(str);
 
-      dsn->FindChildWithName(NS_REINTERPRET_CAST(const PRUnichar*, chars),
+      dsn->FindChildWithName(reinterpret_cast<const PRUnichar*>(chars),
                              PR_FALSE, PR_TRUE, nsnull, nsnull,
                              getter_AddRefs(child));
 
@@ -6928,7 +6955,7 @@ nsElementSH::PostCreate(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                                                                     nsnull);
     NS_ENSURE_TRUE(sc, NS_ERROR_FAILURE);
 
-    nsIURI *bindingURL = sc->GetStyleDisplay()->mBinding;
+    nsCSSValue::URL *bindingURL = sc->GetStyleDisplay()->mBinding;
     if (!bindingURL) {
       // No binding, nothing left to do here.
       return NS_OK;
@@ -6940,7 +6967,8 @@ nsElementSH::PostCreate(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     nsCOMPtr<nsIXBLService> xblService(do_GetService("@mozilla.org/xbl;1"));
     NS_ENSURE_TRUE(xblService, NS_ERROR_NOT_AVAILABLE);
 
-    xblService->LoadBindings(content, bindingURL, PR_FALSE,
+    xblService->LoadBindings(content, bindingURL->mURI,
+                             bindingURL->mOriginPrincipal, PR_FALSE,
                              getter_AddRefs(binding), &dummy);
   }
   
@@ -7213,7 +7241,7 @@ nsContentListSH::PreCreate(nsISupports *nativeObj, JSContext *cx,
 {
   nsCOMPtr<nsIDOMNodeList> nodeList(do_QueryInterface(nativeObj));
   nsContentList *contentList =
-    NS_STATIC_CAST(nsContentList*, NS_STATIC_CAST(nsIDOMNodeList*, nodeList));
+    static_cast<nsContentList*>(static_cast<nsIDOMNodeList*>(nodeList));
 
   if (!contentList) {
     return NS_OK;
@@ -7589,8 +7617,8 @@ nsDocumentSH::PostCreate(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
     NS_NAMED_LITERAL_STRING(doc_str, "document");
 
     if (!::JS_DefineUCProperty(cx, JSVAL_TO_OBJECT(winVal),
-                               NS_REINTERPRET_CAST(const jschar *,
-                                                   doc_str.get()),
+                               reinterpret_cast<const jschar *>
+                                               (doc_str.get()),
                                doc_str.Length(), OBJECT_TO_JSVAL(obj), nsnull,
                                nsnull, JSPROP_READONLY | JSPROP_ENUMERATE)) {
       return NS_ERROR_FAILURE;
@@ -7673,8 +7701,8 @@ nsHTMLDocumentSH::DocumentOpen(JSContext *cx, JSObject *obj, uintN argc,
     }
 
     replace = NS_LITERAL_STRING("replace").
-      Equals(NS_REINTERPRET_CAST(const PRUnichar*,
-                                 ::JS_GetStringChars(jsstr)));
+      Equals(reinterpret_cast<const PRUnichar*>
+                             (::JS_GetStringChars(jsstr)));
   }
 
   nsCOMPtr<nsIDOMDocument> retval;
@@ -8648,8 +8676,8 @@ nsHTMLFormElementSH::NewEnumerate(nsIXPConnectWrappedNative *wrapper,
         JSAutoRequest ar(cx);
 
         JSString *jsname =
-          JS_NewUCStringCopyN(cx, NS_REINTERPRET_CAST(const jschar *,
-                                                      attr.get()),
+          JS_NewUCStringCopyN(cx, reinterpret_cast<const jschar *>
+                                                  (attr.get()),
                               attr.Length());
         NS_ENSURE_TRUE(jsname, NS_ERROR_OUT_OF_MEMORY);
 
@@ -9564,7 +9592,7 @@ nsStringArraySH::GetProperty(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
   JSAutoRequest ar(cx);
 
   JSString *str =
-    ::JS_NewUCStringCopyN(cx, NS_REINTERPRET_CAST(const jschar *, val.get()),
+    ::JS_NewUCStringCopyN(cx, reinterpret_cast<const jschar *>(val.get()),
                           val.Length());
   NS_ENSURE_TRUE(str, NS_ERROR_OUT_OF_MEMORY);
 
@@ -9903,8 +9931,8 @@ nsStorageSH::NewEnumerate(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
       if (keys->Length() != 0) {
         nsString& key = keys->ElementAt(0);
         JSString *str =
-          JS_NewUCStringCopyN(cx, NS_REINTERPRET_CAST(const jschar *,
-                                                      key.get()),
+          JS_NewUCStringCopyN(cx, reinterpret_cast<const jschar *>
+                                                  (key.get()),
                               key.Length());
         NS_ENSURE_TRUE(str, NS_ERROR_OUT_OF_MEMORY);
 
@@ -9992,7 +10020,7 @@ nsDOMConstructorSH::Call(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                          PRBool *_retval)
 {
   nsDOMConstructor *wrapped =
-    NS_STATIC_CAST(nsDOMConstructor *, wrapper->Native());
+    static_cast<nsDOMConstructor *>(wrapper->Native());
 
 #ifdef DEBUG
   {
@@ -10010,7 +10038,7 @@ nsDOMConstructorSH::Construct(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
                               jsval *vp, PRBool *_retval)
 {
   nsDOMConstructor *wrapped =
-    NS_STATIC_CAST(nsDOMConstructor *, wrapper->Native());
+    static_cast<nsDOMConstructor *>(wrapper->Native());
 
 #ifdef DEBUG
   {
@@ -10028,7 +10056,7 @@ nsDOMConstructorSH::HasInstance(nsIXPConnectWrappedNative *wrapper,
                                 PRBool *bp, PRBool *_retval)
 {
   nsDOMConstructor *wrapped =
-    NS_STATIC_CAST(nsDOMConstructor *, wrapper->Native());
+    static_cast<nsDOMConstructor *>(wrapper->Native());
 
 #ifdef DEBUG
   {
@@ -10068,4 +10096,20 @@ nsOfflineResourceListSH::GetStringAt(nsISupports *aNative, PRInt32 aIndex,
   NS_ENSURE_TRUE(list, NS_ERROR_UNEXPECTED);
 
   return list->Item(aIndex, aResult);
+}
+
+// nsLoadStatusListSH
+nsresult
+nsLoadStatusListSH::GetItemAt(nsISupports *aNative, PRUint32 aIndex,
+                              nsISupports **aResult)
+{
+  nsCOMPtr<nsIDOMLoadStatusList> list(do_QueryInterface(aNative));
+  NS_ENSURE_TRUE(list, NS_ERROR_UNEXPECTED);
+
+  nsIDOMLoadStatus *status = nsnull; // Weak, transfer the ownership over to aResult
+  nsresult rv = list->Item(aIndex, &status);
+
+  *aResult = status;
+
+  return rv;
 }

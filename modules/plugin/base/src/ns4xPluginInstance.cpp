@@ -869,8 +869,8 @@ NS_IMETHODIMP ns4xPluginInstance::Start(void)
 
   if(mStarted)
     return NS_OK;
-  else
-    return InitializePlugin(mPeer); 
+
+  return InitializePlugin(mPeer); 
 }
 
 
@@ -900,6 +900,14 @@ NS_IMETHODIMP ns4xPluginInstance::Stop(void)
   if(!mStarted)
     return NS_OK;
 
+  // Make sure we lock while we're writing to mStarted after we've
+  // started as other threads might be checking that inside a lock.
+  EnterAsyncPluginThreadCallLock();
+  mStarted = PR_FALSE;
+  ExitAsyncPluginThreadCallLock();
+
+  OnPluginDestroy(&fNPP);
+
   if (fCallbacks->destroy == NULL)
     return NS_ERROR_FAILURE; // XXX right error?
 
@@ -924,8 +932,6 @@ NS_IMETHODIMP ns4xPluginInstance::Stop(void)
 
   NPP_PLUGIN_LOG(PLUGIN_LOG_NORMAL,
   ("NPP Destroy called: this=%p, npp=%p, return=%d\n", this, &fNPP, error));
-
-  mStarted = PR_FALSE;
 
   nsJSNPRuntime::OnPluginDestroy(&fNPP);
 
@@ -1141,7 +1147,7 @@ NS_IMETHODIMP ns4xPluginInstance::SetWindow(nsPluginWindow* window)
     if (!mXtBin && window->ws_info) {
 
       NPSetWindowCallbackStruct* ws =
-        NS_STATIC_CAST(NPSetWindowCallbackStruct*, window->ws_info);
+        static_cast<NPSetWindowCallbackStruct*>(window->ws_info);
 
       if (!isXembed) {  
 #ifdef NS_DEBUG      

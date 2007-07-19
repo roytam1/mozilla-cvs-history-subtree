@@ -50,8 +50,12 @@
 #include "jsfun.h"
 #include "jsobj.h"
 #include "jsscript.h"
+#include "nsThreadUtilsInternal.h"
 
-NS_IMPL_THREADSAFE_ISUPPORTS2(nsXPConnect,nsIXPConnect,nsISupportsWeakReference)
+NS_IMPL_THREADSAFE_ISUPPORTS3(nsXPConnect,
+                              nsIXPConnect,
+                              nsISupportsWeakReference,
+                              nsIThreadObserver)
 
 nsXPConnect* nsXPConnect::gSelf = nsnull;
 JSBool       nsXPConnect::gOnceAliveNowDead = JS_FALSE;
@@ -286,6 +290,10 @@ nsXPConnect::GetXPConnect()
             // Initial extra ref to keep the singleton alive
             // balanced by explicit call to ReleaseXPConnectSingleton()
             NS_ADDREF(gSelf);
+            if (NS_FAILED(NS_SetGlobalThreadObserver(gSelf))) {
+                NS_RELEASE(gSelf);
+                // Fall through to returning null
+            }
         }
     }
     return gSelf;
@@ -307,6 +315,7 @@ nsXPConnect::ReleaseXPConnectSingleton()
     nsXPConnect* xpc = gSelf;
     if(xpc)
     {
+        NS_SetGlobalThreadObserver(nsnull);
 
 #ifdef XPC_TOOLS_SUPPORT
         if(xpc->mProfiler)
@@ -332,7 +341,7 @@ nsXPConnect::ReleaseXPConnectSingleton()
                 if(dumpFile)
                 {
                     JS_DumpHeap(ccx, dumpFile, nsnull, 0, nsnull,
-                                NS_STATIC_CAST(size_t, -1), nsnull);
+                                static_cast<size_t>(-1), nsnull);
                     if(dumpFile != stdout)
                         fclose(dumpFile);
                 }
@@ -531,7 +540,7 @@ void XPCMarkNotification(void *thing, uint8 flags, void *closure)
        ty != GCX_XML)
         return;
 
-    JSObjectRefcounts* jsr = NS_STATIC_CAST(JSObjectRefcounts*, closure);
+    JSObjectRefcounts* jsr = static_cast<JSObjectRefcounts*>(closure);
     // We're marking after a mark phase ended, so the GC restarted itself and
     // we want to clear the refcounts first.
     if(jsr->mMarkEnded)
@@ -593,6 +602,17 @@ nsXPConnect::FinishCycleCollection()
     return NS_OK;
 }
 
+nsCycleCollectionParticipant *
+nsXPConnect::ToParticipant(void *p)
+{
+    // Put this assertion here so it fires when we still have a stack
+    // showing where the bad pointer came from.
+    NS_ASSERTION(mObjRefcounts->Get(p) > 0,
+                 "JS object but unknown to the JS GC?");
+
+    return this;
+}
+
 NS_IMETHODIMP
 nsXPConnect::Root(void *p)
 {
@@ -608,7 +628,7 @@ nsXPConnect::Unlink(void *p)
         return NS_ERROR_FAILURE;
     uint8 ty = *js_GetGCThingFlags(p) & GCF_TYPEMASK;
     if(ty == GCX_OBJECT)
-        JS_ClearScope(*mCycleCollectionContext, NS_STATIC_CAST(JSObject*, p));
+        JS_ClearScope(*mCycleCollectionContext, static_cast<JSObject*>(p));
     return NS_OK;
 }
 
@@ -643,7 +663,7 @@ NoteJSChild(JSTracer *trc, void *thing, uint32 kind)
     if(kind == JSTRACE_OBJECT || kind == JSTRACE_NAMESPACE ||
        kind == JSTRACE_QNAME || kind == JSTRACE_XML)
     {
-        ContextCallbackItem *item = NS_STATIC_CAST(ContextCallbackItem*, trc);
+        ContextCallbackItem *item = static_cast<ContextCallbackItem*>(trc);
         item->cb->NoteScriptChild(nsIProgrammingLanguage::JAVASCRIPT, thing);
     }
 }
@@ -679,7 +699,7 @@ nsXPConnect::Traverse(void *p, nsCycleCollectionTraversalCallback &cb)
 #ifdef DEBUG_CC
     if(ty == GCX_OBJECT)
     {
-        JSObject *obj = NS_STATIC_CAST(JSObject*, p);
+        JSObject *obj = static_cast<JSObject*>(p);
         JSClass *clazz = OBJ_GET_CLASS(cx, obj);
         char name[72];
         if(XPCNativeWrapper::IsNativeWrapperClass(clazz))
@@ -790,7 +810,7 @@ nsXPConnect::Traverse(void *p, nsCycleCollectionTraversalCallback &cb)
     if(ty != GCX_OBJECT)
         return NS_OK;
     
-    JSObject *obj = NS_STATIC_CAST(JSObject*, p);
+    JSObject *obj = static_cast<JSObject*>(p);
     JSClass* clazz = OBJ_GET_CLASS(cx, obj);
 
     if(clazz == &XPC_WN_Tearoff_JSClass)
@@ -810,7 +830,7 @@ nsXPConnect::Traverse(void *p, nsCycleCollectionTraversalCallback &cb)
             clazz->flags & JSCLASS_PRIVATE_IS_NSISUPPORTS &&
             !XPCNativeWrapper::IsNativeWrapperClass(clazz))
     {
-        cb.NoteXPCOMChild(NS_STATIC_CAST(nsISupports*, JS_GetPrivate(cx, obj)));
+        cb.NoteXPCOMChild(static_cast<nsISupports*>(JS_GetPrivate(cx, obj)));
     }
 
 #ifndef XPCONNECT_STANDALONE
@@ -978,7 +998,7 @@ nsXPConnect::InitClassesWithNewWrappedGlobal(JSContext * aJSContext,
         return UnexpectedFailure(NS_ERROR_FAILURE);
 
     XPCWrappedNative* wrapper =
-        NS_REINTERPRET_CAST(XPCWrappedNative*, holder.get());
+        reinterpret_cast<XPCWrappedNative*>(holder.get());
     XPCWrappedNativeScope* scope = wrapper->GetScope();
 
     if(!scope)
@@ -1160,7 +1180,7 @@ nsXPConnect::GetWrappedNativeOfNativeObject(JSContext * aJSContext,
                                                 &wrapper);
     if(NS_FAILED(rv))
         return NS_ERROR_FAILURE;
-    *_retval = NS_STATIC_CAST(nsIXPConnectWrappedNative*, wrapper);
+    *_retval = static_cast<nsIXPConnectWrappedNative*>(wrapper);
     return NS_OK;
 }
 
@@ -1196,7 +1216,7 @@ MoveableWrapperFinder(JSDHashTable *table, JSDHashEntryHdr *hdr,
                       uint32 number, void *arg)
 {
     // Every element counts.
-    nsVoidArray *va = NS_STATIC_CAST(nsVoidArray *,arg);
+    nsVoidArray *va = static_cast<nsVoidArray *>(arg);
     va->AppendElement(((Native2WrappedNativeMap::Entry*)hdr)->value);
     return JS_DHASH_NEXT;
 }
@@ -1238,7 +1258,7 @@ nsXPConnect::ReparentScopeAwareWrappers(JSContext *aJSContext,
             // reparented.
 
             XPCWrappedNative *wrapper =
-                NS_STATIC_CAST(XPCWrappedNative *, wrappersToMove[i]);
+                static_cast<XPCWrappedNative *>(wrappersToMove[i]);
             nsISupports *identity = wrapper->GetIdentityObject();
             nsCOMPtr<nsIClassInfo> info(do_QueryInterface(identity));
 
@@ -1680,7 +1700,7 @@ nsXPConnect::CreateSandbox(JSContext *cx, nsIPrincipal *principal,
 NS_IMETHODIMP
 nsXPConnect::EvalInSandboxObject(const nsAString& source, JSContext *cx,
                                  nsIXPConnectJSObjectHolder *sandbox,
-                                 jsval *rval)
+                                 PRBool returnStringOnly, jsval *rval)
 {
 #ifdef XPCONNECT_STANDALONE
     return NS_ERROR_NOT_AVAILABLE;
@@ -1693,7 +1713,8 @@ nsXPConnect::EvalInSandboxObject(const nsAString& source, JSContext *cx,
     NS_ENSURE_SUCCESS(rv, rv);
 
     return xpc_EvalInSandbox(cx, obj, source,
-                             NS_ConvertUTF16toUTF8(source).get(), 1, rval);
+                             NS_ConvertUTF16toUTF8(source).get(), 1,
+                             returnStringOnly, rval);
 #endif /* XPCONNECT_STANDALONE */
 }
 
@@ -2012,6 +2033,31 @@ nsXPConnect::FlagSystemFilenamePrefix(const char *aFilenamePrefix)
     if(!JS_FlagScriptFilenamePrefix(rt, aFilenamePrefix, JSFILENAME_SYSTEM))
         return NS_ERROR_OUT_OF_MEMORY;
     return NS_OK;
+}
+
+NS_IMETHODIMP
+nsXPConnect::OnProcessNextEvent(nsIThreadInternal *aThread, PRBool aMayWait,
+                                PRUint32 aRecursionDepth)
+{
+    // Push a null JSContext so that we don't see any script during
+    // event processing.
+    NS_ENSURE_STATE(mContextStack);
+    return mContextStack->Push(nsnull);
+}
+
+NS_IMETHODIMP
+nsXPConnect::AfterProcessNextEvent(nsIThreadInternal *aThread,
+                                   PRUint32 aRecursionDepth)
+{
+    NS_ENSURE_STATE(mContextStack);
+    return mContextStack->Pop(nsnull);
+}
+
+NS_IMETHODIMP
+nsXPConnect::OnDispatchedEvent(nsIThreadInternal* aThread)
+{
+    NS_NOTREACHED("Why tell us?");
+    return NS_ERROR_UNEXPECTED;
 }
 
 #ifdef DEBUG

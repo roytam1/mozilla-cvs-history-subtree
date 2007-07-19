@@ -187,7 +187,7 @@ protected:
                        PRUint32 aLineNumber, nsIURI* aBaseURI,
                        nsIPrincipal* aSheetPrincipal);
   // the caller must hold on to aBuffer until parsing is done
-  nsresult InitScanner(const nsString& aString, nsIURI* aSheetURI,
+  nsresult InitScanner(const nsSubstring& aString, nsIURI* aSheetURI,
                        PRUint32 aLineNumber, nsIURI* aBaseURI,
                        nsIPrincipal* aSheetPrincipal);
   nsresult ReleaseScanner(void);
@@ -203,7 +203,7 @@ protected:
 
   PRBool ExpectSymbol(nsresult& aErrorCode, PRUnichar aSymbol, PRBool aSkipWS);
   PRBool ExpectEndProperty(nsresult& aErrorCode, PRBool aSkipWS);
-  nsString* NextIdent(nsresult& aErrorCode);
+  nsSubstring* NextIdent(nsresult& aErrorCode);
   void SkipUntil(nsresult& aErrorCode, PRUnichar aStopSymbol);
   void SkipRuleSet(nsresult& aErrorCode);
   PRBool SkipAtRule(nsresult& aErrorCode);
@@ -490,7 +490,7 @@ protected:
 
 PR_STATIC_CALLBACK(void) AppendRuleToArray(nsICSSRule* aRule, void* aArray)
 {
-  NS_STATIC_CAST(nsCOMArray<nsICSSRule>*, aArray)->AppendObject(aRule);
+  static_cast<nsCOMArray<nsICSSRule>*>(aArray)->AppendObject(aRule);
 }
 
 PR_STATIC_CALLBACK(void) AppendRuleToSheet(nsICSSRule* aRule, void* aParser)
@@ -654,7 +654,7 @@ CSSParserImpl::InitScanner(nsIUnicharInputStream* aInput, nsIURI* aSheetURI,
 }
 
 nsresult
-CSSParserImpl::InitScanner(const nsString& aString, nsIURI* aSheetURI,
+CSSParserImpl::InitScanner(const nsSubstring& aString, nsIURI* aSheetURI,
                            PRUint32 aLineNumber, nsIURI* aBaseURI,
                            nsIPrincipal* aSheetPrincipal)
 {
@@ -662,7 +662,7 @@ CSSParserImpl::InitScanner(const nsString& aString, nsIURI* aSheetURI,
   // the stream until we're done parsing.
   NS_ASSERTION(! mScannerInited, "already have scanner");
 
-  mScanner.Init(nsnull, aString.get(), aString.Length(), aSheetURI, aLineNumber);
+  mScanner.Init(nsnull, aString.BeginReading(), aString.Length(), aSheetURI, aLineNumber);
 
 #ifdef DEBUG
   mScannerInited = PR_TRUE;
@@ -802,9 +802,8 @@ CSSParserImpl::ParseStyleAttribute(const nsAString& aAttributeValue,
   
   NS_ASSERTION(nsnull != aBaseURL, "need base URL");
 
-  const nsAFlatString& flat = PromiseFlatString(aAttributeValue);
   // XXX line number?
-  nsresult rv = InitScanner(flat, aDocURL, 0, aBaseURL, aNodePrincipal);
+  nsresult rv = InitScanner(aAttributeValue, aDocURL, 0, aBaseURL, aNodePrincipal);
   if (! NS_SUCCEEDED(rv)) {
     return rv;
   }
@@ -861,8 +860,7 @@ CSSParserImpl::ParseAndAppendDeclaration(const nsAString&  aBuffer,
 //  NS_ASSERTION(nsnull != aBaseURL, "need base URL");
   *aChanged = PR_FALSE;
 
-  const nsAFlatString& flat = PromiseFlatString(aBuffer);
-  nsresult rv = InitScanner(flat, aSheetURL, 0, aBaseURL, aSheetPrincipal);
+  nsresult rv = InitScanner(aBuffer, aSheetURL, 0, aBaseURL, aSheetPrincipal);
   if (! NS_SUCCEEDED(rv)) {
     return rv;
   }
@@ -914,8 +912,7 @@ CSSParserImpl::ParseRule(const nsAString&        aRule,
   
   NS_ASSERTION(nsnull != aBaseURL, "need base URL");
 
-  const nsAFlatString& flat = PromiseFlatString(aRule);
-  nsresult rv = InitScanner(flat, aSheetURL, 0, aBaseURL, aSheetPrincipal);
+  nsresult rv = InitScanner(aRule, aSheetURL, 0, aBaseURL, aSheetPrincipal);
   if (NS_FAILED(rv)) {
     return rv;
   }
@@ -955,8 +952,7 @@ CSSParserImpl::ParseProperty(const nsCSSProperty aPropID,
   NS_ASSERTION(nsnull != aDeclaration, "Need declaration to parse into!");
   *aChanged = PR_FALSE;
 
-  const nsAFlatString& flat = PromiseFlatString(aPropValue);
-  nsresult rv = InitScanner(flat, aSheetURL, 0, aBaseURL, aSheetPrincipal);
+  nsresult rv = InitScanner(aPropValue, aSheetURL, 0, aBaseURL, aSheetPrincipal);
   if (NS_FAILED(rv)) {
     return rv;
   }
@@ -1066,10 +1062,8 @@ CSSParserImpl::DoParseMediaList(const nsSubstring& aBuffer,
                                 PRUint32 aLineNumber, // for error reporting
                                 nsMediaList* aMediaList)
 {
-  const nsAFlatString& flat = PromiseFlatString(aBuffer);
-
   // fake base URL since media lists don't have URLs in them
-  nsresult rv = InitScanner(flat, aURL, aLineNumber, aURL, nsnull);
+  nsresult rv = InitScanner(aBuffer, aURL, aLineNumber, aURL, nsnull);
   if (NS_FAILED(rv)) {
     return rv;
   }
@@ -1091,8 +1085,7 @@ CSSParserImpl::ParseColorString(const nsSubstring& aBuffer,
 {
   NS_ASSERTION(aHandleAlphaColors == PR_TRUE || aHandleAlphaColors == PR_FALSE, "bad PRBool value");
 
-  const nsAFlatString& flat = PromiseFlatString(aBuffer);
-  nsresult rv = InitScanner(flat, aURL, aLineNumber, aURL, nsnull);
+  nsresult rv = InitScanner(aBuffer, aURL, aLineNumber, aURL, nsnull);
   if (NS_FAILED(rv))
     return rv;
 
@@ -1112,9 +1105,8 @@ CSSParserImpl::ParseColorString(const nsSubstring& aBuffer,
   }
 
   if (value.GetUnit() == eCSSUnit_String) {
-    nsAutoString s;
     nscolor rgba;
-    if (NS_ColorNameToRGB(value.GetStringValue(s), &rgba)) {
+    if (NS_ColorNameToRGB(nsDependentString(value.GetStringBufferValue()), &rgba)) {
       (*aColor) = rgba;
       rv = NS_OK;
     }
@@ -1217,7 +1209,7 @@ PRBool CSSParserImpl::ExpectEndProperty(nsresult& aErrorCode, PRBool aSkipWS)
 }
 
 
-nsString* CSSParserImpl::NextIdent(nsresult& aErrorCode)
+nsSubstring* CSSParserImpl::NextIdent(nsresult& aErrorCode)
 {
   // XXX Error reporting?
   if (!GetToken(aErrorCode, PR_TRUE)) {
@@ -2407,66 +2399,67 @@ CSSParserImpl::ParseAttributeSelector(PRInt32&       aDataMask,
           return eSelectorParsingStatus_Error;
         }
         if (mToken.IsSymbol(']')) {
-          PRBool isCaseSensitive = mCaseSensitive;
-          if (nameSpaceID == kNameSpaceID_None ||
-              nameSpaceID == kNameSpaceID_XHTML) {
-            static const char* caseSensitiveHTMLAttribute[] = {
+          PRBool isCaseSensitive = PR_TRUE;
+
+          // If we're parsing a style sheet for an HTML document, and
+          // the attribute selector is for a non-namespaced attribute,
+          // then check to see if it's one of the known attributes whose
+          // VALUE is case-insensitive.
+          if (!mCaseSensitive && nameSpaceID == kNameSpaceID_None) {
+            static const char* caseInsensitiveHTMLAttribute[] = {
               // list based on http://www.w3.org/TR/html4/
-              "abbr",
-              "action",
-              "alt",
-              "archive",
-              "background",
-              "cite",
-              "class",
-              "classid",
-              "code",
-              "codebase",
-              "content",
-              "data",
-              "datetime",
-              "for",
-              "headers",
-              "href",
-              "id",
-              "label",
-              "longdesc",
-              "name",
-              "object",
-              "onblur",
-              "onchange",
-              "ondblclick",
-              "onfocus",
-              "onkeydown",
-              "onkeypress",
-              "onkeyup",
-              "onload",
-              "onmousedown",
-              "onmousemove",
-              "onmouseout",
-              "onmouseup",
-              "onoffline",
-              "ononline",
-              "onreset",
-              "onselect",
-              "onsubmit",
-              "onunload",
-              "profile",
-              "prompt",
-              "scheme",
-              "src",
-              "standby",
-              "summary",
-              "title",
-              "usemap",
-              "value",
+              "lang", 
+              "dir", 
+              "http-equiv", 
+              "text", 
+              "link", 
+              "vlink", 
+              "alink", 
+              "compact", 
+              "align", 
+              "frame", 
+              "rules",
+              "valign", 
+              "scope", 
+              "axis", 
+              "nowrap", 
+              "hreflang", 
+              "rel", 
+              "rev", 
+              "charset", 
+              "codetype", 
+              "declare",
+              "valuetype", 
+              "shape", 
+              "nohref", 
+              "media", 
+              "bgcolor", 
+              "clear", 
+              "color", 
+              "face", 
+              "noshade",
+              "noresize", 
+              "scrolling", 
+              "target", 
+              "method", 
+              "enctype", 
+              "accept-charset", 
+              "accept", 
+              "checked",
+              "multiple", 
+              "selected", 
+              "disabled", 
+              "readonly", 
+              "language", 
+              "defer", 
+              "type",
               nsnull
             };
             short i = 0;
             const char* htmlAttr;
-            while ((htmlAttr = caseSensitiveHTMLAttribute[i++])) {
+            while ((htmlAttr = caseInsensitiveHTMLAttribute[i++])) {
               if (attr.EqualsIgnoreCase(htmlAttr)) {
-                isCaseSensitive = PR_TRUE;
+                isCaseSensitive = PR_FALSE;
                 break;
               }
             }
@@ -3470,8 +3463,8 @@ CSSParserImpl::DoTransferTempData(nsCSSDeclaration* aDeclaration,
   void *v_dest = mData.PropertyAt(aPropID);
   switch (nsCSSProps::kTypeTable[aPropID]) {
     case eCSSType_Value: {
-      nsCSSValue *source = NS_STATIC_CAST(nsCSSValue*, v_source);
-      nsCSSValue *dest = NS_STATIC_CAST(nsCSSValue*, v_dest);
+      nsCSSValue *source = static_cast<nsCSSValue*>(v_source);
+      nsCSSValue *dest = static_cast<nsCSSValue*>(v_dest);
       if (*source != *dest)
         *aChanged = PR_TRUE;
       dest->~nsCSSValue();
@@ -3480,8 +3473,8 @@ CSSParserImpl::DoTransferTempData(nsCSSDeclaration* aDeclaration,
     } break;
 
     case eCSSType_Rect: {
-      nsCSSRect *source = NS_STATIC_CAST(nsCSSRect*, v_source);
-      nsCSSRect *dest = NS_STATIC_CAST(nsCSSRect*, v_dest);
+      nsCSSRect *source = static_cast<nsCSSRect*>(v_source);
+      nsCSSRect *dest = static_cast<nsCSSRect*>(v_dest);
       if (*source != *dest)
         *aChanged = PR_TRUE;
       dest->~nsCSSRect();
@@ -3490,8 +3483,8 @@ CSSParserImpl::DoTransferTempData(nsCSSDeclaration* aDeclaration,
     } break;
 
     case eCSSType_ValuePair: {
-      nsCSSValuePair *source = NS_STATIC_CAST(nsCSSValuePair*, v_source);
-      nsCSSValuePair *dest = NS_STATIC_CAST(nsCSSValuePair*, v_dest);
+      nsCSSValuePair *source = static_cast<nsCSSValuePair*>(v_source);
+      nsCSSValuePair *dest = static_cast<nsCSSValuePair*>(v_dest);
       if (*source != *dest)
         *aChanged = PR_TRUE;
       dest->~nsCSSValuePair();
@@ -3500,8 +3493,8 @@ CSSParserImpl::DoTransferTempData(nsCSSDeclaration* aDeclaration,
     } break;
 
     case eCSSType_ValueList: {
-      nsCSSValueList **source = NS_STATIC_CAST(nsCSSValueList**, v_source);
-      nsCSSValueList **dest = NS_STATIC_CAST(nsCSSValueList**, v_dest);
+      nsCSSValueList **source = static_cast<nsCSSValueList**>(v_source);
+      nsCSSValueList **dest = static_cast<nsCSSValueList**>(v_dest);
       if (!nsCSSValueList::Equal(*source, *dest))
         *aChanged = PR_TRUE;
       delete *dest;
@@ -3510,8 +3503,8 @@ CSSParserImpl::DoTransferTempData(nsCSSDeclaration* aDeclaration,
     } break;
 
     case eCSSType_CounterData: {
-      nsCSSCounterData **source = NS_STATIC_CAST(nsCSSCounterData**, v_source);
-      nsCSSCounterData **dest = NS_STATIC_CAST(nsCSSCounterData**, v_dest);
+      nsCSSCounterData **source = static_cast<nsCSSCounterData**>(v_source);
+      nsCSSCounterData **dest = static_cast<nsCSSCounterData**>(v_dest);
       if (!nsCSSCounterData::Equal(*source, *dest))
         *aChanged = PR_TRUE;
       delete *dest;
@@ -3520,8 +3513,8 @@ CSSParserImpl::DoTransferTempData(nsCSSDeclaration* aDeclaration,
     } break;
 
     case eCSSType_Quotes: {
-      nsCSSQuotes **source = NS_STATIC_CAST(nsCSSQuotes**, v_source);
-      nsCSSQuotes **dest = NS_STATIC_CAST(nsCSSQuotes**, v_dest);
+      nsCSSQuotes **source = static_cast<nsCSSQuotes**>(v_source);
+      nsCSSQuotes **dest = static_cast<nsCSSQuotes**>(v_dest);
       if (!nsCSSQuotes::Equal(*source, *dest))
         *aChanged = PR_TRUE;
       delete *dest;
@@ -3633,7 +3626,7 @@ static const nsCSSProperty kBorderEndIDs[] = {
 PRBool CSSParserImpl::ParseEnum(nsresult& aErrorCode, nsCSSValue& aValue,
                                 const PRInt32 aKeywordTable[])
 {
-  nsString* ident = NextIdent(aErrorCode);
+  nsSubstring* ident = NextIdent(aErrorCode);
   if (nsnull == ident) {
     return PR_FALSE;
   }
@@ -4194,7 +4187,7 @@ CSSParserImpl::AppendValue(nsCSSProperty aPropID,
                nsPrintfCString(64, "type error (property=\'%s\')",
                              nsCSSProps::GetStringValue(aPropID).get()).get());
   nsCSSValue& storage =
-      *NS_STATIC_CAST(nsCSSValue*, mTempData.PropertyAt(aPropID));
+      *static_cast<nsCSSValue*>(mTempData.PropertyAt(aPropID));
   storage = aValue;
   mTempData.SetPropertyBit(aPropID);
 }
@@ -5688,7 +5681,7 @@ PRBool CSSParserImpl::ParseCounterData(nsresult& aErrorCode,
                                        nsCSSCounterData** aResult,
                                        nsCSSProperty aPropID)
 {
-  nsString* ident = NextIdent(aErrorCode);
+  nsSubstring* ident = NextIdent(aErrorCode);
   if (nsnull == ident) {
     return PR_FALSE;
   }

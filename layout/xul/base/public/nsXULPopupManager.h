@@ -46,7 +46,9 @@
 #include "nsIRollupListener.h"
 #include "nsIMenuRollup.h"
 #include "nsIDOMKeyListener.h"
+#include "nsPoint.h"
 #include "nsCOMPtr.h"
+#include "nsTArray.h"
 #include "nsITimer.h"
 #include "nsThreadUtils.h"
 
@@ -119,28 +121,16 @@ enum nsNavigationDirection {
 /**
  * DirectionFromKeyCode_lr_tb: an array that maps keycodes to values of
  * nsNavigationDirection for left-to-right and top-to-bottom flow orientation
+ * This is defined in nsXULPopupManager.cpp.
  */
-static nsNavigationDirection DirectionFromKeyCode_lr_tb [6] = {
-  eNavigationDirection_Last,   // NS_VK_END
-  eNavigationDirection_First,  // NS_VK_HOME
-  eNavigationDirection_Start,  // NS_VK_LEFT
-  eNavigationDirection_Before, // NS_VK_UP
-  eNavigationDirection_End,    // NS_VK_RIGHT
-  eNavigationDirection_After   // NS_VK_DOWN
-};
+extern nsNavigationDirection DirectionFromKeyCode_lr_tb [6];
 
 /**
  * DirectionFromKeyCode_rl_tb: an array that maps keycodes to values of
  * nsNavigationDirection for right-to-left and top-to-bottom flow orientation
+ * This is defined in nsXULPopupManager.cpp.
  */
-static nsNavigationDirection DirectionFromKeyCode_rl_tb [6] = {
-  eNavigationDirection_Last,   // NS_VK_END
-  eNavigationDirection_First,  // NS_VK_HOME
-  eNavigationDirection_End,    // NS_VK_LEFT
-  eNavigationDirection_Before, // NS_VK_UP
-  eNavigationDirection_Start,  // NS_VK_RIGHT
-  eNavigationDirection_After   // NS_VK_DOWN
-};
+extern nsNavigationDirection DirectionFromKeyCode_rl_tb [6];
 
 #define NS_DIRECTION_FROM_KEY_CODE(frame, direction, keycode)    \
   NS_ASSERTION(NS_VK_HOME == NS_VK_END + 1, "Broken ordering");  \
@@ -370,8 +360,9 @@ public:
   // This is used by the implementation of nsIDOMXULDocument::GetPopupRangeParent
   // and nsIDOMXULDocument::GetPopupRangeOffset.
   void GetMouseLocation(nsIDOMNode** aNode, PRInt32* aOffset);
-  // set the mouse event that was used to activate the next popup to be opened.
-  void SetMouseLocation(nsIDOMEvent* aEvent);
+  // set the mouse event that was used to activate the next popup, specified by
+  // aPopup, to be opened.
+  void SetMouseLocation(nsIDOMEvent* aEvent, nsIContent* aPopup);
 
   /**
    * Open a <menu> given its content node. If aSelectFirstItem is
@@ -460,9 +451,20 @@ public:
   void ExecuteMenu(nsIContent* aMenu, nsEvent* aEvent);
 
   /**
+   * Return true if the popup for the supplied content node is open.
+   */
+  PRBool IsPopupOpen(nsIContent* aPopup);
+
+  /**
    * Return true if the popup for the supplied menu parent is open.
    */
   PRBool IsPopupOpenForMenuParent(nsIMenuParent* aMenuParent);
+
+  /**
+   * Return an array of all the open popup frames for menus, in order from
+   * top to bottom.
+   */
+  nsTArray<nsIFrame *> GetOpenPopups();
 
   /**
    * Return false if a popup may not be opened. This will return false if the
@@ -499,6 +501,16 @@ public:
    * is closed asynchronously.
    */
   void KillMenuTimer();
+
+  /**
+   * Cancel the timer which closes menus after delay, but only if the menu to
+   * close is aMenuParent. When a submenu is opened, the user might move the
+   * mouse over a sibling menuitem which would normally close the menu. This
+   * menu is closed via a timer. However, if the user moves the mouse over the
+   * submenu before the timer fires, we should instead cancel the timer. This
+   * ensures that the user can move the mouse diagonally over a menu.
+   */
+  void CancelMenuTimer(nsIMenuParent* aMenuParent);
 
   /**
    * Handles navigation for menu accelkeys. Returns true if the key has
@@ -616,6 +628,7 @@ protected:
   // range parent and offset set in SetMouseLocation
   nsCOMPtr<nsIDOMNode> mRangeParent;
   PRInt32 mRangeOffset;
+  nsPoint mCachedMousePoint;
 
   // set to the currently active menu bar, if any
   nsMenuBarFrame* mActiveMenuBar;

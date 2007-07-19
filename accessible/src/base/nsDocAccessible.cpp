@@ -516,7 +516,7 @@ NS_IMETHODIMP nsDocAccessible::Init()
 NS_IMETHODIMP nsDocAccessible::Destroy()
 {
   if (mWeakShell) {
-    gGlobalDocAccessibleCache.Remove(NS_STATIC_CAST(void*, mWeakShell));
+    gGlobalDocAccessibleCache.Remove(static_cast<void*>(mWeakShell));
   }
   return Shutdown();
 }
@@ -822,7 +822,7 @@ NS_IMETHODIMP nsDocAccessible::FireDocLoadEvents(PRUint32 aEventType)
 
 void nsDocAccessible::ScrollTimerCallback(nsITimer *aTimer, void *aClosure)
 {
-  nsDocAccessible *docAcc = NS_REINTERPRET_CAST(nsDocAccessible*, aClosure);
+  nsDocAccessible *docAcc = reinterpret_cast<nsDocAccessible*>(aClosure);
 
   if (docAcc && docAcc->mScrollPositionChangedTicks &&
       ++docAcc->mScrollPositionChangedTicks > 2) {
@@ -918,7 +918,7 @@ NS_IMPL_NSIDOCUMENTOBSERVER_STYLE_STUB(nsDocAccessible)
 void
 nsDocAccessible::AttributeChanged(nsIDocument *aDocument, nsIContent* aContent,
                                   PRInt32 aNameSpaceID, nsIAtom* aAttribute,
-                                  PRInt32 aModType)
+                                  PRInt32 aModType, PRUint32 aStateMask)
 {
   // Fire accessible event after short timer, because we need to wait for
   // DOM attribute & resulting layout to actually change. Otherwise,
@@ -958,6 +958,8 @@ nsDocAccessible::AttributeChanged(nsIDocument *aDocument, nsIContent* aContent,
     // set for XUL, HTML or ARIA namespace.
     // Checking the namespace would not seem to gain us anything, because
     // disabled really is going to mean the same thing in any namespace.
+    // We use the attribute instead of the disabled state bit because
+    // ARIA's aaa:disabled does not affect the disabled state bit
     nsCOMPtr<nsIAccessibleStateChangeEvent> enabledChangeEvent =
       new nsAccStateChangeEvent(targetNode,
                                 nsIAccessibleStates::EXT_STATE_ENABLED,
@@ -1235,7 +1237,7 @@ nsDocAccessible::FireDelayedAccessibleEvent(nsIAccessibleEvent *aEvent,
     // This is be the first delayed event in queue, start timer
     // so that event gets fired via FlushEventsCallback
     mFireEventTimer->InitWithFuncCallback(FlushEventsCallback,
-                                          NS_STATIC_CAST(nsPIAccessibleDocument*, this),
+                                          static_cast<nsPIAccessibleDocument*>(this),
                                           0, nsITimer::TYPE_ONE_SHOT);
   }
 
@@ -1269,6 +1271,11 @@ NS_IMETHODIMP nsDocAccessible::FlushPendingEvents()
         nsCOMPtr<nsIAccessibleText> accessibleText = do_QueryInterface(accessible);
         PRInt32 caretOffset;
         if (accessibleText && NS_SUCCEEDED(accessibleText->GetCaretOffset(&caretOffset))) {
+#ifdef DEBUG
+          PRUnichar chAtOffset;
+          accessibleText->GetCharacterAtOffset(caretOffset, &chAtOffset);
+          printf("\nCaret moved to %d with char %c", caretOffset, chAtOffset);
+#endif
           nsCOMPtr<nsIAccessibleCaretMoveEvent> caretMoveEvent =
             new nsAccCaretMoveEvent(accessible, caretOffset);
           NS_ENSURE_TRUE(caretMoveEvent, NS_ERROR_OUT_OF_MEMORY);
@@ -1294,7 +1301,7 @@ NS_IMETHODIMP nsDocAccessible::FlushPendingEvents()
 
 void nsDocAccessible::FlushEventsCallback(nsITimer *aTimer, void *aClosure)
 {
-  nsPIAccessibleDocument *accessibleDoc = NS_STATIC_CAST(nsPIAccessibleDocument*, aClosure);
+  nsPIAccessibleDocument *accessibleDoc = static_cast<nsPIAccessibleDocument*>(aClosure);
   NS_ASSERTION(accessibleDoc, "How did we get here without an accessible document?");
   accessibleDoc->FlushPendingEvents();
 }
@@ -1315,7 +1322,7 @@ void nsDocAccessible::RefreshNodes(nsIDOMNode *aStartNode, PRUint32 aChangeEvent
       // children when they override Shutdown()
 
       // Don't shutdown our doc object!
-      if (accessNode != NS_STATIC_CAST(nsIAccessNode*, this)) {
+      if (accessNode != static_cast<nsIAccessNode*>(this)) {
 
         nsCOMPtr<nsIAccessible> accessible(do_QueryInterface(accessNode));
         if (accessible) {
@@ -1545,7 +1552,7 @@ void nsDocAccessible::DocLoadCallback(nsITimer *aTimer, void *aClosure)
   // which is important because we only fire doc loaded events for focused documents.
 
   nsDocAccessible *docAcc =
-    NS_REINTERPRET_CAST(nsDocAccessible*, aClosure);
+    reinterpret_cast<nsDocAccessible*>(aClosure);
   if (!docAcc) {
     return;
   }

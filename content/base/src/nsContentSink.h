@@ -167,7 +167,8 @@ protected:
                                     const nsSubstring& aType,
                                     const nsSubstring& aMedia);
 
-  void PrefetchHref(const nsAString &aHref, PRBool aExplicit, PRBool aOffline);
+  void PrefetchHref(const nsAString &aHref, nsIContent *aSource,
+                    PRBool aExplicit, PRBool aOffline);
   nsresult GetOfflineCacheSession(nsIOfflineCacheSession **aSession);
   nsresult AddOfflineResource(const nsAString &aHref);
 
@@ -209,6 +210,10 @@ protected:
   virtual nsresult FlushTags() = 0;
 
   void TryToScrollToRef();
+
+  // Later on we might want to make this more involved somehow
+  // (e.g. stop waiting after some timeout or whatnot).
+  PRBool WaitForPendingSheets() { return mPendingSheetCount > 0; }
 
 private:
   // People shouldn't be allocating this class directly.  All subclasses should
@@ -275,7 +280,9 @@ protected:
   PRUint8 mHaveOfflineResources : 1;
   // true if offline-resource links should be saved to the offline cache
   PRUint8 mSaveOfflineResources : 1;
-
+  // If true, we deferred notifications until sheets load
+  PRUint8 mDeferredFlushTags : 1;
+  
   // -- Can interrupt parsing members --
   PRUint32 mDelayTimerStart;
 

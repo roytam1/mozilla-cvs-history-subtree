@@ -184,16 +184,11 @@ nsNativeThemeCocoa::DrawButton(CGContextRef cgContext, ThemeButtonKind inKind,
     [image setSize:NSMakeSize(inBoxRect.size.width, inBoxRect.size.height)];
 
     // render to the given CGContextRef
-#if MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_4
-    // graphicsContextWithGraphicsPort is only available on 10.4+
     [NSGraphicsContext saveGraphicsState];
     [NSGraphicsContext setCurrentContext:[NSGraphicsContext graphicsContextWithGraphicsPort:cgContext flipped:YES]];
-#endif
     [image compositeToPoint:NSMakePoint(inBoxRect.origin.x, inBoxRect.origin.y + inBoxRect.size.height)
                   operation:NSCompositeSourceOver];
-#if MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_4
     [NSGraphicsContext restoreGraphicsState];
-#endif
     [image release];
   }
   else {
@@ -517,9 +512,13 @@ nsNativeThemeCocoa::DrawWidgetBackground(nsIRenderingContext* aContext, nsIFrame
 
   double offsetX = 0.0, offsetY = 0.0;
   nsRefPtr<gfxASurface> thebesSurface = thebesCtx->CurrentSurface(&offsetX, &offsetY);
+  if (thebesSurface->CairoStatus() != 0) {
+    NS_WARNING("Got Cairo surface with nonzero error status");
+    return NS_ERROR_FAILURE;
+  }
+
   if (thebesSurface->GetType() != gfxASurface::SurfaceTypeQuartz) {
-    fprintf(stderr, "Expected surface of type Quartz, got %d\n",
-            thebesSurface->GetType());
+    NS_WARNING("Expected surface of type Quartz, got somthing else");
     return NS_ERROR_FAILURE;
   }
 
@@ -529,9 +528,9 @@ nsNativeThemeCocoa::DrawWidgetBackground(nsIRenderingContext* aContext, nsIFrame
 
   //fprintf (stderr, "surface: %p cgContext: %p\n", quartzSurf, cgContext);
 
-  if (cgContext == nsnull ||
-      ((((unsigned long)cgContext) & 0xffff) == 0x3f3f)) {
-    fprintf (stderr, "********** Invalid CGContext!\n");
+  if (cgContext == nsnull) {
+    NS_WARNING("Invalid CGContext!");
+    return NS_ERROR_FAILURE;
   }
 
   // Eventually we can just do a GetCTM and restore it with SetCTM,

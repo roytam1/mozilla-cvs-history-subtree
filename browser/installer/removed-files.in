@@ -64,6 +64,7 @@ components/@DLL_PREFIX@spellchk@DLL_SUFFIX@
 components/xpti.dat
 components/xptitemp.dat
 components/nsBackgroundUpdateService.js
+components/nsCloseAllWindows.js
 #ifndef XP_MACOSX
 components/autocomplete.xpt
 #endif
@@ -467,6 +468,9 @@ searchplugins/zoznam-sk.gif
 components/sidebar.xpt
 components/xmlextras.xpt
 components/xpcom.xpt
+components/bookmarks.xpt
+components/history.xpt
+components/nsBookmarkTransactionManager.js
 extensions/talkback@mozilla.org/
 extensions/talkback@mozilla.org/install.rdf
 extensions/talkback@mozilla.org/chrome.manifest
@@ -522,3 +526,4 @@ extensions/talkback@mozilla.org/components/master.ini
 extensions/talkback@mozilla.org/components/talkback.so
 #endif
 #endif
+components/airbag.xpt

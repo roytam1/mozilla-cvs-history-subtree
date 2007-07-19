@@ -79,6 +79,7 @@
 #include "nsIBoxLayout.h"
 #include "nsIPopupBoxObject.h"
 #include "nsIReflowCallback.h"
+#include "nsBindingManager.h"
 #ifdef XP_WIN
 #include "nsISound.h"
 #endif
@@ -440,8 +441,6 @@ nsMenuPopupFrame::InitializePopupWithAnchorAlign(nsIContent* aAnchorContent,
   EnsureWidget();
 
   mIsOpenPending = PR_TRUE;
-  mXPos = aXPos;
-  mYPos = aYPos;
 
   // this popup opening function is provided for backwards compatibility
   // only. It accepts either coordinates or an anchor and alignment value
@@ -450,6 +449,8 @@ nsMenuPopupFrame::InitializePopupWithAnchorAlign(nsIContent* aAnchorContent,
     mAnchorContent = aAnchorContent;
     mScreenXPos = -1;
     mScreenYPos = -1;
+    mXPos = 0;
+    mYPos = 0;
     InitPositionFromAnchorAlign(aAnchor, aAlign);
   }
   else {
@@ -458,6 +459,8 @@ nsMenuPopupFrame::InitializePopupWithAnchorAlign(nsIContent* aAnchorContent,
     mPopupAlignment = POPUPALIGNMENT_NONE;
     mScreenXPos = aXPos;
     mScreenYPos = aYPos;
+    mXPos = aXPos;
+    mYPos = aYPos;
   }
 }
 
@@ -467,7 +470,7 @@ LazyGeneratePopupDone(nsIContent* aPopup, nsIFrame* aFrame, void* aArg)
   // be safe and check the frame type
   if (aFrame->GetType() == nsGkAtoms::menuPopupFrame) {
     nsWeakFrame weakFrame(aFrame);
-    nsMenuPopupFrame* popupFrame = NS_STATIC_CAST(nsMenuPopupFrame*, aFrame);
+    nsMenuPopupFrame* popupFrame = static_cast<nsMenuPopupFrame*>(aFrame);
 
     popupFrame->SetGeneratedChildren();
 
@@ -506,10 +509,9 @@ nsMenuPopupFrame::ShowPopup(PRBool aIsContextMenu, PRBool aSelectFirstItem)
     nsIFrame* parent = GetParent();
     if (parent && parent->GetType() == nsGkAtoms::menuFrame) {
       nsWeakFrame weakFrame(this);
-      (NS_STATIC_CAST(nsMenuFrame*, parent))->PopupOpened();
+      (static_cast<nsMenuFrame*>(parent))->PopupOpened();
       if (!weakFrame.IsAlive())
         return PR_FALSE;
-      PresContext()->RootPresContext()->NotifyAddedActivePopupToTop(this);
     }
 
     // the frames for the child menus have not been created yet, so tell the
@@ -564,8 +566,7 @@ nsMenuPopupFrame::HidePopup(PRBool aDeselectMenu)
 
   nsIFrame* parent = GetParent();
   if (parent && parent->GetType() == nsGkAtoms::menuFrame) {
-    (NS_STATIC_CAST(nsMenuFrame*, parent))->PopupClosed(aDeselectMenu);
-    PresContext()->RootPresContext()->NotifyRemovedActivePopup(this);
+    (static_cast<nsMenuFrame*>(parent))->PopupClosed(aDeselectMenu);
   }
 }
 
@@ -859,7 +860,8 @@ nsMenuPopupFrame::SetPopupPosition(nsIFrame* aAnchorFrame)
     if (!aAnchorFrame)
       return NS_OK;
   }
-  else {
+
+  if (aAnchorFrame->GetContent()) {
     // the popup should be the same size as the anchor menu, for example, a menulist.
     sizedToPopup = nsMenuFrame::IsSizedToPopup(aAnchorFrame->GetContent(), PR_FALSE);
   }
@@ -1436,7 +1438,7 @@ nsMenuPopupFrame::FindMenuWithShortcut(nsIDOMKeyEvent* aKeyEvent, PRBool& doActi
     return nsnull;
   }
   else {
-    PRUnichar uniChar = ToLowerCase(NS_STATIC_CAST(PRUnichar, charCode));
+    PRUnichar uniChar = ToLowerCase(static_cast<PRUnichar>(charCode));
     if (isMenu || // Menu supports only first-letter navigation
         keyTime - lastKeyTime > INC_TYP_INTERVAL) // Interval too long, treat as new typing
       mIncrementalString = uniChar;
@@ -1500,17 +1502,17 @@ nsMenuPopupFrame::FindMenuWithShortcut(nsIDOMKeyEvent* aKeyEvent, PRBool& doActi
             // There is one shortcut-key match
             matchShortcutCount++;
             // Record the matched item. If there is only one matched shortcut item, do it
-            frameShortcut = NS_STATIC_CAST(nsMenuFrame *, currFrame);
+            frameShortcut = static_cast<nsMenuFrame *>(currFrame);
           }
           if (!foundActive) {
             // It's a first candidate item located before/on the current item
             if (!frameBefore)
-              frameBefore = NS_STATIC_CAST(nsMenuFrame *, currFrame);
+              frameBefore = static_cast<nsMenuFrame *>(currFrame);
           }
           else {
             // It's a first candidate item located after the current item
             if (!frameAfter)
-              frameAfter = NS_STATIC_CAST(nsMenuFrame *, currFrame);
+              frameAfter = static_cast<nsMenuFrame *>(currFrame);
           }
         }
         else
@@ -1627,11 +1629,6 @@ nsMenuPopupFrame::Destroy()
   nsXULPopupManager* pm = nsXULPopupManager::GetInstance();
   if (pm)
     pm->PopupDestroyed(this);
-
-  nsPresContext* rootPresContext = PresContext()->RootPresContext();
-  if (rootPresContext->ContainsActivePopup(this)) {
-    rootPresContext->NotifyRemovedActivePopup(this);
-  }
 
   nsBoxFrame::Destroy();
 }

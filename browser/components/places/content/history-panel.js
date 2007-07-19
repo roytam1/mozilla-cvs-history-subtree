@@ -71,7 +71,8 @@ function HistorySidebarInit()
 
 function initContextMenu() {
   // Force-hide items in the context menu which never apply to this view
-  var alwaysHideElements = ["placesContext_new:folder",
+  var alwaysHideElements = ["placesContext_new:bookmark",
+                            "placesContext_new:folder",
                             "placesContext_new:separator",
                             "placesContext_cut",
                             "placesContext_paste",
@@ -104,12 +105,8 @@ function historyAddBookmarks()
   var node = gHistoryTree.selectedURINode;
   if (!node) 
     return;
-  
-#ifdef MOZ_PLACES_BOOKMARKS
+
   PlacesUtils.showMinimalAddBookmarkUI(PlacesUtils._uri(node.uri), node.title);
-#else
-  BookmarksUtils.addBookmark(node.uri, node.title, undefined);
-#endif
 }
 
 function SetSortingAndGrouping(aOptions) 

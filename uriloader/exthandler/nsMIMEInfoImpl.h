@@ -140,16 +140,16 @@ class nsMIMEInfoBase : public nsIMIMEInfo {
     /**
      * Used to launch a web-based handler with this URI.
      * 
-     * @param aUri  The URI to launch with.
+     * @param aURI  The URI to launch with.
      */
     static NS_HIDDEN_(nsresult) LaunchWithWebHandler(nsIWebHandlerApp *aApp, 
-                                                     nsIURI *aUri);
+                                                     nsIURI *aURI);
 
     /**
      * Given a file: nsIURI, return the associated nsILocalFile
      *
-     * @param  aURI  the file: URI in question
-     * @return       the associated nsILocalFile
+     * @param  aURI      the file: URI in question
+     * @param  aFile     the associated nsILocalFile (out param)
      */
     static NS_HIDDEN_(nsresult) GetLocalFileFromURI(nsIURI *aURI,
                                                     nsILocalFile **aFile);

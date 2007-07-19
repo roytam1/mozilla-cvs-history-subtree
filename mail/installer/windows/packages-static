@@ -16,16 +16,8 @@ bin\isp\@AB_CD@\*
 [xpcom]
 bin\xpcom.dll
 bin\xpcom_core.dll
-bin\xpcom_compat.dll
 bin\xpistub.dll
 bin\components\jar50.dll
-bin\components\xpcom_base.xpt
-bin\components\xpcom_system.xpt
-bin\components\xpcom_components.xpt
-bin\components\xpcom_ds.xpt
-bin\components\xpcom_io.xpt
-bin\components\xpcom_thread.xpt
-bin\components\xpcom_xpti.xpt
 bin\nspr4.dll
 bin\plc4.dll
 bin\plds4.dll
@@ -46,20 +38,6 @@ bin\chrome\newsblog.jar
 bin\chrome\newsblog.manifest
 bin\components\newsblog.js
 
-; Optional Talkback
-[talkback]
-bin\extensions\talkback@mozilla.org\install.rdf
-bin\extensions\talkback@mozilla.org\chrome.manifest
-bin\extensions\talkback@mozilla.org\components\qfaservices.dll
-bin\extensions\talkback@mozilla.org\components\qfaservices.xpt
-bin\extensions\talkback@mozilla.org\components\BrandRes.dll
-bin\extensions\talkback@mozilla.org\components\fullsoft.dll
-bin\extensions\talkback@mozilla.org\components\master.ini
-bin\extensions\talkback@mozilla.org\components\talkback-l10n.ini
-bin\extensions\talkback@mozilla.org\components\talkback.cnt
-bin\extensions\talkback@mozilla.org\components\talkback.exe
-bin\extensions\talkback@mozilla.org\components\talkback.hlp
-
 [mail]
 
 bin\xpicleanup.exe
@@ -69,6 +47,7 @@ bin\platform.ini
 bin\LICENSE.txt
 bin\license.html
 bin\README.txt
+bin\sqlite3.dll
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Mail Specific Files
@@ -95,7 +74,13 @@ bin\components\impComm4xMail.xpt
 bin\components\mailview.xpt
 bin\components\mailprofilemigration.xpt
 bin\components\shellservice.xpt
-
+bin\components\xpcom_base.xpt
+bin\components\xpcom_system.xpt
+bin\components\xpcom_components.xpt
+bin\components\xpcom_ds.xpt
+bin\components\xpcom_io.xpt
+bin\components\xpcom_thread.xpt
+bin\components\xpcom_xpti.xpt
 bin\chrome\toolkit.jar
 bin\chrome\toolkit.manifest
 bin\chrome\comm.jar
@@ -320,6 +305,7 @@ bin\nssckbi.dll
 bin\components\xpautocomplete.xpt
 bin\components\autocomplete.xpt
 bin\components\alerts.xpt
+bin\components\crashreporter.xpt
 bin\components\jsdservice.xpt
 bin\components\fastfind.xpt
 bin\components\find.xpt
@@ -338,7 +324,7 @@ bin\components\progressDlg.xpt
 bin\components\dom_xpath.xpt
 bin\AccessibleMarshal.dll
 bin\components\lwbrk.xpt
-bin\components\nsCloseAllWindows.js
+bin\components\nsTryToClose.js
 bin\components\pluginGlue.js
 bin\components\txEXSLTRegExFunctions.js
 

@@ -76,6 +76,13 @@
 #error JS_INITIAL_NSLOTS must be greater than JSSLOT_ITER_FLAGS.
 #endif
 
+#if JS_HAS_GENERATORS
+
+static JSBool
+CloseGenerator(JSContext *cx, JSObject *genobj);
+
+#endif
+
 /*
  * Shared code to close iterator's state either through an explicit call or
  * when GC detects that the iterator is no longer reachable.
@@ -429,7 +436,7 @@ js_CloseIterator(JSContext *cx, jsval v)
     }
 #if JS_HAS_GENERATORS
     else if (clasp == &js_GeneratorClass) {
-        if (!js_CloseGenerator(cx, obj))
+        if (!CloseGenerator(cx, obj))
             return JS_FALSE;
     }
 #endif
@@ -795,12 +802,6 @@ js_NewGenerator(JSContext *cx, JSStackFrame *fp)
         JS_free(cx, gen);
         goto bad;
     }
-
-    /*
-     * Register with GC to ensure that suspended finally blocks will be
-     * executed.
-     */
-    js_RegisterGenerator(cx, gen);
     return obj;
 
   bad:
@@ -827,6 +828,13 @@ SendToGenerator(JSContext *cx, JSGeneratorOp op, JSObject *obj,
     jsval junk;
     JSArena *arena;
     JSBool ok;
+
+    if (gen->state == JSGEN_RUNNING || gen->state == JSGEN_CLOSING) {
+        js_ReportValueError(cx, JSMSG_NESTING_GENERATOR,
+                            JSDVG_SEARCH_STACK, OBJECT_TO_JSVAL(obj),
+                            JS_GetFunctionId(gen->frame.fun));
+        return JS_FALSE;
+    }
 
     JS_ASSERT(gen->state ==  JSGEN_NEWBORN || gen->state == JSGEN_OPEN);
     switch (op) {
@@ -904,12 +912,8 @@ SendToGenerator(JSContext *cx, JSGeneratorOp op, JSObject *obj,
     return JS_FALSE;
 }
 
-/*
- * Execute gen's close hook after the GC detects that the object has become
- * unreachable.
- */
-JSBool
-js_CloseGenerator(JSContext *cx, JSObject *obj)
+static JSBool
+CloseGenerator(JSContext *cx, JSObject *obj)
 {
     JSGenerator *gen;
 
@@ -920,7 +924,6 @@ js_CloseGenerator(JSContext *cx, JSObject *obj)
         return JS_TRUE;
     }
 
-    JS_ASSERT(gen->state != JSGEN_RUNNING && gen->state != JSGEN_CLOSING);
     if (gen->state == JSGEN_CLOSED)
         return JS_TRUE;
 
@@ -947,8 +950,7 @@ generator_op(JSContext *cx, JSGeneratorOp op,
         goto closed_generator;
     }
 
-    switch (gen->state) {
-      case JSGEN_NEWBORN:
+    if (gen->state == JSGEN_NEWBORN) {
         switch (op) {
           case JSGENOP_NEXT:
           case JSGENOP_THROW:
@@ -967,21 +969,7 @@ generator_op(JSContext *cx, JSGeneratorOp op,
             gen->state = JSGEN_CLOSED;
             return JS_TRUE;
         }
-        break;
-
-      case JSGEN_OPEN:
-        break;
-
-      case JSGEN_RUNNING:
-      case JSGEN_CLOSING:
-        js_ReportValueError(cx, JSMSG_NESTING_GENERATOR,
-                            JSDVG_SEARCH_STACK, argv[-1],
-                            JS_GetFunctionId(gen->frame.fun));
-        return JS_FALSE;
-
-      default:
-        JS_ASSERT(gen->state == JSGEN_CLOSED);
-
+    } else if (gen->state == JSGEN_CLOSED) {
       closed_generator:
         switch (op) {
           case JSGENOP_NEXT:

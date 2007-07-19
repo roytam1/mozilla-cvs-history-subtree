@@ -526,6 +526,15 @@ public:
                                 nsIAtom* aName);
 
   /**
+   * Method that gets the primary presContext for the node.
+   * 
+   * @param aContent The content node.
+   * @return the presContext, or nsnull if the content is not in a document
+   *         (if GetCurrentDoc returns nsnull)
+   */
+  static nsPresContext* GetContextForContent(nsIContent* aContent);
+
+  /**
    * Method to do security and content policy checks on the image URI
    *
    * @param aURI uri of the image to be loaded
@@ -979,7 +988,7 @@ public:
   static void DestroyMatchString(void* aData)
   {
     if (aData) {
-      nsString* matchString = NS_STATIC_CAST(nsString*, aData);
+      nsString* matchString = static_cast<nsString*>(aData);
       delete matchString;
     }
   }
@@ -1067,6 +1076,25 @@ public:
                                           nsISupports* aContext,
                                           const nsACString& aMimeGuess = EmptyCString(),
                                           nsISupports* aExtra = nsnull);
+
+  /**
+   * Trigger a link with uri aLinkURI. If aClick is false, this triggers a
+   * mouseover on the link, otherwise it triggers a load after doing a
+   * security check using aContent's principal.
+   *
+   * @param aContent the node on which a link was triggered.
+   * @param aPresContext the pres context, must be non-null.
+   * @param aLinkURI the URI of the link, must be non-null.
+   * @param aTargetSpec the target (like target=, may be empty).
+   * @param aClick whether this was a click or not (if false, this method
+   *               assumes you just hovered over the link).
+   * @param aIsUserTriggered whether the user triggered the link. This would be
+   *                         false for loads from auto XLinks or from the
+   *                         click() method if we ever implement it.
+   */
+  static void TriggerLink(nsIContent *aContent, nsPresContext *aPresContext,
+                          nsIURI *aLinkURI, const nsString& aTargetSpec,
+                          PRBool aClick, PRBool aIsUserTriggered);
 
 private:
 
@@ -1205,7 +1233,7 @@ private:
 
 #define NS_INTERFACE_MAP_ENTRY_TEAROFF(_interface, _allocator)                \
   if (aIID.Equals(NS_GET_IID(_interface))) {                                  \
-    foundInterface = NS_STATIC_CAST(_interface *, _allocator);                \
+    foundInterface = static_cast<_interface *>(_allocator);                   \
     if (!foundInterface) {                                                    \
       *aInstancePtr = nsnull;                                                 \
       return NS_ERROR_OUT_OF_MEMORY;                                          \

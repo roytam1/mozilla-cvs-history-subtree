@@ -55,7 +55,7 @@ nsMIMEInfoMac::LaunchWithURI(nsIURI* aURI)
 
     // check for and launch with web handler app
     nsCOMPtr<nsIWebHandlerApp> webHandlerApp =
-        do_QueryInterface(mPreferredApplication, &rv);
+      do_QueryInterface(mPreferredApplication, &rv);
     if (NS_SUCCEEDED(rv)) {
       return LaunchWithWebHandler(webHandlerApp, aURI);         
     }

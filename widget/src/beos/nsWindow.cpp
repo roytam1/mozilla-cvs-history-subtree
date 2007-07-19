@@ -23,6 +23,7 @@
  *   Paul Ashford <arougthopher@lizardland.net>
  *   Sergei Dolgov <sergei_d@fi.tartu.ee>
  *   Fredrik Holmqvist <thesuckiestemail@yahoo.se>
+ *   Mats Palmgren <mats.palmgren@bredband.net>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -1010,7 +1011,7 @@ void nsWindow::HideKids(PRBool state)
 {
 	for (nsIWidget* kid = mFirstChild; kid; kid = kid->GetNextSibling()) 
 	{
-		nsWindow *childWidget = NS_STATIC_CAST(nsWindow*, kid);
+		nsWindow *childWidget = static_cast<nsWindow*>(kid);
 		nsRect kidrect = ((nsWindow *)kid)->mBounds;
 		//Don't bother about invisible
 		if (mBounds.Intersects(kidrect))
@@ -1739,7 +1740,7 @@ NS_METHOD nsWindow::Scroll(PRInt32 aDx, PRInt32 aDy, nsRect *aClipRect)
 		// Time to silently move now invisible children
 		for (nsIWidget* kid = mFirstChild; kid; kid = kid->GetNextSibling()) 
 		{
-			nsWindow *childWidget = NS_STATIC_CAST(nsWindow*, kid);
+			nsWindow *childWidget = static_cast<nsWindow*>(kid);
 			// No need to Lock/UnlockLooper with GetBounds() and Move() methods
 			// using cached values and native MoveBy() instead
 			nsRect bounds = childWidget->mBounds;
@@ -1786,7 +1787,7 @@ bool nsWindow::CallMethod(MethodInfo *info)
 
 			for (nsIWidget* kid = mFirstChild; kid; kid = kid->GetNextSibling()) 
 			{
-				nsWindow *childWidget = NS_STATIC_CAST(nsWindow*, kid);
+				nsWindow *childWidget = static_cast<nsWindow*>(kid);
 				BWindow* kidwindow = (BWindow *)kid->GetNativeData(NS_NATIVE_WINDOW);
 				if (kidwindow)
 				{
@@ -2571,6 +2572,10 @@ nsresult nsWindow::OnPaint(BRegion *breg)
 	}	
 
 	nsIRenderingContext* rc = GetRenderingContext();
+	if (NS_UNLIKELY(!rc)) {
+		return NS_ERROR_FAILURE;
+	}
+
 	// Double buffering for cairo builds is done here
 #ifdef MOZ_CAIRO_GFX
 	nsRefPtr<gfxContext> ctx =

@@ -91,7 +91,6 @@ typedef enum JSGeneratorState {
 } JSGeneratorState;
 
 struct JSGenerator {
-    JSGenerator         *next;
     JSObject            *obj;
     JSGeneratorState    state;
     JSStackFrame        frame;
@@ -104,9 +103,6 @@ struct JSGenerator {
 
 extern JSObject *
 js_NewGenerator(JSContext *cx, JSStackFrame *fp);
-
-extern JSBool
-js_CloseGenerator(JSContext *cx, JSObject *obj);
 
 #endif
 

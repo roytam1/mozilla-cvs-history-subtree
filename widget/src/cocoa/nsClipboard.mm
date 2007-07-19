@@ -231,7 +231,7 @@ nsClipboard::HasDataMatchingFlavors(nsISupportsArray* aFlavorList, PRInt32 aWhic
         aFlavorList->Count(&passedFlavorCount);
         for (PRUint32 k = 0; k < passedFlavorCount; k++) {
           nsCOMPtr<nsISupports> passedFlavorSupports;
-          aFlavorList->GetElementAt(j, getter_AddRefs(passedFlavorSupports));
+          aFlavorList->GetElementAt(k, getter_AddRefs(passedFlavorSupports));
           nsCOMPtr<nsISupportsCString> currentPassedFlavor(do_QueryInterface(passedFlavorSupports));
           if (!currentPassedFlavor)
             continue;
@@ -299,7 +299,7 @@ nsClipboard::PasteboardDictFromTransferable(nsITransferable* aTransferable)
     nsXPIDLCString flavorStr;
     currentFlavor->ToString(getter_Copies(flavorStr));
 
-    // printf("writing out clipboard data of type %s\n", flavorStr.get());
+    PR_LOG(sCocoaLog, PR_LOG_ALWAYS, ("writing out clipboard data of type %s (%d)\n", flavorStr.get(), i));
 
     if (flavorStr.EqualsLiteral(kUnicodeMime)) {
       void* data = nsnull;
@@ -377,6 +377,9 @@ nsClipboard::PasteboardDictFromTransferable(nsITransferable* aTransferable)
         continue;
 
       [pasteboardOutputDict setObject:tiffData forKey:NSTIFFPboardType];
+    }
+    else if (flavorStr.EqualsLiteral(kFilePromiseMime)) {
+      [pasteboardOutputDict setObject:[NSArray arrayWithObject:@""] forKey:NSFilesPromisePboardType];      
     }
 
     // If it wasn't a type that we recognize as exportable we don't put it on the system

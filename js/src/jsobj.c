@@ -863,7 +863,7 @@ js_obj_toSource(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
         }
         *rval = STRING_TO_JSVAL(idstr);         /* local root */
         idIsLexicalIdentifier = js_IsIdentifier(idstr);
-        needOldStyleGetterSetter = 
+        needOldStyleGetterSetter =
             !idIsLexicalIdentifier ||
             js_CheckKeyword(JSSTRING_CHARS(idstr),
                             JSSTRING_LENGTH(idstr)) != TOK_EOF;
@@ -1287,7 +1287,7 @@ obj_eval(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     JS_ASSERT(!caller || caller->pc);
     indirectCall = (caller && *caller->pc != JSOP_EVAL);
 
-    /* 
+    /*
      * Ban all indirect uses of eval (global.foo = eval; global.foo(...)) and
      * calls that attempt to use a non-global object as the "with" object in
      * the former indirect case.
@@ -1970,17 +1970,22 @@ js_CloneBlockObject(JSContext *cx, JSObject *proto, JSObject *parent,
 JSBool
 js_PutBlockObject(JSContext *cx, JSObject *obj)
 {
+    JSStackFrame *fp;
+    uintN depth, slot;
     JSScopeProperty *sprop;
-    jsval v;
 
+    fp = (JSStackFrame *) JS_GetPrivate(cx, obj);
+    JS_ASSERT(fp);
+    depth = OBJ_BLOCK_DEPTH(cx, obj);
     for (sprop = OBJ_SCOPE(obj)->lastProp; sprop; sprop = sprop->parent) {
         if (sprop->getter != js_BlockClass.getProperty)
             continue;
         if (!(sprop->flags & SPROP_HAS_SHORTID))
             continue;
-        if (!sprop->getter(cx, obj, INT_TO_JSVAL(sprop->shortid), &v) ||
-            !js_DefineNativeProperty(cx, obj, sprop->id,
-                                     v, NULL, NULL,
+        slot = depth + (uintN)sprop->shortid;
+        JS_ASSERT(slot < fp->script->depth);
+        if (!js_DefineNativeProperty(cx, obj, sprop->id,
+                                     fp->spbase[slot], NULL, NULL,
                                      JSPROP_ENUMERATE | JSPROP_PERMANENT,
                                      SPROP_HAS_SHORTID, sprop->shortid,
                                      NULL)) {
@@ -2034,18 +2039,20 @@ block_setProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 
 #if JS_HAS_XDR
 
-#define NO_PARENT_INDEX (jsatomid)-1
+#define NO_PARENT_INDEX ((uint32)-1)
 
-jsatomid
-FindObjectAtomIndex(JSAtomMap *map, JSObject *obj)
+uint32
+FindObjectIndex(JSObjectArray *array, JSObject *obj)
 {
     size_t i;
-    JSAtom *atom;
 
-    for (i = 0; i < map->length; i++) {
-        atom = map->vector[i];
-        if (ATOM_KEY(atom) == OBJECT_TO_JSVAL(obj))
-            return i;
+    if (array) {
+        i = array->length;
+        do {
+
+            if (array->vector[--i] == obj)
+                return i;
+        } while (i != 0);
     }
 
     return NO_PARENT_INDEX;
@@ -2055,8 +2062,7 @@ static JSBool
 block_xdrObject(JSXDRState *xdr, JSObject **objp)
 {
     JSContext *cx;
-    jsatomid parentId;
-    JSAtomMap *atomMap;
+    uint32 parentId;
     JSObject *obj, *parent;
     uint16 depth, count, i;
     uint32 tmp;
@@ -2072,11 +2078,12 @@ block_xdrObject(JSXDRState *xdr, JSObject **objp)
     obj = NULL;         /* quell GCC overwarning */
 #endif
 
-    atomMap = &xdr->script->atomMap;
     if (xdr->mode == JSXDR_ENCODE) {
         obj = *objp;
         parent = OBJ_GET_PARENT(cx, obj);
-        parentId = FindObjectAtomIndex(atomMap, parent);
+        parentId = (xdr->script->objectsOffset == 0)
+                   ? NO_PARENT_INDEX
+                   : FindObjectIndex(JS_SCRIPT_OBJECTS(xdr->script), parent);
         depth = (uint16)OBJ_BLOCK_DEPTH(cx, obj);
         count = (uint16)OBJ_BLOCK_COUNT(cx, obj);
         tmp = (uint32)(depth << 16) | count;
@@ -2097,16 +2104,13 @@ block_xdrObject(JSXDRState *xdr, JSObject **objp)
 
         /*
          * If there's a parent id, then get the parent out of our script's
-         * atomMap. We know that we XDR block object in outer-to-inner order,
-         * which means that getting the parent now will work.
+         * object array. We know that we XDR block object in outer-to-inner
+         * order, which means that getting the parent now will work.
          */
-        if (parentId == NO_PARENT_INDEX) {
+        if (parentId == NO_PARENT_INDEX)
             parent = NULL;
-        } else {
-            atom = js_GetAtom(cx, atomMap, parentId);
-            JS_ASSERT(ATOM_IS_OBJECT(atom));
-            parent = ATOM_TO_OBJECT(atom);
-        }
+        else
+            JS_GET_SCRIPT_OBJECT(xdr->script, parentId, parent);
         STOBJ_SET_PARENT(obj, parent);
     }
 
@@ -2807,7 +2811,7 @@ js_AllocSlot(JSContext *cx, JSObject *obj, uint32 *slotp)
         return JS_FALSE;
     }
 
-    /* ReallocSlots or js_FreeSlot should set the free slots to void. */   
+    /* ReallocSlots or js_FreeSlot should set the free slots to void. */
     JS_ASSERT(STOBJ_GET_SLOT(obj, map->freeslot) == JSVAL_VOID);
     *slotp = map->freeslot++;
     return JS_TRUE;
@@ -3143,7 +3147,7 @@ Detecting(JSContext *cx, jsbytecode *pc)
              * worry about someone redefining undefined, which was added by
              * Edition 3, so is read/write for backward compatibility.
              */
-            atom = js_GetAtomFromBytecode(script, pc, 0);
+            GET_ATOM_FROM_BYTECODE(script, pc, 0, atom);
             if (atom == cx->runtime->atomState.typeAtoms[JSTYPE_VOID] &&
                 (pc += js_CodeSpec[op].length) < endpc) {
                 op = (JSOp) *pc;
@@ -3160,7 +3164,7 @@ Detecting(JSContext *cx, jsbytecode *pc)
              * At this point, anything but an extended atom index prefix means
              * we're not detecting.
              */
-            if (!(js_CodeSpec[op].format & JOF_ATOMBASE))
+            if (!(js_CodeSpec[op].format & JOF_INDEXBASE))
                 return JS_FALSE;
             break;
         }
@@ -4448,7 +4452,8 @@ js_GetClassPrototype(JSContext *cx, JSObject *scope, jsid id,
              * instance that delegates to this object, or just query the
              * prototype for its class.
              */
-            cx->weakRoots.newborn[GCX_OBJECT] = JSVAL_TO_GCTHING(v);
+            cx->weakRoots.newborn[GCX_OBJECT] =
+                (JSGCThing *)JSVAL_TO_GCTHING(v);
         }
     }
     *protop = JSVAL_IS_OBJECT(v) ? JSVAL_TO_OBJECT(v) : NULL;

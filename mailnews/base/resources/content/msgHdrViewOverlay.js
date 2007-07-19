@@ -1159,6 +1159,16 @@ function handleAttachmentSelection(commandPrefix)
     selectedAttachments[0].attachment[commandPrefix]();
 }
 
+function createAttachmentDisplayName(aAttachment)
+{
+  // Strip any white space at the end of the display name to avoid
+  // attachment name spoofing (especially Windows will drop trailing dots
+  // and whitespace from filename extensions). Leading and internal
+  // whitespace will be taken care of by the crop="center" attribute.
+  // We must not change the actual filename, though.
+  return aAttachment.displayName.replace(/\s+$/, "");
+}
+
 function displayAttachmentsForExpandedView()
 {
   var numAttachments = currentAttachments.length;
@@ -1170,9 +1180,10 @@ function displayAttachmentsForExpandedView()
     {
       var attachment = currentAttachments[index];
 
-      // we need to create a listitem to insert the attachment
-      // into the attachment list..
-      var item = attachmentList.appendItem(attachment.displayName,"");
+      // create a listitem for the attachment listbox
+      var displayName = createAttachmentDisplayName(attachment);
+      var item = attachmentList.appendItem(displayName, "");
+      item.setAttribute("crop", "center");
       item.setAttribute("class", "listitem-iconic attachment-item"); 
       item.setAttribute("tooltip", "attachmentListTooltip");
       item.attachment = attachment;
@@ -1283,9 +1294,10 @@ function addAttachmentToPopup(popup, attachment, attachmentIndex)
       item = popup.insertBefore(item, popup.childNodes[attachmentIndex - 1]);
       item.setAttribute('class', 'menu-iconic attachment-item');
 
+      var displayName = createAttachmentDisplayName(attachment);
       var formattedDisplayNameString = gMessengerBundle.getFormattedString("attachmentDisplayNameFormat",
-                                       [attachmentIndex, attachment.displayName]);
-
+                                       [attachmentIndex, displayName]);
+      item.setAttribute("crop", "center");
       item.setAttribute('label', formattedDisplayNameString); 
       item.setAttribute('accesskey', attachmentIndex); 
 

@@ -107,6 +107,7 @@ VIAddVersionKey "FileDescription" "${BrandShortName} Installer"
 !insertmacro CreateRegKey
 !insertmacro CanWriteToInstallDir
 !insertmacro CheckDiskSpace
+!insertmacro CleanVirtualStore
 !insertmacro AddHandlerValues
 !insertmacro GetSingleInstallPath
 
@@ -253,6 +254,10 @@ Section "-Application" Section1
   StrCpy $0 "Software\Microsoft\Windows\CurrentVersion\Uninstall\${BrandFullNameInternal} (${AppVersion})"
   DeleteRegKey HKLM "$0"
 
+  ; Remove files that may be left behind by the application in the
+  ; VirtualStore directory.
+  ${CleanVirtualStore}
+
   ${If} $InstallType != 1
     ; Custom installs.
     ; If DOMi is installed and this install includes DOMi remove it from
@@ -383,7 +388,7 @@ Section "-Application" Section1
           ${LogMsg} "** ERROR Installing File: $INSTDIR\components\nsIQTScriptablePlugin.xpt **"
         ${Else}
           ${LogMsg} "Installed File: $INSTDIR\components\nsIQTScriptablePlugin.xpt"
-          ${LogUninstall} "File: $R3"
+          ${LogUninstall} "File: \components\nsIQTScriptablePlugin.xpt"
         ${EndIf}
       ${EndUnless}
     ${EndUnless}
