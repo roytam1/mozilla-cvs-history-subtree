@@ -7365,12 +7365,8 @@
 			baseConfigurationReference = 00F3BE290C4F280700E19B0C /* Debug.xcconfig */;
 			buildSettings = {
 				GCC_C_LANGUAGE_STANDARD = c99;
-				GCC_VERSION_i386 = 4.0;
-				GCC_VERSION_ppc = 3.3;
-				MACOSX_DEPLOYMENT_TARGET = 10.3;
-				SDKROOT = /Developer/SDKs/MacOSX10.3.9.sdk;
-				SDKROOT_i386 = /Developer/SDKs/MacOSX10.4u.sdk;
-				SDKROOT_ppc = /Developer/SDKs/MacOSX10.3.9.sdk;
+				MACOSX_DEPLOYMENT_TARGET = 10.4;
+				SDKROOT = /Developer/SDKs/MacOSX10.4u.sdk;
 				ZERO_LINK = NO;
 			};
 			name = Development;
@@ -7380,12 +7376,8 @@
 			baseConfigurationReference = 00F3BE2B0C4F280700E19B0C /* Release.xcconfig */;
 			buildSettings = {
 				GCC_C_LANGUAGE_STANDARD = c99;
-				GCC_VERSION_i386 = 4.0;
-				GCC_VERSION_ppc = 3.3;
-				MACOSX_DEPLOYMENT_TARGET = 10.3;
-				SDKROOT = /Developer/SDKs/MacOSX10.3.9.sdk;
-				SDKROOT_i386 = /Developer/SDKs/MacOSX10.4u.sdk;
-				SDKROOT_ppc = /Developer/SDKs/MacOSX10.3.9.sdk;
+				MACOSX_DEPLOYMENT_TARGET = 10.4;
+				SDKROOT = /Developer/SDKs/MacOSX10.4u.sdk;
 				ZERO_LINK = NO;
 			};
 			name = Deployment;
@@ -7395,12 +7387,8 @@
 			baseConfigurationReference = 00F3BE2C0C4F280700E19B0C /* ReleaseSymbols.xcconfig */;
 			buildSettings = {
 				GCC_C_LANGUAGE_STANDARD = c99;
-				GCC_VERSION_i386 = 4.0;
-				GCC_VERSION_ppc = 3.3;
-				MACOSX_DEPLOYMENT_TARGET = 10.3;
-				SDKROOT = /Developer/SDKs/MacOSX10.3.9.sdk;
-				SDKROOT_i386 = /Developer/SDKs/MacOSX10.4u.sdk;
-				SDKROOT_ppc = /Developer/SDKs/MacOSX10.3.9.sdk;
+				MACOSX_DEPLOYMENT_TARGET = 10.4;
+				SDKROOT = /Developer/SDKs/MacOSX10.4u.sdk;
 				ZERO_LINK = NO;
 			};
 			name = DeploymentSymbols;
