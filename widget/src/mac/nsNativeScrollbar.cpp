@@ -229,6 +229,7 @@ nsNativeScrollbar::DoScrollAction(ControlPartCode part)
       return;
   }
 
+  UpdateContentPosition(newPos);
   if (buttonPress) {
     //
     // For the up/down buttons, scroll up or down by the line height and 
@@ -242,9 +243,6 @@ nsNativeScrollbar::DoScrollAction(ControlPartCode part)
       BoundsCheck(0, newPos, mMaxValue);
       mMediator->ScrollbarButtonPressed(mScrollbar, oldPos, newPos);
     }
-    else {
-      UpdateContentPosition(newPos);
-    }
   }
   else {
     //
@@ -255,7 +253,6 @@ nsNativeScrollbar::DoScrollAction(ControlPartCode part)
     // outliner takes the new position as a signed reference, so we have to
     // convert our unsigned to signed first.
     //
-    UpdateContentPosition(newPos);
     if (mMediator) {
       PRInt32 np = newPos;
       if (np < 0) {
