@@ -46,6 +46,9 @@ interface nsIHandlerService : nsISupports
    * of the given handler info object to the datastore.  Updates an existing
    * record or creates a new one if necessary.
    *
+   * Note: if preferred action is undefined or invalid, then we assume
+   * the default value nsIHandlerInfo::useHelperApp.
+   *
    * FIXME: also store any changes to the list of possible handlers.
    *
    * @param aHandlerInfo  {nsIHandlerInfo}  the handler info object

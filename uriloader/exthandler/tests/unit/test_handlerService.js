@@ -35,12 +35,13 @@
  * ***** END LICENSE BLOCK ***** */
 
 function run_test() {
-  // It doesn't matter whether or not this executable exists or is executable,
-  // only that it'll QI to nsIFile and has a path attribute, which the service
-  // expects.
-  var executable = Cc["@mozilla.org/file/local;1"].createInstance(Ci.nsILocalFile);
-  executable.initWithPath("/usr/bin/test");
-  
+  // It doesn't matter whether or not this nsIFile is actually executable,
+  // only that it has a path and exists.  Since we don't know any executable
+  // that exists on all platforms (except possibly the application being
+  // tested, but there doesn't seem to be a way to get a reference to that
+  // from the directory service), we use the temporary directory itself.
+  var executable = HandlerServiceTest._dirSvc.get("TmpD", Ci.nsIFile);
+
   var localHandler = {
     name: "Local Handler",
     executable: executable,
@@ -113,8 +114,9 @@ function run_test() {
   var preferredHandler = handlerInfo.preferredApplicationHandler;
   do_check_eq(typeof preferredHandler, "object");
   do_check_eq(preferredHandler.name, "Local Handler");
-  var localHandler = preferredHandler.QueryInterface(Ci.nsILocalHandlerApp);
-  do_check_eq(localHandler.executable.path, "/usr/bin/test");
+  do_check_true(preferredHandler instanceof Ci.nsILocalHandlerApp);
+  preferredHandler.QueryInterface(Ci.nsILocalHandlerApp);
+  do_check_eq(preferredHandler.executable.path, localHandler.executable.path);
 
   do_check_false(handlerInfo.alwaysAskBeforeHandling);
 

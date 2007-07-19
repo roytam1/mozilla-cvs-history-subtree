@@ -144,8 +144,6 @@ HandlerService.prototype = {
       // options, the former seems preferable, because it reduces the size
       // of the RDF file and thus the amount of stuff we have to parse.
       case Ci.nsIHandlerInfo.useHelperApp:
-      // XXX Should we throw instead of assuming the default if we don't
-      // recognize the value?
       default:
         this._removeValue(infoID, NC_SAVE_TO_DISK);
         this._removeValue(infoID, NC_HANDLE_INTERNALLY);
@@ -163,12 +161,12 @@ HandlerService.prototype = {
     // process we also need to remove any vestiges of an existing record, so
     // we remove any properties that we aren't overwriting.
     this._setLiteral(handlerID, NC_PRETTY_NAME, handler.name);
-    try {
+    if (handler instanceof Ci.nsILocalHandlerApp) {
       handler.QueryInterface(Ci.nsILocalHandlerApp);
       this._setLiteral(handlerID, NC_PATH, handler.executable.path);
       this._removeValue(handlerID, NC_URI_TEMPLATE);
     }
-    catch(ex) {
+    else {
       handler.QueryInterface(Ci.nsIWebHandlerApp);
       this._setLiteral(handlerID, NC_URI_TEMPLATE, handler.uriTemplate);
       this._removeValue(handlerID, NC_PATH);
@@ -318,7 +316,7 @@ HandlerService.prototype = {
     return id;
   },
 
-  _getTypeList: function HS__getTypeList(aHandlerInfo) {
+  _ensureAndGetTypeList: function HS__ensureAndGetTypeList(aHandlerInfo) {
     // FIXME: once nsIHandlerInfo supports retrieving the scheme
     // (and differentiating between MIME and protocol content types),
     // implement support for protocols.
@@ -357,7 +355,7 @@ HandlerService.prototype = {
    */
   _ensureRecordsForType: function HS__ensureRecordsForType(aHandlerInfo) {
     // Get the list of types.
-    var typeList = this._getTypeList(aHandlerInfo);
+    var typeList = this._ensureAndGetTypeList(aHandlerInfo);
 
     // If there's already a record in the datastore for this type, then we
     // don't need to do anything more.
@@ -457,8 +455,8 @@ HandlerService.prototype = {
   //**************************************************************************//
   // Utilities
 
-  // FIXME: this stuff should all be in a JavaScript module given that I keep
-  // copying it from component to component.
+  // FIXME: given that I keep copying them from JS component to JS component,
+  // these utilities should all be in a JavaScript module or FUEL interface.
 
   /**
    * Get an app pref or a default value if the pref doesn't exist.
