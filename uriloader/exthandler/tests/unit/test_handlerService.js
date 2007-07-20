@@ -80,6 +80,9 @@ function run_test() {
 
   var handlerInfo = mimeSvc.getFromTypeAndExtension("nonexistent/type", null);
 
+  // Make sure it's also an nsIHandlerInfo.
+  do_check_true(handlerInfo instanceof Ci.nsIHandlerInfo);
+
   do_check_eq(handlerInfo.MIMEType, "nonexistent/type");
 
   // These three properties are the ones the handler service knows how to store.
@@ -87,9 +90,13 @@ function run_test() {
   do_check_eq(handlerInfo.preferredApplicationHandler, null);
   do_check_true(handlerInfo.alwaysAskBeforeHandling);
 
+  // These properties are initialized to default values by the service,
+  // so we might as well make sure they're initialized to the right defaults.
   do_check_eq(handlerInfo.description, "");
   do_check_eq(handlerInfo.hasDefaultHandler, false);
   do_check_eq(handlerInfo.defaultDescription, "");
+
+  // FIXME: test a default protocol handler.
 
 
   //**************************************************************************//
