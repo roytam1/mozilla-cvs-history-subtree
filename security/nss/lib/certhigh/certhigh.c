@@ -255,7 +255,7 @@ done:
  */
 CERTCertificate *
 CERT_FindUserCertByUsage(CERTCertDBHandle *handle,
-			 const char *nickname,
+			 char *nickname,
 			 SECCertUsage usage,
 			 PRBool validOnly,
 			 void *proto_win)
@@ -1044,15 +1044,11 @@ loser:
     NSSCryptoContext *cc = STAN_GetDefaultCryptoContext();
 
     stanCert = STAN_GetNSSCertificate(cert);
-    if (!stanCert) {
-        /* error code is set */
-        return NULL;
-    }
     nssUsage.anyUsage = PR_FALSE;
     nssUsage.nss3usage = usage;
     nssUsage.nss3lookingForCA = PR_FALSE;
-    stanChain = NSSCertificate_BuildChain(stanCert, NULL, &nssUsage, NULL, NULL,
-					  CERT_MAX_CERT_CHAIN, NULL, NULL, td, cc);
+    stanChain = NSSCertificate_BuildChain(stanCert, NULL, &nssUsage, NULL,
+					  NULL, 0, NULL, NULL, td, cc);
     if (!stanChain) {
 	PORT_SetError(SEC_ERROR_UNKNOWN_ISSUER);
 	return NULL;

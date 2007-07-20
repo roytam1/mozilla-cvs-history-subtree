@@ -257,7 +257,7 @@ void *
 CERT_StartCertificateRequestAttributes(CERTCertificateRequest *req);
 
 /*
-** Reformat the certificate extension list into a CertificateRequest
+** Reformat the certifcate extension list into a CertificateRequest
 ** attribute list.
 */
 SECStatus
@@ -348,7 +348,7 @@ CERT_EncodeGeneralName(CERTGeneralName *genName, SECItem *dest,
 		       PRArenaPool *arena);
 
 extern CERTGeneralName *
-CERT_DecodeGeneralName(PRArenaPool *reqArena, SECItem *encodedName,
+CERT_DecodeGeneralName(PRArenaPool *arena, SECItem *encodedName,
 		       CERTGeneralName  *genName);
 
 
@@ -360,8 +360,7 @@ CERT_DecodeGeneralName(PRArenaPool *reqArena, SECItem *encodedName,
 **	"derCert" the DER encoded certificate
 **	"key" the returned key
 */
-extern SECStatus CERT_KeyFromDERCert(PRArenaPool *reqArena, SECItem *derCert,
-                                     SECItem *key);
+extern SECStatus CERT_KeyFromDERCert(PRArenaPool *arena, SECItem *derCert, SECItem *key);
 
 extern SECStatus CERT_KeyFromIssuerAndSN(PRArenaPool *arena, SECItem *issuer,
 					 SECItem *sn, SECItem *key);
@@ -543,7 +542,7 @@ CERT_FindCertBySubjectKeyID (CERTCertDBHandle *handle, SECItem *subjKeyID);
 **	"nickname" is the ascii string nickname to look for
 */
 extern CERTCertificate *
-CERT_FindCertByNickname (CERTCertDBHandle *handle, const char *nickname);
+CERT_FindCertByNickname (CERTCertDBHandle *handle, char *nickname);
 
 /*
 ** Find a certificate in the database by a DER encoded certificate
@@ -564,7 +563,7 @@ CERT_FindCertByEmailAddr(CERTCertDBHandle *handle, char *emailAddr);
 **	"name" is the email address or nickname to look up
 */
 CERTCertificate *
-CERT_FindCertByNicknameOrEmailAddr(CERTCertDBHandle *handle, const char *name);
+CERT_FindCertByNicknameOrEmailAddr(CERTCertDBHandle *handle, char *name);
 
 /*
 ** Find a certificate in the database by a digest of a subject public key
@@ -1016,11 +1015,7 @@ extern CERTCertNicknames *CERT_GetCertNicknames (CERTCertDBHandle *handle,
 /*
 ** Finds the crlNumber extension and decodes its value into 'value'
 */
-extern SECStatus CERT_FindCRLNumberExten (PRArenaPool *arena, CERTCrl *crl,
-                                          SECItem *value);
-
-extern SECStatus CERT_FindCRLEntryReasonExten (CERTCrlEntry *crlEntry,
-					       CERTCRLEntryReasonCode *value);
+extern SECStatus CERT_FindCRLNumberExten (CERTCrl *crl, CERTCrlNumber *value);
 
 extern void CERT_FreeNicknames(CERTCertNicknames *nicknames);
 
@@ -1075,7 +1070,7 @@ void
 CERT_DestroyCertArray(CERTCertificate **certs, unsigned int ncerts);
 
 /* convert an email address to lower case */
-char *CERT_FixupEmailAddr(const char *emailAddr);
+char *CERT_FixupEmailAddr(char *emailAddr);
 
 /* decode string representation of trust flags into trust struct */
 SECStatus
@@ -1100,6 +1095,10 @@ CERT_ImportCerts(CERTCertDBHandle *certdb, SECCertUsage usage,
 		 unsigned int ncerts, SECItem **derCerts,
 		 CERTCertificate ***retCerts, PRBool keepCerts,
 		 PRBool caOnly, char *nickname);
+
+SECStatus
+CERT_SaveImportedCert(CERTCertificate *cert, SECCertUsage usage,
+		      PRBool caOnly, char *nickname);
 
 char *
 CERT_MakeCANickname(CERTCertificate *cert);
@@ -1135,24 +1134,11 @@ CERT_DecodeCertificatePoliciesExtension(SECItem *extnValue);
 void
 CERT_DestroyCertificatePoliciesExtension(CERTCertificatePolicies *policies);
 
-CERTCertificatePolicyMappings *
-CERT_DecodePolicyMappingsExtension(SECItem *encodedCertPolicyMaps);
-
-SECStatus
-CERT_DestroyPolicyMappingsExtension(CERTCertificatePolicyMappings *mappings);
-
-SECStatus
-CERT_DecodePolicyConstraintsExtension(
-    CERTCertificatePolicyConstraints *decodedValue, SECItem *encodedValue);
-
-SECStatus CERT_DecodeInhibitAnyExtension
-    (CERTCertificateInhibitAny *decodedValue, SECItem *extnValue);
-
 CERTUserNotice *
 CERT_DecodeUserNotice(SECItem *noticeItem);
 
 extern CERTGeneralName *
-CERT_DecodeAltNameExtension(PRArenaPool *reqArena, SECItem *EncodedAltName);
+CERT_DecodeAltNameExtension(PRArenaPool *arena, SECItem *EncodedAltName);
 
 extern CERTNameConstraints *
 CERT_DecodeNameConstraintsExtension(PRArenaPool *arena, 
@@ -1160,7 +1146,7 @@ CERT_DecodeNameConstraintsExtension(PRArenaPool *arena,
 
 /* returns addr of a NULL termainated array of pointers to CERTAuthInfoAccess */
 extern CERTAuthInfoAccess **
-CERT_DecodeAuthInfoAccessExtension(PRArenaPool *reqArena,
+CERT_DecodeAuthInfoAccessExtension(PRArenaPool *arena,
 				   SECItem     *encodedExtension);
 
 extern CERTPrivKeyUsagePeriod *
@@ -1195,6 +1181,15 @@ CERT_GovtApprovedBitSet(CERTCertificate *cert);
 
 SECStatus
 CERT_AddPermNickname(CERTCertificate *cert, char *nickname);
+
+/*
+ * Given a cert, find the cert with the same subject name that
+ * has the given key usage.  If the given cert has the correct keyUsage, then
+ * return it, otherwise search the list in order.
+ */
+CERTCertificate *
+CERT_FindCertByUsage(CERTCertificate *basecert, unsigned int requiredKeyUsage);
+
 
 CERTCertList *
 CERT_MatchUserCert(CERTCertDBHandle *handle,
@@ -1339,7 +1334,7 @@ CERT_FindUserCertsByUsage(CERTCertDBHandle *handle,
  */
 CERTCertificate *
 CERT_FindUserCertByUsage(CERTCertDBHandle *handle,
-			 const char *nickname,
+			 char *nickname,
 			 SECCertUsage usage,
 			 PRBool validOnly,
 			 void *proto_win);
@@ -1505,7 +1500,7 @@ CERT_UnlockCertTrust(CERTCertificate *cert);
  * results in a NULL being returned (and an appropriate error set).
  */ 
 extern SECItem *
-CERT_GetSPKIDigest(PRArenaPool *arena, const CERTCertificate *cert,
+cert_GetSPKIDigest(PRArenaPool *arena, const CERTCertificate *cert,
                    SECOidTag digestAlg, SECItem *fill);
 
 /*
@@ -1517,46 +1512,6 @@ extern SECStatus cert_GetCertType(CERTCertificate *cert);
 SECStatus CERT_CheckCRL(CERTCertificate* cert, CERTCertificate* issuer,
                         SECItem* dp, int64 t, void* wincx);
 
-
-/*
- * Add a CERTNameConstraint to the CERTNameConstraint list
- */
-extern CERTNameConstraint *
-CERT_AddNameConstraint(CERTNameConstraint *list, 
-		       CERTNameConstraint *constraint);
-
-/*
- * Allocate space and copy CERTNameConstraint from src to dest.
- * Arena is used to allocate result(if dest eq NULL) and its members
- * SECItem data.
- */
-extern CERTNameConstraint *
-CERT_CopyNameConstraint(PRArenaPool         *arena, 
-			CERTNameConstraint  *dest, 
-			CERTNameConstraint  *src);
-
-/*
- * Verify name against all the constraints relevant to that type of
- * the name.
- */
-extern SECStatus
-CERT_CheckNameSpace(PRArenaPool          *arena,
-		    CERTNameConstraints  *constraints,
-		    CERTGeneralName      *currentName);
-
-/*
- * Extract and allocate the name constraints extension from the CA cert.
- */
-extern SECStatus
-CERT_FindNameConstraintsExten(PRArenaPool      *arena,
-			      CERTCertificate  *cert,
-			      CERTNameConstraints **constraints);
-
-/*
- * Initialize a new GERTGeneralName fields (link)
- */
-extern CERTGeneralName *
-CERT_NewGeneralName(PLArenaPool *arena, CERTGeneralNameType type);
 
 SEC_END_PROTOS
 

@@ -776,13 +776,6 @@ safe_popen(char *cmd)
     if (pipe(p) < 0)
 	return 0;
 
-    fp = fdopen(p[0], "r");
-    if (fp == 0) {
-	close(p[0]);
-	close(p[1]);
-	return 0;
-    }
-
     /* Setup signals so that SIGCHLD is ignored as we want to do waitpid */
     newact.sa_handler = SIG_DFL;
     newact.sa_flags = 0;
@@ -792,7 +785,7 @@ safe_popen(char *cmd)
     pid = fork();
     switch (pid) {
       case -1:
-	fclose(fp); /* this closes p[0], the fd associated with fp */
+	close(p[0]);
 	close(p[1]);
 	sigaction (SIGCHLD, &oldact, NULL);
 	return 0;
@@ -834,6 +827,12 @@ safe_popen(char *cmd)
 
       default:
 	close(p[1]);
+	fp = fdopen(p[0], "r");
+	if (fp == 0) {
+	    close(p[0]);
+	    sigaction (SIGCHLD, &oldact, NULL);
+	    return 0;
+	}
 	break;
     }
 

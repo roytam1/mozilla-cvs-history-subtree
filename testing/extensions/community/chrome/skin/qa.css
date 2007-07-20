@@ -30,9 +30,6 @@ html|a {
   position: fixed;
   border: 1px solid grey;
   background-color: white;
-  background-image: url("logolight.png");
-  background-repeat: no-repeat;
-  background-position: center;
 }
 
 .qa-notify {
@@ -48,14 +45,6 @@ html|a {
 #qa-notify-header {
   font-size: 1.5em;
   font-weight: bold;
-}
-
-
-
-/* general formatting */
-
-.list {
-  padding-left: 10px;
 }
 
 /* @group test overview */

@@ -92,11 +92,6 @@ SEC_DeletePermCertificate(CERTCertificate *cert)
     NSSTrustDomain *td = STAN_GetDefaultTrustDomain();
     NSSCertificate *c = STAN_GetNSSCertificate(cert);
 
-    if (c == NULL) {
-        /* error code is set */
-        return SECFailure;
-    }
-
     /* get rid of the token instances */
     nssrv = NSSCertificate_DeleteStoredObject(c, NULL);
 
@@ -162,11 +157,6 @@ __CERT_AddTempCertToPerm(CERTCertificate *cert, char *nickname,
     NSSCertificate *c = STAN_GetNSSCertificate(cert);
     nssCertificateStoreTrace lockTrace = {NULL, NULL, PR_FALSE, PR_FALSE};
     nssCertificateStoreTrace unlockTrace = {NULL, NULL, PR_FALSE, PR_FALSE};
-
-    if (c == NULL) {
-        /* error code is set */
-        return SECFailure;
-    }
 
     context = c->object.cryptoContext;
     if (!context) {
@@ -439,7 +429,7 @@ done:
 }
 
 CERTCertificate *
-CERT_FindCertByNickname(CERTCertDBHandle *handle, const char *nickname)
+CERT_FindCertByNickname(CERTCertDBHandle *handle, char *nickname)
 {
     NSSCryptoContext *cc;
     NSSCertificate *c, *ct;
@@ -481,7 +471,7 @@ CERT_FindCertByDERCert(CERTCertDBHandle *handle, SECItem *derCert)
 }
 
 CERTCertificate *
-CERT_FindCertByNicknameOrEmailAddr(CERTCertDBHandle *handle, const char *name)
+CERT_FindCertByNicknameOrEmailAddr(CERTCertDBHandle *handle, char *name)
 {
     NSSCryptoContext *cc;
     NSSCertificate *c, *ct;
@@ -884,12 +874,7 @@ CERT_SaveSMimeProfile(CERTCertificate *cert, SECItem *emailProfile,
         }
     }
 
-    if (cert->slot && cert->isperm && CERT_IsUserCert(cert) &&
-	(!emailProfile || !emailProfile->len)) {
-	/* Don't clobber emailProfile for user certs. */
-    	return SECSuccess;
-    }
-
+    
     for (emailAddr = CERT_GetFirstEmailAddress(cert); emailAddr != NULL;
 		emailAddr = CERT_GetNextEmailAddress(cert,emailAddr)) {
 	rv = certdb_SaveSingleProfile(cert,emailAddr,emailProfile,profileTime);

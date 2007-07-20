@@ -323,8 +323,7 @@ ReadSystemFiles()
 
     RNG_RandomUpdate(&dwNumFiles, sizeof(dwNumFiles));
 
-    // now read the first 10 readable files, then 10 or 11 files
-    // spread throughout the system directory
+    // now read 10 files
     filesToRead = 10;
     if (dwNumFiles == 0)
         return;
@@ -412,14 +411,10 @@ void RNG_SystemInfoForRNG(void)
     }
 #endif
 
-    hVal = GetCurrentProcess();               // 4 or 8 byte pseudo handle (a
-                                              // constant!) of current process
+    hVal = GetCurrentProcess();               // 4 byte handle of current task
     RNG_RandomUpdate(&hVal, sizeof(hVal));
 
     dwVal = GetCurrentProcessId();            // process ID (4 bytes)
-    RNG_RandomUpdate(&dwVal, sizeof(dwVal));
-
-    dwVal = GetCurrentThreadId();             // thread ID (4 bytes)
     RNG_RandomUpdate(&dwVal, sizeof(dwVal));
 
 #if !defined(_WIN32_WCE)

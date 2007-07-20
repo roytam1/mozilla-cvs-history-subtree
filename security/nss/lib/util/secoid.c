@@ -169,13 +169,6 @@
 #define ANSI_X962_SIGNATURE_OID ANSI_X962_OID, 0x04
 #define ANSI_X962_SPECIFY_OID   ANSI_X962_SIGNATURE_OID, 0x03
 
-/* for Camellia: iso(1) member-body(2) jisc(392)
- *    mitsubishi(200011) isl(61) security(1) algorithm(1)
- */
-#define MITSUBISHI_ALG 0x2a,0x83,0x08,0x8c,0x9a,0x4b,0x3d,0x01,0x01
-#define CAMELLIA_ENCRYPT_OID MITSUBISHI_ALG,1
-#define CAMELLIA_WRAP_OID    MITSUBISHI_ALG,3
-
 #define CONST_OID static const unsigned char
 
 CONST_OID md2[]        				= { DIGEST, 0x02 };
@@ -350,7 +343,6 @@ CONST_OID x509InhibitAnyPolicy[]           	= { ID_CE_OID, 54 };
 CONST_OID x509AuthInfoAccess[]        		= { PKIX_CERT_EXTENSIONS,  1 };
 CONST_OID x509SubjectInfoAccess[]               = { PKIX_CERT_EXTENSIONS, 11 };
 
-
 /* pkcs 12 additions */
 CONST_OID pkcs12[]                           = { PKCS12 };
 CONST_OID pkcs12ModeIDs[]                    = { PKCS12_MODE_IDS };
@@ -467,13 +459,6 @@ CONST_OID aes256_OFB[] 				= { AES, 43 };
 CONST_OID aes256_CFB[] 				= { AES, 44 };
 #endif
 CONST_OID aes256_KEY_WRAP[]			= { AES, 45 };
-
-CONST_OID camellia128_CBC[]			= { CAMELLIA_ENCRYPT_OID, 2};
-CONST_OID camellia192_CBC[]			= { CAMELLIA_ENCRYPT_OID, 3};
-CONST_OID camellia256_CBC[]			= { CAMELLIA_ENCRYPT_OID, 4};
-CONST_OID camellia128_KEY_WRAP[]		= { CAMELLIA_WRAP_OID, 2};
-CONST_OID camellia192_KEY_WRAP[]		= { CAMELLIA_WRAP_OID, 3};
-CONST_OID camellia256_KEY_WRAP[]		= { CAMELLIA_WRAP_OID, 4};
 
 CONST_OID sha256[]                              = { SHAXXX, 1 };
 CONST_OID sha384[]                              = { SHAXXX, 2 };
@@ -821,14 +806,14 @@ const static SECOidData oids[] = {
 	"CRL Distribution Points",
 	CKM_INVALID_MECHANISM, FAKE_SUPPORTED_CERT_EXTENSION ),
     OD( x509CertificatePolicies, SEC_OID_X509_CERTIFICATE_POLICIES,
- 	"Certificate Policies",
-        CKM_INVALID_MECHANISM, SUPPORTED_CERT_EXTENSION ),
+	"Certificate Policies",
+        CKM_INVALID_MECHANISM, FAKE_SUPPORTED_CERT_EXTENSION ),
     OD( x509PolicyMappings, SEC_OID_X509_POLICY_MAPPINGS, 
- 	"Certificate Policy Mappings",
-        CKM_INVALID_MECHANISM, SUPPORTED_CERT_EXTENSION ),
+	"Certificate Policy Mappings",
+        CKM_INVALID_MECHANISM, UNSUPPORTED_CERT_EXTENSION ),
     OD( x509PolicyConstraints, SEC_OID_X509_POLICY_CONSTRAINTS, 
- 	"Certificate Policy Constraints",
-        CKM_INVALID_MECHANISM, SUPPORTED_CERT_EXTENSION ),
+	"Certificate Policy Constraints",
+        CKM_INVALID_MECHANISM, FAKE_SUPPORTED_CERT_EXTENSION ),
     OD( x509AuthKeyID, SEC_OID_X509_AUTH_KEY_ID, 
 	"Certificate Authority Key Identifier",
 	CKM_INVALID_MECHANISM, SUPPORTED_CERT_EXTENSION ),
@@ -1522,14 +1507,6 @@ const static SECOidData oids[] = {
     OD( x509SubjectInfoAccess,        SEC_OID_X509_SUBJECT_INFO_ACCESS,
         "Subject Info Access",        CKM_INVALID_MECHANISM,
 	UNSUPPORTED_CERT_EXTENSION ),
-
-    /* Camellia algorithm OIDs */
-    OD( camellia128_CBC, SEC_OID_CAMELLIA_128_CBC,
-	"CAMELLIA-128-CBC", CKM_CAMELLIA_CBC, INVALID_CERT_EXTENSION ),
-    OD( camellia192_CBC, SEC_OID_CAMELLIA_192_CBC,
-	"CAMELLIA-192-CBC", CKM_CAMELLIA_CBC, INVALID_CERT_EXTENSION ),
-    OD( camellia256_CBC, SEC_OID_CAMELLIA_256_CBC,
-	"CAMELLIA-256-CBC", CKM_CAMELLIA_CBC, INVALID_CERT_EXTENSION ),
 
 };
 

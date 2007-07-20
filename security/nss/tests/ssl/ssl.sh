@@ -68,9 +68,6 @@ ssl_init()
       cd ../common
       . ./init.sh
   fi
-  if [ -z "${IOPR_SSL_SOURCED}" ]; then
-      . ../iopr/ssl_iopr.sh
-  fi
   if [ ! -r $CERT_LOG_FILE ]; then  # we need certificates here
       cd ../cert
       . ./cert.sh
@@ -209,7 +206,6 @@ kill_selfserv()
   echo "selfserv with PID ${PID} killed at `date`"
 
   rm ${SERVERPID}
-  html_detect_core "<TR><TD>kill_selfserv core detection step"
 }
 
 ########################### start_selfserv #############################
@@ -223,8 +219,7 @@ start_selfserv()
       echo "$SCRIPTNAME: $testname ----"
   fi
   sparam=`echo $sparam | sed -e 's;_; ;g'`
-  if [ -n "$NSS_ENABLE_ECC" ] && \
-     [ -z "$NO_ECC_CERTS" -o "$NO_ECC_CERTS" != "1"  ] ; then
+  if [ -n "$NSS_ENABLE_ECC" ] ; then
       ECC_OPTIONS="-e ${HOSTADDR}-ec"
   else
       ECC_OPTIONS=""
@@ -236,11 +231,11 @@ start_selfserv()
   echo "selfserv -D -p ${PORT} -d ${P_R_SERVERDIR} -n ${HOSTADDR} ${SERVER_OPTIONS} \\"
   echo "         ${ECC_OPTIONS} -w nss ${sparam} -i ${R_SERVERPID} $verbose &"
   if [ ${fileout} -eq 1 ]; then
-      ${PROFTOOL} selfserv -D -p ${PORT} -d ${P_R_SERVERDIR} -n ${HOSTADDR} ${SERVER_OPTIONS} \
+      selfserv -D -p ${PORT} -d ${P_R_SERVERDIR} -n ${HOSTADDR} ${SERVER_OPTIONS} \
                ${ECC_OPTIONS} -w nss ${sparam} -i ${R_SERVERPID} $verbose \
                > ${SERVEROUTFILE} 2>&1 &
   else
-      ${PROFTOOL} selfserv -D -p ${PORT} -d ${P_R_SERVERDIR} -n ${HOSTADDR} ${SERVER_OPTIONS} \
+      selfserv -D -p ${PORT} -d ${P_R_SERVERDIR} -n ${HOSTADDR} ${SERVER_OPTIONS} \
                ${ECC_OPTIONS} -w nss ${sparam} -i ${R_SERVERPID} $verbose &
   fi
   # The PID $! returned by the MKS or Cygwin shell is not the PID of
@@ -288,17 +283,12 @@ ssl_cov()
 
   while read ectype tls param testname
   do
-      p=`echo "$testname" | sed -e "s/_.*//"`   #sonmi, only run extended test on SSL3 and TLS
-
-      echo "$testname" | grep EXPORT > /dev/null 2>&1 
-      exp=$?
+      p=`echo "$testname" | sed -e "s/ .*//"`   #sonmi, only run extended test on SSL3 and TLS
       
       if [ "$p" = "SSL2" -a "$NORM_EXT" = "Extended Test" ] ; then
           echo "$SCRIPTNAME: skipping  $testname for $NORM_EXT"
       elif [ "$ectype" = "ECC" -a  -z "$NSS_ENABLE_ECC" ] ; then
           echo "$SCRIPTNAME: skipping  $testname (ECC only)"
-      elif [ "$p" = "SSL2" -o "$exp" -eq 0 ] && [ "$BYPASS_STRING" = "Server FIPS" ] ; then
-          echo "$SCRIPTNAME: skipping  $testname (non-FIPS only)"
       elif [ "$ectype" != "#" ] ; then
           echo "$SCRIPTNAME: running $testname ----------------------------"
           TLS_FLAG=-T
@@ -338,7 +328,7 @@ ssl_cov()
           echo "        -f -d ${P_R_CLIENTDIR} < ${REQUEST_FILE}"
 
           rm ${TMP}/$HOST.tmp.$$ 2>/dev/null
-          ${PROFTOOL} tstclnt -p ${PORT} -h ${HOSTADDR} -c ${param} ${TLS_FLAG} ${CLIENT_OPTIONS} -f \
+          tstclnt -p ${PORT} -h ${HOSTADDR} -c ${param} ${TLS_FLAG} ${CLIENT_OPTIONS} -f \
                   -d ${P_R_CLIENTDIR} < ${REQUEST_FILE} \
                   >${TMP}/$HOST.tmp.$$  2>&1
           ret=$?
@@ -371,7 +361,7 @@ ssl_auth()
           echo "tstclnt -p ${PORT} -h ${HOSTADDR} -f -d ${P_R_CLIENTDIR} ${CLIENT_OPTIONS} \\"
 	  echo "        ${cparam}  < ${REQUEST_FILE}"
           rm ${TMP}/$HOST.tmp.$$ 2>/dev/null
-          ${PROFTOOL} tstclnt -p ${PORT} -h ${HOSTADDR} -f ${cparam} ${CLIENT_OPTIONS} \
+          tstclnt -p ${PORT} -h ${HOSTADDR} -f ${cparam} ${CLIENT_OPTIONS} \
                   -d ${P_R_CLIENTDIR} < ${REQUEST_FILE} \
                   >${TMP}/$HOST.tmp.$$  2>&1
           ret=$?
@@ -406,8 +396,6 @@ ssl_stress()
           echo "$SCRIPTNAME: skipping  $testname for $NORM_EXT"
       elif [ "$ectype" = "ECC" -a  -z "$NSS_ENABLE_ECC" ] ; then
           echo "$SCRIPTNAME: skipping  $testname (ECC only)"
-      elif [ "$p" = "SSL2" -a "$BYPASS_STRING" = "Server FIPS" ] ; then
-          echo "$SCRIPTNAME: skipping  $testname (non-FIPS only)"
       elif [ "$ectype" != "#" ]; then
           cparam=`echo $cparam | sed -e 's;_; ;g' -e "s/TestUser/$USER_NICKNAME/g" `
 
@@ -429,7 +417,7 @@ ssl_stress()
           echo "strsclnt -q -p ${PORT} -d ${P_R_CLIENTDIR} ${CLIENT_OPTIONS} -w nss $cparam \\"
           echo "         $verbose ${HOSTADDR}"
           echo "strsclnt started at `date`"
-          ${PROFTOOL} strsclnt -q -p ${PORT} -d ${P_R_CLIENTDIR} ${CLIENT_OPTIONS} -w nss $cparam \
+          strsclnt -q -p ${PORT} -d ${P_R_CLIENTDIR} ${CLIENT_OPTIONS} -w nss $cparam \
                    $verbose ${HOSTADDR}
           ret=$?
           echo "strsclnt completed at `date`"
@@ -498,7 +486,7 @@ ssl_crl_ssl()
 	  echo "tstclnt -p ${PORT} -h ${HOSTADDR} -f -d ${R_CLIENTDIR} \\"
 	  echo "        ${cparam}  < ${REQUEST_FILE}"
 	  rm ${TMP}/$HOST.tmp.$$ 2>/dev/null
-	  ${PROFTOOL} tstclnt -p ${PORT} -h ${HOSTADDR} -f ${cparam} \
+	  tstclnt -p ${PORT} -h ${HOSTADDR} -f ${cparam} \
 	      -d ${R_CLIENTDIR} < ${REQUEST_FILE} \
 	      >${TMP}/$HOST.tmp.$$  2>&1
 	  ret=$?
@@ -595,7 +583,7 @@ load_group_crl() {
         echo "GET crl://${SERVERDIR}/root.crl_${grpBegin}-${grpEnd}${ecsuffix}"
         echo ""
         echo "RELOAD time $i"
-        ${PROFTOOL} tstclnt -p ${PORT} -h ${HOSTADDR} -f  \
+        tstclnt -p ${PORT} -h ${HOSTADDR} -f  \
             -d ${R_CLIENTDIR} -w nss -n TestUser${UNREVOKED_CERT_GRP_1}${ecsuffix} \
 	    >${OUTFILE_TMP}  2>&1 <<_EOF_REQUEST_
 GET crl://${SERVERDIR}/root.crl_${grpBegin}-${grpEnd}${ecsuffix}
@@ -682,7 +670,7 @@ ssl_crl_cache()
             echo "tstclnt -p ${PORT} -h ${HOSTADDR} -f -d ${R_CLIENTDIR} \\"
             echo "        ${cparam}  < ${REQUEST_FILE}"
             rm ${TMP}/$HOST.tmp.$$ 2>/dev/null
-            ${PROFTOOL} tstclnt -p ${PORT} -h ${HOSTADDR} -f ${cparam} \
+            tstclnt -p ${PORT} -h ${HOSTADDR} -f ${cparam} \
 	        -d ${R_CLIENTDIR} < ${REQUEST_FILE} \
                 >${TMP}/$HOST.tmp.$$  2>&1
             ret=$?
@@ -783,48 +771,12 @@ ssl_run()
     cd ${QADIR}/ssl
 }
 
-############################ ssl_set_fips ##############################
-# local shell function to set FIPS mode on/off
-########################################################################
-ssl_set_fips()
-{
-    DBDIR=$1
-    FIPSMODE=$2
-    TESTNAME=$3
-    MODUTIL="modutil"
-
-    if [ "${FIPSMODE}" = "true" ] ; then
-        RET_EXP=0
-    else
-        RET_EXP=1
-    fi
-
-    echo "${SCRIPTNAME}: ${TESTNAME}"
-
-    echo "${MODUTIL} -dbdir ${DBDIR} -fips ${FIPSMODE} -force"
-    ${MODUTIL} -dbdir ${DBDIR} -fips ${FIPSMODE} -force 2>&1
-    RET=$?  
-    html_msg "${RET}" "0" "${TESTNAME} (modutil -fips ${FIPSMODE})" \
-             "produced a returncode of ${RET}, expected is 0"
-
-    echo "${MODUTIL} -dbdir ${DBDIR} -list"
-    DBLIST=`${MODUTIL} -dbdir ${DBDIR} -list 2>&1`
-    RET=$?  
-    html_msg "${RET}" "0" "${TESTNAME} (modutil -list)" \
-             "produced a returncode of ${RET}, expected is 0"
-
-    echo "${DBLIST}" | grep "FIPS PKCS #11"
-    RET=$?
-    html_msg "${RET}" "${RET_EXP}" "${TESTNAME} (grep \"FIPS PKCS #11\")" \
-             "produced a returncode of ${RET}, expected is ${RET_EXP}"
-}
-
 ################## main #################################################
 
 #this script may be sourced from the distributed stress test - in this case do nothing...
 
-CSHORT="-c ABCDEF:0041:0084cdefgijklmnvyz"
-CLONG="-c ABCDEF:C001:C002:C003:C004:C005:C006:C007:C008:C009:C00A:C00B:C00C:C00D:C00E:C00F:C010:C011:C012:C013:C014:0041:0084cdefgijklmnvyz"
+CSHORT="-c ABCDEFcdefgijklmnvyz"
+CLONG="-c ABCDEF:C001:C002:C003:C004:C005:C006:C007:C008:C009:C00A:C00B:C00C:C00D:C00E:C00F:C010:C011:C012:C013:C014cdefgijklmnvyz"
 
 if [ -z  "$DO_REM_ST" -a -z  "$DO_DIST_ST" ] ; then
 
@@ -872,30 +824,9 @@ if [ -z  "$DO_REM_ST" -a -z  "$DO_DIST_ST" ] ; then
         else
             echo "$SCRIPTNAME: Skipping Cipher Coverage - Server Bypass Tests"
         fi
-
-        if [ -z "$NSS_TEST_DISABLE_FIPS" ] ; then
-            CLIENT_OPTIONS=""
-            SERVER_OPTIONS=""
-            BYPASS_STRING="Server FIPS"
-
-            html_head "SSL - FIPS mode on"
-            ssl_set_fips "${SERVERDIR}" "true" "Turning FIPS on for the server"
-            ssl_set_fips "${EXT_SERVERDIR}" "true" "Turning FIPS on for the extended server" 
-            html "</TABLE><BR>"
-
-            ssl_run
-
-            html_head "SSL - FIPS mode off"
-            ssl_set_fips "${SERVERDIR}" "false" "Turning FIPS off for the server"
-            ssl_set_fips "${EXT_SERVERDIR}" "false" "Turning FIPS off for the extended server"
-            html "</TABLE><BR>"
-        else
-            echo "$SCRIPTNAME: Skipping Cipher Coverage - FIPS Tests"
-        fi
     else
         echo "$SCRIPTNAME: Skipping Cipher Coverage Tests"
     fi
 
-    ssl_iopr_run
     ssl_cleanup
 fi

@@ -73,7 +73,7 @@ nss_builtins_LibraryVersion = {
 	NSS_BUILTINS_LIBRARY_VERSION_MINOR};
 
 NSS_IMPLEMENT_DATA const NSSUTF8 *
-nss_builtins_SlotDescription = (NSSUTF8 *) "NSS Builtin Objects";
+nss_builtins_SlotDescription = (NSSUTF8 *) "";
 
 NSS_IMPLEMENT_DATA const CK_VERSION
 nss_builtins_HardwareVersion = { 

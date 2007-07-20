@@ -82,12 +82,10 @@ void PK11_LogoutAll(void);
 void PK11_SetSlotPWValues(PK11SlotInfo *slot,int askpw, int timeout);
 void PK11_GetSlotPWValues(PK11SlotInfo *slot,int *askpw, int *timeout);
 SECStatus PK11_CheckSSOPassword(PK11SlotInfo *slot, char *ssopw);
-SECStatus PK11_CheckUserPassword(PK11SlotInfo *slot, const char *pw);
+SECStatus PK11_CheckUserPassword(PK11SlotInfo *slot,char *pw);
 PRBool PK11_IsLoggedIn(PK11SlotInfo *slot, void *wincx);
-SECStatus PK11_InitPin(PK11SlotInfo *slot,const char *ssopw,
-                       const char *pk11_userpwd);
-SECStatus PK11_ChangePW(PK11SlotInfo *slot, const char *oldpw,
-                        const char *newpw);
+SECStatus PK11_InitPin(PK11SlotInfo *slot,char *ssopw, char *pk11_userpwd);
+SECStatus PK11_ChangePW(PK11SlotInfo *slot,char *oldpw, char *newpw);
 void PK11_SetPasswordFunc(PK11PasswordFunc func);
 int PK11_GetMinimumPwdLength(PK11SlotInfo *slot);
 SECStatus PK11_ResetToken(PK11SlotInfo *slot, char *sso_pwd);
@@ -438,26 +436,6 @@ SECStatus PK11_ExtractKeyValue(PK11SymKey *symKey);
 SECItem * PK11_GetKeyData(PK11SymKey *symKey);
 PK11SlotInfo * PK11_GetSlotFromKey(PK11SymKey *symKey);
 void *PK11_GetWindow(PK11SymKey *symKey);
-
-/*
- * Explicitly set the key usage for the generated private key.
- *
- * This allows us to specify single use EC and RSA keys whose usage
- * can be regulated by the underlying token.
- *
- * The underlying key usage is set using opFlags. opFlagsMask specifies
- * which operations are specified by opFlags. For instance to turn encrypt
- * on and signing off, opFlags would be CKF_ENCRYPT|CKF_DECRYPT and 
- * opFlagsMask would be CKF_ENCRYPT|CKF_DECRYPT|CKF_SIGN|CKF_VERIFY. You
- * need to specify both the public and private key flags, 
- * PK11_GenerateKeyPairWithOpFlags will sort out the correct flag to the 
- * correct key type. Flags not specified in opFlagMask will be defaulted 
- * according to mechanism type and token capabilities.
- */
-SECKEYPrivateKey *PK11_GenerateKeyPairWithOpFlags(PK11SlotInfo *slot,
-   CK_MECHANISM_TYPE type, void *param, SECKEYPublicKey **pubk,
-   PK11AttrFlags attrFlags, CK_FLAGS opFlags, CK_FLAGS opFlagsMask,
-    void *wincx);
 /*
  * The attrFlags is the logical OR of the PK11_ATTR_XXX bitflags.
  * These flags apply to the private key.  The PK11_ATTR_TOKEN,
@@ -559,8 +537,8 @@ SECItem *PK11_MakeIDFromPubKey(SECItem *pubKeyData);
 SECStatus PK11_TraverseSlotCerts(
      SECStatus(* callback)(CERTCertificate*,SECItem *,void *),
                                                 void *arg, void *wincx);
-CERTCertificate * PK11_FindCertFromNickname(const char *nickname, void *wincx);
-CERTCertList * PK11_FindCertsFromNickname(const char *nickname, void *wincx);
+CERTCertificate * PK11_FindCertFromNickname(char *nickname, void *wincx);
+CERTCertList * PK11_FindCertsFromNickname(char *nickname, void *wincx);
 CERTCertificate *PK11_GetCertFromPrivateKey(SECKEYPrivateKey *privKey);
 SECStatus PK11_ImportCert(PK11SlotInfo *slot, CERTCertificate *cert,
                 CK_OBJECT_HANDLE key, char *nickname, PRBool includeTrust);
@@ -636,7 +614,7 @@ SECStatus PK11_DigestBegin(PK11Context *cx);
  * the hash algorithm 'hashAlg'.
  */
 SECStatus PK11_HashBuf(SECOidTag hashAlg, unsigned char *out, unsigned char *in,
-					PRInt32 len);
+					int32 len);
 SECStatus PK11_DigestOp(PK11Context *context, const unsigned char *in, 
                         unsigned len);
 SECStatus PK11_CipherOp(PK11Context *context, unsigned char * out, int *outlen, 

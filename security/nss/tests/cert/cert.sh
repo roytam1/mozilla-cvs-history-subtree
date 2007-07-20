@@ -75,26 +75,12 @@ cert_init()
       cd ../common
       . ./init.sh
   fi
-  if [ -z "${IOPR_CERT_SOURCED}" ]; then
-       . ../iopr/cert_iopr.sh
-  fi
   SCRIPTNAME="cert.sh"
   CRL_GRP_DATE=`date "+%Y%m%d%H%M%SZ"`
   if [ -n "$NSS_ENABLE_ECC" ] ; then
       html_head "Certutil and Crlutil Tests with ECC"
   else
       html_head "Certutil and Crlutil Tests"
-  fi
-
-  LIBDIR="${DIST}/${OBJDIR}/lib"
-
-  ROOTCERTSFILE=`ls -1 ${LIBDIR}/*nssckbi* | head -1`
-  if [ ! "${ROOTCERTSFILE}" ] ; then
-      html_failed "<TR><TD>Looking for root certs module." 
-      cert_log "ERROR: Root certs module not found."
-      Exit 5 "Fatal - Root certs module not found."
-  else
-      html_passed "<TR><TD>Looking for root certs module."
   fi
 
   ################## Generate noise for our CA cert. ######################
@@ -139,12 +125,12 @@ certu()
         #the subject of the cert contains blanks, and the shell 
         #will strip the quotes off the string, if called otherwise...
         echo "certutil -s \"${CU_SUBJECT}\" $*"
-        ${PROFTOOL} certutil -s "${CU_SUBJECT}" $*
+        certutil -s "${CU_SUBJECT}" $*
         RET=$?
         CU_SUBJECT=""
     else
         echo "certutil $*"
-        ${PROFTOOL} certutil $*
+        certutil $*
         RET=$?
     fi
     if [ "$RET" -ne 0 ]; then
@@ -155,6 +141,8 @@ certu()
         html_passed "<TR><TD>${CU_ACTION}"
     fi
 
+    # echo "Contine?"
+    # cat > /dev/null
     return $RET
 }
 
@@ -168,7 +156,7 @@ crlu()
     
     CRLUTIL="crlutil -q"
     echo "$CRLUTIL $*"
-    ${PROFTOOL} $CRLUTIL $*
+    $CRLUTIL $*
     RET=$?
     if [ "$RET" -ne 0 ]; then
         CRLFAILED=$RET
@@ -178,26 +166,8 @@ crlu()
         html_passed "<TR><TD>${CU_ACTION}"
     fi
 
-    return $RET
-}
-
-modu()
-{
-    echo "$SCRIPTNAME: ${CU_ACTION} --------------------------"
-
-    MODUTIL="modutil"
-    echo "$MODUTIL $*"
-    # echo is used to press Enter expected by modutil
-    echo | $MODUTIL $*
-    RET=$?
-    if [ "$RET" -ne 0 ]; then
-        MODFAILED=$RET
-        html_failed "<TR><TD>${CU_ACTION} ($RET) " 
-        cert_log "ERROR: ${CU_ACTION} failed $RET"
-    else
-        html_passed "<TR><TD>${CU_ACTION}"
-    fi
-
+    # echo "Contine?"
+    # cat > /dev/null
     return $RET
 }
 
@@ -217,9 +187,9 @@ cert_init_cert()
         echo "$SCRIPTNAME: WARNING - ${CERTDIR} exists"
     fi
     cd "${CERTDIR}"
-    CERTDIR="."
+    CERTDIR="." 
 
-    PROFILEDIR=`cd ${CERTDIR}; pwd`
+    PROFILEDIR=${CERTDIR}
     if [ -n "${MULTIACCESS_DBM}" ]; then
 	PROFILEDIR="multiaccess:${DOMAIN}"
     fi
@@ -238,6 +208,7 @@ hw_acc()
         echo "creating $CERTNAME s cert with hwaccelerator..."
         #case $ACCELERATOR in
         #rainbow)
+   
 
         echo "modutil -add rainbow -libfile /usr/lib/libcryptoki22.so "
         echo "         -dbdir ${PROFILEDIR} 2>&1 "
@@ -285,22 +256,13 @@ cert_create_cert()
     if [ "$RET" -ne 0 ]; then
         return $RET
     fi
-
-    CU_ACTION="Loading root cert module to ${CERTNAME}'s Cert DB"
-    modu -add "RootCerts" -libfile "${ROOTCERTSFILE}" -dbdir "${PROFILEDIR}" 2>&1   
-    if [ "$RET" -ne 0 ]; then
-        return $RET
-    fi
-
     hw_acc
-
     CU_ACTION="Import Root CA for $CERTNAME"
     certu -A -n "TestCA" -t "TC,TC,TC" -f "${R_PWFILE}" -d "${PROFILEDIR}" \
           -i "${R_CADIR}/root.cert" 2>&1
     if [ "$RET" -ne 0 ]; then
         return $RET
     fi
-
     if [ -n "$NSS_ENABLE_ECC" ] ; then
 	CU_ACTION="Import EC Root CA for $CERTNAME"
 	certu -A -n "TestCA-ec" -t "TC,TC,TC" -f "${R_PWFILE}" \
@@ -309,7 +271,6 @@ cert_create_cert()
             return $RET
 	fi
     fi
-
     cert_add_cert "$5"
     return $?
 }
@@ -489,24 +450,17 @@ cert_CA()
   cd ${CUR_CADIR}
   pwd
 
-  LPROFILE=`pwd`
+  LPROFILE=.
   if [ -n "${MULTIACCESS_DBM}" ]; then
 	LPROFILE="multiaccess:${DOMAIN}"
   fi
 
   if [ "$SIGNER" = "-x" ] ; then # self signed -> create DB
       CU_ACTION="Creating CA Cert DB"
-      certu -N -d "${LPROFILE}" -f ${R_PWFILE} 2>&1
+      certu -N -d ${LPROFILE} -f ${R_PWFILE} 2>&1
       if [ "$RET" -ne 0 ]; then
           Exit 5 "Fatal - failed to create CA $NICKNAME "
       fi
-
-      CU_ACTION="Loading root cert module to CA Cert DB"
-      modu -add "RootCerts" -libfile "${ROOTCERTSFILE}" -dbdir "${LPROFILE}" 2>&1   
-      if [ "$RET" -ne 0 ]; then
-          return $RET
-      fi
-
       echo "$SCRIPTNAME: Certificate initialized ----------"
   fi
 
@@ -728,9 +682,6 @@ cert_extended_ssl()
   CU_ACTION="Initializing ${CERTNAME}'s Cert DB (ext.)"
   certu -N -d "${PROFILEDIR}" -f "${R_PWFILE}" 2>&1
 
-  CU_ACTION="Loading root cert module to ${CERTNAME}'s Cert DB (ext.)"
-  modu -add "RootCerts" -libfile "${ROOTCERTSFILE}" -dbdir "${PROFILEDIR}" 2>&1
-
   CU_ACTION="Generate Cert Request for $CERTNAME (ext)"
   CU_SUBJECT="CN=$CERTNAME, E=${CERTNAME}@bogus.com, O=BOGUS NSS, L=Mountain View, ST=California, C=US"
   certu -R -d "${PROFILEDIR}" -f "${R_PWFILE}" -z "${R_NOISE_FILE}" -o req 2>&1
@@ -815,9 +766,6 @@ cert_extended_ssl()
 
   CU_ACTION="Initializing ${CERTNAME}'s Cert DB (ext.)"
   certu -N -d "${PROFILEDIR}" -f "${R_PWFILE}" 2>&1
-
-  CU_ACTION="Loading root cert module to ${CERTNAME}'s Cert DB (ext.)"
-  modu -add "RootCerts" -libfile "${ROOTCERTSFILE}" -dbdir "${PROFILEDIR}" 2>&1
 
   CU_ACTION="Generate Cert Request for $CERTNAME (ext)"
   CU_SUBJECT="CN=$CERTNAME, E=${CERTNAME}@bogus.com, O=BOGUS NSS, L=Mountain View, ST=California, C=US"
@@ -951,7 +899,7 @@ cert_stresscerts()
   CERTDIR="$CLIENTDIR"
   cd "${CERTDIR}"
 
-  PROFILEDIR=`cd ${CERTDIR}; pwd`
+  PROFILEDIR=${CERTDIR}
   if [ -n "${MULTIACCESS_DBM}" ]; then
      PROFILEDIR="multiaccess:${D_CLIENT}"
   fi
@@ -988,9 +936,6 @@ cert_fips()
   CU_ACTION="Initializing ${CERTNAME}'s Cert DB"
   certu -N -d "${PROFILEDIR}" -f "${R_FIPSPWFILE}" 2>&1
 
-  CU_ACTION="Loading root cert module to ${CERTNAME}'s Cert DB (ext.)"
-  modu -add "RootCerts" -libfile "${ROOTCERTSFILE}" -dbdir "${PROFILEDIR}" 2>&1
-
   echo "$SCRIPTNAME: Enable FIPS mode on database -----------------------"
   CU_ACTION="Enable FIPS mode on database for ${CERTNAME}"
   echo "modutil -dbdir ${PROFILEDIR} -fips true "
@@ -1023,18 +968,12 @@ cert_eccurves()
   if [ -n "$NSS_ENABLE_ECC" ] ; then
     echo "$SCRIPTNAME: Creating Server CA Issued Certificate for "
     echo "             EC Curves Test Certificates ------------------------------------"
-
-    cert_init_cert "${ECCURVES_DIR}" "EC Curves Test Certificates" 1 ${D_ECCURVES}
-
+    cert_init_cert ${ECCURVES_DIR} "EC Curves Test Certificates" 1 ${D_ECCURVES}
     CU_ACTION="Initializing EC Curve's Cert DB"
-    certu -N -d "${PROFILEDIR}" -f "${R_PWFILE}" 2>&1
-
-    CU_ACTION="Loading root cert module to EC Curve's Cert DB"
-    modu -add "RootCerts" -libfile "${ROOTCERTSFILE}" -dbdir "${PROFILEDIR}" 2>&1
-
-    CU_ACTION="Import EC Root CA for $CERTNAME"
-    certu -A -n "TestCA-ec" -t "TC,TC,TC" -f "${R_PWFILE}" \
-        -d "${PROFILEDIR}" -i "${R_CADIR}/ecroot.cert" 2>&1
+    certu -N -d "${ECCURVES_DIR}" -f "${R_PWFILE}" 2>&1
+	CU_ACTION="Import EC Root CA for $CERTNAME"
+	certu -A -n "TestCA-ec" -t "TC,TC,TC" -f "${R_PWFILE}" \
+	    -d "${PROFILEDIR}" -i "${R_CADIR}/ecroot.cert" 2>&1
 
     if [ -n "${NSS_ECC_MORE_THAN_SUITE_B}" ] ; then
       CURVE_LIST="c2pnb163v1 c2pnb163v2 c2pnb163v3 c2pnb176v1 \
@@ -1064,7 +1003,7 @@ cert_eccurves()
 	CERTSERIAL=`expr $CERTSERIAL + 1 `
 	CU_ACTION="Generate EC Cert Request for $CERTNAME"
 	CU_SUBJECT="CN=$CERTNAME, E=${CERTNAME}-ec@bogus.com, O=BOGUS NSS, L=Mountain View, ST=California, C=US"
-	certu -R -k ec -q "${CURVE}" -d "${PROFILEDIR}" -f "${R_PWFILE}" \
+	certu -R -k ec -q "${CURVE}" -d "${ECCURVES_DIR}" -f "${R_PWFILE}" \
 		-z "${R_NOISE_FILE}" -o req  2>&1
 	
 	if [ $RET -eq 0 ] ; then
@@ -1075,7 +1014,7 @@ cert_eccurves()
 	
 	if [ $RET -eq 0 ] ; then
 	  CU_ACTION="Import $CERTNAME's EC Cert"
-	  certu -A -n "${CERTNAME}-ec" -t "u,u,u" -d "${PROFILEDIR}" \
+	  certu -A -n "${CERTNAME}-ec" -t "u,u,u" -d "${ECCURVES_DIR}" \
 		-f "${R_PWFILE}" -i "${CERTNAME}-ec.cert" 2>&1
 	fi
     done
@@ -1169,7 +1108,7 @@ cert_crl_ssl()
 
   cd $CADIR
   
-  PROFILEDIR=`cd ${CLIENTDIR}; pwd`
+  PROFILEDIR=${CLIENTDIR}
   CRL_GRPS_END=`expr ${CRL_GRP_1_BEGIN} + ${TOTAL_CRL_RANGE} - 1`
   echo "$SCRIPTNAME: Creating Client CA Issued Certificates Range $CRL_GRP_1_BEGIN - $CRL_GRPS_END ==="
   CU_ACTION="Creating client test certs"
@@ -1307,33 +1246,6 @@ EOF_CRLINI
   CRL_GRP_END=`expr ${CRL_GRP_3_BEGIN} + ${CRL_GRP_3_RANGE} - 1`
   CRL_FILE_GRP_3=${R_SERVERDIR}/root.crl_${CRL_GRP_3_BEGIN}-${CRL_GRP_END}
 
-#################
-# Verify the we can successfully change the password on the database
-#
-cert_test_password()
-{
-  CERTFAILED=0
-  echo "$SCRIPTNAME: Create A Password Test Cert  =============="
-  cert_init_cert "${DBPASSDIR}" "Password Test Cert" 1000 "${D_DBPASSDIR}"
-
-  echo "$SCRIPTNAME: Create A Password Test Ca  --------"
-  ALL_CU_SUBJECT="CN=NSS Password Test CA, O=BOGUS NSS, L=Mountain View, ST=California, C=US"
-  cert_CA ${DBPASSDIR} PasswordCA -x "CTu,CTu,CTu" ${D_DBPASS} "1"
-
-  # now change the password
-  CU_ACTION="Changing password on ${CERTNAME}'s Cert DB"
-  certu -W -d "${PROFILEDIR}" -f "${R_PWFILE}" -@ "${R_FIPSPWFILE}" 2>&1
-
-  # finally make sure we can use the old key with the new password
-  CU_ACTION="Generate Certificate for ${CERTNAME} with new password"
-  CU_SUBJECT="CN=${CERTNAME}, E=password@bogus.com, O=BOGUS NSS, L=Mountain View, ST=California, C=US"
-  certu -S -n PasswordCert -x -t "Cu,Cu,Cu" -d "${PROFILEDIR}" -f "${R_FIPSPWFILE}" -z "${R_NOISE_FILE}" 2>&1
-  if [ "$RET" -eq 0 ]; then
-    cert_log "SUCCESS: PASSORD passed"
-  fi
-}
-
-
   echo "$SCRIPTNAME: Creating CA CRL for groups 1, 2 and 3  ==============="
   sleep 2
   CRLUPDATE=`date "+%Y%m%d%H%M%SZ"`
@@ -1369,7 +1281,6 @@ EOF_CRLINI
   crlu -I -i ${CRL_FILE} -n "TestCA" -f "${R_PWFILE}" -d "${R_SERVERDIR}"
   CRL_GEN_RES=`expr $? + $CRL_GEN_RES`
   if [ -n "$NSS_ENABLE_ECC" ] ; then
-cert_test_password
       CU_ACTION="Importing CRL (ECC) for groups 1"
       crlu -D -n TestCA-ec  -f "${R_PWFILE}" -d "${R_SERVERDIR}"
       crlu -I -i ${CRL_FILE}-ec -n "TestCA-ec" -f "${R_PWFILE}" \
@@ -1416,7 +1327,5 @@ fi
 if [ -n "$DO_DIST_ST" -a "$DO_DIST_ST" = "TRUE" ] ; then
     cert_stresscerts 
 fi
-
-cert_iopr_setup
 
 cert_cleanup

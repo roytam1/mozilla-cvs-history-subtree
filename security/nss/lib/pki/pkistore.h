@@ -117,7 +117,7 @@ static void nssCertificateStore_Check(nssCertificateStoreTrace* a,
 
     PORT_Assert(a->lock == b->lock);
     PORT_Assert(a->store == b->store);
-}
+};
 
 NSS_EXTERN void
 nssCertificateStore_Lock (
@@ -144,7 +144,7 @@ NSS_EXTERN NSSCertificate **
 nssCertificateStore_FindCertificatesByNickname
 (
   nssCertificateStore *store,
-  const NSSUTF8 *nickname,
+  NSSUTF8 *nickname,
   NSSCertificate *rvOpt[],
   PRUint32 maximumOpt,
   NSSArena *arenaOpt

@@ -898,9 +898,6 @@ collect_subject_certs (
     nssCertificateList_AddReferences(subjectList);
     if (rvCertListOpt) {
 	nssListIterator *iter = nssList_CreateIterator(subjectList);
-	if (!iter) {
-	    return (NSSCertificate **)NULL;
-	}
 	for (c  = (NSSCertificate *)nssListIterator_Start(iter);
 	     c != (NSSCertificate *)NULL;
 	     c  = (NSSCertificate *)nssListIterator_Next(iter)) {
@@ -954,7 +951,7 @@ nssTrustDomain_GetCertsForSubjectFromCache (
 NSS_IMPLEMENT NSSCertificate **
 nssTrustDomain_GetCertsForNicknameFromCache (
   NSSTrustDomain *td,
-  const NSSUTF8 *nickname,
+  NSSUTF8 *nickname,
   nssList *certListOpt
 )
 {

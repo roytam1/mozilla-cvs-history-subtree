@@ -48,7 +48,6 @@
 
 static char *progName;
 PRBool pk12_debugging = PR_FALSE;
-PRBool dumpRawFile;
 
 PRIntn pk12uErrno = 0;
 
@@ -56,18 +55,16 @@ static void
 Usage(char *progName)
 {
 #define FPS PR_fprintf(PR_STDERR,
-    FPS "Usage:	 %s -i importfile [-d certdir] [-P dbprefix] [-h tokenname] [-v]\n",
+    FPS "Usage:	 %s -i importfile [-d certdir] [-P dbprefix] [-h tokenname]\n",
 				 progName);
     FPS "\t\t [-k slotpwfile | -K slotpw] [-w p12filepwfile | -W p12filepw]\n");
-
-    FPS "Usage:	 %s -l listfile [-d certdir] [-P dbprefix] [-h tokenname] [-r]\n",
+    FPS "\t\t [-v]\n");
+    FPS "Usage:	 %s -l listfile [-d certdir] [-P dbprefix] [-h tokenname]\n",
 				 progName);
     FPS "\t\t [-k slotpwfile | -K slotpw] [-w p12filepwfile | -W p12filepw]\n");
-
-    FPS "Usage:	 %s -o exportfile -n certname [-d certdir] [-P dbprefix] [-v]\n", 
-        progName);
+    FPS "Usage:	 %s -o exportfile -n certname [-d certdir] [-P dbprefix]\n", progName);
     FPS "\t\t [-k slotpwfile | -K slotpw] [-w p12filepwfile | -W p12filepw]\n");
-
+    FPS "\t\t [-v]\n");
     exit(PK12UERR_USAGE);
 }
 
@@ -145,40 +142,30 @@ p12u_InitContext(PRBool fileImport, char *filename)
 SECItem *
 P12U_NicknameCollisionCallback(SECItem *old_nick, PRBool *cancel, void *wincx)
 {
-    char           *nick     = NULL;
-    SECItem        *ret_nick = NULL;
-    CERTCertificate* cert    = (CERTCertificate*)wincx;
-
-    if (!cancel || !cert) {
-	pk12uErrno = PK12UERR_USER_CANCELLED;
-	return NULL;
+    if(cancel == NULL) {
+      pk12uErrno = PK12UERR_USER_CANCELLED;
+      return NULL;
     }
 
     if (!old_nick)
-	fprintf(stdout, "pk12util: no nickname for cert in PKCS12 file.\n");
+      fprintf(stdout, "pk12util: no nickname for cert...not handled\n");
 
-#if 0
     /* XXX not handled yet  */
     *cancel = PR_TRUE;
     return NULL;
 
-#else
+#if 0
+    char *nick = NULL;
+    SECItem *ret_nick = NULL;
 
-    nick = CERT_MakeCANickname(cert); 
-    if (!nick) {
-    	return NULL;
-    }
+    nick = strdup( DEFAULT_CERT_NICKNAME );
 
-    if(old_nick && old_nick->data && old_nick->len &&
-       PORT_Strlen(nick) == old_nick->len &&
-       !PORT_Strncmp((char *)old_nick->data, nick, old_nick->len)) {
+    if(old_nick && !PORT_Strcmp((char *)old_nick->data, nick)) {
 	PORT_Free(nick);
-	PORT_SetError(SEC_ERROR_IO);
 	return NULL;
     }
 
-    fprintf(stdout, "pk12util: using nickname: %s\n", nick);
-    ret_nick = PORT_ZNew(SECItem);
+    ret_nick = (SECItem *)PORT_ZAlloc(sizeof(SECItem));
     if(ret_nick == NULL) {
 	PORT_Free(nick);
 	return NULL;
@@ -493,6 +480,7 @@ P12U_ImportPKCS12Object(char *in_file, PK11SlotInfo *slot,
     SEC_PKCS12DecoderContext *p12dcx = NULL;
     SECItem uniPwitem = { 0 };
     SECStatus rv = SECFailure;
+    int error;
 
     rv = P12U_InitSlot(slot, slotPw);
     if (rv != SECSuccess) {
@@ -617,8 +605,7 @@ P12U_ExportPKCS12Object(char *nn, char *outfile, PK11SlotInfo *inSlot,
 
     if ((SECSuccess != CERT_FilterCertListForUserCerts(certlist)) ||
         CERT_LIST_EMPTY(certlist)) {
-        PR_fprintf(PR_STDERR, "%s: no user certs from given nickname\n",
-                   progName);
+        SECU_PrintError(progName,"no user certs from given nickname");
         pk12uErrno = PK12UERR_FINDCERTBYNN;
         goto loser;
     }
@@ -756,27 +743,12 @@ P12U_ListPKCS12File(char *in_file, PK11SlotInfo *slot,
 	SECU_PrintError(progName,"PKCS12 decode iterate bags failed");
 	pk12uErrno = PK12UERR_DECODEIMPTBAGS;
         rv = SECFailure;
-    } else {
-	int fileCounter = 0;
+    }
+    else {
         while (SEC_PKCS12DecoderIterateNext(p12dcx, &dip) == SECSuccess) {
             switch (dip->type) {
                 case SEC_OID_PKCS12_V1_CERT_BAG_ID:
                     printf("Certificate");
-		    if (dumpRawFile) {
-			PRFileDesc * fd;
-			char fileName[20];
-			sprintf(fileName, "file%04d.der", ++fileCounter);
-			fd = PR_Open(fileName,
-				     PR_CREATE_FILE | PR_RDWR | PR_TRUNCATE,
-				     0600);
-			if (!fd) {
-			    SECU_PrintError(progName,
-			                    "Cannot create output file");
-			} else {
-			    PR_Write(fd, dip->der->data, dip->der->len);
-			    PR_Close(fd);
-			}
-		    } else 
                     if (SECU_PrintSignedData(stdout, dip->der,
                             (dip->hasKey) ? "(has private key)" : "",
                              0, SECU_PrintCertificate) != 0) {
@@ -868,7 +840,6 @@ enum {
     opt_List,
     opt_Nickname,
     opt_Export,
-    opt_Raw,
     opt_P12FilePWFile,
     opt_P12FilePW,
     opt_DBPrefix,
@@ -885,7 +856,6 @@ static secuCommandFlag pk12util_options[] =
     { /* opt_List              */ 'l', PR_TRUE,  0, PR_FALSE },
     { /* opt_Nickname	       */ 'n', PR_TRUE,	 0, PR_FALSE },
     { /* opt_Export	       */ 'o', PR_TRUE,	 0, PR_FALSE },
-    { /* opt_Raw   	       */ 'r', PR_FALSE, 0, PR_FALSE },
     { /* opt_P12FilePWFile     */ 'w', PR_TRUE,	 0, PR_FALSE },
     { /* opt_P12FilePW	       */ 'W', PR_TRUE,	 0, PR_FALSE },
     { /* opt_DBPrefix	       */ 'P', PR_TRUE,	 0, PR_FALSE },
@@ -963,9 +933,6 @@ main(int argc, char **argv)
     }
     if (pk12util.options[opt_DBPrefix].activated) {
     	dbprefix = pk12util.options[opt_DBPrefix].arg;
-    }
-    if (pk12util.options[opt_Raw].activated) {
-    	dumpRawFile = PR_TRUE;
     }
     P12U_Init(SECU_ConfigDirectory(NULL), dbprefix,
                 pk12util.options[opt_List].activated);

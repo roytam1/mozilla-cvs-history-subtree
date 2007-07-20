@@ -423,11 +423,6 @@ typedef enum {
     SEC_OID_X509_INHIBIT_ANY_POLICY         = 286,
     SEC_OID_X509_SUBJECT_INFO_ACCESS        = 287,
 
-    /* Camellia OIDs (RFC3657)*/
-    SEC_OID_CAMELLIA_128_CBC                = 288,
-    SEC_OID_CAMELLIA_192_CBC                = 289,
-    SEC_OID_CAMELLIA_256_CBC                = 290,
-
     SEC_OID_TOTAL
 } SECOidTag;
 
