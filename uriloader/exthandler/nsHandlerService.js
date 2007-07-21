@@ -162,7 +162,6 @@ HandlerService.prototype = {
     // we remove any properties that we aren't overwriting.
     this._setLiteral(handlerID, NC_PRETTY_NAME, handler.name);
     if (handler instanceof Ci.nsILocalHandlerApp) {
-      handler.QueryInterface(Ci.nsILocalHandlerApp);
       this._setLiteral(handlerID, NC_PATH, handler.executable.path);
       this._removeValue(handlerID, NC_URI_TEMPLATE);
     }
@@ -235,9 +234,9 @@ HandlerService.prototype = {
    * @returns {string} the ID
    */
   _getClass: function HS__getClass(aHandlerInfo) {
-    if (aHandlerInfo instanceof Ci.nsIMIMEInfo
+    if (aHandlerInfo instanceof Ci.nsIMIMEInfo &&
         // FIXME: remove this extra condition in the fix for bug 388388.
-        && aHandlerInfo.QueryInterface(Ci.nsIMIMEInfo).MIMEType)
+        aHandlerInfo.QueryInterface(Ci.nsIMIMEInfo).MIMEType)
       return "mimetype";
     else
       return "scheme";
@@ -297,7 +296,7 @@ HandlerService.prototype = {
    * the datastore for a given content type via the NC:ExternalApplication
    * property rather than looking for a specific ID, so a handler doesn't
    * have to change IDs when it goes from being a possible handler to being
-   * the preferred one.
+   * the preferred one (once we support possible handlers).
    * 
    * @param aHandlerInfo {nsIHandlerInfo} the handler for which to get the ID
    * 

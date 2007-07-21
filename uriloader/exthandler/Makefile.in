@@ -41,6 +41,13 @@ srcdir		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
+DIRS = \
+       $(NULL)
+
+ifdef ENABLE_TESTS
+  DIRS += tests
+endif
+
 ifeq ($(MOZ_WIDGET_TOOLKIT),os2)
 OSDIR		= os2
 else

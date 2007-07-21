@@ -54,9 +54,5 @@ DIRS		= \
 		prefetch \
 		$(NULL)
 
-ifdef ENABLE_TESTS
-	DIRS += exthandler/tests
-endif
-
 include $(topsrcdir)/config/rules.mk
 
