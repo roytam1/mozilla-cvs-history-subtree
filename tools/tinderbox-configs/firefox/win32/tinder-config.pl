@@ -142,11 +142,11 @@ $ConfigureOnly = 1;
 # Existing build files to download.
 %WGetFiles = (
 # CONFIG:	      'http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/%version%-candidates/rc%rc%/unsigned/firefox-%version%.en-US.win32.installer.exe' =>
-'http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/2.0.0.5-candidates/rc2/unsigned/firefox-2.0.0.5.en-US.win32.installer.exe' =>
+'http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/2.0.0.6-candidates/rc1/unsigned/firefox-2.0.0.6.en-US.win32.installer.exe' =>
 # CONFIG:	      "%l10n_buildDir%/%l10n_buildPlatform%/firefox-installer.exe",
 "/cygdrive/c/builds/tinderbox/Fx-Mozilla1.8-l10n-release/WINNT_5.2_Depend/firefox-installer.exe",
 # CONFIG:	      'http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/%version%-candidates/rc%rc%/unsigned/firefox-%version%.en-US.win32.zip' =>
-'http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/2.0.0.5-candidates/rc2/unsigned/firefox-2.0.0.5.en-US.win32.zip' =>
+'http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/2.0.0.6-candidates/rc1/unsigned/firefox-2.0.0.6.en-US.win32.zip' =>
 # CONFIG:	      "%l10n_buildDir%/%l10n_buildPlatform%/firefox.zip"
 "/cygdrive/c/builds/tinderbox/Fx-Mozilla1.8-l10n-release/WINNT_5.2_Depend/firefox.zip"
 	      );
@@ -167,7 +167,7 @@ $BuildTree  = 'Mozilla1.8-l10n';
 
 #$BuildName = '';
 # CONFIG: $BuildTag = '%productTag%_RELEASE';
-$BuildTag = 'FIREFOX_2_0_0_5_RELEASE';
+$BuildTag = 'FIREFOX_2_0_0_6_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -207,7 +207,7 @@ $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
 # CONFIG: $milestone     = 'firefox%version%-l10n';
-$milestone     = 'firefox2.0.0.5-l10n';
+$milestone     = 'firefox2.0.0.6-l10n';
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 1;
