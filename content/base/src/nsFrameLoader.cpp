@@ -160,27 +160,16 @@ nsFrameLoader::LoadFrame()
   rv = secMan->GetSystemPrincipal(getter_AddRefs(sysPrin));
   NS_ENSURE_SUCCESS(rv, rv);
 
-  if (principal == sysPrin) {
-    // We're a chrome node.  Belt and braces -- inherit the principal for this
-    // load instead of just forcing the system principal.  That way if we have
-    // something loaded already the principal used will be that of what we
-    // already have loaded.
+  // We'll use our principal, not that of the document loaded inside us.
+  // This is very important; needed to prevent XSS attacks on documents
+  // loaded in subframes!  Note that if |principal == sysPrin| the
+  // situation is handled by nsDocShell::LoadURI.
+  loadInfo->SetOwner(principal);
 
-    // XXX bz I'd love to nix this, but the problem is chrome calling
-    // setAttribute() on an iframe or browser and passing in a javascript: URI.
-    // We probably don't want to run that with chrome privileges... Though in
-    // similar circumstances, if one sets window.location.href from chrome we
-    // _do_ run that with chrome privileges, so maybe we should do the same
-    // here?
-    loadInfo->SetInheritOwner(PR_TRUE);
-
-    // Also, in this case we don't set a referrer, just in case.
-  } else {
-    // We'll use our principal, not that of the document loaded inside us.
-    // This is very important; needed to prevent XSS attacks on documents
-    // loaded in subframes!
-    loadInfo->SetOwner(principal);
-
+  // Don't set referrer if we're the system principal.
+  // XXXbz not like it matters -- the URI of the system principal is
+  // null on branch...
+  if (principal != sysPrin) {
     nsCOMPtr<nsIURI> referrer;  
     rv = principal->GetURI(getter_AddRefs(referrer));
     NS_ENSURE_SUCCESS(rv, rv);

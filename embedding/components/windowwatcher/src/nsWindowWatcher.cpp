@@ -886,6 +886,17 @@ nsWindowWatcher::OpenWindowJSInternal(nsIDOMWindow *aParent,
       }
     }
 
+    nsCOMPtr<nsIPrincipal> systemPrincipal;
+    sm->GetSystemPrincipal(getter_AddRefs(systemPrincipal));
+    if (newWindowPrincipal == systemPrincipal) {
+      // Don't pass this principal along to content windows
+      PRInt32 itemType;
+      rv = newDocShellItem->GetItemType(&itemType);
+      if (NS_FAILED(rv) || itemType != nsIDocShellTreeItem::typeChrome) {
+        newWindowPrincipal = nsnull;        
+      }
+    }
+
     nsCOMPtr<nsPIDOMWindow_MOZILLA_1_8_BRANCH2> newWindow =
       do_QueryInterface(*_retval);
 #ifdef DEBUG

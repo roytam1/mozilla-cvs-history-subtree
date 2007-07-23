@@ -771,31 +771,42 @@ nsDocShell::LoadURI(nsIURI * aURI,
     }
     // Perform the load...
     else {
-        // We need an owner (a referring principal). 3 possibilities:
-        // (1) If a principal was passed in, that's what we'll use.
-        // (2) If the caller has allowed inheriting from the current document,
-        //   or if we're being called from chrome (if there's system JS on the stack),
-        //   then inheritOwner should be true and InternalLoad will get an owner
-        //   from the current document. If none of these things are true, then
-        // (3) we pass a null owner into the channel, and an owner will be
-        //   created later from the URL.
-        if (!owner && !inheritOwner) {
-            // See if there's system or chrome JS code running
-            nsCOMPtr<nsIScriptSecurityManager> secMan;
+        // We need an owner (a referring principal). 4 possibilities:
+        // (1) If the system principal was passed in and we're a typeContent
+        //     docshell, inherit the principal from the current document
+        //     instead.
+        // (2) In all other cases when the principal passed in is not null,
+        //     use that principal.
+        // (3) If the caller has allowed inheriting from the current
+        //     document, or if we're being called from chrome (if there's
+        //     system JS on the stack), then inheritOwner should be true and
+        //     InternalLoad will get an owner from the current document. If
+        //     none of these things are true, then
+        // (4) we pass a null owner into the channel, and an owner will be
+        //     created later from the channel's internal data.
+        nsCOMPtr<nsIScriptSecurityManager> secMan =
+            do_GetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID, &rv);
+        NS_ENSURE_SUCCESS(rv, rv);
 
-            secMan = do_GetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID, &rv);
+        // Just to compare, not to use!
+        nsCOMPtr<nsIPrincipal> sysPrin;
+        rv = secMan->GetSystemPrincipal(getter_AddRefs(sysPrin));
+        NS_ENSURE_SUCCESS(rv, rv);
+        
+        if (owner == sysPrin && mItemType != typeChrome) {
+            owner = nsnull;
+            inheritOwner = PR_TRUE;
+        }
+        else if (!owner && !inheritOwner) {
+            // See if there's system or chrome JS code running
             if (NS_SUCCEEDED(rv)) {
-                nsCOMPtr<nsIPrincipal> sysPrin;
                 nsCOMPtr<nsIPrincipal> subjectPrin;
 
-                // Just to compare, not to use!
-                rv = secMan->GetSystemPrincipal(getter_AddRefs(sysPrin));
-                if (NS_SUCCEEDED(rv)) {
-                    rv = secMan->GetSubjectPrincipal(getter_AddRefs(subjectPrin));
-                }
-                // If there's no subject principal, there's no JS running, so we're in system code.
+                rv = secMan->GetSubjectPrincipal(getter_AddRefs(subjectPrin));
+                // If there's no subject principal, there's no JS running, so
+                // we're in system code.
                 if (NS_SUCCEEDED(rv) &&
-                    (!subjectPrin || sysPrin.get() == subjectPrin.get())) {
+                    (!subjectPrin || sysPrin == subjectPrin)) {
                     inheritOwner = PR_TRUE;
                 }
             }
