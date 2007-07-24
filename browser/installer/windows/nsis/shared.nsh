@@ -393,5 +393,8 @@
       ${AddHandlerValues} "$0\gopher" "$1" "$8,1" "URL:Gopher Protocol" "true" "true"
     ${EndUnless}
   ${EndIf}
+
+  ; Remove protocol handler registry keys added by the MS shim
+  DeleteRegKey HKLM "Software\Classes\Firefox.URL"
 !macroend
 !define FixClassKeys "!insertmacro FixClassKeys"
