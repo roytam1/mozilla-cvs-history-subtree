@@ -72,9 +72,9 @@ $CodesizeTest             = 0;  # Z,  require mozilla/tools/codesighs
 $EmbedCodesizeTest        = 0;  # mZ, require mozilla/tools/codesigns
 #$MailBloatTest            = 0;
 #$EmbedTest                = 0;  # Assumes you wanted $BuildEmbed=1
-$LayoutPerformanceTest    = 0;  # Tp
-$LayoutPerformanceLocalTest = 0;  # Tp
-$DHTMLPerformanceTest     = 0;  # Tdhtml
+$LayoutPerformanceTest    = 1;  # Tp
+$LayoutPerformanceLocalTest = 1;  # Tp
+$DHTMLPerformanceTest     = 1;  # Tdhtml
 #$QATest                   = 0;  
 $XULWindowOpenTest        = 1;  # Txul
 $StartupPerformanceTest   = 1;  # Ts
@@ -90,6 +90,7 @@ $TestsPhoneHome           = 1;  # Should test report back to server?
 #$results_server           = "build-graphs.mozilla.org";
 
 #$pageload_server          = "spider";  # localhost
+$pageload_server          = "axolotl.mozilla.org";
 
 #
 # Timeouts, values are in seconds.
@@ -108,9 +109,9 @@ $AliveTestTimeout                 = 10;
 #$XpcomGlueTestTimeout             = 15;
 #$CodesizeTestTimeout              = 900;     # seconds
 #$CodesizeTestType                 = "auto";  # {"auto"|"base"}
-#$LayoutPerformanceTestTimeout     = 1200;  # entire test, seconds
-#$LayoutPerformanceLocalTestTimeout     = 1200;  # entire test, seconds
-#$DHTMLPerformanceTestTimeout      = 1200;  # entire test, seconds
+$LayoutPerformanceTestTimeout      = 300;  # entire test, seconds
+$LayoutPerformanceLocalTestTimeout = 180;  # entire test, seconds
+$DHTMLPerformanceTestTimeout       = 180;  # entire test, seconds
 #$QATestTimeout                    = 1200;   # entire test, seconds
 #$LayoutPerformanceTestPageTimeout = 30000; # each page, ms
 #$StartupPerformanceTestTimeout    = 15;    # seconds
