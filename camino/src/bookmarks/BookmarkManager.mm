@@ -1926,25 +1926,8 @@ static BookmarkManager* gBookmarkManager = nil;
   }
 
   NSString* stdPath = [pathToFile stringByStandardizingPath];
-  NSString* backupFile = [NSString stringWithFormat:@"%@.new", stdPath];
-  BOOL success = [dict writeToFile:backupFile atomically:YES];
-  if (success)
-  {
-    NSFileManager* fm = [NSFileManager defaultManager];
-    long long bmFileSize = [fm sizeOfFileAtPath:backupFile traverseLink:YES];
-    if (bmFileSize > 0)
-    {
-      BOOL removedOld = [fm removeFileAtPath:stdPath handler:self];               // out with the old...
-      BOOL movedNew   = [fm movePath:backupFile toPath:stdPath handler:self];     //  ... in with the new
-      if (!removedOld || !movedNew)
-        NSLog(@"writePropertyList: move failed (removed old file at %@ (OK %d), moved new file from %@ (OK %d)",
-                      stdPath, removedOld,
-                      backupFile, movedNew);
-    }
-    else
-      NSLog(@"writePropertyList: saved bookmarks file was empty (%qi bytes))", bmFileSize);
-  }
-  else
+  BOOL success = [dict writeToFile:stdPath atomically:YES];
+  if (!success)
     NSLog(@"writePropertyList: Failed to write file %@", pathToFile);
 }
 
