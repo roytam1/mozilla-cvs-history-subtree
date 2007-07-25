@@ -100,12 +100,10 @@ class nsMIMEInfoBase : public nsIMIMEInfo {
     // nsMIMEInfoBase methods
     nsMIMEInfoBase(const char *aMIMEType = "") NS_HIDDEN;
     nsMIMEInfoBase(const nsACString& aMIMEType) NS_HIDDEN;
-    nsMIMEInfoBase(const nsACString& aType, int aClass) NS_HIDDEN;
+    nsMIMEInfoBase(const nsACString& aType, HandlerClass aClass) NS_HIDDEN;
     virtual ~nsMIMEInfoBase();        // must be virtual, as the the base class's Release should call the subclass's destructor
 
-    void SetType(const nsACString & aType) { mType = aType; }
-
-    void SetMIMEType(const nsACString & aMIMEType) { mMIMEType = aMIMEType; }
+    void SetMIMEType(const nsACString & aMIMEType) { mType = aMIMEType; }
 
     void SetDefaultDescription(const nsString& aDesc) { mDefaultAppDescription = aDesc; }
 
@@ -168,7 +166,7 @@ class nsMIMEInfoBase : public nsIMIMEInfo {
     nsString               mDescription; ///< human readable description
     PRUint32               mMacType, mMacCreator; ///< Mac file type and creator
     nsCString              mType;
-    nsCString              mMIMEType;
+    HandlerClass           mClass;
     nsCOMPtr<nsIHandlerApp> mPreferredApplication;
     nsHandlerInfoAction    mPreferredAction; ///< preferred action to associate with this type
     nsString               mPreferredAppDescription;
@@ -189,7 +187,7 @@ class nsMIMEInfoImpl : public nsMIMEInfoBase {
   public:
     nsMIMEInfoImpl(const char *aMIMEType = "") : nsMIMEInfoBase(aMIMEType) {}
     nsMIMEInfoImpl(const nsACString& aMIMEType) : nsMIMEInfoBase(aMIMEType) {}
-    nsMIMEInfoImpl(const nsACString& aType, int aClass) :
+    nsMIMEInfoImpl(const nsACString& aType, HandlerClass aClass) :
       nsMIMEInfoBase(aType, aClass) {}
     virtual ~nsMIMEInfoImpl() {}
 

@@ -50,8 +50,8 @@ NS_IMPL_THREADSAFE_RELEASE(nsMIMEInfoBase)
 
 NS_INTERFACE_MAP_BEGIN(nsMIMEInfoBase)
     NS_INTERFACE_MAP_ENTRY(nsIHandlerInfo)
-    // This is only an nsIMIMEInfo if it's a MIME handler with a MIME type.
-    NS_INTERFACE_MAP_ENTRY_CONDITIONAL(nsIMIMEInfo, !mMIMEType.IsEmpty())
+    // This is only an nsIMIMEInfo if it's a MIME handler.
+    NS_INTERFACE_MAP_ENTRY_CONDITIONAL(nsIMIMEInfo, mClass == eMIMEInfo)
     NS_INTERFACE_MAP_ENTRY_AMBIGUOUS(nsISupports, nsIHandlerInfo)
 NS_INTERFACE_MAP_END_THREADSAFE
 
@@ -62,7 +62,7 @@ nsMIMEInfoBase::nsMIMEInfoBase(const char *aMIMEType) :
     mMacType(0),
     mMacCreator(0),
     mType(aMIMEType),
-    mMIMEType(aMIMEType),
+    mClass(eMIMEInfo),
     mPreferredAction(nsIMIMEInfo::saveToDisk),
     mAlwaysAskBeforeHandling(PR_TRUE)
 {
@@ -72,7 +72,7 @@ nsMIMEInfoBase::nsMIMEInfoBase(const nsACString& aMIMEType) :
     mMacType(0),
     mMacCreator(0),
     mType(aMIMEType),
-    mMIMEType(aMIMEType),
+    mClass(eMIMEInfo),
     mPreferredAction(nsIMIMEInfo::saveToDisk),
     mAlwaysAskBeforeHandling(PR_TRUE)
 {
@@ -83,15 +83,14 @@ nsMIMEInfoBase::nsMIMEInfoBase(const nsACString& aMIMEType) :
 // classes (f.e. nsMIMEInfo and nsProtocolInfo), but for now we reuse this class
 // for both and distinguish between the two kinds of handlers via the aClass
 // argument to this method, which can be either eMIMEInfo or eProtocolInfo.
-nsMIMEInfoBase::nsMIMEInfoBase(const nsACString& aType, int aClass) :
+nsMIMEInfoBase::nsMIMEInfoBase(const nsACString& aType, HandlerClass aClass) :
     mMacType(0),
     mMacCreator(0),
     mType(aType),
+    mClass(aClass),
     mPreferredAction(nsIMIMEInfo::saveToDisk),
     mAlwaysAskBeforeHandling(PR_TRUE)
 {
-  if (aClass == eMIMEInfo)
-    mMIMEType = aType;
 }
 
 nsMIMEInfoBase::~nsMIMEInfoBase()
@@ -177,10 +176,10 @@ nsMIMEInfoBase::GetType(nsACString& aType)
 NS_IMETHODIMP
 nsMIMEInfoBase::GetMIMEType(nsACString& aMIMEType)
 {
-    if (mMIMEType.IsEmpty())
+    if (mType.IsEmpty())
         return NS_ERROR_NOT_INITIALIZED;
 
-    aMIMEType = mMIMEType;
+    aMIMEType = mType;
     return NS_OK;
 }
 
@@ -207,7 +206,7 @@ nsMIMEInfoBase::Equals(nsIMIMEInfo *aMIMEInfo, PRBool *_retval)
     nsresult rv = aMIMEInfo->GetMIMEType(type);
     if (NS_FAILED(rv)) return rv;
 
-    *_retval = mMIMEType.Equals(type);
+    *_retval = mType.Equals(type);
 
     return NS_OK;
 }
@@ -377,7 +376,7 @@ nsMIMEInfoBase::LaunchWithURI(nsIURI* aURI)
 void
 nsMIMEInfoBase::CopyBasicDataTo(nsMIMEInfoBase* aOther)
 {
-  aOther->mMIMEType = mMIMEType;
+  aOther->mType = mType;
   aOther->mDefaultAppDescription = mDefaultAppDescription;
   aOther->mExtensions = mExtensions;
 

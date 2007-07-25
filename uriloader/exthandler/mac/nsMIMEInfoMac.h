@@ -43,7 +43,7 @@ class nsMIMEInfoMac : public nsMIMEInfoImpl {
   public:
     nsMIMEInfoMac(const char* aMIMEType = "") : nsMIMEInfoImpl(aMIMEType) {}
     nsMIMEInfoMac(const nsACString& aMIMEType) : nsMIMEInfoImpl(aMIMEType) {}
-    nsMIMEInfoMac(const nsACString& aType, int aClass) :
+    nsMIMEInfoMac(const nsACString& aType, HandlerClass aClass) :
       nsMIMEInfoImpl(aType, aClass) {}
 
     NS_IMETHOD LaunchWithURI(nsIURI* aURI);
