@@ -1949,7 +1949,7 @@ case "$target" in
 	AC_DEFINE(_i386)
 	OS_TARGET=NTO
 	MOZ_OPTIMIZE_FLAGS="-O"
-	MOZ_DEBUG_FLAGS="-gstabs"
+	MOZ_DEBUG_FLAGS="-gdwarf-2"
 	USE_PTHREADS=1
 	_PEDANTIC=
 	LIBS="$LIBS -lsocket -lstdc++"

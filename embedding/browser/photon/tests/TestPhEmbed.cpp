@@ -39,6 +39,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <errno.h>
 #include <libgen.h>
 
 #include <Pt.h>
@@ -477,6 +478,18 @@ int moz_auth_cb(PtWidget_t *widget, void *data, PtCallbackInfo_t *cbinfo)
 	return (CreateAuthWindow(a, PtFindDisjoint(widget)));
 }
 
+int moz_new_area_cb(PtWidget_t *widget, void *data, PtCallbackInfo_t *cbinfo)
+{
+	PtMozillaNewAreaCb_t *r = ( PtMozillaNewAreaCb_t * ) cbinfo->cbdata;
+
+	if ( widget->flags & Pt_DESTROYED )
+		return Pt_CONTINUE;
+
+	printf("moz_new_area_cb called\n");
+
+	return Pt_CONTINUE;
+	}
+
 int moz_dialog_cb(PtWidget_t *widget, void *data, PtCallbackInfo_t *cbinfo)
 {
 	PtMozillaDialogCb_t *d = (PtMozillaDialogCb_t *) cbinfo->cbdata;
@@ -583,6 +596,109 @@ int moz_print_status_cb(PtWidget_t *widget, void *data, PtCallbackInfo_t *cbinfo
 			printf("Printing: progress %d-%d\n", c->cur, c->max);
 			break;
 	}
+
+	return (Pt_CONTINUE);
+}
+
+int moz_various_cb( PtWidget_t *widget, void *data, PtCallbackInfo_t *cbinfo ) {
+
+	printf("moz_various_cb called with reason %ld\n", cbinfo->reason);
+	switch( cbinfo->reason ) {
+
+		case Pt_CB_MOZ_WEB_DATA_REQ: {
+			PtMozillaDataRequestCb_t *cb = ( PtMozillaDataRequestCb_t * ) cbinfo->cbdata;
+			//PtWebReportClientData( swidget, cb->type, cb->length, cb->url );
+			}
+			break;
+
+		case Pt_CB_MOZ_ERROR: {
+			PtWebErrorCallback_t *cb = ( PtWebErrorCallback_t * ) cbinfo->cbdata;
+			//PtWebReportError( swidget, cb->type, cb->reason, cb->url, cb->description );
+			}
+		break;
+		}
+	return Pt_CONTINUE;
+	}
+
+int moz_unknown_cb(PtWidget_t *widget, void *data, PtCallbackInfo_t *cbinfo)
+{
+	PtWebUnknownWithNameCallback_t *cb = ( PtWebUnknownWithNameCallback_t * ) cbinfo->cbdata;
+	PtWebClient2UnknownData_t resp;
+	PtMozillaUnknownCtrl_t *moz_unknown_ctrl;
+	int answer;
+	char *btns[] = { "&Ok", "&Cancel" };
+	char text[PATH_MAX+1], *env;
+	struct window_info *i;
+	struct timespec time;
+
+	PtGetResource(PtFindDisjoint(widget), Pt_ARG_POINTER, &i, 0);
+
+	printf("moz_unknown_cb called, content type %s, url %s, suggested filename %s\n", cb->content_type, cb->url, cb->suggested_filename);
+
+	//
+	// Make sure the PtMozilla widget has a moz_unknown_ctrl structure allocated
+	//
+	PtGetResource( widget, Pt_ARG_MOZ_UNKNOWN_CTRL, &moz_unknown_ctrl, 0 );
+	if( !moz_unknown_ctrl ) {
+		moz_unknown_ctrl = ( PtMozillaUnknownCtrl_t * ) calloc( 1, sizeof( *moz_unknown_ctrl ) );
+		PtSetResource( widget, Pt_ARG_MOZ_UNKNOWN_CTRL, moz_unknown_ctrl, 0 );
+	}
+
+	//
+	// Prompt the user.
+	//
+	env = getenv("HOME");
+	sprintf(text, "%s/%s", env ? env:"", cb->suggested_filename);
+
+	answer = PtPrompt(i->window, NULL, "Download", NULL,
+				"Confirm the location of the file to be downloaded", NULL, 2,
+				(char const **)btns, NULL, 1, 2, sizeof(text)-1, text, NULL,
+				NULL, 0 );
+	switch( answer ) 
+	{
+		//
+		// This is where the response from the UI determines whether the
+		// download will be performed or not.
+		//
+		case 1: // ok
+			moz_unknown_ctrl->response = Pt_WEB_RESPONSE_OK;
+			free(moz_unknown_ctrl->filename);
+			moz_unknown_ctrl->filename = strdup(text);
+			clock_gettime( CLOCK_REALTIME, &time);
+			moz_unknown_ctrl->download_ticket = time.tv_sec;
+			break;
+		case 2: // cancel
+		default:
+			moz_unknown_ctrl->response = Pt_WEB_RESPONSE_CANCEL;
+			free(moz_unknown_ctrl->filename);
+			moz_unknown_ctrl->filename = strdup("");
+			moz_unknown_ctrl->download_ticket = 0;
+			break;
+	}
+	
+#if 0
+	//
+	// The only thing implemented for this resource right now is the ability
+	// to cancel a current download. This code needs to be moved.
+	//
+	resp.response = moz_unknown_ctrl->response;
+	resp.filename = moz_unknown_ctrl->filename;
+	resp.download_ticket = moz_unknown_ctrl->download_ticket;
+	PtSetResource( widget, Pt_ARG_MOZ_UNKNOWN_RESP, &resp, NULL );
+#endif
+
+	return (Pt_CONTINUE);
+}
+
+int moz_download_cb(PtWidget_t *widget, void *data, PtCallbackInfo_t *cbinfo)
+{
+	PtWebDownloadCallback_t *cb = ( PtWebDownloadCallback_t * ) cbinfo->cbdata;
+
+	printf("moz_download_cb called, received %d of %d\n", cb->current, cb->total);
+	//
+	// Here we can report to the UI on the download's progress
+	//
+	//PtWebReportDownload( swidget, cb->url, cb->download_ticket, cb->type, cb->current, cb->total, cb->message );
 
 	return (Pt_CONTINUE);
 }
@@ -783,10 +899,15 @@ PtWidget_t *create_browser_window(unsigned window_flags)
     PtAddCallback(info->web, Pt_CB_MOZ_DIALOG, 		moz_dialog_cb, NULL);
     PtAddCallback(info->web, Pt_CB_MOZ_PROMPT, 		moz_prompt_cb, NULL);
     PtAddCallback(info->web, Pt_CB_MOZ_NEW_WINDOW,		moz_new_window_cb, NULL);
+	PtAddCallback(info->web, Pt_CB_MOZ_NEW_AREA,      moz_new_area_cb, NULL);
     PtAddCallback(info->web, Pt_CB_MOZ_VISIBILITY,		moz_visibility_cb, NULL);
     PtAddCallback(info->web, Pt_CB_MOZ_DESTROY,		moz_destroy_cb, NULL);
     PtAddCallback(info->web, Pt_CB_MOZ_CONTEXT,		moz_context_cb, NULL);
     PtAddCallback(info->web, Pt_CB_MOZ_PRINT_STATUS,	moz_print_status_cb, NULL);
+	PtAddCallback(info->web, Pt_CB_MOZ_WEB_DATA_REQ,  moz_various_cb, NULL);
+	PtAddCallback(info->web, Pt_CB_MOZ_UNKNOWN,		moz_unknown_cb, NULL);
+	PtAddCallback(info->web, Pt_CB_MOZ_ERROR,					moz_various_cb, NULL);
+	PtAddCallback(info->web, Pt_CB_MOZ_DOWNLOAD,	moz_download_cb, NULL);
 	
   	window_count++;
 
@@ -802,8 +923,16 @@ main(int argc, char **argv)
 	PtWidget_t *win;
 	struct window_info *i;
 	char *argv0 = strdup(argv[0]);
+	PhChannelParms_t cparms;
 
-	PtInit(NULL);
+	memset( &cparms, 0, sizeof( cparms ) );
+	cparms.flags = Ph_NO_HOLD | Ph_DYNAMIC_BUFFER;
+	PhAttach( NULL, &cparms );
+	if ( PtInit( NULL ) == -1 ) 
+	{
+		fprintf(stderr,"Unable to Connect to Photon (%s)\n",strerror(errno));
+		exit(EXIT_FAILURE);
+	}
 
 	/*
 	 * Set MOZILLA_FIVE_HOME if it is not already set.

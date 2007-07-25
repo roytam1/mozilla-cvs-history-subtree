@@ -42,7 +42,15 @@
 #define XPCOM_TRANSLATE_NSGM_ENTRY_POINT 1
 
 #include "nsIGenericFactory.h"
-#include "nsStaticComponent.h"
+// Must be implemented by some part of the app, if we're building the
+// static component loader.
+//#include "nsStaticComponent.h"
+#include "nsIModule.h"
+#include "nsModule.h"
+extern "C" {
+typedef nsresult (PR_CALLBACK *NSGetStaticModuleInfoFunc)(nsStaticModuleInfo **info, PRUint32 *count);
+extern NS_COM NSGetStaticModuleInfoFunc NSGetStaticModuleInfo;
+}
 
 /**
  * Construct a unique NSGetModule entry point for a generic module.

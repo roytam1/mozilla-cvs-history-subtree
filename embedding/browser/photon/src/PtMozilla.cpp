@@ -94,7 +94,7 @@
 //#include "nsUnknownContentTypeHandler.h"
 
 #ifdef _BUILD_STATIC_BIN
-#include "nsStaticComponent.h"
+#include "nsStaticComponents.h"
 nsresult PR_CALLBACK
 ph_getModuleInfo(nsStaticModuleInfo **info, PRUint32 *count);
 #endif
@@ -1035,11 +1035,11 @@ static int StartupEmbedding()
   nsresult rv;
 
 #ifdef _BUILD_STATIC_BIN
-  // Initialize XPCOM's module info table
-  NSGetStaticModuleInfo = ph_getModuleInfo;
+  rv = NS_InitEmbedding(nsnull, nsnull, kPStaticModules, kStaticModuleCount);
+#else
+  rv = NS_InitEmbedding(nsnull, nsnull);
 #endif
 
-  rv = NS_InitEmbedding(nsnull, nsnull);
   if( NS_FAILED( rv ) ) return -1;
 
 	char *profile_dir;
