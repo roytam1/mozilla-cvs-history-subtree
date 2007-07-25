@@ -4382,12 +4382,12 @@ enum BWCOpenDest {
 
   [inMenu insertItem:[NSMenuItem separatorItem] atIndex:dictionaryItemsInsertBase];
 
-  [inMenu insertItemWithTitle:NSLocalizedString(@"Ignore Spelling", nil) 
+  [inMenu insertItemWithTitle:NSLocalizedString(@"IgnoreSpelling", nil) 
                        action:@selector(ignoreWord:) 
                 keyEquivalent:@"" 
                       atIndex:(dictionaryItemsInsertBase + 1)];
 
-  [inMenu insertItemWithTitle:NSLocalizedString(@"Learn Spelling", nil) 
+  [inMenu insertItemWithTitle:NSLocalizedString(@"LearnSpelling", nil) 
                        action:@selector(learnWord:) 
                 keyEquivalent:@"" 
                       atIndex:(dictionaryItemsInsertBase + 2)];
