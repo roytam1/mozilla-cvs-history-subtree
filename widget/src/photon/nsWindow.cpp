@@ -952,14 +952,30 @@ NS_IMETHODIMP nsWindow::SetFocus(PRBool aRaise)
 	if( PtIsFocused( mWidget ) == 2 ) return NS_OK;
 
 	if( mWidget ) {
+#if 0
 		PtWidget_t *disjoint;
 		disjoint = PtFindDisjoint( mWidget );
 		if( PtWidgetIsClass( disjoint, PtWindow ) ) {
+			printf("    disjoint is a PtWindow\n");
 			if( !( PtWindowGetState( disjoint ) & Ph_WM_STATE_ISFOCUS ) ) {
+				printf("    disjoint is not in focus, bringing it to front\n");
 				nsWindow *pWin = (nsWindow *) GetInstance( disjoint );
+				//
+				// The following line was causing TestPhEmbed (and therefore
+				// kwww) to crash. Mozserver was unaffected because the disjoint
+				// widget is a PtServer. So it seems like we don't need to bring
+				// the disjoint widget to front anyways. Standalone Firefox
+				// does have a disjoint widget that is a PtWindow, but we never
+				// seem to get in here because it's always in focus for some
+				// reason. So I am commenting out this whole section of 
+				// seemingly unnecessary code. This following call is through
+				// an overloaded "->" operator through a templated class.
+				//
 				pWin->GetAttention( -1 );
 				}
 			}
+		printf("    Giving container focus\n");
+#endif
 		PtContainerGiveFocus( mWidget, NULL );
 		}
 	return NS_OK;
