@@ -1,5 +1,5 @@
 /* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
- * vim: set ts=8 sw=4 et tw=80:
+ * vim: set ts=8 sw=4 et tw=78:
  *
  * ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
@@ -222,6 +222,7 @@ void DEBUG_CheckWrapperThreadSafety(const XPCWrappedNative* wrapper);
 #define XPC_NATIVE_JSCLASS_MAP_SIZE         32
 #define XPC_THIS_TRANSLATOR_MAP_SIZE         8
 #define XPC_NATIVE_WRAPPER_MAP_SIZE         16
+#define XPC_WRAPPER_MAP_SIZE                 8
 
 /***************************************************************************/
 // data declarations...
@@ -480,15 +481,17 @@ public:
     nsresult GetInfoForIID(const nsIID * aIID, nsIInterfaceInfo** info);
     nsresult GetInfoForName(const char * name, nsIInterfaceInfo** info);
 
-    // from nsCycleCollectionLanguageRuntime and nsCycleCollectionParticipant
-    nsresult BeginCycleCollection();
+    // nsCycleCollectionParticipant
     NS_IMETHOD Root(void *p);
     NS_IMETHOD Unlink(void *p);
     NS_IMETHOD Unroot(void *p);
     NS_IMETHOD Traverse(void *p,
                         nsCycleCollectionTraversalCallback &cb);
-    nsresult FinishCycleCollection();
-    nsCycleCollectionParticipant *ToParticipant(void *p) {return this;}
+    
+    // nsCycleCollectionLanguageRuntime
+    virtual nsresult BeginCycleCollection();
+    virtual nsresult FinishCycleCollection();
+    virtual nsCycleCollectionParticipant *ToParticipant(void *p);
 
     JSObjectRefcounts* GetJSObjectRefcounts() {return mObjRefcounts;}
 #ifndef XPCONNECT_STANDALONE
@@ -1105,6 +1108,9 @@ public:
     Native2WrappedNativeMap*
     GetWrappedNativeMap() const {return mWrappedNativeMap;}
 
+    WrappedNative2WrapperMap*
+    GetWrapperMap() const {return mWrapperMap;}
+
     ClassInfo2WrappedNativeProtoMap*
     GetWrappedNativeProtoMap() const {return mWrappedNativeProtoMap;}
 
@@ -1200,6 +1206,7 @@ private:
     XPCJSRuntime*                    mRuntime;
     Native2WrappedNativeMap*         mWrappedNativeMap;
     ClassInfo2WrappedNativeProtoMap* mWrappedNativeProtoMap;
+    WrappedNative2WrapperMap*        mWrapperMap;
     nsXPCComponents*                 mComponents;
     XPCWrappedNativeScope*           mNext;
     // The JS global object for this scope.  If non-null, this will be the
@@ -2087,11 +2094,9 @@ public:
         if(mScriptableInfo && JS_IsGCMarkingTracer(trc))
             mScriptableInfo->Mark();
         if(HasProto()) mMaybeProto->TraceJS(trc);
-        if(mNativeWrapper)
-        {
-            JS_CALL_OBJECT_TRACER(trc, mNativeWrapper,
-                                  "XPCWrappedNative::mNativeWrapper");
-        }
+        if(mWrapper)
+            JS_CALL_OBJECT_TRACER(trc, mWrapper, "XPCWrappedNative::mWrapper");
+        TraceOtherWrapper(trc);
     }
 
     inline void AutoTrace(JSTracer* trc)
@@ -2130,8 +2135,8 @@ public:
 
     JSBool HasExternalReference() const {return mRefCnt > 1;}
 
-    JSObject* GetNativeWrapper()              { return mNativeWrapper; }
-    void      SetNativeWrapper(JSObject *obj) { mNativeWrapper = obj; }
+    JSObject* GetWrapper()              { return mWrapper; }
+    void      SetWrapper(JSObject *obj) { mWrapper = obj; }
 
     // Make ctor and dtor protected (rather than private) to placate nsCOMPtr.
 protected:
@@ -2149,6 +2154,7 @@ protected:
     virtual ~XPCWrappedNative();
 
 private:
+    void TraceOtherWrapper(JSTracer* trc);
     JSBool Init(XPCCallContext& ccx, JSObject* parent, JSBool isGlobal,
                 const XPCNativeScriptableCreateInfo* sci);
 
@@ -2179,7 +2185,7 @@ private:
     JSObject*                    mFlatJSObject;
     XPCNativeScriptableInfo*     mScriptableInfo;
     XPCWrappedNativeTearOffChunk mFirstChunk;
-    JSObject*                    mNativeWrapper;
+    JSObject*                    mWrapper;
 
 public:
     nsCOMPtr<nsIThread>          mThread; // Don't want to overload _mOwningThread
@@ -3752,10 +3758,15 @@ xpc_CreateSandboxObject(JSContext * cx, jsval * vp, nsISupports *prinOrSop);
 // that *rval doesn't get collected during the call or usage after the
 // call. This helper will use filename and lineNo for error reporting,
 // and if no filename is provided it will use the codebase from the
-// principal and line number 1 as a fallback.
+// principal and line number 1 as a fallback. if returnStringOnly is
+// true, then the result in *rval, or the exception in cx->exception
+// will be coerced into strings. If an exception is thrown converting
+// an exception to a string, evalInSandbox will return an NS_ERROR_*
+// result, and cx->exception will be empty.
 nsresult
 xpc_EvalInSandbox(JSContext *cx, JSObject *sandbox, const nsAString& source,
-                  const char *filename, PRInt32 lineNo, jsval *rval);
+                  const char *filename, PRInt32 lineNo,
+                  PRBool returnStringOnly, jsval *rval);
 #endif /* !XPCONNECT_STANDALONE */
 
 /***************************************************************************/
@@ -3783,6 +3794,9 @@ XPC_SJOW_Construct(JSContext *cx, JSObject *obj, uintN, jsval *argv,
 PRBool
 XPC_SJOW_AttachNewConstructorObject(XPCCallContext &ccx,
                                     JSObject *aGlobalObject);
+
+JSBool
+XPC_XOW_WrapObject(JSContext *cx, JSObject *parent, jsval *vp);
 
 #ifdef XPC_IDISPATCH_SUPPORT
 // IDispatch specific classes

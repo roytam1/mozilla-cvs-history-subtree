@@ -176,6 +176,14 @@ gfx/cairo/glitz/src/wgl/Makefile
 "
 fi
 
+if [ ! "$MOZ_NATIVE_LCMS" ] ; then
+MAKEFILES_gfx="$MAKEFILES_gfx
+modules/lcms/Makefile
+modules/lcms/include/Makefile
+modules/lcms/src/Makefile
+"
+fi
+
 MAKEFILES_htmlparser="
 parser/htmlparser/Makefile
 parser/htmlparser/robot/Makefile
@@ -643,19 +651,6 @@ xpinstall/public/Makefile
 xpinstall/res/Makefile
 xpinstall/src/Makefile
 xpinstall/stub/Makefile
-xpinstall/wizard/libxpnet/Makefile
-xpinstall/wizard/libxpnet/src/Makefile
-xpinstall/wizard/libxpnet/test/Makefile
-xpinstall/wizard/unix/src2/Makefile
-xpinstall/wizard/windows/builder/Makefile
-xpinstall/wizard/windows/nsinstall/Makefile
-xpinstall/wizard/windows/nsztool/Makefile
-xpinstall/wizard/windows/uninstall/Makefile
-xpinstall/wizard/windows/setup/Makefile
-xpinstall/wizard/windows/setuprsc/Makefile
-xpinstall/wizard/windows/ren8dot3/Makefile
-xpinstall/wizard/windows/ds32/Makefile
-xpinstall/wizard/windows/GetShortPathName/Makefile
 "
 
 MAKEFILES_xpfe="
@@ -712,7 +707,6 @@ xpfe/components/alerts/public/Makefile
 xpfe/components/alerts/src/Makefile
 xpfe/components/console/Makefile
 xpfe/components/resetPref/Makefile
-xpfe/components/killAll/Makefile
 xpfe/components/build/Makefile
 xpfe/components/xremote/Makefile
 xpfe/components/xremote/public/Makefile

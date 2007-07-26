@@ -164,6 +164,7 @@ MODULES_core :=                                 \
   mozilla/js/src/liveconnect                    \
   mozilla/js/src/xpconnect                      \
   mozilla/js/jsd/idl                            \
+  mozilla/modules/lcms                          \
   mozilla/modules/libimg                        \
   mozilla/modules/libjar                        \
   mozilla/modules/libpr0n                       \
@@ -432,7 +433,7 @@ MODULES_all :=                                  \
 MOZ_CO_TAG           = ZAP_20050610_BRANCH
 
 NSPR_CO_TAG          = NSPR_HEAD_20070713
-NSS_CO_TAG           = NSS_3_11_7_WITH_CKBI_1_64_RTM
+NSS_CO_TAG           = NSS_3_12_ALPHA1A
 LDAPCSDK_CO_TAG      = LDAPCSDK_6_0_3_CLIENT_BRANCH
 LOCALES_CO_TAG       =
 
