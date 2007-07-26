@@ -37,7 +37,7 @@
 
 debug("*** loading SipSyntaxFactory\n");
 
-Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
+Components.utils.import("resource://gre/components/zapXPCOMUtils.jsm");
 Components.utils.import("resource://gre/components/ClassUtils.jsm");
 Components.utils.import("resource://gre/components/ArrayUtils.jsm");
 Components.utils.import("resource://gre/components/StringUtils.jsm");
@@ -2950,9 +2950,9 @@ var theSyntaxFactory = SipSyntaxFactory.instantiate();
 ////////////////////////////////////////////////////////////////////////
 // Module definition
 
-NSGetModule = XPCOMUtils.generateNSGetModule(
+NSGetModule = zapXPCOMUtils.generateNSGetModule(
   [{ className  : "ZAP SIP Syntax Factory",
      cid        : Components.ID("{a8e60fb1-5880-4392-95b4-404ab52ea323}"),
      contractID : "@mozilla.org/zap/sipsyntaxfactory;1",
-     factory    : XPCOMUtils.generateFactory(function() { return theSyntaxFactory; })
+     factory    : zapXPCOMUtils.generateFactory(function() { return theSyntaxFactory; })
   }]);

@@ -38,7 +38,7 @@
 
 debug("*** loading SdpService\n");
 
-Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
+Components.utils.import("resource://gre/components/zapXPCOMUtils.jsm");
 Components.utils.import("resource://gre/components/ClassUtils.jsm");
 Components.utils.import("resource://gre/components/ArrayUtils.jsm");
 Components.utils.import("resource://gre/components/StringUtils.jsm");
@@ -1040,9 +1040,9 @@ var theSdpService = SdpService.instantiate();
 ////////////////////////////////////////////////////////////////////////
 // Module definition
 
-NSGetModule = XPCOMUtils.generateNSGetModule(
+NSGetModule = zapXPCOMUtils.generateNSGetModule(
   [{ className  : "ZAP SDP Service",
      cid        : Components.ID("{5de0fd79-a03e-4640-ab99-186f5c66f5bb}"),
      contractID : "@mozilla.org/zap/sdpservice;1",
-     factory    : XPCOMUtils.generateFactory(function() { return theSdpService; })
+     factory    : zapXPCOMUtils.generateFactory(function() { return theSdpService; })
   }]);

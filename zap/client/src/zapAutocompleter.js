@@ -38,7 +38,7 @@
 
 debug("*** loading zapAutocompleter\n");
 
-Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
+Components.utils.import("resource://gre/components/zapXPCOMUtils.jsm");
 Components.utils.import("resource://gre/components/ClassUtils.jsm");
 Components.utils.import("resource://gre/components/ArrayUtils.jsm");
 Components.utils.import("resource://gre/components/StringUtils.jsm");
@@ -237,9 +237,9 @@ zapAutocompleter.fun(function stopSearch() {});
 ////////////////////////////////////////////////////////////////////////
 // Module definition
 
-NSGetModule = XPCOMUtils.generateNSGetModule(
+NSGetModule = zapXPCOMUtils.generateNSGetModule(
   [{ className  : "ZAP Autocompleter",
      cid        : Components.ID("{d65246a4-9778-4124-8c3d-e76efe44b6d8}"),
      contractID : "@mozilla.org/autocomplete/search;1?name=zap-autocomplete",
-     factory    : XPCOMUtils.generateFactory(function() { return zapAutocompleter.instantiate(); })
+     factory    : zapXPCOMUtils.generateFactory(function() { return zapAutocompleter.instantiate(); })
   }]);

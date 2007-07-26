@@ -37,7 +37,7 @@
 
 debug("*** loading SipAuthentication.js\n");
 
-Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
+Components.utils.import("resource://gre/components/zapXPCOMUtils.jsm");
 Components.utils.import("resource://gre/components/ClassUtils.jsm");
 Components.utils.import("resource://gre/components/ArrayUtils.jsm");
 Components.utils.import("resource://gre/components/StringUtils.jsm");
@@ -272,10 +272,10 @@ SipAuthentication.fun(
 ////////////////////////////////////////////////////////////////////////
 // Module definition
 
-NSGetModule = XPCOMUtils.generateNSGetModule(
+NSGetModule = zapXPCOMUtils.generateNSGetModule(
   [{ className  : "ZAP SIP Authentication API",
      cid        : Components.ID("{5e6e20ab-3ebb-43f8-9b60-41adce227ab4}"),
      contractID : "@mozilla.org/zap/sipauth;1",
-     factory    : XPCOMUtils.generateFactory(function() { return SipAuthentication.instantiate(); })
+     factory    : zapXPCOMUtils.generateFactory(function() { return SipAuthentication.instantiate(); })
   }]);
 

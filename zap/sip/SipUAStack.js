@@ -38,7 +38,7 @@
 
 debug("*** loading SipUAStack\n");
 
-Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
+Components.utils.import("resource://gre/components/zapXPCOMUtils.jsm");
 Components.utils.import("resource://gre/components/ClassUtils.jsm");
 Components.utils.import("resource://gre/components/ArrayUtils.jsm");
 Components.utils.import("resource://gre/components/StringUtils.jsm");
@@ -780,10 +780,10 @@ SipUAStack.fun(
 ////////////////////////////////////////////////////////////////////////
 // Module definition
 
-NSGetModule = XPCOMUtils.generateNSGetModule(
+NSGetModule = zapXPCOMUtils.generateNSGetModule(
   [{ className  : "ZAP SIP User Agent Stack",
      cid        : Components.ID("{7377a41d-7bee-4729-8803-0b32218c1a9e}"),
      contractID : "@mozilla.org/zap/sipstack;1",
-     factory    : XPCOMUtils.generateFactory(function() { return SipUAStack.instantiate(); })
+     factory    : zapXPCOMUtils.generateFactory(function() { return SipUAStack.instantiate(); })
   }]);
 

@@ -37,7 +37,7 @@
 
 debug("*** loading LoggingService.js\n");
 
-Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
+Components.utils.import("resource://gre/components/zapXPCOMUtils.jsm");
 Components.utils.import("resource://gre/components/ClassUtils.jsm");
 Components.utils.import("resource://gre/components/ArrayUtils.jsm");
 Components.utils.import("resource://gre/components/StringUtils.jsm");
@@ -98,9 +98,9 @@ var theLoggingService = LoggingService.instantiate();
 ////////////////////////////////////////////////////////////////////////
 // Module definition
 
-NSGetModule = XPCOMUtils.generateNSGetModule(
+NSGetModule = zapXPCOMUtils.generateNSGetModule(
   [{ className  : "ZAP Logging Service",
      cid        : Components.ID("{3ae046d9-a9b0-4033-8637-755eb015a986}"),
      contractID : "@mozilla.org/zap/loggingservice;1",
-     factory    : XPCOMUtils.generateFactory(function() { return theLoggingService; })
+     factory    : zapXPCOMUtils.generateFactory(function() { return theLoggingService; })
   }]);

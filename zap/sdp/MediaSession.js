@@ -38,7 +38,7 @@
 
 debug("*** loading MediaSession\n");
 
-Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
+Components.utils.import("resource://gre/components/zapXPCOMUtils.jsm");
 Components.utils.import("resource://gre/components/ClassUtils.jsm");
 Components.utils.import("resource://gre/components/ArrayUtils.jsm");
 Components.utils.import("resource://gre/components/StringUtils.jsm");
@@ -449,9 +449,9 @@ MediaSession.fun(
 ////////////////////////////////////////////////////////////////////////
 // Module definition
 
-NSGetModule = XPCOMUtils.generateNSGetModule(
+NSGetModule = zapXPCOMUtils.generateNSGetModule(
   [{ className  : "ZAP Media Session",
      cid        : Components.ID("{6ec361e6-eb0d-40ae-a2a5-5bcc942784b6}"),
      contractID : "@mozilla.org/zap/mediasession;1",
-     factory    : XPCOMUtils.generateFactory(function() { return MediaSession.instantiate(); })
+     factory    : zapXPCOMUtils.generateFactory(function() { return MediaSession.instantiate(); })
   }]);

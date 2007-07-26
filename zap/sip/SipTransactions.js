@@ -37,7 +37,7 @@
 
 debug("*** loading SipTransactions\n");
 
-Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
+Components.utils.import("resource://gre/components/zapXPCOMUtils.jsm");
 Components.utils.import("resource://gre/components/ClassUtils.jsm");
 Components.utils.import("resource://gre/components/ArrayUtils.jsm");
 Components.utils.import("resource://gre/components/StringUtils.jsm");
@@ -1094,10 +1094,10 @@ SipTransactionManager.fun(
 ////////////////////////////////////////////////////////////////////////
 // Module definition
 
-NSGetModule = XPCOMUtils.generateNSGetModule(
+NSGetModule = zapXPCOMUtils.generateNSGetModule(
   [{ className  : "ZAP SIP Transaction Manager",
      cid        : Components.ID("{8a6d1bad-ef92-4559-9ea1-4176ff630f07}"),
      contractID : "@mozilla.org/zap/siptransactmgr;1",
-     factory    : XPCOMUtils.generateFactory(function() { return SipTransactionManager.instantiate(); })
+     factory    : zapXPCOMUtils.generateFactory(function() { return SipTransactionManager.instantiate(); })
   }]);
 

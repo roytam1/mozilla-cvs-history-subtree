@@ -37,7 +37,7 @@
 
 debug("*** loading zapStunResolver\n");
 
-Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
+Components.utils.import("resource://gre/components/zapXPCOMUtils.jsm");
 Components.utils.import("resource://gre/components/ClassUtils.jsm");
 Components.utils.import("resource://gre/components/ArrayUtils.jsm");
 Components.utils.import("resource://gre/components/StringUtils.jsm");
@@ -294,11 +294,11 @@ zapStunResolver.fun(
 ////////////////////////////////////////////////////////////////////////
 // Module definition
 
-NSGetModule = XPCOMUtils.generateNSGetModule(
+NSGetModule = zapXPCOMUtils.generateNSGetModule(
   [
    { className  : "ZAP STUN Resolver",
      cid        : Components.ID("{3e2e9ff8-89b8-442a-a190-8cecabb93c78}"),
      contractID : "@mozilla.org/zap/stun-resolver;1",
-     factory    : XPCOMUtils.generateFactory(function() { return zapStunResolver.instantiate(); })
+     factory    : zapXPCOMUtils.generateFactory(function() { return zapStunResolver.instantiate(); })
    }
   ]);

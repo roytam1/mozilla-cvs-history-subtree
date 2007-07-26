@@ -38,7 +38,7 @@
 
 debug("*** loading SipResolver.js\n");
 
-Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
+Components.utils.import("resource://gre/components/zapXPCOMUtils.jsm");
 Components.utils.import("resource://gre/components/ClassUtils.jsm");
 Components.utils.import("resource://gre/components/ArrayUtils.jsm");
 Components.utils.import("resource://gre/components/StringUtils.jsm");
@@ -119,10 +119,10 @@ SipResolver.fun(
 ////////////////////////////////////////////////////////////////////////
 // Module definition
 
-NSGetModule = XPCOMUtils.generateNSGetModule(
+NSGetModule = zapXPCOMUtils.generateNSGetModule(
   [{ className  : "ZAP SIP Resolver",
      cid        : Components.ID("{5dcd9252-efd0-4664-9a6d-546e89a5cd22}"),
      contractID : "@mozilla.org/zap/sipresolver;1",
-     factory    : XPCOMUtils.generateFactory(function() { return SipResolver.instantiate(); })
+     factory    : zapXPCOMUtils.generateFactory(function() { return SipResolver.instantiate(); })
   }]);
 

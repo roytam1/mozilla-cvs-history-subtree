@@ -37,7 +37,7 @@
 
 debug("*** loading zapVerboseErrorService.js\n");
 
-Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
+Components.utils.import("resource://gre/components/zapXPCOMUtils.jsm");
 Components.utils.import("resource://gre/components/ClassUtils.jsm");
 Components.utils.import("resource://gre/components/ArrayUtils.jsm");
 Components.utils.import("resource://gre/components/StringUtils.jsm");
@@ -119,9 +119,9 @@ var theVerboseErrorService = zapVerboseErrorService.instantiate();
 ////////////////////////////////////////////////////////////////////////
 // Module definition
 
-NSGetModule = XPCOMUtils.generateNSGetModule(
+NSGetModule = zapXPCOMUtils.generateNSGetModule(
   [{ className  : "ZAP Verbose Error Service",
      cid        : Components.ID("{071b583f-174e-452c-a558-697601e04e20}"),
      contractID : "@mozilla.org/zap/verbose-error-service;1",
-     factory    : XPCOMUtils.generateFactory(function() { return theVerboseErrorService; })
+     factory    : zapXPCOMUtils.generateFactory(function() { return theVerboseErrorService; })
   }]);

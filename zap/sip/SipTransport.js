@@ -37,7 +37,7 @@
 
 debug("*** loading SipTransport\n");
 
-Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
+Components.utils.import("resource://gre/components/zapXPCOMUtils.jsm");
 Components.utils.import("resource://gre/components/ClassUtils.jsm");
 Components.utils.import("resource://gre/components/ArrayUtils.jsm");
 Components.utils.import("resource://gre/components/StringUtils.jsm");
@@ -1191,17 +1191,17 @@ debug("*** SipTransport 3\n");
 ////////////////////////////////////////////////////////////////////////
 // Module definition
 
-NSGetModule = XPCOMUtils.generateNSGetModule(
+NSGetModule = zapXPCOMUtils.generateNSGetModule(
   [
    { className  : "ZAP SIP Transceiver",
      cid        : Components.ID("{a872ed47-0696-46d5-b6ed-12e2ee691737}"),
      contractID : "@mozilla.org/zap/siptransceiver;1",
-     factory    : XPCOMUtils.generateFactory(function() { return SipTransceiver.instantiate(); })
+     factory    : zapXPCOMUtils.generateFactory(function() { return SipTransceiver.instantiate(); })
    },
    { className  : "ZAP SIP Transport",
      cid        : Components.ID("{564b569b-4350-420c-b247-2581ace9e780}"),
      contractID : "@mozilla.org/zap/siptransport;1",
-     factory    : XPCOMUtils.generateFactory(function() { return SipTransport.instantiate(); })
+     factory    : zapXPCOMUtils.generateFactory(function() { return SipTransport.instantiate(); })
    }
   ]);
 

@@ -34,7 +34,7 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
+Components.utils.import("resource://gre/components/zapXPCOMUtils.jsm");
 
 function ZAPCmdLineHandler() {
 }
@@ -81,25 +81,25 @@ ZAPCmdLineHandler.prototype = {
 
 };
 
-NSGetModule = XPCOMUtils.generateNSGetModule(
+NSGetModule = zapXPCOMUtils.generateNSGetModule(
   [
     {
       className  : "ZAPCmdLineHandler",
       cid        : Components.ID("fce37800-ad8d-40fe-87e3-3bc9d3c7457a"),
       contractID : "@mozilla.org/zapcmdlinehandler;1",
-      factory    : XPCOMUtils.generateFactory(function(){ return new ZAPCmdLineHandler();},
+      factory    : zapXPCOMUtils.generateFactory(function(){ return new ZAPCmdLineHandler();},
                                                   [Components.interfaces.nsICommandLineHandler])
     }
   ],
 
   function(mgr,file,arr) {
-    XPCOMUtils.categoryManager.addCategoryEntry("command-line-handler",
+    zapXPCOMUtils.categoryManager.addCategoryEntry("command-line-handler",
                                                     "z-zap-cmd",
                                                     arr[0].contractID,
                                                     true, true);
   },
   function(mgr,file,arr) {
-    XPCOMUtils.categoryManager.deleteCategoryEntry("command-line-handler",
+    zapXPCOMUtils.categoryManager.deleteCategoryEntry("command-line-handler",
                                                        "z-zap-cmd", true);
   }
 );

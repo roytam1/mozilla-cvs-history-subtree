@@ -37,7 +37,7 @@
 
 debug("*** loading zapUUIDGenerator.js\n");
 
-Components.utils.import("resource://gre/modules/XPCOMUtils.jsm");
+Components.utils.import("resource://gre/components/zapXPCOMUtils.jsm");
 Components.utils.import("resource://gre/components/ClassUtils.jsm");
 Components.utils.import("resource://gre/components/ArrayUtils.jsm");
 Components.utils.import("resource://gre/components/StringUtils.jsm");
@@ -100,9 +100,9 @@ var theUUIDGenerator = zapUUIDGenerator.instantiate();
 ////////////////////////////////////////////////////////////////////////
 // Module definition
 
-NSGetModule = XPCOMUtils.generateNSGetModule(
+NSGetModule = zapXPCOMUtils.generateNSGetModule(
   [{ className  : "ZAP UUID Generator",
      cid        : Components.ID("{a119ec9d-ebdf-4df9-aec6-a659f6e4d674}"),
      contractID : "@mozilla.org/zap/uuid-generator;1",
-     factory    : XPCOMUtils.generateFactory(function() { return theUUIDGenerator; })
+     factory    : zapXPCOMUtils.generateFactory(function() { return theUUIDGenerator; })
   }]);
