@@ -1694,13 +1694,18 @@ ldap_url_parse(url)
 	      static char *filter_key = "filter";
 	      static char *options_key = "options";
 	      SV* options = newSViv(realcomp->lud_options);
-	      SV* host = newSVpv(realcomp->lud_host,0);
+	      SV* host; /* = newSVpv(realcomp->lud_host,0); */
 	      SV* port = newSViv(realcomp->lud_port);
 	      SV* dn; /* = newSVpv(realcomp->lud_dn,0); */
 	      SV* scope = newSViv(realcomp->lud_scope);
 	      SV* filter = newSVpv(realcomp->lud_filter,0);
 	      AV* attrarray = newAV();
 	      SV* attribref = newRV((SV*) attrarray);
+
+	      if (realcomp->lud_host)
+	         host = newSVpv(realcomp->lud_host,0);
+	      else
+	         host = newSVpv("",0);
 
 	      if (realcomp->lud_dn)
 	         dn = newSVpv(realcomp->lud_dn,0);

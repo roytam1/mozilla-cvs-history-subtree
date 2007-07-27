@@ -4,7 +4,7 @@
 
 Summary: LDAP Perl module that wraps the Mozilla C SDK
 Name: perl-Mozilla-LDAP
-Version: 1.5.1
+Version: 1.5.2
 Release: 1%{?dist}
 License: GPL/LGPL/MPL
 Group: Development/Libraries
@@ -86,6 +86,9 @@ rm -rf $RPM_BUILD_ROOT
 %doc CREDITS ChangeLog README MPL-1.1.txt
 
 %changelog
+* Fri Jul 27 2007 Rich Megginson <richm@stanfordalumni.org> - 1.5.2-1
+- Fix bugzilla 389731 - crash when a bad URL is passed
+
 * Wed Jun 20 2007 Rich Megginson <richm@stanfordalumni.org> - 1.5.1-1
 - all files have been GPL/LGPL/MPL tri-licensed
 

@@ -4,6 +4,20 @@
 #                                                                           #
 #############################################################################
 
+VERSION 1.5.2 - Jul 2007
+========================
+
+Fixes https://bugzilla.mozilla.org/show_bug.cgi?id=389731
+PerLDAP crashes when a bad URL is passed
+
+VERSION 1.5.1 - May 2007
+========================
+This version is the officially tri-licensed version.  All code
+is licensed under the MPL/GPL/LGPL tri-license, as all of the
+other Mozilla components.  All code was either granted permission
+by the copyright holder, or was rewritten in a clean-room
+implementation.
+
 VERSION 1.5 - Feb 2006
 ======================
 
