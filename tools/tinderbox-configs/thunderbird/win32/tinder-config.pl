@@ -143,11 +143,11 @@ $ConfigureOnly = 1;
 $LocalizationVersionFile = 'mail/config/version.txt';
 %WGetFiles = (
 # CONFIG:          "http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/%version%-candidates/rc%rc%/unsigned/thunderbird-%version%.en-US.win32.installer.exe" =>
-"http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/2.0.0.6-candidates/rc1/unsigned/thunderbird-2.0.0.6.en-US.win32.installer.exe" =>
+"http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/2.0.0.6-candidates/rc2/unsigned/thunderbird-2.0.0.6.en-US.win32.installer.exe" =>
 # CONFIG:  	      "/cygdrive/c/builds/tinderbox/Tb-Mozilla1.8-l10n-Release/%l10n_buildPlatform%/thunderbird-installer.exe",
 "/cygdrive/c/builds/tinderbox/Tb-Mozilla1.8-l10n-Release/WINNT_5.2_Depend/thunderbird-installer.exe",
 # CONFIG:         "http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/%version%-candidates/rc%rc%/unsigned/thunderbird-%version%.en-US.win32.zip" =>
-"http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/2.0.0.6-candidates/rc1/unsigned/thunderbird-2.0.0.6.en-US.win32.zip" =>
+"http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/2.0.0.6-candidates/rc2/unsigned/thunderbird-2.0.0.6.en-US.win32.zip" =>
 # CONFIG: 	      "/cygdrive/c/builds/tinderbox/Tb-Mozilla1.8-l10n-Release/%l10n_buildPlatform%/thunderbird.zip");
 "/cygdrive/c/builds/tinderbox/Tb-Mozilla1.8-l10n-Release/WINNT_5.2_Depend/thunderbird.zip");
 
