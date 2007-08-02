@@ -17,9 +17,5 @@ ac_add_options --disable-debug
 ac_add_options --disable-tests
 ac_add_options --enable-update-packaging
 
-ac_add_options --enable-libxul
-ac_add_options --enable-places-bookmarks
 ac_add_app_options ppc --enable-prebinding
-ac_add_options --enable-svg
-ac_add_options --enable-canvas
 ac_add_options --with-branding=browser/branding/unofficial

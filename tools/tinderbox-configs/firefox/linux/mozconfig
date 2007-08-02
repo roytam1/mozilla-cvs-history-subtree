@@ -1,6 +1,6 @@
 #
-## hostname: fx-linux-tbox
-## uname: Linux fx-linux-tbox.build.mozilla.org 2.6.9-42.ELsmp #1 SMP Sat Aug 12 09:39:11 CDT 2006 i686 i686 i386 GNU/Linux
+## hostname: fxnewref-linux-tbox
+## uname: Linux fxnewref-linux-tbox.build.mozilla.org 2.6.18-8.el5 #1 SMP Thu Mar 15 19:57:35 EDT 2007 i686 i686 i386 GNU/Linux
 #
 
 export MOZILLA_OFFICIAL=1
@@ -17,13 +17,6 @@ ac_add_options --enable-update-packaging
 ac_add_options --enable-optimize="-Os -freorder-blocks -fno-reorder-functions -gstabs+"
 ac_add_options --disable-debug
 ac_add_options --disable-tests
-ac_add_options --enable-canvas
-ac_add_options --enable-svg
-ac_add_options --enable-pango
-ac_add_options --enable-default-toolkit=cairo-gtk2
-
-ac_add_options --enable-libxul
-ac_add_options --enable-places-bookmarks
 
 ac_add_options --with-branding=browser/branding/unofficial
 
