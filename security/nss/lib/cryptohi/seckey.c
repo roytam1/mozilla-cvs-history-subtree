@@ -1779,11 +1779,6 @@ SECKEY_CreateSubjectPublicKeyInfo(SECKEYPublicKey *pubk)
     PRArenaPool *arena;
     SECItem params = { siBuffer, NULL, 0 };
 
-    if (!pubk) {
-        PORT_SetError(SEC_ERROR_INVALID_ARGS);
-        return NULL;
-    }
-
     arena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
     if (arena == NULL) {
 	PORT_SetError(SEC_ERROR_NO_MEMORY);

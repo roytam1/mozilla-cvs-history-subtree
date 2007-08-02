@@ -908,7 +908,6 @@ CERT_FindNameConstraintsExten;
 PK11_GetAllSlotsForCert;
 PK11_GenerateKeyPairWithOpFlags;
 SEC_GetRegisteredHttpClient;
-SEC_StringToOID;
 SECKEY_ECParamsToKeySize;
 SECKEY_ECParamsToBasePointOrderLen;
 SECMOD_DeleteModuleEx;

@@ -55,6 +55,7 @@
 #include "secitem.h"
 #include "pkcs11.h"
 #include "pkcs11i.h"
+#include "pkcs11p.h"
 #include "softoken.h"
 #include "lowkeyi.h"
 #include "blapi.h"

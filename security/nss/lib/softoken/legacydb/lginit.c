@@ -43,7 +43,6 @@
 #include "keydbi.h"
 #include "lgdb.h"
 #include "secoid.h"
-#include "prenv.h"
 
 typedef struct LGPrivateStr {
     NSSLOWCERTCertDBHandle *certDB;
@@ -156,7 +155,6 @@ DB * rdbopen(const char *appName, const char *prefix,
 {
     PRLibrary *lib;
     DB *db;
-    char *disableUnload = NULL;
 
     if (lg_rdbfunc) {
 	db = (*lg_rdbfunc)(appName,prefix,type,rdbmapflags(flags));
@@ -187,12 +185,7 @@ DB * rdbopen(const char *appName, const char *prefix,
     }
 
     /* couldn't find the entry point, unload the library and fail */
-#ifdef DEBUG
-    disableUnload = PR_GetEnv("NSS_DISABLE_UNLOAD");
-#endif
-    if (!disableUnload) {
-        PR_UnloadLibrary(lib);
-    }
+    PR_UnloadLibrary(lib);
     return NULL;
 }
 
@@ -551,7 +544,7 @@ lg_init(SDB **pSdb, int flags, NSSLOWCERTCertDBHandle *certdbPtr,
     sdb->sdb_Begin = lg_Begin;
     sdb->sdb_Commit = lg_Commit;
     sdb->sdb_Abort = lg_Abort;
-    sdb->sdb_Reset = lg_Reset;
+    sdb->sdb_Close = lg_Reset;
     sdb->sdb_Close = lg_Close;
 
 

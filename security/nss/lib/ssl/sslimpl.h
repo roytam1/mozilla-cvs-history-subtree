@@ -191,8 +191,6 @@ typedef enum { SSLAppOpRead = 0,
 #define BPB 8 /* Bits Per Byte */
 #endif
 
-#define EXPORT_RSA_KEY_LENGTH 64	/* bytes */
-
 typedef struct sslBufferStr             sslBuffer;
 typedef struct sslConnectInfoStr        sslConnectInfo;
 typedef struct sslGatherStr             sslGather;
@@ -486,8 +484,8 @@ typedef enum { type_stream, type_block } CipherType;
  * Do not depend upon 64 bit arithmetic in the underlying machine. 
  */
 typedef struct {
-    PRUint32         high;
-    PRUint32         low;
+    uint32         high;
+    uint32         low;
 } SSL3SequenceNumber;
 
 #define MAX_MAC_CONTEXT_BYTES 400
@@ -901,8 +899,8 @@ struct sslSecurityInfoStr {
     ** This stuff is equivalent to SSL3's "spec", and is protected by the 
     ** same "Spec Lock" as used for SSL3's specs.
     */
-    PRUint32           sendSequence;		/*xmitBufLock*/	/* ssl2 only */
-    PRUint32           rcvSequence;		/*recvBufLock*/	/* ssl2 only */
+    uint32           sendSequence;		/*xmitBufLock*/	/* ssl2 only */
+    uint32           rcvSequence;		/*recvBufLock*/	/* ssl2 only */
 
     /* Hash information; used for one-way-hash functions (MD2, MD5, etc.) */
     const SECHashObject   *hash;		/* Spec Lock */ /* ssl2 only */
@@ -1285,54 +1283,6 @@ extern void      ssl3_FilterECCipherSuitesByServerCerts(sslSocket *ss);
 extern PRBool    ssl3_IsECCEnabled(sslSocket *ss);
 extern SECStatus ssl3_DisableECCSuites(sslSocket * ss, 
                                        const ssl3CipherSuite * suite);
-
-/* Macro for finding a curve equivalent in strength to RSA key's */
-#define SSL_RSASTRENGTH_TO_ECSTRENGTH(s) \
-        ((s <= 1024) ? 160 \
-	  : ((s <= 2048) ? 224 \
-	    : ((s <= 3072) ? 256 \
-	      : ((s <= 7168) ? 384 : 521 ) ) ) )
-
-/* Types and names of elliptic curves used in TLS */
-typedef enum { ec_type_explicitPrime      = 1,
-	       ec_type_explicitChar2Curve = 2,
-	       ec_type_named
-} ECType;
-
-typedef enum { ec_noName     = 0,
-	       ec_sect163k1  = 1, 
-	       ec_sect163r1  = 2, 
-	       ec_sect163r2  = 3,
-	       ec_sect193r1  = 4, 
-	       ec_sect193r2  = 5, 
-	       ec_sect233k1  = 6,
-	       ec_sect233r1  = 7, 
-	       ec_sect239k1  = 8, 
-	       ec_sect283k1  = 9,
-	       ec_sect283r1  = 10, 
-	       ec_sect409k1  = 11, 
-	       ec_sect409r1  = 12,
-	       ec_sect571k1  = 13, 
-	       ec_sect571r1  = 14, 
-	       ec_secp160k1  = 15,
-	       ec_secp160r1  = 16, 
-	       ec_secp160r2  = 17, 
-	       ec_secp192k1  = 18,
-	       ec_secp192r1  = 19, 
-	       ec_secp224k1  = 20, 
-	       ec_secp224r1  = 21,
-	       ec_secp256k1  = 22, 
-	       ec_secp256r1  = 23, 
-	       ec_secp384r1  = 24,
-	       ec_secp521r1  = 25,
-	       ec_pastLastName
-} ECName;
-
-extern SECStatus ssl3_ECName2Params(PRArenaPool *arena, ECName curve,
-				   SECKEYECParams *params);
-ECName	ssl3_GetCurveWithECKeyStrength(PRUint32 curvemsk, int requiredECCbits);
-
-
 #endif /* NSS_ENABLE_ECC */
 
 extern SECStatus ssl3_CipherPrefSetDefault(ssl3CipherSuite which, PRBool on);

@@ -261,7 +261,7 @@ ckmk_mdCryptoOperationRSADecrypt_GetOperationLength
        (ckmkInternalCryptoOperationRSAPriv *)mdOperation->etc; 
   CSSM_DATA cssmInput;
   CSSM_DATA cssmOutput = { 0, NULL };
-  PRUint32  bytesDecrypted;
+  uint32  bytesDecrypted;
   CSSM_DATA remainder = { 0, NULL };
   NSSItem output;
   CSSM_RETURN cssmErr;

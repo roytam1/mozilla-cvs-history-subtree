@@ -221,15 +221,13 @@ extern PZLock * pz_NewLock(
 
     lock = PR_NEWZAP( PZLock );
     if ( NULL != lock )  {
-        lock->ltype = ltype;
         lock->lock = PR_NewLock();
         if ( NULL == lock->lock )  {
             PR_DELETE( lock );
-            PORT_SetError(SEC_ERROR_NO_MEMORY);
+            lock = NULL;
         }
-    } else {
-            PORT_SetError(SEC_ERROR_NO_MEMORY);
     }
+    lock->ltype = ltype;
 
     Vtrace( NewLock, ltype, 0, 0, lock, line, file );
     return(lock);
@@ -297,18 +295,14 @@ extern PZCondVar *
     PZCondVar *cvar;
 
     cvar = PR_NEWZAP( PZCondVar );
-    if ( NULL == cvar ) {
-        PORT_SetError(SEC_ERROR_NO_MEMORY);
-    } else {
-        cvar->ltype = lock->ltype; 
-        cvar->cvar = PR_NewCondVar( lock->lock );
-        if ( NULL == cvar->cvar )  {
-            PR_DELETE( cvar );
-            PORT_SetError(SEC_ERROR_NO_MEMORY);
-        }
-
+    if ( NULL == cvar ) return(NULL);
+   
+    cvar->ltype = lock->ltype; 
+    cvar->cvar = PR_NewCondVar( lock->lock );
+    if ( NULL == cvar->cvar )  {
+        PR_DELETE( cvar );
     }
-    Vtrace( NewCondVar, lock->ltype, 0, 0, cvar, line, file );
+    Vtrace( NewCondVar, cvar->ltype, 0, 0, cvar, line, file );
     return( cvar );
 } /* --- end  pz_NewCondVar() --- */
 
@@ -394,17 +388,15 @@ extern PZMonitor *
 
     mon = PR_NEWZAP( PZMonitor );
     if ( NULL != mon )  {
-        mon->ltype = ltype;
         mon->mon = PR_NewMonitor();
         if ( NULL == mon->mon )  {
             PR_DELETE( mon );
-            PORT_SetError(SEC_ERROR_NO_MEMORY);
+            return NULL;
         }
-    } else {
-        PORT_SetError(SEC_ERROR_NO_MEMORY);
     }
+    mon->ltype = ltype;
 
-    Vtrace( NewMonitor, ltype, 0, 0, mon, line, file );
+    Vtrace( NewMonitor, mon->ltype, 0, 0, mon, line, file );
     return(mon);
 } /* --- end  pz_NewMonitor() --- */
 
