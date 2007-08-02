@@ -1554,6 +1554,11 @@ public:
 
 int main(int argc, char* argv[])
 {
+#ifdef XP_WIN32
+  if (argc > 4 && !strcmp(argv[1], "-osint"))
+    return 1;
+#endif
+
   NS_TIMELINE_MARK("enter main");
   int i; //Moved here due to portability guideline 20. See bug 258055
 

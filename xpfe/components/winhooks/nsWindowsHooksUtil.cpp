@@ -59,8 +59,8 @@
 // Where Mozilla stores its own registry values.
 const char * const mozillaKeyName = "Software\\Mozilla\\Desktop";
 
-static const char shortcutSuffix[] = " -url \"%1\"";
-static const char chromeSuffix[] = " -chrome \"%1\"";
+static const char shortcutSuffix[] = " -osint -url \"%1\"";
+static const char chromeSuffix[] = " -osint -chrome \"%1\"";
 static const char iconSuffix[] = ",0";
 
 // Returns the (fully-qualified) name of this executable.
