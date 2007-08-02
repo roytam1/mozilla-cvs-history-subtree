@@ -142,10 +142,10 @@ $ConfigureOnly = 1;
 $LocalizationVersionFile = 'browser/config/version.txt';
 %WGetFiles = (
 	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/latest-mozilla1.8/firefox-%version%.en-US.mac.dmg" =>
-	      "/builds/tinderbox/Fx-Mozilla1.8-l10n/Darwin_8.7.0_Clobber/firefox.dmg"
+	      "/builds/tinderbox/Fx-Mozilla1.8-l10n/Darwin_8.7.0_Depend/firefox.dmg"
 	      );
 
-$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Fx-Mozilla1.8-l10n/Darwin_8.7.0_Clobber/firefox.dmg";
+$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Fx-Mozilla1.8-l10n/Darwin_8.7.0_Depend/firefox.dmg";
 
 #-
 #- The rest should not need to be changed
