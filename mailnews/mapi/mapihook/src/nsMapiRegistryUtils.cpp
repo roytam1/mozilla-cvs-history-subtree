@@ -691,14 +691,9 @@ nsresult nsMapiRegistryUtils::setupDefaultProtocolKey(const char * aDefaultAppRe
       // Protocols\<protocol scheme>\shell\open\command value
       nsCAutoString appPath (thisApplication());
 
-      appPath += " ";
-      if (aCmdLineText) 
-      {
-        appPath += aCmdLineText;
-        appPath += " ";
-      }
-      
-      appPath += "%1";
+      appPath += " -osint ";
+      appPath += aCmdLineText;
+      appPath += " \"%1\"";
       nsCAutoString shellOpenKey (keyName);
       shellOpenKey.AppendLiteral("\\shell\\open\\command");
 
