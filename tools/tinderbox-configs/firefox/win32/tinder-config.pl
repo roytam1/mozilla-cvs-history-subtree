@@ -28,6 +28,12 @@ $ENV{MOZ_PACKAGE_NSIS} = '1';
 #           and on the Talkback server.
 #$ENV{MOZ_SYMBOLS_TRANSFER_TYPE} = "scp";
 
+# Breakpad server variables
+$ENV{'SYMBOL_SERVER_HOST'} = 'stage.mozilla.org';
+$ENV{'SYMBOL_SERVER_USER'}   = 'ffxbld';
+$ENV{'SYMBOL_SERVER_PATH'}   = '/mnt/netapp/breakpad/symbols_ffx/';
+$ENV{'SYMBOL_SERVER_SSH_KEY'}   = "$ENV{'HOME'}/.ssh/ffxbld_dsa";
+
 #- PLEASE FILL THIS IN WITH YOUR PROPER EMAIL ADDRESS
 $BuildAdministrator = 'build@mozilla.org';
 #$BuildAdministrator = "$ENV{USER}\@$ENV{HOST}";
@@ -42,7 +48,7 @@ $BuildAdministrator = 'build@mozilla.org';
 #$BuildDebug        = 0;      # Debug or Opt (Darwin)
 #$ReportStatus      = 1;      # Send results to server, or not
 #$ReportFinalStatus = 1;      # Finer control over $ReportStatus.
-#$UseTimeStamp      = 1;      # Use the CVS 'pull-by-timestamp' option, or not
+$UseTimeStamp      = 0;      # Use the CVS 'pull-by-timestamp' option, or not
 #$BuildOnce         = 0;      # Build once, don't send results to server
 #$TestOnly          = 0;      # Only run tests, don't pull/build
 #$BuildEmbed        = 0;      # After building seamonkey, go build embed app.
@@ -141,7 +147,7 @@ $use_blat       = 0;
 #$moz_cvsroot   = $ENV{CVSROOT};
 $moz_cvsroot = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 
-$MofoRoot = ":ext:cltbld\@cvs.mozilla.org:/mofo";
+$MofoRoot   = ":ext:cltbld\@cvs.mozilla.org:/mofo";
 
 #- Set these proper values for your tinderbox server
 #$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
@@ -150,10 +156,10 @@ $MofoRoot = ":ext:cltbld\@cvs.mozilla.org:/mofo";
 #$moz_client_mk = 'client.mk';
 
 #- Set if you want to build in a separate object tree
-$ObjDir = 'obj-fx-trunk';
+#$ObjDir = 'fx-trunk-cairo';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'Nightly';
+$BuildNameExtra = 'Release';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -169,10 +175,10 @@ $BuildNameExtra = 'Nightly';
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
 #$BuildTree  = 'MozillaTest';
-$BuildTree  = 'Firefox';
+$BuildTree  = 'MozillaRelease';
 
 #$BuildName = '';
-#$BuildTag = '';
+$BuildTag = 'MOZILLA_1_9a7_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -193,8 +199,10 @@ $BinaryName = 'firefox.exe';
 
 # Release build options
 $ReleaseBuild  = 1;
-$shiptalkback  = 0;
-$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
+$shiptalkback  = 1;
+$crashreporter_buildsymbols = 1;
+$crashreporter_pushsymbols = 1;
+$ReleaseToLatest = 0; # Push the release to latest-<milestone>?
 $ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
 $build_hour    = "4";
 $package_creation_path = "/browser/installer";
@@ -206,7 +214,7 @@ $ftp_path      = "/home/ftp/pub/firefox/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
-$milestone     = "trunk";
+$milestone     = "mozilla1.9a7";
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 1;
@@ -219,13 +227,7 @@ $update_platform = "WINNT_x86-msvc";
 $update_hash = "sha1";
 $update_filehost = "ftp.mozilla.org";
 $update_ver_file = 'browser/config/version.txt';
-$update_pushinfo = 1;
-$crashreporter_buildsymbols = 1;
-$crashreporter_pushsymbols = 1;
-$ENV{SYMBOL_SERVER_HOST} = 'stage.mozilla.org';
-$ENV{SYMBOL_SERVER_USER}   = 'ffxbld';
-$ENV{SYMBOL_SERVER_PATH}   = '/mnt/netapp/breakpad/symbols_ffx/';
-$ENV{SYMBOL_SERVER_SSH_KEY}   = "$ENV{HOME}/.ssh/ffxbld_dsa";
+$update_pushinfo = 0;
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
@@ -251,3 +253,6 @@ $ENV{SYMBOL_SERVER_SSH_KEY}   = "$ENV{HOME}/.ssh/ffxbld_dsa";
 # Prevent Extension Manager from spawning child processes during tests
 # - processes that tbox scripts cannot kill. 
 #$ENV{NO_EM_RESTART} = '1';
+
+# Do not build XForms
+$BuildXForms = 0;

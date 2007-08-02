@@ -74,7 +74,6 @@ PORT_Alloc(size_t bytes)
     rv = (void *)malloc(bytes ? bytes : 1);
     if (!rv) {
 	++port_allocFailures;
-	PORT_SetError(SEC_ERROR_NO_MEMORY);
     }
     return rv;
 }
@@ -87,7 +86,6 @@ PORT_Realloc(void *oldptr, size_t bytes)
     rv = (void *)realloc(oldptr, bytes);
     if (!rv) {
 	++port_allocFailures;
-	PORT_SetError(SEC_ERROR_NO_MEMORY);
     }
     return rv;
 }
@@ -101,7 +99,6 @@ PORT_ZAlloc(size_t bytes)
     rv = (void *)calloc(1, bytes ? bytes : 1);
     if (!rv) {
 	++port_allocFailures;
-	PORT_SetError(SEC_ERROR_NO_MEMORY);
     }
     return rv;
 }
@@ -146,7 +143,6 @@ PORT_ArenaAlloc(PLArenaPool *arena, size_t size)
     PL_ARENA_ALLOCATE(p, arena, size);
     if (p == NULL) {
 	++port_allocFailures;
-	PORT_SetError(SEC_ERROR_NO_MEMORY);
     }
 
     return(p);
@@ -160,7 +156,6 @@ PORT_ArenaZAlloc(PLArenaPool *arena, size_t size)
     PL_ARENA_ALLOCATE(p, arena, size);
     if (p == NULL) {
 	++port_allocFailures;
-	PORT_SetError(SEC_ERROR_NO_MEMORY);
     } else {
 	PORT_Memset(p, 0, size);
     }
@@ -183,10 +178,6 @@ PORT_ArenaGrow(PLArenaPool *arena, void *ptr, size_t oldsize, size_t newsize)
     
     PL_ARENA_GROW(ptr, arena, oldsize, ( newsize - oldsize ) );
     
-    if (ptr == NULL) { 
-        ++port_allocFailures;
-        PORT_SetError(SEC_ERROR_NO_MEMORY);
-    }
     return(ptr);
 }
 

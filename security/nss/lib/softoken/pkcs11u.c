@@ -801,7 +801,7 @@ sftk_GetObjectFromList(PRBool *hasLocks, PRBool optimizeSpace,
 		+ hashSize *sizeof(SFTKAttribute *) : sizeof(SFTKTokenObject);
 
     object  = (SFTKObject*)PORT_ZAlloc(size);
-    if (isSessionObject && object) {
+    if (isSessionObject) {
 	((SFTKSessionObject *)object)->hashSize = hashSize;
     }
     *hasLocks = PR_FALSE;

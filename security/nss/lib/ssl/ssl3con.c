@@ -3196,7 +3196,7 @@ static SECStatus
 ssl3_ComputeHandshakeHashes(sslSocket *     ss,
                             ssl3CipherSpec *spec,   /* uses ->master_secret */
 			    SSL3Hashes *    hashes, /* output goes here. */
-			    PRUint32        sender)
+			    uint32          sender)
 {
     SECStatus     rv        = SECSuccess;
     PRBool        isTLS     = (PRBool)(spec->version > SSL_LIBRARY_VERSION_3_0);

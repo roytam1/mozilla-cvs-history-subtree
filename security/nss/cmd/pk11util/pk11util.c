@@ -56,7 +56,6 @@
 #include "prtime.h"
 #include "prlong.h"
 #include "prinrval.h"
-#include "prenv.h"
 
 #include "pkcs11.h"
 
@@ -1428,20 +1427,15 @@ putOutput(Value **ptr)
 CK_RV
 unloadModule(Module *module)
 {
-    char *disableUnload = NULL;
-
-#ifdef DEBUG 
-    disableUnload = PR_GetEnv("NSS_DISABLE_UNLOAD");
-#endif
-
-    if (module->library && !disableUnload) {
+   
+   if (module->library) {
 	PR_UnloadLibrary(module->library);
-    }
+   }
 
-    module->library = NULL;
-    module->functionList = NULL;
+   module->library = NULL;
+   module->functionList = NULL;
 
-    return CKR_OK;
+   return CKR_OK;
 }
 
 CK_RV

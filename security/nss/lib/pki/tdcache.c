@@ -954,7 +954,7 @@ nssTrustDomain_GetCertsForSubjectFromCache (
 NSS_IMPLEMENT NSSCertificate **
 nssTrustDomain_GetCertsForNicknameFromCache (
   NSSTrustDomain *td,
-  const NSSUTF8 *nickname,
+  NSSUTF8 *nickname,
   nssList *certListOpt
 )
 {

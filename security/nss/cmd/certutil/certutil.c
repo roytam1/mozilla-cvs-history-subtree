@@ -609,9 +609,6 @@ ValidateCert(CERTCertDBHandle *handle, char *name, char *date,
 	case 'R':
 	    usage = certificateUsageEmailRecipient;
 	    break;
-	case 'J':
-	    usage = certificateUsageObjectSigner;
-	    break;
 	default:
 	    PORT_SetError (SEC_ERROR_INVALID_ARGS);
 	    return (SECFailure);
@@ -835,7 +832,7 @@ Usage(char *progName)
     FPS "\t%s -C [-c issuer-name | -x] -i cert-request-file -o cert-file\n"
 	"\t\t [-m serial-number] [-w warp-months] [-v months-valid]\n"
         "\t\t [-f pwfile] [-d certdir] [-P dbprefix] [-1] [-2] [-3] [-4] [-5]\n"
-	"\t\t [-6] [-7 emailAddrs] [-8 dns-names] [-a]\n",
+	"\t\t [-6] [-7 emailAddrs] [-8 dns-names]\n",
 	progName);
     FPS "\t%s -D -n cert-name [-d certdir] [-P dbprefix]\n", progName);
     FPS "\t%s -E -n cert-name -t trustargs [-d certdir] [-P dbprefix] [-a] [-i input]\n", 
@@ -947,8 +944,6 @@ static void LongUsage(char *progName)
 	"   -7 ");
     FPS "%-20s Create an dns subject alt name extension\n",
 	"   -8 ");
-    FPS "%-20s The input certificate request is encoded in ASCII (RFC1113)\n",
-	"   -a");
     FPS "\n");
 
     FPS "%-15s Generate a new key pair\n",
@@ -1158,7 +1153,6 @@ static void LongUsage(char *progName)
     FPS "%-25s S \t Email signer\n", "");
     FPS "%-25s R \t Email Recipient\n", "");   
     FPS "%-25s O \t OCSP status responder\n", "");   
-    FPS "%-25s J \t Object signer\n", "");   
     FPS "%-20s Cert database directory (default is ~/.netscape)\n",
 	"   -d certdir");
     FPS "%-20s Cert & Key database prefix\n",
@@ -2002,20 +1996,6 @@ secuCommandFlag certutil_options[] =
     else if (slotname != NULL)
 	slot = PK11_FindSlotByName(slotname);
 
-   
-    if ( !slot && (certutil.commands[cmd_NewDBs].activated ||
-         certutil.commands[cmd_ModifyCertTrust].activated  || 
-         certutil.commands[cmd_ChangePassword].activated   ||
-         certutil.commands[cmd_TokenReset].activated       ||
-         certutil.commands[cmd_CreateAndAddCert].activated ||
-         certutil.commands[cmd_AddCert].activated          ||
-         certutil.commands[cmd_AddEmailCert].activated)) {
-      
-         SECU_PrintError(progName, "could not find the slot %s",slotname);
-         rv = SECFailure;
-         goto shutdown;
-    }
-
     /*  If creating new database, initialize the password.  */
     if (certutil.commands[cmd_NewDBs].activated) {
 	SECU_ChangePW2(slot, 0, 0, certutil.options[opt_PasswordFile].arg,
@@ -2101,8 +2081,6 @@ secuCommandFlag certutil_options[] =
 			  certutil.options[opt_VerifySig].activated,
 			  certutil.options[opt_DetailedInfo].activated,
 	                  &pwdata);
-	if (rv != SECSuccess && PR_GetError() == SEC_ERROR_INVALID_ARGS)
-            SECU_PrintError(progName, "validation failed");
 	goto shutdown;
     }
 

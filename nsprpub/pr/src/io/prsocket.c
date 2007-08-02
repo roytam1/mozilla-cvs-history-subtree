@@ -199,13 +199,6 @@ PRFileDesc *fd;
 	if (fd != NULL) {
 		_PR_MD_MAKE_NONBLOCK(fd);
 		_PR_MD_INIT_FD_INHERITABLE(fd, PR_TRUE);
-#ifdef _PR_NEED_SECRET_AF
-		/* this means we can only import IPv4 sockets here.
-		 * but this is what the function in ptio.c does.
-		 * We need a way to import IPv6 sockets, too.
-		 */
-		fd->secret->af = AF_INET;
-#endif
 	} else
 		_PR_MD_CLOSE_SOCKET(osfd);
 	return(fd);
@@ -520,9 +513,6 @@ PRIntervalTime timeout)
 #ifdef _PR_INET6
 		if (AF_INET6 == addr->raw.family)
         	addr->raw.family = PR_AF_INET6;
-#endif
-#ifdef _PR_NEED_SECRET_AF
-		fd2->secret->af = fd->secret->af;
 #endif
 	}
 	return fd2;
@@ -954,9 +944,6 @@ PRIntervalTime timeout)
 			if (AF_INET6 == *raddr->raw.family)
         		*raddr->raw.family = PR_AF_INET6;
 #endif
-#ifdef _PR_NEED_SECRET_AF
-			(*nd)->secret->af = sd->secret->af;
-#endif
 		}
 	}
 	return rv;
@@ -1007,9 +994,6 @@ void *callbackArg)
 #ifdef _PR_INET6
 			if (AF_INET6 == *raddr->raw.family)
         		*raddr->raw.family = PR_AF_INET6;
-#endif
-#ifdef _PR_NEED_SECRET_AF
-			(*nd)->secret->af = sd->secret->af;
 #endif
 		}
 	}
@@ -1340,9 +1324,6 @@ PR_IMPLEMENT(PRFileDesc*) PR_Socket(PRInt32 domain, PRInt32 type, PRInt32 proto)
 				fd = NULL;
 			}
 		}
-#endif
-#ifdef _PR_NEED_SECRET_AF
-		fd->secret->af = domain;
 #endif
 	} else
 		_PR_MD_CLOSE_SOCKET(osfd);

@@ -56,3 +56,7 @@ CSRCS = \
 	blapitest.c \
 	$(NULL)
 
+ifdef NSS_ENABLE_ECC
+DEFINES += -DNSS_ENABLE_ECC
+endif
+

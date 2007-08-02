@@ -144,7 +144,7 @@ NSS_EXTERN NSSCertificate **
 nssCertificateStore_FindCertificatesByNickname
 (
   nssCertificateStore *store,
-  const NSSUTF8 *nickname,
+  NSSUTF8 *nickname,
   NSSCertificate *rvOpt[],
   PRUint32 maximumOpt,
   NSSArena *arenaOpt

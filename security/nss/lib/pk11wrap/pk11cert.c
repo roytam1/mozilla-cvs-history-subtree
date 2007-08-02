@@ -524,7 +524,7 @@ transfer_token_certs_to_collection(nssList *certList, NSSToken *token,
 }
 
 CERTCertificate *
-PK11_FindCertFromNickname(const char *nickname, void *wincx) 
+PK11_FindCertFromNickname(char *nickname, void *wincx) 
 {
     PRStatus status;
     CERTCertificate *rvCert = NULL;
@@ -551,9 +551,7 @@ PK11_FindCertFromNickname(const char *nickname, void *wincx)
 	/* find token by name */
 	token = NSSTrustDomain_FindTokenByName(defaultTD, (NSSUTF8 *)tokenName);
 	if (token) {
-	    slot = PK11_ReferenceSlot(token->pk11slot);
-	} else {
-	    PORT_SetError(SEC_ERROR_NO_TOKEN);
+		slot = PK11_ReferenceSlot(token->pk11slot);
 	}
 	*delimit = ':';
     } else {
@@ -641,7 +639,7 @@ loser:
 }
 
 CERTCertList *
-PK11_FindCertsFromNickname(const char *nickname, void *wincx) 
+PK11_FindCertsFromNickname(char *nickname, void *wincx) 
 {
     char *nickCopy;
     char *delimit = NULL;
@@ -670,7 +668,6 @@ PK11_FindCertsFromNickname(const char *nickname, void *wincx)
 	if (token) {
 	    slot = PK11_ReferenceSlot(token->pk11slot);
 	} else {
-	    PORT_SetError(SEC_ERROR_NO_TOKEN);
 	    slot = NULL;
 	}
 	*delimit = ':';

@@ -78,7 +78,6 @@ CSRCS = \
 	nssrwlk.c \
 	nssilock.c \
 	nsslocks.c \
-	oidstring.c \
 	portreg.c \
 	pqgutil.c \
 	secalgid.c \
