@@ -142,9 +142,9 @@ $ConfigureOnly = 1;
 $LocalizationVersionFile = 'mail/config/version.txt';
 %WGetFiles = (
 	     "http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/latest-trunk/thunderbird-%version%.en-US.mac.dmg" =>
-	     "/builds/tinderbox/Tb-Trunk-l10n/Darwin_8.7.0_Clobber/thunderbird.dmg"
+	     "/builds/tinderbox/Tb-Trunk-l10n/Darwin_8.8.4_Depend/thunderbird.dmg"
 	     );
-$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Tb-Trunk-l10n/Darwin_8.7.0_Clobber/thunderbird.dmg";
+$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Tb-Trunk-l10n/Darwin_8.8.4_Depend/thunderbird.dmg";
 
 
 #-
