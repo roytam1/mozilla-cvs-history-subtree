@@ -80,7 +80,7 @@ $StartupPerformanceTest   = 1;  # Ts
 
 $TestsPhoneHome           = 1;  # Should test report back to server?
 $TestOnlyTinderbox = 1;
-$DownloadBuildFile = 'firefox-3.0a7pre.en-US.linux-i686.tar.bz2';
+$DownloadBuildFile = 'firefox-3.0a8pre.en-US.linux-i686.tar.bz2';
 $DownloadBuildURL = 'http://stage.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds/fxnewref-linux-tbox-trunk';
 $DownloadBuildDir = 'firefox';
 
