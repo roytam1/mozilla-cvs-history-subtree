@@ -549,7 +549,7 @@ rebase:
 ifdef MOZILLA_OFFICIAL
 	echo rebasing $(DIST)
 	/bin/find $(DIST) -name "*.dll" > rebase.lst
-	rebase -v -b 60000000 -R . -G rebase.lst 2>&1
+	rebase -b 60000000 -R . -G rebase.lst
 	rm rebase.lst
 endif
 
