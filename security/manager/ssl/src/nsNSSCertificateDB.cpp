@@ -922,6 +922,8 @@ nsNSSCertificateDB::SetCertTrust(nsIX509Cert *cert,
   SECStatus srv;
   nsNSSCertTrust trust;
   nsNSSCertificate *pipCert = NS_STATIC_CAST(nsNSSCertificate *, cert);
+  if (!pipCert)
+    return NS_ERROR_FAILURE;
   CERTCertificate *nsscert = pipCert->GetCert();
   CERTCertificateCleaner certCleaner(nsscert);
   if (type == nsIX509Cert::CA_CERT) {
