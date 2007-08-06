@@ -1091,6 +1091,7 @@ nsNSSCertificateDB::ImportCertsFromFile(nsISupports *aToken,
                                         nsILocalFile *aFile,
                                         PRUint32 aType)
 {
+  NS_ENSURE_ARG(aFile);
   switch (aType) {
     case nsIX509Cert::CA_CERT:
     case nsIX509Cert::EMAIL_CERT:
