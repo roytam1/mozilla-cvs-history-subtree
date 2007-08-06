@@ -2528,7 +2528,8 @@ js_LookupHiddenProperty(JSContext *cx, JSObject *obj, jsid id, JSObject **objp,
                         JSProperty **propp)
 {
     return HidePropertyName(cx, &id) &&
-           js_LookupProperty(cx, obj, id, objp, propp);
+           js_LookupPropertyWithFlags(cx, obj, id, JSRESOLVE_HIDDEN,
+                                      objp, propp);
 }
 
 JSScopeProperty *
