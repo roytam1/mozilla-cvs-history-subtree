@@ -484,14 +484,7 @@ uriloader/exthandler/Makefile
 
 MAKEFILES_profile="
 profile/Makefile
-profile/src/Makefile
 profile/public/Makefile
-profile/resources/Makefile
-profile/pref-migrator/Makefile
-profile/pref-migrator/public/Makefile
-profile/pref-migrator/src/Makefile
-profile/pref-migrator/resources/Makefile
-profile/defaults/Makefile
 profile/dirserviceprovider/Makefile
 profile/dirserviceprovider/public/Makefile
 profile/dirserviceprovider/src/Makefile
@@ -699,7 +692,6 @@ xpfe/components/autocomplete/public/Makefile
 xpfe/components/autocomplete/src/Makefile
 xpfe/components/updates/Makefile
 xpfe/components/updates/src/Makefile
-xpfe/components/urlwidget/Makefile
 xpfe/components/winhooks/Makefile
 xpfe/components/windowds/Makefile
 xpfe/components/alerts/Makefile
@@ -731,9 +723,9 @@ xpfe/global/resources/locale/en-US/unix/Makefile
 xpfe/global/resources/locale/en-US/win/Makefile
 xpfe/communicator/Makefile
 extensions/spellcheck/Makefile
+extensions/spellcheck/hunspell/Makefile
 extensions/spellcheck/idl/Makefile
 extensions/spellcheck/locales/Makefile
-extensions/spellcheck/myspell/Makefile
 extensions/spellcheck/src/Makefile
 "
 

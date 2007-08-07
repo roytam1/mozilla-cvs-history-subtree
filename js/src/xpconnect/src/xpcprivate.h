@@ -650,6 +650,7 @@ public:
         IDX_COM_OBJECT              ,
         IDX_ACTIVEX_SUPPORTS        ,
 #endif
+        IDX_PROTO                   ,
         IDX_TOTAL_COUNT // just a count of the above
     };
 
@@ -1176,6 +1177,9 @@ public:
 
     JSBool
     IsValid() const {return mRuntime != nsnull;}
+
+    static JSBool
+    IsDyingScope(XPCWrappedNativeScope *scope);
 
     void SetComponents(nsXPCComponents* aComponents);
     void SetGlobal(XPCCallContext& ccx, JSObject* aGlobal);
