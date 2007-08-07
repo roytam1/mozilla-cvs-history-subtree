@@ -156,7 +156,7 @@
 
 - (NSScriptObjectSpecifier *)objectSpecifier
 {
-  BrowserWindow *window = (BrowserWindow *)[self nativeWindow];
+  BrowserWindow *window = (BrowserWindow *)[self getNativeWindow];
   NSArray *tabArray = [window valueForKeyPath:@"windowController.getTabBrowser.tabViewItems.view"];
   unsigned index = [tabArray indexOfObjectIdenticalTo:self];
   
