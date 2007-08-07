@@ -765,7 +765,6 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 
   NSWindow* behindWindow = nil;
 
-  // eBookmarkOpenBehavior_Preferred not specified, since it uses all the default behaviors
   switch (behavior) {
     case eBookmarkOpenBehavior_NewPreferred:
       if ([[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.opentabfor.middleclick" withSuccess:NULL]) {
@@ -795,6 +794,10 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
       if (loadNewTabsInBackgroundPref)
         behindWindow = [browserWindowController window];
         break;
+      
+    case eBookmarkOpenBehavior_Preferred:
+      // default, so nothing to be done.
+      break;
   }
 
   // we allow popups for the load that fires off a bookmark. Subsequent page loads, however, will
@@ -1201,7 +1204,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
     NSArray* windows = [NSApp windows];
     NSEnumerator* windowEnum = [windows objectEnumerator];
     NSWindow* curWindow;
-    while (curWindow = [windowEnum nextObject])
+    while ((curWindow = [windowEnum nextObject]))
       [curWindow close];
   }
 }
@@ -1514,7 +1517,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
   NSEnumerator* windowEnum = [windows objectEnumerator];
   NSWindow* curWindow;
 
-  while (curWindow = [windowEnum nextObject])
+  while ((curWindow = [windowEnum nextObject]))
     if ([[curWindow windowController] isMemberOfClass:[BrowserWindowController class]])
       [curWindow zoom:aSender];
 }
