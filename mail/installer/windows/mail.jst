@@ -64,7 +64,7 @@ function updateMapi()
     winreg.createKey(subkey      + "\\protocols\\mailto\\shell", "");
     winreg.createKey(subkey      + "\\protocols\\mailto\\shell\\open", "");
     winreg.createKey(subkey      + "\\protocols\\mailto\\shell\\open\\command", "");
-    winreg.setValueString(subkey + "\\protocols\\mailto\\shell\\open\\command", "", sfpMainExePath + " -compose \"%1\"");
+    winreg.setValueString(subkey + "\\protocols\\mailto\\shell\\open\\command", "", sfpMainExePath + " -osint -compose \"%1\"");
     winreg.createKey(subkey      + "\\protocols\\mailto\\DefaultIcon", "");
     winreg.setValueString(subkey + "\\protocols\\mailto\\DefaultIcon", sfpMainExePath + ",0");
 
@@ -102,7 +102,7 @@ function updateMapi()
     winreg.createKey(subkey      + "\\protocols\\news\\shell", "");
     winreg.createKey(subkey      + "\\protocols\\news\\shell\\open", "");
     winreg.createKey(subkey      + "\\protocols\\news\\shell\\open\\command", "");
-    winreg.setValueString(subkey + "\\protocols\\news\\shell\\open\\command", "", sfpMainExePath + " -mail \"%1\"");
+    winreg.setValueString(subkey + "\\protocols\\news\\shell\\open\\command", "", sfpMainExePath + " -osint -mail \"%1\"");
     winreg.createKey(subkey      + "\\protocols\\news\\DefaultIcon", "");
     winreg.setValueString(subkey + "\\protocols\\news\\DefaultIcon", sfpMainExePath + ",0");
 
@@ -112,7 +112,7 @@ function updateMapi()
     winreg.createKey(subkey      + "\\protocols\\nntp\\shell", "");
     winreg.createKey(subkey      + "\\protocols\\nntp\\shell\\open", "");
     winreg.createKey(subkey      + "\\protocols\\nntp\\shell\\open\\command", "");
-    winreg.setValueString(subkey + "\\protocols\\nntp\\shell\\open\\command", "", sfpMainExePath + " -mail \"%1\"");
+    winreg.setValueString(subkey + "\\protocols\\nntp\\shell\\open\\command", "", sfpMainExePath + " -osint -mail \"%1\"");
     winreg.createKey(subkey      + "\\protocols\\nntp\\DefaultIcon", "");
     winreg.setValueString(subkey + "\\protocols\\nntp\\DefaultIcon", sfpMainExePath + ",0");
 
@@ -122,7 +122,7 @@ function updateMapi()
     winreg.createKey(subkey      + "\\protocols\\snews\\shell", "");
     winreg.createKey(subkey      + "\\protocols\\snews\\shell\\open", "");
     winreg.createKey(subkey      + "\\protocols\\snews\\shell\\open\\command", "");
-    winreg.setValueString(subkey + "\\protocols\\snews\\shell\\open\\command", "", sfpMainExePath + " -mail \"%1\"");
+    winreg.setValueString(subkey + "\\protocols\\snews\\shell\\open\\command", "", sfpMainExePath + " -osint -mail \"%1\"");
     winreg.createKey(subkey      + "\\protocols\\snews\\DefaultIcon", "");
     winreg.setValueString(subkey + "\\protocols\\snews\\DefaultIcon", sfpMainExePath + ",0");
 
@@ -146,7 +146,7 @@ function updateMapi()
     {
       // check to see if the location of the default mail protocol handler matches the location we just wrote to...
       // if it does not, then 
-      var szNewMailtoProtocolHandler = sfpMainExePath + " -compose \"%1\"";
+      var szNewMailtoProtocolHandler = sfpMainExePath + " -osint -compose \"%1\"";
       var szOldMailtoProtocolHandler = winreg.getValueString("Software\\Classes\\mailto\\shell\\open\\command", "");
 
       if ((szOldMailtoProtocolHandler != null) && (szNewMailtoProtocolHandler != szOldMailtoProtocolHandler))
