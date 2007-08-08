@@ -147,7 +147,7 @@ XPCJSContextStack::Pop(JSContext * *_retval)
         --idx; // Advance to new top of the stack
         JSContextAndFrame & e = mStack[idx];
         NS_ASSERTION(!e.frame || e.cx, "Shouldn't have frame without a cx!");
-        if(e.cx)
+        if(e.cx && e.frame)
         {
             JS_RestoreFrameChain(e.cx, e.frame);
             e.frame = nsnull;
@@ -179,7 +179,7 @@ XPCJSContextStack::Push(JSContext * cx)
     if(mStackSize > 1)
     {
         JSContextAndFrame & e = mStack[mStackSize - 2];
-        if(e.cx)
+        if(e.cx && e.cx != cx)
             e.frame = JS_SaveFrameChain(e.cx);
     }
     return NS_OK;
