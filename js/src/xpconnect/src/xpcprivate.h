@@ -2722,6 +2722,15 @@ private:
 /***************************************************************************/
 // XPCJSContextStack is not actually an xpcom object, but xpcom calls are
 // delegated to it as an implementation detail.
+struct JSContextAndFrame {
+    JSContextAndFrame(JSContext* aCx) :
+        cx(aCx),
+        frame(nsnull)
+    {}
+    JSContext* cx;
+    JSStackFrame* frame;  // Frame to be restored when this JSContext becomes
+                          // the topmost one.
+};
 
 class XPCJSContextStack
 {
@@ -2736,14 +2745,22 @@ public:
     JSBool DEBUG_StackHasJSContext(JSContext*  aJSContext);
 #endif
 
-    const nsDeque &GetStack()
-    { return mStack; }
+    const JSContextAndFrame* const * const GetStack()
+    { return &mStack; }
+    PRUint32 GetStackSize()
+    { return mStackSize; }
 
 private:
     void SyncJSContexts();
 
+    // EnsureStackSize makes sure the stack can hold aNewSize elements
+    // but does not change mStackSize.
+    nsresult EnsureStackSize(PRUint32 aNewSize);
+
 private:
-    nsDeque     mStack;
+    JSContextAndFrame* mStack;
+    PRUint32 mStackBufferSize;
+    PRUint32 mStackSize;
     JSContext*  mSafeJSContext;
 
     // If non-null, we own it; same as mSafeJSContext if SetSafeJSContext
@@ -2760,12 +2777,16 @@ private:
 class nsXPCJSContextStackIterator : public nsIJSContextStackIterator
 {
 public:
+    nsXPCJSContextStackIterator() :
+        mStack(nsnull), mStackSize(0), mPosition(0)
+    {}
     NS_DECL_ISUPPORTS
     NS_DECL_NSIJSCONTEXTSTACKITERATOR
 
 private:
-    // XXX These don't really want to be pointers.
-    nsAutoPtr<nsDequeIterator> mIterator;
+    const JSContextAndFrame * const *  mStack;
+    PRUint32 mStackSize;
+    PRUint32 mPosition;
 };
 
 /**************************************************************/
