@@ -2136,6 +2136,10 @@ sub run_all_tests {
             set_pref($pref_file, 'dom.disable_window_flip', 'false');
             set_pref($pref_file, 'dom.disable_window_move_resize', 'false');
 
+            # Avoid launching extra requests for icons during tests.
+            set_pref($pref_file, 'browser.chrome.site_icons', 'false');
+            set_pref($pref_file, 'browser.chrome.favicons', 'false');
+
             if ($Settings::BinaryName =~ /^firefox/) {
                 # Suppress firefox's popup blocking
                 set_pref($pref_file, 'privacy.popups.firstTime', 'false');
