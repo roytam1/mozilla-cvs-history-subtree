@@ -57,6 +57,16 @@
 #include "imgIRequest.h"
 #include "imgIDecoderObserver.h"
 
+class nsTreeBodyFrame;
+class nsTreeReflowCallback : public nsIReflowCallback
+{
+public:
+  nsTreeReflowCallback(nsTreeBodyFrame* aFrame) : mFrame(aFrame) {}
+  NS_DECL_ISUPPORTS
+  NS_IMETHOD ReflowFinished(nsIPresShell* aShell, PRBool* aFlushFlag);
+  nsTreeBodyFrame* mFrame;
+};
+
 // An entry in the tree's image cache
 struct nsTreeImageCacheEntry
 {
@@ -72,8 +82,7 @@ struct nsTreeImageCacheEntry
 class nsTreeBodyFrame : public nsLeafBoxFrame,
                         public nsITreeBoxObject,
                         public nsICSSPseudoComparator,
-                        public nsIScrollbarMediator,
-                        public nsIReflowCallback
+                        public nsIScrollbarMediator
 {
 public:
   nsTreeBodyFrame(nsIPresShell* aPresShell);
@@ -87,8 +96,7 @@ public:
   NS_IMETHOD SetBounds(nsBoxLayoutState& aBoxLayoutState, const nsRect& aRect,
                        PRBool aRemoveOverflowArea = PR_FALSE);
 
-  // nsIReflowCallback
-  NS_IMETHOD ReflowFinished(nsIPresShell* aPresShell, PRBool* aFlushFlag);
+  nsresult ReflowFinished(nsIPresShell* aPresShell, PRBool* aFlushFlag);
 
   // nsICSSPseudoComparator
   NS_IMETHOD PseudoMatches(nsIAtom* aTag, nsCSSSelector* aSelector, PRBool* aResult);
@@ -269,6 +277,11 @@ protected:
 
   // Check vertical overflow.
   void CheckVerticalOverflow();
+  
+  // Calls UpdateScrollbar, Invalidate if aNeedsFullInvalidation is PR_TRUE,
+  // InvalidateScrollbar and finally CheckVerticalOverflow.
+  // Returns PR_TRUE if the frame is still alive after the method call.
+  PRBool FullScrollbarUpdate(PRBool aNeedsFullInvalidation);
 
   // Use to auto-fill some of the common properties without the view having to do it.
   // Examples include container, open, selected, and focus.
@@ -381,7 +394,7 @@ protected: // Data Members
 
   PRPackedBool mVerticalOverflow;
 
-  PRPackedBool mReflowCallbackPosted;
+  nsRefPtr<nsTreeReflowCallback> mReflowCallback;
 
   PRInt32 mUpdateBatchNest;
 

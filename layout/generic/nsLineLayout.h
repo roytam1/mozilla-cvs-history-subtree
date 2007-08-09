@@ -288,6 +288,8 @@ public:
 
   nsPresContext* mPresContext;
 
+  nsIFrame* GetLineContainerFrame() const { return mBlockReflowState->frame; }
+  
 protected:
   // This state is constant for a given block frame doing line layout
   nsSpaceManager* mSpaceManager;

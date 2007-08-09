@@ -91,6 +91,7 @@ _cairo_pen_init (cairo_pen_t *pen, double radius, cairo_gstate_t *gstate)
     
     pen->vertices = malloc (pen->num_vertices * sizeof (cairo_pen_vertex_t));
     if (pen->vertices == NULL) {
+	pen->num_vertices = 0;
 	return CAIRO_STATUS_NO_MEMORY;
     }
 
@@ -132,6 +133,7 @@ _cairo_pen_init_copy (cairo_pen_t *pen, cairo_pen_t *other)
     if (pen->num_vertices) {
 	pen->vertices = malloc (pen->num_vertices * sizeof (cairo_pen_vertex_t));
 	if (pen->vertices == NULL) {
+	    pen->num_vertices = 0;
 	    return CAIRO_STATUS_NO_MEMORY;
 	}
 	memcpy (pen->vertices, other->vertices, pen->num_vertices * sizeof (cairo_pen_vertex_t));

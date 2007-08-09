@@ -82,6 +82,10 @@ FindUsernamePasswordFields(nsIDOMHTMLFormElement* inFormElement, nsIDOMHTMLInput
                             nsIDOMHTMLInputElement** outPassword, PRBool inStopWhenFound);
 
 
+@interface KeychainService(Private)
+- (NSString*)allowedActionHostsFile;
+@end
+
 @implementation KeychainService
 
 static KeychainService *sInstance = nil;
@@ -145,6 +149,11 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
         pref->RegisterCallback(gAutoFillEnabledPref, KeychainPrefChangedCallback, nsnull);
       }
     }
+
+    // load the mapping of hosts to allowed action hosts
+    mAllowedActionHosts = [[NSMutableDictionary alloc] initWithContentsOfFile:[self allowedActionHostsFile]];
+    if (!mAllowedActionHosts)
+      mAllowedActionHosts = [[NSMutableDictionary alloc] init];
     
     // load the keychain.nib file with our dialogs in it
     BOOL success = [NSBundle loadNibNamed:@"Keychain" owner:self];
@@ -158,6 +167,8 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
   // unregister for shutdown notification. It may have already happened, but just in case.
   NS_IF_RELEASE(mFormSubmitObserver);
   [[NSNotificationCenter defaultCenter] removeObserver:self];
+
+  [mAllowedActionHosts release];
   
   [super dealloc];
 }
@@ -438,8 +449,8 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
 //
 - (KeychainPromptResult)confirmStorePassword:(NSWindow*)parent
 {
-  int result = [NSApp runModalForWindow:confirmStorePasswordPanel relativeToWindow:parent];
-  [confirmStorePasswordPanel close];
+  int result = [NSApp runModalForWindow:mConfirmStorePasswordPanel relativeToWindow:parent];
+  [mConfirmStorePasswordPanel close];
   
   KeychainPromptResult keychainAction = kDontRemember;
   switch (result)
@@ -461,9 +472,23 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
 //
 - (BOOL)confirmChangedPassword:(NSWindow*)parent
 {
-  int result = [NSApp runModalForWindow:confirmChangePasswordPanel relativeToWindow:parent];
-  [confirmChangePasswordPanel close];
+  int result = [NSApp runModalForWindow:mConfirmChangePasswordPanel relativeToWindow:parent];
+  [mConfirmChangePasswordPanel close];
   return (result == NSAlertDefaultReturn);
+}
+
+//
+// confirmFillPassword:
+//
+// The password stored in the keychain has an action domain that
+// doesn't match the stored value; ask the user whether to fill.
+//
+- (BOOL)confirmFillPassword:(NSWindow*)parent
+{
+  int result = [NSApp runModalForWindow:mConfirmFillPasswordPanel relativeToWindow:parent];
+  [mConfirmFillPasswordPanel close];
+  // Default is not to fill
+  return (result != NSAlertDefaultReturn);
 }
 
 
@@ -475,6 +500,23 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
 - (BOOL) isHostInDenyList:(NSString*)host
 {
   return [[KeychainDenyList instance] isHostPresent:host];
+}
+
+- (void)setAllowedActionHosts:(NSArray*)actionHosts forHost:(NSString*)host
+{
+  [mAllowedActionHosts setObject:actionHosts forKey:host];
+  [mAllowedActionHosts writeToFile:[self allowedActionHostsFile] atomically:YES];
+}
+
+- (NSArray*)allowedActionHostsForHost:(NSString*)host
+{
+  return [mAllowedActionHosts objectForKey:host];
+}
+
+- (NSString*)allowedActionHostsFile
+{
+  NSString* profilePath = [[PreferenceManager sharedInstance] newProfilePath];
+  return [profilePath stringByAppendingPathComponent:@"AllowedActionHosts.plist"];
 }
 
 @end
@@ -883,8 +925,10 @@ KeychainFormSubmitObserver::Notify(nsIContent* node, nsIDOMWindowInternal* windo
     NSMutableString* existingUser = [NSMutableString string];
     NSMutableString* existingPassword = [NSMutableString string];
     KCItemRef itemRef;
+    BOOL storedPassword = NO;
     BOOL foundExistingPassword = [keychain getUsernameAndPassword:realm port:port user:existingUser password:existingPassword item:&itemRef];
     if ( foundExistingPassword ) {
+      storedPassword = YES;
       if ( !([existingUser isEqualToString:username] && [existingPassword isEqualToString:password]) )
         if ( CheckChangeDataYN(window) )
           [keychain updateUsernameAndPassword:realm port:port user:username password:password item:itemRef];
@@ -893,6 +937,7 @@ KeychainFormSubmitObserver::Notify(nsIContent* node, nsIDOMWindowInternal* windo
       switch (CheckStorePasswordYN(window)) {
         case kSave:
           [keychain storeUsernameAndPassword:realm port:port user:username password:password];
+          storedPassword = YES;
           break;
         
         case kNeverRemember:
@@ -904,6 +949,19 @@ KeychainFormSubmitObserver::Notify(nsIContent* node, nsIDOMWindowInternal* windo
           // do nothing at all
           break;
       }
+    }
+
+    if (storedPassword) {
+      nsAutoString action;
+      formNode->GetAction(action);
+      NSString* actionHost = [[NSURL URLWithString:[NSString stringWith_nsAString:action]] host];
+      // Forms without an action specified submit to the page
+      if (!actionHost)
+        actionHost = realm;
+
+      NSArray* allowedHosts = [keychain allowedActionHostsForHost:actionHost];
+      if (!allowedHosts || [allowedHosts count] == 0)
+        [keychain setAllowedActionHosts:[NSArray arrayWithObject:actionHost] forHost:realm];
     }
   }
 
@@ -979,6 +1037,7 @@ KeychainFormSubmitObserver::CheckChangeDataYN(nsIDOMWindowInternal* window)
   if (NS_FAILED(rv) || !forms) 
     return;
 
+  BOOL silentlyDenySuspiciousForms = NO;
   PRUint32 numForms;
   forms->GetLength(&numForms);
 
@@ -1023,6 +1082,31 @@ KeychainFormSubmitObserver::CheckChangeDataYN(nsIDOMWindowInternal* window)
       
       KCItemRef ignore;
       if ([keychain getUsernameAndPassword:hostStr port:port user:username password:password item:&ignore]) {
+        // To help prevent password stealing on sites that allow user-created HTML (but not JS),
+        // only fill if the form's action host matches the one it was stored with.
+        // If the keychain entry doesn't have any authorized hosts, either because it pre-dates
+        // this code or because it's a non-Camino entry, fill any form.
+        nsAutoString action;
+        formElement->GetAction(action);
+        NSString* actionHost = [[NSURL URLWithString:[NSString stringWith_nsAString:action]] host];
+        if (!actionHost)
+          actionHost = hostStr;
+        NSArray* allowedActionHosts = [keychain allowedActionHostsForHost:hostStr];
+        if ([allowedActionHosts count] > 0 && ![allowedActionHosts containsObject:actionHost]) {
+          // The form has an un-authorized action domain. If we haven't
+          // asked the user about this page, ask. If we have and they said
+          // no, don't ask (to prevent a malicious page from throwing
+          // dialogs until the user tries the other button).
+          if (silentlyDenySuspiciousForms)
+            continue;
+          if (![keychain confirmFillPassword:[[CHBrowserView browserViewFromDOMWindow:inDOMWindow] getNativeWindow]]) {
+            silentlyDenySuspiciousForms = YES;
+            continue;
+          }
+          // Remember the approval
+          [keychain setAllowedActionHosts:[allowedActionHosts arrayByAddingObject:actionHost] forHost:hostStr];
+        }
+
         nsAutoString user, pwd;
         [username assignTo_nsAString:user];
         [password assignTo_nsAString:pwd];
@@ -1038,10 +1122,6 @@ KeychainFormSubmitObserver::CheckChangeDataYN(nsIDOMWindowInternal* window)
           rv = passwordElement->SetValue(pwd);
         }
       }
-        
-      // We found the sign-in form so return now. This means we don't
-      // support pages where there's multiple sign-in forms.
-      return;
     }
 
   } // for each form on page

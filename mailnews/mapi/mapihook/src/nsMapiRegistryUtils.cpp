@@ -760,7 +760,7 @@ nsresult nsMapiRegistryUtils::registerMailApp(PRBool aForceRegistration)
         SetRegistryKey(HKEY_LOCAL_MACHINE, keyName.get(), "DLLPath", (char *)dllPath.get());
         
         // (3) now that we have added Software\\Clients\\Mail\\<app name> add subkeys for each protocol mail supports
-        setupDefaultProtocolKey(nsCString(keyName + NS_LITERAL_CSTRING("\\Protocols\\")).get(), "mailto", "URL:MailTo Protocol", "-compose");
+        setupDefaultProtocolKey(nsCString(keyName + NS_LITERAL_CSTRING("\\Protocols\\")).get(), "mailto", "URL:MailTo Protocol", "-osint -compose");
 
 
         setupFileExtension("Software\\Classes\\", ".eml");
@@ -863,9 +863,9 @@ nsresult nsMapiRegistryUtils::registerNewsApp(PRBool aForceRegistration)
             // (3) now that we have added Software\\Clients\\News\\<app name>
             //     add subkeys for each protocol news supports
             nsCString protocolKeyName(keyName + NS_LITERAL_CSTRING("\\Protocols\\"));
-            setupDefaultProtocolKey(protocolKeyName.get(), "news", "URL:News Protocol", "-mail");
-            setupDefaultProtocolKey(protocolKeyName.get(), "nntp", "URL:NNTP Protocol", "-mail");
-            setupDefaultProtocolKey(protocolKeyName.get(), "snews", "URL:Snews Protocol", "-mail");
+            setupDefaultProtocolKey(protocolKeyName.get(), "news", "URL:News Protocol", "-osint -mail");
+            setupDefaultProtocolKey(protocolKeyName.get(), "nntp", "URL:NNTP Protocol", "-osint -mail");
+            setupDefaultProtocolKey(protocolKeyName.get(), "snews", "URL:Snews Protocol", "-osint -mail");
 
             // (4) Software\Clients\News\<app name>\shell\open\command value 
             nsCAutoString appKeyName;
@@ -943,7 +943,7 @@ nsresult nsMapiRegistryUtils::setDefaultNewsClient()
 
 nsresult nsMapiRegistryUtils::setDefaultFeedClient()
 {
-    return setupDefaultProtocolKey("Software\\Classes\\", "feed", "URL:Feed Protocol", "-mail");
+    return setupDefaultProtocolKey("Software\\Classes\\", "feed", "URL:Feed Protocol", "-osint -mail");
 }
 
 nsresult nsMapiRegistryUtils::unsetDefaultFeedClient()

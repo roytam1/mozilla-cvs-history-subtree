@@ -3371,10 +3371,7 @@ IsSpecialContent(nsIContent* aContent,
       aTag == nsXULAtoms::menu ||
       aTag == nsXULAtoms::menuitem ||
       aTag == nsXULAtoms::menubutton ||
-  #ifndef XP_MACOSX
-      // keep this in sync  with ConstructXULFrame especially for the MAC
       aTag == nsXULAtoms::menubar ||
-  #endif
       aTag == nsXULAtoms::popupgroup ||
       aTag == nsXULAtoms::iframe ||
       aTag == nsXULAtoms::editor ||
@@ -6025,6 +6022,8 @@ nsCSSFrameConstructor::ConstructXULFrame(nsFrameConstructorState& aState,
                aTag == nsXULAtoms::description) {
         if ((aTag == nsHTMLAtoms::label || aTag == nsXULAtoms::description) && 
             (! aContent->HasAttr(kNameSpaceID_None, nsHTMLAtoms::value))) {
+          // XXX we should probably be calling ConstructBlock here to handle
+          // things like columns etc
           rv = NS_NewAreaFrame(mPresShell, &newFrame,
                                NS_BLOCK_SPACE_MGR | NS_BLOCK_SHRINK_WRAP | NS_BLOCK_MARGIN_ROOT);
         }
@@ -6387,6 +6386,15 @@ nsCSSFrameConstructor::ConstructXULFrame(nsFrameConstructorState& aState,
 #ifdef MOZ_XUL
     }
 #endif
+
+    // If the new frame isn't a float containing block, then push a null
+    // float containing block to disable floats. This is needed to disable
+    // floats within XUL frames.
+    nsFrameConstructorSaveState floatSaveState;
+    PRBool isFloatContainingBlock =
+      newFrame->GetContentInsertionFrame()->IsFloatContainingBlock();
+    aState.PushFloatContainingBlock(isFloatContainingBlock ? newFrame : nsnull,
+                                    floatSaveState, PR_FALSE, PR_FALSE);
 
     // Process the child content if requested
     nsFrameItems childItems;
@@ -6887,8 +6895,8 @@ nsCSSFrameConstructor::ConstructFrameByDisplayType(nsFrameConstructorState& aSta
       }
   
     default:
-      NS_NOTREACHED("How did we get here?");
-      break;
+      NS_NOTREACHED("How did we get here? (ok if from CantRenderReplacedElement)");
+      return NS_ERROR_FAILURE;
     }
   }
 
@@ -8139,7 +8147,8 @@ nsCSSFrameConstructor::GetFloatContainingBlock(nsIFrame* aFrame)
   // IF we hit a mathml frame, bail out; we don't allow floating out of mathml
   // frames, because they don't seem to be able to deal.
   for (nsIFrame* containingBlock = aFrame;
-       containingBlock && !containingBlock->IsFrameOfType(nsIFrame::eMathML);
+       containingBlock && !containingBlock->IsFrameOfType(nsIFrame::eMathML) &&
+       !containingBlock->IsBoxFrame();
        containingBlock = containingBlock->GetParent()) {
     if (containingBlock->IsFloatContainingBlock()) {
       return containingBlock;

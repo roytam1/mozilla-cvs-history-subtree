@@ -348,6 +348,12 @@ nsHTMLDocument::Init()
   return NS_OK;
 }
 
+void
+nsHTMLDocument::Destroy()
+{
+  InvalidateHashTables();
+  nsDocument::Destroy();
+}
 
 void
 nsHTMLDocument::Reset(nsIChannel* aChannel, nsILoadGroup* aLoadGroup)
@@ -2448,53 +2454,63 @@ nsHTMLDocument::GetElementById(const nsAString& aElementId,
   NS_ENSURE_ARG_POINTER(aReturn);
   *aReturn = nsnull;
 
-  // We don't have to flush before we do the initial hashtable lookup, since if
-  // the id is already in the hashtable it couldn't have been removed without
-  // us being notified (all removals notify immediately, as far as I can tell).
-  // So do the lookup first.
-  IdAndNameMapEntry *entry =
-    NS_STATIC_CAST(IdAndNameMapEntry *,
-                   PL_DHashTableOperate(&mIdAndNameHashTable, &aElementId,
-                                        PL_DHASH_ADD));
-  NS_ENSURE_TRUE(entry, NS_ERROR_OUT_OF_MEMORY);
-
-  nsIContent *e = entry->mIdContent;
-
-  if (e == ID_NOT_IN_DOCUMENT) {
-    // Now we have to flush.  It could be that we have a cached "not in
-    // document" but more content has been added to the document since.  Note
-    // that we have to flush notifications, so that the entry will get updated
-    // properly.
-    
-    // Make sure to stash away the current generation so we can check whether
-    // the table changes when we flush.
-    PRUint32 generation = mIdAndNameHashTable.generation;
+  IdAndNameMapEntry *entry = nsnull;
+  nsIContent *e = nsnull;
   
-    FlushPendingNotifications(Flush_ContentAndNotify);
+  // We don't want to use the hash table at all after the document has been
+  // destroyed, since the hash table doesn't own the objects that are placed
+  // into it, and so they have an uncertain lifetime after the document's
+  // released them.
+  if (!mIsGoingAway) {
+    // We don't have to flush before we do the initial hashtable lookup, since if
+    // the id is already in the hashtable it couldn't have been removed without
+    // us being notified (all removals notify immediately, as far as I can tell).
+    // So do the lookup first.
+    entry =
+      NS_STATIC_CAST(IdAndNameMapEntry *,
+                     PL_DHashTableOperate(&mIdAndNameHashTable, &aElementId,
+                                        PL_DHASH_ADD));
+    NS_ENSURE_TRUE(entry, NS_ERROR_OUT_OF_MEMORY);
 
-    if (generation != mIdAndNameHashTable.generation) {
-      // Table changed, so the entry pointer is no longer valid; look up the
-      // entry again, adding if necessary (the adding may be necessary in case
-      // the flush actually deleted entries).
-      entry =
-        NS_STATIC_CAST(IdAndNameMapEntry *,
-                       PL_DHashTableOperate(&mIdAndNameHashTable, &aElementId,
+    e = entry->mIdContent;
+
+    if (e == ID_NOT_IN_DOCUMENT) {
+      // Now we have to flush.  It could be that we have a cached "not in
+      // document" but more content has been added to the document since.  Note
+      // that we have to flush notifications, so that the entry will get updated
+      // properly.
+    
+      // Make sure to stash away the current generation so we can check whether
+      // the table changes when we flush.
+      PRUint32 generation = mIdAndNameHashTable.generation;
+  
+      FlushPendingNotifications(Flush_ContentAndNotify);
+
+      if (generation != mIdAndNameHashTable.generation) {
+        // Table changed, so the entry pointer is no longer valid; look up the
+        // entry again, adding if necessary (the adding may be necessary in case
+        // the flush actually deleted entries).
+        entry =
+          NS_STATIC_CAST(IdAndNameMapEntry *,
+                         PL_DHashTableOperate(&mIdAndNameHashTable, &aElementId,
                                             PL_DHASH_ADD));
-      NS_ENSURE_TRUE(entry, NS_ERROR_OUT_OF_MEMORY);
+        NS_ENSURE_TRUE(entry, NS_ERROR_OUT_OF_MEMORY);
+      }
+
+      // We could now have a new entry, or the entry could have been
+      // updated, so update e to point to the current entry's
+      // mIdContent.
+      e = entry->mIdContent;
     }
 
-    // We could now have a new entry, or the entry could have been
-    // updated, so update e to point to the current entry's
-    // mIdContent.
-    e = entry->mIdContent;
-  }
+    if (e == ID_NOT_IN_DOCUMENT) {
+      // We've looked for this id before and we didn't find it, so it
+      // won't be in the document now either (since the
+      // mIdAndNameHashTable is live for entries in the table)
 
-  if (e == ID_NOT_IN_DOCUMENT) {
-    // We've looked for this id before and we didn't find it, so it
-    // won't be in the document now either (since the
-    // mIdAndNameHashTable is live for entries in the table)
-
-    return NS_OK;
+      return NS_OK;
+    }
+  
   }
 
   if (!e) {
@@ -2509,13 +2525,17 @@ nsHTMLDocument::GetElementById(const nsAString& aElementId,
     if (!e) {
       // There is no element with the given id in the document, cache
       // the fact that it's not in the document
-      entry->mIdContent = ID_NOT_IN_DOCUMENT;
+      if (entry) {
+        entry->mIdContent = ID_NOT_IN_DOCUMENT;
+      }
 
       return NS_OK;
     }
 
     // We found an element with a matching id, store that in the hash
-    entry->mIdContent = e;
+    if (entry) {
+      entry->mIdContent = e;
+    }
   }
 
   return CallQueryInterface(e, aReturn);
@@ -3122,6 +3142,10 @@ nsHTMLDocument::UpdateNameTableEntry(const nsAString& aName,
 nsresult
 nsHTMLDocument::AddToIdTable(const nsAString& aId, nsIContent *aContent)
 {
+  if (mIsGoingAway) {
+    return NS_OK;
+  }
+
   IdAndNameMapEntry *entry =
     NS_STATIC_CAST(IdAndNameMapEntry *,
                    PL_DHashTableOperate(&mIdAndNameHashTable, &aId,
@@ -3140,6 +3164,10 @@ nsHTMLDocument::AddToIdTable(const nsAString& aId, nsIContent *aContent)
 nsresult
 nsHTMLDocument::UpdateIdTableEntry(const nsAString& aId, nsIContent *aContent)
 {
+  if (mIsGoingAway) {
+    return NS_OK;
+  }
+
   IdAndNameMapEntry *entry =
     NS_STATIC_CAST(IdAndNameMapEntry *,
                    PL_DHashTableOperate(&mIdAndNameHashTable, &aId,
@@ -3318,8 +3346,9 @@ nsHTMLDocument::ResolveName(const nsAString& aName,
 {
   *aResult = nsnull;
 
-  if (IsXHTML()) {
+  if (IsXHTML() || mIsGoingAway) {
     // We don't dynamically resolve names on XHTML documents.
+    // We also don't want to add a new cache item to a destroyed document
 
     return NS_OK;
   }

@@ -89,7 +89,7 @@ public:
 
   NS_IMETHOD GetPrefSize(nsBoxLayoutState& aState, nsSize& aSize);
 
-  virtual void Destroy();
+  NS_IMETHOD Destroy(nsPresContext* aPresContext);
  
   // nsIScrollbarMediator forwarding
   NS_IMETHOD PositionChanged(nsISupports* aScrollbar, PRInt32 aOldIndex, PRInt32& aNewIndex);

@@ -58,11 +58,14 @@ enum KeychainPromptResult { kSave, kDontRemember, kNeverRemember } ;
 
 @interface KeychainService : NSObject
 {
-  IBOutlet id confirmStorePasswordPanel;
-  IBOutlet id confirmChangePasswordPanel;
+  IBOutlet id mConfirmStorePasswordPanel;
+  IBOutlet id mConfirmChangePasswordPanel;
+  IBOutlet id mConfirmFillPasswordPanel;
 
   BOOL mIsEnabled;
   BOOL mIsAutoFillEnabled;
+
+  NSMutableDictionary* mAllowedActionHosts;
 
   nsIObserver* mFormSubmitObserver;
 }
@@ -93,6 +96,10 @@ enum KeychainPromptResult { kSave, kDontRemember, kNeverRemember } ;
 // ask about
 - (void) addHostToDenyList:(NSString*)host;
 - (BOOL) isHostInDenyList:(NSString*)host;
+
+// Methods to interact with the list of approved form action hosts.
+- (void)setAllowedActionHosts:(NSArray*)actionHosts forHost:(NSString*)host;
+- (NSArray*)allowedActionHostsForHost:(NSString*)host;
 
 @end
 

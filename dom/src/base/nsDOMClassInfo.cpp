@@ -6357,6 +6357,17 @@ nsEventReceiverSH::AddEventListenerHelper(JSContext *cx, JSObject *obj,
     return JS_FALSE;
   }
 
+  // Can't use the macro OBJ_TO_INNER_OBJECT here due to it using the
+  // non-exported function js_GetSlotThreadSafe().
+  {
+    JSClass *clasp = JS_GET_CLASS(cx, obj);
+    if (clasp->flags & JSCLASS_IS_EXTENDED) {
+      JSExtendedClass *xclasp = (JSExtendedClass*)clasp;
+      if (xclasp->innerObject)
+        obj = xclasp->innerObject(cx, obj);
+    }
+  }
+
   nsCOMPtr<nsIXPConnectWrappedNative> wrapper;
   nsresult rv =
     sXPConnect->GetWrappedNativeOfJSObject(cx, obj, getter_AddRefs(wrapper));
@@ -6634,26 +6645,31 @@ nsElementSH::PostCreate(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
   nsPresContext *pctx = shell->GetPresContext();
   NS_ENSURE_TRUE(pctx, NS_ERROR_UNEXPECTED);
 
-  nsRefPtr<nsStyleContext> sc = pctx->StyleSet()->ResolveStyleFor(content,
-                                                                  nsnull);
-  NS_ENSURE_TRUE(sc, NS_ERROR_FAILURE);
-
-  nsIURI *bindingURL = sc->GetStyleDisplay()->mBinding;
-  if (!bindingURL) {
-    // No binding, nothing left to do here.
-    return NS_OK;
-  }
-
-  // We have a binding that must be installed.
-  PRBool dummy;
-
-  nsCOMPtr<nsIXBLService> xblService(do_GetService("@mozilla.org/xbl;1"));
-  NS_ENSURE_TRUE(xblService, NS_ERROR_NOT_AVAILABLE);
-
+  // Make sure the style context goes away _before_ we execute the binding
+  // constructor, since the constructor can destroy the relevant presshell.
   nsRefPtr<nsXBLBinding> binding;
-  xblService->LoadBindings(content, bindingURL, PR_FALSE,
-                           getter_AddRefs(binding), &dummy);
+  {
+    // Scope for the nsRefPtr
+    nsRefPtr<nsStyleContext> sc = pctx->StyleSet()->ResolveStyleFor(content,
+                                                                    nsnull);
+    NS_ENSURE_TRUE(sc, NS_ERROR_FAILURE);
 
+    nsIURI *bindingURL = sc->GetStyleDisplay()->mBinding;
+    if (!bindingURL) {
+      // No binding, nothing left to do here.
+      return NS_OK;
+    }
+
+    // We have a binding that must be installed.
+    PRBool dummy;
+
+    nsCOMPtr<nsIXBLService> xblService(do_GetService("@mozilla.org/xbl;1"));
+    NS_ENSURE_TRUE(xblService, NS_ERROR_NOT_AVAILABLE);
+
+    xblService->LoadBindings(content, bindingURL, PR_FALSE,
+                             getter_AddRefs(binding), &dummy);
+  }
+  
   if (binding) {
     binding->ExecuteAttachedHandler();
   }

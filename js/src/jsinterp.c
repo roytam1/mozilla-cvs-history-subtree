@@ -2030,6 +2030,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
                 RESTORE_SP(fp);
 
                 /* Restore the calling script's interpreter registers. */
+                obj = NULL;
                 script = fp->script;
                 depth = (jsint) script->depth;
                 pc = fp->pc;
@@ -3289,8 +3290,8 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
                 ok = js_NewNumberValue(cx, d, &rtmp);                         \
                 if (!ok)                                                      \
                     goto out;                                                 \
-                *vp = rtmp;                                                   \
             }                                                                 \
+            *vp = rtmp;                                                       \
             (cs->format & JOF_INC) ? d++ : d--;                               \
             ok = js_NewNumberValue(cx, d, &rval);                             \
         } else {                                                              \
@@ -3584,6 +3585,7 @@ js_Interpret(JSContext *cx, jsbytecode *pc, jsval *result)
                 cx->fp = fp = &newifp->frame;
                 pc = script->code;
                 endpc = pc + script->length;
+                obj = NULL;
                 inlineCallCount++;
                 JS_RUNTIME_METER(rt, inlineCalls);
                 continue;

@@ -1359,7 +1359,8 @@ nsScriptSecurityManager::CheckLoadURIWithPrincipal(nsIPrincipal* aPrincipal,
         { "datetime",        DenyProtocol   },
         { "finger",          AllowProtocol  },
         { "res",             DenyProtocol   },
-        { "x-jsd",           ChromeProtocol }
+        { "x-jsd",           ChromeProtocol },
+        { "wyciwyg",         DenyProtocol   }
     };
 
     NS_NAMED_LITERAL_STRING(errorTag, "CheckLoadURIError");

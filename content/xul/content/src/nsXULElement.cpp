@@ -2125,7 +2125,9 @@ nsXULElement::HandleDOMEvent(nsPresContext* aPresContext, nsEvent* aEvent,
     }
 
     //Capturing stage evaluation
-    if (NS_EVENT_FLAG_CAPTURE & aFlags) {
+    if (NS_EVENT_FLAG_CAPTURE & aFlags &&
+        !(aEvent->eventStructType == NS_MUTATION_EVENT &&
+          IsAnonymousForEvents())) {
         //Initiate capturing phase.  Special case first call to document
         if (parent) {
             parent->HandleDOMEvent(aPresContext, aEvent, aDOMEvent, aFlags & NS_EVENT_CAPTURE_MASK, aEventStatus);
@@ -2166,7 +2168,9 @@ nsXULElement::HandleDOMEvent(nsPresContext* aPresContext, nsEvent* aEvent,
     }
 
     //Bubbling stage
-    if (NS_EVENT_FLAG_BUBBLE & aFlags) {
+    if (NS_EVENT_FLAG_BUBBLE & aFlags &&
+        !(aEvent->eventStructType == NS_MUTATION_EVENT &&
+          IsAnonymousForEvents())) {
         if (parent != nsnull) {
             // We have a parent. Let them field the event.
             ret = parent->HandleDOMEvent(aPresContext, aEvent, aDOMEvent,

@@ -196,7 +196,7 @@ typedef struct {
 
 #define CLS_HTML "FirefoxHTML"
 #define VAL_ICON "%APPPATH%,1"
-#define VAL_OPEN "%APPPATH% -url \"%1\""
+#define VAL_OPEN "%APPPATH% -osint -url \"%1\""
 
 #define MAKE_KEY_NAME1(PREFIX, MID) \
   PREFIX MID

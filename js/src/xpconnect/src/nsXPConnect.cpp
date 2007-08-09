@@ -45,10 +45,11 @@
 #include "xpcprivate.h"
 #include "XPCNativeWrapper.h"
 
-NS_IMPL_THREADSAFE_ISUPPORTS3(nsXPConnect,
+NS_IMPL_THREADSAFE_ISUPPORTS4(nsXPConnect,
                               nsIXPConnect,
                               nsIXPConnect_MOZILLA_1_8_BRANCH,
-                              nsISupportsWeakReference)
+                              nsISupportsWeakReference,
+                              nsIEventQueueListener)
 
 nsXPConnect* nsXPConnect::gSelf = nsnull;
 JSBool       nsXPConnect::gOnceAliveNowDead = JS_FALSE;
@@ -1563,6 +1564,22 @@ nsXPConnect::FlagSystemFilenamePrefix(const char *aFilenamePrefix)
     if(!JS_FlagScriptFilenamePrefix(rt, aFilenamePrefix, JSFILENAME_SYSTEM))
         return NS_ERROR_OUT_OF_MEMORY;
     return NS_OK;
+}
+
+NS_IMETHODIMP
+nsXPConnect::WillProcessEvents(nsIEventQueue *aQueue)
+{
+    // Push a null JSContext so that we don't see any script during
+    // event processing.
+    NS_ENSURE_STATE(mContextStack);
+    return mContextStack->Push(nsnull);
+}
+
+NS_IMETHODIMP
+nsXPConnect::DidProcessEvents(nsIEventQueue *aQueue)
+{
+    NS_ENSURE_STATE(mContextStack);
+    return mContextStack->Pop(nsnull);
 }
 
 #ifdef DEBUG

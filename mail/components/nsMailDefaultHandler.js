@@ -39,6 +39,7 @@ const nsISupports              = Components.interfaces.nsISupports;
 
 const nsICommandLine           = Components.interfaces.nsICommandLine;
 const nsICommandLineHandler    = Components.interfaces.nsICommandLineHandler;
+const nsICommandLineValidator  = Components.interfaces.nsICommandLineValidator;
 const nsIDOMWindowInternal     = Components.interfaces.nsIDOMWindowInternal;
 const nsIFactory               = Components.interfaces.nsIFactory;
 const nsISupportsString        = Components.interfaces.nsISupportsString;
@@ -87,6 +88,7 @@ var nsMailDefaultHandler = {
 
   QueryInterface : function mdh_QI(iid) {
     if (iid.equals(nsICommandLineHandler) ||
+        iid.equals(nsICommandLineValidator) ||
         iid.equals(nsIFactory) ||
         iid.equals(nsISupports))
       return this;
@@ -274,6 +276,30 @@ var nsMailDefaultHandler = {
                       "chrome,dialog=no,all", argstring);
   },
 
+  /* nsICommandLineValidator */
+  validate : function mdh_validate(cmdLine) {
+    // Other handlers may use osint so only handle the osint flag if the mail
+    // or compose flag is also present and the command line is valid.
+    var osintFlagIdx = cmdLine.findFlag("osint", false);
+    var mailFlagIdx = cmdLine.findFlag("mail", false);
+    var composeFlagIdx = cmdLine.findFlag("compose", false);
+
+    // If both flags are present use the first flag found so the command line
+    // length test will fail.
+    if (mailFlagIdx > -1 && composeFlagIdx > -1)
+      var actionFlagIdx = mailFlagIdx > composeFlagIdx ? composeFlagIdx : mailFlagIdx;
+    else
+      actionFlagIdx = mailFlagIdx > -1 ? mailFlagIdx : composeFlagIdx;
+
+    if (actionFlagIdx && (osintFlagIdx > -1)) {
+      var param = cmdLine.getArgument(actionFlagIdx + 1);
+      if (cmdLine.length != actionFlagIdx + 2 ||
+          /thunderbird.url.(mailto|news):/.test(param))
+        throw NS_ERROR_ABORT;
+      cmdLine.handleFlag("osint", false)
+    }
+  },
+
   helpInfo : "",
 
   /* nsIFactory */
@@ -329,6 +355,9 @@ var Module = {
     catMan.addCategoryEntry("command-line-handler",
                             "x-default",
                             mdh_contractID, true, true);
+    catMan.addCategoryEntry("command-line-validator",
+                            "b-default",
+                            mdh_contractID, true, true);
   },
     
   unregisterSelf : function mod_unregself(compMgr, location, type) {
@@ -339,7 +368,9 @@ var Module = {
                            .getService(Components.interfaces.nsICategoryManager);
 
     catMan.deleteCategoryEntry("command-line-handler",
-                               "y-default", true);
+                               "x-default", true);
+    catMan.deleteCategoryEntry("command-line-validator",
+                               "b-default", true);
   },
 
   canUnload: function(compMgr) {

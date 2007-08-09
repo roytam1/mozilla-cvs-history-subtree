@@ -2132,7 +2132,9 @@ nsGenericElement::HandleDOMEvent(nsPresContext* aPresContext,
       aEvent->message != NS_SCRIPT_LOAD &&
       aEvent->message != NS_IMAGE_LOAD &&
       aEvent->message != NS_IMAGE_ERROR &&
-      aEvent->message != NS_SCROLL_EVENT) {
+      aEvent->message != NS_SCROLL_EVENT &&
+      !(aEvent->eventStructType == NS_MUTATION_EVENT &&
+        IsAnonymousForEvents())) {
     //Initiate capturing phase.  Special case first call to document
     if (parent) {
       parent->HandleDOMEvent(aPresContext, aEvent, aDOMEvent,
@@ -2213,7 +2215,9 @@ nsGenericElement::HandleDOMEvent(nsPresContext* aPresContext,
       aEvent->message != NS_PAGE_LOAD && aEvent->message != NS_SCRIPT_LOAD &&
       aEvent->message != NS_IMAGE_ERROR && aEvent->message != NS_IMAGE_LOAD &&
       !(aEvent->message == NS_SCROLL_EVENT &&
-        aEvent->flags & NS_EVENT_FLAG_CANT_BUBBLE)) {
+        aEvent->flags & NS_EVENT_FLAG_CANT_BUBBLE) &&
+      !(aEvent->eventStructType == NS_MUTATION_EVENT &&
+        IsAnonymousForEvents())) {
     if (parent) {
       // If there's a parent we pass the event to the parent...
 
@@ -2797,18 +2801,16 @@ doInsertChildAt(nsIContent* aKid, PRUint32 aIndex, PRBool aNotify,
   // XXXbz What if the kid just moved us in the document?  Scripts suck.  We
   // really need to stop running them while we're in the middle of modifying
   // the DOM....
-  if (aDocument && aKid->GetCurrentDoc() == aDocument &&
+  if (aNotify && aDocument && aKid->GetCurrentDoc() == aDocument &&
       (!aParent || aKid->GetParent() == aParent)) {
-    if (aNotify) {
-      // Note that we always want to call ContentInserted when things are added
-      // as kids to documents
-      if (aParent && isAppend) {
-        aDocument->ContentAppended(aParent, aIndex);
-      } else {
-        aDocument->ContentInserted(aParent, aKid, aIndex);
-      }
+    // Note that we always want to call ContentInserted when things are added
+    // as kids to documents
+    if (aParent && isAppend) {
+      aDocument->ContentAppended(aParent, aIndex);
+    } else {
+      aDocument->ContentInserted(aParent, aKid, aIndex);
     }
-
+    
     // XXXbz how come we're not firing mutation listeners for adding to
     // documents?
     if (aParent &&
@@ -2816,7 +2818,7 @@ doInsertChildAt(nsIContent* aKid, PRUint32 aIndex, PRBool aNotify,
                                                NS_EVENT_BITS_MUTATION_NODEINSERTED)) {
       nsMutationEvent mutation(PR_TRUE, NS_MUTATION_NODEINSERTED, aKid);
       mutation.mRelatedNode = do_QueryInterface(aParent);
-
+        
       nsEventStatus status = nsEventStatus_eIgnore;
       aKid->HandleDOMEvent(nsnull, &mutation, nsnull, NS_EVENT_FLAG_INIT, &status);
     }
@@ -2850,17 +2852,17 @@ nsGenericElement::AppendChildTo(nsIContent* aKid, PRBool aNotify)
   // XXXbz What if the kid just moved us in the document?  Scripts suck.  We
   // really need to stop running them while we're in the middle of modifying
   // the DOM....
-  if (document && document == GetCurrentDoc() && aKid->GetParent() == this) {
-    if (aNotify) {
-      document->ContentAppended(this, GetChildCount() - 1);
-    }
-
+  if (aNotify && document && document == GetCurrentDoc() &&
+      aKid->GetParent() == this) {
+    document->ContentAppended(this, GetChildCount() - 1);
+    
     if (HasMutationListeners(this, NS_EVENT_BITS_MUTATION_NODEINSERTED)) {
       nsMutationEvent mutation(PR_TRUE, NS_MUTATION_NODEINSERTED, aKid);
       mutation.mRelatedNode = do_QueryInterface(this);
-
+      
       nsEventStatus status = nsEventStatus_eIgnore;
-      aKid->HandleDOMEvent(nsnull, &mutation, nsnull, NS_EVENT_FLAG_INIT, &status);
+      aKid->HandleDOMEvent(nsnull, &mutation, nsnull, NS_EVENT_FLAG_INIT, 
+                           &status);
     }
   }
 
@@ -2967,24 +2969,27 @@ doRemoveChildAt(PRUint32 aIndex, PRBool aNotify, nsIContent* aKid,
 
   mozAutoDocUpdate updateBatch(aDocument, UPDATE_CONTENT_MODEL, aNotify);
 
-  nsMutationGuard guard;
+  if (aNotify) {
+    nsMutationGuard guard;
 
-  if (aParent && nsGenericElement::HasMutationListeners(aParent,
-        NS_EVENT_BITS_MUTATION_NODEREMOVED)) {
-    nsMutationEvent mutation(PR_TRUE, NS_MUTATION_NODEREMOVED, aKid);
-    mutation.mRelatedNode = do_QueryInterface(aParent);
-
+    if (aParent && 
+        nsGenericElement::HasMutationListeners(aParent,
+                                               NS_EVENT_BITS_MUTATION_NODEREMOVED)) {
+      nsMutationEvent mutation(PR_TRUE, NS_MUTATION_NODEREMOVED, aKid);
+      mutation.mRelatedNode = do_QueryInterface(aParent);
+      
       nsEventStatus status = nsEventStatus_eIgnore;
       aKid->HandleDOMEvent(nsnull, &mutation, nsnull,
                            NS_EVENT_FLAG_INIT, &status);
-  }
-
-  // Someone may have removed the kid or any of its siblings while that event
-  // was processing.
-  if (guard.Mutated(0)) {
-    aIndex = container.IndexOf(aKid);
-    if (aIndex == (PRUint32)(-1)) {
-      return NS_OK;
+    }
+    
+    // Someone may have removed the kid or any of its siblings while that event
+    // was processing.
+    if (guard.Mutated(0)) {
+      aIndex = container.IndexOf(aKid);
+      if (aIndex == (PRUint32)(-1)) {
+        return NS_OK;
+      }
     }
   }
 
@@ -3935,42 +3940,42 @@ nsGenericElement::SetAttr(PRInt32 aNamespaceID, nsIAtom* aName,
   }
 
   if (document) {
-    nsXBLBinding *binding = document->BindingManager()->GetBinding(this);
+    nsRefPtr<nsXBLBinding> binding = document->BindingManager()->GetBinding(this);
     if (binding)
       binding->AttributeChanged(aName, aNamespaceID, PR_FALSE, aNotify);
 
-    if (HasMutationListeners(this, NS_EVENT_BITS_MUTATION_ATTRMODIFIED)) {
-      nsCOMPtr<nsIDOMEventTarget> node =
-        do_QueryInterface(NS_STATIC_CAST(nsIContent *, this));
-      nsMutationEvent mutation(PR_TRUE, NS_MUTATION_ATTRMODIFIED, node);
-
-      nsAutoString attrName;
-      aName->ToString(attrName);
-      nsCOMPtr<nsIDOMAttr> attrNode;
-      GetAttributeNode(attrName, getter_AddRefs(attrNode));
-      mutation.mRelatedNode = attrNode;
-
-      mutation.mAttrName = aName;
-      if (!oldValue.IsEmpty()) {
-        mutation.mPrevAttrValue = do_GetAtom(oldValue);
-      }
-
-      if (!aValue.IsEmpty()) {
-        mutation.mNewAttrValue = do_GetAtom(aValue);
-      }
-
-      if (modification) {
-        mutation.mAttrChange = nsIDOMMutationEvent::MODIFICATION;
-      } else {
-        mutation.mAttrChange = nsIDOMMutationEvent::ADDITION;
-      }
-
-      nsEventStatus status = nsEventStatus_eIgnore;
-      HandleDOMEvent(nsnull, &mutation, nsnull,
-                     NS_EVENT_FLAG_INIT, &status);
-    }
-
     if (aNotify) {
+      if (HasMutationListeners(this, NS_EVENT_BITS_MUTATION_ATTRMODIFIED)) {
+        nsCOMPtr<nsIDOMEventTarget> node =
+          do_QueryInterface(NS_STATIC_CAST(nsIContent *, this));
+        nsMutationEvent mutation(PR_TRUE, NS_MUTATION_ATTRMODIFIED, node);
+
+        nsAutoString attrName;
+        aName->ToString(attrName);
+        nsCOMPtr<nsIDOMAttr> attrNode;
+        GetAttributeNode(attrName, getter_AddRefs(attrNode));
+        mutation.mRelatedNode = attrNode;
+
+        mutation.mAttrName = aName;
+        if (!oldValue.IsEmpty()) {
+          mutation.mPrevAttrValue = do_GetAtom(oldValue);
+        }
+
+        if (!aValue.IsEmpty()) {
+          mutation.mNewAttrValue = do_GetAtom(aValue);
+        }
+
+        if (modification) {
+          mutation.mAttrChange = nsIDOMMutationEvent::MODIFICATION;
+        } else {
+          mutation.mAttrChange = nsIDOMMutationEvent::ADDITION;
+        }
+
+        nsEventStatus status = nsEventStatus_eIgnore;
+        HandleDOMEvent(nsnull, &mutation, nsnull,
+                       NS_EVENT_FLAG_INIT, &status);
+      }
+
       PRInt32 modHint = modification ? PRInt32(nsIDOMMutationEvent::MODIFICATION)
                                      : PRInt32(nsIDOMMutationEvent::ADDITION);
       document->AttributeChanged(this, aNamespaceID, aName, modHint);
@@ -4033,7 +4038,10 @@ nsGenericElement::UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
   nsIDocument *document = GetCurrentDoc();    
   mozAutoDocUpdate updateBatch(document, UPDATE_CONTENT_MODEL, aNotify);
 
-  PRBool hasMutationListeners = document &&
+  //  we do not need to look for mutation listeners if
+  //  aNotify is false, because there is no use of that knowledge then
+  //  (mutation events won't be fired).
+  PRBool hasMutationListeners = aNotify && document &&
     HasMutationListeners(this, NS_EVENT_BITS_MUTATION_ATTRMODIFIED);
   // Grab the attr node if needed before we remove it from the attr map
   nsCOMPtr<nsIDOMAttr> attrNode;
@@ -4046,12 +4054,12 @@ nsGenericElement::UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
 
     if (aNotify) {
       document->AttributeWillChange(this, aNameSpaceID, aName);
-    }
-
-    if (hasMutationListeners) {
-      nsAutoString attrName;
-      aName->ToString(attrName);
-      GetAttributeNode(attrName, getter_AddRefs(attrNode));
+    
+      if (hasMutationListeners) {
+        nsAutoString attrName;
+        aName->ToString(attrName);
+        GetAttributeNode(attrName, getter_AddRefs(attrNode));
+      }
     }
   }
 
@@ -4066,32 +4074,32 @@ nsGenericElement::UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
   NS_ENSURE_SUCCESS(rv, rv);
 
   if (document) {
-    nsXBLBinding *binding = document->BindingManager()->GetBinding(this);
+    nsRefPtr<nsXBLBinding> binding = document->BindingManager()->GetBinding(this);
     if (binding)
       binding->AttributeChanged(aName, aNameSpaceID, PR_TRUE, aNotify);
 
     if (aNotify) {
       document->AttributeChanged(this, aNameSpaceID, aName,
                                  nsIDOMMutationEvent::REMOVAL);
-    }
 
-    if (hasMutationListeners) {
-      nsCOMPtr<nsIDOMEventTarget> node =
-        do_QueryInterface(NS_STATIC_CAST(nsIContent *, this));
-      nsMutationEvent mutation(PR_TRUE, NS_MUTATION_ATTRMODIFIED, node);
+      if (hasMutationListeners) {
+        nsCOMPtr<nsIDOMEventTarget> node =
+          do_QueryInterface(NS_STATIC_CAST(nsIContent *, this));
+        nsMutationEvent mutation(PR_TRUE, NS_MUTATION_ATTRMODIFIED, node);
 
-      mutation.mRelatedNode = attrNode;
-      mutation.mAttrName = aName;
+        mutation.mRelatedNode = attrNode;
+        mutation.mAttrName = aName;
 
-      nsAutoString value;
-      oldValue.ToString(value);
-      if (!value.IsEmpty())
-        mutation.mPrevAttrValue = do_GetAtom(value);
-      mutation.mAttrChange = nsIDOMMutationEvent::REMOVAL;
+        nsAutoString value;
+        oldValue.ToString(value);
+        if (!value.IsEmpty())
+          mutation.mPrevAttrValue = do_GetAtom(value);
+        mutation.mAttrChange = nsIDOMMutationEvent::REMOVAL;
 
-      nsEventStatus status = nsEventStatus_eIgnore;
-      HandleDOMEvent(nsnull, &mutation, nsnull,
-                     NS_EVENT_FLAG_INIT, &status);
+        nsEventStatus status = nsEventStatus_eIgnore;
+        HandleDOMEvent(nsnull, &mutation, nsnull,
+                       NS_EVENT_FLAG_INIT, &status);
+      }
     }
   }
 

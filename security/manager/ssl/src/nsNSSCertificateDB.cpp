@@ -137,11 +137,15 @@ nsNSSCertificateDB::FindCertByDBKey(const char *aDBkey, nsISupports *aToken,
   CERTIssuerAndSN issuerSN;
   unsigned long moduleID,slotID;
   *_cert = nsnull; 
-  if (!aDBkey) return NS_ERROR_FAILURE;
+  if (!aDBkey || !*aDBkey)
+    return NS_ERROR_FAILURE;
+
   dummy = NSSBase64_DecodeBuffer(nsnull, &keyItem, aDBkey,
                                  (PRUint32)PL_strlen(aDBkey)); 
-  CERTCertificate *cert;
+  if (!dummy)
+    return NS_ERROR_FAILURE;
 
+  CERTCertificate *cert;
   // someday maybe we can speed up the search using the moduleID and slotID
   moduleID = NS_NSS_GET_LONG(keyItem.data);
   slotID = NS_NSS_GET_LONG(&keyItem.data[NS_NSS_LONG]);
@@ -918,6 +922,8 @@ nsNSSCertificateDB::SetCertTrust(nsIX509Cert *cert,
   SECStatus srv;
   nsNSSCertTrust trust;
   nsNSSCertificate *pipCert = NS_STATIC_CAST(nsNSSCertificate *, cert);
+  if (!pipCert)
+    return NS_ERROR_FAILURE;
   CERTCertificate *nsscert = pipCert->GetCert();
   CERTCertificateCleaner certCleaner(nsscert);
   if (type == nsIX509Cert::CA_CERT) {
@@ -1010,6 +1016,7 @@ nsNSSCertificateDB::ImportCertsFromFile(nsISupports *aToken,
                                         nsILocalFile *aFile,
                                         PRUint32 aType)
 {
+  NS_ENSURE_ARG(aFile);
   switch (aType) {
     case nsIX509Cert::CA_CERT:
     case nsIX509Cert::EMAIL_CERT:

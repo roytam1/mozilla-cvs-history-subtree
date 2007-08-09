@@ -375,6 +375,11 @@ public:
     * on out of flow frames so always use PR_TRUE for out of flows.
     */
   nsresult DoRemoveFrame(nsIFrame* aDeletedFrame, PRBool aDestroyFrames = PR_TRUE);
+  
+  void ReparentFloats(nsIFrame* aFirstFrame,
+                      nsBlockFrame* aOldParent, PRBool aFromOverflow,
+                      PRBool aReparentSiblings);
+
 protected:
 
   /** grab overflow lines from this block's prevInFlow, and make them
@@ -390,7 +395,7 @@ protected:
   line_iterator RemoveFloat(nsIFrame* aFloat);
 
   void CollectFloats(nsIFrame* aFrame, nsFrameList& aList, nsIFrame** aTail,
-                     PRBool aFromOverflow);
+                     PRBool aFromOverflow, PRBool aCollectFromSiblings);
   // Remove a float, abs, rel positioned frame from the appropriate block's list
   static void DoRemoveOutOfFlowFrame(nsIFrame* aFrame);
 
@@ -557,10 +562,6 @@ protected:
 
   void PushLines(nsBlockReflowState& aState,
                  nsLineList::iterator aLineBefore);
-
-
-  void ReparentFloats(nsIFrame* aFirstFrame,
-                      nsBlockFrame* aOldParent, PRBool aFromOverflow);
 
   //----------------------------------------
   //XXX
