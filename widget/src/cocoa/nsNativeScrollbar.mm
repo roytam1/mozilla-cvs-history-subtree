@@ -132,21 +132,19 @@ nsNativeScrollbar::DoScroll(NSScrollerPart inPart)
 
     case NSScrollerDecrementLine:           // scroll up/left
       newPos = oldPos - (mLineIncrement ? mLineIncrement : 1);
+      UpdateContentPosition(newPos);
       if ( mMediator ) {
         BoundsCheck(0, newPos, mMaxValue);
         mMediator->ScrollbarButtonPressed(mScrollbar, oldPos, newPos);
-      } else {
-        UpdateContentPosition(newPos);
       }
       break;
     
     case NSScrollerIncrementLine:           // scroll down/right
       newPos = oldPos + (mLineIncrement ? mLineIncrement : 1);
+      UpdateContentPosition(newPos); 
       if ( mMediator ) {
         BoundsCheck(0, newPos, mMaxValue);
         mMediator->ScrollbarButtonPressed(mScrollbar, oldPos, newPos);
-      } else {
-        UpdateContentPosition(newPos); 
       }
       break;
   
