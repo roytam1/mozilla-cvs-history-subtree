@@ -77,7 +77,7 @@ $NeckoUnitTest            = 0;
 $RenderPerformanceTest    = 0;  # Tgfx
 
 $TestsPhoneHome           = 0;  # Should test report back to server?
-$GraphNameOverride        = 'fx-win32-tbox';
+$GraphNameOverride        = 'fxnewref-win32-tbox';
 
 # $results_server
 #----------------------------------------------------------------------------
@@ -128,7 +128,7 @@ $Make          = 'make';       # Must be GNU make
 #$CVSCO         = 'checkout -P';
 
 # win32 usually doesn't have /bin/mail
-$blat           = 'd:/moztools/bin/blat';
+$blat           = '/d/mozilla-build/blat261/full/blat';
 $use_blat       = 0;
 
 # Set moz_cvsroot to something like:
@@ -141,7 +141,7 @@ $use_blat       = 0;
 #$moz_cvsroot   = $ENV{CVSROOT};
 $moz_cvsroot = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 
-$MofoRoot   = ":ext:cltbld\@cvs.mozilla.org:/mofo";
+$MofoRoot   = ':ext:cltbld@cvs.mozilla.org:/mofo';
 
 #- Set these proper values for your tinderbox server
 #$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
@@ -154,7 +154,7 @@ $MofoRoot   = ":ext:cltbld\@cvs.mozilla.org:/mofo";
 #$ObjDir = 'fx-trunk';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'Nightly';
+$BuildNameExtra = 'Fx-Newref';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -170,7 +170,7 @@ $BuildNameExtra = 'Nightly';
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
 #$BuildTree  = 'MozillaTest';
-$BuildTree  = 'Firefox';
+$BuildTree  = 'MozillaExperimental';
 
 #$BuildName = '';
 #$BuildTag = '';
@@ -196,17 +196,17 @@ $BinaryName = 'firefox.exe';
 $ReleaseBuild  = 1;
 $shiptalkback  = 1;
 $ReleaseToLatest = 1; # Push the release to latest-<milestone>?
-$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
+$ReleaseToDated = 0; # Push the release to YYYY-MM-DD-HH-<milestone>?
 $build_hour    = "4";
 $package_creation_path = "/browser/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
 $ssh_version   = "2";
 #$ssh_user      = "cltbld";
 #$ssh_server    = "stage.mozilla.org";
-$ftp_path      = "/home/ftp/pub/firefox/nightly";
-$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
-$tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
-$tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
+$ftp_path      = "/home/ftp/pub/firefox/nightly/experimental/win32-newref";
+$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/experimental/win32-newref";
+$tbox_ftp_path = "/home/ftp/pub/firefox/nightly/experimental/win32-newref/hourly-builds";
+$tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/experimental/win32-newref/hourly-builds";
 $milestone     = "trunk";
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
@@ -220,7 +220,7 @@ $update_platform = "WINNT_x86-msvc";
 $update_hash = "sha1";
 $update_filehost = "ftp.mozilla.org";
 $update_ver_file = 'browser/config/version.txt';
-$update_pushinfo = 1;
+$update_pushinfo = 0;
 $crashreporter_buildsymbols = 1;
 $crashreporter_pushsymbols = 1;
 $ENV{SYMBOL_SERVER_HOST} = 'stage.mozilla.org';
