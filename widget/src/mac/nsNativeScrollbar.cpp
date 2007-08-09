@@ -239,12 +239,10 @@ nsNativeScrollbar::DoScrollAction(ControlPartCode part)
     // lines. Outliner ignores the indexes in ScrollbarButtonPressed() except
     // to check if one is greater than the other to indicate direction.
     //
+    UpdateContentPosition(newPos);
     if (mMediator) {
       BoundsCheck(0, newPos, mMaxValue);
       mMediator->ScrollbarButtonPressed(mScrollbar, oldPos, newPos);
-    }
-    else {
-      UpdateContentPosition(newPos);
     }
   }
   else {
