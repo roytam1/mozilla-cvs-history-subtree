@@ -289,16 +289,16 @@ const int kOutlineViewLeftMargin = 19; // determined empirically, since it doesn
 
   [self ensureBookmarks];
 
-  // set a formatter on the shortcut column
-  BookmarkShortcutFormatter* shortcutFormatter = [[[BookmarkShortcutFormatter alloc] init] autorelease];
-  [[[mBookmarksOutlineView tableColumnWithIdentifier:@"shortcut"] dataCell] setFormatter:shortcutFormatter];
+  // set a formatter on the keyword column
+  BookmarkKeywordFormatter* keywordFormatter = [[[BookmarkKeywordFormatter alloc] init] autorelease];
+  [[[mBookmarksOutlineView tableColumnWithIdentifier:@"keyword"] dataCell] setFormatter:keywordFormatter];
 
   // these should be settable in the nib.  however, whenever
   // I try, they disappear as soon as I've saved.  Very annoying.
   [mContainersTableView setAutosaveName:@"BMContainerView"];
   [mContainersTableView setAutosaveTableColumns:YES];
 
-  [mBookmarksOutlineView setAutosaveName:@"BookmarksOutlineViewV2"];
+  [mBookmarksOutlineView setAutosaveName:@"BookmarksOutlineView"];
   [mBookmarksOutlineView setAutosaveTableColumns:YES];
 
   [mHistoryOutlineView setAutosaveName:@"HistoryOutlineView"];
@@ -393,14 +393,16 @@ const int kOutlineViewLeftMargin = 19; // determined empirically, since it doesn
 
 - (IBAction)addBookmarkSeparator:(id)aSender
 {
-  Bookmark *separator = [Bookmark separator];
+  Bookmark *aBookmark = [[Bookmark alloc] init];
+  [aBookmark setIsSeparator:YES];
 
   int index;
   BookmarkFolder *parentFolder = [self selectedItemFolderAndIndex:&index];
 
-  [parentFolder insertChild:separator atIndex:index isMove:NO];
+  [parentFolder insertChild:aBookmark atIndex:index isMove:NO];
 
-  [self revealItem:separator scrollIntoView:YES selecting:YES byExtendingSelection:NO];
+  [self revealItem:aBookmark scrollIntoView:YES selecting:YES byExtendingSelection:NO];
+  [aBookmark release];
 }
 
 - (IBAction)addBookmarkFolder:(id)aSender
@@ -1034,13 +1036,11 @@ const int kOutlineViewLeftMargin = 19; // determined empirically, since it doesn
   // make sure we re-enable updates
   NS_DURING
     for (unsigned int i = 0; i < [urls count]; ++i) {
-      NSString* url = [urls objectAtIndex:i];
       NSString* title = [titles objectAtIndex:i];
       if ([title length] == 0)
-        title = url;
-      Bookmark* bookmark = [Bookmark bookmarkWithTitle:title url:url];
-      [dropFolder insertChild:bookmark atIndex:(index + i) isMove:NO];
-      [newBookmarks addObject:bookmark];
+        title = [urls objectAtIndex:i];
+
+      [newBookmarks addObject:[dropFolder addBookmark:title url:[urls objectAtIndex:i] inPosition:(index + i) isSeparator:NO]];
     }
   NS_HANDLER
   NS_ENDHANDLER
@@ -1750,8 +1750,8 @@ const int kOutlineViewLeftMargin = 19; // determined empirically, since it doesn
     case kArrangeBookmarksByTitleMask:
       return @selector(compareTitle:sortDescending:);
 
-    case kArrangeBookmarksByShortcutMask:
-      return @selector(compareShortcut:sortDescending:);
+    case kArrangeBookmarksByKeywordMask:
+      return @selector(compareKeyword:sortDescending:);
 
     case kArrangeBookmarksByDescriptionMask:
       return @selector(compareDescription:sortDescending:);
@@ -1924,7 +1924,7 @@ const int kOutlineViewLeftMargin = 19; // determined empirically, since it doesn
   const unsigned int kVisibleAttributeChangedFlags = (kBookmarkItemTitleChangedMask |
                                                       kBookmarkItemIconChangedMask |
                                                       kBookmarkItemURLChangedMask |
-                                                      kBookmarkItemShortcutChangedMask |
+                                                      kBookmarkItemKeywordChangedMask |
                                                       kBookmarkItemDescriptionChangedMask |
                                                       kBookmarkItemLastVisitChangedMask |
                                                       kBookmarkItemStatusChangedMask);

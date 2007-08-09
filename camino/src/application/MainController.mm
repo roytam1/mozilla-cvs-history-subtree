@@ -72,7 +72,6 @@
 #import "SharedMenusObj.h"
 #import "SiteIconProvider.h"
 #import "SessionManager.h"
-#import "CHPermissionManager.h"
 
 #include "nsBuildID.h"
 #include "nsCOMPtr.h"
@@ -89,6 +88,7 @@
 #include "nsIGenericFactory.h"
 #include "nsIEventQueueService.h"
 #include "nsNetCID.h"
+#include "nsIPermissionManager.h"
 #include "nsICookieManager.h"
 #include "nsIBrowserHistory.h"
 #include "nsICacheService.h"
@@ -471,7 +471,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
   // for non-nightly builds, show a special start page
   PreferenceManager* prefManager = [PreferenceManager sharedInstance];
   NSString* vendorSubString = [prefManager getStringPref:"general.useragent.vendorSub" withSuccess:NULL];
-  if ([vendorSubString rangeOfString:@"pre"].location == NSNotFound) {
+  if (![vendorSubString hasSuffix:@"+"]) {
     // has the user seen this already?
     NSString* startPageRev = [prefManager getStringPref:"browser.startup_page_override.version" withSuccess:NULL];
     if (![vendorSubString isEqualToString:startPageRev]) {
@@ -835,8 +835,8 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
     return;
   }
 
-  // check to see if it's a bookmark shortcut
-  NSArray* resolvedURLs = [[BookmarkManager sharedBookmarkManager] resolveBookmarksShortcut:urlString];
+  // check to see if it's a bookmark keyword
+  NSArray* resolvedURLs = [[BookmarkManager sharedBookmarkManager] resolveBookmarksKeyword:urlString];
 
   if (resolvedURLs) {
     if ([resolvedURLs count] == 1)
@@ -966,7 +966,10 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
       mCookieManager->RemoveAll();
 
     // remove site permissions
-    [[CHPermissionManager permissionManager] removeAllPermissions];
+    nsCOMPtr<nsIPermissionManager> pm(do_GetService(NS_PERMISSIONMANAGER_CONTRACTID));
+    nsIPermissionManager* mPermissionManager = pm.get();
+    if (mPermissionManager)
+      mPermissionManager->RemoveAll();
 
     // remove history
     nsCOMPtr<nsIBrowserHistory> hist (do_GetService("@mozilla.org/browser/global-history;2"));
@@ -1066,7 +1069,6 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
                                                  NSFileTypeForHFSTypeCode('ilht'),
                                                  NSFileTypeForHFSTypeCode('ilft'),
                                                  NSFileTypeForHFSTypeCode('LINK'),
-                                                 NSFileTypeForHFSTypeCode('TEXT'),
                                                  nil];
 
   BrowserWindowController* browserController = [self getMainWindowBrowserController];
@@ -1315,7 +1317,9 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
   if (!browserController)
     return;
 
-  BOOL showToolbar = ![[browserController bookmarkToolbar] isVisible];
+  float height = [[browserController bookmarkToolbar] frame].size.height;
+  BOOL showToolbar = (BOOL)(!(height > 0));
+
   [[browserController bookmarkToolbar] setVisible:showToolbar];
 
   // save prefs here

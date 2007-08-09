@@ -39,6 +39,7 @@
 
 #import "NSString+Utils.h"
 #import "NSPasteboard+Utils.h"
+#import "NSDate+Utils.h"
 
 #import "BrowserWindowController.h"
 #import "HistoryDataSource.h"
@@ -160,6 +161,7 @@ static int HistoryItemSort(id firstItem, id secondItem, void* context)
 
 - (NSArray*)historyItems;
 - (HistorySiteItem*)itemWithIdentifier:(NSString*)identifier;
+- (NSString*)relativeDataStringForDate:(NSDate*)date;
 
 - (void)siteIconLoaded:(NSNotification*)inNotification;
 - (void)checkForNewDay;
@@ -971,6 +973,12 @@ NS_IMPL_ISUPPORTS1(nsHistoryObserver, nsIHistoryObserver);
   return [mHistoryItemsDictionary objectForKey:identifier];
 }
 
+- (NSString*)relativeDataStringForDate:(NSDate*)date
+{
+  NSCalendarDate* calendarDate = [date dateWithCalendarFormat:nil timeZone:nil];
+  return [calendarDate relativeDateDescription];
+}
+
 - (void)siteIconLoaded:(NSNotification*)inNotification
 {
   HistoryItem* theItem = [inNotification object];
@@ -1096,7 +1104,7 @@ NS_IMPL_ISUPPORTS1(nsHistoryObserver, nsIHistoryObserver);
   return [item isKindOfClass:[HistoryCategoryItem class]];
 }
 
-// identifiers: title url last_visit first_visit
+// identifiers: title url description keyword
 - (id)outlineView:(NSOutlineView*)outlineView objectValueForTableColumn:(NSTableColumn*)aTableColumn byItem:(id)item
 {
   if ([[aTableColumn identifier] isEqualToString:@"title"])
@@ -1108,10 +1116,10 @@ NS_IMPL_ISUPPORTS1(nsHistoryObserver, nsIHistoryObserver);
       return [item url];
 
     if ([[aTableColumn identifier] isEqualToString:@"last_visit"])
-      return [item lastVisit];
+      return [self relativeDataStringForDate:[item lastVisit]];
 
     if ([[aTableColumn identifier] isEqualToString:@"first_visit"])
-      return [item firstVisit];
+      return [self relativeDataStringForDate:[item firstVisit]];
   }
 
   if ([item isKindOfClass:[HistoryCategoryItem class]])
@@ -1120,7 +1128,7 @@ NS_IMPL_ISUPPORTS1(nsHistoryObserver, nsIHistoryObserver);
       return [BookmarkViewController greyStringWithItemCount:[item numberOfChildren]];
   }
   
-  return nil;
+  return @"";
 
 // TODO truncate string
 //  - (void)truncateToWidth:(float)maxWidth at:kTruncateAtMiddle withAttributes:(NSDictionary *)attributes

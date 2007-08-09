@@ -54,12 +54,12 @@ NSString* const BMChildrenKey = @"Children";
 // Camino plist keys
 NSString* const BMFolderDescKey = @"FolderDescription";
 NSString* const BMFolderTypeKey = @"FolderType";
-NSString* const BMFolderShortcutKey = @"FolderKeyword";
+NSString* const BMFolderKeywordKey = @"FolderKeyword";
 NSString* const BMDescKey = @"Description";
 NSString* const BMStatusKey = @"Status";
 NSString* const BMURLKey = @"URL";
 NSString* const BMUUIDKey = @"UUID";
-NSString* const BMShortcutKey = @"Keyword";
+NSString* const BMKeywordKey = @"Keyword";
 NSString* const BMLastVisitKey = @"LastVisitedDate";
 NSString* const BMNumberVisitsKey = @"VisitCount";
 NSString* const BMLinkedFaviconURLKey = @"LinkedFaviconURL";
@@ -74,7 +74,20 @@ NSString* const SafariURIDictKey = @"URIDictionary";
 NSString* const SafariBookmarkTitleKey = @"title";
 NSString* const SafariURLStringKey = @"URLString";
 
-@implementation BookmarkShortcutFormatter
+// camino XML keys
+NSString* const CaminoNameKey = @"name";
+NSString* const CaminoDescKey = @"description";
+NSString* const CaminoTypeKey = @"type";
+NSString* const CaminoKeywordKey = @"id";
+NSString* const CaminoURLKey = @"href";
+NSString* const CaminoToolbarKey = @"toolbar";
+NSString* const CaminoDockMenuKey = @"dockmenu";
+NSString* const CaminoGroupKey = @"group";
+NSString* const CaminoBookmarkKey = @"bookmark";
+NSString* const CaminoFolderKey = @"folder";
+NSString* const CaminoTrueKey = @"true";
+
+@implementation BookmarkKeywordFormatter
 
 - (NSString *)stringForObjectValue:(id)anObject
 {
@@ -119,7 +132,7 @@ NSString* const SafariURLStringKey = @"URLString";
   if ((self = [super init])) {
     mParent       = nil;
     mTitle        = [[NSString alloc] init]; //retain count +1
-    mShortcut     = [mTitle retain]; //retain count +2
+    mKeyword      = [mTitle retain]; //retain count +2
     mDescription  = [mTitle retain]; //retain count +3! and just 1 allocation.
     mUUID         = nil;
     mIcon         = nil;
@@ -133,7 +146,7 @@ NSString* const SafariURLStringKey = @"URLString";
   id bmItemCopy = [[[self class] allocWithZone:zone] init];
   [bmItemCopy setTitle:[self title]];
   [bmItemCopy setItemDescription:[self itemDescription]];
-  [bmItemCopy setShortcut:[self shortcut]];
+  [bmItemCopy setKeyword:[self keyword]];
   [bmItemCopy setParent:[self parent]];
   [bmItemCopy setIcon:[self icon]];
   // do NOT copy the UUID.  It wouldn't be "U" then, would it?
@@ -144,7 +157,7 @@ NSString* const SafariURLStringKey = @"URLString";
 {
   [mTitle release];
   [mDescription release];
-  [mShortcut release];
+  [mKeyword release];
   [mIcon release];
   [mUUID release];
 
@@ -167,9 +180,9 @@ NSString* const SafariURLStringKey = @"URLString";
   return mDescription;
 }
 
-- (NSString *)shortcut
+- (NSString *)keyword
 {
-  return mShortcut;
+  return mKeyword;
 }
 
 // if we ask for a UUID, it means we need
@@ -247,16 +260,16 @@ NSString* const SafariURLStringKey = @"URLString";
   }
 }
 
-- (void)setShortcut:(NSString *)aShortcut
+- (void)setKeyword:(NSString *)aKeyword
 {
-  if (!aShortcut)
+  if (!aKeyword)
     return;
 
-  if (![mShortcut isEqualToString:aShortcut]) {
-    [aShortcut retain];
-    [mShortcut release];
-    mShortcut = aShortcut;
-    [self itemUpdatedNote:kBookmarkItemShortcutChangedMask];
+  if (![mKeyword isEqualToString:aKeyword]) {
+    [aKeyword retain];
+    [mKeyword release];
+    mKeyword = aKeyword;
+    [self itemUpdatedNote:kBookmarkItemKeywordChangedMask];
   }
 }
 
@@ -288,15 +301,15 @@ NSString* const SafariURLStringKey = @"URLString";
   switch (tag) {
     case eBookmarksSearchFieldAll:
       return (([[self title]           rangeOfString:searchString options:NSCaseInsensitiveSearch].location != NSNotFound) ||
-              ([[self shortcut]        rangeOfString:searchString options:NSCaseInsensitiveSearch].location != NSNotFound) ||
+              ([[self keyword]         rangeOfString:searchString options:NSCaseInsensitiveSearch].location != NSNotFound) ||
               ([[self itemDescription] rangeOfString:searchString options:NSCaseInsensitiveSearch].location != NSNotFound));
 
     case eBookmarksSearchFieldTitle:
       return ([[self title]            rangeOfString:searchString options:NSCaseInsensitiveSearch].location != NSNotFound);
 
     // case eBookmarksSearchFieldURL: // Bookmark subclass has to check this
-    case eBookmarksSearchFieldShortcut:
-      return ([[self shortcut]         rangeOfString:searchString options:NSCaseInsensitiveSearch].location != NSNotFound);
+    case eBookmarksSearchFieldKeyword:
+      return ([[self keyword]          rangeOfString:searchString options:NSCaseInsensitiveSearch].location != NSNotFound);
 
     case eBookmarksSearchFieldDescription:
       return ([[self itemDescription]  rangeOfString:searchString options:NSCaseInsensitiveSearch].location != NSNotFound);
@@ -321,14 +334,6 @@ NSString* const SafariURLStringKey = @"URLString";
 
 - (void)itemUpdatedNote:(unsigned int)inChangeMask
 {
-  // If the bookmark hasn't been inserted into the tree yet then it doesn't
-  // matter if it changed, so don't bother sending the notification. Because
-  // we can't tell if it's the root of the bookmark tree (which always has a
-  // nil parent) we always have to let kBookmarkItemChildrenChangedMask
-  // notfications through.
-  if (![self parent] && !(inChangeMask & kBookmarkItemChildrenChangedMask))
-    return;
-
   if ([[BookmarkManager sharedBookmarkManager] areChangeNotificationsSuppressed])
     return;   // don't even accumulate the flags. caller is expected to update stuff manually
 
@@ -356,7 +361,22 @@ NSString* const SafariURLStringKey = @"URLString";
 
 #pragma mark -
 
-// Writing to disk - all just stubs.
+//Reading/writing to & from disk - all just stubs.
+
+- (BOOL)readNativeDictionary:(NSDictionary *)aDict
+{
+  return NO;
+}
+
+- (BOOL)readSafariDictionary:(NSDictionary *)aDict
+{
+  return NO;
+}
+
+- (BOOL)readCaminoXML:(CFXMLTreeRef)aTreeRef settingToolbar:(BOOL)setupToolbar
+{
+  return NO;
+}
 
 - (void)writeBookmarksMetadataToPath:(NSString*)inPath
 {
@@ -393,9 +413,9 @@ NSString* const SafariURLStringKey = @"URLString";
   return mDescription ? mDescription : @"";
 }
 
-- (id)savedShortcut
+- (id)savedKeyword
 {
-  return mShortcut ? mShortcut : @"";
+  return mKeyword ? mKeyword : @"";
 }
 
 - (id)savedUUID
@@ -418,9 +438,9 @@ NSString* const SafariURLStringKey = @"URLString";
   return [inDescending boolValue] ? (NSComparisonResult)(-1 * (int)result) : result;
 }
 
-- (NSComparisonResult)compareShortcut:(BookmarkItem *)aItem sortDescending:(NSNumber*)inDescending
+- (NSComparisonResult)compareKeyword:(BookmarkItem *)aItem sortDescending:(NSNumber*)inDescending
 {
-  NSComparisonResult result = [[self shortcut] compare:[aItem shortcut] options:NSCaseInsensitiveSearch];
+  NSComparisonResult result = [[self keyword] compare:[aItem keyword] options:NSCaseInsensitiveSearch];
   return [inDescending boolValue] ? (NSComparisonResult)(-1 * (int)result) : result;
 }
 

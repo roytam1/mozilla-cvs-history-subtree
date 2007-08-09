@@ -119,8 +119,7 @@
       [mBookmarksToolbar setFrame:newFrame];
     }
     
-    if (![mBookmarksToolbar isHidden])
-      bmToolbarHeight = NSHeight([mBookmarksToolbar frame]);
+    bmToolbarHeight = NSHeight([mBookmarksToolbar frame]);
   }
   
   if (mStatusBar)

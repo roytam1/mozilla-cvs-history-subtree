@@ -22,7 +22,6 @@
  * Contributor(s):
  *   David Haas <haasd@cae.wisc.edu>
  *   Josh Aas <josh@mozilla.com>
- *   Stuart Morgan <stuart.morgan@alumni.case.edu>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -51,75 +50,15 @@
 NSString* const URLLoadNotification   = @"url_load";
 NSString* const URLLoadSuccessKey     = @"url_bool";
 
-//Status Flags
-#define kBookmarkOKStatus 0
-#define kBookmarkSpacerStatus 9
-
-#pragma mark -
-
-@interface Bookmark (Private)
-
-- (void)setIsSeparator:(BOOL)isSeparator;
-
-// methods used for saving to files; are guaranteed never to return nil
-- (id)savedURL;
-- (id)savedLastVisit;
-- (id)savedStatus;
-- (id)savedNumberOfVisits;
-- (id)savedFaviconURL;
-
-@end
-
 #pragma mark -
 
 @implementation Bookmark
-
-+ (Bookmark*)separator
-{
-  Bookmark* separator = [[[self alloc] init] autorelease];
-  [separator setIsSeparator:YES];
-  return separator;
-}
-
-+ (Bookmark*)bookmarkWithTitle:(NSString*)aTitle url:(NSString*)aURL
-{
-  Bookmark* bookmark = [[[self alloc] init] autorelease];
-  [bookmark setTitle:aTitle];
-  [bookmark setUrl:aURL];
-  return bookmark;
-}
-
-+ (Bookmark*)bookmarkWithNativeDictionary:(NSDictionary*)aDict
-{
-  // There used to be more than two possible status states, but now state just
-  // indicates whether or not it's a separator.
-  if ([[aDict objectForKey:BMStatusKey] unsignedIntValue] == kBookmarkSpacerStatus)
-    return [self separator];
-
-  Bookmark* bookmark = [self bookmarkWithTitle:[aDict objectForKey:BMTitleKey]
-                                           url:[aDict objectForKey:BMURLKey]];
-  [bookmark setItemDescription:[aDict objectForKey:BMDescKey]];
-  [bookmark setShortcut:[aDict objectForKey:BMShortcutKey]];
-  [bookmark setUUID:[aDict objectForKey:BMUUIDKey]];
-  [bookmark setLastVisit:[aDict objectForKey:BMLastVisitKey]];
-  [bookmark setNumberOfVisits:[[aDict objectForKey:BMNumberVisitsKey] unsignedIntValue]];
-  [bookmark setFaviconURL:[aDict objectForKey:BMLinkedFaviconURLKey]];
-
-  return bookmark;
-}
-
-+ (Bookmark*)bookmarkWithSafariDictionary:(NSDictionary*)aDict
-{
-  NSDictionary* uriDict = [aDict objectForKey:SafariURIDictKey];
-  return [self bookmarkWithTitle:[uriDict objectForKey:SafariBookmarkTitleKey]
-                             url:[aDict objectForKey:SafariURLStringKey]];
-}
 
 - (id)init
 {
   if ((self = [super init])) {
     mURL            = [[NSString alloc] init];
-    mIsSeparator    = NO;
+    mStatus         = kBookmarkOKStatus;
     mNumberOfVisits = 0;
     mLastVisit      = [[NSDate date] retain];
   }
@@ -130,7 +69,7 @@ NSString* const URLLoadSuccessKey     = @"url_bool";
 {
   id bookmarkCopy = [super copyWithZone:zone];
   [bookmarkCopy setUrl:[self url]];
-  [bookmarkCopy setIsSeparator:[self isSeparator]];
+  [bookmarkCopy setStatus:[self status]];
   [bookmarkCopy setLastVisit:[self lastVisit]];
   [bookmarkCopy setNumberOfVisits:[self numberOfVisits]];
   return bookmarkCopy;
@@ -139,6 +78,7 @@ NSString* const URLLoadSuccessKey     = @"url_bool";
 - (void)dealloc
 {
   [[NSNotificationCenter defaultCenter] removeObserver:self];
+  mParent = NULL;  // not retained, so just set to null
   [mURL release];
   [mLastVisit release];
   [super dealloc];
@@ -170,6 +110,11 @@ NSString* const URLLoadSuccessKey     = @"url_bool";
   return mLastVisit;
 }
 
+- (unsigned)status
+{
+  return mStatus;
+}
+
 - (unsigned)numberOfVisits
 {
   return mNumberOfVisits;
@@ -177,7 +122,7 @@ NSString* const URLLoadSuccessKey     = @"url_bool";
 
 - (BOOL)isSeparator
 {
-  return mIsSeparator;
+  return (mStatus == kBookmarkSpacerStatus);
 }
 
 - (NSString*)faviconURL
@@ -192,6 +137,23 @@ NSString* const URLLoadSuccessKey     = @"url_bool";
   mFaviconURL = inURL;
 }
 
+- (void)setStatus:(unsigned)aStatus
+{
+  if (aStatus != mStatus) {
+    // There used to be more than two possible status states.
+    // Now we regard everything except kBookmarkSpacerStatus
+    // as kBookmarkOKStatus.
+    if (aStatus != kBookmarkSpacerStatus)
+      aStatus = kBookmarkOKStatus;
+
+    mStatus = aStatus;
+    [self itemUpdatedNote:kBookmarkItemStatusChangedMask];
+
+    if (aStatus == kBookmarkSpacerStatus)
+      [self setTitle:NSLocalizedString(@"<Menu Spacer>", nil)];
+  }
+}
+
 - (void)setUrl:(NSString *)aURL
 {
   if (!aURL)
@@ -201,6 +163,7 @@ NSString* const URLLoadSuccessKey     = @"url_bool";
     [aURL retain];
     [mURL release];
     mURL = aURL;
+    [self setStatus:kBookmarkOKStatus];
 
     // clear the icon, so we'll refresh it next time someone asks for it
     [mIcon release];
@@ -229,14 +192,12 @@ NSString* const URLLoadSuccessKey     = @"url_bool";
   }
 }
 
-- (void)setIsSeparator:(BOOL)isSeparator
+- (void)setIsSeparator:(BOOL)aBool
 {
-  if (mIsSeparator != isSeparator) {
-    mIsSeparator = isSeparator;
-    if (isSeparator)
-      [self setTitle:NSLocalizedString(@"<Menu Spacer>", nil)];
-    [self itemUpdatedNote:kBookmarkItemStatusChangedMask];
-  }
+  if (aBool)
+    [self setStatus:kBookmarkSpacerStatus];
+  else
+    [self setStatus:kBookmarkOKStatus];
 }
 
 - (void)refreshIcon
@@ -292,10 +253,7 @@ NSString* const URLLoadSuccessKey     = @"url_bool";
 
 - (id)savedStatus
 {
-  // There used to be more than two possible status states. Now we regard
-  // everything except kBookmarkSpacerStatus as kBookmarkOKStatus.
-  return [NSNumber numberWithUnsignedInt:(mIsSeparator ? kBookmarkSpacerStatus
-                                                       : kBookmarkOKStatus)];
+  return [NSNumber numberWithUnsignedInt:mStatus];
 }
 
 - (id)savedNumberOfVisits
@@ -311,8 +269,79 @@ NSString* const URLLoadSuccessKey     = @"url_bool";
 #pragma mark -
 
 //
-// for writing to disk
+// for reading/writing from/to disk
 //
+
+- (BOOL)readNativeDictionary:(NSDictionary *)aDict
+{
+  //gather the redundant update notifications
+  [self setAccumulateUpdateNotifications:YES];
+
+  [self setTitle:[aDict objectForKey:BMTitleKey]];
+  [self setItemDescription:[aDict objectForKey:BMDescKey]];
+  [self setKeyword:[aDict objectForKey:BMKeywordKey]];
+  [self setUrl:[aDict objectForKey:BMURLKey]];
+  [self setUUID:[aDict objectForKey:BMUUIDKey]];
+  [self setLastVisit:[aDict objectForKey:BMLastVisitKey]];
+  [self setNumberOfVisits:[[aDict objectForKey:BMNumberVisitsKey] unsignedIntValue]];
+  [self setStatus:[[aDict objectForKey:BMStatusKey] unsignedIntValue]];
+  [self setFaviconURL:[aDict objectForKey:BMLinkedFaviconURLKey]];
+
+  //fire an update notification
+  [self setAccumulateUpdateNotifications:NO];
+  return YES;
+}
+
+- (BOOL)readSafariDictionary:(NSDictionary *)aDict
+{
+  //gather the redundant update notifications
+  [self setAccumulateUpdateNotifications:YES];
+
+  NSDictionary *uriDict = [aDict objectForKey:SafariURIDictKey];
+  [self setTitle:[uriDict objectForKey:SafariBookmarkTitleKey]];
+  [self setUrl:[aDict objectForKey:SafariURLStringKey]];
+
+  //fire an update notification
+  [self setAccumulateUpdateNotifications:NO];
+  return YES;
+}
+
+- (BOOL)readCaminoXML:(CFXMLTreeRef)aTreeRef settingToolbar:(BOOL)setupToolbar
+{
+  CFXMLNodeRef myNode;
+  CFXMLElementInfo* elementInfoPtr;
+  myNode = CFXMLTreeGetNode(aTreeRef);
+  if (myNode) {
+    // Process our info
+    if (CFXMLNodeGetTypeCode(myNode)==kCFXMLNodeTypeElement){
+      elementInfoPtr = (CFXMLElementInfo *)CFXMLNodeGetInfoPtr(myNode);
+      if (elementInfoPtr) {
+        NSDictionary* attribDict = (NSDictionary*)elementInfoPtr->attributes;
+        //gather the redundant update notifications
+        [self setAccumulateUpdateNotifications:YES];
+        [self setTitle:[[attribDict objectForKey:CaminoNameKey] stringByRemovingAmpEscapes]];
+        [self setKeyword:[[attribDict objectForKey:CaminoKeywordKey] stringByRemovingAmpEscapes]];
+        [self setItemDescription:[[attribDict objectForKey:CaminoDescKey] stringByRemovingAmpEscapes]];
+        [self setUrl:[[attribDict objectForKey:CaminoURLKey] stringByRemovingAmpEscapes]];
+        //fire an update notification
+        [self setAccumulateUpdateNotifications:NO];
+      }
+      else {
+        NSLog(@"Bookmark:readCaminoXML - elementInfoPtr null, load failed");
+        return NO;
+      }
+    }
+    else {
+      NSLog(@"Bookmark:readCaminoXML - node not kCFXMLNodeTypeElement, load failed");
+      return NO;
+    }
+  }
+  else {
+    NSLog(@"Bookmark:readCaminoXML - urk! CFXMLTreeGetNode null, load failed");
+    return NO;
+  }
+  return YES;
+}
 
 //
 // -writeBookmarksMetaDatatoPath:
@@ -362,8 +391,8 @@ NSString* const URLLoadSuccessKey     = @"url_bool";
   if ([[self itemDescription] length])
     [itemDict setObject:[self itemDescription] forKey:BMDescKey];
 
-  if ([[self shortcut] length])
-    [itemDict setObject:[self shortcut] forKey:BMShortcutKey];
+  if ([[self keyword] length])
+    [itemDict setObject:[self keyword] forKey:BMKeywordKey];
 
   if ([mUUID length])    // don't call -UUID to avoid generating one
     [itemDict setObject:mUUID forKey:BMUUIDKey];
@@ -409,8 +438,8 @@ NSString* const URLLoadSuccessKey     = @"url_bool";
   if ([self lastVisit])  // if there is a lastVisit, export it
     exportHTMLString = [exportHTMLString stringByAppendingFormat:@" LAST_VISIT=\"%d\"", [[self lastVisit] timeIntervalSince1970]];
 
-  if ([[self shortcut] length] > 0)  // if there is a shortcut, export it (bug 307743)
-    exportHTMLString = [exportHTMLString stringByAppendingFormat:@" SHORTCUTURL=\"%@\"", [self shortcut]];
+  if ([[self keyword] length] > 0)  // if there is a keyword, export it (bug 307743)
+    exportHTMLString = [exportHTMLString stringByAppendingFormat:@" SHORTCUTURL=\"%@\"", [self keyword]];
 
   // close up the attributes, export the title, close the A tag
   exportHTMLString = [exportHTMLString stringByAppendingFormat:@">%@</A>\n", [mTitle stringByAddingAmpEscapes]];
@@ -459,7 +488,7 @@ NSString* const URLLoadSuccessKey     = @"url_bool";
   return [inDescending boolValue] ? (NSComparisonResult)(-1 * (int)result) : result;
 }
 
-// base class does the title, shortcut and description compares
+// base class does the title, keyword and description compares
 
 - (NSComparisonResult)compareType:(BookmarkItem *)aItem sortDescending:(NSNumber*)inDescending
 {

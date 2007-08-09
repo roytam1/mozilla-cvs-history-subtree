@@ -82,10 +82,8 @@ extern NSString* const kPrefChangedPrefNameUserInfoKey;   // NSString
 
 - (void)clearPref:(const char*)prefName;
 
-// the path to the user profile's root folder
+// the path to the user profile's root folder, used by camino 0.8+
 - (NSString*)profilePath;
-// the path to Camino's cache root folder
-- (NSString*)cacheParentDirPath;
 
 // turn notifications on and off when the given pref changes. 
 // if not nil, inObject is used at the 'object' of the resulting notification.

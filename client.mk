@@ -236,10 +236,9 @@ BOOTSTRAP_xulrunner := mozilla/xulrunner/config/mozconfig
 
 MODULES_macbrowser :=                           \
   $(MODULES_core)                               \
-  mozilla/camino                                \
   $(NULL)
 
-BOOTSTRAP_macbrowser := mozilla/camino/config/mozconfig
+BOOTSTRAP_macbrowser := 
 
 MODULES_all :=                                  \
   mozilla/other-licenses/bsdiff                 \
@@ -257,11 +256,12 @@ MODULES_all :=                                  \
 #
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
-MOZ_CO_TAG           = FIREFOX_2_0_0_6_RELEASE
-NSPR_CO_TAG          = FIREFOX_2_0_0_6_RELEASE
-NSS_CO_TAG           = FIREFOX_2_0_0_6_RELEASE
-LDAPCSDK_CO_TAG      = FIREFOX_2_0_0_6_RELEASE
-LOCALES_CO_TAG       = FIREFOX_2_0_0_6_RELEASE
+CAMINO_CO_TAG        = CAMINO_1_5_1_RELEASE
+MOZ_CO_TAG           = CAMINO_1_5_1_RELEASE
+NSPR_CO_TAG          = NSPR_4_6_7_RTM
+NSS_CO_TAG           = NSS_3_11_5_WITH_CKBI_1_64_RTM
+LDAPCSDK_CO_TAG      = CAMINO_1_5_1_RELEASE
+LOCALES_CO_TAG       = CAMINO_1_5_1_RELEASE
 
 BUILD_MODULES = all
 
@@ -418,6 +418,25 @@ else
 endif
 
 endif # MOZ_BUILD_PROJECTS
+
+####################################
+# CVS defines for Camino
+#
+CAMINO_CO_MODULE = mozilla/camino
+CAMINO_CO_FLAGS := -P
+ifdef MOZ_CO_FLAGS
+  CAMINO_CO_FLAGS := $(MOZ_CO_FLAGS)
+endif
+CAMINO_CO_FLAGS := $(CAMINO_CO_FLAGS) $(if $(CAMINO_CO_TAG),-r $(CAMINO_CO_TAG),-A)
+
+# Can only pull the tip or branch tags by date
+ifeq (,$(filter-out HEAD %BRANCH,$(CAMINO_CO_TAG)))
+CVSCO_CAMINO_BASE = $(CVS) $(CVS_FLAGS) co $(CAMINO_CO_FLAGS) $(CVS_CO_DATE_FLAGS)
+else
+CVSCO_CAMINO_BASE = $(CVS) $(CVS_FLAGS) co $(CAMINO_CO_FLAGS)
+endif
+CVSCO_CAMINO = $(CVSCO_CAMINO_BASE) $(CAMINO_CO_MODULE)
+CVSCO_CAMINO_CLIENTMK = $(CVSCO_CAMINO_BASE) mozilla/client.mk
 
 ####################################
 # CVS defines for NSS
@@ -624,22 +643,30 @@ ifdef RUN_AUTOCONF_LOCALLY
 		mozilla/directory/c-sdk/configure
 endif
 	@echo "checkout start: "`date` | tee $(CVSCO_LOGFILE)
-	@echo '$(CVSCO) $(CVS_CO_DATE_FLAGS) mozilla/client.mk $(MOZCONFIG_MODULES)'; \
+	@echo '$(CVSCO_CAMINO_BASE) mozilla/client.mk mozilla/camino/config/mozconfig'; \
         cd $(ROOTDIR) && \
-	$(CVSCO) $(CVS_CO_DATE_FLAGS) mozilla/client.mk $(MOZCONFIG_MODULES)
+	$(CVSCO_CAMINO_BASE) mozilla/client.mk mozilla/camino/config/mozconfig
+	@echo '$(CVSCO) $(CVS_CO_DATE_FLAGS) $(MOZCONFIG_MODULES)'; \
+        cd $(ROOTDIR) && \
+	$(CVSCO) $(MOZCONFIG_MODULES)
 	@cd $(ROOTDIR) && $(MAKE) -f mozilla/client.mk real_checkout
 
 #	Start the checkout. Split the output to the tty and a log file.
+#	Check out client.mk again because it's present in SeaMonkeyAll
+#	and will be checked out with a tag other than $(CAMINO_CO_TAG).
+#	Yes, this sucks, but cvs doesn't let you ignore things on checkout.
 
 real_checkout:
 	@set -e; \
 	cvs_co() { set -e; echo "$$@" ; \
 	  "$$@" 2>&1 | tee -a $(CVSCO_LOGFILE); }; \
+	cvs_co $(CVSCO_CAMINO); \
 	cvs_co $(CVSCO_NSPR); \
 	cvs_co $(CVSCO_NSS); \
 	cvs_co $(CVSCO_LDAPCSDK); \
 	$(CHECKOUT_MODULES) \
 	$(CHECKOUT_MODULES_NS); \
+	cvs_co $(CVSCO_CAMINO_CLIENTMK); \
 	$(CHECKOUT_LOCALES);
 	@echo "checkout finish: "`date` | tee -a $(CVSCO_LOGFILE)
 # update the NSS checkout timestamp
@@ -675,9 +702,12 @@ ifdef RUN_AUTOCONF_LOCALLY
 		mozilla/directory/c-sdk/configure
 endif
 	@echo "checkout start: "`date` | tee $(CVSCO_LOGFILE)
-	@echo '$(CVSCO) mozilla/client.mk $(MOZCONFIG_MODULES)'; \
+	@echo '$(CVSCO_CAMINO_BASE) mozilla/client.mk mozilla/camino/config/mozconfig'; \
         cd $(ROOTDIR) && \
-	$(CVSCO) mozilla/client.mk $(MOZCONFIG_MODULES)
+	$(CVSCO_CAMINO_BASE) mozilla/client.mk mozilla/camino/config/mozconfig
+	@echo '$(CVSCO) $(CVS_CO_DATE_FLAGS) $(MOZCONFIG_MODULES)'; \
+        cd $(ROOTDIR) && \
+	$(CVSCO) $(CVS_CO_DATE_FLAGS) $(MOZCONFIG_MODULES)
 	@cd $(TOPSRCDIR) && \
 	$(MAKE) -f client.mk real_fast-update
 
@@ -687,6 +717,7 @@ real_fast-update:
 	fast_update() { set -e; config/cvsco-fast-update.pl $$@ 2>&1 | tee -a $(CVSCO_LOGFILE); }; \
 	cvs_co() { set -e; echo "$$@" ; \
 	  "$$@" 2>&1 | tee -a $(CVSCO_LOGFILE); }; \
+	fast_update $(CVSCO_CAMINO); \
 	fast_update $(CVSCO_NSPR); \
 	cd $(ROOTDIR); \
 	cvs_co $(CVSCO_NSS); \
@@ -694,6 +725,7 @@ real_fast-update:
 	fast_update $(CVSCO_LDAPCSDK); \
 	$(FASTUPDATE_MODULES); \
 	$(FASTUPDATE_MODULES_NS); \
+	fast_update $(CVSCO_CAMINO_CLIENTMK); \
 	$(FASTUPDATE_LOCALES);
 	@echo "fast_update finish: "`date` | tee -a $(CVSCO_LOGFILE)
 # update the NSS checkout timestamp

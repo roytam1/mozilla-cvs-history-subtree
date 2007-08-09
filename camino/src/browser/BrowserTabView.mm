@@ -328,6 +328,9 @@ NSString* const kTabBarBackgroundDoubleClickedNotification = @"kTabBarBackground
     NSTabViewItem* item = [self tabViewItemAtIndex: i];
     [[item view] windowClosed];
   }
+  
+  // Tell the tab bar the window is closed so it will perform any needed cleanup
+  [mTabBar windowClosed];
 }
 
 - (BOOL)tabsVisible
@@ -530,13 +533,6 @@ NSString* const kTabBarBackgroundDoubleClickedNotification = @"kTabBarBackground
   id object = [inNotify object];
   if (!object || object != [self selectedTabViewItem])
     [self setJumpbackTab:nil];
-}
-
-// Tabs should be scrolled into view when selected.
--(void)selectTabViewItem:(NSTabViewItem*)item
-{
-  [mTabBar scrollTabIndexToVisible:[self indexOfTabViewItem:item]];
-  [super selectTabViewItem:item];
 }
 
 @end

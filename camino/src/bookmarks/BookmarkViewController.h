@@ -64,7 +64,7 @@ enum
   kArrangeBookmarksByTitleMask        = (1 << 1),
 
   // currently unused (but implemented)
-  kArrangeBookmarksByShortcutMask     = (1 << 2),
+  kArrangeBookmarksByKeywordMask      = (1 << 2),
   kArrangeBookmarksByDescriptionMask  = (1 << 3),
   kArrangeBookmarksByLastVisitMask    = (1 << 4),
   kArrangeBookmarksByVisitCountMask   = (1 << 5),
