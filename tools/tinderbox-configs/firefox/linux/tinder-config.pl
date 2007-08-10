@@ -89,7 +89,7 @@ $BloatTestTimeout                 = 1800;   # seconds
 # This sets the value of the XPCOM_DEBUG_BREAK environment variable.  We
 # default to 'warn', which suppresses the assertion dialogs on Windows
 # and gives platform parity.  Use 'abort' for fatal assertions.
-$MozAssertBehavior = 'abort';
+$MozAssertBehavior = 'stack-and-abort';
 
 #- Set these to what makes sense for your system
 #$Make          = 'gmake';       # Must be GNU make
