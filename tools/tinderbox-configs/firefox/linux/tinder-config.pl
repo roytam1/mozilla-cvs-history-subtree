@@ -1,6 +1,6 @@
 #
-## hostname: argo-vm 
-## uname: Linux argo-vm.build.mozilla.org 2.4.21-32.0.1.EL #1 Tue May 17 18:01:37 EDT 2005 i686 athlon i386 GNU/Linux
+## hostname: l10n-linux-tbox
+## uname: Linux l10n-linux-tbox.build.mozilla.org 2.6.18-8.el5 #1 SMP Thu Mar 15 19:57:35 EDT 2007 i686 i686 i386 GNU/Linux
 #
 
 #- tinder-config.pl - Tinderbox configuration file.
@@ -124,6 +124,7 @@ $VendorName               = 'Mozilla';
 # :pserver:$ENV{USER}%netscape.com@cvs.mozilla.org:/cvsroot
 
 #$moz_cvsroot   = $ENV{CVSROOT};
+$moz_cvsroot   = ":ext:cltbld\@cvs.mozilla.org:/cvsroot";
 
 #- Set these proper values for your tinderbox server
 #$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
@@ -146,10 +147,10 @@ $ConfigureOnly = 1;
 $LocalizationVersionFile = 'browser/config/version.txt';
 %WGetFiles = (
 	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/latest-trunk/firefox-%version%.en-US.linux-i686.tar.bz2" =>
-	      "/builds/tinderbox/Fx-Trunk-l10n/Linux_2.4.21-32.0.1.EL_Clobber/firefox.tar.bz2"
+	      "/builds/tinderbox/Fx-Trunk-l10n/Linux_2.6.18-8.el5_Depend/firefox.tar.bz2"
 	      );
 
-$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Fx-Trunk-l10n/Linux_2.4.21-32.0.1.EL_Clobber/firefox.tar.bz2";
+$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Fx-Trunk-l10n/Linux_2.6.18-8.el5_Depend/firefox.tar.bz2";
 
 #-
 #- The rest should not need to be changed
