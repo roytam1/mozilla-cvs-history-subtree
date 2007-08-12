@@ -3,8 +3,6 @@
 ## uname: Linux l10n-linux-tbox.build.mozilla.org 2.6.18-8.el5 #1 SMP Thu Mar 15 19:57:35 EDT 2007 i686 i686 i386 GNU/Linux
 #
 
-. $topsrcdir/browser/config/mozconfig
- 
 export MOZILLA_OFFICIAL=1
 
 mk_add_options MOZ_CO_PROJECT=browser
