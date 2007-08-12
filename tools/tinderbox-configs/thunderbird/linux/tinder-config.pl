@@ -1,6 +1,6 @@
 #
-## hostname: karma
-## uname: Linux karma.mozilla.org 2.4.20-28.8 #1 Thu Dec 18 12:53:39 EST 2003 i686 athlon i386 GNU/Linux
+## hostname: l10n-linux-tbox
+## uname: Linux l10n-linux-tbox.build.mozilla.org 2.6.18-8.el5 #1 SMP Thu Mar 15 19:57:35 EDT 2007 i686 i686 i386 GNU/Linux
 #
 
 #- tinder-config.pl - Tinderbox configuration file.
@@ -148,10 +148,10 @@ $ConfigureOnly = 1;
 $LocalizationVersionFile = 'mail/config/version.txt';
 %WGetFiles = (
 	      "http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/latest-trunk/thunderbird-%version%.en-US.linux-i686.tar.bz2" =>
-	      "/builds/tinderbox/Tb-Trunk-l10n/Linux_2.4.20-28.8_Clobber/thunderbird.tar.bz2"
+	      "/builds/tinderbox/Tb-Trunk-l10n/Linux_2.6.18-8.el5_Depend/thunderbird.tar.bz2"
 	      );
 
-$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Tb-Trunk-l10n/Linux_2.4.20-28.8_Clobber/thunderbird.tar.bz2";
+$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Tb-Trunk-l10n/Linux_2.6.18-8.el5_Depend/thunderbird.tar.bz2";
 
 #-
 #- The rest should not need to be changed

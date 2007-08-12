@@ -1,13 +1,10 @@
 #
-## hostname: karma
-## uname: Linux karma.mozilla.org 2.4.20-28.8 #1 Thu Dec 18 12:53:39 EST 2003 i686 athlon i386 GNU/Linux
+## hostname: l10n-linux-tbox
+## uname: Linux l10n-linux-tbox.build.mozilla.org 2.6.18-8.el5 #1 SMP Thu Mar 15 19:57:35 EDT 2007 i686 i686 i386 GNU/Linux
 #
 
 export MOZILLA_OFFICIAL=1
  
-#mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/obj
-#mk_add_options PROFILE_GEN_SCRIPT=@TOPSRCDIR@/build/profile_pageloader.pl
-
 mk_add_options MOZ_CO_PROJECT=mail
 mk_add_options MOZ_CO_LOCALES=all
 mk_add_options LOCALES_CVSROOT=:ext:cltbld@cvs.mozilla.org:/l10n
@@ -18,10 +15,4 @@ ac_add_options --enable-update-packaging
 ac_add_options --enable-application=mail
 ac_add_options --disable-debug
 ac_add_options --enable-optimize="-O2 -gstabs+"
-# ac_add_options --enable-official-branding
 ac_add_options --disable-tests
-ac_add_options --disable-shared
-ac_add_options --enable-static
-ac_add_options --enable-xft
-ac_add_options --disable-freetype2
-ac_add_options --enable-default-toolkit=cairo-gtk2
