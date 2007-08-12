@@ -136,7 +136,7 @@ $ProductName              = "Thunderbird";
 #$ObjDir = '';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'Tb Trunk l10n';
+$BuildNameExtra = 'Tb-Trunk-l10n';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
