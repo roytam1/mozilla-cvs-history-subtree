@@ -82,7 +82,7 @@ $TestsPhoneHome           = 1;  # Should test report back to server?
 # If TestOnlyTinderbox is enabled, fetch the latest build info from tinderbox in a 
 # parseable format
 $TinderboxServerURL = 'http://tinderbox.mozilla.org/showbuilds.cgi?tree=MozillaExperimental&quickparse=1';
-$MatchBuildname = 'WINNT 5.2 win2k3-ref-img Depend Fx-Newref';
+$MatchBuildname = 'WINNT 5.2 fxnewref-win32- Depend Fx-Newref';
 #$GraphNameOverride        = 'Fx-Trunk-win32-test1'; # Override name built from ::hostname() and $BuildTag
 
 # $results_server
