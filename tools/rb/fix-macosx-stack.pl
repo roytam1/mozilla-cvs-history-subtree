@@ -117,7 +117,13 @@ sub nmstruct_for($) {
             my ($addr, $ty, $rest) = ($_ =~ /^([0-9a-f ]{8}) (.) (.*)$/);
             $addr = hex($addr);
             if ($ty eq 't' || $ty eq 'T') {
-                add_info($nmstruct->{symbols}, $addr, $rest);
+                my $sym = $rest;
+                if ($ty eq 'T' && substr($sym, 0, 1) eq '_' &&
+                                  substr($sym, 1, 1) ne '_') {
+                    # Public symbols have an extra leading _
+                    $sym = substr($sym, 1);
+                }
+                add_info($nmstruct->{symbols}, $addr, $sym);
             } elsif ($ty eq '-') {
                 # nm gives us stabs debugging information
                 my ($n1, $n2, $ty2, $rest2) =
