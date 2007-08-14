@@ -561,6 +561,26 @@ NS_IMETHODIMP nsWindow::Resize(PRInt32 aWidth, PRInt32 aHeight, PRBool aRepaint)
 {
 	PRBool nNeedToShow = PR_FALSE;
 	
+	if (mWidget) {
+		PtWidget_t *parent;
+		for (parent = mWidget; parent; parent = parent->parent) {
+			char *description = parent->class_rec->description;
+
+			if (description && strcmp(description, "PtMozilla") == 0) {
+				//
+				// For embedding, make sure the browser does not try to 
+				// resize itself bigger than the PtMozilla widget or else our
+				// scroll bars will be clipped.
+				//
+				if (aWidth > parent->area.size.w)
+					aWidth = parent->area.size.w;
+				if (aHeight > parent->area.size.h)
+					aHeight = parent->area.size.h;
+				break; //for
+				}
+			}
+		}
+
 	if( aWidth == mBounds.width && aHeight == mBounds.height ) return NS_OK;
 	
 	mBounds.width  = aWidth;
