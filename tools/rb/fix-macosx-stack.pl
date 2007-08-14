@@ -61,16 +61,22 @@ my %address_adjustments;
 sub address_adjustment($) {
     my ($file) = @_;
     unless (exists $address_adjustments{$file}) {
-        my $result = 0;
+        my $result = -1;
 
         open(OTOOL, '-|', 'otool', '-l', $file);
         while (<OTOOL>) {
-            if (/^   vmaddr (0x[0-9a-f]{8})$/) {
-                $result = hex($1);
-                last;
+            if (/^  segname __TEXT$/) {
+                if (<OTOOL> =~ /^   vmaddr (0x[0-9a-f]{8})$/) {
+                    $result = hex($1);
+                    last;
+                } else {
+                    die "Bad output from otool";
+                }
             }
         }
         close(OTOOL);
+
+        $result >= 0 || die "Bad output from otool";
 
         $address_adjustments{$file} = $result;
     }
