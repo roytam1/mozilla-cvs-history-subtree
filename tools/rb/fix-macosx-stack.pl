@@ -110,7 +110,7 @@ sub nmstruct_for($) {
             chomp;
             my ($addr, $ty, $rest) = ($_ =~ /^([0-9a-f ]{8}) (.) (.*)$/);
             $addr = hex($addr);
-            if ($ty eq 't') {
+            if ($ty eq 't' || $ty eq 'T') {
                 add_info($nmstruct->{symbols}, $addr, $rest);
             } elsif ($ty eq '-') {
                 # nm gives us stabs debugging information
