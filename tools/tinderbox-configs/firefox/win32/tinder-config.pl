@@ -171,7 +171,7 @@ $BuildNameExtra = 'fxnewref-win32-tbox perf test';
 
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
-$BuildTree  = 'MozillaExperimental';
+$BuildTree  = 'Firefox';
 
 $BuildTag = 'HEAD';
 #$BuildConfigDir = 'mozilla/config';
