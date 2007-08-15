@@ -170,7 +170,7 @@ $BuildNameExtra = 'Fx-Newref';
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
 #$BuildTree  = 'MozillaTest';
-$BuildTree  = 'MozillaExperimental';
+$BuildTree  = 'Firefox';
 
 #$BuildName = '';
 #$BuildTag = '';
