@@ -1,6 +1,6 @@
 #
-## hostname: boomer
-## uname: Darwin boomer.mozilla.org 7.9.0 Darwin Kernel Version 7.9.0: Wed Mar 30 20:11:17 PST 2005; root:xnu/xnu-517.12.7.obj~1/RELEASE_PPC  Power Macintosh powerpc
+## hostname: bm-xserve12
+## uname: Darwin bm-xserve12 8.8.4 Darwin Kernel Version 8.8.4: Sun Oct 29 15:26:54 PST 2006; root:xnu-792.16.4.obj~1/RELEASE_I386 i386 i386
 #
 
 # . $topsrcdir/browser/config/mozconfig
@@ -8,13 +8,10 @@
 mk_add_options MOZ_CO_PROJECT=browser
 mk_add_options MOZ_CO_LOCALES=all
 mk_add_options LOCALES_CVSROOT=:ext:cltbld@cvs.mozilla.org:/l10n
-# mk_add_options LOCALES_CO_TAG=AVIARY_1_0_20040515_BRANCH
 
 ac_add_options --enable-application=browser
 ac_add_options --enable-optimize="-O2 -g"
 ac_add_options --disable-debug
 ac_add_options --disable-tests
-# ac_add_options --enable-official-branding
 ac_add_options --enable-prebinding
 
-ac_add_options --with-macos-sdk=/Developer/SDKs/MacOSX10.2.8.sdk

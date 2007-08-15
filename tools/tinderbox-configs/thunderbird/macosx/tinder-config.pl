@@ -1,6 +1,6 @@
 #
-## hostname: xserve05
-## uname: Darwin xserve05.build.mozilla.org 8.7.0 Darwin Kernel Version 8.7.0: Fri May 26 15:20:53 PDT 2006; root:xnu-792.6.76.obj~1/RELEASE_PPC Power Macintosh powerpc
+## hostname: bm-xserve12
+## uname: Darwin bm-xserve12 8.8.4 Darwin Kernel Version 8.8.4: Sun Oct 29 15:26:54 PST 2006; root:xnu-792.16.4.obj~1/RELEASE_I386 i386 i386
 #
 
 #- tinder-config.pl - Tinderbox configuration file.
