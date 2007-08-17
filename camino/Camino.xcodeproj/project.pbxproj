@@ -218,6 +218,10 @@
 		0FFE0A84079B147F00966027 /* bm_sort.tiff in Resources */ = {isa = PBXBuildFile; fileRef = 0FFE0A7E079B147F00966027 /* bm_sort.tiff */; };
 		0FFE0A85079B147F00966027 /* bm_add.tiff in Resources */ = {isa = PBXBuildFile; fileRef = 0FFE0A7F079B147F00966027 /* bm_add.tiff */; };
 		0FFE0A86079B147F00966027 /* bm_action.tiff in Resources */ = {isa = PBXBuildFile; fileRef = 0FFE0A80079B147F00966027 /* bm_action.tiff */; };
+		333FC6410C760D4300B61438 /* WebSearchField.h in Headers */ = {isa = PBXBuildFile; fileRef = 333FC63F0C760D4300B61438 /* WebSearchField.h */; };
+		333FC6420C760D4300B61438 /* WebSearchField.mm in Sources */ = {isa = PBXBuildFile; fileRef = 333FC6400C760D4300B61438 /* WebSearchField.mm */; };
+		333FC6430C760D4300B61438 /* WebSearchField.h in Headers */ = {isa = PBXBuildFile; fileRef = 333FC63F0C760D4300B61438 /* WebSearchField.h */; };
+		333FC6440C760D4300B61438 /* WebSearchField.mm in Sources */ = {isa = PBXBuildFile; fileRef = 333FC6400C760D4300B61438 /* WebSearchField.mm */; };
 		33F3B7260C63FC25007DFBD0 /* ScriptingSupport.mm in Sources */ = {isa = PBXBuildFile; fileRef = 33F3B7250C63FC25007DFBD0 /* ScriptingSupport.mm */; };
 		33F3B7270C63FC25007DFBD0 /* ScriptingSupport.mm in Sources */ = {isa = PBXBuildFile; fileRef = 33F3B7250C63FC25007DFBD0 /* ScriptingSupport.mm */; };
 		34884A36074F7C5D000EA76B /* AddressBook.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 34884A35074F7C5D000EA76B /* AddressBook.framework */; };
@@ -2342,6 +2346,8 @@
 		3003B89F044514B600B85BF3 /* SearchPopUp.tiff */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; name = SearchPopUp.tiff; path = chrome/SearchPopUp.tiff; sourceTree = "<group>"; };
 		3003B8A0044514B600B85BF3 /* SearchRight.tiff */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; name = SearchRight.tiff; path = chrome/SearchRight.tiff; sourceTree = "<group>"; };
 		3003B8AC044514E300B85BF3 /* English */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text.xml; name = English; path = resources/localized/English.lproj/SearchURLList.plist; sourceTree = "<group>"; };
+		333FC63F0C760D4300B61438 /* WebSearchField.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = WebSearchField.h; path = src/browser/WebSearchField.h; sourceTree = "<group>"; };
+		333FC6400C760D4300B61438 /* WebSearchField.mm */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.objcpp; name = WebSearchField.mm; path = src/browser/WebSearchField.mm; sourceTree = "<group>"; };
 		33F3B7250C63FC25007DFBD0 /* ScriptingSupport.mm */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.objcpp; name = ScriptingSupport.mm; path = src/appleevents/ScriptingSupport.mm; sourceTree = "<group>"; };
 		34884A35074F7C5D000EA76B /* AddressBook.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AddressBook.framework; path = /System/Library/Frameworks/AddressBook.framework; sourceTree = "<absolute>"; };
 		3489ADC90753B717005ADF6C /* ABAddressBook+Utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "ABAddressBook+Utils.h"; path = "src/extensions/ABAddressBook+Utils.h"; sourceTree = SOURCE_ROOT; };
@@ -3740,6 +3746,8 @@
 				F5B950BD030C83B601A96654 /* BrowserTabViewItem.mm */,
 				3FFFEC1C081C3F0B00843C07 /* StatusBarView.h */,
 				3FFFEC1D081C3F0B00843C07 /* StatusBarView.mm */,
+				333FC63F0C760D4300B61438 /* WebSearchField.h */,
+				333FC6400C760D4300B61438 /* WebSearchField.mm */,
 				3003B8890445124400B85BF3 /* SearchTextField */,
 				F558137B030AEF9B0176F207 /* Site icons */,
 			);
@@ -4567,6 +4575,7 @@
 				008116EC0B2722EB001CB3F0 /* KeychainItem.h in Headers */,
 				DEE349A80B84F45500BCD687 /* FileChangeWatcher.h in Headers */,
 				DE6D27380C19FE5500292043 /* CHPermissionManager.h in Headers */,
+				333FC6410C760D4300B61438 /* WebSearchField.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -4720,6 +4729,7 @@
 				008116EE0B2722EB001CB3F0 /* KeychainItem.h in Headers */,
 				DEE349A70B84F45500BCD687 /* FileChangeWatcher.h in Headers */,
 				DE6D27370C19FE5500292043 /* CHPermissionManager.h in Headers */,
+				333FC6430C760D4300B61438 /* WebSearchField.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -5638,6 +5648,7 @@
 				DEE349AB0B84F47400BCD687 /* FileChangeWatcher.m in Sources */,
 				DE6D273B0C19FE6F00292043 /* CHPermissionManager.mm in Sources */,
 				33F3B7260C63FC25007DFBD0 /* ScriptingSupport.mm in Sources */,
+				333FC6420C760D4300B61438 /* WebSearchField.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -5805,6 +5816,7 @@
 				DEE349AA0B84F47400BCD687 /* FileChangeWatcher.m in Sources */,
 				DE6D273A0C19FE6F00292043 /* CHPermissionManager.mm in Sources */,
 				33F3B7270C63FC25007DFBD0 /* ScriptingSupport.mm in Sources */,
+				333FC6440C760D4300B61438 /* WebSearchField.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
