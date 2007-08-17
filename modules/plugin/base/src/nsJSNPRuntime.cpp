@@ -1305,7 +1305,7 @@ nsNPObjWrapper::GetNewOrUsed(NPP npp, JSContext *cx, NPObject *npobj)
   if (!obj) {
     // OOM? Remove the stale entry from the hash.
 
-    PL_DHashTableRawRemove(&sJSObjWrappers, entry);
+    PL_DHashTableRawRemove(&sNPObjWrappers, entry);
 
     return nsnull;
   }
@@ -1317,7 +1317,7 @@ nsNPObjWrapper::GetNewOrUsed(NPP npp, JSContext *cx, NPObject *npobj)
   if (!::JS_SetPrivate(cx, obj, npobj)) {
     NS_ERROR("Error setting private NPObject data in JS wrapper!");
 
-    PL_DHashTableRawRemove(&sJSObjWrappers, entry);
+    PL_DHashTableRawRemove(&sNPObjWrappers, entry);
 
     return nsnull;
   }
