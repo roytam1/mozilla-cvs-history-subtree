@@ -583,7 +583,7 @@
 
     font = [NSFont userFontOfSize:14.0];
     if (!regionDict) // Should never happen, but this would mean a displayString with no info
-      displayString = @"Font missing"; // XXX localize
+      displayString = [self getLocalizedString:@"FontMissing"];
   }
 
   // Set the font of the sample to a font that is not bold, italic etc.
