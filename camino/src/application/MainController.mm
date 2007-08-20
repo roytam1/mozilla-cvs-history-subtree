@@ -393,7 +393,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
     BOOL dontShowAgain = NO;
     BOOL confirmed = NO;
 
-    NS_DURING
+    @try {
       confirmed = [controller confirmCheckEx:nil
                                        title:quitAlertMsg
                                          text:quitAlertExpl
@@ -402,8 +402,9 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
                                       button3:nil
                                      checkMsg:NSLocalizedString(@"DontShowWarningAgainCheckboxLabel", @"")
                                    checkValue:&dontShowAgain];
-    NS_HANDLER
-    NS_ENDHANDLER
+    }
+    @catch (id exception) {
+    }
 
     if (dontShowAgain)
       [prefManager setPref:"camino.warn_when_closing" toBoolean:NO];
@@ -521,7 +522,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
       BOOL dontAskAgain = NO;
       int result = NSAlertErrorReturn;
 
-      NS_DURING
+      @try {
         result = [controller confirmCheckEx:nil // parent
                                       title:NSLocalizedString(@"DefaultBrowserTitle", nil)
                                        text:NSLocalizedString(@"DefaultBrowserMessage", nil)
@@ -530,14 +531,15 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
                                     button3:nil
                                    checkMsg:NSLocalizedString(@"DefaultBrowserChecboxTitle", nil)
                                  checkValue:&dontAskAgain];
-      NS_HANDLER
-        NS_ENDHANDLER
+      }
+      @catch (id exception) {
+      }
 
-        if (result == NSAlertDefaultReturn)
-          [[NSWorkspace sharedWorkspace] setDefaultBrowserWithIdentifier:myIdentifier];
+      if (result == NSAlertDefaultReturn)
+        [[NSWorkspace sharedWorkspace] setDefaultBrowserWithIdentifier:myIdentifier];
 
-        [[PreferenceManager sharedInstance] setPref:"camino.check_default_browser" toBoolean:!dontAskAgain];
-        [controller release];
+      [[PreferenceManager sharedInstance] setPref:"camino.check_default_browser" toBoolean:!dontAskAgain];
+      [controller release];
     }
   }
 }
@@ -1182,7 +1184,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
       nsAlertController* controller = CHBrowserService::GetAlertController();
       BOOL dontShowAgain = NO;
 
-      NS_DURING
+      @try {
         doCloseWindows = [controller confirmCheckEx:nil
                                               title:closeAlertMsg
                                                text:closeAlertExpl
@@ -1191,8 +1193,9 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
                                             button3:nil
                                            checkMsg:NSLocalizedString(@"DontShowWarningAgainCheckboxLabel", @"")
                                          checkValue:&dontShowAgain];
-      NS_HANDLER
-      NS_ENDHANDLER
+      }
+      @catch (id exception) {
+      }
 
       if (dontShowAgain)
         [prefManager setPref:"camino.warn_when_closing" toBoolean:NO];
