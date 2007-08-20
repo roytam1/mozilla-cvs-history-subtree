@@ -38,7 +38,6 @@ $CleanProfile             = 0;
 $ProductName               = "Minefield";
 $VendorName                = "";
 $ENV{NO_EM_RESTART}        = '1';
-$ENV{XPCOM_DEBUG_BREAK}    = 'warn';
 
 #$RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
 #$RegxpcomTest             = 1;
@@ -90,6 +89,12 @@ $BloatTestTimeout                 = 300;   # seconds
 
 #$UseMozillaProfile = 1;
 #$MozProfileName = 'default';
+
+# This sets the value of the XPCOM_DEBUG_BREAK environment variable.  We
+# default to 'warn', which suppresses the assertion dialogs on Windows
+# and gives platform parity.  Use 'abort' (or, on trunk after 2007-08-10,
+# 'stack-and-abort') for fatal assertions.
+$MozAssertBehavior = 'warn';
 
 #- Set these to what makes sense for your system
 #$Make          = 'gmake';       # Must be GNU make
