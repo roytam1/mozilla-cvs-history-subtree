@@ -24,6 +24,8 @@
    -   Stuart Parmenter   <stuart.parmenter@oracle.com>
    -   Vladimir Vukicevic <vladimir@pobox.com>
    -   Simon Paquet       <bugzilla@babylonsounds.com>
+   -   Berend Cornelius   <berend.cornelius@sun.com>
+   -   Philipp Kewisch <mozilla@kewis.ch>
    -
    - Alternatively, the contents of this file may be used under the terms of
    - either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -72,13 +74,13 @@
                    class="cal-toolbarbutton-1"
                    label="&calendar.newevent.button.label;"
                    tooltiptext="&calendar.newevent.button.tooltip;"
-                   oncommand="createEventWithDialog(ltnSelectedCalendar())"/>
+                   observes="calendar_new_event_command"/>
     <toolbarbutton id="calendar-new-task-button"
                    mode="calendar"
                    class="cal-toolbarbutton-1"
                    label="&calendar.newtask.button.label;"
                    tooltiptext="&calendar.newtask.button.tooltip;"
-                   oncommand="createTodoWithDialog(ltnSelectedCalendar())"/>
+                   observes="calendar_new_todo_command"/>
     <toolbarbutton id="calendar-day-view-button"
                    mode="calendar"
                    type="radio"
@@ -117,6 +119,11 @@
                    label="&calendar.today.button.label;"
                    tooltiptext="&calendar.today.button.tooltip;"
                    oncommand="goToToday()"/>
+    <toolbarbutton id="calendar-show-todaypane-button"
+                   class="cal-toolbarbutton-1"
+                   label="&calendar.context.button.label;"
+                   tooltiptext="&calendar.todaypane.button.tooltip;"
+                   command="cmd_toggleTodayPane"/>
     <toolbarbutton id="calendar-edit-event-button"
                    mode="calendar"
                    class="cal-toolbarbutton-1"
@@ -146,13 +153,13 @@
                    class="cal-toolbarbutton-1"
                    label="&calendar.publish.button.label;"
                    tooltiptext="&calendar.publish.button.tooltip;"
-                   observes="publish_calendar"/>
+                   observes="calendar_publish_calendar"/>
     <toolbarbutton id="calendar-remote-reload-button"
                    mode="calendar"
                    class="cal-toolbarbutton-1"
                    label="&calendar.remotereload.button.label;"
                    tooltiptext="&calendar.remotereload.button.tooltip;"
-                   observes="reload_remote_calendars"/>
+                   observes="calendar_reload_remote_calendars"/>
   </toolbarpalette>
   
   <toolbox id="mail-toolbox">

@@ -19,6 +19,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ *   Philipp Kewisch <mozilla@kewis.ch>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -331,28 +332,6 @@ function now() {
 function jsDateToDateTime(aDate) {
     var newDate = createDateTime();
     newDate.jsDate = aDate;
-    return newDate;
-}
-
-/**
- * Returns a calIDateTime with a floating timezone and each field the same as
- * the equivalent field of the javascript date aDate
- *
- * @param aDate a javascript date
- * @returns     a calIDateTime with all of the fields the same as aDate
- *
- * @warning  Like jsDateToDateTime, use of the function is strongly discouraged.
- */
-function jsDateToFloatingDateTime(aDate) {
-    var newDate = createDateTime();
-    newDate.timezone = "floating";
-    newDate.year = aDate.getFullYear();
-    newDate.month = aDate.getMonth();
-    newDate.day = aDate.getDate();
-    newDate.hour = aDate.getHours();
-    newDate.minute = aDate.getMinutes();
-    newDate.second = aDate.getSeconds();
-    newDate.normalize();
     return newDate;
 }
 
@@ -1059,3 +1038,48 @@ function hasPositiveIntegerValue(elementId)
     }
     return false;
 }
+
+function getAtomFromService(aStr) {
+    var atomService = Cc["@mozilla.org/atom-service;1"]
+                      .getService(Ci.nsIAtomService);
+    return atomService.getAtom(aStr);
+}
+
+function calListenerBag(iid) {
+    this.mIid = iid;
+    this.mListeners = [];
+}
+calListenerBag.prototype = {
+    mIid: null,
+    mListeners: null,
+
+    add: function calListenerBag_add(listener) {
+        var iid = this.mIid;
+        function eq(obj) {
+            return compareObjects(obj, listener, iid);
+        }
+        if (!this.mListeners.some(eq)) {
+            this.mListeners.push(listener);
+        }
+    },
+
+    remove: function calListenerBag_remove(listener) {
+        var iid = this.mIid;
+        function neq(obj) {
+            return !compareObjects(obj, listener, iid);
+        }
+        this.mListeners = this.mListeners.filter(neq);
+    },
+
+    notify: function calListenerBag_notify(func, args) {
+        function notifyFunc(obj) {
+            try {
+                obj[func].apply(obj, args ? args : []);
+            }
+            catch (exc) {
+                Components.utils.reportError(exc);
+            }
+        }
+        this.mListeners.forEach(notifyFunc);
+    }
+};

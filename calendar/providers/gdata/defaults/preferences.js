@@ -1,4 +1,3 @@
-/* -*- Mode: C++; tab-width: 20; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -12,15 +11,14 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is Sun Microsystems code.
+ * The Original Code is Google Calendar Provider code.
  *
  * The Initial Developer of the Original Code is
- * Sun Microsystems, Inc.
+ *   Philipp Kewisch <mozilla@kewis.ch>
  * Portions created by the Initial Developer are Copyright (C) 2007
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Daniel Boelzle <daniel.boelzle@sun.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -36,51 +34,14 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsIVariant.idl"
+/* extension description */
+pref("extensions.{a62ef8ec-5fdc-40c2-873c-223b8a6925cc}.description",
+     "chrome://gdata-provider/locale/gdata.properties");
+pref("extensions.{a62ef8ec-5fdc-40c2-873c-223b8a6925cc}.name",
+     "chrome://gdata-provider/locale/gdata.properties");
 
-[scriptable, uuid(6586B48D-3FF6-4b82-B9F6-5B561D416E36)]
-interface calIWcapRequest : nsISupports
-{
-    /**
-     * For easy testing for equality.
-     */
-    readonly attribute unsigned long id;
-    
-    /**
-     * Determines whether the request is pending, i.e. has not been completed.
-     */
-    readonly attribute boolean isPending;
-    
-    /**
-     * Determines whether the request has succeeded, i.e. it has successfully
-     * been completed.
-     * XXX todo: remove this and favor
-     * !request.isPending && Components.isSuccessCode(request.status) ?
-     */
-    readonly attribute boolean succeeded;
-    
-    /**
-     * Status of the request, e.g. NS_OK while pending or after successful
-     * completion, or NS_ERROR_FAILED when failed.
-     */
-    readonly attribute nsIVariant status;
-    
-    /**
-     * Cancels a pending request and changes status.
-     */
-    void cancel(in nsIVariant status);
-};
-
-[scriptable, uuid(D0BC007F-D0B5-4352-A32A-8F7A9F55A713)]
-interface calIWcapRequestResultListener : nsISupports
-{
-    /**
-     * Callback receiving results.
-     *
-     * @param request object to track operation
-     * @param result request result or null in case of an error
-     */
-    void onRequestResult(in calIWcapRequest request,
-                         in nsIVariant result);
-};
-
+/* other default prefs */
+pref("calendar.google.useHTTPMethodOverride", true);
+pref("calendar.google.alarmClosest", true);
+pref("calendar.google.defaultPrivacy", "private");
+pref("calendar.google.sendEventNotifications", true);

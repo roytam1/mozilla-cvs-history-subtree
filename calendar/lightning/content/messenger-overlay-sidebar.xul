@@ -59,6 +59,8 @@
 <?xml-stylesheet href="chrome://calendar/content/datetimepickers/minimonth.css" type="text/css"?>
 <?xml-stylesheet href="chrome://calendar/content/datetimepickers/datetimepickers.css" type="text/css"?>
 
+<?xul-overlay href="chrome://calendar/content/calendar-calendars-list.xul"?>
+
 <overlay id="ltnSidebarOverlay"
          xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
 
@@ -73,7 +75,7 @@
 <script type="application/x-javascript" src="chrome://calendar/content/import-export.js"/>
 <script type="application/x-javascript" src="chrome://calendar/content/publish.js"/>
 <script type="application/x-javascript" src="chrome://lightning/content/lightning-utils.js"/>
-<script type="application/x-javascript" src="chrome://lightning/content/calendar-management.js"/>
+<script type="application/x-javascript" src="chrome://calendar/content/calendar-management.js"/>
 <script type="application/x-javascript" src="chrome://lightning/content/messenger-overlay-sidebar.js"/>
 <script type="application/x-javascript" src="chrome://calendar/content/calendar-views.js"/>
 <script type="application/x-javascript" src="chrome://calendar/content/calendar-minimonth-busy.js"/>
@@ -83,11 +85,11 @@
 <menupopup id="menu_NewPopup">
   <menuseparator />
   <menuitem id="ltnNewEvent" label="&lightning.menupopup.new.event.label;"
-            oncommand="createEventWithDialog(ltnSelectedCalendar());"/>
+            observes="calendar_new_event_command"/>
   <menuitem id="ltnNewTask" label="&lightning.menupopup.new.task.label;"
-            oncommand="createTodoWithDialog(ltnSelectedCalendar());"/>
+            observes="calendar_new_todo_command"/>
   <menuitem id="ltnNewCalendar" label="&lightning.menupopup.new.calendar.label;"
-            oncommand="ltnNewCalendar();"/>
+            observes="calendar_new_calendar_command"/>
 </menupopup>
 
 <menubar id="mail-menubar">
@@ -98,11 +100,11 @@
       <menuitem id="ltnEditSelectedCalendar"
                 label="&lightning.toolbar.edit.calendar.label;"
                 accesskey="&lightning.toolbar.edit.calendar.accesskey;"
-                oncommand="ltnEditSelectedCalendar();"/>
+                observes="calendar_edit_calendar_command"/>
       <menuitem id="ltnDeleteSelectedCalendar"
                 label="&lightning.toolbar.delete.calendar.label;"
                 accesskey="&lightning.toolbar.delete.calendar.accesskey;"
-                oncommand="ltnDeleteSelectedCalendar();"/>
+                observes="calendar_delete_calendar_command"/>
       <menuseparator/>
       <menuitem id="ltnChangeViewDay"
                 label="&lightning.toolbar.day.label;"
@@ -143,6 +145,13 @@
                     label="&calendar.displaytodos.checkbox.label;"
                     accesskey="&calendar.displaytodos.checkbox.accesskey;"
                     oncommand="toggleTasksInView()"/>
+          <menuitem type="checkbox"
+                    id="ltn-multiday-rotated"
+                    persist="checked"
+                    disabled="true"
+                    label="&calendar.orientation.label;"
+                    accesskey="&calendar.orientation.accesskey;"
+                    oncommand="updateOrientation()"/>
         </menupopup>
       </menu>
       <menuitem id="ltnGoToToday"
@@ -164,14 +173,20 @@
 
 <window id="messengerWindow">
   <commandset id="calendar_commands">
+    <command id="calendar_new_event_command" oncommand="createEventWithDialog(getSelectedCalendar());"/>
+    <command id="calendar_new_todo_command" oncommand="createTodoWithDialog(getSelectedCalendar());"/>
+    <command id="calendar_new_calendar_command" oncommand="openCalendarWizard();"/>
+    <command id="calendar_edit_calendar_command" oncommand="openCalendarProperties(getSelectedCalendar());"/>
+    <command id="calendar_delete_calendar_command" oncommand="promptDeleteCalendar(getSelectedCalendar());"/>
     <command id="modify_command" oncommand="modifyEventWithDialog(currentView().getSelectedItems({})[0])" disabled="true" disabledwhennoeventsselected="true"/>
-    <command id="publish_calendar" oncommand="ltnPublishCalendar()" disabled="true" disabledwhennoeventsselected="true"/>
+    <command id="calendar_publish_calendar" oncommand="publishEntireCalendar(getSelectedCalendar());" disabled="true" disabledwhennoeventsselected="true"/>
     <command id="import_command" oncommand="loadEventsFromFile()"/>
     <command id="export_command" oncommand="exportEntireCalendar()" disabled="true" disabledwhennoeventsselected="true"/>
-    <command id="reload_remote_calendars" oncommand="getCompositeCalendar().refresh();"/>
+    <command id="calendar_reload_remote_calendars" oncommand="getCompositeCalendar().refresh();"/>
     <command id="switch2mail" oncommand="ltnSwitch2Mail()"/>
     <command id="switch2calendar" oncommand="ltnSwitch2Calendar()"/>
     <command id="switch2task" oncommand="ltnSwitch2Task()"/>
+    <command id="cmd_toggleTodayPane" oncommand="toggleTodayPaneinMailMode()"/>
     <command id="day-view-command" oncommand="showCalendarView('day')"/>
     <command id="week-view-command" oncommand="showCalendarView('week')"/>
     <command id="multiweek-view-command" oncommand="showCalendarView('multiweek')"/>
@@ -181,53 +196,26 @@
   <keyset>
     <key id="openLightningKey" key="3" modifiers="accel"
          oncommand="ltnMinimonthPick(document.getElementById('ltnMinimonth'))"/>
+    <key id="todaypanekey" modifiers="accel" key="D" command="cmd_toggleTodayPane"/>         
   </keyset>
 
-  <popupset>
-    <!-- Popup for Calendars tab -->
-    <popup id="calendartree-context-menu" onpopupshowing="return true;">
-      <menuitem id="calpopup-new"
-                label="&calendar.context.newserver.label;" 
-                accesskey="&calendar.context.newserver.accesskey;"
-                oncommand="ltnNewCalendar();"/>
-      <menuitem id="calpopup-delete"
-                label="&calendar.context.deleteserver.label;" 
-                accesskey="&calendar.context.deleteserver.accesskey;"
-                oncommand="ltnDeleteSelectedCalendar();"/>
-      <menuseparator/>
-      <menuitem id="calpopup-export"
-                label="&calendar.context.export.label;" 
-                accesskey="&calendar.context.export.accesskey;"
-                oncommand="exportEntireCalendar(ltnSelectedCalendar())"/>
-      <menuitem id="calpopup-publish"
-                label="&calendar.context.publish.label;" 
-                accesskey="&calendar.context.publish.accesskey;"
-                observes="publish_calendar"/>
-      <menuseparator/>
-      <menuitem id="calpopup-reload"
-                label="&calendar.context.reloadserver.label;"
-                accesskey="&calendar.context.reloadserver.accesskey;"
-                observes="reload_remote_calendars"/>
-      <menuseparator/>
-      <menuitem id="calpopup-edit"
-                label="&calendar.context.properties.label;" 
-                accesskey="&calendar.context.properties.accesskey;"
-                oncommand="ltnEditSelectedCalendar();"/>
-    </popup>
-
+  <popupset id="calendar-popupset">
     <popup id="calendar-view-context-menu" onpopupshowing="return true;">
       <!-- These labels are set dynamically, based on the current view -->
-      <menuitem id="context_previous" label="" oncommand="moveView(-1)" disabled="true"
+      <menuitem id="context_previous" label="" oncommand="moveView(-1)"
                 label-day="&calendar.prevday.button.tooltip;"
                 label-week="&calendar.prevweek.button.tooltip;"
+                label-multiweek="&calendar.prevweek.button.tooltip;"
                 label-month="&calendar.prevmonth.button.tooltip;"
                 accesskey="&goPreviousCmd.accesskey;"/>
-      <menuitem id="context_next" label="" oncommand="moveView(1)" disabled="true"
+      <menuitem id="context_next" label="" oncommand="moveView(1)"
                 label-day="&calendar.nextday.button.tooltip;"
                 label-week="&calendar.nextweek.button.tooltip;"
+                label-multiweek="&calendar.nextweek.button.tooltip;"
                 label-month="&calendar.nextmonth.button.tooltip;"
                 accesskey="&goNextCmd.accesskey;"/>
-      <menuitem label="&calendar.context.newevent.label;" oncommand="ltnCreateEvent()"
+      <menuitem label="&calendar.context.newevent.label;"
+                observes="calendar_new_event_command"
                 accesskey="&lightning.context.newevent.accesskey;"/>
     </popup>
     <popup id="calendar-item-context-menu" onpopupshowing="return true;">
@@ -243,7 +231,11 @@
 
 </window>
     
+#ifdef MOZILLA_1_8_BRANCH
 <hbox id="mailContent" flex="1">
+#else
+<hbox id="messengerBox" flex="1">
+#endif
 
   <!-- this will replace 'folderPaneBox' -->
   <vbox id="ltnModeBox" insertbefore="folderPaneBox" persist="collapsed width">
@@ -261,37 +253,12 @@
           <datepicker id="ltnDateTextPicker" onchange="ltnMinimonthPick(this)"/>
           <spacer flex="1"/>
         </hbox>
-
-        <tabbox id="ltnTabpanelBox" flex="1">
-          <tabs id="ltnTabpanelTabs">
-            <tab id="agenda-tab" label="&lightning.sidebar.agenda.label;"/>
-            <tab id="todo-tab" label="&lightning.sidebar.todo.label;"/>
-            <tab id="calendar-tab" label="&lightning.sidebar.calendars.label;"/>
-          </tabs>
-          <tabpanels id="ltnTabpanels" flex="1">
-            <vbox id="agenda-tab-panel"/>    
-            <vbox id="todo-tab-panel"/>
-            <vbox id="calendar-tab-panel" flex="1">
-              <tree id="calendarTree" hidecolumnpicker="true" seltype="single"
-                    onfocus="selectedCalendarPane(event)" flex="1"
-                    onselect="ltnSidebarCalendarSelected(this);"
-                    ondblclick="ltnCalendarTreeView.onDoubleClick(event);"
-                    context="calendartree-context-menu">
-                <treecols>
-                  <treecol id="col-calendar-Checkbox" cycler="true" fixed="true" width="18" >
-                    <image />
-                  </treecol>
-                  <treecol id="col-calendar-Color" fixed="true" width="18"/>
-                  <treecol id="col-calendar-Calendar" label="&lightning.calendar.label;" flex="1"/>
-                </treecols>
-                <treechildren>
-                </treechildren>
-              </tree>
-            </vbox>
-          </tabpanels>
-        </tabbox>
+        <separator/>
+        <vbox id="calendar-panel" flex="1">
+          <!-- This will be overlayed by calendar-calendars-list.xul -->
+          <tree id="calendar-list-tree" flex="1"/>
+        </vbox>
       </vbox>
-
     </deck>
 
     <popup id="mode-toolbar-context-menu">
@@ -313,11 +280,15 @@
                        id="calendar-switch-button"
                        label="&lightning.toolbar.calendar.label;"
                        command="switch2calendar"/>
+
+<!-- XXX Disable task-switch-button until task view is implemented
         <toolbarbutton class="toolbarbutton-2"
                        mode="mode" 
                        id="task-switch-button"
                        label="&lightning.toolbar.task.label;"
                        command="switch2task"/>
+-->
+
       </toolbarpalette>
       <toolbar id="mode-toolbar"
                class="chromeclass-toolbar"
@@ -331,23 +302,23 @@
 </hbox>
 
 <deck id="displayDeck">
-  <deck flex="1" id="calendar-view-box">
-    <calendar-decorated-day-view id="day-view" flex="1"
-                                       context="calendar-view-context-menu"
-                                       item-context="calendar-item-context-menu"/>
-    <calendar-decorated-week-view id="week-view" flex="1"
-                                       context="calendar-view-context-menu"
-                                       item-context="calendar-item-context-menu"/>
-    <calendar-decorated-multiweek-view id="multiweek-view" flex="1"
-                                       context="calendar-view-context-menu"
-                                       item-context="calendar-item-context-menu"/>
-    <calendar-decorated-month-view id="month-view" flex="1"
-                                       context="calendar-view-context-menu"
-                                       item-context="calendar-item-context-menu"/>
-  </deck>
+  <vbox id="calendar-view-box">
+    <deck flex="1" id="view-deck">
+      <calendar-decorated-day-view id="day-view" flex="1"
+                                         context="calendar-view-context-menu"
+                                         item-context="calendar-item-context-menu"/>
+      <calendar-decorated-week-view id="week-view" flex="1"
+                                         context="calendar-view-context-menu"
+                                         item-context="calendar-item-context-menu"/>
+      <calendar-decorated-multiweek-view id="multiweek-view" flex="1"
+                                         context="calendar-view-context-menu"
+                                         item-context="calendar-item-context-menu"/>
+      <calendar-decorated-month-view id="month-view" flex="1"
+                                         context="calendar-view-context-menu"
+                                         item-context="calendar-item-context-menu"/>
+    </deck>
+  </vbox>
 </deck>
 
 <vbox id="messagepanebox"/>
 </overlay>
-
-<!-- -*- Mode: xml; sgml-ident-step: 2; indent-tabs-mode: nil; -*- -->

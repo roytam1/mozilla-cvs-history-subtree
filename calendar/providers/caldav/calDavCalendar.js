@@ -26,6 +26,7 @@
  *   Gary van der Merwe <garyvdm@gmail.com>
  *   Bruno Browning <browning@uwalumni.com>
  *   Matthew Willis <lilmatt@mozilla.com>
+ *   Daniel Boelzle <daniel.boelzle@sun.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -60,10 +61,11 @@ const xmlHeader = '<?xml version="1.0" encoding="UTF-8"?>\n';
 
 function calDavCalendar() {
     this.wrappedJSObject = this;
-    this.mObservers = Array();
+    this.mObservers = new calListenerBag(Ci.calIObserver);
     this.unmappedProperties = [];
+    this.mPendingStartupRequests = [];
     this.mUriParams = null;
-    this.mEtagCache = Array();
+    this.mEtagCache = [];
 }
 
 // some shorthand
@@ -181,11 +183,10 @@ calDavCalendar.prototype = {
     // attribute PRUInt8 mAuthenticationStatus;
     mAuthenticationStatus: 0,
 
-    mPendingStartupRequests: Array(),
+    mPendingStartupRequests: null,
 
     get canRefresh() {
-        // refresh() is currently not implemented, but we may want to change that
-        return false;
+        return true;
     },
 
     // mUriParams stores trailing ?parameters from the
@@ -196,7 +197,7 @@ calDavCalendar.prototype = {
     // attribute nsIURI uri;
     mUri: null,
     get uri() { return this.mUri; },
-    set uri(aUri) { this.mUri = aUri; },
+    set uri(aUri) { return (this.mUri = aUri); },
 
     get mCalendarUri() { 
         calUri = this.mUri.clone();
@@ -211,7 +212,7 @@ calDavCalendar.prototype = {
         return calUri;
     },
     
-    mMakeUri: function caldav_makeUri(aInsertString) {
+    makeUri: function caldav_makeUri(aInsertString) {
         var spec = this.mCalendarUri.spec + aInsertString;
         if (this.mUriParams) {
             return spec + this.mUriParams;
@@ -223,31 +224,33 @@ calDavCalendar.prototype = {
         return decodeURIComponent(this.mCalendarUri.path);
     },
 
-    refresh: function() {
-        throw Components.results.NS_ERROR_NOT_IMPLEMENTED;
+    refresh: function caldav_refresh() {
+        // clear etag cache
+        this.mEtagCache = [];
+        this.mObservers.notify("onLoad", [this]);
     },
 
     // attribute boolean suppressAlarms;
-    get suppressAlarms() { return false; },
-    set suppressAlarms(aSuppressAlarms) { throw Components.results.NS_ERROR_NOT_IMPLEMENTED; },
-
+    mSuppressAlarms: false,
+    get suppressAlarms() {
+        return this.mSuppressAlarms;
+    },
+    set suppressAlarms(aSuppressAlarms) {
+        return (this.mSuppressAlarms = aSuppressAlarms);
+    },
+ 
+    // XXX todo: in general we want to do CalDAV scheduling, but for servers
+    //           that don't support it, we want Itip
     get sendItipInvitations() { return true; },
 
     // void addObserver( in calIObserver observer );
-    addObserver: function (aObserver, aItemFilter) {
-        for each (obs in this.mObservers) {
-            if (compareObjects(obs, aObserver, Ci.calIObserver)) {
-                return;
-            }
-        }
-
-        this.mObservers.push(aObserver);
+    addObserver: function caldav_addObserver(aObserver) {
+        this.mObservers.add(aObserver);
     },
 
     // void removeObserver( in calIObserver observer );
     removeObserver: function (aObserver) {
-        this.mObservers = this.mObservers.filter(
-            function(o) {return (o != aObserver);});
+        this.mObservers.remove(aObserver);
     },
 
     /**
@@ -272,11 +275,11 @@ calDavCalendar.prototype = {
         var itemUri = this.mCalendarUri.clone();
 
         try {
-            itemUri.spec = this.mMakeUri(aItem.getProperty("X-MOZ-LOCATIONPATH"));
+            itemUri.spec = this.makeUri(aItem.getProperty("X-MOZ-LOCATIONPATH"));
             LOG("using X-MOZ-LOCATIONPATH: " + itemUri.spec);
         } catch (ex) {
             // XXX how are we REALLY supposed to figure this out?
-            itemUri.spec = this.mMakeUri(aItem.id + ".ics");
+            itemUri.spec = this.makeUri(aItem.id + ".ics");
         }
 
         var itemResource = new WebDavResource(itemUri);
@@ -331,6 +334,8 @@ calDavCalendar.prototype = {
         listener.onOperationDetail = function OOD(aStatusCode, aResource,
                                                   aOperation, aDetail,
                                                   aClosure) {
+            LOG("fetchEtag: onOperationDetail aStatusCode=" + aStatusCode);
+
             var props = aDetail.QueryInterface(Ci.nsIProperties);
             serverEtag = props.get("DAV: getetag",
                                    Ci.nsISupportsString).toString();
@@ -381,7 +386,7 @@ calDavCalendar.prototype = {
 
     },
 
-    mEtagCache: Array(),
+    mEtagCache: null,
 
     /**
      * addItem() is required by the IDL, but simply calls adoptItem().
@@ -431,7 +436,7 @@ calDavCalendar.prototype = {
         // XXX how are we REALLY supposed to figure this out?
         var locationPath = aItem.id + ".ics";
         var itemUri = this.mCalendarUri.clone();
-        itemUri.spec = this.mMakeUri(locationPath);
+        itemUri.spec = this.makeUri(locationPath);
         LOG("itemUri.spec = " + itemUri.spec);
         var eventResource = new WebDavResource(itemUri);
 
@@ -480,7 +485,7 @@ calDavCalendar.prototype = {
 
             // notify observers
             if (Components.isSuccessCode(retVal)) {
-                thisCalendar.observeAddItem(aItem);
+                thisCalendar.mObservers.notify("onAddItem", [aItem]);
             }
         }
   
@@ -548,18 +553,18 @@ calDavCalendar.prototype = {
 
         var eventUri = this.mCalendarUri.clone();
         try {
-            eventUri.spec = this.mMakeUri(aNewItem.getProperty("X-MOZ-LOCATIONPATH"));
+            eventUri.spec = this.makeUri(aNewItem.getProperty("X-MOZ-LOCATIONPATH"));
             LOG("using X-MOZ-LOCATIONPATH: " + eventUri.spec);
         } catch (ex) {
             // XXX how are we REALLY supposed to figure this out?
-            eventUri.spec = this.mMakeUri(aNewItem.id + ".ics");
+            eventUri.spec = this.makeUri(aNewItem.id + ".ics");
         }
 
         // It seems redundant to use generation when we have etags
         // but until the idl is changed we do it.
         if (aOldItem.parentItem.generation != aNewItem.generation) {
             if (aListener) {
-                aListener.onOperationComplete (this.calendarToReturn,
+                aListener.onOperationComplete (this,
                                                Components.results.NS_ERROR_FAILURE,
                                                aListener.MODIFY,
                                                aNewItem.id,
@@ -632,7 +637,8 @@ calDavCalendar.prototype = {
 
             // notify observers
             if (Components.isSuccessCode(retVal)) {
-                thisCalendar.observeModifyItem(aNewItem, aOldItem.parentItem);
+                thisCalendar.mObservers.notify("onModifyItem",
+                                               [aNewItem, aOldItem.parentItem]);
             }
 
             return;
@@ -641,7 +647,7 @@ calDavCalendar.prototype = {
         // XXX use if-exists stuff here
         // XXX use etag as generation
         // do WebDAV put
-        LOG("modifyItem: aNewItem.icalString = " + aNewItem.icalString);
+        LOG("modifyItem: PUTting = " + modifiedItemICS);
         var webSvc = Components.classes['@mozilla.org/webdav/service;1']
             .getService(Components.interfaces.nsIWebDAVService);
         webSvc.putFromString(eventResource, "text/calendar; charset=utf-8",
@@ -680,11 +686,11 @@ calDavCalendar.prototype = {
 
         var eventUri = this.mCalendarUri.clone();
         try {
-            eventUri.spec = this.mMakeUri(aItem.getProperty("X-MOZ-LOCATIONPATH"));
+            eventUri.spec = this.makeUri(aItem.getProperty("X-MOZ-LOCATIONPATH"));
             LOG("using X-MOZ-LOCATIONPATH: " + eventUri.spec);
         } catch (ex) {
             // XXX how are we REALLY supposed to figure this out?
-            eventUri.spec = this.mMakeUri(aItem.id + ".ics");
+            eventUri.spec = this.makeUri(aItem.id + ".ics");
         }
 
         var eventResource = new WebDavResource(eventUri);
@@ -724,7 +730,7 @@ calDavCalendar.prototype = {
 
             // notify observers
             if (Components.isSuccessCode(retVal)) {
-                thisCalendar.observeDeleteItem(aItem);
+                thisCalendar.mObservers.notify("onDeleteItem", [aItem]);
             }
         }
 
@@ -837,7 +843,8 @@ calDavCalendar.prototype = {
     },
 
     reportInternal: function caldavRI(aQuery, aOccurrences, aRangeStart,
-                                      aRangeEnd, aCount, aListener, aItem)
+                                      aRangeEnd, aCount, aListener, aItem,
+                                      aQueryCount, aQueryStatuses)
     {
         var reportListener = new WebDavListener();
         var count = 0;  // maximum number of hits to return
@@ -855,6 +862,7 @@ calDavCalendar.prototype = {
             if (aResource.path == calendarDirUri.path) {
                 // XXX is this even valid?  what should we do here?
                 // XXX if it's an error, it might be valid?
+                LOG("XXX report result for calendar, not event\n");
                 throw("XXX report result for calendar, not event\n");
             }
 
@@ -897,9 +905,11 @@ calDavCalendar.prototype = {
                   return;
                 }
                 LOG("item result = \n" + calData);
-                this.mICSService = Cc["@mozilla.org/calendar/ics-service;1"].
-                                   getService(Components.interfaces.calIICSService);
-                var rootComp = this.mICSService.parseICS(calData);
+                if (!thisCalendar.mICSService) {
+                    thisCalendar.mICSService = Cc["@mozilla.org/calendar/ics-service;1"].
+                                               getService(Ci.calIICSService);
+                }
+                var rootComp = thisCalendar.mICSService.parseICS(calData);
 
                 var calComp;
                 if (rootComp.componentType == 'VCALENDAR') {
@@ -940,7 +950,8 @@ calDavCalendar.prototype = {
                                 // do anything with it here.
                                 break;
                             default:
-                                this.unmappedComponents.push(subComp);
+                                thisCalendar.unmappedComponents.push(subComp);
+                                break;
                             }
                             if (item != null) {
 
@@ -967,7 +978,7 @@ calDavCalendar.prototype = {
                                 }
                             }
                         } catch (ex) { 
-                            this.mObserver.onError(ex.result, ex.toString());
+                            thisCalendar.mObservers.notify("onError", [ex.result, ex.toString()]);
                         }
                         subComp = calComp.getNextSubcomponent("ANY");
                     }
@@ -997,7 +1008,8 @@ calDavCalendar.prototype = {
                     // changes. So in order to have the updated item displayed
                     // we need to modify the item currently displayed with
                     // the one just fetched
-                    thisCalendar.observeModifyItem(item, aItem.parentItem);
+                    thisCalendar.mObservers.notify("onModifyItem",
+                                                   [item, aItem.parentItem]);
                 }
 
                 // figure out what type of item to return
@@ -1066,34 +1078,36 @@ calDavCalendar.prototype = {
 
         reportListener.onOperationComplete = function(aStatusCode, aResource,
                                                       aOperation, aClosure) {
-            
-            // XXX test that something reasonable happens w/notfound
+            aQueryStatuses.push(aStatusCode);
+            if (aQueryStatuses.length == aQueryCount) {
+                var rv = Components.results.NS_OK;
+                var errString;
 
-            // parse aStatusCode
-            var rv;
-            var errString;
-            if (aStatusCode == 200) { // XXX better error checking
-                rv = Components.results.NS_OK;
-            } else {
-                rv = Components.results.NS_ERROR_FAILURE;
-                errString = "XXX something bad happened";
-            }
+                for each (statusCode in aQueryStatuses) {
+                    if (statusCode != 200) { // XXX better error checking
+                        rv = Components.results.NS_ERROR_FAILURE;
+                        errString = "XXX something bad happened";
+                    }
+                }
 
-            // call back the listener
-            try {
-                if (aListener) {
+                // call back the listener
+                try {
+                    if (aListener) {
                     aListener.onOperationComplete(thisCalendar,
                                                   Components.results.
-                                                  NS_ERROR_FAILURE,
-                                                  aListener.GET, null,
+                                                  rv, aListener.GET, null,
                                                   errString);
-                }
-            } catch (ex) {
+                    }
+                } catch (ex) {
                     LOG("reportInternal's onOperationComplete threw an"
-                          + " exception " + ex + "; ignoring");
-            }
+                        + " exception " + ex + "; ignoring");
+                }
 
-            return;
+                return;
+            } else {
+                // there's still a query pending, so it's too early to 
+                // call the listener back
+            }
         };
 
         // convert this into a form the WebDAV service can use
@@ -1103,7 +1117,7 @@ calDavCalendar.prototype = {
 
         // construct the resource we want to search against
         var calendarDirUri = this.mCalendarUri.clone();
-        calendarDirUri.spec = this.mMakeUri('');
+        calendarDirUri.spec = this.makeUri('');
         LOG("report uri = " + calendarDirUri.spec);
         var calendarDirResource = new WebDavResource(calendarDirUri);
 
@@ -1154,37 +1168,36 @@ calDavCalendar.prototype = {
             </filter>
           </calendar-query>;
 
-        // figure out 
         var compFilterNames = new Array();
         compFilterNames[calICalendar.ITEM_FILTER_TYPE_TODO] = "VTODO";
-        compFilterNames[calICalendar.ITEM_FILTER_TYPE_VJOURNAL] = "VJOURNAL";
+        // omit VJOURNAL for now since we don't support it and not all 
+        // CalDAV servers can handle requests for it
+        // compFilterNames[calICalendar.ITEM_FILTER_TYPE_JOURNAL] = "VJOURNAL";
         compFilterNames[calICalendar.ITEM_FILTER_TYPE_EVENT] = "VEVENT";
 
-        var filterTypes = 0;
+        var queryFilters = [];
         for (var i in compFilterNames) {
             if (aItemFilter & i) {
-                // XXX CalDAV only allows you to ask for one filter-type
-                // at once, so if the caller wants multiple filtern
-                // types, all they're going to get for now is events
-                // (since that's last in the Array).  Sorry!
-                ++filterTypes;
-                queryXml[0].C::filter.C::["comp-filter"]
-                    .C::["comp-filter"] = 
-                    <comp-filter name={compFilterNames[i]}/>;
+                queryFilters.push(compFilterNames[i]);
             }
         }
 
-        if (filterTypes < 1) {
+        if (queryFilters.length < 1) {
             LOG("No item types specified");
             // XXX should we just quietly call back the completion method?
             throw NS_ERROR_FAILURE;
         }
 
+        var queryCount = queryFilters.length;
+        var queryStatuses = new Array();
+
         // if a time range has been specified, do the appropriate restriction.
         // XXX express "end of time" in caldav by leaving off "start", "end"
+        var hasRange = false;
         if (aRangeStart && aRangeStart.isValid && 
             aRangeEnd && aRangeEnd.isValid) {
 
+            var hasRange = true;
             var queryRangeStart = aRangeStart.clone();
             var queryRangeEnd = aRangeEnd.clone();
             queryRangeStart.isDate = false;
@@ -1192,33 +1205,46 @@ calDavCalendar.prototype = {
                 // add a day to rangeEnd since we want to match events all that day
                 // and isDate=false is converting the date to midnight
                 queryRangeEnd.day++;
-                queryRangeEnd.normalize();
                 queryRangeEnd.isDate = false;
             }
             var rangeXml = <time-range start={queryRangeStart.getInTimezone("UTC").icalString}
                                        end={queryRangeEnd.getInTimezone("UTC").icalString}/>;
 
-            // append the time-range as a child of our innermost comp-filter
-            queryXml[0].C::filter.C::["comp-filter"]
-                .C::["comp-filter"].appendChild(rangeXml);
         }
 
-        var queryString = xmlHeader + queryXml.toXMLString();
-        LOG("getItems(): querying CalDAV server for events: \n" + queryString);
+        for (var queryFilter in queryFilters) {
 
-        var occurrences = (aItemFilter &
-                           calICalendar.ITEM_FILTER_CLASS_OCCURRENCES) != 0; 
-        this.reportInternal(queryString, occurrences, aRangeStart, aRangeEnd,
-                            aCount, aListener, null);
+            var typeQueryXml = queryXml;
+
+            typeQueryXml[0].C::filter.C::["comp-filter"]
+                           .C::["comp-filter"] =
+                           <comp-filter name={queryFilters[queryFilter]}/>;
+
+            // append the time-range as a child of our innermost comp-filter
+            if (hasRange) {
+                typeQueryXml[0].C::filter.C::["comp-filter"]
+                               .C::["comp-filter"].appendChild(rangeXml);
+            }
+
+            var queryString = xmlHeader + typeQueryXml.toXMLString();
+            LOG("getItems(): querying CalDAV server:\n" + queryString);
+
+            var occurrences = (aItemFilter &
+                              calICalendar.ITEM_FILTER_CLASS_OCCURRENCES) != 0;
+            this.reportInternal(queryString, occurrences, aRangeStart,
+                                aRangeEnd, aCount, aListener, null, queryCount,
+                                queryStatuses);
+        }
+
     },
 
     startBatch: function ()
     {
-        this.observeBatchChange(true);
+        this.mObservers.notify("onStartBatch");
     },
     endBatch: function ()
     {
-        this.observeBatchChange(false);
+        this.mObservers.notify("onEndBatch");
     },
 
     // nsIInterfaceRequestor impl
@@ -1249,65 +1275,24 @@ calDavCalendar.prototype = {
     //
     // Helper functions
     //
-    observeBatchChange: function observeBatchChange (aNewBatchMode) {
-        for each (obs in this.mObservers) {
-            if (aNewBatchMode) {
-                try {
-                    obs.onStartBatch();
-                } catch (ex) {
-                    LOG("observer's onStartBatch threw an exception " + ex 
-                          + "; ignoring");
-                }
-            } else {
-                try {
-                    obs.onEndBatch();
-                } catch (ex) {
-                    LOG("observer's onEndBatch threw an exception " + ex 
-                          + "; ignoring");
-                }
+
+    // Unless an error number is in this array, we consider it very bad, set
+    // the calendar to readOnly, and give up.
+    acceptableErrorNums: [],
+
+    onError: function caldav_onError(aErrNo, aMessage) {
+        var errorIsOk = false;
+        for each (num in this.acceptableErrorNums) {
+            if (num == aErrNo) {
+                errorIsOk = true;
+                break;
             }
         }
-        return;
+        if (!errorIsOk) {
+            this.mReadOnly = true;
+        }
+        this.mObservers.notify("onError", [aErrNo, aMessage]);
     },
-
-    observeAddItem: 
-        function observeAddItem(aItem) {
-            for each (obs in this.mObservers) {
-                try {
-                    obs.onAddItem(aItem);
-                } catch (ex) {
-                    LOG("observer's onAddItem threw an exception " + ex 
-                          + "; ignoring");
-                }
-            }
-            return;
-        },
-
-    observeModifyItem: 
-        function observeModifyItem(aNewItem, aOldItem) {
-            for each (obs in this.mObservers) {
-                try {
-                    obs.onModifyItem(aNewItem, aOldItem);
-                } catch (ex) {
-                    LOG("observer's onModifyItem threw an exception " + ex 
-                          + "; ignoring");
-                }
-            }
-            return;
-        },
-
-    observeDeleteItem: 
-        function observeDeleteItem(aDeletedItem) {
-            for each (obs in this.mObservers) {
-                try {
-                    obs.onDeleteItem(aDeletedItem);
-                } catch (ex) {
-                    LOG("observer's onDeleteItem threw an exception " + ex 
-                          + "; ignoring");
-                }
-            }
-            return;
-        },
 
     popStartupRequest: function popStartupRequest() {
         var req = this.mPendingStartupRequests.pop();
@@ -1328,15 +1313,13 @@ calDavCalendar.prototype = {
                                               aOperation, aClosure) {
 
             if (resourceType == null || resourceType == kDavResourceTypeNone) {
-                thisCalendar.mReadOnly = true;
-                throw("The resource at " + thisCalendar.mUri.spec +
-                      " is either not DAV or not available\n");
+                thisCalendar.reportDavError(Ci.calIErrors.DAV_NOT_DAV,
+                                            "dav_notDav");
             }
 
             if (resourceType == kDavResourceTypeCollection) {
-                thisCalendar.mReadOnly = true;
-                throw("The resource at " + thisCalendar.mUri.spec +
-                      " is a DAV collection but not a CalDAV calendar\n");
+                thisCalendar.reportDavError(Ci.calIErrors.DAV_DAV_NOT_CALDAV,
+                                            "dav_davNotCaldav");
             }
 
             // we've authenticated in the process of PROPFINDing and can flush
@@ -1369,24 +1352,29 @@ calDavCalendar.prototype = {
             }
         }
 
-        var res = new WebDavResource(this.mCalendarUri);
+        var calendarDirUri = this.mCalendarUri.clone();
+        calendarDirUri.spec = this.makeUri('');
+        var res = new WebDavResource(calendarDirUri);
         var webSvc = Cc['@mozilla.org/webdav/service;1'].
                      getService(Ci.nsIWebDAVService);
         try {
             webSvc.getResourceProperties(res, 1, ["DAV: resourcetype"], false,
                                           listener, this, null);
         } catch (ex) {
-            thisCalendar.mReadOnly = true;
-            Components.utils.reportError(
-                "Unable to get properties of resource " + thisCalendar.mUri.spec
-                + " (not a network resource?); setting read-only");
+            thisCalendar.reportDavError(Ci.calIErrors.DAV_NO_PROPS,
+                                        "dav_noProps");
         }
     },
 
-    refresh: function calDAV_refresh() {
-        // XXX-fill this in, get a report for modifications+onModifyItem
+    reportDavError: function caldav_rDE(aErrNo, aMessage) {
+        var sbs = Cc["@mozilla.org/intl/stringbundle;1"].
+                    getService(Ci.nsIStringBundleService);
+        var sb = sbs.createBundle
+                    ("chrome://calendar/locale/calendar.properties");
+        errMsg = sb.formatStringFromName(aMessage, [this.mUri.spec], 1);
+        this.onError(aErrNo, errMsg);
     },
-    
+
     // stubs to keep callbacks we don't support yet from throwing errors 
     // we don't care about
     // nsIProgressEventSink

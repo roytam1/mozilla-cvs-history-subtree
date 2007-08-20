@@ -124,7 +124,6 @@ enum {
 // Reading bookmark files
 - (BOOL)readBookmarks;
 - (void)showCorruptBookmarksAlert;
-- (void)showRestoredBookmarksAlert;
 
 // these versions assume that we're reading all the bookmarks from the file (i.e. not an import into a subfolder)
 - (BOOL)readPListBookmarks:(NSString *)pathToFile;    // camino or safari
@@ -296,7 +295,7 @@ static BookmarkManager* gBookmarkManager = nil;
   [self startSuppressingChangeNotifications];
 
   // handle exceptions to ensure that turn notification suppression back off
-  NS_DURING
+  @try {
     BookmarkFolder* root = [[BookmarkFolder alloc] init];
 
     // We used to do this:
@@ -336,10 +335,10 @@ static BookmarkManager* gBookmarkManager = nil;
     // set the localized titles of these folders
     [[self toolbarFolder] setTitle:NSLocalizedString(@"Bookmark Bar", nil)];
     [[self bookmarkMenuFolder] setTitle:NSLocalizedString(@"Bookmark Menu", nil)];
-
-  NS_HANDLER
-      NSLog(@"Exception caught in loadBookmarks: %@", localException);
-  NS_ENDHANDLER
+  }
+  @catch (id exception) {
+      NSLog(@"Exception caught in loadBookmarks: %@", exception);
+  }
 
   [self stopSuppressingChangeNotifications];
 
@@ -659,7 +658,7 @@ static BookmarkManager* gBookmarkManager = nil;
   // XXX this will fire a lot of changed notifications.
   NSEnumerator* bookmarksEnum = [[self rootBookmarks] objectEnumerator];
   BookmarkItem* curItem;
-  while (curItem = [bookmarksEnum nextObject]) {
+  while ((curItem = [bookmarksEnum nextObject])) {
     if ([curItem isKindOfClass:[Bookmark class]])
       [(Bookmark*)curItem setNumberOfVisits:0];
   }
@@ -956,7 +955,7 @@ static BookmarkManager* gBookmarkManager = nil;
   NSMutableSet* seenBookmarks = [NSMutableSet setWithCapacity:[bookmarkItems count]];
   NSEnumerator* bookmarkItemsEnum = [bookmarkItems objectEnumerator];
   BookmarkItem* curItem;
-  while (curItem = [bookmarkItemsEnum nextObject]) {
+  while ((curItem = [bookmarkItemsEnum nextObject])) {
     if ([curItem isKindOfClass:[Bookmark class]] && ![curItem isSeparator] && ![seenBookmarks containsObject:curItem]) {
       [seenBookmarks addObject:curItem]; // now we've seen it
       [urlList addObject:[(Bookmark*)curItem url]];
@@ -966,7 +965,7 @@ static BookmarkManager* gBookmarkManager = nil;
       NSArray* children = [(BookmarkFolder*)curItem allChildBookmarks];
       NSEnumerator* childrenEnum = [children objectEnumerator];
       Bookmark* curChild;
-      while (curChild = [childrenEnum nextObject]) {
+      while ((curChild = [childrenEnum nextObject])) {
         if (![seenBookmarks containsObject:curChild] && ![curItem isSeparator]) {
           [seenBookmarks addObject:curChild]; // now we've seen it
           [urlList addObject:[curChild url]];
@@ -1290,19 +1289,23 @@ static BookmarkManager* gBookmarkManager = nil;
 //
 - (BOOL)readBookmarks
 {
-  NSString *profileDir = [[PreferenceManager sharedInstance] profilePath];
-
-  //
   // figure out where Bookmarks.plist is and store it as mPathToBookmarkFile
   // if there is a Bookmarks.plist, read it
-  // if there isn't, move default Bookmarks.plist to profile dir & read it.
-  //
-  NSFileManager *fM = [NSFileManager defaultManager];
+  // if there isn't (or it's corrupt), but there's a backup, restore from the backup
+  // otherwise, move default Bookmarks.plist to profile dir & read it.
+  NSString *profileDir = [[PreferenceManager sharedInstance] profilePath];
   NSString *bookmarkPath = [profileDir stringByAppendingPathComponent:@"bookmarks.plist"];
+  NSString *backupPath = [bookmarkPath stringByAppendingString:@".bak"];
   [self setPathToBookmarkFile:bookmarkPath];
+
+  NSFileManager *fM = [NSFileManager defaultManager];
+
+  // If the bookmark file is somehow missing, grab the backup if there is one.
+  if (![fM fileExistsAtPath:bookmarkPath] && [fM fileExistsAtPath:backupPath])
+    [fM copyPath:backupPath toPath:bookmarkPath handler:self];
+
   BOOL bookmarksAreCorrupt = NO;
   if ([fM isReadableFileAtPath:bookmarkPath]) {
-    NSString *backupPath = [bookmarkPath stringByAppendingString:@".bak"];
     if ([self readPListBookmarks:bookmarkPath]) {
       // since the bookmarks look good, save them aside as a backup in case something goes
       // wrong later (e.g., bug 337750) since users really don't like losing their bookmarks.
@@ -1315,12 +1318,6 @@ static BookmarkManager* gBookmarkManager = nil;
     else {
       bookmarksAreCorrupt = YES;
       // save the corrupted bookmarks to a backup file
-      long long bmFileSize = [fM sizeOfFileAtPath:bookmarkPath traverseLink:YES];
-      NSLog(@"Corrupted bookmarks file '%@' is %qi bytes", bookmarkPath, bmFileSize);
-      NSDictionary* fileAttributesDict = [fM fileAttributesAtPath:bookmarkPath traverseLink:YES];
-      NSDate* modificationDate = [fileAttributesDict objectForKey:NSFileModificationDate];
-      NSLog(@"Corrupted bookmarks.plist was last modified %@", modificationDate);
-
       NSString* uniqueName = [fM backupFileNameFromPath:bookmarkPath withSuffix:@"-corrupted"];
       if ([fM movePath:bookmarkPath toPath:uniqueName handler:nil])
         NSLog(@"Moved corrupted bookmarks file to '%@'", uniqueName);
@@ -1330,8 +1327,6 @@ static BookmarkManager* gBookmarkManager = nil;
       // Try to recover from the backup, if there is one
       if ([fM fileExistsAtPath:backupPath]) {
         if ([self readPListBookmarks:backupPath]) {
-          // This is a background thread, so we can't put up an alert directly.
-          [self performSelectorOnMainThread:@selector(showRestoredBookmarksAlert) withObject:nil waitUntilDone:NO];
           NSLog(@"Recovering from backup bookmarks file '%@'", backupPath);
 
           [fM copyPath:backupPath toPath:bookmarkPath handler:self];
@@ -1363,18 +1358,6 @@ static BookmarkManager* gBookmarkManager = nil;
                   NSLocalizedString(@"OKButtonText", nil),
                   nil,
                   nil);
-}
-
-- (void)showRestoredBookmarksAlert
-{
-  if (NSRunAlertPanel(NSLocalizedString(@"RestoredBookmarksAlert", nil),
-                      NSLocalizedString(@"RestoredBookmarksMsg", nil),
-                      NSLocalizedString(@"RestoredBookmarksInfoButton", nil),
-                      NSLocalizedString(@"CancelButtonText", nil),
-                      nil) == NSAlertDefaultReturn)
-  {
-    [[NSApp delegate] showURL:NSLocalizedStringFromTable(@"CorruptedBookmarksDefault", @"WebsiteDefaults", nil)];
-  }
 }
 
 - (BOOL)readPListBookmarks:(NSString *)pathToFile

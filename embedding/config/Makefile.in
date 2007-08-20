@@ -59,9 +59,17 @@ ifeq (windows,$(MOZ_WIDGET_TOOLKIT))
   #WINAPP=winembed
 else
 ifdef MINIMO
-  BASEBROWSER = minimo-unix
+  ifeq (photon,$(MOZ_WIDGET_TOOLKIT))
+    BASEBROWSER = minimo-qnx
+  else
+    BASEBROWSER = minimo-unix
+  endif
 else
-  BASEBROWSER = basebrowser-unix
+  ifeq (photon,$(MOZ_WIDGET_TOOLKIT))
+    BASEBROWSER = basebrowser-qnx
+  else
+    BASEBROWSER = basebrowser-unix
+  endif
 endif
   CLIENTMANIFEST = client-unix
   _PLATFORM = unix

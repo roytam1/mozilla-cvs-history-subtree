@@ -96,6 +96,7 @@ nsSHEntry::nsSHEntry(const nsSHEntry &other)
   , mCacheKey(other.mCacheKey)
   , mParent(other.mParent)
   , mViewerBounds(0, 0, 0, 0)
+  , mOwner(other.mOwner)
 {
 }
 
@@ -123,7 +124,8 @@ nsSHEntry::~nsSHEntry()
 //    nsSHEntry: nsISupports
 //*****************************************************************************
 
-NS_IMPL_ISUPPORTS4(nsSHEntry, nsISHContainer, nsISHEntry, nsIHistoryEntry,
+NS_IMPL_ISUPPORTS5(nsSHEntry, nsISHContainer, nsISHEntry,
+                   nsISHEntry_MOZILLA_1_8_BRANCH, nsIHistoryEntry,
                    nsIDocumentObserver)
 
 //*****************************************************************************
@@ -401,11 +403,25 @@ nsSHEntry::Create(nsIURI * aURI, const nsAString &aTitle,
                   nsILayoutHistoryState * aLayoutHistoryState,
                   nsISupports * aCacheKey, const nsACString& aContentType)
 {
+  return Create_MOZILLA_1_8_BRANCH(aURI, aTitle, aInputStream,
+                                   aLayoutHistoryState, aCacheKey,
+                                   aContentType, nsnull);
+}
+
+NS_IMETHODIMP
+nsSHEntry::Create_MOZILLA_1_8_BRANCH(nsIURI * aURI, const nsAString &aTitle,
+                                     nsIInputStream * aInputStream,
+                                     nsILayoutHistoryState * aLayoutHistoryState,
+                                     nsISupports * aCacheKey,
+                                     const nsACString& aContentType,
+                                     nsISupports* aOwner)
+{
   mURI = aURI;
   mTitle = aTitle;
   mPostData = aInputStream;
   mCacheKey = aCacheKey;
   mContentType = aContentType;
+  mOwner = aOwner;
     
   // Set the LoadType by default to loadHistory during creation
   mLoadType = (PRUint32) nsIDocShellLoadInfo::loadHistory;
@@ -481,6 +497,13 @@ NS_IMETHODIMP
 nsSHEntry::GetViewerBounds(nsRect &aBounds)
 {
   aBounds = mViewerBounds;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsSHEntry::GetOwner(nsISupports **aOwner)
+{
+  NS_IF_ADDREF(*aOwner = mOwner);
   return NS_OK;
 }
 

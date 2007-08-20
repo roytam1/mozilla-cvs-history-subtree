@@ -51,8 +51,8 @@ DIRS = \
 
 APP_NAME	= Camino
 
-FOX_APP_VERSION_FILE = $(srcdir)/../browser/config/version.txt
-FOX_APP_VERSION = $(shell cat $(FOX_APP_VERSION_FILE))
+FOX_APP_VERSION_FILE = $(topsrcdir)/browser/config/version.txt
+FOX_APP_VERSION := $(shell cat $(FOX_APP_VERSION_FILE))
 
 ifdef MOZ_DEBUG
 BUILDSTYLE	= Development
@@ -70,7 +70,12 @@ else
 TARGET		= Camino
 endif
 
-GARBAGE_DIRS += build 
+GARBAGE_DIRS += build \
+	$(DIST)/$(APP_NAME).app \
+	IBPalette/build \
+	embed-replacements.tmp \
+	generated \
+	$(NULL)
 
 include $(topsrcdir)/config/rules.mk
 
@@ -81,33 +86,29 @@ ABS_topsrcdir := $(shell cd $(topsrcdir); pwd)
 export::
 	mkdir -p ./wallet/tables && ln -sf $(ABS_topsrcdir)/extensions/wallet/src/*.tbl ./wallet/tables
 ifneq ($(ABS_topsrcdir),$(MOZ_BUILD_ROOT))
-	rsync -a --exclude .DS_Store --exclude "CVS/" --exclude "*.mode1" --exclude "*.pbxuser" $(srcdir)/Camino.xcode .
+	rsync -a --exclude .DS_Store --exclude "CVS/" --exclude "*.mode1" --exclude "*.pbxuser" $(srcdir)/Camino.xcodeproj .
 	ln -fs $(srcdir)/src
 	ln -fs $(srcdir)/resources
+	ln -fs $(srcdir)/config
 	ln -fs $(srcdir)/PreferencePanes
 	ln -fs $(srcdir)/Info-*.plist .
 endif
-
-clean clobber repackage::
-	rm -rf $(DIST)/$(APP_NAME).app
-	rm -rf embed-replacements.tmp
-	rm -rf generated
 
 generated:
 	mkdir -p $@
 
 # Generate files which need to pull version numbers from elsewhere in the tree
 generated/all-camino.js: $(srcdir)/resources/application/all-camino.js.in $(FOX_APP_VERSION_FILE) generated
-	sed -e "s/@FOX_APP_VERSION@/$(FOX_APP_VERSION)/" $< > $@
+	sed -e "s/%FOX_APP_VERSION%/$(FOX_APP_VERSION)/" $< > $@
 
 # The embed-replacements rsync is done for both srcdir and objdir builds
 # to avoid adding CVS stuff to embed.jar.
 libs:: generated/all-camino.js
 	rsync -aC --delete $(srcdir)/embed-replacements/ embed-replacements.tmp
 	cd embed-replacements.tmp && $(ZIP) -r0DX ../../dist/Embed/chrome/embed.jar *
-	$(PBBUILD) -project Camino.xcode -target $(TARGET) -buildstyle $(BUILDSTYLE) $(PBBUILD_SETTINGS)
+	$(PBBUILD) -project Camino.xcodeproj -target $(TARGET) -configuration $(BUILDSTYLE) $(PBBUILD_SETTINGS)
 
-libs repackage::
+libs::
 	rsync -a --copy-unsafe-links $(XCODE_PRODUCT_DIR)/Camino.app/ $(DIST)/$(APP_NAME).app
 	$(RM) $(DIST)/$(APP_NAME).app/Contents/MacOS/components/camino.xpt
 	$(XPIDL_LINK) $(DIST)/$(APP_NAME).app/Contents/MacOS/camino.xpt $(DIST)/$(APP_NAME).app/Contents/MacOS/components/*.xpt

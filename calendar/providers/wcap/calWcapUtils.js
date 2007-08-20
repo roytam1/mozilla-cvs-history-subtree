@@ -74,7 +74,8 @@ function initLogging()
                     logFile,
                     0x02 /* PR_WRONLY */ |
                     0x08 /* PR_CREATE_FILE */ |
-                    0x10 /* PR_APPEND */,
+                    (getPref("calendar.wcap.log_file_append", false)
+                     ? 0x10 /* PR_APPEND */ : 0x20 /* PR_TRUNCATE */),
                     0700 /* read, write, execute/search by owner */,
                     0 /* unused */);
                 g_logFilestream = logFileStream;
@@ -204,28 +205,6 @@ function getDomParser() {
     return g_domParser;
 }
 
-var g_calendarManager = null;
-function getCalendarManager() {
-    if (!g_calendarManager) {
-        g_calendarManager =
-            Components.classes["@mozilla.org/calendar/manager;1"]
-                      .getService(Components.interfaces.calICalendarManager);
-    }
-    return g_calendarManager;
-};
-
-var g_wcapBundle = null;
-function getWcapBundle() {
-    if (!g_wcapBundle) {
-        var stringBundleService =
-            Components.classes["@mozilla.org/intl/stringbundle;1"]
-                      .getService(Components.interfaces.nsIStringBundleService);
-        g_wcapBundle = stringBundleService.createBundle(
-            "chrome://calendar/locale/wcap.properties");
-    }
-    return g_wcapBundle;
-}
-
 function subClass(subCtor, baseCtor) {
     subCtor.prototype = new baseCtor();
     subCtor.prototype.constructor = subCtor;
@@ -235,10 +214,6 @@ function subClass(subCtor, baseCtor) {
 function qiface(list, iid) {
     if (!list.some( function(i) { return i.equals(iid); } ))
         throw Components.results.NS_ERROR_NO_INTERFACE;
-}
-
-function isEvent(item) {
-    return (item instanceof Components.interfaces.calIEvent);
 }
 
 function isParent(item) {
@@ -297,7 +272,7 @@ function getTime() {
 }
 
 function getIcalUTC(dt) {
-    if (!dt)
+    if (!dt || !dt.isValid)
         return "0";
     else {
         var dtz = dt.timezone;
@@ -314,15 +289,6 @@ function getDatetimeFromIcalString(val) {
     // assuming timezone is known:
     var dt = new CalDateTime();
     dt.icalString = val;
-    if (LOG_LEVEL > 1) {
-        var dt_ = dt.clone();
-        dt_.normalize();
-        if (dt.icalString != val || dt_.icalString != val) {
-            logError(dt.icalString + " vs. " + val, "date-time error");
-            logError(dt_.icalString + " vs. " + val, "date-time error");
-            debugger;
-        }
-    }
     return dt;
 }
 
@@ -333,46 +299,8 @@ function getDatetimeFromIcalProp(prop) {
 }
 
 function getPref(prefName, defaultValue) {
-    const nsIPrefBranch = Components.interfaces.nsIPrefBranch;
-    var prefBranch = Components.classes["@mozilla.org/preferences-service;1"]
-                               .getService(nsIPrefBranch);
-    var ret;
-    switch (prefBranch.getPrefType(prefName)) {
-    case nsIPrefBranch.PREF_BOOL:
-        ret = prefBranch.getBoolPref(prefName);
-        break;
-    case nsIPrefBranch.PREF_INT:
-        ret = prefBranch.getIntPref(prefName);
-        break;
-    case nsIPrefBranch.PREF_STRING:
-        ret = prefBranch.getCharPref(prefName);
-        break;
-    default:
-        ret = defaultValue;
-        break;
-    }
+    var ret = getPrefSafe(prefName, defaultValue);
     log(ret, "getPref(): prefName=" + prefName);
     return ret;
-}
-
-function setPref(prefName, value) {
-    log(value, "setPref(): prefName=" + prefName);
-    const nsIPrefBranch = Components.interfaces.nsIPrefBranch;
-    var prefBranch = Components.classes["@mozilla.org/preferences-service;1"]
-                               .getService(nsIPrefBranch);
-    switch (typeof(value)) {
-    case "boolean":
-        prefBranch.setBoolPref(prefName, value);
-        break;
-    case "number":
-        prefBranch.setIntPref(prefName, value);
-        break;
-    case "string":
-        prefBranch.setCharPref(prefName, value);
-        break;
-    default:
-        throw new Components.Exception("unsupported pref value: " +
-                                       typeof(value));
-    }
 }
 

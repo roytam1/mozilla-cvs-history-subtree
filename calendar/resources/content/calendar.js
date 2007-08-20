@@ -111,15 +111,17 @@ function calendarInit()
        deck.selectedPanel.goToDay(deck.selectedPanel.selectedDay);
    }
 
+   updateOrientation();
+
    // set up the unifinder
-   
+
    prepareCalendarUnifinder();
 
    prepareCalendarToDoUnifinder();
    
    scheduleMidnightUpdate(refreshUIBits);
 
-   initCalendarManager();
+   loadCalendarManager();
 
    // fire up the alarm service
    var alarmSvc = Components.classes["@mozilla.org/calendar/alarm-service;1"]
@@ -224,75 +226,8 @@ function calendarFinish()
    
    finishCalendarToDoUnifinder();
 
-   finishCalendarManager();
+   unloadCalendarManager();
 }
-
-function newCalendarDialog()
-{
-    openCalendarWizard();
-}
-
-function editCalendarDialog(event)
-{
-    openCalendarProperties(document.popupNode.calendar, null);
-}
-
-function calendarListboxDoubleClick(event) {
-    if(event.target.calendar)
-        openCalendarProperties(event.target.calendar, null);
-    else
-        openCalendarWizard();
-}
-
-function checkCalListTarget() {
-    if(!document.popupNode.calendar) {
-        document.getElementById("calpopup-edit").setAttribute("disabled", "true");
-        document.getElementById("calpopup-delete").setAttribute("disabled", "true");
-        document.getElementById("calpopup-publish").setAttribute("disabled", "true");
-    }
-    else {
-        document.getElementById("calpopup-edit").removeAttribute("disabled");
-        document.getElementById("calpopup-delete").removeAttribute("disabled");
-        document.getElementById("calpopup-publish").removeAttribute("disabled");
-    }
-}
-
-function deleteCalendar(event)
-{
-    var promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService(Components.interfaces.nsIPromptService); 
-
-    var result = {}; 
-    var calendarBundle = document.getElementById("bundle_calendar");
-    var calendar = document.popupNode.calendar;
-    var ok = promptService.confirm(
-        window,
-        calendarBundle.getString("unsubscribeCalendarTitle"),
-        calendarBundle.getFormattedString("unsubscribeCalendarMessage",[calendar.name]),
-        result);
-   
-    if (ok) {
-        getCompositeCalendar().removeCalendar(calendar.uri);
-        var calMgr = getCalendarManager();
-        calMgr.unregisterCalendar(calendar);
-        calMgr.deleteCalendar(calendar);
-    }
-}
-
-/**
- * Get the default calendar selected in the calendars tab.
- * Returns a calICalendar object, or null if none selected.
- */
-function getSelectedCalendarOrNull()
-{
-   var selectedCalendarItem = document.getElementById( "list-calendars-listbox" ).selectedItem;
-   
-   if ( selectedCalendarItem )
-     return selectedCalendarItem.calendar;
-   else
-     return null;
-}
-
-
 
 /**
 *  Delete the current selected item with focus from the ToDo unifinder list
@@ -363,7 +298,6 @@ function selectAllEvents()
     // Need to move one day out to get all events
     var end = currentView().endDay.clone();
     end.day += 1;
-    end.normalize();
 
     composite.getItems(filter, 0, currentView().startDay, end, listener);
 }
@@ -386,6 +320,17 @@ function onSelectionChanged(aEvent) {
         } else {
             elements[i].setAttribute("disabled", "true");
         }
+    }
+}
+
+function updateOrientation() {
+
+    var value = (document.getElementById("menu-multiday-rotated")
+                         .getAttribute("checked") == 'true');
+
+    // This makes the views refresh themselves
+    for each (view in document.getElementById("view-deck").childNodes) {
+        view.rotated = value;
     }
 }
 
@@ -445,18 +390,6 @@ function openPreferences() {
 
         openDialog(url, "Preferences", features);
     }
-}
-
-/**
- * Opens the release notes page for this version of the application.
- */
-function openReleaseNotes() {
-    var appInfo = Components.classes["@mozilla.org/xre/app-info;1"]
-                            .getService(Components.interfaces.nsIXULAppInfo);
-    var calendarBundle = document.getElementById("bundle_branding");
-    var relNotesURL = calendarBundle.getFormattedString("releaseNotesURL",
-                                                        [appInfo.version]);
-    launchBrowser(relNotesURL);
 }
 
 function CalendarCustomizeToolbar()

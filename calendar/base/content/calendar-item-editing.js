@@ -90,7 +90,6 @@ function createEventWithDialog(calendar, startDate, endDate, summary, event)
         startDate.hour = now().hour;
         startDate.minute = 0;
         startDate.second = 0;
-        startDate.normalize();
    }
 
     event.startDate = startDate.clone();
@@ -98,16 +97,10 @@ function createEventWithDialog(calendar, startDate, endDate, summary, event)
     if (!endDate) {
         endDate = startDate.clone();
         endDate.minute += getPrefSafe("calendar.event.defaultlength", 60);
-        endDate.normalize();
     }
     event.endDate = endDate.clone();
 
-    if (calendar) {
-        event.calendar = calendar;
-    } else if ("getSelectedCalendarOrNull" in window) {
-        // Sunbird specific code
-        event.calendar = getSelectedCalendarOrNull();
-    }
+    event.calendar = calendar || getSelectedCalendar();
 
     if (summary)
         event.title = summary;
@@ -138,12 +131,7 @@ function createTodoWithDialog(calendar, dueDate, summary, todo)
 
     todo = createTodo();
 
-    if (calendar) {
-        todo.calendar = calendar;
-    } else if ("getSelectedCalendarOrNull" in window) {
-        // Sunbird specific code
-        todo.calendar = getSelectedCalendarOrNull();
-    }
+    todo.calendar = calendar || getSelectedCalendar();
 
     if (summary)
         todo.title = summary;
@@ -201,16 +189,16 @@ function openEventDialog(calendarItem, calendar, mode, callback, job)
     args.onOk = callback;
     args.job = job;
 
+    // this will be called if file->new has been selected from within the dialog
+    args.onNewEvent = function(calendar) {
+        createEventWithDialog(calendar, null, null);
+    }
+
     // the dialog will reset this to auto when it is done loading.
     window.setCursor("wait");
 
     // open the dialog modeless
-    var url = "chrome://calendar/content/calendar-event-dialog.xul";
-
-    if (getPrefSafe("calendar.prototypes.wcap", false)) {
-      url = "chrome://calendar/content/sun-calendar-event-dialog.xul";
-    }
-
+    var url = "chrome://calendar/content/sun-calendar-event-dialog.xul";
     openDialog(url, "_blank", "chrome,titlebar,resizable", args);
 }
 

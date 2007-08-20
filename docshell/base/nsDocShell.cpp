@@ -771,31 +771,42 @@ nsDocShell::LoadURI(nsIURI * aURI,
     }
     // Perform the load...
     else {
-        // We need an owner (a referring principal). 3 possibilities:
-        // (1) If a principal was passed in, that's what we'll use.
-        // (2) If the caller has allowed inheriting from the current document,
-        //   or if we're being called from chrome (if there's system JS on the stack),
-        //   then inheritOwner should be true and InternalLoad will get an owner
-        //   from the current document. If none of these things are true, then
-        // (3) we pass a null owner into the channel, and an owner will be
-        //   created later from the URL.
-        if (!owner && !inheritOwner) {
-            // See if there's system or chrome JS code running
-            nsCOMPtr<nsIScriptSecurityManager> secMan;
+        // We need an owner (a referring principal). 4 possibilities:
+        // (1) If the system principal was passed in and we're a typeContent
+        //     docshell, inherit the principal from the current document
+        //     instead.
+        // (2) In all other cases when the principal passed in is not null,
+        //     use that principal.
+        // (3) If the caller has allowed inheriting from the current
+        //     document, or if we're being called from chrome (if there's
+        //     system JS on the stack), then inheritOwner should be true and
+        //     InternalLoad will get an owner from the current document. If
+        //     none of these things are true, then
+        // (4) we pass a null owner into the channel, and an owner will be
+        //     created later from the channel's internal data.
+        nsCOMPtr<nsIScriptSecurityManager> secMan =
+            do_GetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID, &rv);
+        NS_ENSURE_SUCCESS(rv, rv);
 
-            secMan = do_GetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID, &rv);
+        // Just to compare, not to use!
+        nsCOMPtr<nsIPrincipal> sysPrin;
+        rv = secMan->GetSystemPrincipal(getter_AddRefs(sysPrin));
+        NS_ENSURE_SUCCESS(rv, rv);
+        
+        if (owner == sysPrin && mItemType != typeChrome) {
+            owner = nsnull;
+            inheritOwner = PR_TRUE;
+        }
+        else if (!owner && !inheritOwner) {
+            // See if there's system or chrome JS code running
             if (NS_SUCCEEDED(rv)) {
-                nsCOMPtr<nsIPrincipal> sysPrin;
                 nsCOMPtr<nsIPrincipal> subjectPrin;
 
-                // Just to compare, not to use!
-                rv = secMan->GetSystemPrincipal(getter_AddRefs(sysPrin));
-                if (NS_SUCCEEDED(rv)) {
-                    rv = secMan->GetSubjectPrincipal(getter_AddRefs(subjectPrin));
-                }
-                // If there's no subject principal, there's no JS running, so we're in system code.
+                rv = secMan->GetSubjectPrincipal(getter_AddRefs(subjectPrin));
+                // If there's no subject principal, there's no JS running, so
+                // we're in system code.
                 if (NS_SUCCEEDED(rv) &&
-                    (!subjectPrin || sysPrin.get() == subjectPrin.get())) {
+                    (!subjectPrin || sysPrin == subjectPrin)) {
                     inheritOwner = PR_TRUE;
                 }
             }
@@ -7594,7 +7605,7 @@ nsDocShell::AddToSessionHistory(nsIURI * aURI,
 #endif
 
     nsresult rv = NS_OK;
-    nsCOMPtr<nsISHEntry> entry;
+    nsCOMPtr<nsISHEntry_MOZILLA_1_8_BRANCH> entry;
     PRBool shouldPersist;
 
     shouldPersist = ShouldAddToSessionHistory(aURI);
@@ -7610,7 +7621,7 @@ nsDocShell::AddToSessionHistory(nsIURI * aURI,
     if (LOAD_TYPE_HAS_FLAGS(mLoadType, LOAD_FLAGS_REPLACE_HISTORY) &&
         root != NS_STATIC_CAST(nsIDocShellTreeItem *, this)) {
         // This is a subframe 
-        entry = mOSHE;
+        entry = do_QueryInterface(mOSHE);
         nsCOMPtr<nsISHContainer> shContainer(do_QueryInterface(entry));
         if (shContainer) {
             PRInt32 childCount = 0;
@@ -7638,6 +7649,7 @@ nsDocShell::AddToSessionHistory(nsIURI * aURI,
     nsCOMPtr<nsIURI> referrerURI;
     nsCOMPtr<nsISupports> cacheKey;
     nsCOMPtr<nsISupports> cacheToken;
+    nsCOMPtr<nsISupports> owner;
     PRBool expired = PR_FALSE;
     PRBool discardLayoutState = PR_FALSE;
     if (aChannel) {
@@ -7665,15 +7677,17 @@ nsDocShell::AddToSessionHistory(nsIURI * aURI,
 
             discardLayoutState = ShouldDiscardLayoutState(httpChannel);
         }
+        aChannel->GetOwner(getter_AddRefs(owner));
     }
 
     //Title is set in nsDocShell::SetTitle()
-    entry->Create(aURI,              // uri
-                  EmptyString(),     // Title
-                  inputStream,       // Post data stream
-                  nsnull,            // LayoutHistory state
-                  cacheKey,          // CacheKey
-                  mContentTypeHint); // Content-type
+    entry->Create_MOZILLA_1_8_BRANCH(aURI,              // uri
+                                     EmptyString(),     // Title
+                                     inputStream,       // Post data stream
+                                     nsnull,            // LayoutHistory state
+                                     cacheKey,          // CacheKey
+                                     mContentTypeHint,  // Content-type
+                                     owner);            // Channel owner
     entry->SetReferrerURI(referrerURI);
     /* If cache got a 'no-store', ask SH not to store
      * HistoryLayoutState. By default, SH will set this
@@ -7751,6 +7765,7 @@ nsDocShell::LoadHistoryEntry(nsISHEntry * aEntry, PRUint32 aLoadType)
     nsCOMPtr<nsIInputStream> postData;
     nsCOMPtr<nsIURI> referrerURI;
     nsCAutoString contentType;
+    nsCOMPtr<nsISupports> owner;
 
     NS_ENSURE_TRUE(aEntry, NS_ERROR_FAILURE);
 
@@ -7760,6 +7775,13 @@ nsDocShell::LoadHistoryEntry(nsISHEntry * aEntry, PRUint32 aLoadType)
     NS_ENSURE_SUCCESS(aEntry->GetPostData(getter_AddRefs(postData)),
                       NS_ERROR_FAILURE);
     NS_ENSURE_SUCCESS(aEntry->GetContentType(contentType), NS_ERROR_FAILURE);
+
+    nsCOMPtr<nsISHEntry_MOZILLA_1_8_BRANCH> branchEntry =
+        do_QueryInterface(aEntry);
+    NS_ENSURE_TRUE(branchEntry, NS_ERROR_UNEXPECTED);
+    NS_ENSURE_SUCCESS(branchEntry->GetOwner(getter_AddRefs(owner)),
+                      NS_ERROR_FAILURE);
+    
 
     PRBool isJavaScript, isViewSource, isData;
     // Calling CreateAboutBlankContentViewer can set mOSHE to null, and if
@@ -7783,6 +7805,20 @@ nsDocShell::LoadHistoryEntry(nsISHEntry * aEntry, PRUint32 aLoadType)
             // viewer failed for some reason (potentially because the
             // user prevented it). Interrupt the history load.
             return NS_OK;
+        }
+
+        if (!owner) {
+            // Ensure that we have an owner, just to make sure that nothing
+            // reuses the principal of the about:blank page that just got
+            // created.
+            nsCOMPtr<nsIScriptSecurityManager> secMan = 
+                do_GetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID, &rv);
+            NS_ENSURE_SUCCESS(rv, rv);
+
+            nsCOMPtr<nsIPrincipal> prin;
+            secMan->GetCodebasePrincipal(uri, getter_AddRefs(prin));
+            owner = prin;
+            NS_ENSURE_TRUE(owner, NS_ERROR_OUT_OF_MEMORY);
         }
     }
 
@@ -7816,7 +7852,7 @@ nsDocShell::LoadHistoryEntry(nsISHEntry * aEntry, PRUint32 aLoadType)
 
     rv = InternalLoad(uri,
                       referrerURI,
-                      nsnull,            // No owner
+                      owner,
                       INTERNAL_LOAD_FLAGS_NONE, // Do not inherit owner from document (security-critical!)
                       nsnull,            // No window target
                       contentType.get(), // Type hint

@@ -1,14 +1,15 @@
-; Base Embedding Package File for linux
 ;
-;
+; Base Embedding Package File for QNX
 ;
 
 [Embed]
+LICENSE
 
 ; 
 ; Sample App + launch script
 ; 
-TestGtkEmbed
+TestPhEmbed
+libphembedmoz.so
 run-mozilla.sh
 
 ; 
@@ -35,7 +36,6 @@ components/xpcom_io.xpt
 components/xpcom_threads.xpt
 components/xpcom_xpti.xpt
 libxpcom_compat.so
-components/libxpcom_compat_c.so
 components/xpcom_obsolete.xpt
 
 ; xpconnect
@@ -47,10 +47,8 @@ components/xpconnect.xpt
 ; 
 
 libgkgfx.so 
-libxlibrgb.so
 libgfxpsshar.so
-components/libgfxps.so
-components/libgfxxprint.so
+;;components/libgfxps.so
 components/gfx.xpt 
 components/widget.xpt
 
@@ -61,7 +59,6 @@ components/libwidget_photon.so
 components/libgfx_photon.so
 
 ; layout
-libmoz_art_lgpl.so
 res/dtd/xhtml11.dtd
 components/libgklayout.so                   
 components/libhtmlpars.so                 
@@ -91,7 +88,7 @@ components/libcaps.so
 components/caps.xpt                     
 
 ; cookies
-components/libcookie.so                   
+;components/libcookie.so                   
 
 ; docshell
 ; embedding glue:
@@ -115,7 +112,6 @@ components/pref.xpt
 components/libpref.so
 
 ; profile
-components/libprofile.so                  
 components/profile.xpt
 
 ; session history
@@ -177,7 +173,6 @@ components/necko_strconv.xpt
 components/necko_cache.xpt
 
 ; optional for FTP support
-components/libnecko2.so                   
 components/necko_ftp.xpt                
 
 ; plugins
@@ -187,8 +182,8 @@ components/plugin.xpt
 
 ; wallet
 ; Optional - only if you need password persistence
-components/libwallet.so
-components/wallet.xpt                  
+;components/libwallet.so
+;components/wallet.xpt                  
 
 ; download progress
 ; Optional - you can implement your own download progress dialog
@@ -199,12 +194,10 @@ components/wallet.xpt
 
 ; psm2
 ; Optional - only if you need HTTPS support
-components/libpipboot.so
 components/pipboot.xpt
 components/libpipnss.so
 components/pipnss.xpt
-chrome/pipnss.jar
-defaults/pref/security-prefs.js
+;;chrome/pipnss.jar
 libnss3.so
 libsmime3.so
 libsoftokn3.chk
@@ -215,8 +208,8 @@ libssl3.so
 libnssckbi.so
 
 ; xmlextras, optional for XMLHttpRequest support
-components/libxmlextras.so
-components/xmlextras.xpt
+;components/libxmlextras.so
+;components/xmlextras.xpt
 
 res/language.properties
 res/langGroups.properties
@@ -229,9 +222,14 @@ res/unixcharset.properties
 greprefs/*
 
 ;
-; Widget-Toolkit and Res (consult hyatt@netscape.com before modifying):
+; Chrome
 ; 
-chrome/embed.jar
+chrome/toolkit.jar
+chrome/toolkit.manifest
+chrome/classic.jar
+chrome/classic.manifest
+chrome/en-US.jar
+chrome/en-US.manifest
 
 ; 
 ; res:
@@ -247,7 +245,6 @@ res/arrowd.gif
 res/loading-image.gif
 res/broken-image.gif
 res/entityTables/html40Special.properties
-res/entityTables/htmlEntityVersion.properties
 res/entityTables/html40Latin1.properties
 res/entityTables/html40Symbols.properties
 res/entityTables/transliterate.properties
@@ -269,7 +266,21 @@ res/entityTables/transliterate.properties
 ;res/fonts/mathfontSymbol.properties
 ;components/libucvmath.so
 
-; p3p
-components/libp3p.so
-components/p3p.xpt
+; defaults
+defaults/autoconfig/platform.js
+defaults/autoconfig/prefcalls.js
+defaults/pref/channel-prefs.js
+defaults/pref/firefox-branding.js
+defaults/pref/firefox-l10n.js
+defaults/pref/firefox.js
+defaults/pref/reporter.js
+defaults/profile/bookmarks.html
+defaults/profile/chrome/userChrome-example.css
+defaults/profile/chrome/userContent-example.css
+defaults/profile/localstore.rdf
+defaults/profile/mimeTypes.rdf
+defaults/profile/prefs.js
+defaults/profile/search.rdf
 
+; Needed, or else FTP crashes (others?)
+components/libappcomps.so

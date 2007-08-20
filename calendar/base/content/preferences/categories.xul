@@ -38,12 +38,7 @@
    -
    - ***** END LICENSE BLOCK ***** -->
 
-<!DOCTYPE overlay [
-    <!ENTITY % brandDTD SYSTEM "chrome://branding/locale/brand.dtd">
-    <!ENTITY % categoriesDTD SYSTEM "chrome://calendar/locale/preferences/categories.dtd">
-    %brandDTD;
-    %categoriesDTD;
-]>
+<!DOCTYPE overlay SYSTEM "chrome://calendar/locale/preferences/categories.dtd">
 
 <overlay id="CategoriesPaneOverlay"
          xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
@@ -71,7 +66,8 @@
         <groupbox id="categoriesBox">
             <listbox id="categorieslist"
                      flex="1"
-                     onselect="gCategoriesPane.enableButtons()">
+                     onselect="gCategoriesPane.enableButtons()"
+                     ondblclick="if (event.target.localName == 'listitem') gCategoriesPane.editCategory()">
                 <listhead>
                     <listheader label="&pref.categories.name.label;"/>
                     <listheader label="&pref.categories.color.label;"/>

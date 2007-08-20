@@ -1105,9 +1105,24 @@ static void PR_CALLBACK destroyExternalLoadEvent(PLEvent *event)
 
 NS_IMETHODIMP nsExternalHelperAppService::LoadURI(nsIURI * aURL, nsIPrompt * aPrompt)
 {
+  nsCAutoString spec;
+  aURL->GetSpec(spec);
+
+  if (spec.Find("%00") != -1)
+    return NS_ERROR_MALFORMED_URI;
+
+  spec.ReplaceSubstring("\"", "%22");
+  spec.ReplaceSubstring("`", "%60");
+  spec.ReplaceSubstring(" ", "%20");
+
+  nsCOMPtr<nsIIOService> ios(do_GetIOService());
+  nsCOMPtr<nsIURI> uri;
+  nsresult rv = ios->NewURI(spec, nsnull, nsnull, getter_AddRefs(uri));
+  NS_ENSURE_SUCCESS(rv, rv);
+
   // post external load event
   nsCOMPtr<nsIEventQueue> eventQ;
-  nsresult rv = NS_GetCurrentEventQ(getter_AddRefs(eventQ));
+  rv = NS_GetCurrentEventQ(getter_AddRefs(eventQ));
   if (NS_FAILED(rv))
     return rv;
 
@@ -1115,7 +1130,7 @@ NS_IMETHODIMP nsExternalHelperAppService::LoadURI(nsIURI * aURL, nsIPrompt * aPr
   if (!event)
     return NS_ERROR_OUT_OF_MEMORY;
 
-  event->uri    = aURL;
+  event->uri    = uri;
   event->prompt = aPrompt;
   PL_InitEvent(event, nsnull, handleExternalLoadEvent, destroyExternalLoadEvent);
 

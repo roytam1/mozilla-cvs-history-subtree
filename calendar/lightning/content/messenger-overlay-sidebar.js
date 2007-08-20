@@ -179,48 +179,6 @@ var CalendarController =
   }
 };
 
-function ltnSidebarCalendarSelected(tree)
-{
-    var selectedCalendar = ltnSelectedCalendar();
-    if (!selectedCalendar) {
-        return;
-    }
-    var compositeCalendar = getCompositeCalendar();
-    if (!compositeCalendar.getCalendar(selectedCalendar.uri)) {
-        compositeCalendar.addCalendar(selectedCalendar);
-    }
-    compositeCalendar.defaultCalendar = selectedCalendar;
-}
-
-function ltnSelectedCalendar()
-{
-    var index = document.getElementById("calendarTree").currentIndex;
-    return getCalendars()[index]; 
-}
-
-function ltnDeleteSelectedCalendar()
-{
-    var promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService(Components.interfaces.nsIPromptService); 
-
-    var result = {}; 
-    var calendarBundle = document.getElementById("bundle_calendar");
-    var calendar = ltnSelectedCalendar();
-    var ok = promptService.confirm(
-        window,
-        calendarBundle.getString("unsubscribeCalendarTitle"),
-        calendarBundle.getFormattedString("unsubscribeCalendarMessage",[calendar.name]),
-        result);
-   
-    if (ok) {
-        ltnRemoveCalendar(calendar);
-    }
-}
-
-function ltnEditSelectedCalendar()
-{
-    ltnEditCalendarProperties(ltnSelectedCalendar());
-}
-
 function today()
 {
     var d = Components.classes['@mozilla.org/calendar/datetime;1'].createInstance(Components.interfaces.calIDateTime);
@@ -252,11 +210,7 @@ function ltnMinimonthPick(minimonth)
 
     var jsDate = minimonth.value;
     document.getElementById("ltnDateTextPicker").value = jsDate;
-    var cdt = new CalDateTime();
-    cdt.year = jsDate.getFullYear();
-    cdt.month = jsDate.getMonth();
-    cdt.day = jsDate.getDate();
-    cdt.isDate = true;
+    var cdt = jsDateToDateTime(jsDate);
 
     if (document.getElementById("displayDeck").selectedPanel != 
         document.getElementById("calendar-view-box")) {
@@ -267,7 +221,8 @@ function ltnMinimonthPick(minimonth)
         if (!view.initialized) {
             showCalendarView('month');
             view = currentView();
-            cdt.timezone = view.timezone;
+            cdt = cdt.getInTimezone(view.timezone);
+            cdt.isDate = true;
             view.goToDay(cdt);
             return;
         }
@@ -279,7 +234,8 @@ function ltnMinimonthPick(minimonth)
         showCalendarView(viewID);
     }
 
-    cdt.timezone = currentView().timezone;
+    cdt = cdt.getInTimezone(currentView().timezone);
+    cdt.isDate = true;
     currentView().goToDay(cdt);
 }
 
@@ -293,6 +249,9 @@ function ltnGoToDate()
 
 function ltnOnLoad(event)
 {
+    // Load the Calendar Manager
+    loadCalendarManager();
+
     // take the existing folderPaneBox (that's what thunderbird displays
     // at the left side of the application window) and stuff that inside
     // of the deck we're introducing with the contentPanel. this essentially
@@ -409,23 +368,13 @@ function ltnOnLoad(event)
     // Hide the calendar view so it doesn't push the status-bar offscreen
     collapseElement(document.getElementById("calendar-view-box"));
 
-    // Start observing preferences
-    var prefService = Components.classes["@mozilla.org/preferences-service;1"]
-                            .getService(Components.interfaces.nsIPrefService);
-    var rootPrefBranch = prefService.getBranch("");
-    ltnPrefObserver.rootPrefBranch = rootPrefBranch;
-    var pb2 = rootPrefBranch.QueryInterface(
-        Components.interfaces.nsIPrefBranch2);
-    pb2.addObserver("calendar.", ltnPrefObserver, false);
-    ltnPrefObserver.observe(null, null, "");
-
     // fire up the alarm service
     var alarmSvc = Components.classes["@mozilla.org/calendar/alarm-service;1"]
                    .getService(Components.interfaces.calIAlarmService);
     alarmSvc.timezone = calendarDefaultTimezone();
     alarmSvc.startup();
 
-    // Add an unload function to the window so we don't leak the pref observer
+    // Add an unload function to the window so we don't leak any listeners
     document.getElementById("messengerWindow")
             .addEventListener("unload", ltnFinish, false);
 
@@ -510,6 +459,8 @@ function showCalendarView(type)
     }
 
     var view = document.getElementById(type+"-view");
+    var rotated = document.getElementById("ltn-multiday-rotated");
+
     if (!view.initialized) {
         // Set up this view with the current view-checkbox values
         var workdaysMenu = document.getElementById("ltn-workdays-only");
@@ -518,6 +469,15 @@ function showCalendarView(type)
         var tasksMenu = document.getElementById("ltn-tasks-in-view")
         view.tasksInView = (tasksMenu.getAttribute("checked") == 'true');
         view.showCompleted = document.getElementById("completed-tasks-checkbox").checked;
+
+        view.rotated = (rotated.getAttribute("checked") == 'true');
+    }
+
+    // Disable the menuitem when not in day or week view.
+    if (type == "day" || type == "week") {
+        rotated.removeAttribute("disabled");
+    } else {
+        rotated.setAttribute("disabled", true);
     }
 
     document.getElementById("displayDeck").selectedPanel =  calendarViewBox;
@@ -530,7 +490,7 @@ function showCalendarView(type)
     previousCommand.setAttribute("label", previousCommand.getAttribute("label-"+type));
 
     // Set up the commands
-    var availableViews = document.getElementById("calendar-view-box");
+    var availableViews = getViewDeck();
     for (var i = 0; i < availableViews.childNodes.length; i++) {
         var view = availableViews.childNodes[i];
         var command = document.getElementById(view.id+"-command");
@@ -548,6 +508,24 @@ function goToToday()
     // note, that the current view in the calendar-view-box is automatically updated
     var currentDay = today();
     document.getElementById("ltnMinimonth").value = currentDay.jsDate;
+}
+
+
+function toggleTodayPaneinMailMode()
+{
+  var oTodayPane = document.getElementById("today-pane-box");
+  var todayPaneCommand = document.getElementById('cmd_toggleTodayPane');
+  if (oTodayPane.hasAttribute("collapsed")) {
+    oTodayPane.removeAttribute("collapsed");
+    oTodayPane.removeAttribute("collapsedinMailMode");
+    todayPaneCommand.setAttribute("checked","true");
+    document.getElementById("today-closer").setAttribute("checked", "false");
+  }
+  else {
+    oTodayPane.setAttribute("collapsed", true);
+    oTodayPane.setAttribute("collapsedinMailMode", "true");
+    todayPaneCommand.setAttribute("checked", "false");
+  }
 }
 
 function selectedCalendarPane(event)
@@ -586,26 +564,17 @@ function LtnObserveDisplayDeckChange(event)
         if (searchBox) {
             uncollapseElement(searchBox);
         }
+
+        // Disable the rotate view menuitem
+        document.getElementById("ltn-multiday-rotated")
+                .setAttribute("disabled", true);
     }
 }
 
-function ltnPublishCalendar()
-{
-    publishEntireCalendar(ltnSelectedCalendar());
-}
-
 function ltnFinish() {
-    var prefService = Components.classes["@mozilla.org/preferences-service;1"]
-                            .getService(Components.interfaces.nsIPrefService);
-    // Remove the pref observer
-    var pb2 = prefService.getBranch("");
-    pb2 = pb2.QueryInterface(Components.interfaces.nsIPrefBranch2);
-    pb2.removeObserver("calendar.", ltnPrefObserver);
-
     getCompositeCalendar().removeObserver(agendaTreeView.calendarObserver);
-    getCompositeCalendar().removeObserver(ltnCompositeCalendarObserver);
-    getCalendarManager().removeObserver(ltnCalendarManagerObserver);
-    return;
+
+    unloadCalendarManager();
 }
 
 function ltnEditSelectedItem() {
@@ -621,19 +590,6 @@ function ltnDeleteSelectedItem() {
                                              selectedItems,
                                              false,
                                              false);
-}
-
-function ltnCreateEvent() {
-    calendarViewController.createNewEvent(ltnSelectedCalendar());
-}
-
-// Preference observer, watches for changes to any 'calendar.' pref
-var ltnPrefObserver =
-{
-   rootPrefBranch: null,
-   observe: function(aSubject, aTopic, aPrefName)
-   {
-   }
 }
 
 // After 1.5 was released, the search box was moved into an optional toolbar
@@ -654,9 +610,19 @@ function findMailSearchBox() {
     return null;
 }
 
-function toggleWorkdaysOnly() {
-    var deck = document.getElementById("calendar-view-box")
+function updateOrientation() {
+
+    var value = (document.getElementById("ltn-multiday-rotated")
+                         .getAttribute("checked") == 'true');
+
+    var deck = getViewDeck();
     for each (view in deck.childNodes) {
+        view.rotated = value;
+    }
+}
+
+function toggleWorkdaysOnly() {
+    for each (view in getViewDeck().childNodes) {
         view.workdaysOnly = !view.workdaysOnly;
     }
 
@@ -665,8 +631,7 @@ function toggleWorkdaysOnly() {
 }
 
 function toggleTasksInView() {
-    var deck = document.getElementById("calendar-view-box")
-    for each (view in deck.childNodes) {
+    for each (view in getViewDeck().childNodes) {
         view.tasksInView = !view.tasksInView;
     }
 

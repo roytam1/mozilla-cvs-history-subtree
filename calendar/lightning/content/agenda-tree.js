@@ -28,6 +28,7 @@
  *   richard@duif.net
  *   Matthew Willis <mattwillis@gmail.com>
  *   Markus Adrario <MarkusAdrario@web.de>
+ *   Philipp Kewisch <mozilla@kewis.ch>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or 
@@ -330,7 +331,7 @@ function agendaDoubleClick(event)
     // Find the row clicked on, and the corresponding event
     var tree = document.getElementById("agenda-tree");
     var row = tree.treeBoxObject.getRowAt(event.clientX, event.clientY);
-    var calendar = ltnSelectedCalendar();
+    var calendar = getSelectedCalendar();
     var calEvent = this.events[row];
 
     if (!calEvent) { // Clicked in empty space, just create a new event
@@ -347,7 +348,6 @@ function agendaDoubleClick(event)
             var tom = today().clone();
             var offset = (calEvent == this.tomorrow) ? 1 : 2;
             tom.day += offset;
-            tom.normalize()
             createEventWithDialog(calendar, tom, tom);
         }
     }
@@ -415,9 +415,9 @@ function refreshCalendarQuery()
 {
     var filter = this.calendar.ITEM_FILTER_CLASS_OCCURRENCES;
     if (document.getElementById("completed-tasks-checkbox").checked) {
-        filter = this.calendar.ITEM_FILTER_COMPLETED_ALL;
+        filter |= this.calendar.ITEM_FILTER_COMPLETED_ALL;
     } else {
-        filter = this.calendar.ITEM_FILTER_COMPLETED_NO;
+        filter |= this.calendar.ITEM_FILTER_COMPLETED_NO;
     }
 
     if (!this.filterType)
@@ -450,28 +450,22 @@ function updateAgendaFilter(menulist) {
 agendaTreeView.refreshPeriodDates =
 function refreshPeriodDates()
 {
-    var now = new Date();
-    var d = new CalDateTime();
-    d.jsDate = now;
-    d = d.getInTimezone(calendarDefaultTimezone());
+    var d = now();
 
     // Today: now until midnight of tonight
     this.today.start = d.clone();
     d.hour = d.minute = d.second = 0;
     d.day++;
-    d.normalize();
     this.today.end = d.clone();
 
     // Tomorrow: midnight of next day to +24 hrs
     this.tomorrow.start = d.clone();
     d.day++;
-    d.normalize();
     this.tomorrow.end = d.clone();
 
     // Soon: end of tomorrow to 6 six days later (remainder of the week period)
     this.soon.start = d.clone();
     d.day += 6;
-    d.normalize();
     this.soon.end = d.clone();
 
     this.refreshCalendarQuery();

@@ -393,7 +393,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
     BOOL dontShowAgain = NO;
     BOOL confirmed = NO;
 
-    NS_DURING
+    @try {
       confirmed = [controller confirmCheckEx:nil
                                        title:quitAlertMsg
                                          text:quitAlertExpl
@@ -402,8 +402,9 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
                                       button3:nil
                                      checkMsg:NSLocalizedString(@"DontShowWarningAgainCheckboxLabel", @"")
                                    checkValue:&dontShowAgain];
-    NS_HANDLER
-    NS_ENDHANDLER
+    }
+    @catch (id exception) {
+    }
 
     if (dontShowAgain)
       [prefManager setPref:"camino.warn_when_closing" toBoolean:NO];
@@ -521,7 +522,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
       BOOL dontAskAgain = NO;
       int result = NSAlertErrorReturn;
 
-      NS_DURING
+      @try {
         result = [controller confirmCheckEx:nil // parent
                                       title:NSLocalizedString(@"DefaultBrowserTitle", nil)
                                        text:NSLocalizedString(@"DefaultBrowserMessage", nil)
@@ -530,14 +531,15 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
                                     button3:nil
                                    checkMsg:NSLocalizedString(@"DefaultBrowserChecboxTitle", nil)
                                  checkValue:&dontAskAgain];
-      NS_HANDLER
-        NS_ENDHANDLER
+      }
+      @catch (id exception) {
+      }
 
-        if (result == NSAlertDefaultReturn)
-          [[NSWorkspace sharedWorkspace] setDefaultBrowserWithIdentifier:myIdentifier];
+      if (result == NSAlertDefaultReturn)
+        [[NSWorkspace sharedWorkspace] setDefaultBrowserWithIdentifier:myIdentifier];
 
-        [[PreferenceManager sharedInstance] setPref:"camino.check_default_browser" toBoolean:!dontAskAgain];
-        [controller release];
+      [[PreferenceManager sharedInstance] setPref:"camino.check_default_browser" toBoolean:!dontAskAgain];
+      [controller release];
     }
   }
 }
@@ -765,7 +767,6 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 
   NSWindow* behindWindow = nil;
 
-  // eBookmarkOpenBehavior_Preferred not specified, since it uses all the default behaviors
   switch (behavior) {
     case eBookmarkOpenBehavior_NewPreferred:
       if ([[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.opentabfor.middleclick" withSuccess:NULL]) {
@@ -795,6 +796,10 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
       if (loadNewTabsInBackgroundPref)
         behindWindow = [browserWindowController window];
         break;
+      
+    case eBookmarkOpenBehavior_Preferred:
+      // default, so nothing to be done.
+      break;
   }
 
   // we allow popups for the load that fires off a bookmark. Subsequent page loads, however, will
@@ -1179,7 +1184,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
       nsAlertController* controller = CHBrowserService::GetAlertController();
       BOOL dontShowAgain = NO;
 
-      NS_DURING
+      @try {
         doCloseWindows = [controller confirmCheckEx:nil
                                               title:closeAlertMsg
                                                text:closeAlertExpl
@@ -1188,8 +1193,9 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
                                             button3:nil
                                            checkMsg:NSLocalizedString(@"DontShowWarningAgainCheckboxLabel", @"")
                                          checkValue:&dontShowAgain];
-      NS_HANDLER
-      NS_ENDHANDLER
+      }
+      @catch (id exception) {
+      }
 
       if (dontShowAgain)
         [prefManager setPref:"camino.warn_when_closing" toBoolean:NO];
@@ -1201,7 +1207,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
     NSArray* windows = [NSApp windows];
     NSEnumerator* windowEnum = [windows objectEnumerator];
     NSWindow* curWindow;
-    while (curWindow = [windowEnum nextObject])
+    while ((curWindow = [windowEnum nextObject]))
       [curWindow close];
   }
 }
@@ -1514,7 +1520,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
   NSEnumerator* windowEnum = [windows objectEnumerator];
   NSWindow* curWindow;
 
-  while (curWindow = [windowEnum nextObject])
+  while ((curWindow = [windowEnum nextObject]))
     if ([[curWindow windowController] isMemberOfClass:[BrowserWindowController class]])
       [curWindow zoom:aSender];
 }

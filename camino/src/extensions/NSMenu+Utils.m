@@ -61,7 +61,7 @@ static OSStatus MenuEventHandler(EventHandlerCallRef inHandlerCallRef, EventRef 
         OSStatus err = GetEventParameter(inEvent, kEventParamDirectObject, typeMenuRef, NULL, sizeof(MenuRef), NULL, &theCarbonMenu);
         if (err == noErr)
         {
-          NS_DURING
+          @try {
             // we can't map from MenuRef to NSMenu, so we have to let receivers of the notification
             // do the test.
             NSString* notificationName = @"";
@@ -72,9 +72,10 @@ static OSStatus MenuEventHandler(EventHandlerCallRef inHandlerCallRef, EventRef 
             
             [[NSNotificationCenter defaultCenter] postNotificationName:notificationName
                                                                 object:[NSValue valueWithPointer:theCarbonMenu]];
-          NS_HANDLER
-            NSLog(@"Caught exception %@", localException);
-          NS_ENDHANDLER
+          }
+          @catch (id exception) {
+            NSLog(@"Caught exception %@", exception);
+          }
         }
       }
       break;
@@ -131,6 +132,17 @@ static OSStatus MenuEventHandler(EventHandlerCallRef inHandlerCallRef, EventRef 
       [curItem setState:(rawTag == unmaskedTag) ? NSOnState : NSOffState];
     }
   }
+}
+
+- (NSMenuItem*)firstCheckedItem
+{
+  NSEnumerator* itemsEnumerator = [[self itemArray] objectEnumerator];
+  NSMenuItem* currentItem;
+  while ((currentItem = [itemsEnumerator nextObject])) {
+    if ([currentItem state] == NSOnState)
+      return currentItem;
+  }
+  return nil;
 }
 
 - (void)setAllItemsEnabled:(BOOL)inEnable startingWithItemAtIndex:(int)inFirstItem includingSubmenus:(BOOL)includeSubmenus
@@ -217,7 +229,7 @@ static OSStatus MenuEventHandler(EventHandlerCallRef inHandlerCallRef, EventRef 
 
 - (id)initAlternateWithTitle:(NSString *)title action:(SEL)action target:(id)target modifiers:(int)modifiers
 {
-  if (self = [self initWithTitle:title action:action keyEquivalent:@""]) {
+  if ((self = [self initWithTitle:title action:action keyEquivalent:@""])) {
     [self setTarget:target];
     [self setKeyEquivalentModifierMask:modifiers];
     [self setAlternate:YES];

@@ -1,4 +1,3 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -12,15 +11,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is SearchTextField UI code.
+ * The Original Code is Sun Microsystems code.
  *
  * The Initial Developer of the Original Code is
- * Prachi Gauriar.
- * Portions created by the Initial Developer are Copyright (C) 2003
+ * Sun Microsystems, Inc.
+ * Portions created by the Initial Developer are Copyright (C) 2007
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Prachi Gauriar (pgauria@uark.edu)
+ *   Daniel Boelzle <daniel.boelzle@sun.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -36,43 +35,47 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#import <AppKit/AppKit.h>
+#include "nsIVariant.idl"
 
-@class SearchTextFieldCell;
-
-@interface SearchTextField : NSTextField
+[scriptable, uuid(B96C2997-7AAA-4619-AD48-B7EBD9236C93)]
+interface calIOperation : nsISupports
 {
-  IBOutlet NSMenu*        mPopupMenu;
-}
+    /**
+     * Id for easy management of pending requests.
+     */
+    readonly attribute AUTF8String id;
 
-+ (Class)cellClass;
+    /**
+     * Determines whether the request is pending, i.e. has not been completed.
+     */
+    readonly attribute boolean isPending;
 
-- (void)awakeFromNib;
-- (void)mouseDown:(NSEvent *)theEvent;
-- (void)resetCursorRects;
+    /**
+     * Status of the request, e.g. NS_OK while pending or after successful
+     * completion, or NS_ERROR_FAILED when failed.
+     */
+    readonly attribute nsIVariant status;
 
-- (BOOL)isFirstResponder;
-- (BOOL)becomeFirstResponder;
-- (void)selectText:(id)sender;
+    /**
+     * Determines whether the request has succeeded, i.e. it has successfully
+     * been completed.
+     */
+    readonly attribute boolean success;
 
-- (BOOL)hasPopUpButton;
-- (void)setHasPopUpButton:(BOOL)aBoolean;
+    /**
+     * Cancels a pending request and changes status.
+     */
+    void cancel(in nsIVariant aStatus);
+};
 
-- (NSString *)titleOfSelectedPopUpItem;
-
-  // Use this method to add menu items to the list
-  // If you need to access menu items, message the control's cell
-
-  //  DO NOT EVER ACCESS THE MENU ITEM AT INDEX 0
-  //  IT IS A BLANK ITEM REQUIRED SO THAT THE MENU
-  //  DISPLAYS CORRECTLY
-- (void)addPopUpMenuItemsWithTitles:(NSArray *)itemTitles;
-
-// note that the first menu item is ignored
-- (void)setPopupMenu:(NSMenu*)menu;
-- (NSMenu*)popupMenu;
-
-- (void)selectPopupMenuItem:(NSMenuItem*)menuItem;
-- (NSMenuItem*)selectedPopupMenuItem;
-
-@end
+[scriptable, uuid(1FA39726-63D2-440c-A464-296D2822B9DA)]
+interface calIGenericOperationListener : nsISupports
+{
+    /**
+     * Generic callback receiving result.
+     *
+     * @param aOperation operation object
+     * @param aResult    result or null in case of an error
+     */
+    void onResult(in calIOperation aOperation, in nsIVariant aResult);
+};

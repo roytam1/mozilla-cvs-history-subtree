@@ -1,4 +1,4 @@
-; Package file for Win32 static Sunbird build. 
+; Package file for Win32 static Sunbird build.
 ;
 ; File format:
 ;
@@ -46,6 +46,11 @@ bin\msvcr80.dll
 [calendar]
 ; [Base Calendar Files]
 bin\sunbird.exe
+#ifndef MOZILLA_1_8_BRANCH
+bin\application.ini
+bin\platform.ini
+bin\sqlite3.dll
+#endif
 bin\res\cmessage.txt
 bin\xpicleanup.exe
 bin\LICENSE
@@ -83,6 +88,9 @@ bin\components\dom_css.xpt
 bin\components\dom_events.xpt
 bin\components\dom_html.xpt
 bin\components\dom_loadsave.xpt
+#ifndef MOZILLA_1_8_BRANCH
+bin\components\dom_offline.xpt
+#endif
 bin\components\dom_range.xpt
 bin\components\dom_sidebar.xpt
 bin\components\dom_storage.xpt
@@ -138,6 +146,9 @@ bin\components\passwordmgr.xpt
 bin\components\pipboot.xpt
 bin\components\pipnss.xpt
 bin\components\pippki.xpt
+#ifndef MOZILLA_1_8_BRANCH
+bin\components\plugin.xpt
+#endif
 bin\components\pref.xpt
 bin\components\prefetch.xpt
 bin\components\profile.xpt
@@ -168,6 +179,9 @@ bin\components\windowwatcher.xpt
 bin\components\winhooks.xpt
 bin\components\xpautocomplete.xpt
 bin\components\xpcom_base.xpt
+#ifndef MOZILLA_1_8_BRANCH
+bin\components\xpcom_system.xpt
+#endif
 bin\components\xpcom_components.xpt
 bin\components\xpcom_ds.xpt
 bin\components\xpcom_io.xpt
@@ -186,7 +200,11 @@ bin\components\wcap.xpt
 ; JavaScript components
 bin\components\nsDefaultCLH.js
 bin\components\nsSetDefaultBrowser.js
+#ifdef MOZILLA_1_8_BRANCH
 bin\components\nsCloseAllWindows.js
+#else
+bin\components\nsTryToClose.js
+#endif
 bin\components\nsInterfaceInfoToIDL.js
 bin\components\nsPostUpdateWin.js
 bin\components\nsProgressDialog.js
@@ -197,8 +215,10 @@ bin\components\nsURLFormatter.js
 bin\components\nsHelperAppDlg.js
 bin\components\nsProxyAutoConfig.js
 bin\components\nsExtensionManager.js
+#ifndef MOZILLA_1_8_BRANCH
+bin\components\nsBlocklistService.js
+#endif
 bin\components\calendarService.js
-bin\components\calAlarmMonitor.js
 bin\components\calCompositeCalendar.js
 bin\components\calDavCalendar.js
 bin\components\calICSCalendar.js
@@ -210,6 +230,7 @@ bin\components\calWcapCalendarModule.js
 bin\components\jsconsole-clhandler.js
 bin\components\pluginGlue.js
 bin\js\calAlarmService.js
+bin\js\calAlarmMonitor.js
 bin\js\calAttachment.js
 bin\js\calAttendee.js
 bin\js\calCalendarManager.js
@@ -241,6 +262,11 @@ bin\js\calWcapRequest.js
 bin\js\calWcapSession.js
 bin\js\calWcapUtils.js
 
+#ifndef MOZILLA_1_8_BRANCH
+; [Modules]
+bin\modules\*
+#endif
+
 ; [Calendar Chrome Files]
 bin\chrome\calendar.jar
 bin\chrome\calendar.manifest
@@ -263,7 +289,7 @@ bin\defaults\autoconfig\platform.js
 bin\defaults\autoconfig\prefcalls.js
 
 ; [Layout Engine Resources]
-; Style Sheets, Graphics and other Resources used by the layout engine. 
+; Style Sheets, Graphics and other Resources used by the layout engine.
 bin\res\hiddenWindow.html
 bin\res\ua.css
 bin\res\html.css
@@ -289,6 +315,9 @@ bin\res\entityTables\*
 ; [Personal Security Manager]
 ;
 bin\nssckbi.dll
+#ifndef MOZILLA_1_8_BRANCH
+bin\nssdbm3.dll
+#endif
 bin\components\pipboot.xpt
 bin\components\pipnss.xpt
 bin\components\pippki.xpt

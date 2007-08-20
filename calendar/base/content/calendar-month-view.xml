@@ -59,6 +59,8 @@
           <xul:box anonid="event-container" flex="1">
             <xul:stack class="calendar-event-selection" flex="1">
               <xul:hbox class="calendar-event-details">
+                <xul:image anonid="item-icon"
+                           class="calendar-month-day-box-item-image"/>
                 <xul:label anonid="item-label"
                            class="calendar-month-day-box-item-label"
                            xbl:inherits="context"/>
@@ -124,24 +126,26 @@
         <setter><![CDATA[
           this.mOccurrence = val;
 
-          var label = document.getAnonymousElementByAttribute(this,
-                                                              "anonid",
-                                                              "item-label");
-          var str = null;
-          // if val is an event and not an all day event, show start time in title
-          if (isEvent(val) && !val.startDate.isDate) {
-            var df = Cc["@mozilla.org/calendar/datetime-formatter;1"].
-                     getService(Ci.calIDateTimeFormatter);
-            str = df.formatTime(val.startDate.getInTimezone(this.calendarView.mTimezone));
-            label.setAttribute("time", "true");
+          var icon = document.getAnonymousElementByAttribute(this,"anonid","item-icon");                                                              
+          if (isEvent(val)) {
+            icon.setAttribute("type", "event");
+            if (val.startDate.isDate) {
+              icon.setAttribute("type", "all-day");
+            } else {
+              var label = document.getAnonymousElementByAttribute(this,"anonid","item-label");
+              var df = Cc["@mozilla.org/calendar/datetime-formatter;1"].
+                       getService(Ci.calIDateTimeFormatter);
+              label.value = df.formatTime(
+                val.startDate.getInTimezone(
+                  this.calendarView.mTimezone));
+              label.setAttribute("time", "true");
+            }
           } else if (isToDo(val)) {
-            // yeah, this should really be a little picture instead of a "*"
-            str = "*";
-          } else {
-            str = "";
+            icon.setAttribute("type", "todo");
+            if (val.isCompleted) {
+              icon.setAttribute("completed", "true");
+            }
           }
-
-          label.value = str;
 
           this.setEditableLabel();
           this.setCSSClasses();
@@ -355,7 +359,7 @@
         <parameter name="aItem"/>
         <body><![CDATA[
           for each (ed in this.mItemData) {
-            if (aItem.hasSameIds(ed.item))
+            if (aItem.hashId == ed.item.hashId)
             {
               this.deleteItem(aItem);
               break;
@@ -373,7 +377,7 @@
         <parameter name="aItem"/>
         <body><![CDATA[
           for each (var itd in this.mItemData) {
-              if (itd.item.hasSameIds(aItem)) {
+              if (aItem && (itd.item.hashId == aItem.hashId)) {
                   itd.box.selected = true;
               }
           }
@@ -384,7 +388,7 @@
         <parameter name="aItem"/>
         <body><![CDATA[
           for each (var itd in this.mItemData) {
-              if (itd.item.hasSameIds(aItem)) {
+              if (aItem && (itd.item.hashId == aItem.hashId)) {
                   itd.box.selected = false;
               }
           }
@@ -399,7 +403,7 @@
           var origLen = this.mItemData.length;
           this.mItemData = this.mItemData.filter(
             function(itd) {
-              if (aItem.hasSameIds(itd.item))
+              if (aItem.hashId == itd.item.hashId)
               {
                 deleted.push(itd);
                 return false;
@@ -526,7 +530,6 @@
           this.monthView.mDropShadows = [];
           var shadowStart = this.mDate.clone();
           shadowStart.day -= this.monthView.mShadowIndex;
-          shadowStart.normalize();
           for (var i = 0; i < this.monthView.mShadowLength; i++) {
               var dropbox =  document.createElementNS("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul", "box");
               dropbox.setAttribute("dropbox", "true");
@@ -536,14 +539,12 @@
               if (!box) {
                   // Dragging to the end of a view
                   shadowStart.day += 1;
-                  shadowStart.normalize();
                   continue;
               }
               box.box.dayitems.insertBefore(dropbox, box.box.dayitems.firstChild);
               this.monthView.mDropShadows.push(dropbox);
 
               shadowStart.day += 1;
-              shadowStart.normalize();
           }
         ]]></body>
       </method>
@@ -657,10 +658,8 @@
 
            newStart = item.startDate.clone();
            newStart.addDuration(duration);
-           newStart.normalize();
            newEnd = item.endDate.clone();
            newEnd.addDuration(duration);
-           newEnd.normalize();
          } else if (isToDo(item)) {
            if (item.entryDate && item.dueDate) {
              var beginMove = item.entryDate.clone();
@@ -668,10 +667,8 @@
              var duration = boxDate.subtractDate(beginMove);
              newStart = item.entryDate.clone();
              newStart.addDuration(duration);
-             newStart.normalize();
              newEnd = item.dueDate.clone();
              newEnd.addDuration(duration);
-             newEnd.normalize();
            } else if (item.entryDate) {
              newStart = adjustDate(item.entryDate);
              // zero offset so we don't double-count
@@ -683,11 +680,9 @@
          }
          if (newStart && offset) {
            newStart.day -= offset;
-           newStart.normalize();
          }
          if (newEnd && offset) {
            newEnd.day -= offset;
-           newEnd.normalize();
          }
 
          this.removeDropShadows();
@@ -951,7 +946,6 @@
           end = end.clone();
           end.day += 1;
           end.isDate = true;
-          end.normalize();
 
           return end;
         ]]></getter>
@@ -1110,8 +1104,6 @@
 
           this.mStartDate.day += this.mWeekStartOffset;
           this.mEndDate.day += this.mWeekStartOffset;
-          this.mStartDate.normalize();
-          this.mEndDate.normalize();
 
           this.refresh();
         ]]></body>
@@ -1135,13 +1127,11 @@
 
 	  var results = [];
 	  var curDate = this.mStartDate.clone();
-          curDate.isDate = true;
-          curDate.normalize();
+	  curDate.isDate = true;
 
 	  while (curDate.compare(this.mEndDate) <= 0) {
 	    results.push(curDate.clone());
 	    curDate.day += 1;
-	    curDate.normalize();
 	  }
 	  aCount.value = results.length;
 	  return results;
@@ -1439,7 +1429,6 @@
                 boxes.push(box);
             }
             targetDate.day += 1;
-            targetDate.normalize();
           }
 
           return boxes;
@@ -1469,7 +1458,7 @@
             return;
 
           function isNotItem(a) {
-              return !a.hasSameIds(aItem);
+              return (a.hashId != aItem.hashId);
           }
           var oldLength = this.mSelectedItems.length;
           this.mSelectedItems = this.mSelectedItems.filter(isNotItem);

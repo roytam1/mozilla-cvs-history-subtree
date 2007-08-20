@@ -51,16 +51,7 @@ var calendarViewController = {
     },
 
     createNewEvent: function (aCalendar, aStartTime, aEndTime) {
-        // XXX If we're adding an item from the view, let's make sure that
-        // XXX the calendar in question is visible!
-        // XXX unify these
-        if (!aCalendar) {
-            if ("ltnSelectedCalendar" in window) {
-                aCalendar = ltnSelectedCalendar();
-            } else {
-                aCalendar = getSelectedCalendarOrNull();
-            }
-        }
+        aCalendar = aCalendar || getSelectedCalendar();
 
         // if we're given both times, skip the dialog
         if (aStartTime && aEndTime && !aStartTime.isDate && !aEndTime.isDate) {
@@ -123,9 +114,9 @@ var calendarViewController = {
       for each (var job in this.pendingJobs) {
           var item = job.item;
           var parent = item.parent;
-          if (item.hasSameIds(aOccurrence) ||
-              item.parentItem.hasSameIds(aOccurrence) ||
-              item.hasSameIds(aOccurrence.parentItem)) {
+          if ((item.hashId == aOccurrence.hashId) ||
+              (item.parentItem.hashId == aOccurrence.hashId) ||
+              (item.hashId == aOccurrence.parentItem.hashId)) {
               // terminate() will most probably create a modified item instance.
               aOccurrence = job.finalize();
               break;
@@ -193,11 +184,8 @@ var calendarViewController = {
 
         function getSavedItem(aItemToDelete) {
             // Get the parent item, saving it in our recurringItems object for
-            // later use. Use one string twice to resolve "ab" + "cd" vs. "a" +
-            // "bcd" ambiguity.
-            var hashVal = aItemToDelete.parentItem.calendar.id +
-                          aItemToDelete.parentItem.id +
-                          aItemToDelete.parentItem.calendar.id;
+            // later use.
+            var hashVal = aItemToDelete.parentItem.hashId;
             if (!recurringItems[hashVal]) {
                 recurringItems[hashVal] = {
                     oldItem: aItemToDelete.parentItem,
@@ -228,7 +216,7 @@ var calendarViewController = {
                 continue;
             }
             itemToDelete = this.finalizePendingModification(itemToDelete);
-            if (!itemToDelete.parentItem.hasSameIds(itemToDelete)) {
+            if (itemToDelete.parentItem.hashId != itemToDelete.hashId) {
                 var savedItem = getSavedItem(itemToDelete);
                 savedItem.newItem.recurrenceInfo
                          .removeOccurrenceAt(itemToDelete.recurrenceId);
@@ -286,12 +274,11 @@ function moveView(aNumber) {
     currentView().moveView(aNumber);
 }
 
-// Helper function to get the view deck in a neutral way, regardless of whether
-// we're in Sunbird or Lightning.
+/**
+ * Returns the calendar view deck.
+ */
 function getViewDeck() {
-    var sbDeck = document.getElementById("view-deck");
-    var ltnDeck = document.getElementById("calendar-view-box");
-    return sbDeck || ltnDeck;
+    return document.getElementById("view-deck");
 }
 
 /**
@@ -415,7 +402,7 @@ function observeViewDaySelect(event) {
         var endDay = currentView().endDay;
         var firstMonth = startDay.startOfMonth;
         var lastMonth = endDay.startOfMonth;
-        for (var month = firstMonth.clone(); month.compare(lastMonth) <= 0; month.month += 1, month.normalize()) {
+        for (var month = firstMonth.clone(); month.compare(lastMonth) <= 0; month.month += 1) {
             var visibleDays = 0;
             if (month.compare(firstMonth) == 0) {
                 visibleDays = startDay.endOfMonth.day - startDay.day + 1;

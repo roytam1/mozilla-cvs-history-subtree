@@ -26,6 +26,7 @@
    -                 Matthew Willis <mattwillis@gmail.com>
    -                 Simon Paquet <bugzilla@babylonsounds.com>
    -                 Stefan Sitter <ssitter@googlemail.com>
+   -                 Philipp Kewisch <mozilla@kewis.ch>
    -
    - Alternatively, the contents of this file may be used under the terms of
    - either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -98,6 +99,7 @@
 <!ENTITY calendar.find.key  "F">
 
 <!ENTITY calendar.today.button.tooltip            "Go to today" >
+<!ENTITY calendar.todaypane.button.tooltip        "Show Today pane" >
 <!ENTITY calendar.choosedate.button.tooltip       "Choose date to go to" >
 
 <!ENTITY calendar.day.button.tooltip            "Switch to day view" >
@@ -156,6 +158,9 @@
 <!ENTITY calendar.displaytodos.checkbox.label   "Tasks in View" >
 <!ENTITY calendar.displaytodos.checkbox.accesskey "k" >
 
+<!ENTITY calendar.orientation.label "Rotate View" >
+<!ENTITY calendar.orientation.accesskey "o" >
+
 <!ENTITY calendar.menu.options.close.key        "W">
 
 <!ENTITY calendar.search.options.searchfor " contain">
@@ -205,6 +210,7 @@
 <!ENTITY calendar.context.selectall.label             "Select All">
 <!ENTITY calendar.context.selectall.accesskey         "A">
 <!ENTITY calendar.context.gototoday.label             "Go to Today">
+<!ENTITY calendar.context.button.label                "Today Pane" >
 <!ENTITY calendar.context.gototoday.accesskey         "T">
 <!ENTITY calendar.context.emailevent.label            "Email Selected Events…">
 <!ENTITY calendar.context.emailevent.accesskey        "i">
@@ -318,7 +324,7 @@
 <!ENTITY calendar.print.settingsGroup.label "Print Settings">
 
 <!-- Error reporting -->
-<!ENTITY calendar.error.detail "Details...">
+<!ENTITY calendar.error.detail "Details…">
 <!ENTITY calendar.error.number "Error number:">
 <!ENTITY calendar.error.description "Description:">
 <!ENTITY calendar.error.title "An error has occurred">
