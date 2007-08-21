@@ -161,6 +161,7 @@ $BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Tb-Mozilla1.8.0-l10n-Release/Darwi
 
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
+# CONFIG: $BuildTree  = '%buildTree%';
 $BuildTree  = 'Mozilla1.8.0-l10n';
 #$BuildName = '';
 # CONFIG: $BuildTag = '%productTag%_RELEASE';
