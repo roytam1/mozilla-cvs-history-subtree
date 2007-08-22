@@ -34,7 +34,7 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-// nsMsgPrintEngine.cpp: provides a DocShell container for use 
+// nsMsgPrintEngine.cpp: provides a DocShell container for use
 // in printing
 
 #include "nscore.h"
@@ -106,16 +106,16 @@ nsMsgPrintEngine::~nsMsgPrintEngine()
 
 // Implement AddRef and Release
 NS_IMPL_ISUPPORTS4(nsMsgPrintEngine,
-                         nsIMsgPrintEngine, 
-                         nsIWebProgressListener, 
+                         nsIMsgPrintEngine,
+                         nsIWebProgressListener,
                          nsIObserver,
                          nsISupportsWeakReference)
 
 // nsIWebProgressListener implementation
 NS_IMETHODIMP
-nsMsgPrintEngine::OnStateChange(nsIWebProgress* aWebProgress, 
-                   nsIRequest *aRequest, 
-                   PRUint32 progressStateFlags, 
+nsMsgPrintEngine::OnStateChange(nsIWebProgress* aWebProgress,
+                   nsIRequest *aRequest,
+                   PRUint32 progressStateFlags,
                    nsresult aStatus)
 {
   nsresult rv = NS_OK;
@@ -131,7 +131,7 @@ nsMsgPrintEngine::OnStateChange(nsIWebProgress* aWebProgress,
 
     if (progressStateFlags & nsIWebProgressListener::STATE_STOP) {
       nsCOMPtr<nsIDocumentLoader> docLoader(do_QueryInterface(aWebProgress));
-      if (docLoader) 
+      if (docLoader)
       {
         // Check to see if the document DOMWin that is finished loading is the same
         // one as the mail msg that we started to load.
@@ -160,7 +160,7 @@ nsMsgPrintEngine::OnStateChange(nsIWebProgress* aWebProgress,
       }
       if (!isPrintingCancelled) {
         // if aWebProgress is a documentloader than the notification from
-        // loading the documents. If it is NULL (or not a DocLoader) then it 
+        // loading the documents. If it is NULL (or not a DocLoader) then it
         // it coming from Printing
         if (docLoader) {
           // Now, fire off the print operation!
@@ -172,7 +172,7 @@ nsMsgPrintEngine::OnStateChange(nsIWebProgress* aWebProgress,
           if (msg) nsCRT::free(msg);
 
           NS_ASSERTION(mDocShell,"can't print, there is no docshell");
-          if ( (!mDocShell) || (!aRequest) ) 
+          if ( (!mDocShell) || (!aRequest) )
           {
             return StartNextPrintOperation();
           }
@@ -186,7 +186,7 @@ nsMsgPrintEngine::OnStateChange(nsIWebProgress* aWebProgress,
             nsCAutoString spec;
 
             if (NS_SUCCEEDED(originalURI->GetSpec(spec)))
-            {      
+            {
               if (spec.Equals("about:blank"))
               {
                 return StartNextPrintOperation();
@@ -195,9 +195,9 @@ nsMsgPrintEngine::OnStateChange(nsIWebProgress* aWebProgress,
           }
 
           // If something bad happens here (menaing we can fire the PLEvent, highly unlikely)
-          // we will still ask the msg to print, but if the user "cancels" out of the 
+          // we will still ask the msg to print, but if the user "cancels" out of the
           // print dialog the hidden print window will not be "closed"
-          if (!FirePrintEvent()) 
+          if (!FirePrintEvent())
           {
             PrintMsgWindow();
           }
@@ -205,8 +205,8 @@ nsMsgPrintEngine::OnStateChange(nsIWebProgress* aWebProgress,
           FireStartNextEvent();
           rv = NS_OK;
         }
-      } 
-      else 
+      }
+      else
       {
         mWindow->Close();
       }
@@ -248,15 +248,15 @@ nsMsgPrintEngine::OnStatusChange(nsIWebProgress* aWebProgress,
 
 
 NS_IMETHODIMP
-nsMsgPrintEngine::OnSecurityChange(nsIWebProgress *aWebProgress, 
-                      nsIRequest *aRequest, 
+nsMsgPrintEngine::OnSecurityChange(nsIWebProgress *aWebProgress,
+                      nsIRequest *aRequest,
                       PRUint32 state)
 {
     NS_NOTREACHED("notification excluded in AddProgressListener(...)");
     return NS_OK;
 }
 
-NS_IMETHODIMP    
+NS_IMETHODIMP
 nsMsgPrintEngine::SetWindow(nsIDOMWindowInternal *aWin)
 {
 	if (!aWin)
@@ -270,6 +270,8 @@ nsMsgPrintEngine::SetWindow(nsIDOMWindowInternal *aWin)
 
   nsCOMPtr<nsIScriptGlobalObject> globalObj( do_QueryInterface(aWin) );
   NS_ENSURE_TRUE(globalObj, NS_ERROR_FAILURE);
+
+  globalObj->GetDocShell()->SetAppType(nsIDocShell::APP_TYPE_MAIL);
 
   nsCOMPtr<nsIDocShellTreeItem> docShellAsItem =
     do_QueryInterface(globalObj->GetDocShell());
@@ -320,7 +322,7 @@ nsMsgPrintEngine::ShowWindow(PRBool aShow)
   nsCOMPtr <nsIDocShellTreeOwner> treeOwner;
   rv = treeItem->GetTreeOwner(getter_AddRefs(treeOwner));
   NS_ENSURE_SUCCESS(rv,rv);
-  
+
   if (treeOwner) {
     // disable (enable) the window
     nsCOMPtr<nsIBaseWindow> baseWindow;
@@ -357,8 +359,8 @@ nsMsgPrintEngine::StartPrintOperation(nsIPrintSettings* aPS)
   mPrintSettings = aPS;
 
   // Load the about:blank on the tail end...
-  nsresult rv = AddPrintURI(NS_LITERAL_STRING("about:blank").get()); 
-  if (NS_FAILED(rv)) return rv; 
+  nsresult rv = AddPrintURI(NS_LITERAL_STRING("about:blank").get());
+  if (NS_FAILED(rv)) return rv;
   return StartNextPrintOperation();
 }
 
@@ -370,7 +372,7 @@ nsMsgPrintEngine::ShowProgressDialog(PRBool aIsForPrinting, PRBool& aDoNotify)
   nsresult rv;
 
   // default to not notifying, that if something here goes wrong
-  // or we aren't going to show the progress dialog we can straight into 
+  // or we aren't going to show the progress dialog we can straight into
   // reflowing the doc for printing.
   aDoNotify = PR_FALSE;
 
@@ -380,15 +382,15 @@ nsMsgPrintEngine::ShowProgressDialog(PRBool aIsForPrinting, PRBool& aDoNotify)
   // if it is already being shown then don't bother to find out if it should be
   // so skip this and leave mShowProgressDialog set to FALSE
   nsCOMPtr<nsIPrefBranch> prefBranch = do_GetService(NS_PREFSERVICE_CONTRACTID, &rv);
-  if (NS_SUCCEEDED(rv)) 
+  if (NS_SUCCEEDED(rv))
   {
     prefBranch->GetBoolPref("print.show_print_progress", &showProgressDialog);
   }
 
   // Turning off the showing of Print Progress in Prefs overrides
-  // whether the calling PS desire to have it on or off, so only check PS if 
+  // whether the calling PS desire to have it on or off, so only check PS if
   // prefs says it's ok to be on.
-  if (showProgressDialog) 
+  if (showProgressDialog)
   {
     mPrintSettings->GetShowPrintProgress(&showProgressDialog);
   }
@@ -396,27 +398,27 @@ nsMsgPrintEngine::ShowProgressDialog(PRBool aIsForPrinting, PRBool& aDoNotify)
   // Now open the service to get the progress dialog
   // If we don't get a service, that's ok, then just don't show progress
   if (showProgressDialog) {
-    if (!mPrintPromptService) 
+    if (!mPrintPromptService)
     {
       mPrintPromptService = do_GetService(kPrintingPromptService);
     }
-    if (mPrintPromptService) 
+    if (mPrintPromptService)
     {
       nsCOMPtr<nsIDOMWindow> domWin(do_QueryInterface(mParentWindow));
-      if (!domWin) 
+      if (!domWin)
       {
         domWin = mWindow;
       }
 
       rv = mPrintPromptService->ShowProgress(domWin, mWebBrowserPrint, mPrintSettings, this, aIsForPrinting,
-                                            getter_AddRefs(mPrintProgressListener), 
-                                            getter_AddRefs(mPrintProgressParams), 
+                                            getter_AddRefs(mPrintProgressListener),
+                                            getter_AddRefs(mPrintProgressParams),
                                             &aDoNotify);
       if (NS_SUCCEEDED(rv)) {
 
         showProgressDialog = mPrintProgressListener != nsnull && mPrintProgressParams != nsnull;
 
-        if (showProgressDialog) 
+        if (showProgressDialog)
         {
           nsIWebProgressListener* wpl = NS_STATIC_CAST(nsIWebProgressListener*, mPrintProgressListener.get());
           NS_ASSERTION(wpl, "nsIWebProgressListener is NULL!");
@@ -427,7 +429,7 @@ nsMsgPrintEngine::ShowProgressDialog(PRBool aIsForPrinting, PRBool& aDoNotify)
           } else {
             GetString(NS_LITERAL_STRING("LoadingMailMsgForPrint").get());
           }
-          if (msg) 
+          if (msg)
           {
             mPrintProgressParams->SetDocTitle(msg);
             nsCRT::free(msg);
@@ -461,7 +463,7 @@ nsMsgPrintEngine::StartNextPrintOperation()
     PRUnichar *msg = GetString(NS_LITERAL_STRING("PrintingComplete").get());
     SetStatusMessage( msg );
     CRTFREEIF(msg)
-    
+
     return NS_OK;
   }
 
@@ -476,7 +478,7 @@ nsMsgPrintEngine::StartNextPrintOperation()
     return rv;
 }
 
-NS_IMETHODIMP    
+NS_IMETHODIMP
 nsMsgPrintEngine::SetStatusFeedback(nsIMsgStatusFeedback *aFeedback)
 {
 	mFeedback = aFeedback;
@@ -492,11 +494,11 @@ nsMsgPrintEngine::SetStatusFeedback(nsIMsgStatusFeedback *aFeedback)
 NS_IMETHODIMP
 nsMsgPrintEngine::FireThatLoadOperationStartup(nsString *uri)
 {
-  if (uri) 
+  if (uri)
   {
     mLoadURI = *uri;
-  } 
-  else 
+  }
+  else
   {
     mLoadURI.SetLength(0);
   }
@@ -509,7 +511,7 @@ nsMsgPrintEngine::FireThatLoadOperationStartup(nsString *uri)
   {
     rv = ShowProgressDialog(!mIsDoingPrintPreview, notify);
   }
-  if (NS_FAILED(rv) || !notify) 
+  if (NS_FAILED(rv) || !notify)
   {
     return FireThatLoadOperation(uri);
   }
@@ -527,7 +529,7 @@ nsMsgPrintEngine::FireThatLoadOperation(nsString *uri)
 
   nsCOMPtr <nsIMsgMessageService> messageService;
 
-  // if this is a data: url, skip it, because 
+  // if this is a data: url, skip it, because
   // we've already got something we can print
   // and we know it is not a message.
   //
@@ -541,8 +543,8 @@ nsMsgPrintEngine::FireThatLoadOperation(nsString *uri)
   // skip it, because we don't want to print the parent message
   // we want to print the part.
   // example:  imap://sspitzer@nsmail-1:143/fetch%3EUID%3E/INBOX%3E180958?part=1.1.2&type=x-message-display&filename=test"
-  if (strncmp(tString, DATA_URL_PREFIX, DATA_URL_PREFIX_LEN) && 
-      strncmp(tString, ADDBOOK_URL_PREFIX, ADDBOOK_URL_PREFIX_LEN) && 
+  if (strncmp(tString, DATA_URL_PREFIX, DATA_URL_PREFIX_LEN) &&
+      strncmp(tString, ADDBOOK_URL_PREFIX, ADDBOOK_URL_PREFIX_LEN) &&
       strcmp(tString, "about:blank") &&
       !strstr(tString, "type=x-message-display")) {
     rv = GetMessageServiceFromURI(tString, getter_AddRefs(messageService));
@@ -572,14 +574,14 @@ void
 nsMsgPrintEngine::InitializeDisplayCharset()
 {
   // libmime always converts to UTF-8 (both HTML and XML)
-  if (mDocShell) 
+  if (mDocShell)
   {
     nsCOMPtr<nsIContentViewer> cv;
     mDocShell->GetContentViewer(getter_AddRefs(cv));
-    if (cv) 
+    if (cv)
     {
       nsCOMPtr<nsIMarkupDocumentViewer> muDV = do_QueryInterface(cv);
-      if (muDV) 
+      if (muDV)
       {
         muDV->SetForceCharacterSet(NS_LITERAL_CSTRING("UTF-8"));
       }
@@ -597,14 +599,14 @@ nsMsgPrintEngine::SetupObserver()
   {
     nsCOMPtr<nsIWebProgress> progress(do_GetInterface(mDocShell));
     NS_ASSERTION(progress, "we were expecting a nsIWebProgress");
-    if (progress) 
+    if (progress)
     {
       (void) progress->AddProgressListener((nsIWebProgressListener *)this,
                                         nsIWebProgress::NOTIFY_STATE_DOCUMENT);
     }
 
-    // Cache a pointer to the mail message's DOMWindow 
-    // so later we know when we can print when the 
+    // Cache a pointer to the mail message's DOMWindow
+    // so later we know when we can print when the
     // document "loaded" msgs com thru via the Progress listener
     mMsgDOMWin = do_GetInterface(mDocShell);
   }
@@ -632,9 +634,9 @@ nsMsgPrintEngine::GetString(const PRUnichar *aStringName)
 	{
 		static const char propertyURL[] = MESSENGER_STRING_URL;
 
-		nsCOMPtr<nsIStringBundleService> sBundleService = 
-		         do_GetService(NS_STRINGBUNDLE_CONTRACTID, &res); 
-		if (NS_SUCCEEDED(res) && (nsnull != sBundleService)) 
+		nsCOMPtr<nsIStringBundleService> sBundleService =
+		         do_GetService(NS_STRINGBUNDLE_CONTRACTID, &res);
+		if (NS_SUCCEEDED(res) && (nsnull != sBundleService))
 		{
 			res = sBundleService->CreateBundle(propertyURL, getter_AddRefs(mStringBundle));
 		}
@@ -657,17 +659,17 @@ nsMsgPrintEngine::PrintMsgWindow()
                             "PrintingCard",     "PrintPreviewCard",
                             "PrintingAddrBook", "PrintPreviewAddrBook"};
 
-  mDocShell->GetContentViewer(getter_AddRefs(mContentViewer));  
-  if (mContentViewer) 
+  mDocShell->GetContentViewer(getter_AddRefs(mContentViewer));
+  if (mContentViewer)
   {
     mWebBrowserPrint = do_QueryInterface(mContentViewer);
-    if (mWebBrowserPrint) 
+    if (mWebBrowserPrint)
     {
-      if (!mPrintSettings) 
+      if (!mPrintSettings)
       {
         mWebBrowserPrint->GetGlobalPrintSettings(getter_AddRefs(mPrintSettings));
       }
-      
+
       // fix for bug #118887 and bug #176016
       // don't show the actual url when printing mail messages or addressbook cards.
       // for mail, it can review the salt.  for addrbook, it's a data:// url, which
@@ -676,21 +678,21 @@ nsMsgPrintEngine::PrintMsgWindow()
       mPrintSettings->SetDocURL(NS_LITERAL_STRING(" ").get());
 
       nsresult rv = NS_ERROR_FAILURE;
-      if (mIsDoingPrintPreview) 
+      if (mIsDoingPrintPreview)
       {
         if (mStartupPPObs) {
           rv = mStartupPPObs->Observe(nsnull, nsnull, nsnull);
         }
-      } 
-      else 
+      }
+      else
       {
         mPrintSettings->SetPrintSilent(mCurrentlyPrintingURI != 0);
         nsCOMPtr<nsIContentViewerFile> contentViewerFile(do_QueryInterface(mWebBrowserPrint));
-        if (contentViewerFile && mParentWindow) 
+        if (contentViewerFile && mParentWindow)
         {
           rv = contentViewerFile->PrintWithParent(mParentWindow, mPrintSettings, (nsIWebProgressListener *)this);
-        } 
-        else 
+        }
+        else
         {
           rv = mWebBrowserPrint->Print(mPrintSettings, (nsIWebProgressListener *)this);
         }
@@ -705,11 +707,11 @@ nsMsgPrintEngine::PrintMsgWindow()
         {
           mPrintSettings->GetIsCancelled(&isPrintingCancelled);
         }
-        if (!isPrintingCancelled) 
+        if (!isPrintingCancelled)
         {
           StartNextPrintOperation();
-        } 
-        else 
+        }
+        else
         {
           mWindow->Close();
         }
@@ -736,7 +738,7 @@ FireEvent(nsMsgPrintEngine* aMPE, PLHandleEventProc handler, PLDestroyEventProc 
 
   nsCOMPtr<nsIEventQueueService> event_service = do_GetService(kEventQueueServiceCID);
 
-  if (!event_service) 
+  if (!event_service)
   {
     NS_WARNING("Failed to get event queue service");
     return PR_FALSE;
@@ -747,7 +749,7 @@ FireEvent(nsMsgPrintEngine* aMPE, PLHandleEventProc handler, PLDestroyEventProc 
   event_service->GetThreadEventQueue(NS_CURRENT_THREAD,
                                      getter_AddRefs(event_queue));
 
-  if (!event_queue) 
+  if (!event_queue)
   {
     NS_WARNING("Failed to get event queue from service");
     return PR_FALSE;
@@ -755,7 +757,7 @@ FireEvent(nsMsgPrintEngine* aMPE, PLHandleEventProc handler, PLDestroyEventProc 
 
   PLEvent *event = new PLEvent;
 
-  if (!event) 
+  if (!event)
   {
     NS_WARNING("Out of memory?");
     return PR_FALSE;
@@ -781,7 +783,7 @@ void PR_CALLBACK HandlePLEventPrintMsgWindow(PLEvent* aEvent)
   nsMsgPrintEngine *msgPrintEngine = (nsMsgPrintEngine*)PL_GetEventOwner(aEvent);
 
   NS_ASSERTION(msgPrintEngine, "The event owner is null.");
-  if (msgPrintEngine) 
+  if (msgPrintEngine)
   {
     msgPrintEngine->PrintMsgWindow();
   }
@@ -800,7 +802,7 @@ void PR_CALLBACK DestroyPLEventPrintMsgWindow(PLEvent* aEvent)
 PRBool
 nsMsgPrintEngine::FirePrintEvent()
 {
-  return FireEvent(this, (PLHandleEventProc)::HandlePLEventPrintMsgWindow, 
+  return FireEvent(this, (PLHandleEventProc)::HandlePLEventPrintMsgWindow,
                          (PLDestroyEventProc)::DestroyPLEventPrintMsgWindow);
 }
 
@@ -809,7 +811,7 @@ void PR_CALLBACK HandlePLEventStartNext(PLEvent* aEvent)
   nsMsgPrintEngine *msgPrintEngine = (nsMsgPrintEngine*)PL_GetEventOwner(aEvent);
 
   NS_ASSERTION(msgPrintEngine, "The event owner is null.");
-  if (msgPrintEngine) 
+  if (msgPrintEngine)
   {
     msgPrintEngine->StartNextPrintOperation();
   }
@@ -828,7 +830,7 @@ void PR_CALLBACK DestroyPLEventStartNext(PLEvent* aEvent)
 PRBool
 nsMsgPrintEngine::FireStartNextEvent()
 {
-  return FireEvent(this, (PLHandleEventProc)::HandlePLEventStartNext, 
+  return FireEvent(this, (PLHandleEventProc)::HandlePLEventStartNext,
                          (PLDestroyEventProc)::DestroyPLEventStartNext);
 }
 
@@ -859,7 +861,7 @@ NS_IMETHODIMP nsMsgPrintEngine::GetWebBrowserPrint(nsIWebBrowserPrint * *aWebBro
   *aWebBrowserPrint = nsnull;
 
   NS_ENSURE_TRUE(mDocShell, NS_ERROR_FAILURE);
-  mDocShell->GetContentViewer(getter_AddRefs(mContentViewer));  
+  mDocShell->GetContentViewer(getter_AddRefs(mContentViewer));
   NS_ENSURE_TRUE(mContentViewer, NS_ERROR_FAILURE);
   mWebBrowserPrint = do_QueryInterface(mContentViewer);
   NS_ENSURE_TRUE(mWebBrowserPrint, NS_ERROR_FAILURE);
@@ -872,7 +874,7 @@ NS_IMETHODIMP nsMsgPrintEngine::GetWebBrowserPrint(nsIWebBrowserPrint * *aWebBro
 /* void setMsgType (in long aMsgType); */
 NS_IMETHODIMP nsMsgPrintEngine::SetMsgType(PRInt32 aMsgType)
 {
-  if (mMsgInx >= nsIMsgPrintEngine::MNAB_START && mMsgInx < nsIMsgPrintEngine::MNAB_END) 
+  if (mMsgInx >= nsIMsgPrintEngine::MNAB_START && mMsgInx < nsIMsgPrintEngine::MNAB_END)
   {
     mMsgInx = aMsgType;
     return NS_OK;
