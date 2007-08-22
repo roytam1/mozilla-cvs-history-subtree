@@ -144,11 +144,6 @@ MAKEFILES_extensions="
 extensions/Makefile
 "
 
-MAKEFILES_gc="
-gc/boehm/Makefile
-gc/boehm/leaksoup/Makefile
-"
-
 MAKEFILES_gfx="
 gfx/Makefile
 gfx/idl/Makefile
@@ -320,7 +315,6 @@ content/xml/document/public/Makefile
 content/xml/document/src/Makefile
 content/xul/Makefile
 content/xul/content/Makefile
-content/xul/content/public/Makefile
 content/xul/content/src/Makefile
 content/xul/document/Makefile
 content/xul/document/public/Makefile
@@ -565,7 +559,6 @@ widget/src/beos/Makefile
 widget/src/build/Makefile
 widget/src/gtkxtbin/Makefile
 widget/src/photon/Makefile
-widget/src/mac/Makefile
 widget/src/cocoa/Makefile
 widget/src/os2/Makefile
 widget/src/windows/Makefile
@@ -819,17 +812,17 @@ xulrunner/installer/mac/Makefile
 MAKEFILES_xulapp="
 toolkit/Makefile
 toolkit/library/Makefile
-toolkit/airbag/Makefile
-toolkit/airbag/client/Makefile
-toolkit/airbag/airbag/src/client/Makefile
-toolkit/airbag/airbag/src/client/mac/handler/Makefile
-toolkit/airbag/airbag/src/client/windows/Makefile
-toolkit/airbag/airbag/src/client/windows/handler/Makefile
-toolkit/airbag/airbag/src/client/windows/sender/Makefile
-toolkit/airbag/airbag/src/common/Makefile
-toolkit/airbag/airbag/src/common/mac/Makefile
-toolkit/airbag/airbag/src/common/windows/Makefile
-toolkit/airbag/airbag/src/tools/mac/dump_syms/Makefile
+toolkit/crashreporter/Makefile
+toolkit/crashreporter/client/Makefile
+toolkit/crashreporter/google-breakpad/src/client/Makefile
+toolkit/crashreporter/google-breakpad/src/client/mac/handler/Makefile
+toolkit/crashreporter/google-breakpad/src/client/windows/Makefile
+toolkit/crashreporter/google-breakpad/src/client/windows/handler/Makefile
+toolkit/crashreporter/google-breakpad/src/client/windows/sender/Makefile
+toolkit/crashreporter/google-breakpad/src/common/Makefile
+toolkit/crashreporter/google-breakpad/src/common/mac/Makefile
+toolkit/crashreporter/google-breakpad/src/common/windows/Makefile
+toolkit/crashreporter/google-breakpad/src/tools/mac/dump_syms/Makefile
 toolkit/content/Makefile
 toolkit/content/buildconfig.html
 toolkit/obsolete/Makefile
@@ -1264,7 +1257,6 @@ $MAKEFILES_composer
 $MAKEFILES_embedding
 $MAKEFILES_expat
 $MAKEFILES_extensions
-$MAKEFILES_gc
 $MAKEFILES_gfx
 $MAKEFILES_accessible
 $MAKEFILES_htmlparser
