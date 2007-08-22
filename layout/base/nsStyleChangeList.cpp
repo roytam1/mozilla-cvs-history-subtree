@@ -89,6 +89,8 @@ nsStyleChangeList::AppendChange(nsIFrame* aFrame, nsIContent* aContent, nsChange
                "must have frame");
   NS_ASSERTION(aContent || !(aHint & nsChangeHint_ReconstructFrame),
                "must have content");
+  NS_ASSERTION(!aContent || aContent->IsContentOfType(nsIContent::eELEMENT),
+               "Shouldn't be trying to restyle non-elements directly");
 
   if ((0 < mCount) && (aHint & nsChangeHint_ReconstructFrame)) { // filter out all other changes for same content
     if (aContent) {
