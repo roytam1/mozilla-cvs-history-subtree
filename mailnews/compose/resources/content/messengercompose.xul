@@ -217,7 +217,7 @@
   <menuitem id="spellCheckAddToDictionary" label="&spellCheckAddToDictionary.label;" accesskey="&spellCheckAddToDictionary.accesskey;"
             oncommand="InlineSpellCheckerUI.addToDictionary();"/>  
   <menuitem id="spellCheckIgnoreWord" label="&spellCheckIgnoreWord.label;" accesskey="&spellCheckIgnoreWord.accesskey;"
-            oncommand="InlineSpellCheckerUI.mInlineSpellChecker.ignoreWord(InlineSpellcheckerUI.mMisspelling);"/>  
+            oncommand="InlineSpellCheckerUI.mInlineSpellChecker.ignoreWord(InlineSpellCheckerUI.mMisspelling);"/>  
   <menuseparator id="spellCheckSuggestionsSeparator"/>
 
   <menuitem label="&undo.label;" accesskey="&undo.accesskey;" command="cmd_undo"/>
