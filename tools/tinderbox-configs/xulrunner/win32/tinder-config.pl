@@ -31,7 +31,7 @@ $ENV{CVS_RSH} = "ssh";
 #- PLEASE FILL THIS IN WITH YOUR PROPER EMAIL ADDRESS
 #$BuildAdministrator = "$ENV{USER}\@$ENV{HOST}";
 #$BuildAdministrator = ($ENV{USER} || "cltbld") . "\@" . ($ENV{HOST} || "dhcp");
-$BuildAdministrator = "build\@mozilla.org";
+$BuildAdministrator = 'build@mozilla.org';
 
 #- You'll need to change these to suit your machine's needs
 #$DisplayServer = ':0.0';
@@ -124,7 +124,7 @@ $Make          = 'make';       # Must be GNU make
 #$CVSCO         = 'checkout -P';
 
 # win32 usually doesn't have /bin/mail
-$blat           = 'd:/moztools/bin/blat.exe';
+$blat           = '/d/mozilla-build/blat261/full/blat';
 $use_blat       = 1;
 
 # Set moz_cvsroot to something like:
@@ -147,7 +147,7 @@ $moz_cvsroot   = ":ext:cltbld\@cvs.mozilla.org:/cvsroot";
 $ObjDir = 'obj-xulrunner';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'Nightly';
+$BuildNameExtra = 'Newref';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -195,11 +195,11 @@ $package_creation_path = "/xulrunner/installer";
 $ssh_version   = "2";
 #$ssh_user      = "cltbld";
 #$ssh_server    = "stage.mozilla.org";
-$ftp_path      = "/home/ftp/pub/xulrunner/nightly";
-$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/xulrunner/nightly";
-$tbox_ftp_path = "/home/ftp/pub/xulrunner/tinderbox-builds";
-$tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/xulrunner/tinderbox-builds";
-#$milestone     = "trunk";
+$ftp_path      = "/home/ftp/pub/xulrunner/nightly/experimental/win32-newref";
+$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/xulrunner/nightly/experimental/win32-newref";
+$tbox_ftp_path = "/home/ftp/pub/xulrunner/nightly/experimental/win32-newref/hourly-builds";
+$tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/xulrunner/nightly/experimental/win32-newref/hourly-builds";
+$milestone     = "trunk";
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 0;
