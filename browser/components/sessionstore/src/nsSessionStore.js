@@ -1060,6 +1060,7 @@ SessionStoreService.prototype = {
                 value += cookie.isDomain ? "domain=" + cookie.rawHost + ";" : "";
                 value += cookie.path ? "path=" + cookie.path + ";" : "";
                 value += cookie.isSecure ? "secure;" : "";
+                value += cookie.isHttpOnly ? "httponly;" : "";
               }
             }
             if (value) {
@@ -1592,7 +1593,7 @@ SessionStoreService.prototype = {
     
     for (var i = 1; i <= aCookies.count; i++) {
       try {
-        cookieService.setCookieString(ioService.newURI(aCookies["domain" + i], null, null), null, aCookies["value" + i] + "expires=0;", null);
+        cookieService.setCookieStringFromHttp(ioService.newURI(aCookies["domain" + i], null, null), null, null, aCookies["value" + i] + "expires=0", null, null);
       }
       catch (ex) { debug(ex); } // don't let a single cookie stop recovering (might happen if a user tried to edit the session file)
     }
