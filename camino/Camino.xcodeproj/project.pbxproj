@@ -214,6 +214,12 @@
 		333FC6440C760D4300B61438 /* WebSearchField.mm in Sources */ = {isa = PBXBuildFile; fileRef = 333FC6400C760D4300B61438 /* WebSearchField.mm */; };
 		33F3B7260C63FC25007DFBD0 /* ScriptingSupport.mm in Sources */ = {isa = PBXBuildFile; fileRef = 33F3B7250C63FC25007DFBD0 /* ScriptingSupport.mm */; };
 		33F3B7270C63FC25007DFBD0 /* ScriptingSupport.mm in Sources */ = {isa = PBXBuildFile; fileRef = 33F3B7250C63FC25007DFBD0 /* ScriptingSupport.mm */; };
+		33FBAB360C84D25C00DD459E /* NSString+Gecko.h in Headers */ = {isa = PBXBuildFile; fileRef = 33FBAB350C84D25C00DD459E /* NSString+Gecko.h */; };
+		33FBAB370C84D25C00DD459E /* NSString+Gecko.h in Headers */ = {isa = PBXBuildFile; fileRef = 33FBAB350C84D25C00DD459E /* NSString+Gecko.h */; };
+		33FBAB3A0C84D27F00DD459E /* NSString+Gecko.mm in Sources */ = {isa = PBXBuildFile; fileRef = 33FBAB380C84D27F00DD459E /* NSString+Gecko.mm */; };
+		33FBAB3B0C84D27F00DD459E /* NSString+Utils.m in Sources */ = {isa = PBXBuildFile; fileRef = 33FBAB390C84D27F00DD459E /* NSString+Utils.m */; };
+		33FBAB3C0C84D27F00DD459E /* NSString+Gecko.mm in Sources */ = {isa = PBXBuildFile; fileRef = 33FBAB380C84D27F00DD459E /* NSString+Gecko.mm */; };
+		33FBAB3D0C84D27F00DD459E /* NSString+Utils.m in Sources */ = {isa = PBXBuildFile; fileRef = 33FBAB390C84D27F00DD459E /* NSString+Utils.m */; };
 		34884A36074F7C5D000EA76B /* AddressBook.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 34884A35074F7C5D000EA76B /* AddressBook.framework */; };
 		34884A37074F7C5D000EA76B /* AddressBook.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 34884A35074F7C5D000EA76B /* AddressBook.framework */; };
 		3489ADCB0753B717005ADF6C /* ABAddressBook+Utils.h in Headers */ = {isa = PBXBuildFile; fileRef = 3489ADC90753B717005ADF6C /* ABAddressBook+Utils.h */; };
@@ -417,7 +423,6 @@
 		3F44ACA905BDFB9E00CB4B08 /* RemoteDataProvider.mm in Sources */ = {isa = PBXBuildFile; fileRef = F558137C030AEF9B0176F207 /* RemoteDataProvider.mm */; };
 		3F44ACAA05BDFB9E00CB4B08 /* SiteIconProvider.mm in Sources */ = {isa = PBXBuildFile; fileRef = F558137D030AEF9B0176F207 /* SiteIconProvider.mm */; };
 		3F44ACAB05BDFB9E00CB4B08 /* BrowserTabViewItem.mm in Sources */ = {isa = PBXBuildFile; fileRef = F5B950BD030C83B601A96654 /* BrowserTabViewItem.mm */; };
-		3F44ACAC05BDFB9E00CB4B08 /* NSString+Utils.mm in Sources */ = {isa = PBXBuildFile; fileRef = F558099E02F22168015DF512 /* NSString+Utils.mm */; };
 		3F44ACAD05BDFB9E00CB4B08 /* CHBrowserListener.mm in Sources */ = {isa = PBXBuildFile; fileRef = F558B1F1030F6E470166970F /* CHBrowserListener.mm */; };
 		3F44ACAE05BDFB9E00CB4B08 /* NSBezierPath+Utils.mm in Sources */ = {isa = PBXBuildFile; fileRef = F5D98EB9031AC37801A96654 /* NSBezierPath+Utils.mm */; };
 		3F44ACAF05BDFB9E00CB4B08 /* DraggableImageAndTextCell.mm in Sources */ = {isa = PBXBuildFile; fileRef = F5FDF167031AF47301DE816D /* DraggableImageAndTextCell.mm */; };
@@ -830,7 +835,6 @@
 		3F44AEDE05BDFBA000CB4B08 /* AppComponents.mm in Sources */ = {isa = PBXBuildFile; fileRef = F5D33CBD02EF61A901A967F3 /* AppComponents.mm */; };
 		3F44AEDF05BDFBA000CB4B08 /* SecurityDialogs.mm in Sources */ = {isa = PBXBuildFile; fileRef = F5D33CBE02EF61A901A967F3 /* SecurityDialogs.mm */; };
 		3F44AEE005BDFBA000CB4B08 /* CocoaPromptService.mm in Sources */ = {isa = PBXBuildFile; fileRef = F566BD1302EFA9AD01A967F3 /* CocoaPromptService.mm */; };
-		3F44AEE105BDFBA000CB4B08 /* NSString+Utils.mm in Sources */ = {isa = PBXBuildFile; fileRef = F558099E02F22168015DF512 /* NSString+Utils.mm */; };
 		3F44AEE205BDFBA000CB4B08 /* ToolTip.mm in Sources */ = {isa = PBXBuildFile; fileRef = F549ACDE0302DE6001026D5D /* ToolTip.mm */; };
 		3F44AEE305BDFBA000CB4B08 /* NSScreen+Utils.m in Sources */ = {isa = PBXBuildFile; fileRef = F549ACDF0302DE6001026D5D /* NSScreen+Utils.m */; };
 		3F44AEE405BDFBA000CB4B08 /* SiteIconProvider.mm in Sources */ = {isa = PBXBuildFile; fileRef = F558137D030AEF9B0176F207 /* SiteIconProvider.mm */; };
@@ -2299,6 +2303,9 @@
 		333FC63F0C760D4300B61438 /* WebSearchField.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = WebSearchField.h; path = src/browser/WebSearchField.h; sourceTree = "<group>"; };
 		333FC6400C760D4300B61438 /* WebSearchField.mm */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.objcpp; name = WebSearchField.mm; path = src/browser/WebSearchField.mm; sourceTree = "<group>"; };
 		33F3B7250C63FC25007DFBD0 /* ScriptingSupport.mm */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.objcpp; name = ScriptingSupport.mm; path = src/appleevents/ScriptingSupport.mm; sourceTree = "<group>"; };
+		33FBAB350C84D25C00DD459E /* NSString+Gecko.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = "NSString+Gecko.h"; path = "src/extensions/NSString+Gecko.h"; sourceTree = "<group>"; };
+		33FBAB380C84D27F00DD459E /* NSString+Gecko.mm */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.objcpp; name = "NSString+Gecko.mm"; path = "src/extensions/NSString+Gecko.mm"; sourceTree = "<group>"; };
+		33FBAB390C84D27F00DD459E /* NSString+Utils.m */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.objc; name = "NSString+Utils.m"; path = "src/extensions/NSString+Utils.m"; sourceTree = "<group>"; };
 		34884A35074F7C5D000EA76B /* AddressBook.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AddressBook.framework; path = /System/Library/Frameworks/AddressBook.framework; sourceTree = "<absolute>"; };
 		3489ADC90753B717005ADF6C /* ABAddressBook+Utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "ABAddressBook+Utils.h"; path = "src/extensions/ABAddressBook+Utils.h"; sourceTree = SOURCE_ROOT; };
 		3489ADCA0753B717005ADF6C /* ABAddressBook+Utils.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = "ABAddressBook+Utils.mm"; path = "src/extensions/ABAddressBook+Utils.mm"; sourceTree = SOURCE_ROOT; };
@@ -2625,7 +2632,6 @@
 		F55714A1023B4898010001CA /* smallbookmark.tif */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; name = smallbookmark.tif; path = resources/images/chrome/smallbookmark.tif; sourceTree = SOURCE_ROOT; };
 		F557193A022B4102010001CA /* PreferencePanes.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = PreferencePanes.framework; path = /System/Library/Frameworks/PreferencePanes.framework; sourceTree = "<absolute>"; };
 		F558099D02F22168015DF512 /* NSString+Utils.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = "NSString+Utils.h"; path = "src/extensions/NSString+Utils.h"; sourceTree = SOURCE_ROOT; };
-		F558099E02F22168015DF512 /* NSString+Utils.mm */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.objcpp; name = "NSString+Utils.mm"; path = "src/extensions/NSString+Utils.mm"; sourceTree = SOURCE_ROOT; };
 		F5581379030AEF9B0176F207 /* RemoteDataProvider.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = RemoteDataProvider.h; path = src/browser/RemoteDataProvider.h; sourceTree = SOURCE_ROOT; };
 		F558137A030AEF9B0176F207 /* SiteIconProvider.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = SiteIconProvider.h; path = src/browser/SiteIconProvider.h; sourceTree = SOURCE_ROOT; };
 		F558137C030AEF9B0176F207 /* RemoteDataProvider.mm */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.objcpp; name = RemoteDataProvider.mm; path = src/browser/RemoteDataProvider.mm; sourceTree = SOURCE_ROOT; };
@@ -4202,6 +4208,7 @@
 				0F5FD71B07F48CDC00E8EDBD /* NSResponder+Utils.h */,
 				F549ACE40302DEBB01026D5D /* NSScreen+Utils.h */,
 				3F27D94A05DB2600007B543D /* NSSplitView+Utils.h */,
+				33FBAB350C84D25C00DD459E /* NSString+Gecko.h */,
 				F558099D02F22168015DF512 /* NSString+Utils.h */,
 				0F84BF1608862E4B00E23BC4 /* NSThread+Utils.h */,
 				F527C90203BCD43601A80166 /* NSView+Utils.h */,
@@ -4240,7 +4247,8 @@
 				0F5FD71E07F48CE500E8EDBD /* NSResponder+Utils.m */,
 				F549ACDF0302DE6001026D5D /* NSScreen+Utils.m */,
 				3F27D94B05DB2600007B543D /* NSSplitView+Utils.mm */,
-				F558099E02F22168015DF512 /* NSString+Utils.mm */,
+				33FBAB380C84D27F00DD459E /* NSString+Gecko.mm */,
+				33FBAB390C84D27F00DD459E /* NSString+Utils.m */,
 				0F84BF1208862E3E00E23BC4 /* NSThread+Utils.m */,
 				3FE4ECE9082C2D89003BF39E /* NSURL+Utils.m */,
 				F527C90303BCD43601A80166 /* NSView+Utils.m */,
@@ -4497,6 +4505,7 @@
 				DEE349A80B84F45500BCD687 /* FileChangeWatcher.h in Headers */,
 				DE6D27380C19FE5500292043 /* CHPermissionManager.h in Headers */,
 				333FC6410C760D4300B61438 /* WebSearchField.h in Headers */,
+				33FBAB360C84D25C00DD459E /* NSString+Gecko.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -4648,6 +4657,7 @@
 				DEE349A70B84F45500BCD687 /* FileChangeWatcher.h in Headers */,
 				DE6D27370C19FE5500292043 /* CHPermissionManager.h in Headers */,
 				333FC6430C760D4300B61438 /* WebSearchField.h in Headers */,
+				33FBAB370C84D25C00DD459E /* NSString+Gecko.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -5469,7 +5479,6 @@
 				3F44ACA905BDFB9E00CB4B08 /* RemoteDataProvider.mm in Sources */,
 				3F44ACAA05BDFB9E00CB4B08 /* SiteIconProvider.mm in Sources */,
 				3F44ACAB05BDFB9E00CB4B08 /* BrowserTabViewItem.mm in Sources */,
-				3F44ACAC05BDFB9E00CB4B08 /* NSString+Utils.mm in Sources */,
 				3F44ACAD05BDFB9E00CB4B08 /* CHBrowserListener.mm in Sources */,
 				3F44ACAE05BDFB9E00CB4B08 /* NSBezierPath+Utils.mm in Sources */,
 				3F44ACAF05BDFB9E00CB4B08 /* DraggableImageAndTextCell.mm in Sources */,
@@ -5542,6 +5551,8 @@
 				DE6D273B0C19FE6F00292043 /* CHPermissionManager.mm in Sources */,
 				33F3B7260C63FC25007DFBD0 /* ScriptingSupport.mm in Sources */,
 				333FC6420C760D4300B61438 /* WebSearchField.mm in Sources */,
+				33FBAB3A0C84D27F00DD459E /* NSString+Gecko.mm in Sources */,
+				33FBAB3B0C84D27F00DD459E /* NSString+Utils.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -5629,7 +5640,6 @@
 				3F44AEDE05BDFBA000CB4B08 /* AppComponents.mm in Sources */,
 				3F44AEDF05BDFBA000CB4B08 /* SecurityDialogs.mm in Sources */,
 				3F44AEE005BDFBA000CB4B08 /* CocoaPromptService.mm in Sources */,
-				3F44AEE105BDFBA000CB4B08 /* NSString+Utils.mm in Sources */,
 				3F44AEE205BDFBA000CB4B08 /* ToolTip.mm in Sources */,
 				3F44AEE305BDFBA000CB4B08 /* NSScreen+Utils.m in Sources */,
 				3F44AEE405BDFBA000CB4B08 /* SiteIconProvider.mm in Sources */,
@@ -5707,6 +5717,8 @@
 				DE6D273A0C19FE6F00292043 /* CHPermissionManager.mm in Sources */,
 				33F3B7270C63FC25007DFBD0 /* ScriptingSupport.mm in Sources */,
 				333FC6440C760D4300B61438 /* WebSearchField.mm in Sources */,
+				33FBAB3C0C84D27F00DD459E /* NSString+Gecko.mm in Sources */,
+				33FBAB3D0C84D27F00DD459E /* NSString+Utils.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
