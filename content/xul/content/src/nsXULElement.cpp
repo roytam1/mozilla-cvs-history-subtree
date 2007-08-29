@@ -1481,6 +1481,10 @@ nsXULElement::SetAttrAndNotify(PRInt32 aNamespaceID,
             binding->AttributeChanged(aAttribute, aNamespaceID, PR_FALSE, aNotify);
         }
 
+        if (aNotify) {
+            doc->AttributeChanged(this, aNamespaceID, aAttribute, modType);
+        }
+
         if (aFireMutation) {
             nsCOMPtr<nsIDOMEventTarget> node =
                 do_QueryInterface(NS_STATIC_CAST(nsIContent *, this));
@@ -1508,10 +1512,6 @@ nsXULElement::SetAttrAndNotify(PRInt32 aNamespaceID,
             nsEventStatus status = nsEventStatus_eIgnore;
             HandleDOMEvent(nsnull, &mutation, nsnull,
                            NS_EVENT_FLAG_INIT, &status);
-        }
-
-        if (aNotify) {
-            doc->AttributeChanged(this, aNamespaceID, aAttribute, modType);
         }
     }
 

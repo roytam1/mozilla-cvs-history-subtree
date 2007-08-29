@@ -3945,6 +3945,10 @@ nsGenericElement::SetAttr(PRInt32 aNamespaceID, nsIAtom* aName,
       binding->AttributeChanged(aName, aNamespaceID, PR_FALSE, aNotify);
 
     if (aNotify) {
+      PRInt32 modHint = modification ? PRInt32(nsIDOMMutationEvent::MODIFICATION)
+                                     : PRInt32(nsIDOMMutationEvent::ADDITION);
+      document->AttributeChanged(this, aNamespaceID, aName, modHint);
+
       if (HasMutationListeners(this, NS_EVENT_BITS_MUTATION_ATTRMODIFIED)) {
         nsCOMPtr<nsIDOMEventTarget> node =
           do_QueryInterface(NS_STATIC_CAST(nsIContent *, this));
@@ -3975,10 +3979,6 @@ nsGenericElement::SetAttr(PRInt32 aNamespaceID, nsIAtom* aName,
         HandleDOMEvent(nsnull, &mutation, nsnull,
                        NS_EVENT_FLAG_INIT, &status);
       }
-
-      PRInt32 modHint = modification ? PRInt32(nsIDOMMutationEvent::MODIFICATION)
-                                     : PRInt32(nsIDOMMutationEvent::ADDITION);
-      document->AttributeChanged(this, aNamespaceID, aName, modHint);
     }
   }
 
