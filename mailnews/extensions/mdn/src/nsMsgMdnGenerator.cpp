@@ -739,11 +739,14 @@ nsresult nsMsgMdnGenerator::CreateSecondPart()
 
     PR_Free (convbuf);
 
-    if (*m_messageId.get() == '<')
-        tmpBuffer = PR_smprintf("Original-Message-ID: %s" CRLF, m_messageId.get());
-    else
-        tmpBuffer = PR_smprintf("Original-Message-ID: <%s>" CRLF, m_messageId.get());
-    PUSH_N_FREE_STRING(tmpBuffer);
+    if (!m_messageId.IsEmpty())
+    {
+      if (*m_messageId.get() == '<')
+          tmpBuffer = PR_smprintf("Original-Message-ID: %s" CRLF, m_messageId.get());
+      else
+          tmpBuffer = PR_smprintf("Original-Message-ID: <%s>" CRLF, m_messageId.get());
+      PUSH_N_FREE_STRING(tmpBuffer);
+    }
     
     tmpBuffer = PR_smprintf("Disposition: %s/%s; %s" CRLF CRLF,
                             (m_autoAction ? "automatic-action" :
