@@ -306,7 +306,10 @@ nsMsgFolderDataSource::~nsMsgFolderDataSource (void)
     NS_RELEASE2(kNC_Rename, refcnt);
     NS_RELEASE2(kNC_EmptyTrash, refcnt);
     NS_RELEASE2(kNC_DownloadFlagged, refcnt);
-    
+    NS_RELEASE2(kNC_UnreadFolders, refcnt);
+    NS_RELEASE2(kNC_FavoriteFolders, refcnt);
+    NS_RELEASE2(kNC_RecentFolders, refcnt);
+
     NS_RELEASE(kTotalMessagesAtom);
     NS_RELEASE(kTotalUnreadMessagesAtom);
     NS_RELEASE(kFolderSizeAtom);
