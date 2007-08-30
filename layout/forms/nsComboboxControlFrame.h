@@ -151,6 +151,14 @@ public:
   NS_IMETHOD_(PRInt32) GetFormControlType() const;
   NS_IMETHOD SetProperty(nsPresContext* aPresContext, nsIAtom* aName, const nsAString& aValue);
   NS_IMETHOD GetProperty(nsIAtom* aName, nsAString& aValue); 
+  /**
+   * Inform the control that it got (or lost) focus.
+   * If it lost focus, the dropdown menu will be rolled up if needed,
+   * and FireOnChange() will be called.
+   * @param aOn PR_TRUE if got focus, PR_FALSE if lost focus.
+   * @param aRepaint if PR_TRUE then force repaint (NOTE: we always force repaint currently)
+   * @note This method might destroy |this|.
+   */
   void       SetFocus(PRBool aOn, PRBool aRepaint);
   void       ScrollIntoView(nsPresContext* aPresContext);
   virtual void InitializeControl(nsPresContext* aPresContext);
@@ -168,9 +176,15 @@ public:
 
   //nsIComboboxControlFrame
   NS_IMETHOD IsDroppedDown(PRBool * aDoDropDown) { *aDoDropDown = mDroppedDown; return NS_OK; }
+  /**
+   * @note This method might destroy |this|.
+   */
   NS_IMETHOD ShowDropDown(PRBool aDoDropDown);
   NS_IMETHOD GetDropDown(nsIFrame** aDropDownFrame);
   NS_IMETHOD SetDropDown(nsIFrame* aDropDownFrame);
+  /**
+   * @note This method might destroy |this|.
+   */
   NS_IMETHOD RollupFromList(nsPresContext* aPresContext);
   NS_IMETHOD AbsolutelyPositionDropDown();
   NS_IMETHOD GetAbsoluteRect(nsRect* aRect);
@@ -191,16 +205,22 @@ public:
   NS_IMETHOD OnSetSelectedIndex(PRInt32 aOldIndex, PRInt32 aNewIndex);
 
   //nsIRollupListener
-  // NS_DECL_NSIROLLUPLISTENER
+  /**
+   * Hide the dropdown menu and stop capturing mouse events.
+   * @note This method might destroy |this|.
+   */
   NS_IMETHOD Rollup();
-   // a combobox should roll up if a mousewheel event happens outside of
-   // the popup area
+  /**
+   * A combobox should roll up if a mousewheel event happens outside of
+   * the popup area.
+   */
   NS_IMETHOD ShouldRollupOnMouseWheelEvent(PRBool *aShouldRollup)
     { *aShouldRollup = PR_TRUE; return NS_OK;}
-  //NS_IMETHOD ShouldRollupOnMouseWheelEvent(nsIWidget *aWidget, PRBool *aShouldRollup) 
-  //{ *aShouldRollup = PR_FALSE; return NS_OK;}
 
-  // a combobox should not roll up if activated by a mouse activate message (eg. X-mouse)
+  /**
+   * A combobox should not roll up if activated by a mouse activate message
+   * (eg. X-mouse).
+   */
   NS_IMETHOD ShouldRollupOnMouseActivate(PRBool *aShouldRollup)
     { *aShouldRollup = PR_FALSE; return NS_OK;}
 
@@ -241,8 +261,19 @@ public:
                             nsRect aAbsoluteTwipsRect, 
                             nsRect aAbsolutePixelRect);
 protected:
+  /**
+   * Show or hide the dropdown list.
+   * @note This method might destroy |this|.
+   */
   void ShowPopup(PRBool aShowPopup);
-  void ShowList(nsPresContext* aPresContext, PRBool aShowList);
+
+  /**
+   * Show or hide the dropdown list.
+   * @param aShowList PR_TRUE to show, PR_FALSE to hide the dropdown.
+   * @note This method might destroy |this|.
+   * @return PR_FALSE if this frame is destroyed, PR_TRUE if still alive.
+   */
+  PRBool ShowList(nsPresContext* aPresContext, PRBool aShowList);
   void SetChildFrameSize(nsIFrame* aFrame, nscoord aWidth, nscoord aHeight);
   void CheckFireOnChange();
   void FireValueChangeEvent();
@@ -250,7 +281,6 @@ protected:
   void HandleRedisplayTextEvent();
   void ActuallyDisplayText(PRBool aNotify);
   nsresult GetPrimaryComboFrame(nsPresContext* aPresContext, nsIContent* aContent, nsIFrame** aFrame);
-  NS_IMETHOD ToggleList(nsPresContext* aPresContext);
 
   void ReflowCombobox(nsPresContext *         aPresContext,
                       const nsHTMLReflowState& aReflowState,
