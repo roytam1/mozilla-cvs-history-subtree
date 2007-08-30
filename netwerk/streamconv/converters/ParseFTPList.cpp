@@ -1072,7 +1072,8 @@ int ParseFTPList(const char *line, struct list_state *state,
 
             /* check that size is numeric */
             p = tokens[tokmarker];
-            for (unsigned int i = 0; i < toklen[tokmarker]; i++)
+            unsigned int i;
+            for (i = 0; i < toklen[tokmarker]; i++)
             {
               if (!isdigit(*p++))
               {
@@ -1084,7 +1085,7 @@ int ParseFTPList(const char *line, struct list_state *state,
             {
               month_num = 0;
               p = tokens[tokmarker+1];
-              for (unsigned int i = 0; i < (12*3); i+=3)
+              for (i = 0; i < (12*3); i+=3)
               {
                 if (p[0] == month_names[i+0] && 
                     p[1] == month_names[i+1] && 
