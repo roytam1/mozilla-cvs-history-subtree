@@ -10052,38 +10052,39 @@ nsCSSFrameConstructor::ContentRemoved(nsIContent*     aContainer,
     if (display->mDisplay == NS_STYLE_DISPLAY_POPUP)
       // Get the placeholder frame
       placeholderFrame = frameManager->GetPlaceholderFrameFor(childFrame);
-      if (placeholderFrame) {
-        // Remove the mapping from the frame to its placeholder
-        frameManager->UnregisterPlaceholderFrame(placeholderFrame);
+    if (placeholderFrame) {
+      // Remove the mapping from the frame to its placeholder
+      frameManager->UnregisterPlaceholderFrame(placeholderFrame);
     
-        // Locate the root popup set and remove ourselves from the popup set's list
-        // of popup frames.
-        nsIFrame* rootFrame = frameManager->GetRootFrame();
-        if (rootFrame)
-          rootFrame = rootFrame->GetFirstChild(nsnull);
+      // Locate the root popup set and remove ourselves from the popup set's list
+      // of popup frames.
+      nsIFrame* rootFrame = frameManager->GetRootFrame();
+      if (rootFrame)
+        rootFrame = rootFrame->GetFirstChild(nsnull);
 #ifdef MOZ_XUL
-        nsCOMPtr<nsIRootBox> rootBox(do_QueryInterface(rootFrame));
-        if (rootBox) {
-          nsIFrame* popupSetFrame;
-          rootBox->GetPopupSetFrame(&popupSetFrame);
-          if (popupSetFrame) {
-            nsCOMPtr<nsIPopupSetFrame> popupSet(do_QueryInterface(popupSetFrame));
-            if (popupSet)
-              popupSet->RemovePopupFrame(childFrame);
-          }
-        }
-#endif
-
-        // Remove the placeholder frame first (XXX second for now) (so
-        // that it doesn't retain a dangling pointer to memory)
-        if (placeholderFrame) {
-          parentFrame = placeholderFrame->GetParent();
-          ::DeletingFrameSubtree(presContext, frameManager, placeholderFrame);
-          frameManager->RemoveFrame(parentFrame, nsnull, placeholderFrame);
-          return NS_OK;
+      nsCOMPtr<nsIRootBox> rootBox(do_QueryInterface(rootFrame));
+      if (rootBox) {
+        nsIFrame* popupSetFrame;
+        rootBox->GetPopupSetFrame(&popupSetFrame);
+        if (popupSetFrame) {
+          nsCOMPtr<nsIPopupSetFrame> popupSet(do_QueryInterface(popupSetFrame));
+          if (popupSet)
+            popupSet->RemovePopupFrame(childFrame);
         }
       }
-      else if (display->IsFloating()) {
+#endif
+
+      // Remove the placeholder frame first (XXX second for now) (so
+      // that it doesn't retain a dangling pointer to memory)
+      if (placeholderFrame) {
+        parentFrame = placeholderFrame->GetParent();
+        ::DeletingFrameSubtree(presContext, frameManager, placeholderFrame);
+        frameManager->RemoveFrame(parentFrame, nsnull, placeholderFrame);
+        return NS_OK;
+      }
+    }
+    else if (childFrame->GetStateBits() & NS_FRAME_OUT_OF_FLOW) {
+      if (display->IsFloating()) {
 #ifdef NOISY_FIRST_LETTER
         printf("  ==> child display is still floating!\n");
 #endif
@@ -10147,43 +10148,44 @@ nsCSSFrameConstructor::ContentRemoved(nsIContent*     aContainer,
                                          placeholderFrame);
         }
 
-      } else {
-        // Notify the parent frame that it should delete the frame
-        // check for a table caption which goes on an additional child list with a different parent
-        nsIFrame* outerTableFrame; 
-        if (GetCaptionAdjustedParent(parentFrame, childFrame, &outerTableFrame)) {
-          rv = frameManager->RemoveFrame(outerTableFrame,
-                                         nsLayoutAtoms::captionList,
-                                         childFrame);
-        }
-        else {
-          rv = frameManager->RemoveFrame(parentFrame, nsnull, childFrame);
-        }
       }
+    } else {
+      // Notify the parent frame that it should delete the frame
+      // check for a table caption which goes on an additional child list with a different parent
+      nsIFrame* outerTableFrame; 
+      if (GetCaptionAdjustedParent(parentFrame, childFrame, &outerTableFrame)) {
+        rv = frameManager->RemoveFrame(outerTableFrame,
+                                       nsLayoutAtoms::captionList,
+                                       childFrame);
+      }
+      else {
+        rv = frameManager->RemoveFrame(parentFrame, nsnull, childFrame);
+      }
+    }
 
-      if (mInitialContainingBlock == childFrame) {
-        mInitialContainingBlock = nsnull;
-        mInitialContainingBlockIsAbsPosContainer = PR_FALSE;
-      }
+    if (mInitialContainingBlock == childFrame) {
+      mInitialContainingBlock = nsnull;
+      mInitialContainingBlockIsAbsPosContainer = PR_FALSE;
+    }
 
-      if (haveFLS && mInitialContainingBlock) {
-        NS_ASSERTION(containingBlock == GetFloatContainingBlock(parentFrame),
-                     "What happened here?");
-        nsFrameConstructorState state(mPresShell, mFixedContainingBlock,
-                                      GetAbsoluteContainingBlock(parentFrame),
-                                      containingBlock);
-        RecoverLetterFrames(state, containingBlock);
-      }
+    if (haveFLS && mInitialContainingBlock) {
+      NS_ASSERTION(containingBlock == GetFloatContainingBlock(parentFrame),
+                   "What happened here?");
+      nsFrameConstructorState state(mPresShell, mFixedContainingBlock,
+                                    GetAbsoluteContainingBlock(parentFrame),
+                                    containingBlock);
+      RecoverLetterFrames(state, containingBlock);
+    }
 
 #ifdef DEBUG
-      if (gReallyNoisyContentUpdates && parentFrame) {
-        nsIFrameDebug* fdbg = nsnull;
-        CallQueryInterface(parentFrame, &fdbg);
-        if (fdbg) {
-          printf("nsCSSFrameConstructor::ContentRemoved: resulting frame model:\n");
-          fdbg->List(presContext, stdout, 0);
-        }
+    if (gReallyNoisyContentUpdates && parentFrame) {
+      nsIFrameDebug* fdbg = nsnull;
+      CallQueryInterface(parentFrame, &fdbg);
+      if (fdbg) {
+        printf("nsCSSFrameConstructor::ContentRemoved: resulting frame model:\n");
+        fdbg->List(presContext, stdout, 0);
       }
+    }
 #endif
   }
 
