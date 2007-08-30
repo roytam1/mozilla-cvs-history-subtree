@@ -3892,7 +3892,7 @@ nsCSSFrameConstructor::ConstructTableColFrame(nsFrameConstructorState& aState,
       rv = aTableCreator.CreateTableColFrame(&newCol);
       if (NS_FAILED(rv)) return rv;
       InitAndRestoreFrame(aState, aContent, parentFrame, styleContext, nsnull,
-                          newCol);
+                          newCol, PR_FALSE);
       ((nsTableColFrame*)newCol)->SetColType(eColAnonymousCol);
       lastCol->SetNextSibling(newCol);
       lastCol = newCol;
