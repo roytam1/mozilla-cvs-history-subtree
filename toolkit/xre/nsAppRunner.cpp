@@ -2287,6 +2287,9 @@ XRE_main(int argc, char* argv[], const nsXREAppData* aAppData)
   // in nsAppShell::Create, but we need to get in before gtk
   // has been initialized to make sure everything is running
   // consistently.
+#if defined(MOZ_WIDGET_GTK2)
+  g_thread_init(NULL);
+#endif
   if (CheckArg("install"))
     gdk_rgb_set_install(TRUE);
 

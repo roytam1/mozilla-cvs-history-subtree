@@ -268,6 +268,9 @@ endif
 # Add explicit X11 dependency when building against X11 toolkits
 ifneq (,$(filter gtk gtk2 qt xlib,$(MOZ_WIDGET_TOOLKIT)))
 LIBS += $(XLDFLAGS) $(XLIBS)
+ifeq (gtk2,$(MOZ_WIDGET_TOOLKIT))
+LIBS += -lgthread-2.0
+endif
 endif
 
 ifeq ($(MOZ_WIDGET_TOOLKIT),windows)
