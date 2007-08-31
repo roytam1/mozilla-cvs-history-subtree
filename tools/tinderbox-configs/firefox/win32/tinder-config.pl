@@ -151,7 +151,7 @@ $MofoRoot   = ':ext:cltbld@cvs.mozilla.org:/mofo';
 
 #- Set if you want to build in a separate object tree
 #XXX: this breaks talkback currently
-#$ObjDir = 'fx-trunk';
+$ObjDir = 'obj-fx-trunk';
 
 # Extra build name, if needed.
 $BuildNameExtra = 'Fx-Newref';
@@ -194,7 +194,7 @@ $BinaryName = 'firefox.exe';
 
 # Release build options
 $ReleaseBuild  = 1;
-$shiptalkback  = 1;
+$shiptalkback  = 0;
 $ReleaseToLatest = 1; # Push the release to latest-<milestone>?
 $ReleaseToDated = 0; # Push the release to YYYY-MM-DD-HH-<milestone>?
 $build_hour    = "4";
