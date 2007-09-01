@@ -466,7 +466,7 @@ endif
 endif
 
 #
-# HP-UXBeOS specific section: for COMPONENTS only, add -Bsymbolic flag
+# HP-UX specific section: for COMPONENTS only, add -Bsymbolic flag
 # which uses internal symbols first
 #
 ifeq ($(OS_ARCH),HP-UX)
@@ -509,6 +509,15 @@ endif
 # Linux: add -Bsymbolic flag for components
 # 
 ifeq ($(OS_ARCH),Linux)
+ifdef IS_COMPONENT
+EXTRA_DSO_LDOPTS += -Wl,-Bsymbolic
+endif
+endif 
+
+#
+# BeOS: add -Bsymbolic flag for components
+# 
+ifeq ($(OS_ARCH),BeOS)
 ifdef IS_COMPONENT
 EXTRA_DSO_LDOPTS += -Wl,-Bsymbolic
 endif
