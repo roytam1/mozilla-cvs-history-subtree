@@ -7,7 +7,7 @@ $VendorName               = 'Mozilla';
 
 $RunMozillaTests          = 0;
 
-$CVSCheckoutTimeout       = 600;
+$CVSCheckoutTimeout       = 3600;
 
 $MozConfigFileName = 'mozconfig';
 
@@ -33,7 +33,7 @@ $RequireExecutableBinary = 0;
 #$LogCompression = 'bzip2';
 #$LogEncoding = 'base64';
 
-$blat = 'd:/moztools/bin/blat.exe';
+$blat = '/d/mozilla-build/blat261/full/blat.exe';
 $use_blat = 1;
 
 $Make = 'make';
