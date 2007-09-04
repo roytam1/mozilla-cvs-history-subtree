@@ -1359,7 +1359,7 @@ nsScriptSecurityManager::CheckLoadURIWithPrincipal(nsIPrincipal* aPrincipal,
         { "datetime",        DenyProtocol   },
         { "finger",          AllowProtocol  },
         { "res",             DenyProtocol   },
-        { "x-jsd",           ChromeProtocol },
+        { "x-jsd",           DenyProtocol   },
         { "wyciwyg",         DenyProtocol   }
     };
 
