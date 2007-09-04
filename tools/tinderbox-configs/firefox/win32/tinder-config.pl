@@ -82,7 +82,7 @@ $TestsPhoneHome           = 1;  # Should test report back to server?
 # If TestOnlyTinderbox is enabled, fetch the latest build info from tinderbox in a 
 # parseable format
 $TinderboxServerURL = 'http://tinderbox.mozilla.org/showbuilds.cgi?tree=Firefox&quickparse=1';
-$MatchBuildname = 'WINNT 5.2 fxnewref-win32- Depend Nightly';
+$MatchBuildname = 'WINNT 5.2 fx-win32-tbox Depend Nightly';
 #$GraphNameOverride        = 'Fx-Trunk-win32-test1'; # Override name built from ::hostname() and $BuildTag
 
 # $results_server
@@ -156,7 +156,7 @@ $AliveTestTimeout                 = 45;
 #$ObjDir = '';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'fxnewref-win32-tbox perf test';
+$BuildNameExtra = 'fx-win32-tbox perf test';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -245,6 +245,6 @@ $BinaryName = 'firefox.exe';
 # the latest build and unpack it rather than building it.
 $TestOnlyTinderbox = 1;
 $DownloadBuildFile = 'firefox-3.0a8pre.en-US.win32.zip';
-$DownloadBuildURL = 'http://stage.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds/FXNEWREF-WIN32--trunk';
+$DownloadBuildURL = 'http://stage.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds/FX-WIN32-TBOX-trunk';
 $DownloadBuildDir = 'firefox';
 
