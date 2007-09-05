@@ -262,11 +262,14 @@ int nsDrawingSurfacePh::prefChanged(const char *aPref, void *aClosure)
 		}
 
 	if(surface->mIsOffscreen) {
+		PhDrawContext_t *newdc;
+
+		newdc = (PhDrawContext_t *)PdCreateOffscreenContext(0, surface->mWidth, surface->mHeight, Pg_OSC_MEM_PAGE_ALIGN);
+		if ( !newdc )
+			return NS_ERROR_FAILURE;
 		surface->mDrawContext->gc = nsnull; /* because we do not want to destroy the one we have since other have it */
 		PhDCRelease( surface->mDrawContext ); 
-		surface->mDrawContext = (PhDrawContext_t *)PdCreateOffscreenContext(0, surface->mWidth, surface->mHeight, Pg_OSC_MEM_PAGE_ALIGN);
-		if( !surface->mDrawContext ) return NS_ERROR_FAILURE;
-
+		surface->mDrawContext = newdc;
 		PgSetDrawBufferSizeCx( surface->mDrawContext, 0xffff );
 
 		PgDestroyGC(surface->mDrawContext->gc);
