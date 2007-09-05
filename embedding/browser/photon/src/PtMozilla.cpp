@@ -308,22 +308,25 @@ mozilla_modify( PtWidget_t *widget, PtArg_t const *argt, PtResourceRec_t const *
 					moz->EmbedRef->Back();
 				else 
 				{
-					PhDim_t dim;
+					int incr;
 
-					PtWidgetDim(widget, &dim);
-					dim.w = (argt->value * dim.w)/100;
-					dim.h = (argt->value * dim.h)/100;
+					incr = argt->len ? argt->len : 1;
 
 					if (argt->value == Pt_WEB_DIRECTION_UP)
-						moz->EmbedRef->ScrollUp(dim.h);
+						moz->EmbedRef->ScrollUp(incr);
 					else if (argt->value ==	Pt_WEB_DIRECTION_DOWN)
-						moz->EmbedRef->ScrollDown(dim.h);
+						moz->EmbedRef->ScrollDown(incr);
 					else if (argt->value ==	Pt_WEB_DIRECTION_LEFT)
-						moz->EmbedRef->ScrollLeft(dim.w);
+						moz->EmbedRef->ScrollLeft(incr);
 					else if (argt->value == Pt_WEB_DIRECTION_RIGHT)
-						moz->EmbedRef->ScrollRight(dim.w);
+						moz->EmbedRef->ScrollRight(incr);
 				}
 			}
+			break;
+
+		case Pt_ARG_MOZ_SCROLL_TO:
+			if (moz->EmbedRef)
+				moz->EmbedRef->ScrollTo(argt->value, argt->len);
 			break;
 
 		case Pt_ARG_MOZ_STOP:
@@ -1076,6 +1079,7 @@ PtWidgetClass_t *PtCreateMozillaClass( void )
 	{
 		{ Pt_ARG_MOZ_GET_URL,           mozilla_modify, Pt_QUERY_PREVENT },
 		{ Pt_ARG_MOZ_NAVIGATE_PAGE,     mozilla_modify, mozilla_get_info },
+		{ Pt_ARG_MOZ_SCROLL_TO,         mozilla_modify, Pt_QUERY_PREVENT },
 		{ Pt_ARG_MOZ_RELOAD,            mozilla_modify, Pt_QUERY_PREVENT },
 		{ Pt_ARG_MOZ_STOP,              mozilla_modify, Pt_QUERY_PREVENT },
 		{ Pt_ARG_MOZ_PRINT,             mozilla_modify, Pt_QUERY_PREVENT },
