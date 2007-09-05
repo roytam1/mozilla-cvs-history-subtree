@@ -37,6 +37,7 @@
 
 #include "nsToolkit.h"
 #include "nscore.h"
+#include "nsIView.h"
 
 //
 // Static thread local storage index of the Toolkit 
@@ -125,3 +126,18 @@ NS_METHOD NS_GetCurrentToolkit(nsIToolkit* *aResult)
 
   return rv;
 }
+
+nsIView *
+nsToolkit::GetViewFor(nsIWidget *aWidget)
+{
+  if (!aWidget)
+    return nsnull;
+  nsIView *retval = nsnull;
+  nsISupports *data = nsnull;
+  aWidget->GetClientData((void*&)data);
+  nsCOMPtr<nsIInterfaceRequestor> req(do_QueryInterface(data));
+  if (req)
+    req->GetInterface(NS_GET_IID(nsIView), (void**) &retval);
+  return retval;
+}
+
