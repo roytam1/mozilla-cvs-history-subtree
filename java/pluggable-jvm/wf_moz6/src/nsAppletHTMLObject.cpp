@@ -353,7 +353,7 @@ nsAppletHTMLObject::ShowStatus(const char* status)
   rv = proxyObjectManager->
     GetProxyForObject(NS_UI_THREAD_EVENTQ,
 		      NS_GET_IID(nsIJavaPluginInstanceProxy),
-		      NS_STATIC_CAST(nsISupports*, inst),
+		      static_cast<nsISupports*>(inst),
 		      PROXY_ASYNC | PROXY_ALWAYS,
 		      getter_AddRefs(instProxy));
   if (NS_FAILED(rv)) return rv;
@@ -381,7 +381,7 @@ nsAppletHTMLObject::ShowDocument(const char* url,
   rv = proxyObjectManager->
     GetProxyForObject(NS_UI_THREAD_EVENTQ,
 		      NS_GET_IID(nsIJavaPluginInstanceProxy),
-		      NS_STATIC_CAST(nsISupports*, inst),
+		      static_cast<nsISupports*>(inst),
 		      PROXY_SYNC | PROXY_ALWAYS,
 		      getter_AddRefs(instProxy));
   if (NS_FAILED(rv)) return rv;
@@ -409,7 +409,7 @@ nsAppletHTMLObject::GetJSThread(jint* jstid)
   rv = proxyObjectManager->
     GetProxyForObject(NS_UI_THREAD_EVENTQ,
 		      NS_GET_IID(nsIJavaPluginInstanceProxy),
-		      NS_STATIC_CAST(nsISupports*, inst),
+		      static_cast<nsISupports*>(inst),
 		      PROXY_SYNC | PROXY_ALWAYS,
 		      getter_AddRefs(instProxy));
   if (NS_FAILED(rv)) return rv;
