@@ -393,8 +393,7 @@ nsPKCS12Blob::ExportToFile(nsILocalFile *file,
     if (NS_FAILED(nrv)) goto finish;
 #endif
   for (i=0; i<numCerts; i++) {
-//    nsNSSCertificate *cert = NS_REINTREPRET_POINTER_CAST(nsNSSCertificate *,
-//                                                         certs[i]);
+//    nsNSSCertificate *cert = reinterpret_cast<nsNSSCertificate *>(certs[i]);
     nsNSSCertificate *cert = (nsNSSCertificate *)certs[i];
     // get it as a CERTCertificate XXX
     CERTCertificate *nssCert = NULL;
