@@ -1,6 +1,6 @@
 #
-## hostname: cerberus
-## uname: WINNT CERBERUS 5.2 3790 xx I386
+## hostname: l10n-win32-tbox
+## uname: MINGW32_NT-5.2 L10N-WIN32-TBOX 1.0.11(0.46/3/2) 2007-01-12 12:05 i686 Msys
 #
 
 #- tinder-config.pl - Tinderbox configuration file.
@@ -12,7 +12,7 @@ $ENV{MOZ_INSTALLER_USE_7ZIP} = "1";
 $ENV{MOZ_SYMBOLS_TRANSFER_TYPE} = "rsync";
 
 #- PLEASE FILL THIS IN WITH YOUR PROPER EMAIL ADDRESS
-$BuildAdministrator = "cphillip\@gmail.com";
+$BuildAdministrator = 'build@mozilla.org';
 #$BuildAdministrator = ($ENV{USER} || "cltbld") . "\@" . ($ENV{HOST} || "dhcp");
 
 #- You'll need to change these to suit your machine's needs
@@ -107,7 +107,7 @@ $Make          = 'make';       # Must be GNU make
 #$CVSCO         = 'checkout -P';
 
 # win32 usually doesn't have /bin/mail
-$blat           = 'c:/moztools/bin/blat';
+$blat           = '/d/mozilla-build/blat261/blat';
 $use_blat       = 1;
 
 # Set moz_cvsroot to something like:
@@ -129,7 +129,7 @@ $moz_cvsroot   = ":ext:cltbld\@cvs.mozilla.org:/cvsroot";
 #$ObjDir = '';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'Fx-Trunk-l10n';
+$BuildNameExtra = 'Fx-Trunk-l10n testing';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -142,12 +142,12 @@ $ConfigureOnly = 1;
 $LocalizationVersionFile = 'browser/config/version.txt';
 %WGetFiles = (
 	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/latest-trunk/firefox-%version%.en-US.win32.installer.exe" =>
-	      "/cygdrive/c/builds/tinderbox/Fx-Trunk-l10n/WINNT_5.2_Clobber/firefox-installer.exe",
+	      "/e/builds/tinderbox/Fx-Trunk-l10n/WINNT_5.2_Depend/firefox-installer.exe",
 	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/latest-trunk/firefox-%version%.en-US.win32.zip" =>
-	      "/cygdrive/c/builds/tinderbox/Fx-Trunk-l10n/WINNT_5.2_Clobber/firefox.zip"
+	      "/e/builds/tinderbox/Fx-Trunk-l10n/WINNT_5.2_Depend/firefox.zip"
 	      );
 
-$BuildLocalesArgs = "ZIP_IN=/cygdrive/c/builds/tinderbox/Fx-Trunk-l10n/WINNT_5.2_Clobber/firefox.zip WIN32_INSTALLER_IN=/cygdrive/c/builds/tinderbox/Fx-Trunk-l10n/WINNT_5.2_Clobber/firefox-installer.exe";
+$BuildLocalesArgs = "ZIP_IN=/e/builds/tinderbox/Fx-Trunk-l10n/WINNT_5.2_Depend/firefox.zip WIN32_INSTALLER_IN=/e/builds/tinderbox/Fx-Trunk-l10n/WINNT_5.2_Depend/firefox-installer.exe";
 
 #-
 #- The rest should not need to be changed
@@ -186,7 +186,7 @@ $BinaryName = 'firefox.exe';
 # Release build options
 $ReleaseBuild  = 1;
 $shiptalkback  = 0;
-$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
+$ReleaseToLatest = 0; # Push the release to latest-<milestone>?
 $ReleaseToDated = 0; # Push the release to YYYY-MM-DD-HH-<milestone>?
 $build_hour    = "9";
 $package_creation_path = "/browser/installer";
