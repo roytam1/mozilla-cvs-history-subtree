@@ -431,8 +431,7 @@ MODULES_all :=                                  \
 # adding '-f' everywhere that we pull with the checkout tag, we force
 # the head revision if a file is not tagged
 MOZ_CO_TAG           = ZAP_20050610_BRANCH
-
-NSPR_CO_TAG          = NSPR_HEAD_20070713
+NSPR_CO_TAG          = NSPR_HEAD_20070820
 NSS_CO_TAG           = NSS_3_12_ALPHA1B
 LDAPCSDK_CO_TAG      = LDAPCSDK_6_0_3_CLIENT_BRANCH
 LOCALES_CO_TAG       =
