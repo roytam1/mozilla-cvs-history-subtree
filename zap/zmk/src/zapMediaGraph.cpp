@@ -192,7 +192,7 @@ zapMediaGraph::ResolveNodeDescriptor(const nsACString& id_or_alias)
 
   NS_ASSERTION(t->type == Descriptor::NODE, "corrupt node list");
   
-  return NS_STATIC_CAST(NodeDescriptor*, t);
+  return static_cast<NodeDescriptor*>(t);
 }
 
 void
@@ -216,8 +216,8 @@ zapMediaGraph::RemoveDescriptor(Descriptor* d)
   }
 
   if (d->type == Descriptor::NODE) {
-    RemoveNodeDescriptorConnections(NS_STATIC_CAST(NodeDescriptor*, d));
-    NS_STATIC_CAST(NodeDescriptor*, d)->node->RemovedFromContainer();
+    RemoveNodeDescriptorConnections(static_cast<NodeDescriptor*>(d));
+    static_cast<NodeDescriptor*>(d)->node->RemovedFromContainer();
   }
   delete d;
 }
@@ -240,9 +240,9 @@ zapMediaGraph::RemoveNodeDescriptorConnections(NodeDescriptor* d)
   // search for connections pointing to d and remove them:
   Descriptor* p = mConnections;
   while((p = p->next)->type != Descriptor::SENTINEL) {
-    if (NS_STATIC_CAST(ConnectionDescriptor*, p)->src_nd == d ||
-        NS_STATIC_CAST(ConnectionDescriptor*, p)->sink_nd == d) {
-      RemoveConnection(NS_STATIC_CAST(ConnectionDescriptor*, p));
+    if (static_cast<ConnectionDescriptor*>(p)->src_nd == d ||
+        static_cast<ConnectionDescriptor*>(p)->sink_nd == d) {
+      RemoveConnection(static_cast<ConnectionDescriptor*>(p));
       // restart from beginning, because the list might have changed.
       // this could be made more efficient, but our list should be
       // relatively small.
@@ -472,7 +472,7 @@ zapMediaGraph::Disconnect(const nsACString & connection_id)
     t = t->next;
   }
 
-  RemoveConnection(NS_STATIC_CAST(ConnectionDescriptor*, t));
+  RemoveConnection(static_cast<ConnectionDescriptor*>(t));
   return NS_OK;
 }
 
