@@ -107,7 +107,7 @@ $Make          = 'make';       # Must be GNU make
 #$CVSCO         = 'checkout -P';
 
 # win32 usually doesn't have /bin/mail
-$blat           = '/d/mozilla-build/blat261/blat';
+$blat           = '/d/mozilla-build/blat261/full/blat.exe';
 $use_blat       = 1;
 
 # Set moz_cvsroot to something like:
