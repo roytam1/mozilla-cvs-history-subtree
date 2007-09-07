@@ -2134,3 +2134,5 @@ Exch $R9 ; exchange the new $R9 value with the top of the stack
     !undef _MOZFUNC_UN
     !define _MOZFUNC_UN
     !verbose pop
+  !endif
+!macroend
