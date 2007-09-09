@@ -800,7 +800,7 @@ Exch $R9 ; exchange the new $R9 value with the top of the stack
       ${GetParentDir}
       Pop $R9
 
-      IfFileExists "$R8" 0 +3
+      IfFileExists "$R9" 0 +3
       ${${_MOZFUNC_UN}GetLongPath} "$R9" $R9
       StrCmp "$R9" "$R1" 0 innerloop
       ClearErrors
@@ -819,7 +819,7 @@ Exch $R9 ; exchange the new $R9 value with the top of the stack
       ${GetParentDir}
       Pop $R9
 
-      IfFileExists "$R8" 0 +3
+      IfFileExists "$R9" 0 +3
       ${${_MOZFUNC_UN}GetLongPath} "$R9" $R9
       StrCmp "$R9" "$R1" 0 outerloop
       ClearErrors
