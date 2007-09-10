@@ -112,15 +112,11 @@ void EmbedDownload::ReportDownload( int type, int current, int total, char *mess
   cb.total = total;
   cb.message = message;
 
-	if( type == Pt_WEB_DOWNLOAD_DONE ) mDone = PR_TRUE;
-
-///* ATENTIE */ printf( "In EmbedDownload::ReportDownload type=%s\n",
-//type==Pt_WEB_DOWNLOAD_CANCEL? "Pt_WEB_DOWNLOAD_CANCEL":
-//type==Pt_WEB_DOWNLOAD_DONE? "Pt_WEB_DOWNLOAD_DONE":
-//type==Pt_WEB_DOWNLOAD_PROGRESS? "Pt_WEB_DOWNLOAD_PROGRESS":"unknown");
+  if( type == Pt_WEB_DOWNLOAD_DONE || type == Pt_WEB_DOWNLOAD_ERROR)
+	mDone = PR_TRUE;
 
   PtInvokeCallbackList( mMozillaWidget->web_download_cb, (PtWidget_t *)mMozillaWidget, &cbinfo );
-  }
+}
 
 
 /* nsIWebProgressListener interface */
@@ -154,6 +150,12 @@ NS_IMETHODIMP EmbedDownload::OnLocationChange(nsIWebProgress* aWebProgress, nsIR
 	return NS_OK;
 	}
 NS_IMETHODIMP EmbedDownload::OnStatusChange(nsIWebProgress* aWebProgress, nsIRequest* aRequest, nsresult aStatus, const PRUnichar* aMessage) {
+	nsString 			u_message(aMessage);
+	char *message = ToNewCString(u_message);
+	//printf("EmbedDownload::OnStatusChange: aRequest 0x%x, message %s\n", aRequest, message);
+	if (aRequest)
+		ReportDownload( Pt_WEB_DOWNLOAD_ERROR, 0, 0, message );
+	if( message ) nsMemory::Free( (void*)message );
 	return NS_OK;
 	}
 NS_IMETHODIMP EmbedDownload::OnSecurityChange(nsIWebProgress *aWebProgress, nsIRequest *aRequest, PRUint32 state) {

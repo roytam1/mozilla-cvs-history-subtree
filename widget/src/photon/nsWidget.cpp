@@ -870,7 +870,7 @@ PRUint32 nsWidget::nsConvertKey( PhKeyEvent_t *aPhKeyEvent ) {
   return((int) 0);
 	}
 
-PRBool  nsWidget::DispatchKeyEvent( PhKeyEvent_t *aPhKeyEvent ) {
+PRBool  nsWidget::DispatchKeyEvent( PhKeyEvent_t *aPhKeyEvent, int force ) {
   NS_ASSERTION(aPhKeyEvent, "nsWidget::DispatchKeyEvent a NULL PhKeyEvent was passed in");
 
   if( !(aPhKeyEvent->key_flags & (Pk_KF_Cap_Valid|Pk_KF_Sym_Valid) ) ) {
@@ -879,7 +879,7 @@ PRBool  nsWidget::DispatchKeyEvent( PhKeyEvent_t *aPhKeyEvent ) {
 		return PR_FALSE;
 		}
 
-  if ( PtIsFocused(mWidget) != 2) {
+  if ( !force && PtIsFocused(mWidget) != 2) {
      //printf("nsWidget::DispatchKeyEvent Not on focus leaf! PtIsFocused(mWidget)=<%d>\n", PtIsFocused(mWidget));
      return PR_FALSE;
   	}
@@ -984,7 +984,7 @@ inline void nsWidget::InitKeyPressEvent(PhKeyEvent_t *aPhKeyEvent, nsKeyEvent &a
 inline PRBool nsWidget::HandleEvent( PtWidget_t *widget, PtCallbackInfo_t* aCbInfo ) {
   PRBool  result = PR_TRUE; // call the default nsWindow proc
   PhEvent_t* event = aCbInfo->event;
-  static int prevx, prevy, left_button_down, kwww_outbound_valid;
+  static int prevx=-1, prevy=-1, left_button_down, kwww_outbound_valid;
 
 	if (event->processing_flags & Ph_CONSUMED) return PR_TRUE;
 
@@ -1101,8 +1101,32 @@ inline PRBool nsWidget::HandleEvent( PtWidget_t *widget, PtCallbackInfo_t* aCbIn
 			        ptrev->pos.x = ptrev->pos.y = 999999;
                     InitMouseEvent(ptrev, this, theMouseEvent, NS_MOUSE_LEFT_BUTTON_UP );
                     result = DispatchMouseEvent(theMouseEvent);
+ 	      	        InitMouseEvent(ptrev, this, theMouseEvent, NS_MOUSE_MOVE );
+        	        result = DispatchMouseEvent(theMouseEvent);
 					left_button_down = 0;
 					kwww_outbound_valid = 1;
+					//
+					// In case we activated a combo box, do another down/up
+					// Sending an Esc key also works. Which is better?
+					// The mouse button method may prevent drag initiation
+					// within (multiline?) input fields. 
+					//
+#if 0
+                    InitMouseEvent(ptrev, this, theMouseEvent, NS_MOUSE_LEFT_BUTTON_DOWN );
+                    result = DispatchMouseEvent(theMouseEvent);
+                    InitMouseEvent(ptrev, this, theMouseEvent, NS_MOUSE_LEFT_BUTTON_UP );
+                    result = DispatchMouseEvent(theMouseEvent);
+#else
+					PhKeyEvent_t kev;
+                    memset( &kev, 0, sizeof(kev) );
+					kev.key_cap = kev.key_sym = Pk_Escape;
+					kev.key_flags = Pk_KF_Key_Down | Pk_KF_Cap_Valid | Pk_KF_Sym_Valid;
+					DispatchKeyEvent( &kev, 1 );
+                    memset( &kev, 0, sizeof(kev) );
+					kev.key_cap = Pk_Escape;
+					kev.key_flags = Pk_KF_Cap_Valid;
+					DispatchKeyEvent( &kev, 1 );
+#endif
 				  }
 
 				  PhInitDrag( PtWidgetRid(mWidget), ( Ph_DRAG_KEY_MOTION | Ph_DRAG_TRACK | Ph_TRACK_DRAG),&rect, &boundary, aCbInfo->event->input_group , NULL, NULL, NULL, NULL, NULL);
@@ -1146,7 +1170,7 @@ inline PRBool nsWidget::HandleEvent( PtWidget_t *widget, PtCallbackInfo_t* aCbIn
         // covers both mozserver and mozilla.
         if (sClipboard)
           sClipboard->SetInputGroup(event->input_group);
-				result = DispatchKeyEvent( (PhKeyEvent_t*) PhGetData( event ) );
+				result = DispatchKeyEvent( (PhKeyEvent_t*) PhGetData( event ), 0 );
         break;
 
       case Ph_EV_DRAG:
@@ -1164,6 +1188,7 @@ inline PRBool nsWidget::HandleEvent( PtWidget_t *widget, PtCallbackInfo_t* aCbIn
                 if (is_kwww) {  
         	      // Already did the button up
 				  kwww_outbound_valid = 0;
+				  prevx = prevy = -1;
 			    } else {
                   ScreenToWidgetPos( ptrev2->pos );
                   InitMouseEvent(ptrev2, this, theMouseEvent, NS_MOUSE_LEFT_BUTTON_UP );
@@ -1216,7 +1241,7 @@ inline PRBool nsWidget::HandleEvent( PtWidget_t *widget, PtCallbackInfo_t* aCbIn
 					top_widget = nsw;
 					nsw = nsw->GetParent();
 				  }
-			      //printf("*** New scroll delta: %d, %d\n", ptrev2->pos.x - prevx, ptrev2->pos.y - prevy);
+			try_again:
                   nsIView *view = nsToolkit::GetViewFor(top_widget);
 				  if (view) {
 					nsIViewManager* vm = view->GetViewManager();
@@ -1224,7 +1249,22 @@ inline PRBool nsWidget::HandleEvent( PtWidget_t *widget, PtCallbackInfo_t* aCbIn
 				      nsIScrollableView* scrollView = nsnull;
 				      vm->GetRootScrollableView(&scrollView);
 					  if (scrollView) {
-						((nsIScrollableView_MOZILLA_1_8_BRANCH*)scrollView)->ScrollByPixels(prevx - ptrev2->pos.x, prevy - ptrev2->pos.y);
+						if (prevx != -1 || prevy != -1) {
+						  //
+						  // The -1 check is to handle prevx and prevy not set
+						  // to the button press location, which happens when
+						  // you click on flash.
+						  //
+						  nsresult rc = ((nsIScrollableView_MOZILLA_1_8_BRANCH*)scrollView)->ScrollByPixels(prevx - ptrev2->pos.x, prevy - ptrev2->pos.y);
+						  //printf("*** rc %d from ScrollByPixels\n");
+						}
+					  } else if (top_widget != this) {
+					    //
+						// There is no scrollable view for the top level widget.
+						// See if there is one for the original widget.
+						//
+						top_widget = this;
+						goto try_again;
 					  }
 					}
 			      }
