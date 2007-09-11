@@ -67,6 +67,11 @@
   -moz-padding-start: 4px; 
 }
 
+#searchbar .searchbar-popup .menu-iconic-icon {
+  width: 16px;
+  height: 16px;
+}
+
 #searchbar[empty="true"] .searchbar-textbox {
   color: GrayText;
   direction: ltr !important;
