@@ -163,7 +163,7 @@ $MofoRoot   = ":ext:cltbld\@cvs.mozilla.org:/mofo";
 #$moz_client_mk = 'client.mk';
 
 #- Set if you want to build in a separate object tree
-#$ObjDir = '';
+$ObjDir = 'obj-fx-trunk';
 
 # Extra build name, if needed.
 $BuildNameExtra = 'Release';
@@ -185,7 +185,7 @@ $BuildNameExtra = 'Release';
 $BuildTree  = 'MozillaRelease';
 
 #$BuildName = '';
-$BuildTag = 'MOZILLA_1_9a7_RELEASE';
+$BuildTag = 'MOZILLA_1_9a8_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -206,7 +206,7 @@ $BinaryName = 'firefox-bin';
 
 # Release build options
 $ReleaseBuild  = 1;
-$shiptalkback  = 1;
+$shiptalkback  = 0;
 $crashreporter_buildsymbols = 1;
 $crashreporter_pushsymbols = 1;
 $ReleaseToLatest = 0; # Push the release to latest-<milestone>?
@@ -221,7 +221,7 @@ $ftp_path      = "/home/ftp/pub/firefox/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
-$milestone     = "mozilla1.9a7";
+$milestone     = "mozilla1.9a8";
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 0;
