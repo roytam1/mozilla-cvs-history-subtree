@@ -11,15 +11,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the PKIX-C library.
+ * The Original Code is the Netscape security libraries.
  *
  * The Initial Developer of the Original Code is
- * Sun Microsystems, Inc.
- * Portions created by the Initial Developer are
- * Copyright 2004-2007 Sun Microsystems, Inc.  All Rights Reserved.
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1994-2000
+ * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Sun Microsystems, Inc.
+ *   Sun Microsystems
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -44,9 +44,8 @@
 #include "testutil.h"
 #include "testutil_nss.h"
 
-static void *plContext = NULL;
+void *plContext = NULL;
 
-static
 void createCRLs(
         char *dataDir,
         char *goodInput,
@@ -238,14 +237,13 @@ cleanup:
         PKIX_TEST_RETURN();
 }
 
-static
 void printUsage(void) {
         (void) printf("\nUSAGE:\ttest_crl <test-purpose> <data-central-dir>\n\n");
 }
 
 /* Functional tests for CRL public functions */
 
-int test_crl(int argc, char *argv[]) {
+int main(int argc, char *argv[]) {
         PKIX_PL_CRL *goodObject = NULL;
         PKIX_PL_CRL *equalObject = NULL;
         PKIX_PL_CRL *diffObject = NULL;

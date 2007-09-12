@@ -98,7 +98,7 @@ memleak_init()
 	IGNORED_STACKS="${QADIR}/memleak/ignored"
 	
 	gline=`echo ${OBJDIR} | grep "_64_"`
-	if [ -n "${gline}" ] ; then
+	if [ "${gline}" ] ; then
 		BIT_NAME="64"
 	else
 		BIT_NAME="32"
@@ -169,11 +169,8 @@ memleak_init()
 
 	if [ "${BUILD_OPT}" -eq 1 ] ; then
 		OPT="OPT"
-		unset NSS_DISABLE_UNLOAD
 	else 
 		OPT="DBG"
-		NSS_DISABLE_UNLOAD="1"
-		export NSS_DISABLE_UNLOAD
 	fi
 
 	SELFSERV_ATTR="-D -p ${PORT} -d ${SERVER_DB} -n ${HOSTADDR} -e ${HOSTADDR}-ec -w nss -c ABCDEF:C001:C002:C003:C004:C005:C006:C007:C008:C009:C00A:C00B:C00C:C00D:C00E:C00F:C010:C011:C012:C013:C014cdefgijklmnvyz -t 5"
@@ -495,7 +492,6 @@ run_ciphers_client()
 parse_logfile_dbx()
 {
 	in_mel=0
-	bin_name=""
 	
 	while read line
 	do
@@ -508,7 +504,7 @@ parse_logfile_dbx()
 		if [ -z "${line}" ] ; then
 			if [ ${in_mel} -eq "1" ] ; then
 				in_mel=0
-				echo "${bin_name}${stack_string}"
+				echo "${stack_string}"
 			fi
 		fi
 			
@@ -521,17 +517,12 @@ parse_logfile_dbx()
 			fi
 				
 			gline=`echo "${line}" | grep "Found leaked block of size"`
-			if [ -n "${gline}" ] ; then
+			if [ "${gline}" ] ; then
 				lbytes=`echo "${line}" | sed "s/Found leaked block of size \(.*\) bytes.*/\1/"`
 				tbytes=`expr "${tbytes}" + "${lbytes}"`
 				tblocks=`expr "${tblocks}" + 1`
 			fi
-		else
-			gline=`echo "${line}" | grep "^Running: "`
-			if [ -n "${gline}" ] ; then
-				bin_name=`echo "${line}" | cut -d" " -f2`
-			fi
-		fi 
+		fi	
 	done
 }
 
@@ -542,29 +533,24 @@ parse_logfile_valgrind()
 {
 	in_mel=0
 	in_sum=0
-	bin_name=""
 
 	while read line
 	do
 		gline=`echo "${line}" | grep "^=="`
-		if [ -z "${gline}" ] ; then
-			gline=`echo "${line}" | grep "^${VALGRIND} "`
-			if [ -n "${gline}" ] ; then
-				bin_name=`echo "${line}" | cut -d" " -f6`
-			fi
+		if [ ! "${gline}" ] ; then
 			continue
 		fi
 
 		line=`echo "${line}" | sed "s/==[0-9]*==\s*\(.*\)/\1/"`
 
 		gline=`echo "${line}" | grep "blocks are"`
-		if [ -n "${gline}" ] ; then
+		if [ "${gline}" ] ; then
 			in_mel=1
 			mel_line=0
 			stack_string=""
 		else
 			gline=`echo "${line}" | grep "LEAK SUMMARY"`
-			if [ -n "${gline}" ] ; then
+			if [ "${gline}" ] ; then
 				in_sum=1
 				mel_line=0
 			fi
@@ -573,7 +559,7 @@ parse_logfile_valgrind()
 		if [ -z "${line}" ] ; then
 			if [ ${in_mel} -eq 1 ] ; then
 				in_mel=0
-				echo "${bin_name}${stack_string}"
+ 				echo "${stack_string}"
 			elif [ ${in_sum} -eq 1 ] ; then
 				in_sum=0
 			fi
@@ -594,7 +580,7 @@ parse_logfile_valgrind()
 			
 			if [ ${mel_line} -ge 2 ] ; then
 				gline=`echo "${line}" | grep "bytes.*blocks"`
-				if [ -n "${gline}" ] ; then
+				if [ "${gline}" ] ; then
 					lbytes=`echo "${line}" | sed "s/.*: \(.*\) bytes.*/\1/" | sed "s/,//g"`
 					lblocks=`echo "${line}" | sed "s/.*bytes in \(.*\) blocks.*/\1/" | sed "s/,//g"`
 
@@ -604,7 +590,7 @@ parse_logfile_valgrind()
 					in_sum=0
 				fi
 			fi
-		fi
+		fi		
 	done
 }
 
@@ -628,13 +614,13 @@ log_compare()
 		NEXT=0
 
 		gline=`echo "${LINE}" | grep '^#'`
-		if [ -n "${gline}" ] ; then
+		if [ "${gline}" ] ; then
 			BUG_ID="${LINE}"
 			NEXT=1
 		fi
 		
 		gline=`echo "${LINE}" | grep '*'`
-		if [ -z "${gline}" ] ; then
+		if [ ! "${gline}" ] ; then
 			NEXT=1
 		fi
 		
@@ -642,7 +628,7 @@ log_compare()
 		do
 			L_WORD=`echo "${LINE}" | cut -d '/' -f1`
 			gline=`echo "${LINE}" | grep '/'`
-			if [ -n "${gline}" ] ; then
+			if [ "${gline}" ] ; then
 				LINE=`echo "${LINE}" | cut -d '/' -f2-`
 			else
 				LINE=""
@@ -650,7 +636,7 @@ log_compare()
 
 			S_WORD=`echo "${STACK}" | cut -d '/' -f1`
 			gline=`echo "${STACK}" | grep '/'`
-			if [ -n "${gline}" ] ; then
+			if [ "${gline}" ] ; then
 				STACK=`echo "${STACK}" | cut -d '/' -f2-`
 			else
 				STACK=""

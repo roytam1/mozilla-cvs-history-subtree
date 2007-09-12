@@ -11,15 +11,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the PKIX-C library.
+ * The Original Code is the Netscape security libraries.
  *
  * The Initial Developer of the Original Code is
- * Sun Microsystems, Inc.
- * Portions created by the Initial Developer are
- * Copyright 2004-2007 Sun Microsystems, Inc.  All Rights Reserved.
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1994-2000
+ * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Sun Microsystems, Inc.
+ *   Sun Microsystems
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -46,8 +46,7 @@
 #undef PKIX_ERRORENTRY
 
 #define PKIX_ERRORENTRY(name,desc) #desc
-
-const char * const PKIX_ErrorText[] =
+char *PKIX_ErrorText[] =
 {
 #include "pkix_errorstrings.h"
 };
@@ -69,6 +68,8 @@ pkix_Error_Equals(
         PKIX_Error *secondError = NULL;
         PKIX_Error *firstCause = NULL;
         PKIX_Error *secondCause = NULL;
+        PKIX_PL_String *firstDesc = NULL;
+        PKIX_PL_String *secondDesc = NULL;
         PKIX_PL_Object *firstInfo = NULL;
         PKIX_PL_Object *secondInfo = NULL;
         PKIX_UInt32 firstCode, secondCode, secondType;
@@ -162,8 +163,22 @@ pkix_Error_Equals(
 
 
         /* Compare descs */
-        if (firstError->descCode != secondError->descCode) {
+        firstDesc = firstError->desc;
+        secondDesc = secondError->desc;
+
+        if (((firstDesc != NULL) && (secondDesc == NULL))||
+            ((firstDesc == NULL) && (secondDesc != NULL))) {
                 unequalFlag = PKIX_TRUE;
+        } else if ((firstDesc != NULL) && (secondDesc != NULL)) {
+                PKIX_CHECK(PKIX_PL_Object_Equals
+                            ((PKIX_PL_Object*) firstDesc,
+                            (PKIX_PL_Object*) secondDesc,
+                            &boolResult,
+                            plContext),
+                            PKIX_ERRORINRECURSIVEEQUALSCALL);
+
+                /* If the desc errors are not equal, return null */
+                if (boolResult == 0) unequalFlag = PKIX_TRUE;
         }
 
         /* If the unequalFlag was set, return false */
@@ -197,6 +212,8 @@ pkix_Error_Destroy(
         error = (PKIX_Error *)object;
 
         PKIX_DECREF(error->cause);
+
+        PKIX_DECREF(error->desc);
 
         PKIX_DECREF(error->info);
 
@@ -241,8 +258,8 @@ pkix_Error_ToString(
         code = error->code;
 
         /* Get the description string */
-        PKIX_Error_GetDescription(error, &desc, plContext);
-            
+        desc = error->desc;
+
         /* Get the cause */
         cause = error->cause;
 
@@ -306,6 +323,7 @@ pkix_Error_ToString(
                     &formatString,
                     plContext),
                     PKIX_STRINGCREATEFAILED);
+
 
         /* Create the output String */
         PKIX_CHECK(PKIX_PL_Sprintf
@@ -409,10 +427,10 @@ pkix_Error_RegisterSelf(void *plContext)
  */
 PKIX_Error *
 PKIX_Error_Create(
-        PKIX_ERRORNUM errorCode,
+        PKIX_UInt32 errorCode,
         PKIX_Error *cause,
         PKIX_PL_Object *info,
-        PKIX_ERRSTRINGNUM descCode,
+        PKIX_PL_String *desc,
         PKIX_Error **pError,
         void *plContext)
 {
@@ -443,7 +461,7 @@ PKIX_Error_Create(
             tempCause = tempCause->cause) {
                 /* If we detect a loop, throw a new error */
                 if (tempCause == error) {
-                        PKIX_THROW(ERROR, PKIX_LOOPOFERRORCAUSEDETECTED);
+                        PKIX_THROW(ERROR, "Loop of error causes detected");
                 }
         }
 
@@ -453,7 +471,8 @@ PKIX_Error_Create(
         PKIX_INCREF(info);
         error->info = info;
 
-        error->descCode = descCode;
+        PKIX_INCREF(desc);
+        error->desc = desc;
 
         *pError = error;
 
@@ -473,23 +492,6 @@ PKIX_Error_GetErrorCode(
         PKIX_NULLCHECK_TWO(error, pCode);
 
         *pCode = error->code;
-
-        PKIX_RETURN(ERROR);
-}
-
-/*
- * FUNCTION: PKIX_Error_GetErrorCode (see comments in pkix_util.h)
- */
-PKIX_Error *
-PKIX_Error_GetErrorMsgCode(
-        PKIX_Error *error,
-        PKIX_UInt32 *pCode,
-        void *plContext)
-{
-        PKIX_ENTER(ERROR, "PKIX_Error_GetDescErrorCode");
-        PKIX_NULLCHECK_TWO(error, pCode);
-
-        *pCode = error->descCode;
 
         PKIX_RETURN(ERROR);
 }
@@ -543,18 +545,14 @@ PKIX_Error_GetDescription(
         PKIX_PL_String **pDesc,
         void *plContext)
 {
-        PKIX_PL_String *descString = NULL;
-
         PKIX_ENTER(ERROR, "PKIX_Error_GetDescription");
         PKIX_NULLCHECK_TWO(error, pDesc);
 
-        PKIX_PL_String_Create(PKIX_ESCASCII,
-                              (void *)PKIX_ErrorText[error->descCode],
-                              0,
-                              &descString,
-                              plContext);
+        if (error != PKIX_ALLOC_ERROR()){
+                PKIX_INCREF(error->desc);
+        }
 
-        *pDesc = descString;
+        *pDesc = error->desc;
 
         PKIX_RETURN(ERROR);
 }

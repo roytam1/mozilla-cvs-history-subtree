@@ -623,7 +623,7 @@ SECStatus PK11_DigestBegin(PK11Context *cx)
 
 SECStatus
 PK11_HashBuf(SECOidTag hashAlg, unsigned char *out, unsigned char *in, 
-								PRInt32 len) {
+								int32 len) {
     PK11Context *context;
     unsigned int max_length;
     unsigned int out_length;

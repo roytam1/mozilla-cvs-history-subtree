@@ -43,7 +43,6 @@
 #include "keyhi.h"
 #include "cert.h"
 #include "certdb.h"
-#include "certi.h"
 #include "cryptohi.h"
 
 #ifndef NSS_3_4_CODE
@@ -408,8 +407,12 @@ loser:
     return(SECFailure);
 }
 
-void
-cert_AddToVerifyLog(CERTVerifyLog *log, CERTCertificate *cert, unsigned long error,
+
+
+
+
+static void
+AddToVerifyLog(CERTVerifyLog *log, CERTCertificate *cert, unsigned long error,
 	       unsigned int depth, void *arg)
 {
     CERTVerifyLogNode *node, *tnode;
@@ -470,14 +473,14 @@ cert_AddToVerifyLog(CERTVerifyLog *log, CERTCertificate *cert, unsigned long err
 
 #define LOG_ERROR_OR_EXIT(log,cert,depth,arg) \
     if ( log != NULL ) { \
-	cert_AddToVerifyLog(log, cert, PORT_GetError(), depth, (void *)arg); \
+	AddToVerifyLog(log, cert, PORT_GetError(), depth, (void *)arg); \
     } else { \
 	goto loser; \
     }
 
 #define LOG_ERROR(log,cert,depth,arg) \
     if ( log != NULL ) { \
-	cert_AddToVerifyLog(log, cert, PORT_GetError(), depth, (void *)arg); \
+	AddToVerifyLog(log, cert, PORT_GetError(), depth, (void *)arg); \
     }
 
 
@@ -560,7 +563,7 @@ cert_VerifyFortezzaV1Cert(CERTCertDBHandle *handle, CERTCertificate *cert,
 
 
 static SECStatus
-cert_VerifyCertChainOld(CERTCertDBHandle *handle, CERTCertificate *cert,
+cert_VerifyCertChain(CERTCertDBHandle *handle, CERTCertificate *cert,
 		     PRBool checkSig, PRBool* sigerror,
                      SECCertUsage certUsage, int64 t, void *wincx,
                      CERTVerifyLog *log, PRBool* revoked)
@@ -679,11 +682,7 @@ cert_VerifyCertChainOld(CERTCertDBHandle *handle, CERTCertificate *cert,
 	    int subjectNameListLen;
 	    int i;
 	    subjectNameList    = CERT_GetCertificateNames(subjectCert, arena);
-	    if (!subjectNameList)
-		goto loser;
 	    subjectNameListLen = CERT_GetNamesLength(subjectNameList);
-	    if (!subjectNameListLen)
-		goto loser;
 	    if (certsListLen <= namesCount + subjectNameListLen) {
 		CERTCertificate **tmpCertsList;
 		certsListLen = (namesCount + subjectNameListLen) * 2;
@@ -933,20 +932,6 @@ done:
 }
 
 SECStatus
-cert_VerifyCertChain(CERTCertDBHandle *handle, CERTCertificate *cert,
-                     PRBool checkSig, PRBool* sigerror,
-                     SECCertUsage certUsage, int64 t, void *wincx,
-                     CERTVerifyLog *log, PRBool* revoked)
-{
-    if (cert_UsePKIXValidation()) {
-        return cert_VerifyCertChainPkix(cert, checkSig, certUsage, t,
-                                        wincx, log, sigerror, revoked);
-    }
-    return cert_VerifyCertChainOld(handle, cert, checkSig, sigerror,
-                                   certUsage, t, wincx, log, revoked);
-}
-
-SECStatus
 CERT_VerifyCertChain(CERTCertDBHandle *handle, CERTCertificate *cert,
 		     PRBool checkSig, SECCertUsage certUsage, int64 t,
 		     void *wincx, CERTVerifyLog *log)
@@ -957,6 +942,7 @@ CERT_VerifyCertChain(CERTCertDBHandle *handle, CERTCertificate *cert,
 
 /*
  * verify that a CA can sign a certificate with the requested usage.
+ * XXX This function completely ignores cert path length constraints!
  */
 SECStatus
 CERT_VerifyCACertForUsage(CERTCertDBHandle *handle, CERTCertificate *cert,
@@ -1397,7 +1383,8 @@ CERT_VerifyCertificate(CERTCertDBHandle *handle, CERTCertificate *cert,
 loser:
     return(valid);
 }
-
+			
+/* obsolete, do not use for new code */
 SECStatus
 CERT_VerifyCert(CERTCertDBHandle *handle, CERTCertificate *cert,
 		PRBool checkSig, SECCertUsage certUsage, int64 t,

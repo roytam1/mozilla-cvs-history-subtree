@@ -245,10 +245,6 @@ cert_FindDERCertBySubjectKeyID(SECItem *subjKeyID);
 /* return maximum length of AVA value based on its type OID tag. */
 extern int cert_AVAOidTagToMaxLen(SECOidTag tag);
 
-/* Make an AVA, allocated from pool, from OID and DER encoded value */
-extern CERTAVA * CERT_CreateAVAFromRaw(PRArenaPool *pool, 
-                               const SECItem * OID, const SECItem * value);
-
 /*
  * get a DPCache object for the given issuer subject and dp
  * Automatically creates the cache object if it doesn't exist yet.
@@ -269,31 +265,5 @@ SECStatus DPCache_GetCRLEntry(CRLDPCache* cache, PRBool readlocked,
                               CERTSignedCrl* crl, SECItem* sn,
                               CERTCrlEntry** returned);
 
-/*
- * map Stan errors into NSS errors
- * This function examines the stan error stack and automatically sets
- * PORT_SetError(); to the appropriate SEC_ERROR value.
- */
-void CERT_MapStanError();
-
-/* Programatical interface to switch to and from libpkix cert
- * validation engine. */
-SECStatus cert_SetPKIXValidation(PRBool enable);
-
-/* The function return PR_TRUE if cert validation should go
- * through libpkix cert validation engine. */
-PRBool cert_UsePKIXValidation();
-
-/* Interface function for libpkix cert validation engine:
- * cert_verify wrapper. */
-SECStatus
-cert_VerifyCertChainPkix(CERTCertificate *cert,
-                         PRBool checkSig,
-                         SECCertUsage     requiredUsage,
-                         PRUint64         time,
-                         void            *wincx,
-                         CERTVerifyLog   *log,
-                         PRBool          *sigError,
-                         PRBool          *revoked);
 #endif /* _CERTI_H_ */
 

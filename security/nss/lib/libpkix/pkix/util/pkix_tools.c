@@ -11,15 +11,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the PKIX-C library.
+ * The Original Code is the Netscape security libraries.
  *
  * The Initial Developer of the Original Code is
- * Sun Microsystems, Inc.
- * Portions created by the Initial Developer are
- * Copyright 2004-2007 Sun Microsystems, Inc.  All Rights Reserved.
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1994-2000
+ * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Sun Microsystems, Inc.
+ *   Sun Microsystems
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -160,13 +160,18 @@ cleanup:
 PKIX_Error *
 pkix_Throw(
         PKIX_UInt32 errorCode,
-        const char *funcName,
-        PKIX_ERRSTRINGNUM errorTextCode,
+        char *funcName,
+        char *errorText,
         PKIX_Error *cause,
         PKIX_Error **pError,
         void *plContext)
 {
+        PKIX_PL_String *formatString = NULL;
+        PKIX_PL_String *funcNameString = NULL;
+        PKIX_PL_String *textString = NULL;
+        PKIX_PL_String *errorString = NULL;
         PKIX_UInt32 causeCode;
+        char *format = NULL;
 
         PKIX_ENTER(ERROR, "pkix_Throw");
         PKIX_NULLCHECK_TWO(funcName, pError);
@@ -185,11 +190,44 @@ pkix_Throw(
                 }
         }
 
-       pkixTempResult = PKIX_Error_Create(errorCode, cause, NULL,
-                                           errorTextCode, pError, plContext);
+        format = "%s: %s";
+
+        pkixTempResult = PKIX_PL_String_Create
+                (PKIX_ESCASCII, (void *)format, 0, &formatString, plContext);
+        if (pkixTempResult) goto cleanup;
+
+        pkixTempResult = PKIX_PL_String_Create
+                (PKIX_ESCASCII,
+                (void *)funcName,
+                0,
+                &funcNameString,
+                plContext);
+        if (pkixTempResult) goto cleanup;
+
+        pkixTempResult = PKIX_PL_String_Create
+                (PKIX_ESCASCII,
+                (void *)errorText,
+                0,
+                &textString,
+                plContext);
+        if (pkixTempResult) goto cleanup;
+
+        pkixTempResult = PKIX_PL_Sprintf
+                (&errorString,
+                plContext,
+                formatString,
+                funcNameString,
+                textString);
+
+        pkixTempResult = PKIX_Error_Create
+                (errorCode, cause, NULL, errorString, pError, plContext);
 
 cleanup:
 
+        PKIX_DECREF(errorString);
+        PKIX_DECREF(formatString);
+        PKIX_DECREF(funcNameString);
+        PKIX_DECREF(textString);
         PKIX_DEBUG_EXIT(ERROR);
         pkixErrorCode = 0;
         return (pkixTempResult);
@@ -1127,18 +1165,9 @@ pkix_CacheCert_Add(
         PKIX_Error *cachedCertError = NULL;
         PKIX_CertStore_CheckTrustCallback trustCallback = NULL;
         PKIX_UInt32 cachePeriod = CACHE_ITEM_PERIOD_SECONDS;
-        PKIX_UInt32 numCerts = 0;
 
         PKIX_ENTER(BUILD, "pkix_CacheCert_Add");
         PKIX_NULLCHECK_THREE(store, certSelParams, certs);
-
-        PKIX_CHECK(PKIX_List_GetLength(certs, &numCerts,
-                                       plContext),
-                   PKIX_LISTGETLENGTHFAILED);
-        if (numCerts == 0) {
-            /* Don't want to add an empty list. */
-            goto cleanup;
-        }
 
         PKIX_CHECK(PKIX_List_Create(&cachedKeys, plContext),
                 PKIX_LISTCREATEFAILED);

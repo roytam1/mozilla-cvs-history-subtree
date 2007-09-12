@@ -54,4 +54,8 @@ REQUIRES = dbm seccmd
 
 PROGRAM = certutil
 
+ifdef NSS_ENABLE_ECC
+DEFINES += -DNSS_ENABLE_ECC
+endif
+
 #USE_STATIC_LIBS = 1

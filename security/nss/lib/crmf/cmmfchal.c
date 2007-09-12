@@ -75,12 +75,12 @@ cmmf_create_witness_and_challenge(PRArenaPool     *poolp,
         goto loser;
     }
     rv = PK11_HashBuf(SEC_OID_SHA1, randHash, encodedRandNum->data, 
-		      (PRUint32)encodedRandNum->len);
+		      (uint32)encodedRandNum->len);
     if (rv != SECSuccess) {
         goto loser;
     }
     rv = PK11_HashBuf(SEC_OID_SHA1, senderHash, senderDER->data,
-		      (PRUint32)senderDER->len);
+		      (uint32)senderDER->len);
     if (rv != SECSuccess) {
         goto loser;
     }

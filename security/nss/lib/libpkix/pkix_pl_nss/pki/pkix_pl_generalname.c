@@ -11,15 +11,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the PKIX-C library.
+ * The Original Code is the Netscape security libraries.
  *
  * The Initial Developer of the Original Code is
- * Sun Microsystems, Inc.
- * Portions created by the Initial Developer are
- * Copyright 2004-2007 Sun Microsystems, Inc.  All Rights Reserved.
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1994-2000
+ * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Sun Microsystems, Inc.
+ *   Sun Microsystems
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -186,7 +186,6 @@ pkix_pl_DirectoryName_Create(
         void *plContext)
 {
         PKIX_PL_X500Name *pkixDN = NULL;
-        CERTName *dirName = NULL;
         PKIX_PL_String *pkixDNString = NULL;
         char *utf8String = NULL;
         PKIX_UInt32 utf8Length;
@@ -194,11 +193,27 @@ pkix_pl_DirectoryName_Create(
         PKIX_ENTER(GENERALNAME, "pkix_pl_DirectoryName_Create");
         PKIX_NULLCHECK_TWO(nssAltName, pX500Name);
 
-        dirName = &nssAltName->name.directoryName;
+        PKIX_GENERALNAME_DEBUG("\t\tCalling CERT_NameToAscii).\n");
+        /* should be called CERT_NameToUTF8 */
+        utf8String = CERT_NameToAscii(&nssAltName->name.directoryName);
 
-        PKIX_CHECK(PKIX_PL_X500Name_CreateFromCERTName(NULL, dirName, 
-                                                       &pkixDN, plContext),
-                   PKIX_X500NAMECREATEFROMCERTNAMEFAILED);
+        if (!utf8String){
+                PKIX_ERROR(PKIX_CERTNAMETOASCIIFAILED);
+        }
+
+        PKIX_GENERALNAME_DEBUG("\t\tCalling PL_strlen).\n");
+        utf8Length = PL_strlen(utf8String);
+
+        PKIX_CHECK(PKIX_PL_String_Create
+                    (PKIX_UTF8,
+                    utf8String,
+                    utf8Length,
+                    &pkixDNString,
+                    plContext),
+                    PKIX_STRINGCREATEFAILED);
+
+        PKIX_CHECK(PKIX_PL_X500Name_Create(pkixDNString, &pkixDN, plContext),
+                    PKIX_X500NAMECREATEFAILED);
 
         *pX500Name = pkixDN;
 
@@ -795,7 +810,6 @@ pkix_pl_GeneralName_RegisterSelf(void *plContext)
 
 /* --Public-Functions------------------------------------------------------- */
 
-#ifdef BUILD_LIBPKIX_TESTS
 /*
  * FUNCTION: PKIX_PL_GeneralName_Create (see comments in pkix_pl_pki.h)
  */
@@ -854,6 +868,11 @@ PKIX_PL_GeneralName_Create(
                 break;
 
         case certDirectoryName:
+
+
+
+
+
 
                 PKIX_CHECK(PKIX_PL_X500Name_Create
                             (stringRep, &pkixDN, plContext),
@@ -927,5 +946,3 @@ cleanup:
 
         PKIX_RETURN(GENERALNAME);
 }
-
-#endif /* BUILD_LIBPKIX_TESTS */

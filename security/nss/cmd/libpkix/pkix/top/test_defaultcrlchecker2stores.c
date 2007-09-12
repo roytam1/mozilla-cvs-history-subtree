@@ -11,15 +11,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the PKIX-C library.
+ * The Original Code is the Netscape security libraries.
  *
  * The Initial Developer of the Original Code is
- * Sun Microsystems, Inc.
- * Portions created by the Initial Developer are
- * Copyright 2004-2007 Sun Microsystems, Inc.  All Rights Reserved.
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1994-2000
+ * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Sun Microsystems, Inc.
+ *   Sun Microsystems
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -46,21 +46,19 @@
 
 #define PKIX_TEST_MAX_CERTS     10
 
-static void *plContext = NULL;
+void *plContext = NULL;
 
-static
 void printUsage1(char *pName){
         printf("\nUSAGE: %s test-purpose [ENE|EE] ", pName);
         printf("crl-directory cert [certs].\n");
 }
 
-static
 void printUsageMax(PKIX_UInt32 numCerts){
         printf("\nUSAGE ERROR: number of certs %d exceed maximum %d\n",
                 numCerts, PKIX_TEST_MAX_CERTS);
 }
 
-static PKIX_Error *
+PKIX_Error *
 getCertCallback(
         PKIX_CertStore *store,
         PKIX_CertSelector *certSelector,
@@ -70,7 +68,7 @@ getCertCallback(
         return (NULL);
 }
 
-static PKIX_Error *
+PKIX_Error *
 testDefaultMultipleCertStores(PKIX_ValidateParams *valParams,
                         char *crlDir1,
                         char *crlDir2)
@@ -158,7 +156,7 @@ cleanup:
  *      required for revocation check to pass.
  */
 
-int test_defaultcrlchecker2stores(int argc, char *argv[]){
+int main(int argc, char *argv[]){
 
         PKIX_List *chain = NULL;
         PKIX_ValidateParams *valParams = NULL;

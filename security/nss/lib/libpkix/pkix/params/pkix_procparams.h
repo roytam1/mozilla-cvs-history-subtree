@@ -11,15 +11,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the PKIX-C library.
+ * The Original Code is the Netscape security libraries.
  *
  * The Initial Developer of the Original Code is
- * Sun Microsystems, Inc.
- * Portions created by the Initial Developer are
- * Copyright 2004-2007 Sun Microsystems, Inc.  All Rights Reserved.
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1994-2000
+ * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Sun Microsystems, Inc.
+ *   Sun Microsystems
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -53,7 +53,7 @@ extern "C" {
 
 struct PKIX_ProcessingParamsStruct {
         PKIX_List *trustAnchors;        /* Never NULL */
-        PKIX_List *hintCerts;	/* user-supplied partial chain, may be NULL */
+	PKIX_List *hintCerts;	/* user-supplied partial chain, may be NULL */
         PKIX_CertSelector *constraints;
         PKIX_PL_Date *date;
         PKIX_List *initialPolicies;     /* list of PKIX_PL_OID */
@@ -65,7 +65,6 @@ struct PKIX_ProcessingParamsStruct {
         PKIX_List *revCheckers;
         PKIX_List *certStores;
         PKIX_Boolean isCrlRevocationCheckingEnabled;
-        PKIX_Boolean isCrlRevocationCheckingEnabledWithNISTPolicy;
         PKIX_ResourceLimits *resourceLimits;
 };
 
@@ -75,12 +74,6 @@ PKIX_Error *pkix_ProcessingParams_RegisterSelf(void *plContext);
 
 PKIX_Error *
 pkix_ProcessingParams_GetRevocationEnabled(
-        PKIX_ProcessingParams *params,
-        PKIX_Boolean *pEnabled,
-        void *plContext);
-
-PKIX_Error *
-pkix_ProcessingParams_GetNISTRevocationPolicyEnabled(
         PKIX_ProcessingParams *params,
         PKIX_Boolean *pEnabled,
         void *plContext);

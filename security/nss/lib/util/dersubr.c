@@ -39,7 +39,7 @@
 #include "secerr.h"
 
 int
-DER_LengthLength(PRUint32 len)
+DER_LengthLength(uint32 len)
 {
     if (len > 127) {
 	if (len > 255) {
@@ -61,7 +61,7 @@ DER_LengthLength(PRUint32 len)
 }
 
 unsigned char *
-DER_StoreHeader(unsigned char *buf, unsigned int code, PRUint32 len)
+DER_StoreHeader(unsigned char *buf, unsigned int code, uint32 len)
 {
     unsigned char b[4];
 
@@ -105,10 +105,10 @@ DER_StoreHeader(unsigned char *buf, unsigned int code, PRUint32 len)
 
 /*
  * XXX This should be rewritten, generalized, to take a long instead
- * of a PRInt32.
+ * of an int32.
  */
 SECStatus
-DER_SetInteger(PRArenaPool *arena, SECItem *it, PRInt32 i)
+DER_SetInteger(PRArenaPool *arena, SECItem *it, int32 i)
 {
     unsigned char bb[4];
     unsigned len;
@@ -156,10 +156,10 @@ DER_SetInteger(PRArenaPool *arena, SECItem *it, PRInt32 i)
 
 /*
  * XXX This should be rewritten, generalized, to take an unsigned long instead
- * of a PRUint32.
+ * of a uint32.
  */
 SECStatus
-DER_SetUInteger(PRArenaPool *arena, SECItem *it, PRUint32 ui)
+DER_SetUInteger(PRArenaPool *arena, SECItem *it, uint32 ui)
 {
     unsigned char bb[5];
     int len;

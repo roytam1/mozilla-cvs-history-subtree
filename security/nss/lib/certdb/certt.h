@@ -578,15 +578,13 @@ struct CERTIssuerAndSNStr {
 #define KU_KEY_AGREEMENT		(0x08)  /* bit 4 */
 #define KU_KEY_CERT_SIGN		(0x04)  /* bit 5 */
 #define KU_CRL_SIGN			(0x02)  /* bit 6 */
-#define KU_ENCIPHER_ONLY		(0x01)  /* bit 7 */
 #define KU_ALL				(KU_DIGITAL_SIGNATURE | \
 					 KU_NON_REPUDIATION | \
 					 KU_KEY_ENCIPHERMENT | \
 					 KU_DATA_ENCIPHERMENT | \
 					 KU_KEY_AGREEMENT | \
 					 KU_KEY_CERT_SIGN | \
-					 KU_CRL_SIGN | \
-					 KU_ENCIPHER_ONLY)
+					 KU_CRL_SIGN)
 
 /* This value will not occur in certs.  It is used internally for the case
  * when the key type is not know ahead of time and either key agreement or
@@ -620,10 +618,7 @@ struct CERTBasicConstraintsStr {
 /* Maximum length of a certificate chain */
 #define CERT_MAX_CERT_CHAIN 20
 
-#define CERT_MAX_SERIAL_NUMBER_BYTES  20    /* from RFC 3280 */
-#define CERT_MAX_DN_BYTES             4096  /* arbitrary */
-
-/* x.509 v3 Reason Flags, used in CRLDistributionPoint Extension */
+/* x.509 v3 Reason Falgs, used in CRLDistributionPoint Extension */
 #define RF_UNUSED			(0x80)	/* bit 0 */
 #define RF_KEY_COMPROMISE		(0x40)  /* bit 1 */
 #define RF_CA_COMPROMISE		(0x20)  /* bit 2 */

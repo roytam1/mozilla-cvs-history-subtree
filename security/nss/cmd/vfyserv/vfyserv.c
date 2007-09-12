@@ -371,10 +371,10 @@ client_main(unsigned short      port,
 	PRInt32     rv;
 	PRNetAddr	addr;
 	PRHostEnt   hostEntry;
-	char        buffer[PR_NETDB_BUF_SIZE];
+	char        buffer[256];
 
 	/* Setup network connection. */
-	prStatus = PR_GetHostByName(hostName, buffer, sizeof(buffer), &hostEntry);
+	prStatus = PR_GetHostByName(hostName, buffer, 256, &hostEntry);
 	if (prStatus != PR_SUCCESS) {
 		exitErr("PR_GetHostByName");
 	}

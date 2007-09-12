@@ -65,12 +65,22 @@ const SEC_ASN1Template CERT_NameConstraintSubtreeSubTemplate[] = {
     { SEC_ASN1_SEQUENCE_OF, 0, SEC_AnyTemplate }
 };
 
+
+const SEC_ASN1Template CERT_NameConstraintSubtreePermitedTemplate[] = {
+    { SEC_ASN1_CONTEXT_SPECIFIC | 0, 0, CERT_NameConstraintSubtreeSubTemplate }
+};
+
+const SEC_ASN1Template CERT_NameConstraintSubtreeExcludedTemplate[] = {
+    { SEC_ASN1_CONTEXT_SPECIFIC | 1, 0, CERT_NameConstraintSubtreeSubTemplate }
+};
+
+
 static const SEC_ASN1Template CERTNameConstraintsTemplate[] = {
     { SEC_ASN1_SEQUENCE, 0, NULL, sizeof(CERTNameConstraints) },
-    { SEC_ASN1_OPTIONAL | SEC_ASN1_CONSTRUCTED | SEC_ASN1_CONTEXT_SPECIFIC | 0, 
+    { SEC_ASN1_OPTIONAL | SEC_ASN1_CONTEXT_SPECIFIC | 0, 
           offsetof(CERTNameConstraints, DERPermited), 
 	  CERT_NameConstraintSubtreeSubTemplate},
-    { SEC_ASN1_OPTIONAL | SEC_ASN1_CONSTRUCTED | SEC_ASN1_CONTEXT_SPECIFIC | 1, 
+    { SEC_ASN1_OPTIONAL | SEC_ASN1_CONTEXT_SPECIFIC | 1, 
           offsetof(CERTNameConstraints, DERExcluded), 
 	  CERT_NameConstraintSubtreeSubTemplate},
     { 0, }
@@ -1613,15 +1623,12 @@ CERT_CompareNameSpace(CERTCertificate  *cert,
  		      PRArenaPool      *reqArena,
  		      CERTCertificate **pBadCert)
 {
-    SECStatus            rv = SECSuccess;
+    SECStatus            rv;
     CERTNameConstraints  *constraints;
     CERTGeneralName      *currentName;
     int                  count = 0;
     CERTCertificate      *badCert = NULL;
-
-    /* If no names to check, then no names can be bad. */
-    if (!namesList)
-    	goto done;
+    
     rv = CERT_FindNameConstraintsExten(reqArena, cert, &constraints);
     if (rv != SECSuccess) {
 	count = -1;

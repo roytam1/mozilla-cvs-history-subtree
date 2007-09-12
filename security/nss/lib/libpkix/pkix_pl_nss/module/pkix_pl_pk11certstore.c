@@ -11,15 +11,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the PKIX-C library.
+ * The Original Code is the Netscape security libraries.
  *
  * The Initial Developer of the Original Code is
- * Sun Microsystems, Inc.
- * Portions created by the Initial Developer are
- * Copyright 2004-2007 Sun Microsystems, Inc.  All Rights Reserved.
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1994-2000
+ * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Sun Microsystems, Inc.
+ *   Sun Microsystems
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -75,37 +75,23 @@ pkix_pl_Pk11CertStore_CheckTrust(
         PKIX_Boolean *pTrusted,
         void *plContext)
 {
+        CERTCertTrust nssTrusted;
         SECStatus rv = SECFailure;
         PKIX_Boolean trusted = PKIX_FALSE;
-        SECCertUsage certUsage = 0;
-        SECCertificateUsage certificateUsage;
-        unsigned int requiredFlags;
-        SECTrustType trustType;
-        CERTCertTrust trust;
+        PKIX_UInt32 trustedValues = 0;
 
         PKIX_ENTER(CERTSTORE, "pkix_pl_Pk11CertStore_CheckTrust");
         PKIX_NULLCHECK_THREE(store, cert, pTrusted);
         PKIX_NULLCHECK_ONE(cert->nssCert);
 
-        certificateUsage = ((PKIX_PL_NssContext*)plContext)->certificateUsage;
+        trustedValues = CERTDB_TRUSTED_CA | CERTDB_VALID_CA;
 
-        /* ensure we obtained a single usage bit only */
-        PORT_Assert(!(certificateUsage & (certificateUsage - 1)));
-
-        /* convert SECertificateUsage (bit mask) to SECCertUsage (enum) */
-        while (0 != (certificateUsage = certificateUsage >> 1)) { certUsage++; }
-
-        rv = CERT_TrustFlagsForCACertUsage(certUsage, &requiredFlags, &trustType);
-        if (rv != SECSuccess) {
-                requiredFlags = 0;
-                trustType = trustSSL;
-        }
-
-        rv = CERT_GetCertTrust(cert->nssCert, &trust);
-        if (rv == SECSuccess) {
-                unsigned int certFlags;
-                certFlags = SEC_GET_TRUST_FLAGS((&trust), trustType);
-                if ((certFlags & requiredFlags) == requiredFlags) {
+        PKIX_CERT_DEBUG("\t\tCalling CERT_GetCertTrust).\n");
+        rv = CERT_GetCertTrust(cert->nssCert, &nssTrusted);
+        if (SECSuccess == rv) {
+                if (nssTrusted.sslFlags & trustedValues ||
+                    nssTrusted.emailFlags & trustedValues ||
+                    nssTrusted.objectSigningFlags & trustedValues) {
                         trusted = PKIX_TRUE;
                 }
         }
@@ -205,7 +191,7 @@ pkix_pl_Pk11CertStore_CertQuery(
                 arena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
                 if (arena) {
 
-                        PKIX_CHECK(pkix_pl_X500Name_GetDERName
+                        PKIX_CHECK(pkix_pl_X500Name_GetSECName
                                 (subjectName, arena, &nameItem, plContext),
                                 PKIX_X500NAMEGETSECNAMEFAILED);
 
@@ -393,7 +379,7 @@ pkix_pl_Pk11CertStore_CrlQuery(
                         (PKIX_PL_Object **)&issuer,
                         plContext),
                         PKIX_LISTGETITEMFAILED);
-                    PKIX_CHECK(pkix_pl_X500Name_GetDERName
+                    PKIX_CHECK(pkix_pl_X500Name_GetSECName
                         (issuer, arena, &nameItem, plContext),
                         PKIX_X500NAMEGETSECNAMEFAILED);
                     if (nameItem) {
@@ -420,7 +406,7 @@ pkix_pl_Pk11CertStore_CrlQuery(
                             PKIX_ERROR(PKIX_FETCHINGCACHEDCRLFAILED);
                         }
 
-                        while (crls != NULL && *crls != NULL) {
+                        while (*crls != NULL) {
 
                             PKIX_CHECK_ONLY_FATAL
                                 (pkix_pl_CRL_CreateWithSignedCRL

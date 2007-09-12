@@ -11,15 +11,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the PKIX-C library.
+ * The Original Code is the Netscape security libraries.
  *
  * The Initial Developer of the Original Code is
- * Sun Microsystems, Inc.
- * Portions created by the Initial Developer are
- * Copyright 2004-2007 Sun Microsystems, Inc.  All Rights Reserved.
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1994-2000
+ * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Sun Microsystems, Inc.
+ *   Sun Microsystems
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -48,7 +48,7 @@
 static int box1 = 0, box2 = 0, box3 = 0;
 static PKIX_PL_Mutex *mutex;
 static PRCondVar *cv;
-static void *plContext = NULL;
+void *plContext = NULL;
 
 static void consumer(/* ARGSUSED */ void* arg) {
         PRStatus status = PR_SUCCESS;
@@ -108,7 +108,7 @@ static void producer(void* arg) {
         }
 }
 
-int test_mutex2(int argc, char *argv[]) {
+int main(int argc, char *argv[]) {
 
         PRThread *consThread, *prodThread, *prodThread2, *prodThread3;
         int x = 10, y = 20, z = 30;

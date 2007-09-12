@@ -55,7 +55,6 @@
 #include "nssbase.h"
 #include "pkixt.h"
 #include "pkix.h"
-#include "pkix_tools.h"
 
 #include "pki3hack.h"
 #include "certi.h"
@@ -519,17 +518,12 @@ loser:
 
     if (SECSuccess == rv) {
 	pkixError = PKIX_Initialize
-	    (PKIX_FALSE, PKIX_FALSE, PKIX_MAJOR_VERSION, PKIX_MINOR_VERSION,
+	    (PKIX_FALSE, PKIX_TRUE, PKIX_MAJOR_VERSION, PKIX_MINOR_VERSION,
 	    PKIX_MINOR_VERSION, &actualMinorVersion, &plContext);
 
 	if (pkixError != NULL) {
 	    rv = SECFailure;
-	} else {
-            char *ev = getenv("NSS_ENABLE_PKIX_VERIFY");
-            if (ev && ev[0]) {
-                cert_SetPKIXValidation(PR_TRUE);
-            }
-        }
+	}
     }
 
     return rv;
@@ -811,7 +805,6 @@ NSS_Shutdown(void)
     }
     ShutdownCRLCache();
     OCSP_ShutdownCache();
-    PKIX_Shutdown(plContext);
     SECOID_Shutdown();
     status = STAN_Shutdown();
     cert_DestroySubjectKeyIDHashTable();

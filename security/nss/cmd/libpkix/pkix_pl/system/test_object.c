@@ -11,15 +11,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the PKIX-C library.
+ * The Original Code is the Netscape security libraries.
  *
  * The Initial Developer of the Original Code is
- * Sun Microsystems, Inc.
- * Portions created by the Initial Developer are
- * Copyright 2004-2007 Sun Microsystems, Inc.  All Rights Reserved.
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1994-2000
+ * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Sun Microsystems, Inc.
+ *   Sun Microsystems
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -44,7 +44,7 @@
 #include "testutil.h"
 #include "testutil_nss.h"
 
-static void *plContext = NULL;
+void *plContext = NULL;
 
 static PKIX_Error *
 destructor(
@@ -111,7 +111,7 @@ comparator(
 }
 
 
-static PKIX_Error *
+PKIX_Error *
 hashcodeCallback(
         PKIX_PL_Object *object,
         PKIX_UInt32 *pValue,
@@ -142,7 +142,7 @@ equalsCallback(
         return (NULL);
 }
 
-static void
+void
 createObjects(
         PKIX_PL_Object **obj,
         PKIX_PL_Object **obj2,
@@ -199,7 +199,7 @@ cleanup:
 }
 
 
-static void
+void
 testGetType(
             PKIX_PL_Object *obj,
             PKIX_PL_Object *obj2,
@@ -230,7 +230,7 @@ cleanup:
         PKIX_TEST_RETURN();
 }
 
-static void
+void
 testCompare(
             PKIX_PL_Object *obj2,
             PKIX_PL_Object *obj4)
@@ -261,7 +261,7 @@ cleanup:
 }
 
 
-static void
+void
 testDestroy(
             PKIX_PL_Object *obj,
             PKIX_PL_Object *obj2,
@@ -280,7 +280,7 @@ cleanup:
         PKIX_TEST_RETURN();
 }
 
-int test_object(int argc, char *argv[]) {
+int main(int argc, char *argv[]) {
 
         PKIX_PL_Object *obj, *obj2, *obj3, *obj4;
         PKIX_UInt32 actualMinorVersion;

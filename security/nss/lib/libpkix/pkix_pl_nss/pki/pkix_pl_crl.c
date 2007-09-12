@@ -11,15 +11,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the PKIX-C library.
+ * The Original Code is the Netscape security libraries.
  *
  * The Initial Developer of the Original Code is
- * Sun Microsystems, Inc.
- * Portions created by the Initial Developer are
- * Copyright 2004-2007 Sun Microsystems, Inc.  All Rights Reserved.
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1994-2000
+ * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Sun Microsystems, Inc.
+ *   Sun Microsystems
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -712,8 +712,6 @@ PKIX_PL_CRL_VerifyUpdateTime(
         PRTime lastUpdate;
         SECStatus status;
         CERTCrl *nssCrl = NULL;
-        SECItem *nextUpdateDer = NULL;
-        PKIX_Boolean haveNextUpdate = PR_FALSE;
 
         PKIX_ENTER(CRL, "PKIX_PL_CRL_VerifyUpdateTime");
         PKIX_NULLCHECK_FOUR(crl, crl->nssSignedCrl, date, pResult);
@@ -726,27 +724,19 @@ PKIX_PL_CRL_VerifyUpdateTime(
                 PKIX_ERROR(PKIX_DERDECODETIMECHOICEFAILED);
         }
 
-        /* nextUpdate can be NULL. Checking before using it */
-        nextUpdateDer = &nssCrl->nextUpdate;
-        if (nextUpdateDer->data && nextUpdateDer->len) {
-                haveNextUpdate = PR_TRUE;
-                status = DER_DecodeTimeChoice(&nextUpdate, nextUpdateDer);
-                if (status != SECSuccess) {
-                        PKIX_ERROR(PKIX_DERDECODETIMECHOICEFORNEXTUPDATEFAILED);
-                }
+        PKIX_CRL_DEBUG("\t\tCalling DER_DecodeTimeChoice on nextUpdate\n");
+        status = DER_DecodeTimeChoice(&nextUpdate, &(nssCrl->nextUpdate));
+        if (status != SECSuccess) {
+                PKIX_ERROR(PKIX_DERDECODETIMECHOICEFORNEXTUPDATEFAILED);
         }
 
+        PKIX_CRL_DEBUG("\t\tCalling DER_DecodeTimeChoice on lastUpdate\n");
         status = DER_DecodeTimeChoice(&lastUpdate, &(nssCrl->lastUpdate));
         if (status != SECSuccess) {
                 PKIX_ERROR(PKIX_DERDECODETIMECHOICEFORLASTUPDATEFAILED);
         }
 
-        if (!haveNextUpdate || nextUpdate < timeToCheck) {
-                *pResult = PKIX_FALSE;
-                goto cleanup;
-        }
-
-        if (lastUpdate <= timeToCheck) {
+        if (lastUpdate <= timeToCheck && nextUpdate > timeToCheck) {
                 *pResult = PKIX_TRUE;
         } else {
                 *pResult = PKIX_FALSE;
@@ -975,8 +965,8 @@ PKIX_PL_CRL_GetIssuer(
 {
         PKIX_PL_String *crlString = NULL;
         PKIX_PL_X500Name *issuer = NULL;
-        SECItem  *derIssuerName = NULL;
-        CERTName *issuerName = NULL;
+        char *utf8Issuer = NULL;
+        PKIX_UInt32 utf8Length;
 
         PKIX_ENTER(CRL, "PKIX_PL_CRL_GetIssuer");
         PKIX_NULLCHECK_THREE(crl, crl->nssSignedCrl, pCRLIssuer);
@@ -988,16 +978,27 @@ PKIX_PL_CRL_GetIssuer(
 
                 if (crl->issuer == NULL) {
 
-                        issuerName = &crl->nssSignedCrl->crl.name;
-                        derIssuerName = &crl->nssSignedCrl->crl.derName;
+                        PKIX_CRL_DEBUG("\t\tCalling CERT_NameToAscii\n");
+                        utf8Issuer = CERT_NameToAscii
+                                (&(crl->nssSignedCrl->crl.name));
 
-                        PKIX_CHECK(
-                            PKIX_PL_X500Name_CreateFromCERTName(derIssuerName,
-                                                                issuerName,
-                                                                &issuer,
-                                                                plContext),
-                            PKIX_X500NAMECREATEFROMCERTNAMEFAILED);
-                        
+                        PKIX_CRL_DEBUG("\t\tCalling PL_strlen\n");
+                        utf8Length = PL_strlen(utf8Issuer);
+
+                        PKIX_CHECK(PKIX_PL_String_Create
+                                    (PKIX_UTF8,
+                                    utf8Issuer,
+                                    utf8Length,
+                                    &crlString,
+                                    plContext),
+                                    PKIX_UNABLETOCREATECRLSTRING);
+
+                        PKIX_CHECK(PKIX_PL_X500Name_Create
+                                    (crlString,
+                                    &issuer,
+                                    plContext),
+                                    PKIX_UNABLETOCREATEISSUER);
+
                         /* save a cached copy in case it is asked for again */
                         crl->issuer = issuer;
                 }
@@ -1011,6 +1012,12 @@ PKIX_PL_CRL_GetIssuer(
         *pCRLIssuer = crl->issuer;
 
 cleanup:
+
+        if (utf8Issuer != NULL) {
+                PKIX_CRL_DEBUG("\t\tCalling PORT_Free\n");
+                PR_Free(utf8Issuer);
+                utf8Issuer = NULL;
+        }
 
         PKIX_DECREF(crlString);
 

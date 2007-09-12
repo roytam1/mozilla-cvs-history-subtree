@@ -11,15 +11,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the PKIX-C library.
+ * The Original Code is the Netscape security libraries.
  *
  * The Initial Developer of the Original Code is
- * Sun Microsystems, Inc.
- * Portions created by the Initial Developer are
- * Copyright 2004-2007 Sun Microsystems, Inc.  All Rights Reserved.
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1994-2000
+ * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Sun Microsystems, Inc.
+ *   Sun Microsystems
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -44,9 +44,9 @@
 #include "testutil.h"
 #include "testutil_nss.h"
 
-static void *plContext = NULL;
+void *plContext = NULL;
 
-static void
+void
 createLists(PKIX_List **list, PKIX_List **list2)
 {
         PKIX_TEST_STD_VARS();
@@ -59,7 +59,7 @@ cleanup:
         PKIX_TEST_RETURN();
 }
 
-static void
+void
 testReverseList(void)
 {
         PKIX_List *firstList = NULL;
@@ -176,7 +176,7 @@ cleanup:
         PKIX_TEST_RETURN();
 }
 
-static void
+void
 testZeroLengthList(PKIX_List *list)
 {
         PKIX_UInt32 length;
@@ -257,7 +257,7 @@ cleanup:
         PKIX_TEST_RETURN();
 }
 
-static void
+void
 testGetLength(PKIX_List *list)
 {
         PKIX_UInt32 length;
@@ -275,7 +275,7 @@ cleanup:
         PKIX_TEST_RETURN();
 }
 
-static void
+void
 testGetSetItem(
         PKIX_List *list,
         char *testItemString,
@@ -396,7 +396,7 @@ cleanup:
         PKIX_TEST_RETURN();
 }
 
-static void
+void
 testInsertItem(
         PKIX_List *list,
         PKIX_PL_String *testItem,
@@ -441,7 +441,7 @@ cleanup:
         PKIX_TEST_RETURN();
 }
 
-static void
+void
 testAppendItem(PKIX_List *list, PKIX_PL_String *testItem)
 {
         PKIX_UInt32 length2;
@@ -474,7 +474,7 @@ cleanup:
         PKIX_TEST_RETURN();
 }
 
-static void
+void
 testNestedLists(
         PKIX_List *list,
         PKIX_List *list2,
@@ -533,7 +533,7 @@ cleanup:
         PKIX_TEST_RETURN();
 }
 
-static void
+void
 testDeleteItem(
         PKIX_List *list,
         PKIX_List *list2,
@@ -659,7 +659,7 @@ cleanup:
 
 #if testContainsFunction
 /* This test requires pkix_List_Contains to be in nss.def */
-static void
+void
 testContains(void)
 {
 
@@ -743,7 +743,7 @@ cleanup:
 }
 #endif
 
-static void
+void
 testErrorHandling(void)
 {
         PKIX_List *emptylist = NULL;
@@ -779,7 +779,7 @@ cleanup:
         PKIX_TEST_RETURN();
 }
 
-static void
+void
 testDestroy(PKIX_List *list)
 {
         PKIX_TEST_STD_VARS();
@@ -791,7 +791,7 @@ cleanup:
         PKIX_TEST_RETURN();
 }
 
-int test_list(int argc, char *argv[]) {
+int main(int argc, char *argv[]) {
 
         PKIX_List *list, *list2;
         PKIX_PL_String *testItem, *testItem2, *testItem3;

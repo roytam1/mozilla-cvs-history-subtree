@@ -271,7 +271,7 @@ create_pk7 (char *dir, char *keyName, int *keyType)
 
     if (cert == NULL) {
 	SECU_PrintError ( PROGRAM_NAME,
-	    "Cannot find the cert \"%s\"", keyName);
+	    "the cert \"%s\" does not exist in the database", keyName);
 	return -1;
     }
 

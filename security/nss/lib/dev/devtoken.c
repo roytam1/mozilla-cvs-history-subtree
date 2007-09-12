@@ -57,8 +57,6 @@ static const char CVS_ID[] = "@(#) $RCSfile$ $Revision$ $Date$";
 #endif
 
 extern const NSSError NSS_ERROR_NOT_FOUND;
-extern const NSSError NSS_ERROR_INVALID_ARGUMENT;
-extern const NSSError NSS_ERROR_PKCS11;
 
 /* The number of object handles to grab during each call to C_FindObjects */
 #define OBJECT_STACK_SIZE 16
@@ -99,9 +97,7 @@ nssToken_Create (
     /* Get token information */
     ckrv = CKAPI(epv)->C_GetTokenInfo(slotID, &tokenInfo);
     if (ckrv != CKR_OK) {
-	/* use the error stack to pass the PKCS #11 error out  */
-	nss_SetError(ckrv);
-	nss_SetError(NSS_ERROR_PKCS11);
+	/* set an error here, eh? */
 	goto loser;
     }
     /* Grab the slot description from the PKCS#11 fixed-length buffer */
@@ -296,13 +292,7 @@ nssToken_DeleteStoredObject (
     if (createdSession) {
 	nssSession_Destroy(session);
     }
-    status = PR_SUCCESS;
-    if (ckrv != CKR_OK) {
-	status = PR_FAILURE;
-	/* use the error stack to pass the PKCS #11 error out  */
-	nss_SetError(ckrv);
-	nss_SetError(NSS_ERROR_PKCS11);
-    }
+    status = (ckrv == CKR_OK) ? PR_SUCCESS : PR_FAILURE;
     return status;
 }
 
@@ -323,8 +313,7 @@ import_object (
     if (nssCKObject_IsTokenObjectTemplate(objectTemplate, otsize)) {
 	if (sessionOpt) {
 	    if (!nssSession_IsReadWrite(sessionOpt)) {
-		nss_SetError(NSS_ERROR_INVALID_ARGUMENT);
-		return NULL;
+		return CK_INVALID_HANDLE;
 	    } else {
 		session = sessionOpt;
 	    }
@@ -338,8 +327,7 @@ import_object (
 	session = (sessionOpt) ? sessionOpt : tok->defaultSession;
     }
     if (session == NULL) {
-	nss_SetError(NSS_ERROR_INVALID_ARGUMENT);
-	return NULL;
+	return CK_INVALID_HANDLE;
     }
     nssSession_EnterMonitor(session);
     ckrv = CKAPI(epv)->C_CreateObject(session->handle, 
@@ -348,9 +336,6 @@ import_object (
     nssSession_ExitMonitor(session);
     if (ckrv == CKR_OK) {
 	object = nssCryptokiObject_Create(tok, session, handle);
-    } else {
-	nss_SetError(ckrv);
-	nss_SetError(NSS_ERROR_PKCS11);
     }
     if (createdSession) {
 	nssSession_Destroy(session);
@@ -500,8 +485,6 @@ loser:
 	nss_SetError(NSS_ERROR_NOT_FOUND);
 	if (statusOpt) *statusOpt = PR_SUCCESS;
     } else {
-	nss_SetError(ckrv);
-	nss_SetError(NSS_ERROR_PKCS11);
 	if (statusOpt) *statusOpt = PR_FAILURE;
     }
     return (nssCryptokiObject **)NULL;
@@ -754,7 +737,7 @@ NSS_IMPLEMENT nssCryptokiObject **
 nssToken_FindCertificatesByNickname (
   NSSToken *token,
   nssSession *sessionOpt,
-  const NSSUTF8 *name,
+  NSSUTF8 *name,
   nssTokenSearchType searchType,
   PRUint32 maximumOpt,
   PRStatus *statusOpt

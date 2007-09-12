@@ -11,15 +11,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the PKIX-C library.
+ * The Original Code is the Netscape security libraries.
  *
  * The Initial Developer of the Original Code is
- * Sun Microsystems, Inc.
- * Portions created by the Initial Developer are
- * Copyright 2004-2007 Sun Microsystems, Inc.  All Rights Reserved.
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1994-2000
+ * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Sun Microsystems, Inc.
+ *   Sun Microsystems
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -66,9 +66,8 @@
 #include "testutil.h"
 #include "testutil_nss.h"
 
-static void *plContext = NULL;
+void *plContext = NULL;
 
-#undef pkixTempResult
 #define PERF_DECREF(obj) \
         { \
                 PKIX_Error *pkixTempResult = NULL; \
@@ -79,7 +78,7 @@ static void *plContext = NULL;
                 } \
         }
 
-static void finish(char* message, int code);
+void finish(char* message, int code);
 
 typedef struct ThreadDataStr tData;
 
@@ -104,7 +103,7 @@ char *logLevels[] = {
         "Trace"
 };
 
-static PKIX_Error *loggerCallback(
+PKIX_Error *loggerCallback(
         PKIX_Logger *logger,
         PKIX_PL_String *message,
         PKIX_UInt32 logLevel,
@@ -126,7 +125,7 @@ static PKIX_Error *loggerCallback(
 
 #endif /* PKIX_LOGGER_ON */
 
-static void ThreadEntry(void* data)
+void ThreadEntry(void* data)
 {
         tData* tdata = (tData*) data;
         PRIntervalTime duration = tdata->duration;
@@ -245,7 +244,7 @@ static void ThreadEntry(void* data)
 
 }
 
-static void
+void
 Test(
         CERTCertificate* anchor,
         char* eecertName,
@@ -304,21 +303,20 @@ Test(
 }
 
 
-static void finish(char* message, int code)
+void finish(char* message, int code)
 {
         (void) printf(message);
         exit(code);
 }
 
-static void usage(char* progname)
+void usage(char* progname)
 {
         (void) printf("Usage : %s <duration> <threads> <anchorNickname> "
                 "<eecertNickname>\n\n", progname);
         finish("", 0);
 }
 
-int
-libpkix_buildthreads(int argc, char** argv)
+int main(int argc, char** argv)
 {
         CERTCertDBHandle *handle = NULL;
         CERTCertificate* eecert = NULL;

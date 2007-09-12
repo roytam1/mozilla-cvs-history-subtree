@@ -11,15 +11,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the PKIX-C library.
+ * The Original Code is the Netscape security libraries.
  *
  * The Initial Developer of the Original Code is
- * Sun Microsystems, Inc.
- * Portions created by the Initial Developer are
- * Copyright 2004-2007 Sun Microsystems, Inc.  All Rights Reserved.
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1994-2000
+ * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Sun Microsystems, Inc.
+ *   Sun Microsystems
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -44,9 +44,8 @@
 #include "testutil.h"
 #include "testutil_nss.h"
 
-static void *plContext = NULL;
+void *plContext = NULL;
 
-static
 void createErrors(
         PKIX_Error **error,
         PKIX_Error **error2,
@@ -54,12 +53,30 @@ void createErrors(
         PKIX_Error **error5,
         PKIX_Error **error6,
         PKIX_Error **error7,
+        char *descChar,
+        char *descChar2,
         char *infoChar)
 
 {
+        PKIX_PL_String *descString = NULL;
+        PKIX_PL_String *desc2String = NULL;
         PKIX_PL_String *infoString = NULL;
 
         PKIX_TEST_STD_VARS();
+
+        PKIX_TEST_EXPECT_NO_ERROR(PKIX_PL_String_Create(
+                                        PKIX_ESCASCII,
+                                        descChar,
+                                        PL_strlen(descChar),
+                                        &descString,
+                                        plContext));
+
+        PKIX_TEST_EXPECT_NO_ERROR(PKIX_PL_String_Create(
+                                        PKIX_ESCASCII,
+                                        descChar2,
+                                        PL_strlen(descChar2),
+                                        &desc2String,
+                                        plContext));
 
         PKIX_TEST_EXPECT_NO_ERROR(PKIX_PL_String_Create(
                                         PKIX_ESCASCII,
@@ -68,19 +85,15 @@ void createErrors(
                                         &infoString,
                                         plContext));
 
-        PKIX_TEST_EXPECT_NO_ERROR(PKIX_Error_Create
-                                  (PKIX_MEM_ERROR,
-                                   NULL,
-                                   NULL,
-                                   PKIX_TESTANOTHERERRORMESSAGE,
-                                   error2,
-                                   plContext));
+        PKIX_TEST_EXPECT_NO_ERROR
+                (PKIX_Error_Create
+                (PKIX_MEM_ERROR, NULL, NULL, desc2String, error2, plContext));
 
         PKIX_TEST_EXPECT_NO_ERROR(PKIX_Error_Create
                                     (PKIX_OBJECT_ERROR,
                                     *error2,
                                     (PKIX_PL_Object*)infoString,
-                                     PKIX_TESTERRORMESSAGE,
+                                    descString,
                                     error,
                                     plContext));
 
@@ -88,7 +101,7 @@ void createErrors(
                                     (PKIX_OBJECT_ERROR,
                                     *error2,
                                     (PKIX_PL_Object*)infoString,
-                                     PKIX_TESTERRORMESSAGE,
+                                    descString,
                                     error3,
                                     plContext));
 
@@ -96,7 +109,7 @@ void createErrors(
                                     (PKIX_OBJECT_ERROR,
                                     NULL,
                                     (PKIX_PL_Object*)infoString,
-                                    0,
+                                    NULL,
                                     error5,
                                     plContext));
 
@@ -104,7 +117,7 @@ void createErrors(
                                     (PKIX_MEM_ERROR,
                                     *error5,
                                     (PKIX_PL_Object*)infoString,
-                                    0,
+                                    NULL,
                                     error6,
                                     plContext));
 
@@ -112,18 +125,19 @@ void createErrors(
                                     (PKIX_OBJECT_ERROR,
                                     *error6,
                                     (PKIX_PL_Object*)infoString,
-                                    0,
+                                    NULL,
                                     error7,
                                     plContext));
 
 cleanup:
 
+        PKIX_TEST_DECREF_AC(descString);
+        PKIX_TEST_DECREF_AC(desc2String);
         PKIX_TEST_DECREF_AC(infoString);
 
         PKIX_TEST_RETURN();
 }
 
-static
 void testGetErrorCode(PKIX_Error *error, PKIX_Error *error2){
 
         PKIX_UInt32 code;
@@ -157,7 +171,6 @@ cleanup:
 
 }
 
-static
 void testGetDescription(
         PKIX_Error *error,
         PKIX_Error *error2,
@@ -213,7 +226,6 @@ cleanup:
         PKIX_TEST_RETURN();
 }
 
-static
 void testGetCause(PKIX_Error *error, PKIX_Error *error2, PKIX_Error *error3){
 
         PKIX_Error *error4 = NULL;
@@ -263,7 +275,6 @@ cleanup:
 
 }
 
-static
 void testGetSupplementaryInfo(PKIX_Error *error, char *infoChar){
 
         PKIX_PL_Object *targetString = NULL;
@@ -290,7 +301,7 @@ cleanup:
 
 }
 
-static void
+void
 testPrimitiveError(void)
 {
         PKIX_PL_String *targetString = NULL;
@@ -323,7 +334,7 @@ cleanup:
         PKIX_TEST_RETURN();
 }
 
-static void
+void
 testChaining(PKIX_Error *error7)
 {
         PKIX_PL_String *targetString = NULL;
@@ -364,7 +375,7 @@ cleanup:
         PKIX_TEST_RETURN();
 }
 
-static void
+void
 testDestroy(PKIX_Error *error)
 {
         PKIX_TEST_STD_VARS();
@@ -376,7 +387,7 @@ cleanup:
         PKIX_TEST_RETURN();
 }
 
-int test_error(int argc, char *argv[]) {
+int main(int argc, char *argv[]) {
 
         PKIX_Error *error, *error2, *error3, *error5, *error6, *error7;
         char *descChar = "Error Message";
@@ -409,6 +420,8 @@ int test_error(int argc, char *argv[]) {
                 &error5,
                 &error6,
                 &error7,
+                descChar,
+                descChar2,
                 infoChar);
 
         PKIX_TEST_EQ_HASH_TOSTR_DUP

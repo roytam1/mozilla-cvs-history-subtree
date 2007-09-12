@@ -11,15 +11,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the PKIX-C library.
+ * The Original Code is the Netscape security libraries.
  *
  * The Initial Developer of the Original Code is
- * Sun Microsystems, Inc.
- * Portions created by the Initial Developer are
- * Copyright 2004-2007 Sun Microsystems, Inc.  All Rights Reserved.
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1994-2000
+ * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Sun Microsystems, Inc.
+ *   Sun Microsystems
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -44,7 +44,7 @@
 #include "testutil.h"
 #include "testutil_nss.h"
 
-static void *plContext = NULL;
+void *plContext = NULL;
 
 static void
 testDestroy(void *goodObject, void *equalObject, void *diffObject)
@@ -63,7 +63,6 @@ cleanup:
 
 }
 
-static
 void testGetValidateResult(
         PKIX_BuildResult *goodObject,
         PKIX_BuildResult *equalObject){
@@ -94,7 +93,6 @@ cleanup:
         PKIX_TEST_RETURN();
 }
 
-static
 void testGetCertChain(
         PKIX_BuildResult *goodObject,
         PKIX_BuildResult *equalObject){
@@ -125,12 +123,11 @@ cleanup:
         PKIX_TEST_RETURN();
 }
 
-static
 void printUsage(char *pName){
         printf("\nUSAGE: %s <central-data-dir>\n\n", pName);
 }
 
-int test_buildresult(int argc, char *argv[]) {
+int main(int argc, char *argv[]) {
 
         PKIX_BuildResult *goodObject = NULL;
         PKIX_BuildResult *equalObject = NULL;

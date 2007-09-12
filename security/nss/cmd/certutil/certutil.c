@@ -68,7 +68,6 @@
 #include "secoid.h"
 #include "certdb.h"
 #include "nss.h"
-#include "certutil.h"
 
 #define MIN_KEY_BITS		512
 /* MAX_KEY_BITS should agree with MAX_RSA_MODULUS in freebl */
@@ -77,7 +76,21 @@
 
 #define GEN_BREAK(e) rv=e; break;
 
+
+extern SECKEYPrivateKey *CERTUTIL_GeneratePrivateKey(KeyType keytype,
+						     PK11SlotInfo *slot, 
+                                                     int rsasize,
+						     int publicExponent,
+						     char *noise,
+						     SECKEYPublicKey **pubkeyp,
+						     char *pqgFile,
+                                                     secuPWData *pwdata);
+
 char *progName;
+
+extern SECStatus
+AddExtensions(void *, const char *, const char *, PRBool, PRBool,
+              PRBool, PRBool, PRBool, PRBool);
 
 static CERTCertificateRequest *
 GetCertRequest(PRFileDesc *inFile, PRBool ascii)
@@ -193,20 +206,8 @@ AddCert(PK11SlotInfo *slot, CERTCertDBHandle *handle, char *name, char *trusts,
 
 	rv = CERT_ChangeCertTrust(handle, cert, trust);
 	if (rv != SECSuccess) {
-	    if (PORT_GetError() == SEC_ERROR_TOKEN_NOT_LOGGED_IN) {
-		rv = PK11_Authenticate(slot, PR_TRUE, pwdata);
-		if (rv != SECSuccess) {
-		    SECU_PrintError(progName, 
-			"could not authenticate to token or database");
-		    GEN_BREAK(SECFailure);
-		}
-		rv = CERT_ChangeCertTrust(handle, cert, trust);
-	    }
-	    if (rv != SECSuccess) {
-		SECU_PrintError(progName, 
-			"could not change trust on certificate");
-		GEN_BREAK(SECFailure);
-	    }
+	    SECU_PrintError(progName, "could not change trust on certificate");
+	    GEN_BREAK(SECFailure);
 	}
 
 	if ( emailcert ) {
@@ -226,7 +227,12 @@ static SECStatus
 CertReq(SECKEYPrivateKey *privk, SECKEYPublicKey *pubk, KeyType keyType,
         SECOidTag hashAlgTag, CERTName *subject, char *phone, int ascii, 
 	const char *emailAddrs, const char *dnsNames,
-        certutilExtnList extnList,
+        PRBool	keyUsage, 
+	PRBool  extKeyUsage,
+	PRBool  basicConstraint, 
+	PRBool  authKeyID,
+	PRBool  crlDistPoints, 
+	PRBool  nscpCertType,
         PRFileDesc *outFile)
 {
     CERTSubjectPublicKeyInfo *spki;
@@ -264,7 +270,8 @@ CertReq(SECKEYPrivateKey *privk, SECKEYPublicKey *pubk, KeyType keyType,
         PORT_FreeArena (arena, PR_FALSE);
 	return SECFailure;
     }
-    if (AddExtensions(extHandle, emailAddrs, dnsNames, extnList)
+    if (AddExtensions(extHandle, emailAddrs, dnsNames, keyUsage, extKeyUsage,
+                      basicConstraint, authKeyID, crlDistPoints, nscpCertType)
                   != SECSuccess) {
         PORT_FreeArena (arena, PR_FALSE);
         return SECFailure;
@@ -274,7 +281,7 @@ CertReq(SECKEYPrivateKey *privk, SECKEYPublicKey *pubk, KeyType keyType,
 
     /* Der encode the request */
     encoding = SEC_ASN1EncodeItem(arena, NULL, cr,
-                                  SEC_ASN1_GET(CERT_CertificateRequestTemplate));
+		  SEC_ASN1_GET(CERT_CertificateRequestTemplate));
     if (encoding == NULL) {
 	SECU_PrintError(progName, "der encoding of request failed");
 	return SECFailure;
@@ -307,7 +314,8 @@ CertReq(SECKEYPrivateKey *privk, SECKEYPublicKey *pubk, KeyType keyType,
 
 	name = CERT_GetCommonName(subject);
 	if (!name) {
-	    name = strdup("(not specified)");
+	    fprintf(stderr, "You must specify a common name\n");
+	    return SECFailure;
 	}
 
 	if (!phone)
@@ -356,8 +364,7 @@ CertReq(SECKEYPrivateKey *privk, SECKEYPublicKey *pubk, KeyType keyType,
 }
 
 static SECStatus 
-ChangeTrustAttributes(CERTCertDBHandle *handle, PK11SlotInfo *slot,
-			char *name, char *trusts, void *pwdata)
+ChangeTrustAttributes(CERTCertDBHandle *handle, char *name, char *trusts)
 {
     SECStatus rv;
     CERTCertificate *cert;
@@ -383,25 +390,10 @@ ChangeTrustAttributes(CERTCertDBHandle *handle, PK11SlotInfo *slot,
 	return SECFailure;
     }
 
-    /* CERT_ChangeCertTrust API does not have a way to pass in
-     * a context, so NSS can't prompt for the password if it needs to.
-     * check to see if the failure was token not logged in and 
-     * log in if need be. */
     rv = CERT_ChangeCertTrust(handle, cert, trust);
-    if (rv != SECSuccess) {
-	if (PORT_GetError() == SEC_ERROR_TOKEN_NOT_LOGGED_IN) {
-	    rv = PK11_Authenticate(slot, PR_TRUE, pwdata);
-	    if (rv != SECSuccess) {
-		SECU_PrintError(progName, 
-			"could not authenticate to token or database");
-		return SECFailure;
-	    }
-	    rv = CERT_ChangeCertTrust(handle, cert, trust);
-	}
-	if (rv != SECSuccess) {
-	    SECU_PrintError(progName, "unable to modify trust attributes");
-	    return SECFailure;
-	}
+    if (rv) {
+	SECU_PrintError(progName, "unable to modify trust attributes");
+	return SECFailure;
     }
     CERT_DestroyCertificate(cert);
 
@@ -616,9 +608,6 @@ ValidateCert(CERTCertDBHandle *handle, char *name, char *date,
 	    break;
 	case 'R':
 	    usage = certificateUsageEmailRecipient;
-	    break;
-	case 'J':
-	    usage = certificateUsageObjectSigner;
 	    break;
 	default:
 	    PORT_SetError (SEC_ERROR_INVALID_ARGS);
@@ -843,7 +832,7 @@ Usage(char *progName)
     FPS "\t%s -C [-c issuer-name | -x] -i cert-request-file -o cert-file\n"
 	"\t\t [-m serial-number] [-w warp-months] [-v months-valid]\n"
         "\t\t [-f pwfile] [-d certdir] [-P dbprefix] [-1] [-2] [-3] [-4] [-5]\n"
-	"\t\t [-6] [-7 emailAddrs] [-8 dns-names] [-a]\n",
+	"\t\t [-6] [-7 emailAddrs] [-8 dns-names]\n",
 	progName);
     FPS "\t%s -D -n cert-name [-d certdir] [-P dbprefix]\n", progName);
     FPS "\t%s -E -n cert-name -t trustargs [-d certdir] [-P dbprefix] [-a] [-i input]\n", 
@@ -955,8 +944,6 @@ static void LongUsage(char *progName)
 	"   -7 ");
     FPS "%-20s Create an dns subject alt name extension\n",
 	"   -8 ");
-    FPS "%-20s The input certificate request is encoded in ASCII (RFC1113)\n",
-	"   -a");
     FPS "\n");
 
     FPS "%-15s Generate a new key pair\n",
@@ -1166,7 +1153,6 @@ static void LongUsage(char *progName)
     FPS "%-25s S \t Email signer\n", "");
     FPS "%-25s R \t Email Recipient\n", "");   
     FPS "%-25s O \t OCSP status responder\n", "");   
-    FPS "%-25s J \t Object signer\n", "");   
     FPS "%-20s Cert database directory (default is ~/.netscape)\n",
 	"   -d certdir");
     FPS "%-20s Cert & Key database prefix\n",
@@ -1358,8 +1344,7 @@ SignCert(CERTCertDBHandle *handle, CERTCertificate *cert, PRBool selfsign,
     rv = SEC_DerSignData(arena, result, der.data, der.len, privKey, algID);
     if (rv != SECSuccess) {
 	fprintf (stderr, "Could not sign encoded certificate data.\n");
-	/* result allocated out of the arena, it will be freed
-	 * when the arena is freed */
+	PORT_Free(result);
 	result = NULL;
 	goto done;
     }
@@ -1387,7 +1372,12 @@ CreateCert(
 	const char *dnsNames,
 	PRBool  ascii,
 	PRBool  selfsign,
-	certutilExtnList extnList)
+	PRBool	keyUsage, 
+	PRBool  extKeyUsage,
+	PRBool  basicConstraint, 
+	PRBool  authKeyID,
+	PRBool  crlDistPoints, 
+	PRBool  nscpCertType)
 {
     void *	extHandle;
     SECItem *	certDER;
@@ -1423,7 +1413,8 @@ CreateCert(
 	    GEN_BREAK (SECFailure)
 	}
         
-        rv = AddExtensions(extHandle, emailAddrs, dnsNames, extnList);
+        rv = AddExtensions(extHandle, emailAddrs, dnsNames, keyUsage, extKeyUsage,
+                          basicConstraint, authKeyID, crlDistPoints, nscpCertType);
         if (rv != SECSuccess) {
 	    GEN_BREAK (SECFailure)
 	}
@@ -1494,7 +1485,7 @@ enum {
 };
 
 /*  Certutil options */
-enum certutilOpts {
+enum {
     opt_SSOPass = 0,
     opt_AddKeyUsageExt,
     opt_AddBasicConstraintExt,
@@ -1536,8 +1527,42 @@ enum certutilOpts {
     opt_NewPasswordFile
 };
 
-static const
-secuCommandFlag commands_init[] =
+static int 
+certutil_main(int argc, char **argv, PRBool initialize)
+{
+    CERTCertDBHandle *certHandle;
+    PK11SlotInfo *slot = NULL;
+    CERTName *  subject         = 0;
+    PRFileDesc *inFile          = PR_STDIN;
+    PRFileDesc *outFile         = NULL;
+    char *      certfile        = "tempcert";
+    char *      certreqfile     = "tempcertreq";
+    char *      slotname        = "internal";
+    char *      certPrefix      = "";
+    KeyType     keytype         = rsaKey;
+    char *      name            = NULL;
+    char *	keysource	= NULL;
+    SECOidTag   hashAlgTag      = SEC_OID_UNKNOWN;
+    int	        keysize	        = DEFAULT_KEY_BITS;
+    int         publicExponent  = 0x010001;
+    unsigned int serialNumber   = 0;
+    int         warpmonths      = 0;
+    int         validityMonths  = 3;
+    int         commandsEntered = 0;
+    char        commandToRun    = '\0';
+    secuPWData  pwdata          = { PW_NONE, 0 };
+    PRBool 	readOnly	= PR_FALSE;
+    PRBool      initialized     = PR_FALSE;
+
+    SECKEYPrivateKey *privkey = NULL;
+    SECKEYPublicKey *pubkey = NULL;
+
+    int i;
+    SECStatus rv;
+
+    secuCommand certutil;
+
+secuCommandFlag certutil_commands[] =
 {
 	{ /* cmd_AddCert             */  'A', PR_FALSE, 0, PR_FALSE },
 	{ /* cmd_CreateNewCert       */  'C', PR_FALSE, 0, PR_FALSE },
@@ -1560,10 +1585,8 @@ secuCommandFlag commands_init[] =
 	{ /* cmd_Version             */  'Y', PR_FALSE, 0, PR_FALSE },
 	{ /* cmd_Batch               */  'B', PR_FALSE, 0, PR_FALSE }
 };
-#define NUM_COMMANDS ((sizeof commands_init) / (sizeof commands_init[0]))
- 
-static const 
-secuCommandFlag options_init[] =
+
+secuCommandFlag certutil_options[] =
 {
 	{ /* opt_SSOPass             */  '0', PR_TRUE,  0, PR_FALSE },
 	{ /* opt_AddKeyUsageExt      */  '1', PR_FALSE, 0, PR_FALSE },
@@ -1605,57 +1628,15 @@ secuCommandFlag options_init[] =
 	{ /* opt_Hash                */  'Z', PR_TRUE,  0, PR_FALSE },
 	{ /* opt_NewPasswordFile     */  '@', PR_TRUE,  0, PR_FALSE }
 };
-#define NUM_OPTIONS ((sizeof options_init)  / (sizeof options_init[0]))
 
-static secuCommandFlag certutil_commands[NUM_COMMANDS];
-static secuCommandFlag certutil_options [NUM_OPTIONS ];
 
-static const secuCommand certutil = {
-    NUM_COMMANDS, 
-    NUM_OPTIONS, 
-    certutil_commands, 
-    certutil_options
-};
-
-static certutilExtnList certutil_extns;
-
-static int 
-certutil_main(int argc, char **argv, PRBool initialize)
-{
-    CERTCertDBHandle *certHandle;
-    PK11SlotInfo *slot = NULL;
-    CERTName *  subject         = 0;
-    PRFileDesc *inFile          = PR_STDIN;
-    PRFileDesc *outFile         = NULL;
-    char *      certfile        = "tempcert";
-    char *      certreqfile     = "tempcertreq";
-    char *      slotname        = "internal";
-    char *      certPrefix      = "";
-    KeyType     keytype         = rsaKey;
-    char *      name            = NULL;
-    char *      keysource       = NULL;
-    SECOidTag   hashAlgTag      = SEC_OID_UNKNOWN;
-    int	        keysize	        = DEFAULT_KEY_BITS;
-    int         publicExponent  = 0x010001;
-    unsigned int serialNumber   = 0;
-    int         warpmonths      = 0;
-    int         validityMonths  = 3;
-    int         commandsEntered = 0;
-    char        commandToRun    = '\0';
-    secuPWData  pwdata          = { PW_NONE, 0 };
-    PRBool      readOnly        = PR_FALSE;
-    PRBool      initialized     = PR_FALSE;
-
-    SECKEYPrivateKey *privkey = NULL;
-    SECKEYPublicKey *pubkey = NULL;
-
-    int i;
-    SECStatus rv;
+    certutil.numCommands = sizeof(certutil_commands) / sizeof(secuCommandFlag);
+    certutil.numOptions = sizeof(certutil_options) / sizeof(secuCommandFlag);
+    certutil.commands = certutil_commands;
+    certutil.options = certutil_options;
 
     progName = PORT_Strrchr(argv[0], '/');
     progName = progName ? progName+1 : argv[0];
-    memcpy(certutil_commands, commands_init, sizeof commands_init);
-    memcpy(certutil_options,  options_init,  sizeof options_init);
 
     rv = SECU_ParseCommandLine(argc, argv, progName, &certutil);
 
@@ -1755,7 +1736,7 @@ certutil_main(int argc, char **argv, PRBool initialize)
 	    PR_fprintf(PR_STDERR, "%s -q: specifies a PQG file for DSA keys" \
 		       " (-k dsa) or a named curve for EC keys (-k ec)\n)",
 	               progName);
-#else   /* } */
+#else
 	if (keytype != dsaKey) {
 	    PR_fprintf(PR_STDERR, "%s -q: PQG file is for DSA key (-k dsa).\n)",
 	               progName);
@@ -2015,20 +1996,6 @@ certutil_main(int argc, char **argv, PRBool initialize)
     else if (slotname != NULL)
 	slot = PK11_FindSlotByName(slotname);
 
-   
-    if ( !slot && (certutil.commands[cmd_NewDBs].activated ||
-         certutil.commands[cmd_ModifyCertTrust].activated  || 
-         certutil.commands[cmd_ChangePassword].activated   ||
-         certutil.commands[cmd_TokenReset].activated       ||
-         certutil.commands[cmd_CreateAndAddCert].activated ||
-         certutil.commands[cmd_AddCert].activated          ||
-         certutil.commands[cmd_AddEmailCert].activated)) {
-      
-         SECU_PrintError(progName, "could not find the slot %s",slotname);
-         rv = SECFailure;
-         goto shutdown;
-    }
-
     /*  If creating new database, initialize the password.  */
     if (certutil.commands[cmd_NewDBs].activated) {
 	SECU_ChangePW2(slot, 0, 0, certutil.options[opt_PasswordFile].arg,
@@ -2080,8 +2047,8 @@ certutil_main(int argc, char **argv, PRBool initialize)
 		goto shutdown;
 	    }
 	}
-	rv = ChangeTrustAttributes(certHandle, slot, name, 
-	                           certutil.options[opt_Trust].arg, &pwdata);
+	rv = ChangeTrustAttributes(certHandle, name, 
+	                           certutil.options[opt_Trust].arg);
 	goto shutdown;
     }
     /*  Change key db password (-W) (future - change pw to slot?)  */
@@ -2114,8 +2081,6 @@ certutil_main(int argc, char **argv, PRBool initialize)
 			  certutil.options[opt_VerifySig].activated,
 			  certutil.options[opt_DetailedInfo].activated,
 	                  &pwdata);
-	if (rv != SECSuccess && PR_GetError() == SEC_ERROR_INVALID_ARGS)
-            SECU_PrintError(progName, "validation failed");
 	goto shutdown;
     }
 
@@ -2148,7 +2113,6 @@ certutil_main(int argc, char **argv, PRBool initialize)
 		rv = SECFailure;
 		goto shutdown;
 	    }
-	    keytype = privkey->keyType;
 	} else {
 	    privkey = 
 		CERTUTIL_GeneratePrivateKey(keytype, slot, keysize,
@@ -2173,26 +2137,6 @@ certutil_main(int argc, char **argv, PRBool initialize)
 	}
     }
 
-    /* If we need a list of extensions convert the flags into list format */
-    if (certutil.commands[cmd_CertReq].activated ||
-        certutil.commands[cmd_CreateAndAddCert].activated ||
-        certutil.commands[cmd_CreateNewCert].activated) {
-        certutil_extns[ext_keyUsage] =
-				certutil.options[opt_AddKeyUsageExt].activated;
-        certutil_extns[ext_basicConstraint] =
-				certutil.options[opt_AddBasicConstraintExt].activated;
-        certutil_extns[ext_authorityKeyID] =
-				certutil.options[opt_AddAuthorityKeyIDExt].activated;
-        certutil_extns[ext_CRLDistPts] =
-				certutil.options[opt_AddCRLDistPtsExt].activated;
-        certutil_extns[ext_NSCertType] =
-				certutil.options[opt_AddNSCertTypeExt].activated;
-        certutil_extns[ext_extKeyUsage] =
-				certutil.options[opt_AddExtKeyUsageExt].activated;
-	/* We can't generate the rest of the extensions yet. When long form
-	 * options are available this code block will be extended
-	 */
-    }
     /*
      *  Certificate request
      */
@@ -2204,7 +2148,12 @@ certutil_main(int argc, char **argv, PRBool initialize)
 	             certutil.options[opt_ASCIIForIO].activated,
 		     certutil.options[opt_ExtendedEmailAddrs].arg,
 		     certutil.options[opt_ExtendedDNSNames].arg,
-                     certutil_extns,
+                     certutil.options[opt_AddKeyUsageExt].activated,
+                     certutil.options[opt_AddExtKeyUsageExt].activated,
+                     certutil.options[opt_AddBasicConstraintExt].activated,
+                     certutil.options[opt_AddAuthorityKeyIDExt].activated,
+                     certutil.options[opt_AddCRLDistPtsExt].activated,
+                     certutil.options[opt_AddNSCertTypeExt].activated,
                      outFile ? outFile : PR_STDOUT);
 	if (rv) 
 	    goto shutdown;
@@ -2220,13 +2169,17 @@ certutil_main(int argc, char **argv, PRBool initialize)
      *  and output the cert to another file.
      */
     if (certutil.commands[cmd_CreateAndAddCert].activated) {
-	static certutilExtnList nullextnlist = {PR_FALSE};
 	rv = CertReq(privkey, pubkey, keytype, hashAlgTag, subject,
 	             certutil.options[opt_PhoneNumber].arg,
 	             certutil.options[opt_ASCIIForIO].activated,
 		     NULL,
 		     NULL,
-                     nullextnlist,
+                     PR_FALSE,
+                     PR_FALSE,
+                     PR_FALSE,
+                     PR_FALSE,
+                     PR_FALSE,
+                     PR_FALSE,
                      outFile ? outFile : PR_STDOUT);
 	if (rv) 
 	    goto shutdown;
@@ -2259,7 +2212,12 @@ certutil_main(int argc, char **argv, PRBool initialize)
 		        certutil.options[opt_ExtendedDNSNames].arg,
 	                certutil.options[opt_ASCIIForIO].activated,
 	                certutil.options[opt_SelfSign].activated,
-	                certutil_extns);
+	                certutil.options[opt_AddKeyUsageExt].activated,
+	                certutil.options[opt_AddExtKeyUsageExt].activated,
+	                certutil.options[opt_AddBasicConstraintExt].activated,
+	                certutil.options[opt_AddAuthorityKeyIDExt].activated,
+	                certutil.options[opt_AddCRLDistPtsExt].activated,
+	                certutil.options[opt_AddNSCertTypeExt].activated);
 	if (rv) 
 	    goto shutdown;
     }

@@ -11,15 +11,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the PKIX-C library.
+ * The Original Code is the Netscape security libraries.
  *
  * The Initial Developer of the Original Code is
- * Sun Microsystems, Inc.
- * Portions created by the Initial Developer are
- * Copyright 2004-2007 Sun Microsystems, Inc.  All Rights Reserved.
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1994-2000
+ * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Sun Microsystems, Inc.
+ *   Sun Microsystems
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -44,9 +44,8 @@
 #include "testutil.h"
 #include "testutil_nss.h"
 
-static void *plContext = NULL;
+void *plContext = NULL;
 
-static
 void createTrustAnchors(
         char *dirName,
         char *goodInput,
@@ -67,7 +66,6 @@ void createTrustAnchors(
                         (dirName, goodInput, PKIX_TRUE, plContext);
 }
 
-static
 void testGetCAName(
         PKIX_PL_Cert *diffCert,
         PKIX_TrustAnchor *equalObject){
@@ -97,7 +95,6 @@ cleanup:
         PKIX_TEST_RETURN();
 }
 
-static
 void testGetCAPublicKey(
         PKIX_PL_Cert *diffCert,
         PKIX_TrustAnchor *equalObject){
@@ -127,7 +124,6 @@ cleanup:
         PKIX_TEST_RETURN();
 }
 
-static
 void testGetNameConstraints(char *dirName)
 {
         PKIX_TrustAnchor *goodObject = NULL;
@@ -215,12 +211,11 @@ cleanup:
 
 }
 
-static
 void printUsage(void) {
         (void) printf("\nUSAGE:\ttest_trustanchor <NIST_FILES_DIR> <central-data-dir>\n\n");
 }
 
-int test_trustanchor(int argc, char *argv[]) {
+int main(int argc, char *argv[]) {
 
         PKIX_TrustAnchor *goodObject = NULL;
         PKIX_TrustAnchor *equalObject = NULL;

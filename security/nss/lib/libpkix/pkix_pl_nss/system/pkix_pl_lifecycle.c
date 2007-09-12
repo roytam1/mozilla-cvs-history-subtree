@@ -11,15 +11,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the PKIX-C library.
+ * The Original Code is the Netscape security libraries.
  *
  * The Initial Developer of the Original Code is
- * Sun Microsystems, Inc.
- * Portions created by the Initial Developer are
- * Copyright 2004-2007 Sun Microsystems, Inc.  All Rights Reserved.
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1994-2000
+ * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Sun Microsystems, Inc.
+ *   Sun Microsystems
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -55,6 +55,30 @@ PRLock *classTableLock;
  * IncRef, DecRef, and Settor functions cannot be called.
  */
 
+/*
+ * This data looks like a UTF-16 string of "PKIX_ALLOC_ERROR".
+ * It is used to create a static PKIX_PL_String object, pkix_Alloc_Error_desc.
+ */
+static const char pkix_Alloc_Error_Msg[32] =
+        {
+                0, 'P', 0, 'K', 0, 'I', 0, 'X',
+                0, ' ',
+                0, 'A', 0, 'L', 0, 'L', 0, 'O', 0, 'C',
+                0, ' ',
+                0, 'E', 0, 'R', 0, 'R', 0, 'O', 0, 'R'
+        };
+
+/*
+ * This is raw data laid out to look like a PKIX_PL_String in memory
+ * XXX If PKIX_PL_StringStruct is changed, this will break.
+ */
+static PKIX_PL_String pkix_Alloc_Error_Desc = {
+        (void *)&pkix_Alloc_Error_Msg,  /* void *utf16String */
+        (PKIX_UInt32)32,                /* PKIX_UInt32 utf16Length */
+        (char *)NULL,                   /* char *escAsciiString */
+        (PKIX_UInt32)0                  /* PKIX_UInt32 escAsciiLength */
+};
+
 /* Keep this structure definition here for its is used only once here */
 struct PKIX_Alloc_Error_ObjectStruct {
         PKIX_PL_Object header;
@@ -73,10 +97,10 @@ static PKIX_Alloc_Error_Object pkix_Alloc_Error_Data = {
         (PKIX_UInt32)0,                 /* PKIX_UInt32 hashcode */
         (PKIX_Boolean)PKIX_FALSE,       /* PKIX_Boolean hashcodeCached */
     }, {
-        (PKIX_ERRORNUM)PKIX_FATAL_ERROR,/* PKIX_UInt32 code */
+        PKIX_FATAL_ERROR,               /* PKIX_UInt32 code */
         (PKIX_Error *)0,                /* PKIX_Error *cause */
         (PKIX_PL_Object *)0,            /* PKIX_PL_Object *info */
-        (PKIX_ERRSTRINGNUM)0,           /* PKIX_ERRSTRINGNUM descCode; */
+        &pkix_Alloc_Error_Desc          /* PKIX_PL_String *desc */
    }
 };
 
@@ -216,13 +240,11 @@ PKIX_PL_Initialize(
         pkix_pl_HttpDefaultClient_RegisterSelf(plContext);
         pkix_VerifyNode_RegisterSelf(plContext);
 
-        if (pPlContext) {
-            PKIX_CHECK(PKIX_PL_NssContext_Create
-                       (0, useArenas, NULL, &plContext),
-                       PKIX_NSSCONTEXTCREATEFAILED);
-            
-            *pPlContext = plContext;
-        }
+        PKIX_CHECK(PKIX_PL_NssContext_Create
+                (0x10, useArenas, NULL, &plContext),
+                PKIX_NSSCONTEXTCREATEFAILED);
+
+        *pPlContext = plContext;
 
         pkix_pl_initialized = PKIX_TRUE;
 

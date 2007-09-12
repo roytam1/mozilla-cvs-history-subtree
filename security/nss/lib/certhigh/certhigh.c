@@ -255,7 +255,7 @@ done:
  */
 CERTCertificate *
 CERT_FindUserCertByUsage(CERTCertDBHandle *handle,
-			 const char *nickname,
+			 char *nickname,
 			 SECCertUsage usage,
 			 PRBool validOnly,
 			 void *proto_win)

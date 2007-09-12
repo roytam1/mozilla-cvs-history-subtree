@@ -11,15 +11,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the PKIX-C library.
+ * The Original Code is the Netscape security libraries.
  *
  * The Initial Developer of the Original Code is
- * Sun Microsystems, Inc.
- * Portions created by the Initial Developer are
- * Copyright 2004-2007 Sun Microsystems, Inc.  All Rights Reserved.
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1994-2000
+ * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Sun Microsystems, Inc.
+ *   Sun Microsystems
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -46,20 +46,19 @@
 
 #define PKIX_TEST_MAX_CERTS     10
 
-static void *plContext = NULL;
+void *plContext = NULL;
 
-static 
 void printUsage1(char *pName){
         printf("\nUSAGE: %s test-purpose [ENE|EE] ", pName);
         printf("[E]oid[,oid]* <data-dir> cert [certs].\n");
 }
 
-static void printUsageMax(PKIX_UInt32 numCerts){
+void printUsageMax(PKIX_UInt32 numCerts){
         printf("\nUSAGE ERROR: number of certs %d exceed maximum %d\n",
                 numCerts, PKIX_TEST_MAX_CERTS);
 }
 
-static PKIX_Error *
+PKIX_Error *
 testCertSelectorMatchCallback(
         PKIX_CertSelector *selector,
         PKIX_PL_Cert *cert,
@@ -71,7 +70,7 @@ testCertSelectorMatchCallback(
         return (0);
 }
 
-static PKIX_Error *
+PKIX_Error *
 testEkuSetup(
         PKIX_ValidateParams *valParams,
         char *ekuOidString,
@@ -184,7 +183,7 @@ cleanup:
         return (0);
 }
 
-static PKIX_Error *
+PKIX_Error *
 testEkuChecker(
         PKIX_ValidateParams *valParams,
         PKIX_Boolean only4EE)
@@ -215,7 +214,7 @@ cleanup:
         return (0);
 }
 
-int test_ekuchecker(int argc, char *argv[]){
+int main(int argc, char *argv[]){
         PKIX_List *chain = NULL;
         PKIX_ValidateParams *valParams = NULL;
         PKIX_ValidateResult *valResult = NULL;

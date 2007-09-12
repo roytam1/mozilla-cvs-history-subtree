@@ -88,9 +88,7 @@ CSRCS = \
 	rsawrapr.c  \
 	sdb.c  \
 	sftkdb.c  \
-	sftkmod.c  \
 	sftkpars.c  \
-	sftkpwd.c  \
 	softkver.c  \
 	tlsprf.c   \
 	$(NULL)
@@ -99,5 +97,3 @@ ifdef SQLITE_UNSAFE_THREADS
 DEFINES += -DSQLITE_UNSAFE_THREADS
 endif
 
-# This part of the code, including all sub-dirs, can be optimized for size
-export ALLOW_OPT_CODE_SIZE = 1

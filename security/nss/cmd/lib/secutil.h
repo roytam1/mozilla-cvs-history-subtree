@@ -396,7 +396,6 @@ typedef struct {
     PRBool needsArg;
     char *arg;
     PRBool activated;
-    char *longform;
 } secuCommandFlag;
 
 /*  A full array of command/option flags  */
@@ -411,10 +410,9 @@ typedef struct
 
 /*  fill the "arg" and "activated" fields for each flag  */
 SECStatus 
-SECU_ParseCommandLine(int argc, char **argv, char *progName,
-		      const secuCommand *cmd);
+SECU_ParseCommandLine(int argc, char **argv, char *progName, secuCommand *cmd);
 char *
-SECU_GetOptionArg(const secuCommand *cmd, int optionNum);
+SECU_GetOptionArg(secuCommand *cmd, int optionNum);
 
 /*
  *

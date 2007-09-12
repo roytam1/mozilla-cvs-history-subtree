@@ -13,15 +13,14 @@
 # for the specific language governing rights and limitations under the
 # License.
 #
-# The Original Code is the PKIX-C library.
+# The Original Code is the Netscape security libraries.
 #
 # The Initial Developer of the Original Code is
-# Sun Microsystems, Inc.
-# Portions created by the Initial Developer are
-# Copyright 2004-2007 Sun Microsystems, Inc.  All Rights Reserved.
+# Netscape Communications Corporation.
+# Portions created by the Initial Developer are Copyright (C) 1994-2000
+# the Initial Developer. All Rights Reserved.
 #
 # Contributor(s):
-#   Sun Microsystems, Inc.
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -96,15 +95,15 @@ TZ=US/Eastern
 ParseArgs $*
 
 RunTests <<EOF
-pkixutil test_cert NIST-Test-Files-Used ../../certs ${HOSTDIR}/rev_data/local
-pkixutil test_crl NIST-Test-Files-Used ../../certs
-pkixutil test_x500name
-pkixutil test_generalname
-pkixutil test_date NIST-Test-Files-Used
-pkixutil test_crlentry ../../certs
-pkixutil test_nameconstraints NIST-Test-Files-Used rev_data/local ${HOSTDIR}
-pkixutil test_authorityinfoaccess NIST-PDTest ${NIST_PDTEST} certs/BasicLDAPURIPathDiscoveryOU1EE1.crt certs/BasicHTTPURITrustAnchorRootCert.crt
-pkixutil test_subjectinfoaccess NIST-PDTest ${NIST_PDTEST} certs/BasicHTTPURITrustAnchorRootCert.crt certs/BasicLDAPURIPathDiscoveryOU1EE1.crt
+test_cert NIST-Test-Files-Used ../../certs ${HOSTDIR}/rev_data/local
+test_crl NIST-Test-Files-Used ../../certs
+test_x500name
+test_generalname
+test_date NIST-Test-Files-Used
+test_crlentry ../../certs
+test_nameconstraints NIST-Test-Files-Used rev_data/local ${HOSTDIR}
+test_authorityinfoaccess NIST-PDTest ${NIST_PDTEST} certs/BasicLDAPURIPathDiscoveryOU1EE1.crt certs/BasicHTTPURITrustAnchorRootCert.crt
+test_subjectinfoaccess NIST-PDTest ${NIST_PDTEST} certs/BasicHTTPURITrustAnchorRootCert.crt certs/BasicLDAPURIPathDiscoveryOU1EE1.crt
 EOF
 
 totalErrors=$?

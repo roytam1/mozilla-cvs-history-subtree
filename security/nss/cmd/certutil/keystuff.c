@@ -82,7 +82,7 @@ const SEC_ASN1Template SECKEY_PQGParamsTemplate[] = {
 static int
 UpdateRNG(void)
 {
-    char           randbuf[RAND_BUF_SIZE];
+    char *         randbuf;
     int            fd, i, count;
     int            c;
     int            rv		= 0;
@@ -92,8 +92,6 @@ UpdateRNG(void)
     tcflag_t       orig_lflag;
     struct termios tio;
 #endif
-    char meter[] = { 
-      "\r|                                                            |" };
 
 #define FPS fprintf(stderr, 
     FPS "\n");
@@ -106,8 +104,7 @@ UpdateRNG(void)
     FPS "\n");
     FPS "\n");
     FPS "Continue typing until the progress meter is full:\n\n");
-    FPS meter);
-    FPS "\r|");
+    FPS "|                                                            |\r");
 
     /* turn off echo on stdin & return on 1 char instead of NL */
     fd = fileno(stdin);
@@ -125,8 +122,9 @@ UpdateRNG(void)
 #endif
 
     /* Get random noise from keyboard strokes */
+    randbuf = (char *) PORT_Alloc(RAND_BUF_SIZE);
     count = 0;
-    while (count < sizeof randbuf) {
+    while (count < NUM_KEYSTROKES+1) {
 #ifdef VMS
 	c = GENERIC_GETCHAR_NOECHO();
 #elif XP_UNIX
@@ -138,14 +136,19 @@ UpdateRNG(void)
 	    rv = -1;
 	    break;
 	}
-	randbuf[count] = c;
-	if (count == 0 || c != randbuf[count-1]) {
+	PK11_RandomUpdate(randbuf, sizeof(randbuf));
+	if (c != randbuf[0]) {
+	    randbuf[0] = c;
+	    FPS "\r|");
+	    for (i=0; i<count/(NUM_KEYSTROKES/RAND_BUF_SIZE); i++) {
+		FPS "*");
+	    }
+	    if (count%(NUM_KEYSTROKES/RAND_BUF_SIZE) == 1)
+		FPS "/");
 	    count++;
-	    FPS "*");
 	}
     }
-    PK11_RandomUpdate(randbuf, sizeof randbuf);
-    memset(randbuf, 0, sizeof randbuf);
+    free(randbuf); 
 
     FPS "\n\n");
     FPS "Finished.  Press enter to continue: ");

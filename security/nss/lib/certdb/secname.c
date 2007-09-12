@@ -200,27 +200,6 @@ SetupAVAValue(PRArenaPool *arena, int valueType, char *value, SECItem *it,
 }
 
 CERTAVA *
-CERT_CreateAVAFromRaw(PRArenaPool *pool, const SECItem * OID, 
-                      const SECItem * value)
-{
-    CERTAVA *ava;
-    int rv;
-    unsigned maxLen;
-
-    ava = PORT_ArenaZNew(pool, CERTAVA);
-    if (ava) {
-	rv = SECITEM_CopyItem(pool, &ava->type, OID);
-	if (rv) 
-	    return NULL;
-
-	rv = SECITEM_CopyItem(pool, &ava->value, value);
-	if (rv) 
-	    return NULL;
-    }
-    return ava;
-}
-
-CERTAVA *
 CERT_CreateAVA(PRArenaPool *arena, SECOidTag kind, int valueType, char *value)
 {
     CERTAVA *ava;
@@ -578,18 +557,14 @@ CERT_CompareRDN(CERTRDN *a, CERTRDN *b)
     if (ac < bc) return SECLessThan;
     if (ac > bc) return SECGreaterThan;
 
-    while (NULL != (aava = *aavas++)) {
-	for (bavas = b->avas; bava = *bavas++; ) {
-	    rv = SECITEM_CompareItem(&aava->type, &bava->type);
-	    if (SECEqual == rv) {
-		rv = CERT_CompareAVA(aava, bava);
-		if (SECEqual != rv) 
-		    return rv;
-		break;
-	    }
-    	}
-	if (!bava)  /* didn't find a match */
+    for (;;) {
+	aava = *aavas++;
+	bava = *bavas++;
+	if (!aava) {
 	    break;
+	}
+	rv = CERT_CompareAVA(aava, bava);
+	if (rv) return rv;
     }
     return rv;
 }

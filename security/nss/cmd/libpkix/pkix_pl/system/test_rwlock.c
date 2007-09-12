@@ -11,15 +11,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the PKIX-C library.
+ * The Original Code is the Netscape security libraries.
  *
  * The Initial Developer of the Original Code is
- * Sun Microsystems, Inc.
- * Portions created by the Initial Developer are
- * Copyright 2004-2007 Sun Microsystems, Inc.  All Rights Reserved.
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1994-2000
+ * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Sun Microsystems, Inc.
+ *   Sun Microsystems
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -44,7 +44,7 @@
 
 static PKIX_PL_RWLock *rwlock = NULL, *rwlock2 = NULL, *rwlock3 = NULL;
 static PRThread *thread = NULL, *thread2 = NULL, *thread3 = NULL;
-static void *plContext = NULL;
+void *plContext = NULL;
 
 static void reader(void) {
         PKIX_Error *errorResult;
@@ -120,7 +120,7 @@ static void reader2(void) {
 
 
 
-int test_rwlock() {
+int main() {
         PKIX_PL_String* outputString = NULL;
         PKIX_UInt32 j = 0;
         PKIX_Boolean useArenas = PKIX_FALSE;

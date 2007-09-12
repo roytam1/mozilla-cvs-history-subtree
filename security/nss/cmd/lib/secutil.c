@@ -3041,95 +3041,42 @@ loser:
 }
 
 SECStatus
-SECU_ParseCommandLine(int argc, char **argv, char *progName,
-		      const secuCommand *cmd)
+SECU_ParseCommandLine(int argc, char **argv, char *progName, secuCommand *cmd)
 {
     PRBool found;
     PLOptState *optstate;
     PLOptStatus status;
     char *optstring;
-    PLLongOpt *longopts = NULL;
     int i, j;
-    int lcmd = 0, lopt = 0;
 
     optstring = (char *)PORT_Alloc(cmd->numCommands + 2*cmd->numOptions);
-    if (optstring == NULL)
-        return SECFailure;
-    
     j = 0;
+
     for (i=0; i<cmd->numCommands; i++) {
-	if (cmd->options[i].flag) /* single character option ? */
-	    optstring[j++] = cmd->commands[i].flag;
-	if (cmd->commands[i].longform)
-	    lcmd++;
+	optstring[j++] = cmd->commands[i].flag;
     }
     for (i=0; i<cmd->numOptions; i++) {
-	if (cmd->options[i].flag) {
-	    optstring[j++] = cmd->options[i].flag;
-	    if (cmd->options[i].needsArg)
-		optstring[j++] = ':';
-	}
-	if (cmd->options[i].longform)
-	    lopt++;
+	optstring[j++] = cmd->options[i].flag;
+	if (cmd->options[i].needsArg)
+	    optstring[j++] = ':';
     }
-    
     optstring[j] = '\0';
-    
-    if (lcmd + lopt > 0) {
-	longopts = PORT_NewArray(PLLongOpt, lcmd+lopt+1);
-	if (!longopts) {
-	    PORT_Free(optstring);
-	    return SECFailure;
-	}
-
-	j = 0;
-	for (i=0; j<lcmd && i<cmd->numCommands; i++) {
-	    if (cmd->commands[i].longform) {
-		longopts[j].longOptName = cmd->commands[i].longform;
-		longopts[j].longOption = 0;
-		longopts[j++].valueRequired = cmd->commands[i].needsArg;
-	    } 
-	}
-	lopt += lcmd;
-	for (i=0; j<lopt && i<cmd->numOptions; i++) {
-	    if (cmd->options[i].longform) {
-		longopts[j].longOptName = cmd->options[i].longform;
-		longopts[j].longOption = 0;
-		longopts[j++].valueRequired = cmd->options[i].needsArg;
-	    }
-	}
-	longopts[j].longOptName = NULL;
-    }
-
-    optstate = PL_CreateLongOptState(argc, argv, optstring, longopts);
+    optstate = PL_CreateOptState(argc, argv, optstring);
     if (!optstate) {
         PORT_Free(optstring);
-        PORT_Free(longopts);
         return SECFailure;
     }
     /* Parse command line arguments */
     while ((status = PL_GetNextOpt(optstate)) == PL_OPT_OK) {
-	const char *optstatelong;
-	char        option = optstate->option;
 
-	/*  positional parameter, single-char option or long opt? */
-	if (optstate->longOptIndex == -1) {
-	    /* not a long opt */
-	    if (option == '\0')
-	        continue;               /* it's a positional parameter */
-	    optstatelong = "";
-	} else {
-	    /* long opt */
-            if (option == '\0')
-		option = '\0377';       /* force unequal with all flags */
-	    optstatelong = longopts[optstate->longOptIndex].longOptName;
-	}
+	/*  Wasn't really an option, just standalone arg.  */
+	if (optstate->option == '\0')
+	    continue;
 
 	found = PR_FALSE;
 
 	for (i=0; i<cmd->numCommands; i++) {
-	    if (cmd->commands[i].flag == option ||
-	        cmd->commands[i].longform == optstatelong) {
+	    if (cmd->commands[i].flag == optstate->option) {
 		cmd->commands[i].activated = PR_TRUE;
 		if (optstate->value) {
 		    cmd->commands[i].arg = (char *)optstate->value;
@@ -3143,8 +3090,7 @@ SECU_ParseCommandLine(int argc, char **argv, char *progName,
 	    continue;
 
 	for (i=0; i<cmd->numOptions; i++) {
-	    if (cmd->options[i].flag == option ||
-		cmd->options[i].longform == optstatelong) {
+	    if (cmd->options[i].flag == optstate->option) {
 		cmd->options[i].activated = PR_TRUE;
 		if (optstate->value) {
 		    cmd->options[i].arg = (char *)optstate->value;
@@ -3166,15 +3112,13 @@ SECU_ParseCommandLine(int argc, char **argv, char *progName,
 loser:
     PL_DestroyOptState(optstate);
     PORT_Free(optstring);
-    if (longopts)
-	PORT_Free(longopts);
     if (status == PL_OPT_BAD)
 	return SECFailure;
     return SECSuccess;
 }
 
 char *
-SECU_GetOptionArg(const secuCommand *cmd, int optionNum)
+SECU_GetOptionArg(secuCommand *cmd, int optionNum)
 {
 	if (optionNum < 0 || optionNum >= cmd->numOptions)
 		return NULL;

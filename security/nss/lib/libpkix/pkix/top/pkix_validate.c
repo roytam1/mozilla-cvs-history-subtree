@@ -11,15 +11,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the PKIX-C library.
+ * The Original Code is the Netscape security libraries.
  *
  * The Initial Developer of the Original Code is
- * Sun Microsystems, Inc.
- * Portions created by the Initial Developer are
- * Copyright 2004-2007 Sun Microsystems, Inc.  All Rights Reserved.
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1994-2000
+ * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Sun Microsystems, Inc.
+ *   Sun Microsystems
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -602,19 +602,12 @@ pkix_InitializeCheckers(
                     PKIX_LISTGETLENGTHFAILED);
 
                 if (numCertStores > 0) {
-                        PKIX_Boolean nistCRLPolicyEnabled = PR_TRUE;
-
-                        PKIX_CHECK(
-                        pkix_ProcessingParams_GetNISTRevocationPolicyEnabled
-                        (procParams, &nistCRLPolicyEnabled, plContext),
-                        PKIX_PROCESSINGPARAMSGETNISTREVPOLICYENABLEDFAILED);
 
                         PKIX_CHECK(pkix_DefaultCRLChecker_Initialize
                             (certStores,
                             testDate,
                             trustedPubKey,
                             numCerts,
-                            nistCRLPolicyEnabled,
                             &defaultCrlChecker,
                             plContext),
                             PKIX_DEFAULTCRLCHECKERINITIALIZEFAILED);

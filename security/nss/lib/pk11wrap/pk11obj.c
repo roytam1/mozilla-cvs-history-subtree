@@ -237,8 +237,6 @@ PK11_GetAttributes(PRArenaPool *arena,PK11SlotInfo *slot,
      * now allocate space to store the results.
      */
     for (i=0; i < count; i++) {
-	if (attr[i].ulValueLen == 0)
-	    continue;
 	if (arena) {
 	    attr[i].pValue = PORT_ArenaAlloc(arena,attr[i].ulValueLen);
 	    if (attr[i].pValue == NULL) {
@@ -1137,50 +1135,37 @@ PK11_WrapPrivKey(PK11SlotInfo *slot, PK11SymKey *wrappingKey,
     return SECSuccess;
 }
 
-#if 0
 /*
- * Sample code relating to linked list returned by PK11_FindGenericObjects
- */
-
-/*
- * You can walk the list with the following code:
- */
-    firstObj = PK11_FindGenericObjects(slot, objClass);
-    for (thisObj=firstObj;
-         thisObj; 
-         thisObj=PK11_GetNextGenericObject(thisObj)) {
-        /* operate on thisObj */
-    }
-/*
- * If you want a particular object from the list...
- */
-    firstObj = PK11_FindGenericObjects(slot, objClass);
-    for (thisObj=firstObj;
-         thisObj; 
-         thisObj=PK11_GetNextGenericObject(thisObj)) {
-   	if (isMyObj(thisObj)) {
-  	    if ( thisObj == firstObj) {
-                /* NOTE: firstObj could be NULL at this point */
-  		firstObj = PK11_GetNextGenericObject(thsObj); 
-  	    }
-  	    PK11_UnlinkGenericObject(thisObj);
-            myObj = thisObj;
-            break;
-        }
-    }
-
-    PK11_DestroyGenericObjects(firstObj);
-
-      /* use myObj */
-
-    PK11_DestroyGenericObject(myObj);
-#endif /* sample code */
-
-/*
- * return a linked, non-circular list of generic objects.
+ * return a linked, non-circular list of generic objects. 
  * If you are only interested
  * in one object, just use the first object in the list. To find the
  * rest of the list use PK11_GetNextGenericObject() to return the next object.
+ *
+ * You can walk the list with the following code:
+ *    firstObj = PK11_FindGenericObjects(slot, objClass);
+ *    for (thisObj=firstObj; thisObj; 
+ *				thisObj=PK11_GetNextGenericObject(thisObj)) {
+ *	/* operate on thisObj */
+/*    }
+ *
+ * If you want a particular object from the list...
+ *    firstObj = PK11_FindGenericObjects(slot, objClass);
+ *    for (thisObj=firstObj; thisObj; 
+ *                             thisObj=PK11_GetNextGenericObject(thisObj)) {
+ * 	if (isMyObj(thisObj)) {
+ *	    if ( thisObj == firstObj) {
+ *              /* NOTE: firstObj could be NULL at this point */
+/*		firstObj = PK11_GetNextGenericObject(thsObj); 
+ *	    }
+ *	    PK11_UnlinkGenericObject(thisObj);
+ *          myObj = thisObj;
+ *          break;
+ *    }
+ *
+ *   PK11_DestroyGenericObjects(firstObj);
+ *
+ *    /* use myObj */
+/*   PK11_DestroyGenericObject(myObj);
  */
 PK11GenericObject *
 PK11_FindGenericObjects(PK11SlotInfo *slot, CK_OBJECT_CLASS objClass)
@@ -1499,10 +1484,7 @@ PK11_MatchItem(PK11SlotInfo *slot, CK_OBJECT_HANDLE searchID,
 
     if ((theTemplate[0].ulValueLen == 0) || (theTemplate[0].ulValueLen == -1)) {
 	PORT_FreeArena(arena,PR_FALSE);
-	if (matchclass == CKO_CERTIFICATE)
-	    PORT_SetError(SEC_ERROR_BAD_KEY);
-	else
-	    PORT_SetError(SEC_ERROR_NO_KEY);
+	PORT_SetError(SEC_ERROR_BAD_KEY);
 	return CK_INVALID_HANDLE;
      }
 	

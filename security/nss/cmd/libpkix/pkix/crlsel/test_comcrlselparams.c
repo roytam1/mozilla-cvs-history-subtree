@@ -11,15 +11,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the PKIX-C library.
+ * The Original Code is the Netscape security libraries.
  *
  * The Initial Developer of the Original Code is
- * Sun Microsystems, Inc.
- * Portions created by the Initial Developer are
- * Copyright 2004-2007 Sun Microsystems, Inc.  All Rights Reserved.
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1994-2000
+ * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Sun Microsystems, Inc.
+ *   Sun Microsystems
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -44,7 +44,7 @@
 #include "testutil.h"
 #include "testutil_nss.h"
 
-static void *plContext = NULL;
+void *plContext = NULL;
 
 static void
 testIssuer(PKIX_ComCRLSelParams *goodObject)
@@ -198,7 +198,6 @@ cleanup:
 
 }
 
-static
 void testCertificateChecking(
         char *dataCentralDir,
         char *goodInput,
@@ -244,7 +243,6 @@ cleanup:
         PKIX_TEST_RETURN();
 }
 
-static
 void testDateAndTime(PKIX_ComCRLSelParams *goodObject){
 
         PKIX_PL_Date *setDate = NULL;
@@ -284,7 +282,6 @@ cleanup:
         PKIX_TEST_RETURN();
 }
 
-static
 void testMaxMinCRLNumbers(PKIX_ComCRLSelParams *goodObject){
         PKIX_PL_BigInt *setMaxCrlNumber = NULL;
         PKIX_PL_BigInt *getMaxCrlNumber = NULL;
@@ -371,7 +368,6 @@ cleanup:
         PKIX_TEST_RETURN();
 }
 
-static
 void testDuplicate(PKIX_ComCRLSelParams *goodObject){
 
         PKIX_ComCRLSelParams *dupObject = NULL;
@@ -401,14 +397,13 @@ cleanup:
         PKIX_TEST_RETURN();
 }
 
-static
 void printUsage(char *pName){
         printf("\nUSAGE: %s <central-data-dir>\n\n", pName);
 }
 
 /* Functional tests for ComCRLSelParams public functions */
 
-int test_comcrlselparams(int argc, char *argv[]){
+int main(int argc, char *argv[]){
 
         char *dataCentralDir = NULL;
         char *goodInput = "yassir2yassir";

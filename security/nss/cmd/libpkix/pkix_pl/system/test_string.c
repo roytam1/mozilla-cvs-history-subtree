@@ -11,15 +11,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the PKIX-C library.
+ * The Original Code is the Netscape security libraries.
  *
  * The Initial Developer of the Original Code is
- * Sun Microsystems, Inc.
- * Portions created by the Initial Developer are
- * Copyright 2004-2007 Sun Microsystems, Inc.  All Rights Reserved.
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1994-2000
+ * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Sun Microsystems, Inc.
+ *   Sun Microsystems
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -44,9 +44,9 @@
 #include "testutil.h"
 #include "testutil_nss.h"
 
-static void *plContext = NULL;
+void *plContext = NULL;
 
-static void
+void
 createString(
         PKIX_PL_String **testString,
         PKIX_UInt32 format,
@@ -64,7 +64,7 @@ cleanup:
         PKIX_TEST_RETURN();
 }
 
-static void
+void
 createStringOther(
         PKIX_PL_String **testEscAscii,
         PKIX_PL_String **testUtf16,
@@ -111,7 +111,7 @@ cleanup:
         PKIX_TEST_RETURN();
 }
 
-static void
+void
 testGetEncoded(
         PKIX_PL_String *testEscAscii,
         PKIX_PL_String *testString0,
@@ -188,7 +188,7 @@ cleanup:
         PKIX_TEST_RETURN();
 }
 
-static void
+void
 testSprintf(void)
 {
         PKIX_Int32 x = 0xCAFE;
@@ -245,7 +245,7 @@ cleanup:
         PKIX_TEST_RETURN();
 }
 
-static void
+void
 testErrorHandling(void)
 {
         char *debugAsciiString =
@@ -369,7 +369,7 @@ cleanup:
         PKIX_TEST_RETURN();
 }
 
-static void
+void
 testDestroy(
         PKIX_PL_String *string)
 {
@@ -383,7 +383,7 @@ cleanup:
 }
 
 
-int test_string(int argc, char *argv[]) {
+int main(int argc, char *argv[]) {
 
         PKIX_PL_String *testString[6] = {NULL};
         PKIX_PL_String *testNullString = NULL;

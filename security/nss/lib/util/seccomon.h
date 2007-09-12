@@ -73,10 +73,7 @@ typedef enum {
     siDEROID = 9,
     siUnsignedInteger = 10,
     siUTCTime = 11,
-    siGeneralizedTime = 12,
-    siVisibleString = 13,
-    siUTF8String = 14,
-    siBMPString = 15
+    siGeneralizedTime = 12
 } SECItemType;
 
 typedef struct SECItemStr SECItem;

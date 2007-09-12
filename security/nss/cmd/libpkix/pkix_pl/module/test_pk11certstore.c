@@ -11,15 +11,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the PKIX-C library.
+ * The Original Code is the Netscape security libraries.
  *
  * The Initial Developer of the Original Code is
- * Sun Microsystems, Inc.
- * Portions created by the Initial Developer are
- * Copyright 2004-2007 Sun Microsystems, Inc.  All Rights Reserved.
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1994-2000
+ * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Sun Microsystems, Inc.
+ *   Sun Microsystems
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -45,14 +45,13 @@
 #include "testutil_nss.h"
 
 
-static void *plContext = NULL;
+void *plContext = NULL;
 
 /*
  * This function creates a certSelector with ComCertSelParams set up to
  * select entries whose Subject Name matches that in the given Cert and
  * whose validity window includes the Date specified by "validityDate".
  */
-static
 void test_makeSubjectCertSelector(
         PKIX_PL_Cert *certNameToMatch,
         PKIX_PL_Date *validityDate,
@@ -93,7 +92,6 @@ cleanup:
  * select entries containing a Basic Constraints extension with a path
  * length of at least the specified "minPathLength".
  */
-static 
 void test_makePathCertSelector(
         PKIX_Int32 minPathLength,
         PKIX_CertSelector **pSelector,
@@ -129,7 +127,6 @@ cleanup:
  * for a Subject Name match, and then queries the database for matching entries.
  * It is intended to test a "smart" database query.
  */
-static
 void testMatchCertSubject(
         char *crlDir,
         char *desiredSubjectCert,
@@ -201,7 +198,6 @@ cleanup:
  * available certs and the filtering will be done by the interaction of the
  * certstore and the selector.
  */
-static 
 void testMatchCertMinPath(
         PKIX_Int32 minPath,
         char *expectedAscii,
@@ -251,7 +247,6 @@ cleanup:
  * This function creates a crlSelector with ComCrlSelParams set up to
  * select entries whose Issuer Name matches that in the given Crl.
  */
-static
 void test_makeIssuerCRLSelector(
         PKIX_PL_CRL *crlNameToMatch,
         PKIX_CRLSelector **pSelector,
@@ -295,7 +290,6 @@ cleanup:
  * select entries that would be valid at the Date specified by the Date
  * criterion.
  */
-static 
 void test_makeDateCRLSelector(
         PKIX_PL_Date *dateToMatch,
         PKIX_CRLSelector **pSelector,
@@ -329,7 +323,6 @@ cleanup:
  * for a Issuer Name match, and then queries the database for matching entries.
  * It is intended to test the case of a "smart" database query.
  */
-static 
 void testMatchCrlIssuer(
         char *crlDir,
         char *desiredIssuerCrl,
@@ -397,7 +390,6 @@ cleanup:
  * rather than ask the database for all available CRLs and then filter the
  * results using the selector.
  */
-static 
 void testMatchCrlDate(
         char *dateMatch,
         char *expectedAscii,
@@ -435,14 +427,13 @@ cleanup:
         PKIX_TEST_RETURN();
 }
 
-static 
 void printUsage(char *pName){
         printf("\nUSAGE: %s <data-dir> <database-dir>\n\n", pName);
 }
 
 /* Functional tests for Pk11CertStore public functions */
 
-int test_pk11certstore(int argc, char *argv[]) {
+int main(int argc, char *argv[]) {
 
         PKIX_Boolean useArenas = PKIX_FALSE;
         PKIX_UInt32 j = 0;

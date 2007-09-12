@@ -11,15 +11,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the PKIX-C library.
+ * The Original Code is the Netscape security libraries.
  *
  * The Initial Developer of the Original Code is
- * Sun Microsystems, Inc.
- * Portions created by the Initial Developer are
- * Copyright 2004-2007 Sun Microsystems, Inc.  All Rights Reserved.
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1994-2000
+ * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Sun Microsystems, Inc.
+ *   Sun Microsystems
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -403,7 +403,7 @@ static PKIX_Error *
 pkix_CRLSelector_DefaultMatch(
         PKIX_CRLSelector *selector,
         PKIX_PL_CRL *crl,
-        PKIX_Boolean *pMatch,
+	PKIX_Boolean *pMatch,
         void *plContext)
 {
         PKIX_ComCRLSelParams *params = NULL;
@@ -417,7 +417,6 @@ pkix_CRLSelector_DefaultMatch(
         PKIX_PL_BigInt *minCRLNumber = NULL;
         PKIX_PL_BigInt *maxCRLNumber = NULL;
         PKIX_PL_BigInt *crlNumber = NULL;
-        PKIX_Boolean nistPolicyEnabled = PKIX_FALSE;
 
         PKIX_ENTER(CRLSELECTOR, "pkix_CRLSelector_DefaultMatch");
         PKIX_NULLCHECK_TWO(selector, crl);
@@ -485,22 +484,16 @@ pkix_CRLSelector_DefaultMatch(
         /* Check for Date */
         if (selDate != NULL){
 
-                PKIX_CHECK(PKIX_ComCRLSelParams_GetNISTPolicyEnabled
-                            (params, &nistPolicyEnabled, plContext),
-                           PKIX_COMCRLSELPARAMSGETNISTPOLICYENABLEDFAILED);
+                result = PKIX_FALSE;
 
-                /* check crl dates only for if NIST policies enforced */
-                if (nistPolicyEnabled) {
-                        result = PKIX_FALSE;
-                    
-                        PKIX_CHECK(PKIX_PL_CRL_VerifyUpdateTime
-                                   (crl, selDate, &result, plContext),
-                                   PKIX_CRLVERIFYUPDATETIMEFAILED);
-                    
-                        if (result == PKIX_FALSE) {
-                                *pMatch = PKIX_FALSE;
-                                goto cleanup;
-                        }
+                PKIX_CHECK(PKIX_PL_CRL_VerifyUpdateTime
+                            (crl, selDate, &result, plContext),
+                            PKIX_CRLVERIFYUPDATETIMEFAILED);
+
+                if (result == PKIX_FALSE) {
+                        PKIX_CRLSELECTOR_DEBUG("DateAndTime match Failed\n");
+                        *pMatch = PKIX_FALSE;
+                        goto cleanup;
                 }
 
         }

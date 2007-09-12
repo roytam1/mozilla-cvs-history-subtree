@@ -11,15 +11,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the PKIX-C library.
+ * The Original Code is the Netscape security libraries.
  *
  * The Initial Developer of the Original Code is
- * Sun Microsystems, Inc.
- * Portions created by the Initial Developer are
- * Copyright 2004-2007 Sun Microsystems, Inc.  All Rights Reserved.
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1994-2000
+ * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Sun Microsystems, Inc.
+ *   Sun Microsystems
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -1068,68 +1068,6 @@ PKIX_ProcessingParams_IsCRLRevocationCheckingEnabled(
  */
 PKIX_Error *
 PKIX_ProcessingParams_SetRevocationEnabled(
-        PKIX_ProcessingParams *params,
-        PKIX_Boolean enabled,
-        void *plContext);
-
-/*
- * FUNCTION: PKIX_ProcessingParams_IsNISTRevocationPolicyEnabled
- * DESCRIPTION:
- *
- *  Checks whether the ProcessingParams pointed to by "params" indicate that
- *  CRL revocation checking is enabled and revocation is done according to NIST
- *  CRL policy which states that a valid CRL with nextUpdate field must be
- *  available for certificate revocation checking.
- *
- * PARAMETERS:
- *  "params"
- *      Address of ProcessingParams used to determine whether or not NIST CRL
- *      revocation policy is enabled. Must be non-NULL.
- *  "pEnabled"
- *      Address where Boolean will be stored. Must be non-NULL.
- *  "plContext"
- *      Platform-specific context pointer.
- * THREAD SAFETY:
- *  Conditionally Thread Safe
- *      (see Thread Safety Definitions in Programmer's Guide)
- * RETURNS:
- *  Returns NULL if the function succeeds.
- *  Returns a Params Error if the function fails in a non-fatal way.
- *  Returns a Fatal Error if the function fails in an unrecoverable way.
- */
-PKIX_Error *
-PKIX_ProcessingParams_IsNISTRevocationPolicyEnabled(
-        PKIX_ProcessingParams *params,
-        PKIX_Boolean *pEnabled,
-        void *plContext);
-
-/*
- * FUNCTION: PKIX_ProcessingParams_SetNISTRevocationPolicyEnabled
- * DESCRIPTION:
- *
- *  Specifies in the ProcessingParams pointed to by "params" whether NIST CRL
- *  revocation checking is enabled using the Boolean value of "enabled".
- *  (See PKIX_ProcessingParams_IsNISTRevocationPolicyEnabled function
- *  description)
- *
- * PARAMETERS:
- *  "params"
- *      Address of ProcessingParams to be set. Must be non-NULL.
- *  "enabled"
- *      Boolean value indicating whether nist CRL revocation checking is to
- *      be enabled.
- *  "plContext"
- *      Platform-specific context pointer.
- * THREAD SAFETY:
- *  Not Thread Safe - assumes exclusive access to "params"
- *  (see Thread Safety Definitions in Programmer's Guide)
- * RETURNS:
- *  Returns NULL if the function succeeds.
- *  Returns a Params Error if the function fails in a non-fatal way.
- *  Returns a Fatal Error if the function fails in an unrecoverable way.
- */
-PKIX_Error *
-PKIX_ProcessingParams_SetNISTRevocationPolicyEnabled(
         PKIX_ProcessingParams *params,
         PKIX_Boolean enabled,
         void *plContext);

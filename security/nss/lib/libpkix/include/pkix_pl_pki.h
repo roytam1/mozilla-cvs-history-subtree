@@ -11,15 +11,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the PKIX-C library.
+ * The Original Code is the Netscape security libraries.
  *
  * The Initial Developer of the Original Code is
- * Sun Microsystems, Inc.
- * Portions created by the Initial Developer are
- * Copyright 2004-2007 Sun Microsystems, Inc.  All Rights Reserved.
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1994-2000
+ * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Sun Microsystems, Inc.
+ *   Sun Microsystems
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -44,8 +44,6 @@
 #define _PKIX_PL_PKI_H
 
 #include "pkixt.h"
-#include "seccomon.h"
-#include "certt.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -165,59 +163,6 @@ PKIX_Error *
 PKIX_PL_Cert_Create(
         PKIX_PL_ByteArray *byteArray,
         PKIX_PL_Cert **pCert,
-        void *plContext);
-
-/*
- * FUNCTION: PKIX_PL_Cert_CreateFromCERTCertificate
- * DESCRIPTION:
- *
- * Creates a new certificate using passed in CERTCertificate object.
- *
- * PARAMETERS:
- *  "nssCert"
- *      The object that will be used to create new PKIX_PL_Cert.
- *  "pCert"
- *      Address where object pointer will be stored. Must be non-NULL.
- *  "plContext"
- *      Platform-specific context pointer.
- * THREAD SAFETY:
- *  Thread Safe (see Thread Safety Definitions in Programmer's Guide)
- * RETURNS:
- *  Returns NULL if the function succeeds.
- *  Returns a Cert Error if the function fails in a non-fatal way.
- *  Returns a Fatal Error if the function fails in an unrecoverable way.
- */
-PKIX_Error *
-PKIX_PL_Cert_CreateFromCERTCertificate(
-        const CERTCertificate *nssCert,
-        PKIX_PL_Cert **pCert,
-        void *plContext);
-
-/*
- * FUNCTION: PKIX_PL_Cert_GetCERTCertificate
- * DESCRIPTION:
- *
- * Returns underlying CERTCertificate structure. Return CERTCertificate
- * object is duplicated and should be destroyed by caller.
- *
- * PARAMETERS:
- *  "cert"
- *      Address of PKIX_PL_Cert. Must be non-NULL.
- *  "pCert"
- *      Address where object pointer will be stored. Must be non-NULL.
- *  "plContext"
- *      Platform-specific context pointer.
- * THREAD SAFETY:
- *  Thread Safe (see Thread Safety Definitions in Programmer's Guide)
- * RETURNS:
- *  Returns NULL if the function succeeds.
- *  Returns a Cert Error if the function fails in a non-fatal way.
- *  Returns a Fatal Error if the function fails in an unrecoverable way.
- */
-PKIX_Error *
-PKIX_PL_Cert_GetCERTCertificate(
-        PKIX_PL_Cert *cert,
-        CERTCertificate **pnssCert, 
         void *plContext);
 
 /*
@@ -2027,7 +1972,7 @@ PKIX_PL_CRL_GetCRLNumber(
  *
  *  Checks whether the CRL pointed to by "crl" would be valid at the time
  *  represented by the Date pointed to by "date" and stores the Boolean result
- *  at "pResult". This check is done only when NIST policy is enforced.
+ *  at "pResult".
  *
  *  Time ::= CHOICE {
  *      utcTime         UTCTime,
@@ -2158,7 +2103,6 @@ PKIX_PL_CRLEntry_GetCriticalExtensionOIDs(
         PKIX_List **pExtensions,  /* list of PKIX_PL_OID */
         void *plContext);
 
-#ifdef BUILD_LIBPKIX_TESTS
 /*
  * FUNCTION: PKIX_PL_X500Name_Create
  * DESCRIPTION:
@@ -2209,42 +2153,6 @@ PKIX_PL_X500Name_Create (
         PKIX_PL_String *stringRep,
         PKIX_PL_X500Name **pName,
         void *plContext);
-
-#endif /* BUILD_LIBPKIX_TESTS */
-
-/*
- * FUNCTION: PKIX_PL_X500Name_CreateFromCERTName
- * DESCRIPTION:
- * 
- * The function creates x500Name using der encoded DN and/or pointer to
- * CERTName. If arument "name" is NULL, but derName is supplied when
- * the function generates nssDN(CERTName type) from der data. If derName
- * is not supplied, CERTName *name will not be used to generate DN DER
- * encoding.
- *
- * PARAMETERS:
- *  "derName"
- *      Address of DER representation of X500Name. Can be NULL
- *  "name"
- *      Address of CERTName representation of X500Name. Can be NULL
- *  "pName"
- *      Address where object pointer will be stored. Must be non-NULL.
- *  "plContext"
- *      Platform-specific context pointer.
- * THREAD SAFETY:
- *  Thread Safe (see Thread Safety Definitions in Programmer's Guide)
- * RETURNS:
- *  Returns NULL if the function succeeds.
- *  Returns an X500Name Error if the function fails in a non-fatal way.
- *  Returns a Fatal Error if the function fails in an unrecoverable way.
- */
-PKIX_Error *
-PKIX_PL_X500Name_CreateFromCERTName(
-        SECItem *derName,
-        CERTName *name,
-        PKIX_PL_X500Name **pName,
-        void *plContext);
-
 
 /*
  * TYPE: PKIX_PL_X500Name_Match
@@ -2341,31 +2249,6 @@ PKIX_PL_Date_Create_UTCTime (
         void *plContext);
 
 /*
- * FUNCTION: PKIX_PL_Date_Create_UTCTime
- * DESCRIPTION:
- *  Creates a new Date from PRTime data.
- *
- * PARAMETERS:
- *  "time"
- *      Represented time in PRTime type.
- *  "pDate"
- *      Address where object pointer will be stored. Must be non-NULL.
- *  "plContext"
- *      Platform-specific context pointer.
- * THREAD SAFETY:
- *  Thread Safe (see Thread Safety Definitions in Programmer's Guide)
- * RETURNS:
- *  Returns NULL if the function succeeds.
- *  Returns a Date Error if the function fails in a non-fatal way.
- *  Returns a Fatal Error if the function fails in an unrecoverable way.
- */
-PKIX_Error *
-PKIX_PL_Date_CreateFromPRTime(
-        PRTime time,
-        PKIX_PL_Date **pDate,
-        void *plContext);
-
-/*
  * FUNCTION: PKIX_PL_Date_Create_CurrentOffBySeconds
  * DESCRIPTION:
  *  Creates a new Date of type UTCTime for current time with seconds off by
@@ -2392,7 +2275,6 @@ PKIX_PL_Date_Create_CurrentOffBySeconds(
         PKIX_PL_Date **pDate,
         void *plContext);
 
-#ifdef BUILD_LIBPKIX_TESTS
 /*
  * FUNCTION: PKIX_PL_GeneralName_Create
  * DESCRIPTION:
@@ -2420,9 +2302,6 @@ PKIX_PL_Date_Create_CurrentOffBySeconds(
  *      iPAddress                       [7]     OCTET STRING,
  *      registeredID                    [8]     OBJECT IDENTIFIER }
  *
- *
- * NOTE: This function is allowed to be called only by pkix tests programs.
- * 
  * PARAMETERS:
  *  "nameType"
  *      Type of GeneralName to be created. This must be one of the GeneralName
@@ -2446,7 +2325,6 @@ PKIX_PL_GeneralName_Create (
         PKIX_PL_String *stringRep,
         PKIX_PL_GeneralName **pGName,
         void *plContext);
-#endif /* BUILD_LIBPKIX_TESTS */
 
 /*
  * FUNCTION: PKIX_PL_CertNameConstraints_CheckNamesInNameSpace

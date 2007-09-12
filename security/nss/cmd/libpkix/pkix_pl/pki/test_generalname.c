@@ -11,15 +11,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the PKIX-C library.
+ * The Original Code is the Netscape security libraries.
  *
  * The Initial Developer of the Original Code is
- * Sun Microsystems, Inc.
- * Portions created by the Initial Developer are
- * Copyright 2004-2007 Sun Microsystems, Inc.  All Rights Reserved.
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1994-2000
+ * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Sun Microsystems, Inc.
+ *   Sun Microsystems
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -44,7 +44,7 @@
 #include "testutil.h"
 #include "testutil_nss.h"
 
-static void *plContext = NULL;
+void *plContext = NULL;
 
 static void
 createGeneralNames(PKIX_UInt32 nameType, char *goodInput, char *diffInput,
@@ -80,7 +80,7 @@ cleanup:
 
 }
 
-static void testNameType
+void testNameType
 (PKIX_UInt32 nameType, char *goodInput, char *diffInput, char *expectedAscii){
 
         PKIX_PL_GeneralName *goodName = NULL;
@@ -101,7 +101,7 @@ static void testNameType
         testDestroy(goodName, equalName, diffName);
 }
 
-int test_generalname(int argc, char *argv[]) {
+int main(int argc, char *argv[]) {
 
         char *goodInput = NULL;
         char *diffInput = NULL;

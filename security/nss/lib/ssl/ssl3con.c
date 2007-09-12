@@ -3196,7 +3196,7 @@ static SECStatus
 ssl3_ComputeHandshakeHashes(sslSocket *     ss,
                             ssl3CipherSpec *spec,   /* uses ->master_secret */
 			    SSL3Hashes *    hashes, /* output goes here. */
-			    PRUint32        sender)
+			    uint32          sender)
 {
     SECStatus     rv        = SECSuccess;
     PRBool        isTLS     = (PRBool)(spec->version > SSL_LIBRARY_VERSION_3_0);
@@ -3614,7 +3614,7 @@ ssl3_SendClientHello(sslSocket *ss)
     if (!num_suites)
     	return SECFailure;	/* ssl3_config_match_init has set error code. */
 
-    if (ss->opt.enableTLS && ss->version > SSL_LIBRARY_VERSION_3_0) {
+    if (ss->opt.enableTLS) {
 	PRUint32 maxBytes = 65535; /* 2^16 - 1 */
 	PRInt32  extLen;
 

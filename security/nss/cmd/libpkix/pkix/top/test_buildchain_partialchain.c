@@ -11,15 +11,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the PKIX-C library.
+ * The Original Code is the Netscape security libraries.
  *
  * The Initial Developer of the Original Code is
- * Sun Microsystems, Inc.
- * Portions created by the Initial Developer are
- * Copyright 2004-2007 Sun Microsystems, Inc.  All Rights Reserved.
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1994-2000
+ * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Sun Microsystems, Inc.
+ *   Sun Microsystems
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -47,20 +47,20 @@
 #include "testutil_nss.h"
 
 #define LDAP_PORT 389
-static PKIX_Boolean usebind = PKIX_FALSE;
-static PKIX_Boolean useLDAP = PKIX_FALSE;
-static char buf[PR_NETDB_BUF_SIZE];
-static char *serverName = NULL;
-static char *sepPtr = NULL;
-static PRNetAddr netAddr;
-static PRHostEnt hostent;
-static PKIX_UInt32 portNum = 0;
-static PRIntn hostenum = 0;
-static PRStatus prstatus = PR_FAILURE;
-static void *ipaddr = NULL;
+PKIX_Boolean usebind = PKIX_FALSE;
+PKIX_Boolean useLDAP = PKIX_FALSE;
+char buf[PR_NETDB_BUF_SIZE];
+char *serverName = NULL;
+char *sepPtr = NULL;
+PRNetAddr netAddr;
+PRHostEnt hostent;
+PKIX_UInt32 portNum = 0;
+PRIntn hostenum = 0;
+PRStatus prstatus = PR_FAILURE;
+void *ipaddr = NULL;
 
 
-static void *plContext = NULL;
+void *plContext = NULL;
 
 static void printUsage(void) {
     (void) printf("\nUSAGE:\ttest_buildchain [-arenas] [usebind] "
@@ -695,7 +695,7 @@ cleanup:
 
 }
 
-int test_buildchain_partialchain(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
         PKIX_UInt32 actualMinorVersion = 0;
         PKIX_UInt32 j = 0;

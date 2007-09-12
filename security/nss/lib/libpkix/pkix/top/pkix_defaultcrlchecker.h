@@ -11,15 +11,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the PKIX-C library.
+ * The Original Code is the Netscape security libraries.
  *
  * The Initial Developer of the Original Code is
- * Sun Microsystems, Inc.
- * Portions created by the Initial Developer are
- * Copyright 2004-2007 Sun Microsystems, Inc.  All Rights Reserved.
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1994-2000
+ * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Sun Microsystems, Inc.
+ *   Sun Microsystems
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -56,7 +56,6 @@ struct pkix_DefaultCRLCheckerState {
         PKIX_List *certStores; /* list of CertStore */
         PKIX_PL_Date *testDate;
         PKIX_Boolean certHasValidCrl;
-        PKIX_Boolean nistCRLPolicyEnabled;
         PKIX_Boolean prevCertCrlSign;
         PKIX_PL_PublicKey *prevPublicKey; /* Subject PubKey of last cert */
         PKIX_List *prevPublicKeyList; /* of PKIX_PL_PublicKey */
@@ -77,7 +76,6 @@ pkix_DefaultCRLChecker_Initialize(
         PKIX_PL_Date *testDate,
         PKIX_PL_PublicKey *trustedPubKey,
         PKIX_UInt32 certsRemaining,
-        PKIX_Boolean nistCRLPolicyEnabled,
         PKIX_CertChainChecker **pChecker,
         void *plContext);
 

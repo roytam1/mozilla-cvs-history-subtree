@@ -94,5 +94,3 @@ const NSSError NSS_ERROR_INVALID_CERTIFICATE            = 35;
 const NSSError NSS_ERROR_BUSY                           = 36;
 const NSSError NSS_ERROR_ALREADY_INITIALIZED            = 37;
 
-const NSSError NSS_ERROR_PKCS11                         = 38;
-

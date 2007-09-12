@@ -39,11 +39,9 @@
  * stored so we can deside that later.
  */
 #include "sftkdb.h"
-#include "sftkdbti.h"
 #include "sdb.h"
 #include "prsystem.h"
-#include "prprf.h"
-#include "prenv.h"
+#include "prprf.h" 
 #include "lgglue.h"
 #include "secerr.h"
 
@@ -190,82 +188,6 @@ done:
     return lib;
 }
 
-/*
- * stub files for legacy db's to be able to encrypt and decrypt
- * various keys and attributes.
- */
-static SECStatus
-sftkdb_encrypt_stub(PRArenaPool *arena, SDB *sdb, SECItem *plainText,
-		    SECItem **cipherText)
-{
-    SFTKDBHandle *handle = sdb->app_private;
-    SECStatus rv;
-
-    if (handle == NULL) {
-	return SECFailure;
-    }
-
-    /* if we aren't th handle, try the other handle */
-    if (handle->type != SFTK_KEYDB_TYPE) {
-	handle = handle->peerDB;
-    }
-
-    /* not a key handle */
-    if (handle == NULL || handle->passwordLock == NULL) {
-	return SECFailure;
-    }
-
-    PZ_Lock(handle->passwordLock);
-    if (handle->passwordKey.data == NULL) {
-	PZ_Unlock(handle->passwordLock);
-	/* PORT_SetError */
-	return SECFailure;
-    }
-
-    rv = sftkdb_EncryptAttribute(arena, 
-	handle->newKey?handle->newKey:&handle->passwordKey, 
-	plainText, cipherText);
-    PZ_Unlock(handle->passwordLock);
-
-    return rv;
-}
-
-/*
- * stub files for legacy db's to be able to encrypt and decrypt
- * various keys and attributes.
- */
-static SECStatus
-sftkdb_decrypt_stub(SDB *sdb, SECItem *cipherText, SECItem **plainText) 
-{
-    SFTKDBHandle *handle = sdb->app_private;
-    SECStatus rv;
-
-    if (handle == NULL) {
-	return SECFailure;
-    }
-
-    /* if we aren't th handle, try the other handle */
-    if (handle->type != SFTK_KEYDB_TYPE) {
-	handle = handle->peerDB;
-    }
-
-    /* not a key handle */
-    if (handle == NULL || handle->passwordLock == NULL) {
-	return SECFailure;
-    }
-
-    PZ_Lock(handle->passwordLock);
-    if (handle->passwordKey.data == NULL) {
-	PZ_Unlock(handle->passwordLock);
-	/* PORT_SetError */
-	return SECFailure;
-    }
-    rv = sftkdb_DecryptAttribute(&handle->passwordKey, cipherText, plainText);
-    PZ_Unlock(handle->passwordLock);
-
-    return rv;
-}
-
 static PRLibrary *legacy_glue_lib = NULL;
 static SECStatus 
 sftkdbLoad_Legacy()
@@ -403,19 +325,13 @@ CK_RV
 sftkdbCall_Shutdown(void)
 {
     CK_RV crv = CKR_OK;
-    char *disableUnload = NULL;
     if (!legacy_glue_lib) {
 	return CKR_OK;
     }
     if (legacy_glue_shutdown) {
 	crv = (*legacy_glue_shutdown)();
     }
-#ifdef DEBUG
-    disableUnload = PR_GetEnv("NSS_DISABLE_UNLOAD");
-#endif
-    if (!disableUnload) {
-        PR_UnloadLibrary(legacy_glue_lib);
-    }
+    PR_UnloadLibrary(legacy_glue_lib);
     legacy_glue_lib = NULL;
     legacy_glue_open = NULL;
     legacy_glue_readSecmod = NULL;

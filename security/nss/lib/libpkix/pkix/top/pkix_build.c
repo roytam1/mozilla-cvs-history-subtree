@@ -11,15 +11,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the PKIX-C library.
+ * The Original Code is the Netscape security libraries.
  *
  * The Initial Developer of the Original Code is
- * Sun Microsystems, Inc.
- * Portions created by the Initial Developer are
- * Copyright 2004-2007 Sun Microsystems, Inc.  All Rights Reserved.
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1994-2000
+ * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Sun Microsystems, Inc.
+ *   Sun Microsystems
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -1628,7 +1628,7 @@ pkix_Build_ValidateEntireChain(
         PKIX_PL_PublicKey *subjPubKey = NULL;
         PKIX_PolicyNode *policyTree = NULL;
         PKIX_ValidateResult *valResult = NULL;
-        void *nbioContext = NULL;
+        void *nbioContext = PKIX_FALSE;
         PKIX_Error *certCheckError = NULL;
 
         PKIX_ENTER(BUILD, "pkix_Build_ValidateEntireChain");
@@ -3601,7 +3601,6 @@ pkix_Build_InitiateBuildChain(
         PKIX_UInt32 i = 0;
         PKIX_Boolean dsaParamsNeeded = PKIX_FALSE;
         PKIX_Boolean isCrlEnabled = PKIX_FALSE;
-        PKIX_Boolean nistCRLPolicyEnabled = PKIX_TRUE;
         PKIX_Boolean cacheHit = PKIX_FALSE;
         PKIX_Boolean trusted = PKIX_FALSE;
         PKIX_Boolean isDuplicate = PKIX_FALSE;
@@ -3787,12 +3786,6 @@ pkix_Build_InitiateBuildChain(
                     (procParams, &isCrlEnabled, plContext),
                     PKIX_PROCESSINGPARAMSGETREVOCATIONENABLEDFAILED);
     
-            PKIX_CHECK(
-                pkix_ProcessingParams_GetNISTRevocationPolicyEnabled
-                (procParams, &nistCRLPolicyEnabled, plContext),
-                PKIX_PROCESSINGPARAMSGETNISTREVPOLICYENABLEDFAILED);
-
-
             PKIX_CHECK(PKIX_ProcessingParams_GetCertStores
                     (procParams, &certStores, plContext),
                     PKIX_PROCESSINGPARAMSGETCERTSTORESFAILED);
@@ -3843,7 +3836,6 @@ pkix_Build_InitiateBuildChain(
                                     testDate,
                                     NULL,
                                     0,
-                                    nistCRLPolicyEnabled,
                                     &crlChecker,
                                     plContext),
                                     PKIX_DEFAULTCRLCHECKERINITIALIZEFAILED);
@@ -4007,7 +3999,7 @@ pkix_Build_InitiateBuildChain(
                                 PKIX_DECREF(state->checkedCritExtOIDs);
                                 PKIX_DECREF(state->checkerChain);
                                 PKIX_DECREF(state->revCheckers);
-                                if (state->verifyNode != NULL && verifyNode) {
+                                if (state->verifyNode != NULL) {
                                     PKIX_CHECK_FATAL(pkix_VerifyNode_AddToTree
                                         (state->verifyNode,
                                         verifyNode,
@@ -4020,7 +4012,6 @@ pkix_Build_InitiateBuildChain(
                                     /* The result from cache is still valid. */
                                     *pBuildResult = buildResult;
                                     if (pVerifyNode != NULL) {
-                                        PKIX_INCREF(state->verifyNode);
                                         *pVerifyNode = state->verifyNode;
                                     }
                                     goto cleanup;

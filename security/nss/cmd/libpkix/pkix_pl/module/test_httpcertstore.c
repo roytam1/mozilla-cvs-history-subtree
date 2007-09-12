@@ -39,9 +39,8 @@
 #include "testutil_nss.h"
 #include "pkix_pl_common.h"
 
-static void *plContext = NULL;
+void *plContext = NULL;
 
-static
 void printUsage(char *testname) {
         char *fmt =
 		"USAGE: %s [-arenas] certDir certName\n";
@@ -49,7 +48,6 @@ void printUsage(char *testname) {
 }
 
 /* Functional tests for Socket public functions */
-static
 void do_other_work(void) { /* while waiting for nonblocking I/O to complete */
         (void) PR_Sleep(2*60);
 }
@@ -68,7 +66,7 @@ pkix_pl_HttpCertStore_CreateWithAsciiName(
         PKIX_CertStore **pCertStore,
         void *plContext);
 
-static PKIX_Error *
+PKIX_Error *
 getLocation(
 	PKIX_PL_Cert *certWithAia,
 	PKIX_PL_GeneralName **pLocation,
@@ -121,7 +119,7 @@ cleanup:
         return (NULL);
 }
 
-int test_httpcertstore(int argc, char *argv[]) {
+int main(int argc, char *argv[]) {
 
         PKIX_UInt32 i = 0;
         PKIX_UInt32 numCerts = 0;

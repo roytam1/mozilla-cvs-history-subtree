@@ -11,15 +11,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the PKIX-C library.
+ * The Original Code is the Netscape security libraries.
  *
  * The Initial Developer of the Original Code is
- * Sun Microsystems, Inc.
- * Portions created by the Initial Developer are
- * Copyright 2004-2007 Sun Microsystems, Inc.  All Rights Reserved.
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1994-2000
+ * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Sun Microsystems, Inc.
+ *   Sun Microsystems
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -47,22 +47,20 @@
 #define PKIX_TEST_MAX_CERTS     10
 #define PKIX_TEST_COLLECTIONCERTSTORE_NUM_CRLS 5
 
-static void *plContext = NULL;
+void *plContext = NULL;
 char *dirName = NULL; /* also used in callback */
 
-static
 void printUsage1(char *pName){
         printf("\nUSAGE: %s test-purpose [ENE|EE] ", pName);
         printf("cert [certs].\n");
 }
 
-static
 void printUsageMax(PKIX_UInt32 numCerts){
         printf("\nUSAGE ERROR: number of certs %d exceed maximum %d\n",
                 numCerts, PKIX_TEST_MAX_CERTS);
 }
 
-static PKIX_Error *
+PKIX_Error *
 getCRLCallback(
         PKIX_CertStore *store,
         PKIX_CRLSelector *crlSelector,
@@ -107,7 +105,7 @@ cleanup:
 
 }
 
-static PKIX_Error *
+PKIX_Error *
 getCRLContinue(
         PKIX_CertStore *store,
         PKIX_CRLSelector *crlSelector,
@@ -118,7 +116,7 @@ getCRLContinue(
         return (NULL);
 }
 
-static PKIX_Error *
+PKIX_Error *
 getCertCallback(
         PKIX_CertStore *store,
         PKIX_CertSelector *certSelector,
@@ -129,7 +127,7 @@ getCertCallback(
         return (NULL);
 }
 
-static PKIX_Error *
+PKIX_Error *
 getCertContinue(
         PKIX_CertStore *store,
         PKIX_CertSelector *certSelector,
@@ -140,7 +138,7 @@ getCertContinue(
         return (NULL);
 }
 
-static PKIX_Error *
+PKIX_Error *
 testCRLSelectorMatchCallback(
         PKIX_CRLSelector *selector,
         PKIX_PL_CRL *crl,
@@ -154,6 +152,7 @@ testCRLSelectorMatchCallback(
         PKIX_UInt32 i = 0;
         PKIX_Boolean result = PKIX_FALSE;
         PKIX_Error *error = NULL;
+        PKIX_PL_String *textString = NULL;
         char *errorText = "Not an error, CRL Select mismatch";
 
         PKIX_TEST_STD_VARS();
@@ -202,11 +201,19 @@ testCRLSelectorMatchCallback(
                         if (i == numIssuers-1) {
 
                                 PKIX_TEST_EXPECT_NO_ERROR
+                                        (PKIX_PL_String_Create
+                                        (PKIX_ESCASCII,
+                                        (void *) errorText,
+                                        0,
+                                        &textString,
+                                        plContext));
+
+                                PKIX_TEST_EXPECT_NO_ERROR
                                         (PKIX_Error_Create
                                         (0,
                                         NULL,
                                         NULL,
-                                        PKIX_TESTNOTANERRORCRLSELECTMISMATCH,
+                                        textString,
                                         &error,
                                         plContext));
 
@@ -226,6 +233,7 @@ cleanup:
         PKIX_TEST_DECREF_AC(crlIssuer);
         PKIX_TEST_DECREF_AC(issuer);
         PKIX_TEST_DECREF_AC(issuerList);
+        PKIX_TEST_DECREF_AC(textString);
 
         PKIX_TEST_RETURN();
 
@@ -233,7 +241,7 @@ cleanup:
 
 }
 
-static PKIX_Error *
+PKIX_Error *
 testAddIssuerName(PKIX_ComCRLSelParams *comCrlSelParams, char *issuerName)
 {
         PKIX_PL_String *issuerString = NULL;
@@ -270,7 +278,7 @@ cleanup:
         return (0);
 }
 
-static PKIX_Error *
+PKIX_Error *
 testCustomCertStore(PKIX_ValidateParams *valParams)
 {
         PKIX_CertStore_CRLCallback crlCallback;
@@ -390,7 +398,7 @@ cleanup:
  *      revocation check, CRL's are filtered based on the criteria set.
  */
 
-int test_customcrlchecker(int argc, char *argv[]){
+int main(int argc, char *argv[]){
 
         PKIX_List *chain = NULL;
         PKIX_ValidateParams *valParams = NULL;

@@ -11,15 +11,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the PKIX-C library.
+ * The Original Code is the Netscape security libraries.
  *
  * The Initial Developer of the Original Code is
- * Sun Microsystems, Inc.
- * Portions created by the Initial Developer are
- * Copyright 2004-2007 Sun Microsystems, Inc.  All Rights Reserved.
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1994-2000
+ * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Sun Microsystems, Inc.
+ *   Sun Microsystems
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -557,69 +557,6 @@ PKIX_Error *
 PKIX_ComCRLSelParams_SetDateAndTime(
         PKIX_ComCRLSelParams *params,
         PKIX_PL_Date *date,
-        void *plContext);
-
-/* 
- * FUNCTION: PKIX_ComCRLSelParams_GetNISTPolicyEnabled
- * DESCRIPTION:
- *
- *  Retrieves a pointer to the Boolean representing the NIST CRL policy
- *  activation flag that is set in the ComCRLSelParams pointed to by "params"
- *  and stores it at "enabled". If enabled, a CRL must have nextUpdate field.
- *
- *  Default value for this flag is TRUE.
- *
- * PARAMETERS:
- *  "params"
- *      Address of ComCRLSelParams whose NIST CRL policy criterion  is to
- *      be stored. Must be non-NULL.
- *  "pEnabled"
- *      Address where object pointer will be stored. Must be non-NULL.
- *  "plContext"
- *      Platform-specific context pointer.
- * THREAD SAFETY:
- *  Conditionally Thread Safe
- *      (see Thread Safety Definitions in Programmer's Guide)
- * RETURNS:
- *  Returns NULL if the function succeeds.
- *  Returns a CRLSelector Error if the function fails in a non-fatal way.
- *  Returns a Fatal Error if the function fails in an unrecoverable way.
- */
-PKIX_Error *
-PKIX_ComCRLSelParams_GetNISTPolicyEnabled(
-        PKIX_ComCRLSelParams *params,
-        PKIX_Boolean *pEnabled,
-        void *plContext);
-
-/*
- * FUNCTION: PKIX_ComCRLSelParams_SetNISTPolicyEnabled
- * DESCRIPTION:
- *
- *  Sets the NIST crl policy criterion of the ComCRLSelParams pointed to by
- *  "params" using a "enabled" flag. In order to match against this
- *  criterion, a CRL's nextUpdate must be available and criterion's
- *  dataAndTime must be within thisUpdate and nextUpdate time period.
- *
- * PARAMETERS:
- *  "params"
- *      Address of ComCRLSelParamsParams whose NIST CRL policy criterion
- *      is to be set. Must be non-NULL.
- *  "enabled"
- *      Address of Bollean used to set the criterion
- *  "plContext"
- *      Platform-specific context pointer.
- * THREAD SAFETY:
- *  Not Thread Safe - assumes exclusive access to "params"
- *  (see Thread Safety Definitions in Programmer's Guide)
- * RETURNS:
- *  Returns NULL if the function succeeds.
- *  Returns a CRLSelector Error if the function fails in a non-fatal way.
- *  Returns a Fatal Error if the function fails in an unrecoverable way.
- */
-PKIX_Error *
-PKIX_ComCRLSelParams_SetNISTPolicyEnabled(
-        PKIX_ComCRLSelParams *params,
-        PKIX_Boolean enabled,
         void *plContext);
 
 /*

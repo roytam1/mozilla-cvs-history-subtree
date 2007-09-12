@@ -13,15 +13,14 @@
 # for the specific language governing rights and limitations under the
 # License.
 #
-# The Original Code is the PKIX-C library.
+# The Original Code is the Netscape security libraries.
 #
 # The Initial Developer of the Original Code is
-# Sun Microsystems, Inc.
-# Portions created by the Initial Developer are
-# Copyright 2004-2007 Sun Microsystems, Inc.  All Rights Reserved.
+# Netscape Communications Corporation.
+# Portions created by the Initial Developer are Copyright (C) 1994-2000
+# the Initial Developer. All Rights Reserved.
 #
 # Contributor(s):
-#   Sun Microsystems, Inc.
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -57,7 +56,7 @@ testunit=STORE
 ParseArgs $*
 
 RunTests <<EOF
-pkixutil test_store genericCertStore rev_data/crlchecker ${HOSTDIR}
+test_store genericCertStore rev_data/crlchecker ${HOSTDIR}
 EOF
 
 totalErrors=$?

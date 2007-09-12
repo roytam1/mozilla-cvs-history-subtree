@@ -677,8 +677,7 @@ STAN_GetCERTCertificateNameForInstance (
     }
     if (stanNick) {
 	/* fill other fields needed by NSS3 functions using CERTCertificate */
-	if (instance && (!PK11_IsInternal(instance->token->pk11slot) || 
-	                 PORT_Strchr(stanNick, ':') != NULL) ) {
+	if (instance && !PK11_IsInternal(instance->token->pk11slot)) {
 	    tokenName = nssToken_GetName(instance->token);
 	    tokenlen = nssUTF8_Size(tokenName, &nssrv);
 	} else {
@@ -742,9 +741,7 @@ fill_CERTCertificateFields(NSSCertificate *c, CERTCertificate *cc, PRBool forced
 	int nicklen, tokenlen, len;
 	NSSUTF8 *tokenName = NULL;
 	char *nick;
-	if (instance && 
-	     (!PK11_IsInternal(instance->token->pk11slot) || 
-	      (stanNick && PORT_Strchr(stanNick, ':') != NULL))) {
+	if (instance && !PK11_IsInternal(instance->token->pk11slot)) {
 	    tokenName = nssToken_GetName(instance->token);
 	    tokenlen = nssUTF8_Size(tokenName, &nssrv);
 	} else {

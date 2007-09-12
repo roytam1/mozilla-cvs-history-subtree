@@ -11,15 +11,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the PKIX-C library.
+ * The Original Code is the Netscape security libraries.
  *
  * The Initial Developer of the Original Code is
- * Sun Microsystems, Inc.
- * Portions created by the Initial Developer are
- * Copyright 2004-2007 Sun Microsystems, Inc.  All Rights Reserved.
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1994-2000
+ * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Sun Microsystems, Inc.
+ *   Sun Microsystems
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -487,7 +487,6 @@ PKIX_ComCRLSelParams_Create(
         params->issuerNames = NULL;
         params->cert = NULL;
         params->date = NULL;
-        params->nistPolicyEnabled = PKIX_TRUE;
         params->maxCRLNumber = NULL;
         params->minCRLNumber = NULL;
 
@@ -682,47 +681,6 @@ cleanup:
         PKIX_RETURN(COMCRLSELPARAMS);
 }
 
-/*
- * FUNCTION: PKIX_ComCRLSelParams_GetDateAndTime (see comments in pkix_crlsel.h)
- */
-PKIX_Error *
-PKIX_ComCRLSelParams_GetNISTPolicyEnabled(
-        PKIX_ComCRLSelParams *params,
-        PKIX_Boolean *pEnabled,
-        void *plContext)
-{
-        PKIX_ENTER(COMCRLSELPARAMS,
-                    "PKIX_ComCRLSelParams_GetNISTPolicyEnabled");
-        PKIX_NULLCHECK_TWO(params, pEnabled);
-
-        *pEnabled = params->nistPolicyEnabled;
-
-        PKIX_RETURN(COMCRLSELPARAMS);
-}
-
-/*
- * FUNCTION: PKIX_ComCRLSelParams_SetDateAndTime (see comments in pkix_crlsel.h)
- */
-PKIX_Error *
-PKIX_ComCRLSelParams_SetNISTPolicyEnabled(
-        PKIX_ComCRLSelParams *params,
-        PKIX_Boolean enabled,
-        void *plContext)
-{
-        PKIX_ENTER(COMCRLSELPARAMS,
-                    "PKIX_ComCRLSelParams_SetNISTPolicyEnabled");
-        PKIX_NULLCHECK_ONE(params); /* allows date to be NULL from spec */
-
-        params->nistPolicyEnabled = enabled;
-
-        PKIX_CHECK(PKIX_PL_Object_InvalidateCache
-                    ((PKIX_PL_Object *)params, plContext),
-                    PKIX_OBJECTINVALIDATECACHEFAILED);
-
-cleanup:
-
-        PKIX_RETURN(COMCRLSELPARAMS);
-}
 
 /*
  * FUNCTION: PKIX_ComCRLSelParams_GetMaxCRLNumber

@@ -11,15 +11,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the PKIX-C library.
+ * The Original Code is the Netscape security libraries.
  *
  * The Initial Developer of the Original Code is
- * Sun Microsystems, Inc.
- * Portions created by the Initial Developer are
- * Copyright 2004-2007 Sun Microsystems, Inc.  All Rights Reserved.
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1994-2000
+ * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Sun Microsystems, Inc.
+ *   Sun Microsystems
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -121,10 +121,6 @@ pkix_ProcessingParams_Equals(
 
         if (firstProcParams->isCrlRevocationCheckingEnabled !=
             secondProcParams->isCrlRevocationCheckingEnabled) {
-                goto cleanup;
-        }
-        if (firstProcParams->isCrlRevocationCheckingEnabledWithNISTPolicy !=
-            secondProcParams->isCrlRevocationCheckingEnabledWithNISTPolicy) {
                 goto cleanup;
         }
 
@@ -269,8 +265,7 @@ pkix_ProcessingParams_Hashcode(
 
         hash += ((((certStoresHash + resourceLimitsHash) << 7) +
                 certChainCheckersHash + revCheckersHash +
-                procParams->isCrlRevocationCheckingEnabled +
-                procParams->isCrlRevocationCheckingEnabledWithNISTPolicy) << 7);
+                procParams->isCrlRevocationCheckingEnabled) << 7);
 
         *pHashcode = hash;
 
@@ -380,8 +375,7 @@ pkix_ProcessingParams_ToString(
                 qualsRejectedString,
                 certStoresString,
                 resourceLimitsString,
-                procParams->isCrlRevocationCheckingEnabled,
-                procParams->isCrlRevocationCheckingEnabledWithNISTPolicy),
+                procParams->isCrlRevocationCheckingEnabled),
                 PKIX_SPRINTFFAILED);
 
         *pString = procParamsString;
@@ -489,9 +483,6 @@ pkix_ProcessingParams_Duplicate(
         paramsDuplicate->isCrlRevocationCheckingEnabled =
                 params->isCrlRevocationCheckingEnabled;
 
-        paramsDuplicate->isCrlRevocationCheckingEnabledWithNISTPolicy =
-                params->isCrlRevocationCheckingEnabledWithNISTPolicy;
-
         *pNewObject = (PKIX_PL_Object *)paramsDuplicate;
 
 cleanup:
@@ -579,9 +570,11 @@ PKIX_ProcessingParams_Create(
         params->certStores = NULL;
         params->resourceLimits = NULL;
 
+        /*
+         * XXX CRL checking should be enabled as default, but before
+         * we encorporate CRL in all our tests, take it as disable for now
+         */
         params->isCrlRevocationCheckingEnabled = PKIX_TRUE;
-
-        params->isCrlRevocationCheckingEnabledWithNISTPolicy = PKIX_TRUE;
 
         *pParams = params;
 
@@ -1196,99 +1189,11 @@ pkix_ProcessingParams_GetRevocationEnabled(
 {
 
         PKIX_ENTER(PROCESSINGPARAMS,
-                    "pkix_ProcessingParams_GetRevocationEnabled");
+                    "PKIX_ProcessingParams_GetRevocationEnabled");
 
         PKIX_NULLCHECK_TWO(params, pEnabled);
 
         *pEnabled = params->isCrlRevocationCheckingEnabled;
-
-        PKIX_RETURN(PROCESSINGPARAMS);
-}
-
-/*
- * FUNCTION: PKIX_ProcessingParams_IsNISTRevocationPolicyEnabled
- * (see comments in pkix_params.h)
- */
-PKIX_Error *
-PKIX_ProcessingParams_IsNISTRevocationPolicyEnabled(
-        PKIX_ProcessingParams *params,
-        PKIX_Boolean *pEnabled,
-        void *plContext)
-{
-
-        PKIX_ENTER(PROCESSINGPARAMS,
-                    "PKIX_ProcessingParams_IsNISTRevocationPolicyEnabled");
-        PKIX_NULLCHECK_TWO(params, pEnabled);
-
-        *pEnabled = params->isCrlRevocationCheckingEnabledWithNISTPolicy;
-
-        PKIX_RETURN(PROCESSINGPARAMS);
-}
-
-/*
- * FUNCTION: PKIX_ProcessingParams_SetNISTRevocationPolicyEnabled
- * (see comments in pkix_params.h)
- */
-PKIX_Error *
-PKIX_ProcessingParams_SetNISTRevocationPolicyEnabled(
-        PKIX_ProcessingParams *params,
-        PKIX_Boolean enabled,
-        void *plContext)
-{
-
-        PKIX_ENTER(PROCESSINGPARAMS,
-                    "PKIX_ProcessingParams_SetNISTRevocationPolicyEnabled");
-        PKIX_NULLCHECK_ONE(params);
-
-        params->isCrlRevocationCheckingEnabledWithNISTPolicy = enabled;
-
-        PKIX_CHECK(PKIX_PL_Object_InvalidateCache
-                    ((PKIX_PL_Object *)params, plContext),
-                    PKIX_OBJECTINVALIDATECACHEFAILED);
-
-cleanup:
-
-        PKIX_RETURN(PROCESSINGPARAMS);
-}
-
-/*
- * FUNCTION: pkix_ProcessingParams_GetNISTRevocationPolicyEnabled
- *
- * DESCRIPTION:
- *  Retrieves the boolean value from the ProcessingParams pointed to by
- *  "params", and stores the result at "pEnable". The value indicates
- *  whether Revocation Checking should be performed according to nist
- *  revocation policy.
- *
- * PARAMETERS:
- *  "params"
- *      Address of ProcessingParams whose revocationEnabledWithNistPolicy
- *      flag is to be retrieved. Must be non-NULL.
- *  "pEnable"
- *      Address where Boolean value will be stored. Must be non-NULL.
- *  "plContext"
- *      Platform-specific context pointer.
- *
- * THREAD SAFETY:
- *  Thread Safe (see Thread Safety Definitions in Programmer's Guide)
- *
- * RETURNS:
- *  Returns NULL if the function succeeds.
- *  Returns a Fatal Error if the function fails in an unrecoverable way.
- */
-PKIX_Error *
-pkix_ProcessingParams_GetNISTRevocationPolicyEnabled(
-        PKIX_ProcessingParams *params,
-        PKIX_Boolean *pEnabled,
-        void *plContext)
-{
-
-        PKIX_ENTER(PROCESSINGPARAMS,
-                    "pkix_ProcessingParams_GetNISTRevocationPolicyEnabled");
-
-        PKIX_NULLCHECK_TWO(params, pEnabled);
-
-        *pEnabled = params->isCrlRevocationCheckingEnabledWithNISTPolicy;
 
         PKIX_RETURN(PROCESSINGPARAMS);
 }

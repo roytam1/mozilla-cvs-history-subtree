@@ -11,15 +11,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the PKIX-C library.
+ * The Original Code is the Netscape security libraries.
  *
  * The Initial Developer of the Original Code is
- * Sun Microsystems, Inc.
- * Portions created by the Initial Developer are
- * Copyright 2004-2007 Sun Microsystems, Inc.  All Rights Reserved.
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1994-2000
+ * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Sun Microsystems, Inc.
+ *   Sun Microsystems
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -46,9 +46,8 @@
 
 #define PKIX_TEST_MAX_CERTS     10
 
-static void *plContext = NULL;
+void *plContext = NULL;
 
-static
 void printUsage(char *testname) {
         char *fmt =
                 "USAGE: %s testname"
@@ -60,14 +59,12 @@ void printUsage(char *testname) {
         printf(fmt, testname);
 }
 
-static
 void printUsageMax(PKIX_UInt32 numCerts)
 {
         printf("\nUSAGE ERROR: number of certs %d exceed maximum %d\n",
                 numCerts, PKIX_TEST_MAX_CERTS);
 }
 
-static
 PKIX_List *policySetParse(char *policyString)
 {
         char *p = NULL;
@@ -160,7 +157,7 @@ cleanup:
  * RETURNS:
  *  Nothing.
  */
-static void
+void
 treeToStringHelper(PKIX_PolicyNode *parent, char *expected)
 {
         PKIX_PL_String *stringRep = NULL;
@@ -191,7 +188,6 @@ cleanup:
         PKIX_TEST_RETURN();
 }
 
-static
 void testPass(char *dirName, char *goodInput, char *diffInput, char *dateAscii){
 
         PKIX_List *chain = NULL;
@@ -232,7 +228,6 @@ cleanup:
         PKIX_TEST_RETURN();
 }
 
-static
 void testNistTest1(char *dirName)
 {
 #define PKIX_TEST_NUM_CERTS     2
@@ -307,7 +302,6 @@ cleanup:
         PKIX_TEST_RETURN();
 }
 
-static
 void testNistTest2(char *dirName)
 {
 #define PKIX_TEST_NUM_CERTS     2
@@ -409,7 +403,7 @@ cleanup:
         PKIX_TEST_RETURN();
 }
 
-int test_policychecker(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 
         PKIX_Boolean initialPolicyMappingInhibit = PKIX_FALSE;

@@ -11,15 +11,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the PKIX-C library.
+ * The Original Code is the Netscape security libraries.
  *
  * The Initial Developer of the Original Code is
- * Sun Microsystems, Inc.
- * Portions created by the Initial Developer are
- * Copyright 2004-2007 Sun Microsystems, Inc.  All Rights Reserved.
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1994-2000
+ * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Sun Microsystems, Inc.
+ *   Sun Microsystems
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -54,7 +54,6 @@ struct PKIX_ComCRLSelParamsStruct {
         PKIX_List *issuerNames; /* list of PKIX_PL_X500Name */
         PKIX_PL_Cert *cert; /* certificate being checked */
         PKIX_PL_Date *date;
-        PKIX_Boolean nistPolicyEnabled;
         PKIX_PL_BigInt *maxCRLNumber;
         PKIX_PL_BigInt *minCRLNumber;
 };

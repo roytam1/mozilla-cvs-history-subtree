@@ -148,11 +148,7 @@ ifeq ($(OS_RELEASE),2.0)
 endif
 
 ifdef BUILD_OPT
-ifeq (11,$(ALLOW_OPT_CODE_SIZE)$(OPT_CODE_SIZE))
-	OPTIMIZER = -Os
-else
-	OPTIMIZER = -O2
-endif
+	OPTIMIZER	= -O2
 endif
 
 ifeq ($(USE_PTHREADS),1)
