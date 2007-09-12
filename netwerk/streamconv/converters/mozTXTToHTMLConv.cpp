@@ -329,14 +329,17 @@ mozTXTToHTMLConv::FindURLEnd(const PRUnichar * aInString, PRInt32 aInStringLengt
       if (aInString[i] == '>' || aInString[i] == '<' ||
           aInString[i] == '"' || aInString[i] == '`' ||
           aInString[i] == '}' || aInString[i] == ']' ||
+          aInString[i] == '{' || aInString[i] == '[' ||
           aInString[i] == '|' ||
+          (aInString[i] == ')' && !haveOpeningBracket) ||
           IsSpace(aInString[i])    )
           break;
       // Disallow non-ascii-characters for email.
       // Currently correct, but revisit later after standards changed.
-      if (isEmail && !nsCRT::IsAscii(aInString[i]))
+      if (isEmail && (
+            aInString[i] == '(' || aInString[i] == '\'' ||
+            !nsCRT::IsAscii(aInString[i])       ))
           break;
-      // while we're iterating, if there's a "(", remember it
       if (aInString[i] == '(')
         haveOpeningBracket = PR_TRUE;
     }
@@ -345,7 +348,7 @@ mozTXTToHTMLConv::FindURLEnd(const PRUnichar * aInString, PRInt32 aInStringLengt
     while (--i > pos && (
              aInString[i] == '.' || aInString[i] == ',' || aInString[i] == ';' ||
              aInString[i] == '!' || aInString[i] == '?' || aInString[i] == '-' ||
-             aInString[i] == '\'' || (aInString[i] == ')' && !haveOpeningBracket)
+             aInString[i] == '\''
              ))
         ;
     if (i > pos)
