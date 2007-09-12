@@ -9241,11 +9241,12 @@ PRBool NotifyListBoxBody(nsPresContext*    aPresContext,
                                           getter_AddRefs(tag));
 
   // Just ignore tree tags, anyway we don't create any frames for them.
-  if (tag == nsXULAtoms::treechildren ||
-      tag == nsXULAtoms::treeitem ||
-      tag == nsXULAtoms::treerow ||
-      (namespaceID == kNameSpaceID_XUL && aUseXBLForms &&
-       ShouldIgnoreSelectChild(aContainer)))
+  if (aContainer->GetParent() &&
+      (tag == nsGkAtoms::treechildren ||
+       tag == nsGkAtoms::treeitem ||
+       tag == nsGkAtoms::treerow ||
+       (namespaceID == kNameSpaceID_XUL && aUseXBLForms &&
+        ShouldIgnoreSelectChild(aContainer))))
     return PR_TRUE;
 
   return PR_FALSE;
