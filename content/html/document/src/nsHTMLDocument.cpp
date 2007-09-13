@@ -1950,6 +1950,17 @@ nsHTMLDocument::OpenCommon(const nsACString& aContentType, PRBool aReplace)
     }
   }
 
+  // check whether we're in the middle of unload.  If so, ignore this call.
+  nsCOMPtr<nsIDocShell_MOZILLA_1_8_BRANCH2> shell =
+    do_QueryReferent(mDocumentContainer);
+  if (shell) {
+    PRBool inUnload;
+    shell->GetIsInUnload(&inUnload);
+    if (inUnload) {
+      return NS_OK;
+    }
+  }
+
   nsCOMPtr<nsIDocument> callerDoc =
     do_QueryInterface(nsContentUtils::GetDocumentFromContext());
 
