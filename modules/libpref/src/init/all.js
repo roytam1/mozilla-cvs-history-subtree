@@ -2327,3 +2327,7 @@ pref("print.print_command", "lp -c -s ${MOZ_PRINTER_NAME:+'-d '}${MOZ_PRINTER_NA
 
 # Solaris
 #endif
+
+#ifdef MOZ_X11
+pref("network.gnomevfs.supported-protocols", "smb:,sftp:");
+#endif

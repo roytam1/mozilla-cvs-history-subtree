@@ -1415,6 +1415,41 @@ nsScriptSecurityManager::CheckLoadURIWithPrincipal(nsIPrincipal* aPrincipal,
         }
     }
 
+    // See whether this URI is going to be handled by gnome-vfs.  If
+    // it is, deny the load.
+#ifdef MOZ_X11
+    nsCOMPtr<nsIProtocolHandler> gnomeVFSHandler =
+        do_GetService(NS_NETWORK_PROTOCOL_CONTRACTID_PREFIX"moz-gnomevfs");
+    if (gnomeVFSHandler) {
+        nsCOMPtr<nsIPrefBranch> prefService =
+            do_GetService(NS_PREFSERVICE_CONTRACTID);
+        if (prefService) {
+            nsXPIDLCString gnomeVFSProtocols;
+            nsresult result =
+                prefService->GetCharPref("network.gnomevfs.supported-protocols",
+                                         getter_Copies(gnomeVFSProtocols));
+            if (NS_SUCCEEDED(result))
+                gnomeVFSProtocols.StripWhitespace();
+            else
+                gnomeVFSProtocols.Truncate();
+
+            // Now see whether the target scheme is supported
+            nsCAutoString scheme(targetScheme);
+            scheme.Append(':');
+            nsACString::const_iterator begin, end, iter;
+            gnomeVFSProtocols.BeginReading(begin);
+            gnomeVFSProtocols.EndReading(end);
+            iter = begin;
+            if (CaseInsensitiveFindInReadable(scheme, iter, end) &&
+                (iter == begin || *(--iter) == ',')) {
+                // Deny this load
+                ReportError(nsnull, errorTag, sourceURI, aTargetURI);
+                return NS_ERROR_DOM_BAD_URI;
+            }
+        }
+    }
+#endif
+
     // If we reach here, we have an unknown protocol. Warn, but allow.
     // This is risky from a security standpoint, but allows flexibility
     // in installing new protocol handlers after initial ship.
