@@ -2998,12 +2998,6 @@ nsMsgDBView::DetermineActionsForJunkMsgs(PRBool* movingJunkMessages, PRBool* mar
   
   if (manualMarkMode == nsISpamSettings::MANUAL_MARK_MODE_MOVE) 
   {
-    PRBool moveOnSpam;
-    (void)spamSettings->GetMoveOnSpam(&moveOnSpam);    
-    // if move of spam not enabled, bail out
-    if (!moveOnSpam)
-      return NS_OK;
-    
     // if this is a junk folder
     // (not only "the" junk folder for this account)
     // don't do the move
