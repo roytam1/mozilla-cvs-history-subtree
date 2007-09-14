@@ -44,13 +44,6 @@ extern "C" {
 #endif
 
 /*
-** Add the ability to override 'extern'
-*/
-#ifndef SQLITE_EXTERN
-# define SQLITE_EXTERN extern
-#endif
-
-/*
 ** Make sure these symbols where not defined by some previous header
 ** file.
 */
@@ -88,8 +81,8 @@ extern "C" {
 **
 ** See also: [sqlite3_libversion()] and [sqlite3_libversion_number()].
 */
-#define SQLITE_VERSION         "3.4.2"
-#define SQLITE_VERSION_NUMBER 3004002
+#define SQLITE_VERSION         "3.4.1"
+#define SQLITE_VERSION_NUMBER 3004001
 
 /*
 ** CAPI3REF: Run-Time Library Version Numbers
@@ -107,7 +100,7 @@ extern "C" {
 ** is provided for DLL users who can only access functions and not
 ** constants within the DLL.
 */
-SQLITE_EXTERN const char sqlite3_version[];
+extern const char sqlite3_version[];
 const char *sqlite3_libversion(void);
 int sqlite3_libversion_number(void);
 
@@ -2027,7 +2020,7 @@ int sqlite3_sleep(int);
 ** it is not safe to invoke this routine after [sqlite3_open()] has
 ** been called.
 */
-SQLITE_EXTERN char *sqlite3_temp_directory;
+extern char *sqlite3_temp_directory;
 
 /*
 ** CAPI3REF:  Test To See If The Databse Is In Auto-Commit Mode
