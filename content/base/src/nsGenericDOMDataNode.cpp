@@ -428,7 +428,7 @@ nsGenericDOMDataNode::AppendData(const nsAString& aData)
     // to issues with dependent concatenation and sliding (sub)strings
     // we'll just have to copy for now. See bug 121841 for details.
     old_data.Append(aData);
-    SetText(old_data, PR_FALSE);
+    DoSetText(old_data, PR_TRUE, PR_TRUE);
   } else {
     // We know aData and the current data is ASCII, so use a
     // nsC*String, no need for any fancy unicode stuff here.
@@ -436,13 +436,7 @@ nsGenericDOMDataNode::AppendData(const nsAString& aData)
     mText.AppendTo(old_data);
     length = old_data.Length();
     LossyAppendUTF16toASCII(aData, old_data);
-    SetText(old_data.get(), old_data.Length(), PR_FALSE);
-  }
-
-  // Trigger a reflow
-  nsIDocument *document = GetCurrentDoc();
-  if (document) {
-    document->CharacterDataChanged(this, PR_TRUE);
+    DoSetText(old_data.get(), old_data.Length(), PR_TRUE, PR_TRUE);
   }
 
   return NS_OK;
@@ -1158,9 +1152,8 @@ nsGenericDOMDataNode::TextLength()
 }
 
 void
-nsGenericDOMDataNode::SetText(const PRUnichar* aBuffer,
-                              PRUint32 aLength,
-                              PRBool aNotify)
+nsGenericDOMDataNode::DoSetText(const PRUnichar* aBuffer, PRUint32 aLength,
+                                PRBool aIsAppend, PRBool aNotify)
 {
   if (!aBuffer) {
     NS_ERROR("Null buffer passed to SetText()!");
@@ -1182,6 +1175,11 @@ nsGenericDOMDataNode::SetText(const PRUnichar* aBuffer,
   mText.SetTo(aBuffer, aLength);
 
   SetBidiStatus();
+
+  // Trigger a reflow
+  if (aNotify && document) {
+    document->CharacterDataChanged(this, aIsAppend);
+  }
 
   if (haveMutationListeners) {
     nsCOMPtr<nsIDOMEventTarget> node(do_QueryInterface(this));
@@ -1199,16 +1197,11 @@ nsGenericDOMDataNode::SetText(const PRUnichar* aBuffer,
     HandleDOMEvent(nsnull, &mutation, nsnull,
                    NS_EVENT_FLAG_INIT, &status);
   }
-
-  // Trigger a reflow
-  if (aNotify && document) {
-    document->CharacterDataChanged(this, PR_FALSE);
-  }
 }
 
 void
-nsGenericDOMDataNode::SetText(const char* aBuffer, PRUint32 aLength,
-                              PRBool aNotify)
+nsGenericDOMDataNode::DoSetText(const char* aBuffer, PRUint32 aLength,
+                                PRBool aIsAppend, PRBool aNotify)
 {
   if (!aBuffer) {
     NS_ERROR("Null buffer passed to SetText()!");
@@ -1229,6 +1222,11 @@ nsGenericDOMDataNode::SetText(const char* aBuffer, PRUint32 aLength,
     
   mText.SetTo(aBuffer, aLength);
 
+  // Trigger a reflow
+  if (aNotify && document) {
+    document->CharacterDataChanged(this, aIsAppend);
+  }
+
   if (haveMutationListeners) {
     nsCOMPtr<nsIDOMEventTarget> node(do_QueryInterface(this));
     nsMutationEvent mutation(PR_TRUE, NS_MUTATION_CHARACTERDATAMODIFIED, node);
@@ -1245,16 +1243,11 @@ nsGenericDOMDataNode::SetText(const char* aBuffer, PRUint32 aLength,
     HandleDOMEvent(nsnull, &mutation, nsnull,
                    NS_EVENT_FLAG_INIT, &status);
   }
-
-  // Trigger a reflow
-  if (aNotify && document) {
-    document->CharacterDataChanged(this, PR_FALSE);
-  }
 }
 
 void
-nsGenericDOMDataNode::SetText(const nsAString& aStr,
-                              PRBool aNotify)
+nsGenericDOMDataNode::DoSetText(const nsAString& aStr, PRBool aIsAppend,
+                                PRBool aNotify)
 {
   nsIDocument *document = GetCurrentDoc();
   mozAutoDocUpdate updateBatch(document, UPDATE_CONTENT_MODEL, aNotify);
@@ -1271,6 +1264,11 @@ nsGenericDOMDataNode::SetText(const nsAString& aStr,
 
   SetBidiStatus();
 
+  // Trigger a reflow
+  if (aNotify && document) {
+    document->CharacterDataChanged(this, aIsAppend);
+  }
+
   if (haveMutationListeners) {
     nsCOMPtr<nsIDOMEventTarget> node(do_QueryInterface(this));
     nsMutationEvent mutation(PR_TRUE, NS_MUTATION_CHARACTERDATAMODIFIED, node);
@@ -1281,11 +1279,6 @@ nsGenericDOMDataNode::SetText(const nsAString& aStr,
     nsEventStatus status = nsEventStatus_eIgnore;
     HandleDOMEvent(nsnull, &mutation, nsnull,
                    NS_EVENT_FLAG_INIT, &status);
-  }
-
-  // Trigger a reflow
-  if (aNotify && document) {
-    document->CharacterDataChanged(this, PR_FALSE);
   }
 }
 
