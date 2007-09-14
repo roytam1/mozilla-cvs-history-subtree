@@ -1,6 +1,6 @@
 #
-## hostname: cerberus
-## uname: WINNT CERBERUS 5.2 3790 xx I386
+## hostname: l10n-win32-tbox
+## uname: MINGW32_NT-5.2 L10N-WIN32-TBOX 1.0.11(0.46/3/2) 2007-01-12 12:05 i686 Msys
 #
 
 mk_add_options MOZ_CO_PROJECT=browser

@@ -1,6 +1,6 @@
 #
-## hostname: cerberus
-## uname: WINNT CERBERUS 5.2 3790 xx I386
+## hostname: l10n-win32-tbox
+## uname: MINGW32_NT-5.2 L10N-WIN32-TBOX 1.0.11(0.46/3/2) 2007-01-12 12:05 i686 Msys
 #
 
 #- tinder-config.pl - Tinderbox configuration file.
@@ -12,7 +12,7 @@ $ENV{MOZ_INSTALLER_USE_7ZIP} = "1";
 $ENV{MOZ_SYMBOLS_TRANSFER_TYPE} = "rsync";
 
 #- PLEASE FILL THIS IN WITH YOUR PROPER EMAIL ADDRESS
-$BuildAdministrator = "chase\@mozilla.org";
+$BuildAdministrator = 'build@mozilla.org';
 #$BuildAdministrator = ($ENV{USER} || "cltbld") . "\@" . ($ENV{HOST} || "dhcp");
 
 #- You'll need to change these to suit your machine's needs
@@ -107,7 +107,7 @@ $Make          = 'make';       # Must be GNU make
 #$CVSCO         = 'checkout -P';
 
 # win32 usually doesn't have /bin/mail
-$blat           = 'c:/moztools/bin/blat';
+$blat           = '/d/mozilla-build/blat261/full/blat.exe';
 $use_blat       = 1;
 
 # Set moz_cvsroot to something like:
@@ -141,11 +141,11 @@ $ConfigureOnly = 1;
 # On windows
 $LocalizationVersionFile = 'mail/config/version.txt';
 %WGetFiles = ("http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/latest-trunk/thunderbird-%version%.en-US.win32.installer.exe" =>
-	      "/cygdrive/c/builds/tinderbox/Tb-Trunk-l10n/WINNT_5.2_Clobber/thunderbird-installer.exe",
+	      "/e/builds/tinderbox/Tb-Trunk-l10n/WINNT_5.2_Depend/thunderbird-installer.exe",
 	      "http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/latest-trunk/thunderbird-%version%.en-US.win32.zip" =>
-	      "/cygdrive/c/builds/tinderbox/Tb-Trunk-l10n/WINNT_5.2_Clobber/thunderbird.zip");
+	      "/e/builds/tinderbox/Tb-Trunk-l10n/WINNT_5.2_Depend/thunderbird.zip");
 
-$BuildLocalesArgs = "ZIP_IN=/cygdrive/c/builds/tinderbox/Tb-Trunk-l10n/WINNT_5.2_Clobber/thunderbird.zip WIN32_INSTALLER_IN=/cygdrive/c/builds/tinderbox/Tb-Trunk-l10n/WINNT_5.2_Clobber/thunderbird-installer.exe";
+$BuildLocalesArgs = "ZIP_IN=/e/builds/tinderbox/Tb-Trunk-l10n/WINNT_5.2_Depend/thunderbird.zip WIN32_INSTALLER_IN=/e/builds/tinderbox/Tb-Trunk-l10n/WINNT_5.2_Depend/thunderbird-installer.exe";
 
 #-
 #- The rest should not need to be changed
