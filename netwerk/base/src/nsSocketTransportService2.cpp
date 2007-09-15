@@ -521,6 +521,7 @@ nsSocketTransportService::Run()
     //
     mPollList[0].fd = mThreadEvent;
     mPollList[0].in_flags = PR_POLL_READ;
+    mPollList[0].out_flags = 0;
 
     PRInt32 i, count;
 
@@ -621,7 +622,29 @@ nsSocketTransportService::Run()
                 active = ServiceEventQ();
             else if (mPollList[0].out_flags == PR_POLL_READ) {
                 // acknowledge pollable event (wait should not block)
-                PR_WaitForPollableEvent(mThreadEvent);
+                if (PR_WaitForPollableEvent(mThreadEvent) != PR_SUCCESS) {
+                    // On Windows, the TCP loopback connection in the
+                    // pollable event may become broken when a laptop
+                    // switches between wired and wireless networks or
+                    // wakes up from hibernation.  We try to create a
+                    // new pollable event.  If that fails, we fall back
+                    // on "busy wait".
+                    {
+                        nsAutoLock lock(mEventQLock);
+                        PR_DestroyPollableEvent(mThreadEvent);
+                        mThreadEvent = PR_NewPollableEvent();
+                    }
+                    if (!mThreadEvent) {
+                        NS_WARNING("running socket transport thread without "
+                                   "a pollable event");
+                        LOG(("running socket transport thread without "
+                             "a pollable event"));
+                    }
+                    mPollList[0].fd = mThreadEvent;
+                    // mPollList[0].in_flags was already set to PR_POLL_READ
+                    // at the beginning of this method.
+                    mPollList[0].out_flags = 0;
+                }
                 active = ServiceEventQ();
             }
         }
