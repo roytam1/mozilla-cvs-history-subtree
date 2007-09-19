@@ -5876,7 +5876,7 @@ nsTextFrame::Reflow(nsPresContext*          aPresContext,
   // Setup text transformer to transform this frames text content
   nsIDocument* doc = mContent->GetDocument();
   if (!doc) {
-    NS_WARNING("Content has no document.");
+    NS_NOTREACHED("Content has no document");
     return NS_ERROR_FAILURE; 
   }
   PRBool forceArabicShaping = (ts.mSmallCaps ||

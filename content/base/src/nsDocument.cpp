@@ -2456,13 +2456,8 @@ nsDocument::ContentRemoved(nsIContent* aContainer, nsIContent* aChild,
 {
   NS_ABORT_IF_FALSE(aChild, "Null child!");
 
-  // XXXdwh There is a hacky ordering dependency between the binding
-  // manager and the frame constructor that forces us to walk the
-  // observer list in a reverse order
-  // XXXldb So one should notify the other rather than both being
-  // registered.
-  NS_DOCUMENT_NOTIFY_OBSERVERS(ContentRemoved,
-                               (this, aContainer, aChild, aIndexInContainer));
+  NS_DOCUMENT_FORWARD_NOTIFY_OBSERVERS(ContentRemoved,
+                                       (this, aContainer, aChild, aIndexInContainer));
 }
 
 void
