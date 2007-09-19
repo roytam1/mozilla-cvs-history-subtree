@@ -1671,9 +1671,23 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
 #pragma mark -
 
 
-- (already_AddRefed<nsISupports>)getPageDescriptor
+- (already_AddRefed<nsISupports>)pageDescriptorByFocus:(BOOL)byFocus
 {
-  nsCOMPtr<nsIWebPageDescriptor> wpd = do_QueryInterface([self getDocShell]);
+  nsIDocShell* docShell;
+  if (byFocus) {
+    nsCOMPtr<nsIDOMWindow> focussedWindow = [self focussedDOMWindow];
+    if (!focussedWindow)
+      return NULL;
+    nsCOMPtr<nsIScriptGlobalObject> global(do_QueryInterface(focussedWindow));
+    if (!global)
+      return NULL;
+    docShell = global->GetDocShell(); // doesn't addref
+  }
+  else {
+    docShell = [self getDocShell];     // doesn't addref
+  }
+  
+  nsCOMPtr<nsIWebPageDescriptor> wpd = do_QueryInterface(docShell);
   if(!wpd)
     return NULL;
 
