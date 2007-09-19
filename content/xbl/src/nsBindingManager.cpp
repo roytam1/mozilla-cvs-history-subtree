@@ -1165,7 +1165,8 @@ nsBindingManager::ContentAppended(nsIDocument* aDocument,
                                   PRInt32     aNewIndexInContainer)
 {
   // XXX This is hacked and not quite correct. See below.
-  if (aNewIndexInContainer == -1 || !mContentListTable.ops)
+  if (aNewIndexInContainer == -1 || 
+      (!mContentListTable.ops && !mAnonymousNodesTable.ops))
     // It's anonymous.
     return;
 
@@ -1213,7 +1214,8 @@ nsBindingManager::ContentInserted(nsIDocument* aDocument,
                                   PRInt32 aIndexInContainer)
 {
 // XXX This is hacked just to make menus work again.
-  if (aIndexInContainer == -1 || !mContentListTable.ops)
+  if (aIndexInContainer == -1 || 
+      (!mContentListTable.ops && !mAnonymousNodesTable.ops))
     // It's anonymous.
     return;
 
@@ -1280,7 +1282,8 @@ nsBindingManager::ContentRemoved(nsIDocument* aDocument,
                                  nsIContent* aChild,
                                  PRInt32 aIndexInContainer)
 {
-  if (aIndexInContainer == -1 || !mContentListTable.ops)
+  if (aIndexInContainer == -1 || 
+      (!mContentListTable.ops  && !mAnonymousNodesTable.ops))
     // It's anonymous.
     return;
 
