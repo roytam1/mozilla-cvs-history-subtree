@@ -118,7 +118,12 @@ static NSString* const kCacheEntryExpirationDateKey = @"exp_date";
 
   if (imageUUID)
   {
-    cachedImage = [NSKeyedUnarchiver unarchiveObjectWithFile:[self imageDataFileWithUUID:imageUUID]];
+    // Damaged files may raise exceptions when we try to unarchive.
+    NS_DURING
+      cachedImage = [NSKeyedUnarchiver unarchiveObjectWithFile:[self imageDataFileWithUUID:imageUUID]];
+    NS_HANDLER
+      // nothing to do here; cleanup of the damage file happens below
+    NS_ENDHANDLER
     if (cachedImage)
     {
       // if we got the image, keep it in the memory cache
