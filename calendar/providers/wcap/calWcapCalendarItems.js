@@ -368,7 +368,7 @@ function calWcapCalendar_storeItem(bAddItem, item, oldItem, request, netRespFunc
 
             // cs bug: enforce DUE (set to DTSTART) if alarm is set
             if (!dtend && item.alarmOffset) {
-                dtend = item.entryDate;
+                dtend = dtstart;
             }
             
             bIsAllDay = (dtstart && dtstart.isDate);
