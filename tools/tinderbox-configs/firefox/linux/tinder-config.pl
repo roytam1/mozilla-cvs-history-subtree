@@ -1,6 +1,6 @@
 #
 ## hostname: fxdbug-linux-tbox.build.mozilla.org
-## uname: Linux fxdbug-linux-tbox.build.mozilla.org 2.6.9-42.ELsmp #1 SMP Sat Aug 12 09:39:11 CDT 2006 i686 i686 i386 GNU/Linux
+## uname: Linux fxdbug-linux-tbox.build.mozilla.org 2.6.18-8.el5 #1 SMP Thu Mar 15 19:57:35 EDT 2007 i686 athlon i386 GNU/Linux
 #
 #- tinder-config.pl - Tinderbox configuration file.
 #-    Uncomment the variables you need to set.
