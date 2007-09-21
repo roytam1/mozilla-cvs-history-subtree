@@ -18,5 +18,5 @@ ac_add_options --enable-pango
 ac_add_options --enable-trace-malloc
 ac_add_options --disable-libxul
 
-CC=/tools/gcc/bin/gcc
-CXX=/tools/gcc/bin/g++
+CC=/tools/gcc-4.1.1/bin/gcc
+CXX=/tools/gcc-4.1.1/bin/g++
