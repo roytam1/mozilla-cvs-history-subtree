@@ -94,7 +94,7 @@ $BloatTestTimeout                 = 300;   # seconds
 # default to 'warn', which suppresses the assertion dialogs on Windows
 # and gives platform parity.  Use 'abort' (or, on trunk after 2007-08-10,
 # 'stack-and-abort') for fatal assertions.
-$MozAssertBehavior = 'warn';
+$MozAssertBehavior = 'stack-and-abort';
 
 #- Set these to what makes sense for your system
 #$Make          = 'gmake';       # Must be GNU make
