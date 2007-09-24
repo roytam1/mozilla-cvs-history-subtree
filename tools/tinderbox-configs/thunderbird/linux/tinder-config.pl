@@ -1,6 +1,6 @@
 #
-## hostname: tb-linux-tbox
-## uname: Linux tb-linux-tbox.build.mozilla.org 2.6.9-42.ELsmp #1 SMP Sat Aug 12 09:39:11 CDT 2006 i686 i686 i386 GNU/Linux
+## hostname: tbnewref-linux-tbox
+## uname: Linux tbnewref-linux-tbox.build.mozilla.org 2.6.18-8.el5 #1 SMP Thu Mar 15 19:57:35 EDT 2007 i686 athlon i386 GNU/Linux
 #
 
 #- tinder-config.pl - Tinderbox configuration file.
@@ -115,7 +115,7 @@ $MofoRoot   = ":ext:cltbld\@cvs.mozilla.org:/mofo";
 $ObjDir = 'obj-tb-trunk';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'release';
+$BuildNameExtra = 'Newref';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -156,6 +156,8 @@ $BinaryName = 'thunderbird-bin';
 #$Timezone = '';
 
 # Release build options
+$ReleaseToLatest = 0; # Push the release to latest-<milestone>?
+$ReleaseToDated = 0; # Push the release to YYYY-MM-DD-HH-<milestone>?
 $ReleaseBuild  = 1;
 $shiptalkback  = 0;
 $build_hour    = "3";
