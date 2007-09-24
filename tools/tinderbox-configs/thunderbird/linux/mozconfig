@@ -17,3 +17,6 @@ ac_add_options --disable-tests
 ac_add_options --disable-shared
 ac_add_options --enable-static
 ac_add_options --enable-pango
+
+CC=/tools/gcc-4.1.1/bin/gcc
+CXX=/tools/gcc-4.1.1/bin/g++
