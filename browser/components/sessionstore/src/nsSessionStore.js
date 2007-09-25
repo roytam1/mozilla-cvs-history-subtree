@@ -885,6 +885,13 @@ SessionStoreService.prototype = {
       }
     }
     catch (ex) { debug(ex); } // POSTDATA is tricky - especially since some extensions don't get it right
+
+    var ownerURI =
+      (aEntry instanceof Ci.nsISHEntry_MOZILLA_1_8_BRANCH2) ?
+        aEntry.ownerURI : null;
+    if (ownerURI) {
+        entry.ownerURI = ownerURI.spec;
+    }
     
     if (!(aEntry instanceof Ci.nsISHContainer)) {
       return entry;
@@ -1416,7 +1423,7 @@ SessionStoreService.prototype = {
    */
   _deserializeHistoryEntry: function sss_deserializeHistoryEntry(aEntry, aIdMap) {
     var shEntry = Cc["@mozilla.org/browser/session-history-entry;1"].
-                  createInstance(Ci.nsISHEntry);
+                  createInstance(Ci.nsISHEntry_MOZILLA_1_8_BRANCH2);
     
     var ioService = Cc["@mozilla.org/network/io-service;1"].
                     getService(Ci.nsIIOService);
@@ -1452,6 +1459,10 @@ SessionStoreService.prototype = {
                    createInstance(Ci.nsIStringInputStream);
       stream.setData(aEntry.postdata, -1);
       shEntry.postData = stream;
+    }
+
+    if (aEntry.ownerURI) {
+        shEntry.ownerURI = ioService.newURI(aEntry.ownerURI, null, null);
     }
     
     if (aEntry.children && shEntry instanceof Ci.nsISHContainer) {

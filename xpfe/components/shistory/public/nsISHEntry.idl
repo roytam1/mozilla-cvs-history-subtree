@@ -200,6 +200,15 @@ interface nsISHEntry_MOZILLA_1_8_BRANCH : nsISHEntry
     readonly attribute nsISupports owner;
 };
 
+[scriptable, uuid(67590da1-bafc-4638-8ccd-33dfd1551c61)]
+interface nsISHEntry_MOZILLA_1_8_BRANCH2 : nsISHEntry_MOZILLA_1_8_BRANCH
+{
+    /**
+     * A URI representation of the owner, if that's possible.
+     */
+    attribute nsIURI ownerURI;
+};
+
 %{ C++
 // {BFD1A791-AD9F-11d3-BDC7-0050040A9B44}
 #define NS_SHENTRY_CID \

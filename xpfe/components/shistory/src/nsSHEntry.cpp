@@ -53,7 +53,8 @@
 #include "nsAutoPtr.h"
 #include "nsIEventQueue.h"
 #include "nsEventQueueUtils.h"
-
+#include "nsIPrincipal.h"
+#include "nsIScriptSecurityManager.h"
 
 static PRUint32 gEntryID = 0;
 
@@ -124,8 +125,10 @@ nsSHEntry::~nsSHEntry()
 //    nsSHEntry: nsISupports
 //*****************************************************************************
 
-NS_IMPL_ISUPPORTS5(nsSHEntry, nsISHContainer, nsISHEntry,
-                   nsISHEntry_MOZILLA_1_8_BRANCH, nsIHistoryEntry,
+NS_IMPL_ISUPPORTS6(nsSHEntry, nsISHContainer, nsISHEntry,
+                   nsISHEntry_MOZILLA_1_8_BRANCH,
+                   nsISHEntry_MOZILLA_1_8_BRANCH2,
+                   nsIHistoryEntry,
                    nsIDocumentObserver)
 
 //*****************************************************************************
@@ -504,6 +507,40 @@ NS_IMETHODIMP
 nsSHEntry::GetOwner(nsISupports **aOwner)
 {
   NS_IF_ADDREF(*aOwner = mOwner);
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsSHEntry::GetOwnerURI(nsIURI **aOwnerURI)
+{
+  nsCOMPtr<nsIPrincipal> prin(do_QueryInterface(mOwner));
+  if (prin) {
+    // Make sure not to hand out a ref to the principal's URI
+    nsCOMPtr<nsIURI> uri;
+    prin->GetURI(getter_AddRefs(uri));
+    if (uri) {
+      return uri->Clone(aOwnerURI);
+    }
+  }
+
+  *aOwnerURI = nsnull;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsSHEntry::SetOwnerURI(nsIURI *aOwnerURI)
+{
+  nsCOMPtr<nsIScriptSecurityManager> secMan =
+    do_GetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID);
+  if (secMan && aOwnerURI) {
+    nsCOMPtr<nsIPrincipal> prin;
+    nsresult rv =
+      secMan->GetCodebasePrincipal(aOwnerURI, getter_AddRefs(prin));
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    mOwner = prin;
+  }
+
   return NS_OK;
 }
 
