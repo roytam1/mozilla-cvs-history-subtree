@@ -2018,7 +2018,7 @@ nsresult CNavDTD::HandleSavedTokens(PRInt32 anIndex) {
             // XXXbz would it be faster to get the tokens out with ObjectAt and
             // put them in the tokenizer and then PopFront them all from
             // mMisplacedContent?
-            nsDeque temp;
+            nsDeque temp(nsnull);
             // Put back attributes, which once got popped out, into the tokenizer
             for(PRInt32 j=0;j<attrCount; ++j){
               CToken* theAttrToken = (CToken*)mMisplacedContent.PopFront();
