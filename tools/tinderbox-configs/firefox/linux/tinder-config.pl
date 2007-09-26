@@ -147,7 +147,7 @@ $pageload_server          = "axolotl.mozilla.org";  # localhost
 # CONFIG: $moz_cvsroot   = '%mozillaCvsroot%';
 $moz_cvsroot   = 'cltbld@cvs.mozilla.org:/cvsroot';
 
-#$MofoRoot   = "%mofoCvsroot%";
+# CONFIG: $MofoRoot   = '%mofoCvsroot%';
 $MofoRoot   = ":ext:cltbld\@cvs.mozilla.org:/mofo";
 
 #- Set these proper values for your tinderbox server
