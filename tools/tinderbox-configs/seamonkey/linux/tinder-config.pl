@@ -150,7 +150,7 @@ $moz_cvsroot   = ':ext:seabld@cvs.mozilla.org:/cvsroot';
 $ObjDir = "objdir";
 
 # Extra build name, if needed.
-$BuildNameExtra = 'release';
+$BuildNameExtra = 'Nightly';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -201,8 +201,8 @@ $package_creation_path = "/suite/installer";
 $ssh_version   = "2";
 $ssh_user      = "seabld";
 $ssh_server    = "stage.mozilla.org";
-$ftp_path      = "/home/ftp/pub/seamonkey/nightly";
-$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/seamonkey/nightly";
+$ftp_path      = "/home/ftp/pub/seamonkey/nightly/experimental";
+$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/seamonkey/nightly/experimental";
 $tbox_ftp_path = "/home/ftp/pub/seamonkey/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/seamonkey/tinderbox-builds";
 $milestone     = "trunk";
