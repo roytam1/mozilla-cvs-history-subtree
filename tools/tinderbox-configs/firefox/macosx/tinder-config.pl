@@ -140,7 +140,7 @@ $StartupPerformanceTest   = 0;  # Ts
 # CONFIG: $moz_cvsroot   = '%mozillaCvsroot%';
 $moz_cvsroot   = 'cltbld@cvs.mozilla.org:/cvsroot';
 
-#$MofoRoot   = ":%mofoCvsroot%";
+#$MofoRoot   = "%mofoCvsroot%";
 $MofoRoot   = ":ext:cltbld\@cvs.mozilla.org:/mofo";
 
 #- Set these proper values for your tinderbox server
