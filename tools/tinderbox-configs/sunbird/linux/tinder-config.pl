@@ -1,6 +1,6 @@
 #
-## hostname: sb-linux-tbox
-## uname: Linux sb-linux-tbox.build.mozilla.org 2.6.9-42.ELsmp #1 SMP Sat Aug 12 09:39:11 CDT 2006 i686 i686 i386 GNU/Linux
+## hostname: sb-newref-linux-tbox
+## uname: Linux sb-newref-linux-tbox.build.mozilla.org 2.6.18-8.el5 #1 SMP Thu Mar 15 19:57:35 EDT 2007 i686 athlon i386 GNU/Linux
 #
 
 #- tinder-config.pl - Tinderbox configuration file.
@@ -159,7 +159,7 @@ $moz_cvsroot   = ":ext:calbld\@cvs.mozilla.org:/cvsroot";
 $ObjDir = 'sunbird-obj';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'Sb-Release';
+$BuildNameExtra = 'Sb-Newref';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -169,10 +169,10 @@ $BuildNameExtra = 'Sb-Release';
 #$ConfigureOnly = 0;
 %WGetFiles = (
 	      "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly/latest-trunk/sunbird-0.3.1.en-US.linux-i686.tar.bz2" =>
-	      "/builds/tinderbox/Sb-Trunk/Linux_2.6.9-42.ELsmp_Depend/sunbird.tar.bz2"
+	      "/builds/tinderbox/Sb-Trunk/Linux_2.6.18-8.el5_Depend/sunbird.tar.bz2"
 	      );
 
-$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Sb-Trunk/Linux_2.6.9-42.ELsmp_Depend/sunbird.tar.bz2";
+$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Sb-Trunk/Linux_2.6.18-8.el5_Depend/sunbird.tar.bz2";
 
 #-
 #- The rest should not need to be changed
@@ -218,8 +218,8 @@ $package_creation_path = "/calendar/installer";
 $ssh_version   = "2";
 $ssh_user      = "calbld";
 #$ssh_server    = "stage.mozilla.org";
-$ftp_path      = "/home/ftp/pub/calendar/sunbird/nightly";
-$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly";
+$ftp_path      = "/home/ftp/pub/calendar/sunbird/nightly/experimental";
+$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly/experimental";
 $tbox_ftp_path = "/home/ftp/pub/calendar/sunbird/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/tinderbox-builds";
 
