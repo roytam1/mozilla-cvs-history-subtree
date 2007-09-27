@@ -213,7 +213,7 @@ $archive       = 1;
 #$push_raw_xpis = 1;
 
 $crashreporter_buildsymbols = 1;
-$crashreporter_pushsymbols = 1;
+$crashreporter_pushsymbols = 0;
 $ENV{SYMBOL_SERVER_HOST} = 'stage.mozilla.org';
 $ENV{SYMBOL_SERVER_USER}   = 'seabld';
 $ENV{SYMBOL_SERVER_PATH}   = '/mnt/netapp/breakpad/symbols_sea/';
