@@ -739,11 +739,14 @@ nsresult nsMsgMdnGenerator::CreateSecondPart()
 
     PR_Free (convbuf);
 
-    if (*m_messageId.get() == '<')
-        tmpBuffer = PR_smprintf("Original-Message-ID: %s" CRLF, m_messageId.get());
-    else
-        tmpBuffer = PR_smprintf("Original-Message-ID: <%s>" CRLF, m_messageId.get());
-    PUSH_N_FREE_STRING(tmpBuffer);
+    if (!m_messageId.IsEmpty())
+    {
+      if (*m_messageId.get() == '<')
+          tmpBuffer = PR_smprintf("Original-Message-ID: %s" CRLF, m_messageId.get());
+      else
+          tmpBuffer = PR_smprintf("Original-Message-ID: <%s>" CRLF, m_messageId.get());
+      PUSH_N_FREE_STRING(tmpBuffer);
+    }
     
     tmpBuffer = PR_smprintf("Disposition: %s/%s; %s" CRLF CRLF,
                             (m_autoAction ? "automatic-action" :
@@ -917,9 +920,57 @@ nsresult nsMsgMdnGenerator::InitAndProcess()
             accountManager->GetAccount(accountKey, getter_AddRefs(account));
           if (account)
             account->GetIncomingServer(getter_AddRefs(m_server));
-          
+
           if (m_server)
-            rv = accountManager->GetFirstIdentityForServer(m_server, getter_AddRefs(m_identity));
+          {
+            // Find the correct identity based on the "To:" and "Cc:" header
+            nsXPIDLCString mailTo;
+            nsXPIDLCString mailCC;
+            m_headers->ExtractHeader(HEADER_TO, PR_TRUE, getter_Copies(mailTo));
+            m_headers->ExtractHeader(HEADER_CC, PR_TRUE, getter_Copies(mailCC));
+            nsCOMPtr<nsISupportsArray> servIdentities;
+            accountManager->GetIdentitiesForServer(m_server, getter_AddRefs(servIdentities));
+            if (servIdentities)
+            {
+              nsCOMPtr<nsIMsgIdentity> ident;
+              nsXPIDLCString identEmail;
+              PRUint32 count = 0;
+              servIdentities->Count(&count);
+              // First check in the "To:" header
+              for (PRUint32 i = 0; i < count; i++)
+              {
+                rv = servIdentities->QueryElementAt(i, NS_GET_IID(nsIMsgIdentity),getter_AddRefs(ident));
+                if (NS_FAILED(rv))
+                  continue;
+                ident->GetEmail(getter_Copies(identEmail));
+                if (!mailTo.IsEmpty() && !identEmail.IsEmpty() && mailTo.Find(identEmail, PR_TRUE) != kNotFound)
+                {
+                  m_identity = ident;
+                  break;
+                }
+              }
+              // If no match, check the "Cc:" header
+              if (!m_identity)
+              {
+                for (PRUint32 i = 0; i < count; i++)
+                {
+                  rv = servIdentities->QueryElementAt(i, NS_GET_IID(nsIMsgIdentity),getter_AddRefs(ident));
+                  if (NS_FAILED(rv))
+                    continue;
+                  ident->GetEmail(getter_Copies(identEmail));
+                  if (!mailCC.IsEmpty() && !identEmail.IsEmpty() && mailCC.Find(identEmail, PR_TRUE) != kNotFound)
+                  {
+                    m_identity = ident;
+                    break;
+                  }
+                }
+              }
+            }
+
+            // If no match again, use the first identity
+            if (!m_identity)
+              rv = accountManager->GetFirstIdentityForServer(m_server, getter_AddRefs(m_identity));
+          }
         }
         NS_ENSURE_SUCCESS(rv,rv);
 

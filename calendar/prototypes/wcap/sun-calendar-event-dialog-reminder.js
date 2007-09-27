@@ -11,10 +11,10 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is Oracle Corporation code.
+ * The Original Code is Sun Microsystems code.
  *
- * The Initial Developer of the Original Code is Oracle Corporation
- * Portions created by the Initial Developer are Copyright (C) 2005
+ * The Initial Developer of the Original Code is Sun Microsystems.
+ * Portions created by the Initial Developer are Copyright (C) 2006
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -95,8 +95,8 @@ function onLoad() {
 }
 
 function stringFromReminderObject(reminder) {
-    var sbs = Cc["@mozilla.org/intl/stringbundle;1"]
-              .getService(Ci.nsIStringBundleService);
+    var sbs = Components.classes["@mozilla.org/intl/stringbundle;1"]
+              .getService(Components.interfaces.nsIStringBundleService);
 
     var props =
         sbs.createBundle(
@@ -147,8 +147,8 @@ function stringFromReminderObject(reminder) {
 }
 
 function loadReminders() {
-    var prefService = Cc["@mozilla.org/preferences-service;1"]
-                      .getService(Ci.nsIPrefService);
+    var prefService = Components.classes["@mozilla.org/preferences-service;1"]
+                      .getService(Components.interfaces.nsIPrefService);
     var prefBranch = prefService.getBranch("calendar.reminder.");
 
     var pref = "length=15;unit=minutes;relation=START;origin=1,length=3;" +
@@ -184,8 +184,8 @@ function loadReminders() {
 }
 
 function saveReminders(reminderArray) {
-    var prefService = Cc["@mozilla.org/preferences-service;1"]
-                      .getService(Ci.nsIPrefService);
+    var prefService = Components.classes["@mozilla.org/preferences-service;1"]
+                      .getService(Components.interfaces.nsIPrefService);
     var prefBranch = prefService.getBranch("calendar.reminder.");
 
     var result = "";

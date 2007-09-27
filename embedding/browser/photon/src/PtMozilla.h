@@ -82,6 +82,7 @@ class EmbedDownload; /* forward declaration */
 #define Pt_ARG_MOZ_GET_HISTORY			Pt_RESOURCE( 104,  13 )
 #define Pt_ARG_MOZ_AUTH_CTRL				Pt_RESOURCE( 104, 14 ) // used internally for authentification
 #define Pt_ARG_MOZ_UNKNOWN_CTRL			Pt_RESOURCE( 104, 15 ) // used internally for downloading
+#define Pt_ARG_MOZ_SCROLL_TO   			Pt_RESOURCE( 104, 16 )
 
 #define Pt_CB_MOZ_PROGRESS					Pt_RESOURCE( 104,  20 )
 #define Pt_CB_MOZ_START							Pt_RESOURCE( 104,  21 )

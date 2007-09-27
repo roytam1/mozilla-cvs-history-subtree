@@ -3656,7 +3656,7 @@ void nsImapProtocol::ProcessMailboxUpdate(PRBool handlePossibleUndo)
     }
     else 
     {
-      fetchStr.AppendInt(GetServerStateParser().HighestRecordedUID() + 1);
+      AppendUid(fetchStr, GetServerStateParser().HighestRecordedUID() + 1);
       fetchStr.Append(":*");
 
       // sprintf(fetchStr, "%ld:*", GetServerStateParser().HighestRecordedUID() + 1);
@@ -3905,7 +3905,7 @@ void nsImapProtocol::PeriodicBiff()
         id = 1;
       
       //sprintf(fetchStr, "%ld:%ld", id, id + GetServerStateParser().NumberOfMessages() - fFlagState->GetNumberOfMessages());
-      fetchStr.AppendInt(id);
+      AppendUid(fetchStr, id);
       fetchStr.Append(":*"); 
       FetchMessage(fetchStr.get(), kFlags, PR_TRUE);
       

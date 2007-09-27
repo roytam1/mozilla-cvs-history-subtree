@@ -849,8 +849,8 @@ function loadStartFolder(initialUri)
         // Perform biff on the server to check for new mail, except for 
         // a pop3 account that is deferred or deferred to,
         // or the case where initialUri is non-null (non-startup)
-        if (!initialUri && isLoginAtStartUpEnabled && gLoadStartFolder
-            && !defaultServer.isDeferredTo &&
+        if (!initialUri && isLoginAtStartUpEnabled && gLoadStartFolder &&
+            !gNewAccountToLoad && !defaultServer.isDeferredTo &&
             defaultServer.rootFolder == defaultServer.rootMsgFolder)
           defaultServer.PerformBiff(msgWindow);        
 

@@ -445,6 +445,7 @@ int moz_new_window_cb(PtWidget_t *widget, void *data, PtCallbackInfo_t *cbinfo)
 	win = create_browser_window(c->window_flags);
 	if (win)
 	{
+		PtRealizeWidget(win);
 		PtGetResource(win, Pt_ARG_POINTER, &i, 0);
 		c->widget = i->web;
 		return (Pt_CONTINUE);
@@ -497,7 +498,7 @@ int moz_dialog_cb(PtWidget_t *widget, void *data, PtCallbackInfo_t *cbinfo)
 	switch (d->type)
 	{
 		case Pt_MOZ_DIALOG_ALERT:
-			PtAskQuestion(NULL, "JS Alert", (d->text) ? d->text : "Alert Message.", \
+			PtAskQuestion(NULL, d->title ? d->title : "JS Alert", (d->text) ? d->text : "Alert Message.", \
 				NULL, "OK", NULL, NULL, 1);
 			break;
 		case Pt_MOZ_DIALOG_ALERT_CHECK:
@@ -505,7 +506,7 @@ int moz_dialog_cb(PtWidget_t *widget, void *data, PtCallbackInfo_t *cbinfo)
 			printf("\tMessage: %s\n", d->checkbox_message);
 			break;
 		case Pt_MOZ_DIALOG_CONFIRM:
-			if (PtAskQuestion(NULL, "JS Confirm", (d->text) ? d->text : "Confirm Message.", \
+			if (PtAskQuestion(NULL, d->title ? d->title : "JS Confirm", (d->text) ? d->text : "Confirm Message.", \
 				NULL, "Yes", "No", NULL, 1) == 1)
 			{
 				return (Pt_CONTINUE);
@@ -537,7 +538,7 @@ int moz_prompt_cb(PtWidget_t *widget, void *data, PtCallbackInfo_t *cbinfo)
 	if (p->dflt_resp)
 		strcpy(text, p->dflt_resp);
 
-	answer = PtPrompt(i->window, NULL, "User Prompt", NULL, (p->text) ? p->text : "Prompt Message.", \
+	answer = PtPrompt(i->window, NULL, p->title ? p->title : "User Prompt", NULL, (p->text) ? p->text : "Prompt Message.", \
 				NULL, 2, (char const **)btns, NULL, 1, 2, len, text, NULL, NULL, 0 );
 
 	switch( answer ) 

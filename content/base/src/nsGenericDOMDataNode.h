@@ -244,10 +244,18 @@ public:
   virtual const nsTextFragment *Text();
   virtual PRUint32 TextLength();
   virtual void SetText(const PRUnichar* aBuffer, PRUint32 aLength,
-                       PRBool aNotify);
-  virtual void SetText(const nsAString& aStr, PRBool aNotify);
-  virtual void SetText(const char* aBuffer, PRUint32 aLength,
-                       PRBool aNotify);
+                       PRBool aNotify)
+  {
+    DoSetText(aBuffer, aLength, PR_FALSE, aNotify);
+  }
+  virtual void SetText(const nsAString& aStr, PRBool aNotify)
+  {
+    DoSetText(aStr, PR_FALSE, aNotify);
+  }
+  virtual void SetText(const char* aBuffer, PRUint32 aLength, PRBool aNotify)
+  {
+    DoSetText(aBuffer, aLength, PR_FALSE, aNotify);
+  }
   virtual PRBool IsOnlyWhitespace();
   virtual void AppendTextTo(nsAString& aResult);
 
@@ -262,6 +270,14 @@ public:
 
 protected:
   nsresult SplitText(PRUint32 aOffset, nsIDOMText** aReturn);
+
+  // Like SetText but allows to specify whether this is an append for
+  // notifications.
+  void DoSetText(const PRUnichar* aBuffer, PRUint32 aLength, PRBool aIsAppend,
+               PRBool aNotify);
+  void DoSetText(const char* aBuffer, PRUint32 aLength, PRBool aIsAppend,
+               PRBool aNotify);
+  void DoSetText(const nsAString& aStr, PRBool aIsAppend, PRBool aNotify);
 
   nsTextFragment mText;
   nsRefPtr<nsNodeInfoManager> mNodeInfoManager;

@@ -68,14 +68,15 @@
 #include "nsITheme.h"
 #include "nsUnicharUtils.h"
 #include "nsContentUtils.h"
+#include "nsIReflowCallback.h"
 
 #ifdef IBMBIDI
 #include "nsBidiUtils.h"
 #include "nsBidiPresUtils.h"
 #endif // IBMBIDI
-#include "nsReadableUtils.h"
 
-#define ELLIPSIS "..."
+// horizontal ellipsis (U+2026)
+#define ELLIPSIS PRUnichar(0x2026)
 
 #define CROP_LEFT   "left"
 #define CROP_RIGHT  "right"
@@ -150,7 +151,9 @@ nsTextBoxFrame::AttributeChanged(nsIContent*     aChild,
     return NS_OK;
 }
 
-nsTextBoxFrame::nsTextBoxFrame(nsIPresShell* aShell):nsLeafBoxFrame(aShell), mCropType(CropRight),mAccessKeyInfo(nsnull)
+nsTextBoxFrame::nsTextBoxFrame(nsIPresShell* aShell)
+  : nsLeafBoxFrame(aShell), mCropType(CropRight), mAccessKeyInfo(nsnull), 
+    mNeedsReflowCallback(PR_FALSE)
 {
     mState |= NS_STATE_NEED_LAYOUT;
     NeedsRecalc();
@@ -221,6 +224,58 @@ nsTextBoxFrame::InsertSeparatorBeforeAccessKey()
   return gInsertSeparatorBeforeAccessKey;
 }
 
+class nsAsyncAccesskeyUpdate : public nsIReflowCallback
+{
+public:
+    nsAsyncAccesskeyUpdate(nsIFrame* aFrame) : mWeakFrame(aFrame)
+    {
+    }
+
+    NS_DECL_ISUPPORTS
+
+    NS_IMETHOD ReflowFinished(nsIPresShell* aShell, PRBool* aFlushFlag)
+    {
+        nsTextBoxFrame* frame =
+            NS_STATIC_CAST(nsTextBoxFrame*, mWeakFrame.GetFrame());
+        if (frame && frame->UpdateAccesskey(mWeakFrame)) {
+            *aFlushFlag = PR_TRUE;
+        }
+        return NS_OK;
+    }
+
+    nsWeakFrame mWeakFrame;
+};
+
+NS_IMPL_ISUPPORTS1(nsAsyncAccesskeyUpdate, nsIReflowCallback)
+
+PRBool
+nsTextBoxFrame::UpdateAccesskey(nsWeakFrame& aWeakThis)
+{
+    nsAutoString accesskey;
+    nsCOMPtr<nsIDOMXULLabelElement> labelElement = do_QueryInterface(mContent);
+    if (labelElement) {
+        // Accesskey may be stored on control.
+        nsCxPusher cx(mContent);
+        labelElement->GetAccessKey(accesskey);
+        NS_ENSURE_TRUE(aWeakThis.IsAlive(), PR_FALSE);
+    }
+    else {
+        mContent->GetAttr(kNameSpaceID_None, nsXULAtoms::accesskey, accesskey);
+    }
+
+    if (!accesskey.Equals(mAccessKey)) {
+        // Need to get clean mTitle.
+        mContent->GetAttr(kNameSpaceID_None, nsHTMLAtoms::value, mTitle);
+        mAccessKey = accesskey;
+        UpdateAccessTitle();
+        nsPresContext* presContext = GetPresContext();
+        nsBoxLayoutState state(presContext);
+        MarkDirty(state);
+        return PR_TRUE;
+    }
+    return PR_FALSE;
+}
+
 void
 nsTextBoxFrame::UpdateAttributes(nsPresContext*  aPresContext,
                                  nsIAtom*         aAttribute,
@@ -259,22 +314,9 @@ nsTextBoxFrame::UpdateAttributes(nsPresContext*  aPresContext,
     }
 
     if (aAttribute == nsnull || aAttribute == nsXULAtoms::accesskey) {
-        nsAutoString accesskey;
-        nsCOMPtr<nsIDOMXULLabelElement> labelElement = do_QueryInterface(mContent);
-        if (labelElement) {
-          labelElement->GetAccessKey(accesskey);  // Accesskey may be stored on control
-        }
-        else {
-          mContent->GetAttr(kNameSpaceID_None, nsXULAtoms::accesskey, accesskey);
-        }
-        if (!accesskey.Equals(mAccessKey)) {
-            if (!doUpdateTitle) {
-                // Need to get clean mTitle and didn't already
-                mContent->GetAttr(kNameSpaceID_None, nsHTMLAtoms::value, mTitle);
-                doUpdateTitle = PR_TRUE;
-            }
-            mAccessKey = accesskey;
-        }
+        mNeedsReflowCallback = PR_TRUE;
+        // Ensure that layout is refreshed and reflow callback called.
+        aResize = PR_TRUE;
     }
 
     if (doUpdateTitle) {
@@ -552,7 +594,7 @@ nsTextBoxFrame::CalculateTitleForWidth(nsPresContext*      aPresContext,
     }
 
     // start with an ellipsis
-    mCroppedTitle.AssignASCII(ELLIPSIS);
+    mCroppedTitle.Assign(ELLIPSIS);
 
     // see if the width is even smaller than the ellipsis
     // if so, clear the text (XXX set as many '.' as we can?).
@@ -694,7 +736,7 @@ nsTextBoxFrame::CalculateTitleForWidth(nsPresContext*      aPresContext,
 
             // form the new cropped string
             nsAutoString ellipsisString;
-            ellipsisString.AssignASCII(ELLIPSIS);
+            ellipsisString.Assign(ELLIPSIS);
 
             mCroppedTitle = leftString + ellipsisString + rightString;
         }
@@ -794,6 +836,14 @@ nsTextBoxFrame::UpdateAccessIndex()
 NS_IMETHODIMP
 nsTextBoxFrame::DoLayout(nsBoxLayoutState& aBoxLayoutState)
 {
+    if (mNeedsReflowCallback) {
+        nsCOMPtr<nsIReflowCallback> cb = new nsAsyncAccesskeyUpdate(this);
+        if (cb) {
+            GetPresContext()->PresShell()->PostReflowCallback(cb);
+        }
+        mNeedsReflowCallback = PR_FALSE;
+    }
+
     mState |= NS_STATE_NEED_LAYOUT;
 
     return nsLeafBoxFrame::DoLayout(aBoxLayoutState);

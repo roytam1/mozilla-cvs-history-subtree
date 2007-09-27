@@ -180,6 +180,8 @@ protected:
 	  PRPackedBool fromUI;
 	}                               mResizeTo;
 #endif
+  EventHandlerRef mScrollEventHandler;
+  EventHandlerRef mWindowEventHandler;
 };
 
 #endif // MacWindow_h__

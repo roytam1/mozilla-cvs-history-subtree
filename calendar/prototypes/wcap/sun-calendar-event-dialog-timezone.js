@@ -11,10 +11,10 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is Oracle Corporation code.
+ * The Original Code is Sun Microsystems code.
  *
- * The Initial Developer of the Original Code is Oracle Corporation
- * Portions created by the Initial Developer are Copyright (C) 2005
+ * The Initial Developer of the Original Code is Sun Microsystems.
+ * Portions created by the Initial Developer are Copyright (C) 2006
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -93,8 +93,8 @@ function updateTimezone() {
     time.timezone = "floating";
     datetime.value = time.jsDate;
 
-    var icssrv = Cc["@mozilla.org/calendar/ics-service;1"]
-                 .getService(Ci.calIICSService);
+    var icssrv = Components.classes["@mozilla.org/calendar/ics-service;1"]
+                 .getService(Components.interfaces.calIICSService);
 
     var comp = icssrv.getTimezone(someTZ);
     var subComp = comp.getFirstSubcomponent("VTIMEZONE");

@@ -1,4 +1,3 @@
-/* -*- Mode: javascript; tab-width: 20; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -22,6 +21,7 @@
  *   Stuart Parmenter <stuart.parmenter@oracle.com>
  *   Joey Minta <jminta@gmail.com>
  *   Daniel Boelzle <daniel.boelzle@sun.com>
+ *   Philipp Kewisch <mozilla@kewis.ch>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -123,7 +123,7 @@ function calAlarmService() {
             this.alarmService.unobserveCalendar(aCalendar);
         },
         onCalendarDeleting: function(aCalendar) {},
-        onCalendarPrefSet: function(aCalendar, aName, aValue) {},
+        onCalendarPrefChanged: function(aCalendar, aName, aValue, aOldValue) {},
         onCalendarPrefDeleting: function(aCalendar, aName) {}
     };
 }
@@ -251,19 +251,11 @@ calAlarmService.prototype = {
         this.mObservers.notify(functionName, args);
     },
 
-    hasAlarm: function almSvc_hasAlarm(aItem) {
-        var hasSnooze;
-        if (aItem.parentItem != aItem) {
-            hasSnooze = aItem.parentItem.hasProperty("X-MOZ-SNOOZE-TIME-" +
-                                                     aItem.recurrenceId.nativeTime);
-        } else {
-            hasSnooze = aItem.hasProperty("X-MOZ-SNOOZE-TIME");
-        }
-
-        return aItem.alarmOffset || aItem.parentItem.alarmOffset || hasSnooze;
+    hasAlarm: function cas_hasAlarm(aItem) {
+        return aItem.alarmOffset || aItem.parentItem.alarmOffset;
     },
 
-    startup: function() {
+    startup: function cas_startup() {
         if (this.mStarted)
             return;
 
@@ -333,7 +325,7 @@ calAlarmService.prototype = {
         this.mStarted = true;
     },
 
-    shutdown: function() {
+    shutdown: function cas_shutdown() {
         /* tell people that we're no longer running */
         var notifier = this.notifier;
         notifier.observe(null, "alarm-service-shutdown", null);
@@ -377,16 +369,16 @@ calAlarmService.prototype = {
     },
 
 
-    observeCalendar: function(calendar) {
+    observeCalendar: function cas_observeCalendar(calendar) {
         calendar.addObserver(this.calendarObserver);
     },
 
-    unobserveCalendar: function(calendar) {
+    unobserveCalendar: function cas_unobserveCalendar(calendar) {
         calendar.removeObserver(this.calendarObserver);
         this.notifyObservers("onRemoveAlarmsByCalendar", [calendar]);
     },
 
-    addAlarm: function(aItem) {
+    addAlarm: function cas_addAlarm(aItem) {
         var alarmTime;
         if (aItem.alarmRelated == Components.interfaces.calIItemBase.ALARM_RELATED_START) {
             alarmTime = aItem.startDate || aItem.entryDate || aItem.dueDate;
@@ -556,7 +548,10 @@ calAlarmService.prototype = {
                      calICalendar.ITEM_FILTER_TYPE_ALL;
 
         for each(var calendar in calendars) {
-            calendar.getItems(filter, 0, start, until, getListener);
+            // assuming that suppressAlarms does not change anymore until refresh:
+            if (!calendar.suppressAlarms) {
+                calendar.getItems(filter, 0, start, until, getListener);
+            }
         }
     },
 
@@ -572,7 +567,7 @@ calAlarmService.prototype = {
         this.findAlarms(calendars, start, until);
     },
 
-    alarmFired: function(event) {
+    alarmFired: function cas_alarmFired(event) {
         if (event.calendar.suppressAlarms)
             return;
 

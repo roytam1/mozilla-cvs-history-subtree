@@ -19,6 +19,7 @@
  *
  * Contributor(s):
  *   Thomas Benisch <thomas.benisch@sun.com>
+ *   Philipp Kewisch <mozilla@kewis.ch>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -68,7 +69,7 @@ var sideBarOperationListener = {
     }
 };
 
-var calendarManagerObserver = {
+var sideBarCalendarManagerObserver = {
     mSideBar: this,
 
     onCalendarRegistered: function cMO_onCalendarRegistered(aCalendar) {
@@ -84,7 +85,7 @@ var calendarManagerObserver = {
     onCalendarDeleting: function cMO_onCalendarDeleting(aCalendar) {
     },
 
-    onCalendarPrefSet: function cMO_onCalendarPrefSet(aCalendar,
+    onCalendarPrefChanged: function cMO_onCalendarPrefSet(aCalendar,
                                                       aName,
                                                       aValue) {
     },
@@ -95,13 +96,13 @@ var calendarManagerObserver = {
 
 function onLoad() {
     scheduleInvitationsUpdate(FIRST_DELAY_STARTUP, REPEAT_DELAY);
-    getCalendarManager().addObserver(calendarManagerObserver);
+    getCalendarManager().addObserver(sideBarCalendarManagerObserver);
     document.addEventListener("unload", onUnload, true);
 }
 
 function onUnload() {
     document.removeEventListener("unload", onUnload, true);
-    getCalendarManager().removeObserver(calendarManagerObserver);
+    getCalendarManager().removeObserver(sideBarCalendarManagerObserver);
 }
 
 function scheduleInvitationsUpdate(firstDelay, repeatDelay) {

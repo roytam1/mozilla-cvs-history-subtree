@@ -72,7 +72,7 @@ function onLoad() {
         if (rules.length > 0) {
             // We only handle 1 rule currently
             var rule = rules[0];
-            if (rule instanceof Ci.calIRecurrenceRule) {
+            if (rule instanceof Components.interfaces.calIRecurrenceRule) {
                 switch (rule.type) {
                     case "DAILY":
                         document.getElementById("period-list").selectedIndex = 0;
@@ -88,7 +88,7 @@ function onLoad() {
                         document.getElementById("period-list").selectedIndex = 1;
                         setElementValue("weekly-weeks", rule.interval);
                         var days = rule.getComponent("BYDAY", {});
-                        document.getElementById("datepicker-weekday").days = days;
+                        document.getElementById("daypicker-weekday").days = days;
                         break;
                     case "MONTHLY":
                         document.getElementById("period-list").selectedIndex = 2;
@@ -100,12 +100,18 @@ function onLoad() {
                             var occurrence = (byday - (byday % 8)) / 8;
                             var weekday = byday % 8;
                             setElementValue("monthly-ordinal", occurrence);
-                            setElementValue("monthly-weekday", weekday);
+                            setElementValue("monthly-weekday", Math.abs(weekday));
                         } else {
                             var ruleComp = rule.getComponent("BYMONTHDAY", {});
                             if (ruleComp.length > 0) {
-                                document.getElementById("monthly-group").selectedIndex = 1;
-                                document.getElementById("monthly-days").days = ruleComp;
+                                if (ruleComp.length == 1 && ruleComp[0] == -1) {
+                                    document.getElementById("monthly-group").selectedIndex = 0;
+                                    setElementValue("monthly-ordinal", ruleComp[0]);
+                                    setElementValue("monthly-weekday", ruleComp[0]);
+                                } else {
+                                    document.getElementById("monthly-group").selectedIndex = 1;
+                                    document.getElementById("monthly-days").days = ruleComp;
+                                }
                             }
                         }
                         break;
@@ -168,7 +174,7 @@ function onLoad() {
 
 function onSave(item) {
     // Always return 'null' if this item is an occurrence.
-    if (item.parentItem != item) {
+    if (!item || item.parentItem != item) {
         return null;
     }
 
@@ -191,8 +197,8 @@ function onSave(item) {
         }
     } else {
         recurrenceInfo = createRecurrenceInfo();
-        recurrenceInfo.item = item;
     }
+    recurrenceInfo.item = item;
 
     var recRule = createRecurrenceRule();
     switch (deckNumber) {
@@ -212,7 +218,7 @@ function onSave(item) {
         recRule.type = "WEEKLY";
         var ndays = Number(getElementValue("weekly-weeks"));
         recRule.interval = ndays;
-        var onDays = document.getElementById("datepicker-weekday").days;
+        var onDays = document.getElementById("daypicker-weekday").days;
         if (onDays.length > 0) {
             recRule.setComponent("BYDAY", onDays.length, onDays);
         }
@@ -225,9 +231,13 @@ function onSave(item) {
         if (monthlyGroup.selectedIndex==0) {
             var ordinal = Number(getElementValue("monthly-ordinal"));
             var day_of_week = Number(getElementValue("monthly-weekday"));
-            var sign = ordinal < 0 ? -1 : 1;
-            var onDays = [ (Math.abs(ordinal) * 8 + day_of_week) * sign ];
-            recRule.setComponent("BYDAY", onDays.length, onDays);
+            if (day_of_week < 0) {
+                recRule.setComponent("BYMONTHDAY", 1, [ ordinal ]);
+            } else {
+                var sign = ordinal < 0 ? -1 : 1;
+                var onDays = [ (Math.abs(ordinal) * 8 + day_of_week) * sign ];
+                recRule.setComponent("BYDAY", onDays.length, onDays);
+            }
         } else {
             var monthlyDays = document.getElementById("monthly-days").days;
             if (monthlyDays.length > 0) {

@@ -157,6 +157,7 @@ function calendarInit()
 
 function handleCommandLine(aComLine) {
     var comLine = aComLine;
+    var calurl = [];
 
     var validFlags = ["showdate", "subscribe", "url"];
     var flagsToProcess = [];
@@ -180,26 +181,45 @@ function handleCommandLine(aComLine) {
                 // LaunchServices to launch Sunbird with the -url command line
                 // switch like so:
                 // sunbird-bin -url file://localhost/Users/foo/mycal.ics -foreground
-                var uri = comLine.resolveURI(param);
-                var cal = getCalendarManager().createCalendar("ics", uri);
-                getCalendarManager().registerCalendar(cal);
-
-                // Strip ".ics" from filename for use as calendar name
-                var fullPathRegEx = new RegExp("([^/:]+)[.]ics$");
-                var prettyName = param.match(fullPathRegEx);
-
-                var name;
-                if (prettyName && prettyName.length >= 1) {
-                    name = decodeURIComponent(prettyName[1]);
-                } else {
-                    name = calGetString("calendar", "untitledCalendarName");
-                }
-                cal.name = name;
+                calurl.push(param);
                 break;
            default:
                 // no-op
                 break;
         }
+    }
+
+    //Look for arguments without a flag.
+    //This is needed to handle double-click on Windows and Linux.
+    if (comLine.length >= 1) {
+        for (var i = 0; i < comLine.length; i++) {
+            if (!comLine.getArgument(i).match(/^-/) &&
+                !comLine.getArgument(i).match(/^\s/)) {
+                calurl.push( comLine.getArgument(i) );
+            } else {
+            comLine.removeArguments(i, i);
+            }
+        }
+    }
+
+    //subscribe to all files in the calurl array
+    for (var i = 0; i < calurl.length; i++) {
+        var uri = comLine.resolveURI(calurl[i]);
+        var cal = getCalendarManager().createCalendar("ics", uri);
+        getCalendarManager().registerCalendar(cal);
+
+        // Strip ".ics" from filename for use as calendar name
+        var fullPathRegEx = new RegExp("([^/:]+)[.]ics$");
+        var path = uri.path;
+        var prettyName = path.match(fullPathRegEx);
+
+        var name;
+        if (prettyName && prettyName.length >= 1) {
+            name = decodeURIComponent(prettyName[1]);
+        } else {
+            name = calGetString("calendar", "untitledCalendarName");
+        }
+        cal.name = name;
     }
 }
 
@@ -228,34 +248,6 @@ function calendarFinish()
 
    unloadCalendarManager();
 }
-
-/**
-*  Delete the current selected item with focus from the ToDo unifinder list
-*/
-function deleteToDoCommand(aDoNotConfirm)
-{
-   var selectedItems = new Array();
-   var tree = document.getElementById( ToDoUnifinderTreeName );
-   var start = new Object();
-   var end = new Object();
-   var numRanges = tree.view.selection.getRangeCount();
-   var t;
-   var v;
-   var toDoItem;
-   for (t = 0; t < numRanges; t++) {
-      tree.view.selection.getRangeAt(t, start, end);
-      for (v = start.value; v <= end.value; v++) {
-         toDoItem = tree.taskView.getCalendarTaskAtRow( v );
-         selectedItems.push( toDoItem );
-      }
-   }
-   calendarViewController.deleteOccurrences(selectedItems.length,
-                                            selectedItems,
-                                            false,
-                                            aDoNotConfirm);
-   tree.view.selection.clearSelection();
-}
-
 
 function goFindNewCalendars()
 {

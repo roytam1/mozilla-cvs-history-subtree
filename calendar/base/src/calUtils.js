@@ -40,49 +40,46 @@
  * that loading this file twice in the same scope will throw errors.
  */
 
-const Cc = Components.classes;
-const Ci = Components.interfaces;
-const Cr = Components.results;
-const kSUNBIRD_UID = "{718e30fb-e89b-41dd-9da7-e25a45638b28}";
-
 /* Returns a clean new calIEvent */
 function createEvent() {
-    return Cc["@mozilla.org/calendar/event;1"].createInstance(Ci.calIEvent);
+    return Components.classes["@mozilla.org/calendar/event;1"].
+           createInstance(Components.interfaces.calIEvent);
 }
 
 /* Returns a clean new calITodo */
 function createTodo() {
-    return Cc["@mozilla.org/calendar/todo;1"].createInstance(Ci.calITodo);
+    return Components.classes["@mozilla.org/calendar/todo;1"].
+           createInstance(Components.interfaces.calITodo);
 }
 
 /* Returns a clean new calIDateTime */
 function createDateTime() {
-    return Cc["@mozilla.org/calendar/datetime;1"].
-           createInstance(Ci.calIDateTime);
+    return Components.classes["@mozilla.org/calendar/datetime;1"].
+           createInstance(Components.interfaces.calIDateTime);
 }
 
 /* Returns a clean new calIRecurrenceInfo */
 function createRecurrenceInfo() {
-    return Cc["@mozilla.org/calendar/recurrence-info;1"].
-           createInstance(Ci.calIRecurrenceInfo);
+    return Components.classes["@mozilla.org/calendar/recurrence-info;1"].
+           createInstance(Components.interfaces.calIRecurrenceInfo);
 }
 
 /* Returns a clean new calIRecurrenceRule */
 function createRecurrenceRule() {
-    return Cc["@mozilla.org/calendar/recurrence-rule;1"].
-           createInstance(Ci.calIRecurrenceRule);
+    return Components.classes["@mozilla.org/calendar/recurrence-rule;1"].
+           createInstance(Components.interfaces.calIRecurrenceRule);
 }
 
 /* Returns a clean new calIAttendee */
 function createAttendee() {
-    return Cc["@mozilla.org/calendar/attendee;1"].
-           createInstance(Ci.calIAttendee);
+    return Components.classes["@mozilla.org/calendar/attendee;1"].
+           createInstance(Components.interfaces.calIAttendee);
 }
 
 /* Shortcut to the calendar-manager service */
 function getCalendarManager() {
     return Components.classes["@mozilla.org/calendar/manager;1"].
-           getService(Ci.calICalendarManager);
+           getService(Components.interfaces.calICalendarManager);
 }
 
 /**
@@ -99,8 +96,8 @@ function calendarDefaultTimezone() {
         if (!gDefaultTimezone) {
             gDefaultTimezone = guessSystemTimezone();
         } else {
-            var icsSvc = Cc["@mozilla.org/calendar/ics-service;1"]
-                         .getService(Ci.calIICSService);
+            var icsSvc = Components.classes["@mozilla.org/calendar/ics-service;1"].
+                         getService(Components.interfaces.calIICSService);
 
             // Update this tzid if necessary.
             if (icsSvc.latestTzId(gDefaultTimezone).length) {
@@ -145,8 +142,9 @@ function guessSystemTimezone() {
     // the offset is always 5 characters long
     var TZoffset1 = Date1.substr(index, 5);
     index = Date2.indexOf('+');
-    if (index < 0)
+    if (index < 0) {
         index = Date2.indexOf('-');
+    }
     // the offset is always 5 characters long
     var TZoffset2 = Date2.substr(index, 5);
 
@@ -156,8 +154,8 @@ function guessSystemTimezone() {
         dump("TZname1: " + TZname1 + "\nTZname2: " + TZname2 + "\n");
     }
 
-    var icsSvc = Cc["@mozilla.org/calendar/ics-service;1"].
-                 getService(Ci.calIICSService);
+    var icsSvc = Components.classes["@mozilla.org/calendar/ics-service;1"].
+                 getService(Components.interfaces.calIICSService);
 
     // returns 0=definitely not, 1=maybe, 2=likely
     function checkTZ(someTZ)
@@ -166,13 +164,18 @@ function guessSystemTimezone() {
         var subComp = comp.getFirstSubcomponent("VTIMEZONE");
         var standard = subComp.getFirstSubcomponent("STANDARD");
         var standardTZOffset = standard.getFirstProperty("TZOFFSETTO").valueAsIcalString;
-        var standardName = standard.getFirstProperty("TZNAME").valueAsIcalString;
+        var standardNameProp = standard.getFirstProperty("TZNAME");
+        var standardName = standardNameProp &&
+                           standardNameProp.valueAsIcalString;
         var daylight = subComp.getFirstSubcomponent("DAYLIGHT");
         var daylightTZOffset = null;
+        var daylightNameProp = null;
         var daylightName = null;
         if (daylight) {
             daylightTZOffset = daylight.getFirstProperty("TZOFFSETTO").valueAsIcalString;
-            daylightName = daylight.getFirstProperty("TZNAME").valueAsIcalString;
+            daylightNameProp = daylight.getFirstProperty("TZNAME");
+            daylightName = daylightNameProp &&
+                           daylightNameProp.valueAsIcalString;
         }
 
         if (TZoffset2 == standardTZOffset && TZoffset2 == TZoffset1 &&
@@ -238,15 +241,19 @@ function guessSystemTimezone() {
     var tzIDs = icsSvc.timezoneIds;
     while (tzIDs.hasMore()) {
         var theTZ = tzIDs.getNext();
-        switch (checkTZ(theTZ)) {
-            case 0: break;
-            case 1: 
-                if (!probableTZ) {
-                    probableTZ = theTZ;
-                }
-                break;
-            case 2:
-                return theTZ;
+        try {
+            switch (checkTZ(theTZ)) {
+                case 0: break;
+                case 1: 
+                    if (!probableTZ) {
+                        probableTZ = theTZ;
+                    }
+                    break;
+                case 2:
+                    return theTZ;
+            }
+        }
+        catch (ex) {
         }
     }
 
@@ -305,8 +312,8 @@ function calPrint() {
  * @returns  an nsIURI whose spec is aUriString
  */
 function makeURL(aUriString) {
-    var ioSvc = Cc["@mozilla.org/network/io-service;1"].
-                getService(Ci.nsIIOService);
+    var ioSvc = Components.classes["@mozilla.org/network/io-service;1"].
+                getService(Components.interfaces.nsIIOService);
     return ioSvc.newURI(aUriString, null, null);
 }
 
@@ -362,7 +369,7 @@ function calRadioGroupSelectItem(aRadioGroupId, aItemId) {
  * @returns        true if the object is a calIEvent, false otherwise
  */
 function isEvent(aObject) {
-    return aObject instanceof Ci.calIEvent;
+    return aObject instanceof Components.interfaces.calIEvent;
 }
 
 /**
@@ -372,7 +379,7 @@ function isEvent(aObject) {
  * @returns        true if the object is a calITodo, false otherwise
  */
 function isToDo(aObject) {
-    return aObject instanceof Ci.calITodo;
+    return aObject instanceof Components.interfaces.calITodo;
 }
 
 /**
@@ -438,12 +445,12 @@ function setPref(aPrefName, aPrefType, aPrefValue) {
  * @param aString     the string to which the preference value should be set
  */
 function setLocalizedPref(aPrefName, aString) {
-    const prefB = Cc["@mozilla.org/preferences-service;1"].
-                  getService(Ci.nsIPrefBranch);
-    var str = Cc["@mozilla.org/supports-string;1"].
-              createInstance(Ci.nsISupportsString);
+    const prefB = Components.classes["@mozilla.org/preferences-service;1"].
+                  getService(Components.interfaces.nsIPrefBranch);
+    var str = Components.classes["@mozilla.org/supports-string;1"].
+              createInstance(Components.interfaces.nsISupportsString);
     str.data = aString;
-    prefB.setComplexValue(aPrefName, Ci.nsISupportsString, str);
+    prefB.setComplexValue(aPrefName, Components.interfaces.nsISupportsString, str);
 }
 
 /**
@@ -453,11 +460,11 @@ function setLocalizedPref(aPrefName, aString) {
  * @param aDefault    (optional) the value to return if the pref is undefined
  */
 function getLocalizedPref(aPrefName, aDefault) {
-    const pb2 = Cc["@mozilla.org/preferences-service;1"].
-                getService(Ci.nsIPrefBranch2);
+    const pb2 = Components.classes["@mozilla.org/preferences-service;1"].
+                getService(Components.interfaces.nsIPrefBranch2);
     var result;
     try {
-        result = pb2.getComplexValue(aPrefName, Ci.nsISupportsString).data;
+        result = pb2.getComplexValue(aPrefName, Components.interfaces.nsISupportsString).data;
     } catch(ex) {
         return aDefault;
     }
@@ -490,8 +497,8 @@ function calGetString(aBundleName, aStringName, aParams) {
  */
 function getUUID() {
     if ("@mozilla.org/uuid-generator;1" in Components.classes) {
-        var uuidGen = Cc["@mozilla.org/uuid-generator;1"].
-                      getService(Ci.nsIUUIDGenerator);
+        var uuidGen = Components.classes["@mozilla.org/uuid-generator;1"].
+                      getService(Components.interfaces.nsIUUIDGenerator);
         // generate uuids without braces to avoid problems with 
         // CalDAV servers that don't support filenames with {}
         return uuidGen.generateUUID().toString().replace(/[{}]/g, '');
@@ -509,15 +516,15 @@ function getUUID() {
  * calIItemBase comparer
  */
 function compareItems(aItem, aOtherItem) {
-    var sip1 = Cc["@mozilla.org/supports-interface-pointer;1"].
-               createInstance(Ci.nsISupportsInterfacePointer);
+    var sip1 = Components.classes["@mozilla.org/supports-interface-pointer;1"].
+               createInstance(Components.interfaces.nsISupportsInterfacePointer);
     sip1.data = aItem;
-    sip1.dataIID = Ci.calIItemBase;
+    sip1.dataIID = Components.interfaces.calIItemBase;
 
-    var sip2 = Cc["@mozilla.org/supports-interface-pointer;1"].
-               createInstance(Ci.nsISupportsInterfacePointer);
+    var sip2 = Components.classes["@mozilla.org/supports-interface-pointer;1"].
+               createInstance(Components.interfaces.nsISupportsInterfacePointer);
     sip2.data = aOtherItem;
-    sip2.dataIID = Ci.calIItemBase;
+    sip2.dataIID = Components.interfaces.calIItemBase;
     return sip1.data == sip2.data;
 }
 
@@ -531,16 +538,46 @@ function compareItems(aItem, aOtherItem) {
  * @param aIID           IID to use in comparison
  */
 function compareObjects(aObject, aOtherObject, aIID) {
-    var sip1 = Cc["@mozilla.org/supports-interface-pointer;1"].
-               createInstance(Ci.nsISupportsInterfacePointer);
+    var sip1 = Components.classes["@mozilla.org/supports-interface-pointer;1"].
+               createInstance(Components.interfaces.nsISupportsInterfacePointer);
     sip1.data = aObject;
     sip1.dataIID = aIID;
 
-    var sip2 = Cc["@mozilla.org/supports-interface-pointer;1"].
-               createInstance(Ci.nsISupportsInterfacePointer);
+    var sip2 = Components.classes["@mozilla.org/supports-interface-pointer;1"].
+               createInstance(Components.interfaces.nsISupportsInterfacePointer);
     sip2.data = aOtherObject;
     sip2.dataIID = aIID;
     return sip1.data == sip2.data;
+}
+
+/**
+ * Compare two arrays using the passed function.
+ */
+function compareArrays(aOne, aTwo, compareFunc) {
+    if (!aOne && !aTwo)
+        return true;
+    if (!aOne || !aTwo)
+        return false;
+    var len = aOne.length;
+    if (len != aTwo.length)
+        return false;
+    for (var i = 0; i < len; ++i) {
+        if (!compareFunc(aOne[i], aTwo[i]))
+            return false;
+    }
+    return true;
+}
+
+/**
+ * Ensures the passed IID is in the list, else throws Components.results.NS_ERROR_NO_INTERFACE.
+ */
+function ensureIID(aList, aIID) {
+    function checkIID(iid) {
+        return iid.equals(aIID);
+    }
+    if (!aList.some(checkIID)) {
+        throw Components.results.NS_ERROR_NO_INTERFACE;
+    }
 }
 
 /**
@@ -577,8 +614,8 @@ function ensureDateTime(aDate) {
  *              properties should be logged.
  */
 function LOG(aArg) {
-    var prefB = Cc["@mozilla.org/preferences-service;1"].
-                getService(Ci.nsIPrefBranch);
+    var prefB = Components.classes["@mozilla.org/preferences-service;1"].
+                getService(Components.interfaces.nsIPrefBranch);
     var shouldLog = false;
     try {
         shouldLog = prefB.getBoolPref("calendar.debug.log");
@@ -601,8 +638,8 @@ function LOG(aArg) {
     }
  
     dump(string + '\n');
-    var consoleSvc = Cc["@mozilla.org/consoleservice;1"].
-                     getService(Ci.nsIConsoleService);
+    var consoleSvc = Components.classes["@mozilla.org/consoleservice;1"].
+                     getService(Components.interfaces.nsIConsoleService);
     consoleSvc.logStringMessage(string);
 }
 
@@ -800,6 +837,43 @@ function calGetEndDate(aItem)
 }
 
 /**
+ * Returns the item's start (or due) date if the item is in the specified Range;
+ * null otherwise.
+ */
+function checkIfInRange(item, rangeStart, rangeEnd)
+{
+    var dueDate = null;
+    var startDate = (item.getProperty("DTSTART") ||
+                     (dueDate = item.getProperty("DUE")));
+    if (!startDate) {
+        // DTSTART or DUE mandatory
+        return null;
+    }
+    var endDate = (item.getProperty("DTEND") ||
+                   (dueDate ? dueDate : item.getProperty("DUE")) ||
+                   startDate);
+
+    var start = ensureDateTime(startDate);
+    var end = ensureDateTime(endDate);
+
+    var queryStart = ensureDateTime(rangeStart);
+    var queryEnd = ensureDateTime(rangeEnd);
+
+    if (start.compare(end) == 0) {
+        if (!queryStart || start.compare(queryStart) >= 0 &&
+            (!queryEnd || start.compare(queryEnd) < 0)) {
+            return startDate;
+        }
+    } else {
+        if (!queryEnd || start.compare(queryEnd) < 0 &&
+            (!queryStart || end.compare(queryStart) > 0)) {
+            return startDate;
+        }
+    }
+    return null;
+}
+
+/**
  *  Delete the current selected items with focus from the unifinder list
  */
 function deleteEventCommand(doNotConfirm)
@@ -816,8 +890,9 @@ function deleteEventCommand(doNotConfirm)
  */
 function isSunbird()
 {
-    var appInfo = Cc["@mozilla.org/xre/app-info;1"].
-                  getService(Ci.nsIXULAppInfo);
+    const kSUNBIRD_UID = "{718e30fb-e89b-41dd-9da7-e25a45638b28}";
+    var appInfo = Components.classes["@mozilla.org/xre/app-info;1"].
+                  getService(Components.interfaces.nsIXULAppInfo);
 
     return appInfo.ID == kSUNBIRD_UID;
 }
@@ -1040,46 +1115,234 @@ function hasPositiveIntegerValue(elementId)
 }
 
 function getAtomFromService(aStr) {
-    var atomService = Cc["@mozilla.org/atom-service;1"]
-                      .getService(Ci.nsIAtomService);
+    var atomService = Components.classes["@mozilla.org/atom-service;1"]
+                      .getService(Components.interfaces.nsIAtomService);
     return atomService.getAtom(aStr);
 }
 
+function calInterfaceBag(iid) {
+    this.init(iid);
+}
+calInterfaceBag.prototype = {
+    mIid: null,
+    mInterfaces: null,
+
+    /// internal:
+    init: function calInterfaceBag_init(iid) {
+        this.mIid = iid;
+        this.mInterfaces = [];
+    },
+
+    /// external:
+    get size() {
+        return this.mInterfaces.length;
+    },
+
+    add: function calInterfaceBag_add(iface) {
+        if (iface) {
+            var iid = this.mIid;
+            function eq(obj) {
+                return compareObjects(obj, iface, iid);
+            }
+            if (!this.mInterfaces.some(eq)) {
+                this.mInterfaces.push(iface);
+            }
+        }
+    },
+
+    remove: function calInterfaceBag_remove(iface) {
+        if (iface) {
+            var iid = this.mIid;
+            function neq(obj) {
+                return !compareObjects(obj, iface, iid);
+            }
+            this.mInterfaces = this.mInterfaces.filter(neq);
+        }
+    },
+
+    forEach: function calInterfaceBag_forEach(func) {
+        this.mInterfaces.forEach(func);
+    }
+};
+
 function calListenerBag(iid) {
-    this.mIid = iid;
-    this.mListeners = [];
+    this.init(iid);
 }
 calListenerBag.prototype = {
-    mIid: null,
-    mListeners: null,
-
-    add: function calListenerBag_add(listener) {
-        var iid = this.mIid;
-        function eq(obj) {
-            return compareObjects(obj, listener, iid);
-        }
-        if (!this.mListeners.some(eq)) {
-            this.mListeners.push(listener);
-        }
-    },
-
-    remove: function calListenerBag_remove(listener) {
-        var iid = this.mIid;
-        function neq(obj) {
-            return !compareObjects(obj, listener, iid);
-        }
-        this.mListeners = this.mListeners.filter(neq);
-    },
+    __proto__: calInterfaceBag.prototype,
 
     notify: function calListenerBag_notify(func, args) {
-        function notifyFunc(obj) {
+        function notifyFunc(iface) {
             try {
-                obj[func].apply(obj, args ? args : []);
+                iface[func].apply(iface, args ? args : []);
             }
             catch (exc) {
                 Components.utils.reportError(exc);
             }
         }
-        this.mListeners.forEach(notifyFunc);
+        this.mInterfaces.forEach(notifyFunc);
     }
 };
+
+function sendMailTo(aRecipient, aSubject, aBody) {
+    if (!aRecipient || aRecipient.length < 1) {
+        return;
+    }
+
+    if (Components.classes["@mozilla.org/messengercompose;1"]) {
+        // We are in Thunderbird, we can use the compose interface directly
+        var msgComposeService = Components.classes["@mozilla.org/messengercompose;1"]
+                                .getService(Components.interfaces.nsIMsgComposeService);
+        var msgParams = Components.classes["@mozilla.org/messengercompose/composeparams;1"]
+                        .createInstance(Components.interfaces.nsIMsgComposeParams);
+        var composeFields = Components.classes["@mozilla.org/messengercompose/composefields;1"]
+                            .createInstance(Components.interfaces.nsIMsgCompFields);
+
+        composeFields.to = aRecipient;
+        composeFields.subject = aSubject;
+        composeFields.body = aBody;
+
+        msgParams.type = Components.interfaces.nsIMsgCompType.New;
+        msgParams.format = Components.interfaces.nsIMsgCompFormat.Default;
+        msgParams.composeFields = composeFields;
+
+        msgComposeService.OpenComposeWindowWithParams(null, msgParams);
+    } else {
+        // We are in a place without a composer. Use the external protocol
+        // service.
+        var protoSvc = Components.classes["@mozilla.org/uriloader/external-protocol-service;1"]
+                       .getService(Components.interfaces.nsIExternalProtocolService);
+        var ioService = Components.classes["@mozilla.org/network/io-service;1"]
+                        .getService(Components.interfaces.nsIIOService);
+
+        var uriString = "mailto:" + aRecipient;
+        var uriParams = [];
+
+        if (aSubject) {
+            uriParams.push("subject=" + encodeURIComponent(aSubject));
+        }
+
+        if (aBody) {
+            uriParams.push("body=" + encodeURIComponent(aSubject));
+        }
+
+        if (uriParams.length > 0) {
+            uriString += "?" + uriParams.join("&");
+        }
+
+        protoSvc.loadUrl(ioService.newURI(uriString, null, null));
+    }
+}
+
+var gOpGroupPrefix;
+var gOpGroupId = 0;
+
+/**
+ * This object implements calIOperation and could group multiple sub
+ * operations into one. You can pass a cancel function which is called once
+ * the operation group is cancelled.
+ * Users must call notifyCompleted() once all sub operations have been
+ * successful, else the operation group will stay pending.
+ * The reason for the latter is that providers currently should (but need
+ * not) implement (and return) calIOperation handles, thus there may be pending
+ * calendar operations (without handle).
+ */
+function calOperationGroup(cancelFunc) {
+    this.wrappedJSObject = this;
+    if (!gOpGroupPrefix) {
+        gOpGroupPrefix = (getUUID() + "-");
+    }
+    this.mCancelFunc = cancelFunc;
+    this.mId = (gOpGroupPrefix + gOpGroupId);
+    ++gOpGroupId;
+    this.mSubOperations = [];
+}
+calOperationGroup.prototype = {
+    mCancelFunc: null,
+    mId: null,
+    mIsPending: true,
+    mStatus: Components.results.NS_OK,
+    mSubOperations: null,
+
+    add: function calOperationGroup_add(op) {
+        if (op) {
+            this.mSubOperations.push(op);
+        }
+    },
+
+    remove: function calOperationGroup_remove(op) {
+        if (op) {
+            function filterFunc(op_) {
+                return (op.id != op_.id);
+            }
+            this.mSubOperations = this.mSubOperations.filter(filterFunc);
+        }
+    },
+
+    get isEmpty() {
+        return (this.mSubOperations.length == 0);
+    },
+
+    notifyCompleted: function calOperationGroup_notifyCompleted(status) {
+        ASSERT(this.isPending, "[calOperationGroup_notifyCompleted] this.isPending");
+        if (this.isPending) {
+            this.mIsPending = false;
+            if (status) {
+                this.mStatus = status;
+            }
+        }
+    },
+
+    toString: function calOperationGroup_toString() {
+        return ("[calOperationGroup] id=" + this.id);
+    },
+
+    // calIOperation:
+    get id() {
+        return this.mId;
+    },
+
+    get isPending() {
+        return this.mIsPending;
+    },
+
+    get status() {
+        return this.mStatus;
+    },
+
+    get success() {
+        return (!this.isPending && Components.isSuccessCode(this.status));
+    },
+
+    cancel: function calOperationGroup_cancel(status) {
+        if (this.isPending) {
+            if (!status) {
+                status = Components.interfaces.calIErrors.OPERATION_CANCELLED;
+            }
+            this.notifyCompleted(status);
+            var subOperations = this.mSubOperations;
+            this.mSubOperations = [];
+            function forEachFunc(op) {
+                op.cancel(null);
+            }
+            subOperations.forEach(forEachFunc);
+            var cancelFunc = this.mCancelFunc;
+            if (cancelFunc) {
+                this.mCancelFunc = null;
+                cancelFunc();
+            }
+        }
+    }
+};
+
+function sameDay(date1, date2) {
+    if (date1 && date2) {
+        if ((date1.day == date2.day) &&
+            (date1.month == date2.month) &&
+            (date1.year == date2.year)) {
+              return true;
+        }
+    }
+    return false;
+}
+

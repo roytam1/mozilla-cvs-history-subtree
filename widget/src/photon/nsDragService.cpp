@@ -148,6 +148,19 @@ nsDragService::InvokeDragSession (nsIDOMNode *aDOMNode,
 
   if(!aArrayTransferables) return NS_ERROR_INVALID_ARG;
 
+  extern char* __progname;
+  if (__progname && strcmp(__progname, "kwww") == 0) {
+	//
+	// In kscope we use dragging to scroll, but due to synthesized mouse
+	// events coming in to nsViewManager::SynthesizeMouseMove() from
+	// PresShell::DidDoReflow() we may occasionally end up here when the
+	// user drags quickly and selects a copy/pastable element like a link.
+	// We don't want to do anything in this case, or else we will mess up
+	// a drag scroll in progress.
+	//
+    return NS_ERROR_FAILURE;
+  }
+
 	/*  this will also addref the transferables since we're going to hang onto this beyond the length of this call */
 	mSourceDataItems = aArrayTransferables;
 

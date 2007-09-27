@@ -19,6 +19,8 @@
  *
  * Contributor(s):
  *   Michael Buettner <michael.buettner@sun.com>
+ *   Philipp Kewisch <mozilla@kewis.ch>
+ *   Martin Schroeder <mschroeder@mozilla.x-home.org>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -48,10 +50,10 @@ var gOrganizerID = null;
 var gPrivacy = null;
 var gURL = null;
 var gPriority = 0;
+var gStatus = "NONE";
 var gDictCount = 0;
 var gPrefs = null;
 var gLastRepeatSelection = 0;
-var gLastAlarmSelection = 0;
 var gIgnoreUpdate = false;
 var gShowTimeAs = null;
 var gIsSunbird = false;
@@ -83,15 +85,6 @@ function goUpdateUndoEditMenuItems() {
 // update menu items that depend on clipboard contents
 function goUpdatePasteMenuItems() {
     goUpdateCommand('cmd_paste');
-}
-
-function getString(aBundleName, aStringName) {
-    var sbs = Cc["@mozilla.org/intl/stringbundle;1"]
-              .getService(Ci.nsIStringBundleService);
-    var props =
-        sbs.createBundle(
-            "chrome://calendar/locale/" + aBundleName + ".properties");
-    return props.GetStringFromName(aStringName);
 }
 
 function onLoad() {
@@ -131,8 +124,8 @@ function onLoad() {
 
     // new items should have a non-empty title.
     if (item.isMutable && (!item.title || item.title.length <= 0)) {
-        item.title = getString("sun-calendar-event-dialog",
-                               isEvent(item) ? "newEvent" : "newTask");
+        item.title = calGetString("sun-calendar-event-dialog",
+                                  isEvent(item) ? "newEvent" : "newTask");
     }
 
     window.onAcceptCallback = args.onOk;
@@ -174,8 +167,8 @@ function onLoad() {
     window.recurrenceInfo = parentItem.recurrenceInfo;
 
     const kSUNBIRD_ID = "{718e30fb-e89b-41dd-9da7-e25a45638b28}";
-    var appInfo = Cc["@mozilla.org/xre/app-info;1"]
-                  .getService(Ci.nsIXULAppInfo);
+    var appInfo = Components.classes["@mozilla.org/xre/app-info;1"]
+                  .getService(Components.interfaces.nsIXULAppInfo);
 
     if (appInfo.ID == kSUNBIRD_ID) {
         gIsSunbird = true;
@@ -188,8 +181,8 @@ function onLoad() {
     document.getElementById("sun-calendar-event-dialog").getButton("cancel")
             .parentNode.setAttribute("collapsed", "true");
 
-    var prefService = Cc["@mozilla.org/preferences-service;1"]
-                      .getService(Ci.nsIPrefService);
+    var prefService = Components.classes["@mozilla.org/preferences-service;1"]
+                      .getService(Components.interfaces.nsIPrefService);
 
     gPrefs = prefService.getBranch(null);
 
@@ -201,13 +194,6 @@ function onLoad() {
     document.getElementById("item-title").select();
 }
 
-function dispose() {
-    var args = window.arguments[0];
-    if (args.job && args.job.dispose) {
-        args.job.dispose();
-    }
-}
-
 function onAccept() {
     dispose();
     onCommandSave();
@@ -215,40 +201,39 @@ function onAccept() {
 }
 
 function onCommandCancel() {
-    // assume that new items need to be asked whether or
-    // not the newly created item wants to be saved.
-    var isNew = window.calendarItem.isMutable;
-    if (!isNew) {
-        var newItem = saveItem();
-        var oldItem = window.calendarItem.clone();
+    // find out if we should bring up the 'do you want to save?' question...
+    var newItem = saveItem();
+    var oldItem = window.calendarItem.clone();
 
-        newItem.deleteProperty("DTSTAMP");
-        oldItem.deleteProperty("DTSTAMP");
+    newItem.deleteProperty("DTSTAMP");
+    oldItem.deleteProperty("DTSTAMP");
 
-        // we need to guide the description text through the text-field since
-        // newlines are getting converted which would indicate changes to the
-        // text.
-        setElementValue("item-description", oldItem.getProperty("DESCRIPTION"));
-        setItemProperty(oldItem,
-                        "DESCRIPTION",
-                        getElementValue("item-description"));
+    // we need to guide the description text through the text-field since
+    // newlines are getting converted which would indicate changes to the
+    // text.
+    setElementValue("item-description", oldItem.getProperty("DESCRIPTION"));
+    setItemProperty(oldItem,
+                    "DESCRIPTION",
+                    getElementValue("item-description"));
+    setElementValue("item-description", newItem.getProperty("DESCRIPTION"));
 
-        var a = newItem.icalString;
-        var b = oldItem.icalString;
-
-        if (newItem.icalString == oldItem.icalString) {
-            return true;
-        }
+    // compare old and new version of this item. we ask the item for its
+    // representation as icalString in order to have some easily comparable
+    // form we can work with.
+    if (newItem.icalString == oldItem.icalString) {
+        return true;
     }
 
-    // TODO: retrieve strings from dtd', etc.
-    var promptService = Cc["@mozilla.org/embedcomp/prompt-service;1"]
-                        .getService(Ci.nsIPromptService);
+    var promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"]
+                        .getService(Components.interfaces.nsIPromptService);
 
-    var promptTitle = "Save Event";
-    var promptMessage = "Do you want to save changes?";
-    var buttonLabel1 = "Yes";
-    var buttonLabel2 = "No";
+    var promptTitle = calGetString("calendar",
+                                   isEvent(window.calendarItem) ?
+                                      "askSaveTitleEvent" :
+                                      "askSaveTitleTask");
+    var promptMessage = calGetString("calendar", "askSaveMessage");
+    var buttonLabel1 = calGetString("calendar", "askSaveLabel1");
+    var buttonLabel2 = calGetString("calendar", "askSaveLabel2");
 
     var flags = promptService.BUTTON_TITLE_IS_STRING *
                 promptService.BUTTON_POS_0 +
@@ -316,6 +301,7 @@ function loadDialog(item) {
                     calendarList.selectedIndex = selectIndex;
                 }
             }
+            selectIndex++;
         } else if (calendar && !calendar.readOnly) {
             var menuitem = calendarList.appendItem(calendar.name, i);
             menuitem.calendar = calendar;
@@ -324,8 +310,8 @@ function loadDialog(item) {
                     calendarList.selectedIndex = selectIndex;
                 }
             }
+            selectIndex++;
         }
-        selectIndex++;
     }
 
     // no calendar attached to item
@@ -335,19 +321,15 @@ function loadDialog(item) {
     }
 
     // Categories
-    var categoriesString = "Anniversary,Birthday,Business,Calls,Clients," +
-                           "Competition,Customer,Favorites,Follow up,Gifts," +
-                           "Holidays,Ideas,Issues,Miscellaneous,Personal," +
-                           "Projects,Public Holiday,Status,Suppliers,Travel," +
-                           "Vacation";
-    try {
-        var categories = getLocalizedPref("calendar.categories.names");
-        if (categories && categories != "") {
-            categoriesString = categories;
-        }
-    } catch (ex) {
-    }
+    var categoriesString = getLocalizedPref("calendar.categories.names", "");
     var categoriesList = categoriesString.split(",");
+    
+    // When categoriesString is empty, split returns an array containing one
+    // empty string, rather than an empty array. This results in an empty
+    // menulist item with no corresponding category.
+    if (categoriesList.length == 1 && !categoriesList[0].length) {
+        categoriesList.pop();
+    }
 
     // insert the category already in the menulist so it doesn't get lost
     var itemCategory = item.getProperty("CATEGORIES");
@@ -375,7 +357,7 @@ function loadDialog(item) {
                                                   categoriesList[i]);
         catItem.value = categoriesList[i];
         if (itemCategory && categoriesList[i] == itemCategory) {
-            indexToSelect = parseInt(i)+1;  // Add 1 because of 'None'
+            indexToSelect = parseInt(i) + 1;  // Add 1 because of 'None'
         }
     }
 
@@ -385,9 +367,15 @@ function loadDialog(item) {
     gURL = item.getProperty("URL");
     updateDocument();
 
-    // Status
+    // Description
     setElementValue("item-description", item.getProperty("DESCRIPTION"));
-    if (!isEvent(item)) {
+
+    // Status
+    if (isEvent(item)) {
+        gStatus = item.hasProperty("STATUS") ?
+            item.getProperty("STATUS") : "NONE";
+        updateStatus();
+    } else {
         setElementValue("todo-status", item.getProperty("STATUS"));
     }
 
@@ -437,11 +425,24 @@ function loadDialog(item) {
     // figure out what the title of the dialog should be and set it
     updateTitle();
 
-    updateAttendees();
-    updateReminderDetails();
+    var sendInvitesCheckbox = document.getElementById("send-invitations-checkbox");
+    if (item.getProperty("X-MOZ-SEND-INVITATIONS") != null) {
+        sendInvitesCheckbox.checked = (item.getProperty("X-MOZ-SEND-INVITATIONS") == "TRUE");
+    } else {
+        sendInvitesCheckbox.checked = false;
+    }
 
-    gShowTimeAs = item.hasProperty("TRANSP") ?
-        item.getProperty("TRANSP") : null;
+    updateAttendees();
+    updateRepeat();
+    updateReminder();
+
+    // How easy would it be to just call hasProperty(), but unfortunately
+    // this is currently flawed and doesn't give us the answer we're longing for.
+    // hasProperty() unconditionally forwards the request to the parent item
+    // if the property doesn't exist at the occurrence. That's why we need to
+    // use this somewhat awkward construct.
+    gShowTimeAs = (item.getUnproxiedProperty("TRANSP") != null) ?
+        item.getUnproxiedProperty("TRANSP") : null;
     updateShowTimeAs();
 }
 
@@ -503,101 +504,8 @@ function loadDateTime(item) {
     }
 }
 
-function updateStartTime() {
-    if (gIgnoreUpdate) {
-        return;
-    }
 
-    var startWidgetId;
-    var endWidgetId;
-    if (isEvent(window.calendarItem)) {
-        startWidgetId = "event-starttime";
-        endWidgetId = "event-endtime";
-    } else {
-        if (!getElementValue("todo-has-entrydate", "checked")) {
-            gItemDuration = null;
-        }
-        if (!getElementValue("todo-has-duedate", "checked")) {
-            gItemDuration = null;
-        }
-        startWidgetId = "todo-entrydate";
-        endWidgetId = "todo-duedate";
-    }
-
-    // jsDate is always in OS timezone, thus we create a calIDateTime
-    // object from the jsDate representation and simply set the new
-    // timezone instead of converting.
-    var kDefaultTimezone = calendarDefaultTimezone();
-    var start = jsDateToDateTime(getElementValue(startWidgetId));
-    start = start.getInTimezone(kDefaultTimezone);
-    var menuItem = document.getElementById('menu-options-timezone');
-    if (menuItem.getAttribute('checked') == 'true') {
-        start.timezone = gStartTimezone;
-    }
-    gStartTime = start.clone();
-    if (gItemDuration) {
-        start.addDuration(gItemDuration);
-        start = start.getInTimezone(gEndTimezone);
-    }
-    if (gEndTime) {
-        var menuItem = document.getElementById('menu-options-timezone');
-        if (menuItem.getAttribute('checked') == 'true') {
-            start.timezone = gEndTimezone
-        }
-        gEndTime = start;
-    }
-
-    var isAllDay = getElementValue("event-all-day", "checked");
-    if (isAllDay) {
-        gStartTime.isDate = true;
-    }
-
-    updateDateTime();
-    updateTimezone();
-}
-
-function updateEntryDate() {
-    if (gIgnoreUpdate) {
-        return;
-    }
-
-    if (!isToDo(window.calendarItem)) {
-        return;
-    }
-
-    // force something to get set if there was nothing there before
-    setElementValue("todo-entrydate", getElementValue("todo-entrydate"));
-
-    // first of all disable the datetime picker if we don't have an entrydate
-    var hasEntryDate = getElementValue("todo-has-entrydate", "checked");
-    var hasDueDate = getElementValue("todo-has-duedate", "checked");
-    setElementValue("todo-entrydate", !hasEntryDate, "disabled");
-
-    // create a new datetime object if entrydate is now checked for the first
-    // time
-    if (hasEntryDate && !gStartTime) {
-        var kDefaultTimezone = calendarDefaultTimezone();
-        var entryDate = jsDateToDateTime(getElementValue("todo-entrydate"));
-        entryDate = entryDate.getInTimezone(kDefaultTimezone);
-        gStartTime = entryDate;
-    } else if (!hasEntryDate && gStartTime) {
-        gStartTime = null;
-    }
-
-    // calculate the duration if possible
-    if (hasEntryDate && hasDueDate) {
-        var start = jsDateToDateTime(getElementValue("todo-entrydate"));
-        var end = jsDateToDateTime(getElementValue("todo-duedate"));
-        gItemDuration = end.subtractDate(start);
-    } else {
-        gItemDuration = null;
-    }
-
-    updateDateTime();
-    updateTimezone();
-}
-
-function updateEndTime() {
+function dateTimeControls2State(aKeepDuration) {
     if (gIgnoreUpdate) {
         return;
     }
@@ -623,41 +531,53 @@ function updateEndTime() {
     var kDefaultTimezone = calendarDefaultTimezone();
 
     if (gStartTime) {
+
+        // jsDate is always in OS timezone, thus we create a calIDateTime
+        // object from the jsDate representation and simply set the new
+        // timezone instead of converting.
         var start = jsDateToDateTime(getElementValue(startWidgetId));
         start = start.getInTimezone(kDefaultTimezone);
         var menuItem = document.getElementById('menu-options-timezone');
         if (menuItem.getAttribute('checked') == 'true') {
             start.timezone = gStartTimezone;
         }
-        gStartTime = start;
+        gStartTime = start.clone();
     }
+    
+    if (gItemDuration) {
+        start.addDuration(gItemDuration);
+        start = start.getInTimezone(gEndTimezone);
+    }
+    
     if (gEndTime) {
-        var end = jsDateToDateTime(getElementValue(endWidgetId));
-        end = end.getInTimezone(kDefaultTimezone);
-        var timezone = gEndTimezone;
-        if (timezone == "UTC") {
-            if (gStartTime && gStartTimezone != gEndTimezone) {
-                timezone = gStartTimezone;
-            }
-        }
-        var menuItem = document.getElementById('menu-options-timezone');
-        if (menuItem.getAttribute('checked') == 'true') {
-            end.timezone = timezone;
+        var end = start;
+        if (!aKeepDuration) {
+          end = jsDateToDateTime(getElementValue(endWidgetId));
+          end = end.getInTimezone(kDefaultTimezone);
+          var timezone = gEndTimezone;
+          if (timezone == "UTC") {
+              if (gStartTime && gStartTimezone != gEndTimezone) {
+                  timezone = gStartTimezone;
+              }
+          }
+          var menuItem = document.getElementById('menu-options-timezone');
+          if (menuItem.getAttribute('checked') == 'true') {
+              end.timezone = timezone;
+          }
         }
         gEndTime = end;
     }
 
-    var isAllDay = getElementValue("event-all-day", "checked");
-    if (isAllDay) {
+    if (getElementValue("event-all-day", "checked")) {
         gStartTime.isDate = true;
     }
 
     // calculate the new duration of start/end-time.
     // don't allow for negative durations.
     var warning = false;
-    if (gStartTime && gEndTime) {
+    if (!aKeepDuration && gStartTime && gEndTime) {
         if (gEndTime.compare(gStartTime) >= 0) {
-            gItemDuration = end.subtractDate(start);
+            gItemDuration = gEndTime.subtractDate(gStartTime);
         } else {
             gStartTime = saveStartTime;
             gEndTime = saveEndTime;
@@ -670,18 +590,46 @@ function updateEndTime() {
 
     if (warning) {
         var callback = function func() {
-            var promptService = Cc["@mozilla.org/embedcomp/prompt-service;1"]
-                                .getService(Ci.nsIPromptService);
+            var promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"]
+                                .getService(Components.interfaces.nsIPromptService);
             promptService.alert(
                 null,
                 document.title,
-                "The end date you entered occurs before the start date.");
+                calGetString("calendar", "warningNegativeDuration"));
         }
         setTimeout(callback, 1);
     }
 }
 
+function updateEntryDate() {
+    updateDateCheckboxes(
+        "todo-entrydate",
+        "todo-has-entrydate",
+        {
+            isValid: function() {
+                return gStartTime != null;
+            },
+            setDateTime: function(dt) {
+                gStartTime = dt;
+            }
+        });
+}
+
 function updateDueDate() {
+    updateDateCheckboxes(
+        "todo-duedate",
+        "todo-has-duedate",
+        {
+            isValid: function() {
+                return gEndTime != null;
+            },
+            setDateTime: function(dt) {
+                gEndTime = dt;
+            }
+        });
+}
+
+function updateDateCheckboxes(aDatePickerId, aCheckboxId, aDateTime) {
     if (gIgnoreUpdate) {
         return;
     }
@@ -691,24 +639,25 @@ function updateDueDate() {
     }
 
     // force something to get set if there was nothing there before
-    setElementValue("todo-duedate", getElementValue("todo-duedate"));
+    setElementValue(aDatePickerId, getElementValue(aDatePickerId));
 
-    // first of all disable the datetime picker if we don't have a duedate
-    var hasEntryDate = getElementValue("todo-has-entrydate", "checked");
-    var hasDueDate = getElementValue("todo-has-duedate", "checked");
-    setElementValue("todo-duedate", !hasDueDate, "disabled");
+    // first of all disable the datetime picker if we don't have a date
+    var hasDate = getElementValue(aCheckboxId, "checked");
+    setElementValue(aDatePickerId, !hasDate, "disabled");
 
-    // create a new datetime object if duedate is now checked for the first time
-    if (hasDueDate && !gEndTime) {
+    // create a new datetime object if date is now checked for the first time
+    if (hasDate && !aDateTime.isValid()) {
         var kDefaultTimezone = calendarDefaultTimezone();
-        var dueDate = jsDateToDateTime(getElementValue("todo-duedate"));
-        dueDate = dueDate.getInTimezone(kDefaultTimezone);
-        gEndTime = dueDate;
-    } else if (!hasDueDate && gEndTime) {
-        gEndTime = null;
+        var date = jsDateToDateTime(getElementValue(aDatePickerId));
+        date = date.getInTimezone(kDefaultTimezone);
+        aDateTime.setDateTime(date);
+    } else if (!hasDate && aDateTime.isValid()) {
+        aDateTime.setDateTime(null);
     }
 
     // calculate the duration if possible
+    var hasEntryDate = getElementValue("todo-has-entrydate", "checked");
+    var hasDueDate = getElementValue("todo-has-duedate", "checked");
     if (hasEntryDate && hasDueDate) {
         var start = jsDateToDateTime(getElementValue("todo-entrydate"));
         var end = jsDateToDateTime(getElementValue("todo-duedate"));
@@ -738,7 +687,7 @@ function loadRepeat(item) {
         }
         if (rules.length == 1) {
             var rule = rules[0];
-            if (rule instanceof Ci.calIRecurrenceRule) {
+            if (rule instanceof Components.interfaces.calIRecurrenceRule) {
                 switch (rule.type) {
                     case 'DAILY':
                         if (rule.interval == 1 && !rule.isFinite) {
@@ -830,283 +779,9 @@ function loadRepeat(item) {
     }
 }
 
-function checkRecurrenceRule(aRule, aArray) {
-    for each (var comp in aArray) {
-        var ruleComp = aRule.getComponent(comp, {});
-        if (ruleComp && ruleComp.length > 0) {
-            return true;
-        }
-    }
-    return false;
-}
-
-function loadReminder(item) {
-    // select 'no reminder' by default
-    var reminderPopup = document.getElementById("item-alarm");
-    reminderPopup.selectedIndex = 0;
-    gLastAlarmSelection = 0;
-    if (!item.alarmOffset) {
-        return;
-    }
-
-    // try to match the reminder setting with the available popup items
-    var matchingItem = null;
-    var menuItems = reminderPopup.getElementsByTagName("menuitem");
-    var numItems = menuItems.length;
-    for (var i=0; i<numItems; i++) {
-        var menuitem = menuItems[i];
-        if (menuitem.hasAttribute("length")) {
-            var origin = "1";
-            if (item.alarmRelated == Ci.calIItemBase.ALARM_RELATED_END) {
-                origin = "-1";
-            }
-            var duration = item.alarmOffset.clone();
-            var relation = "END";
-            if (duration.isNegative) {
-                duration.isNegative = false;
-                duration.normalize();
-                relation = "START";
-            }
-            if (menuitem.getAttribute("origin") == origin &&
-                menuitem.getAttribute("relation") == relation) {
-                var unit = menuitem.getAttribute("unit");
-                var length = menuitem.getAttribute("length");
-                if (unit == "minutes" &&
-                    item.alarmOffset.minutes == length) {
-                    matchingItem = menuitem;
-                    break;
-                } else if (unit == "hours" &&
-                           item.alarmOffset.hours == length) {
-                    matchingItem = menuitem;
-                    break;
-                } else if (unit == "days" &&
-                           item.alarmOffset.days == length) {
-                    matchingItem = menuitem;
-                    break;
-                }
-            }
-        }
-    }
-
-    if (matchingItem) {
-        var numChilds = reminderPopup.childNodes[0].childNodes.length;
-        for (var i = 0; i < numChilds; i++) {
-            var node = reminderPopup.childNodes[0].childNodes[i];
-            if (node == matchingItem) {
-                reminderPopup.selectedIndex = i;
-                break;
-            }
-        }
-    } else {
-        reminderPopup.value = 'custom';
-        var customReminder =
-            document.getElementById("reminder-custom-menuitem");
-        var reminder = {};
-        if (item.alarmRelated == Ci.calIItemBase.ALARM_RELATED_START) {
-            reminder.origin = "1";
-        } else {
-            reminder.origin = "-1";
-        }
-        var offset = item.alarmOffset.clone();
-        var relation = "END";
-        if (offset.isNegative) {
-            offset.isNegative = false;
-            offset.normalize();
-            relation = "START";
-        }
-        reminder.relation = relation;
-        if (offset.minutes) {
-            var minutes = offset.minutes +
-                          offset.hours * 60 +
-                          offset.days * 24 * 60 +
-                          offset.weeks * 60 * 24 * 7;
-            reminder.unit = 'minutes';
-            reminder.length = minutes;
-        } else if (offset.hours) {
-            var hours = offset.hours + offset.days * 24 + offset.weeks * 24 * 7;
-            reminder.unit = 'hours';
-            reminder.length = hours;
-        } else {
-            var days = offset.days + offset.weeks * 7;
-            reminder.unit = 'days';
-            reminder.length = days;
-        }
-        customReminder.reminder = reminder;
-    }
-
-    // remember the selected index
-    gLastAlarmSelection = reminderPopup.selectedIndex;
-}
-
-function saveReminder(item) {
-    var reminderPopup = document.getElementById("item-alarm");
-    if (reminderPopup.value == 'none') {
-        item.alarmOffset = null;
-        item.alarmLastAck = null;
-        item.alarmRelated = null;
-    } else {
-        var menuitem = reminderPopup.selectedItem;
-
-        // custom reminder entries carry their own reminder object
-        // with them, pre-defined entries specify the necessary information
-        // as attributes attached to the menuitem elements.
-        var reminder = menuitem.reminder;
-        if (!reminder) {
-            reminder = {};
-            reminder.length = menuitem.getAttribute('length');
-            reminder.unit = menuitem.getAttribute('unit');
-            reminder.relation = menuitem.getAttribute('relation');
-            reminder.origin = menuitem.getAttribute('origin');
-        }
-
-        var duration = Cc["@mozilla.org/calendar/duration;1"]
-                       .createInstance(Ci.calIDuration);
-
-        duration[reminder.unit] = Number(reminder.length);
-        if (reminder.relation != "END") {
-            duration.isNegative = true;
-        }
-        duration.normalize();
-        item.alarmOffset = duration;
-
-        if (Number(reminder.origin) >= 0) {
-            item.alarmRelated = Ci.calIItemBase.ALARM_RELATED_START;
-        } else {
-            item.alarmRelated = Ci.calIItemBase.ALARM_RELATED_END;
-        }
-    }
-}
-
-function editReminder() {
-    var customReminder =
-        document.getElementById("reminder-custom-menuitem");
-    var args = new Object();
-    args.reminder = customReminder.reminder;
-    var savedWindow = window;
-    args.onOk = function(reminder) {
-        customReminder.reminder = reminder;
-    };
-
-    window.setCursor("wait");
-
-    // open the dialog modally
-    openDialog(
-        "chrome://calendar/content/sun-calendar-event-dialog-reminder.xul",
-        "_blank",
-        "chrome,titlebar,modal,resizable",
-        args);
-}
-
 function updateReminder() {
-    // TODO: possibly the selected reminder conflicts with the item.
-    // for example an end-relation combined with a task without duedate.
-    // we need to disable the ok-button in this case.
-
-    // find relevant elements in the document
-    var reminderPopup = document.getElementById("item-alarm");
-    var reminderDetails = document.getElementById("reminder-details");
-
-    // if a custom reminder was selected, we show the appropriate
-    // dialog in order to allow the user to specify the details.
-    // the result will be placed in the 'reminder-custom-menuitem' tag.
-    if (reminderPopup.value == 'custom') {
-        // show the dialog.
-        editReminder();
-
-        // Now check if the resulting custom reminder is valid.
-        // possibly we receive an invalid reminder if the user cancels the
-        // dialog. In that case we revert to the previous selection of the
-        // reminder drop down.
-        if (!document.getElementById("reminder-custom-menuitem").reminder) {
-            reminderPopup.selectedIndex = gLastAlarmSelection;
-        }
-    }
-
-    // remember the current reminder drop down selection index.
-    gLastAlarmSelection = reminderPopup.selectedIndex;
-
-    updateReminderDetails();
+    commonUpdateReminder();
     updateAccept();
-}
-
-function updateReminderDetails() {
-    // find relevant elements in the document
-    var reminderPopup = document.getElementById("item-alarm");
-    var reminderDetails = document.getElementById("reminder-details");
-    var reminder = document.getElementById("reminder-custom-menuitem").reminder;
-
-    // first of all collapse the details text. if we fail to
-    // create a details string, we simply don't show anything.
-    reminderDetails.setAttribute("collapsed", "true");
-
-    // don't try to show the details text
-    // for anything but a custom recurrence rule.
-    if (reminderPopup.value == "custom" && reminder) {
-        var sbs = Cc["@mozilla.org/intl/stringbundle;1"]
-                  .getService(Ci.nsIStringBundleService);
-
-        var props =
-            sbs.createBundle(
-                "chrome://calendar/locale/sun-calendar-event-dialog.properties");
-
-        var unitString;
-        switch (reminder.unit) {
-            case 'minutes':
-                unitString = Number(reminder.length) <= 1 ?
-                    props.GetStringFromName('reminderCustomUnitMinute') :
-                    props.GetStringFromName('reminderCustomUnitMinutes');
-                break;
-            case 'hours':
-                unitString = Number(reminder.length) <= 1 ?
-                    props.GetStringFromName('reminderCustomUnitHour') :
-                    props.GetStringFromName('reminderCustomUnitHours');
-                break;
-            case 'days':
-                unitString = Number(reminder.length) <= 1 ?
-                    props.GetStringFromName('reminderCustomUnitDay') :
-                    props.GetStringFromName('reminderCustomUnitDays');
-                break;
-        }
-
-        var relationString;
-        switch (reminder.relation) {
-            case 'START':
-                relationString = props.GetStringFromName('reminderCustomRelationStart');
-                break;
-            case 'END':
-                relationString = props.GetStringFromName('reminderCustomRelationEnd');
-                break;
-        }
-
-        var originString;
-        if (reminder.origin && reminder.origin < 0) {
-            originString = props.GetStringFromName('reminderCustomOriginEnd');
-        } else {
-            originString = props.GetStringFromName('reminderCustomOriginBegin');
-        }
-
-        var detailsString = props.formatStringFromName(
-          'reminderCustomTitle',
-          [ reminder.length,
-            unitString,
-            relationString,
-            originString], 4);
-
-        var lines = detailsString.split("\n");
-        reminderDetails.removeAttribute("collapsed");
-        while (reminderDetails.childNodes.length > lines.length) {
-            reminderDetails.removeChild(reminderDetails.lastChild);
-        }
-        var numChilds = reminderDetails.childNodes.length;
-        for (var i = 0; i < lines.length; i++) {
-            if (i >= numChilds) {
-                var newNode = reminderDetails.childNodes[0].cloneNode(true);
-                reminderDetails.appendChild(newNode);
-            }
-            var node = reminderDetails.childNodes[i];
-            node.setAttribute('value', lines[i]);
-        }
-    }
 }
 
 function saveDialog(item) {
@@ -1143,7 +818,13 @@ function saveDialog(item) {
 
     setItemProperty(item, "DESCRIPTION", getElementValue("item-description"));
 
-    if (!isEvent(item)) {
+    if (isEvent(item)) {
+        if(gStatus && gStatus != "NONE") {
+            item.setProperty("STATUS", gStatus);
+        } else {
+            item.deleteProperty("STATUS");
+        }
+    } else {
         var status = getElementValue("todo-status");
         if (status != "COMPLETED") {
             item.completedDate = null;
@@ -1248,6 +929,23 @@ function updateStyle() {
     }
 }
 
+function onPopupShowing(menuPopup) {
+    if (isToDo(window.calendarItem)) {
+        var nodes = menuPopup.childNodes;
+        for (var i = nodes.length - 1; i >= 0; --i) {
+            var node = nodes[i];
+            if (node.hasAttribute('class')) {
+                if (node.getAttribute('class').split(' ').some(
+                    function (element) {
+                        return element.toLowerCase() == 'event-only';
+                    })) {
+                    menuPopup.removeChild(node);
+                }
+            }
+        }
+    }
+}
+
 function updateAccept() {
     var enableAccept = true;
 
@@ -1262,8 +960,8 @@ function updateAccept() {
 
         var menuItem = document.getElementById('menu-options-timezone');
         if (menuItem.getAttribute('checked') == 'true') {
-            startTimezone = gStartTimezone;
-            endTimezone = gEndTimezone;
+            var startTimezone = gStartTimezone;
+            var endTimezone = gEndTimezone;
             if (endTimezone == "UTC") {
                 if (gStartTimezone != gEndTimezone) {
                     endTimezone = gStartTimezone;
@@ -1307,10 +1005,6 @@ function updateAccept() {
         enableAccept = false;
     }
 
-    if (!updateTaskAlarmWarnings()) {
-        enableAccept = false;
-    }
-
     var accept = document.getElementById("cmd_accept");
     if (enableAccept) {
         accept.removeAttribute('disabled');
@@ -1319,39 +1013,6 @@ function updateAccept() {
     }
 
     return enableAccept;
-}
-
-function updateTaskAlarmWarnings() {
-    var alarmType = getElementValue("item-alarm");
-    if (!isToDo(window.calendarItem) ||
-        alarmType == "none") {
-        return true;
-    }
-
-    var hasEntryDate =
-        getElementValue(
-            "todo-has-entrydate",
-            "checked");
-    var hasDueDate =
-        getElementValue(
-            "todo-has-duedate",
-            "checked");
-
-    var alarmRelated = document.getElementById("alarm-trigger-relation")
-                               .selectedItem.value;
-
-    if ((alarmType != "custom" ||
-         alarmRelated == "START") &&
-         !hasEntryDate) {
-        return false;
-    }
-
-    if (alarmRelated == "END" &&
-        !hasDueDate) {
-        return false;
-    }
-
-    return true;
 }
 
 // this function sets the enabled/disabled
@@ -1383,35 +1044,9 @@ function updateAllDay() {
     gStartTime.isDate = allDay;
     gEndTime.isDate = allDay;
 
-    // disable the timezone links if 'allday' is checked OR the
-    // calendar of this item is read-only. in any other case we
-    // enable the links.
-    if (allDay || gIsReadOnly) {
-        tzStart.setAttribute("disabled", "true");
-        tzEnd.setAttribute("disabled", "true");
-        tzStart.removeAttribute("class");
-        tzEnd.removeAttribute("class");
-    } else {
-        tzStart.removeAttribute("disabled");
-        tzEnd.removeAttribute("disabled");
-        tzStart.setAttribute("class", "text-link");
-        tzEnd.setAttribute("class", "text-link");
-    }
-
     updateDateTime();
     updateRepeatDetails();
     updateAccept();
-}
-
-function setAlarmFields(alarmItem) {
-    var alarmLength = alarmItem.getAttribute("length");
-    if (alarmLength != "") {
-        var alarmUnits = alarmItem.getAttribute("unit");
-        var alarmRelation = alarmItem.getAttribute("relation");
-        setElementValue("alarm-length-field", alarmLength);
-        setElementValue("alarm-length-units", alarmUnits);
-        setElementValue("alarm-trigger-relation", alarmRelation);
-    }
 }
 
 function openNewEvent() {
@@ -1421,12 +1056,12 @@ function openNewEvent() {
 }
 
 function openNewMessage() {
-    var msgComposeService = Cc["@mozilla.org/messengercompose;1"]
-                            .getService(Ci.nsIMsgComposeService);
+    var msgComposeService = Components.classes["@mozilla.org/messengercompose;1"]
+                            .getService(Components.interfaces.nsIMsgComposeService);
     msgComposeService.OpenComposeWindow(null,
                                         null,
-                                        Ci.nsIMsgCompType.New,
-                                        Ci.nsIMsgCompFormat.Default,
+                                        Components.interfaces.nsIMsgCompType.New,
+                                        Components.interfaces.nsIMsgCompFormat.Default,
                                         null,
                                         null);
 }
@@ -1452,7 +1087,32 @@ function editAttendees() {
 
     var callback = function(attendees, organizer, startTime, endTime) {
         savedWindow.attendees = attendees;
-        savedWindow.organizer = organizer;
+        if (organizer) {
+            // In case we didn't have an organizer object before we
+            // added attendees to our event we take the one created
+            // by the 'invite attendee'-dialog.
+            if (!savedWindow.organizer) {
+                savedWindow.organizer = organizer.clone();
+            }
+            // The other case is that we already had an organizer object
+            // before we went throught the 'invite attendee'-dialog. In that
+            // case make sure we don't carry over attributes that have been
+            // set to their default values by the dialog but don't actually
+            // exist in the original organizer object.
+            if (!savedWindow.organizer.id) {
+                organizer.id = null;
+            }
+            if (!savedWindow.organizer.role) {
+                organizer.role = null;
+            }
+            if (!savedWindow.organizer.participationStatus) {
+                organizer.participationStatus = null;
+            }
+            if (!savedWindow.organizer.commonName) {
+                organizer.commonName = null;
+            }
+            savedWindow.organizer = organizer;
+        }
         var duration = endTime.subtractDate(startTime);
         startTime = startTime.clone();
         endTime = endTime.clone();
@@ -1490,7 +1150,7 @@ function editAttendees() {
     args.endTime = endTime;
     args.displayTimezone = displayTimezone;
     args.attendees = window.attendees;
-    args.organizer = window.organizer;
+    args.organizer = window.organizer && window.organizer.clone();
     args.calendar = calendar;
     args.item = window.calendarItem;
     args.onOk = callback;
@@ -1601,6 +1261,25 @@ function updatePriority() {
     }
 }
 
+function editStatus(target) {
+    gStatus = target.getAttribute("value");
+    updateStatus();
+}
+
+function updateStatus() {
+    [ "cmd_status_none",
+      "cmd_status_tentative",
+      "cmd_status_confirmed",
+      "cmd_status_cancelled" ].forEach(
+          function(element, index, array) {
+              var node = document.getElementById(element);
+              node.setAttribute("checked",
+                  node.getAttribute("value") == gStatus ?
+                      "true" : "false");
+          }
+      );
+}
+
 function editShowTimeAs(target) {
     gShowTimeAs = target.getAttribute("value");
     updateShowTimeAs();
@@ -1617,14 +1296,18 @@ function updateShowTimeAs() {
 }
 
 function editURL() {
-    var promptService = Cc["@mozilla.org/embedcomp/prompt-service;1"]
-                       .getService(Ci.nsIPromptService);
+    var promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"]
+                       .getService(Components.interfaces.nsIPromptService);
     if (promptService) {
+        // ghost in an example...
+        if (!gURL) {
+            gURL = "http://www.example.com";
+        }
         var result = { value: gURL };
         if (promptService.prompt(
             window,
-            "Please specify the document location",
-            "Target:",
+            calGetString("sun-calendar-event-dialog", "specifyLinkLocation"),
+            calGetString("sun-calendar-event-dialog", "enterLinkLocation"),
             result,
             null,
             { value: 0 })) {
@@ -1661,10 +1344,11 @@ function setItemProperty(item, propertyName, value) {
             if (value == item.entryDate) {
                 break;
             }
-            if ((value && !item.entryDate) ||
-                (!value && item.entryDate) ||
-                (value.timezone != item.entryDate.timezone) ||
-                (value.compare(item.entryDate) != 0)) {
+            if (value && !item.entryDate ||
+                !value && item.entryDate ||
+                value.isDate != item.entryDate.isDate ||
+                value.timezone != item.entryDate.timezone ||
+                value.compare(item.entryDate) != 0) {
                 item.entryDate = value;
             }
             break;
@@ -1672,10 +1356,11 @@ function setItemProperty(item, propertyName, value) {
             if (value == item.dueDate) {
                 break;
             }
-            if ((value && !item.dueDate) ||
-                (!value && item.dueDate) ||
-                (value.timezone != item.dueDate.timezone) ||
-                (value.compare(item.dueDate) != 0)) {
+            if (value && !item.dueDate ||
+                !value && item.dueDate ||
+                value.isDate != item.dueDate.isDate ||
+                value.timezone != item.dueDate.timezone ||
+                value.compare(item.dueDate) != 0) {
                 item.dueDate = value;
             }
             break;
@@ -1707,6 +1392,12 @@ function updateCalendar() {
     gIsReadOnly = true;
     if (calendar) {
         gIsReadOnly = calendar.readOnly;
+    }
+
+    if (calendar.sendItipInvitations) {
+        enableElement("send-invitations-checkbox");
+    } else {
+        disableElement("send-invitations-checkbox");
     }
 
     // update the accept button
@@ -1779,12 +1470,7 @@ function updateCalendar() {
             setElementValue("item-calendar", "true", "disabled");
 
             // don't allow to revoke the entrydate of recurring todo's.
-            disableElement("todo-has-entrydate");
-        }
-
-        // don't allow to revoke the entrydate of recurring todo's.
-        if (window.recurrenceInfo) {
-            disableElement("todo-has-entrydate");
+            disableElementWithLock("todo-has-entrydate", "permanent-lock");
         }
 
         // update datetime pickers
@@ -1794,20 +1480,6 @@ function updateCalendar() {
         // update datetime pickers
         updateAllDay();
     }
-}
-
-function splitRecurrenceRules(recurrenceInfo) {
-    var ritems = recurrenceInfo.getRecurrenceItems({});
-    var rules = [];
-    var exceptions = [];
-    for each (var r in ritems) {
-        if (r.isNegative) {
-            exceptions.push(r);
-        } else {
-            rules.push(r);
-        }
-    }
-    return [rules, exceptions];
 }
 
 function editRepeat() {
@@ -1832,10 +1504,12 @@ function editRepeat() {
         args);
 }
 
-// This function is called after the 'repeat pattern' selection has been
-// changed. As a consequence we need to create/modify recurrence rules or
-// bring up the custom 'repeat pattern'-dialog and modify states of several
-// elements of the document (i.e. task entrydate, etc.)
+/**
+ * This function is responsilble for propagating UI state to controls
+ * depending on the repeat setting of an item. This functionality is used
+ * after the dialog has been loaded as well as if the repeat pattern has
+ * been changed.
+ */
 function updateRepeat() {
     var repeatMenu = document.getElementById("item-repeat");
     var repeatItem = repeatMenu.selectedItem;
@@ -1845,7 +1519,7 @@ function updateRepeat() {
         window.recurrenceInfo = null;
         var item = window.calendarItem;
         if (isToDo(item)) {
-            enableElement("todo-has-entrydate");
+            enableElementWithLock("todo-has-entrydate", "repeat-lock");
         }
     } else if (repeatValue == 'custom') {
         // the user selected custom repeat pattern. we now need to bring
@@ -1868,7 +1542,7 @@ function updateRepeat() {
             // disable the checkbox to indicate that we need
             // the entry-date. the 'disabled' state will be
             // revoked if the user turns off the repeat pattern.
-            disableElement("todo-has-entrydate");
+            disableElementWithLock("todo-has-entrydate", "repeat-lock");
         }
 
         // retrieve the current recurrence info, we need this
@@ -1877,7 +1551,11 @@ function updateRepeat() {
         var recurrenceInfo = window.recurrenceInfo;
 
         // now bring up the recurrence dialog.
-        editRepeat();
+        // don't pop up the dialog if this happens during
+        // initialization of the dialog.
+        if (repeatMenu.hasAttribute("last-value")) {
+            editRepeat();
+        }
 
         // we need to address two separate cases here.
         // 1) we need to revoke the selection of the repeat
@@ -1889,7 +1567,7 @@ function updateRepeat() {
             repeatMenu.selectedIndex = gLastRepeatSelection;
             if (isToDo(item)) {
                 if (!window.recurrenceInfo) {
-                    enableElement("todo-has-entrydate");
+                    enableElementWithLock("todo-has-entrydate", "repeat-lock");
                 }
             }
         }
@@ -1955,13 +1633,16 @@ function updateRepeat() {
             if (!getElementValue("todo-has-entrydate", "checked")) {
                 setElementValue("todo-has-entrydate", "true", "checked");
             }
-            disableElement("todo-has-entrydate");
+            disableElementWithLock("todo-has-entrydate", "repeat-lock");
         }
     }
 
     gLastRepeatSelection = repeatMenu.selectedIndex;
+    repeatMenu.setAttribute("last-value", repeatValue);
 
     updateRepeatDetails();
+    updateEntryDate();
+    updateDueDate();
     updateAccept();
 }
 
@@ -2055,13 +1736,17 @@ function saveItem() {
         item.organizer = window.organizer;
     }
 
-    // TODO: we set the array of attendees for the new item
-    // regardless of it being an occurrence or not. probably
-    // this is not correct.
     if (window.attendees) {
         item.removeAllAttendees();
         for each (var attendee in window.attendees) {
            item.addAttendee(attendee);
+        }
+
+        var sendInvitesCheckbox = document.getElementById("send-invitations-checkbox");
+        if (sendInvitesCheckbox.checked) {
+            setItemProperty(item, "X-MOZ-SEND-INVITATIONS", "TRUE");
+        } else {
+            item.deleteProperty("X-MOZ-SEND-INVITATIONS");
         }
     }
 
@@ -2069,20 +1754,11 @@ function saveItem() {
 }
 
 function onCommandSave() {
-    var progress = document.getElementById("statusbar-progress");
-    progress.setAttribute("mode", "undetermined");
-
     var originalItem = window.calendarItem;
     var item = saveItem();
     var calendar = document.getElementById("item-calendar")
                            .selectedItem.calendar;
     window.onAcceptCallback(item, calendar, originalItem);
-
-    var callback = function onCommandSave_callback() {
-        progress.setAttribute("mode", "normal");
-    }
-    setTimeout(callback, 1000);
-
     item.makeImmutable();
     window.calendarItem = item;
 }
@@ -2118,74 +1794,115 @@ function onCommandViewToolbar(aToolbarId, aMenuItemId) {
     document.persist(aMenuItemId, 'checked');
 }
 
-function onCommandCustomize() {
-    var id = "event-toolbox";
-    var aToolbarId = 'event-toolbar';
-    var aMenuItemId = 'menu-view-toolbar';
-    var toolbar = document.getElementById(aToolbarId);
-    var toolbarCollapsed = toolbar.collapsed;
-    if (toolbarCollapsed) {
-        onCommandViewToolbar(aToolbarId, aMenuItemId);
-    }
+/**
+ * DialogToolboxCustomizeDone() is called after the customize toolbar dialog
+ * has been closed by the user. We need to restore the state of all buttons
+ * and commands of all customizable toolbars.
+ */
 
-    window.openDialog(
-        "chrome://calendar/content/sun-calendar-customize-toolbar.xul",
-        "CustomizeToolbar",
-        "chrome,all,dependent",
-        document.getElementById(id));
+function DialogToolboxCustomizeDone(aToolboxChanged) {
+
+    var menubar = document.getElementById("event-menubar");
+    for (var i = 0; i < menubar.childNodes.length; ++i) {
+        menubar.childNodes[i].removeAttribute("disabled");
+    }
+  
+    // make sure our toolbar buttons have the correct enabled state restored to them...
+    document.commandDispatcher.updateCommands('itemCommands');
+
+    // Enable the toolbar context menu items
+    document.getElementById("cmd_customize").removeAttribute("disabled");
+}
+
+function onCommandCustomize() {
+    // install the callback that handles what needs to be
+    // done after a toolbar has been customized.
+    var toolbox = document.getElementById("event-toolbox");
+    toolbox.customizeDone = DialogToolboxCustomizeDone;
+
+    var menubar = document.getElementById("event-menubar");
+    for (var i = 0; i < menubar.childNodes.length; ++i) {
+        menubar.childNodes[i].setAttribute("disabled", true);
+    }
+      
+    // Disable the toolbar context menu items
+    document.getElementById("cmd_customize").setAttribute("disabled", "true");
+
+    var id = "event-toolbox";
+    if (gIsSunbird) {
+#ifdef MOZILLA_1_8_BRANCH
+        var newwindow = window.openDialog("chrome://calendar/content/customizeToolbar.xul",
+                                          "CustomizeToolbar",
+                                          "chrome,all,dependent",
+                                          document.getElementById(id));
+#else
+        window.openDialog("chrome://global/content/customizeToolbar.xul",
+                          "CustomizeToolbar",
+                          "chrome,all,dependent",
+                          document.getElementById(id));
+#endif
+    } else {
+        var wintype = document.documentElement.getAttribute("windowtype");
+        wintype = wintype.replace(/:/g, "");
+
+        window.openDialog("chrome://global/content/customizeToolbar.xul",
+                          "CustomizeToolbar" + wintype,
+                          "chrome,all,dependent",
+                          document.getElementById(id), // toolbar dom node
+                          false,                       // is mode toolbar yes/no?
+                          null,                        // callback function
+                          "dialog");                   // name of this mode
+    }
 }
 
 function editStartTimezone() {
-    var tzStart = document.getElementById("timezone-starttime");
-    if (tzStart.hasAttribute("disabled")) {
-        return;
-    }
-
-    var args = new Object();
-    args.time = gStartTime.getInTimezone(gStartTimezone);
-    args.onOk = function(datetime) {
-        var equalTimezones = false;
-        if (gStartTimezone && gEndTimezone) {
-            if (gStartTimezone == gEndTimezone) {
-                equalTimezones = true;
+    editTimezone(
+        "timezone-starttime",
+        gStartTime.getInTimezone(gStartTimezone),
+        function(datetime) {
+            var equalTimezones = false;
+            if (gStartTimezone && gEndTimezone) {
+                if (gStartTimezone == gEndTimezone) {
+                    equalTimezones = true;
+                }
             }
-        }
-        gStartTimezone = datetime.timezone;
-        if (equalTimezones) {
-          gEndTimezone = datetime.timezone;
-        }
-        updateDateTime();
-    };
-
-    // open the dialog modally
-    openDialog(
-        "chrome://calendar/content/sun-calendar-event-dialog-timezone.xul",
-        "_blank",
-        "chrome,titlebar,modal,resizable",
-        args);
+            gStartTimezone = datetime.timezone;
+            if (equalTimezones) {
+              gEndTimezone = datetime.timezone;
+            }
+            updateDateTime();
+        });
 }
 
 function editEndTimezone() {
-    var tzStart = document.getElementById("timezone-endtime");
-    if (tzStart.hasAttribute("disabled")) {
+    editTimezone(
+        "timezone-endtime",
+        gEndTime.getInTimezone(gEndTimezone),
+        function(datetime) {
+            var equalTimezones = false;
+            if (gStartTimezone && gEndTimezone) {
+                if (gStartTimezone == gEndTimezone) {
+                    equalTimezones = true;
+                }
+            }
+            if (equalTimezones) {
+                gStartTimezone = datetime.timezone;
+            }
+            gEndTimezone = datetime.timezone;
+            updateDateTime();
+        });
+}
+
+function editTimezone(aElementId,aDateTime,aCallback) {
+    if (document.getElementById(aElementId)
+        .hasAttribute("disabled")) {
         return;
     }
 
+    // prepare the arguments that will be passed to the dialog
     var args = new Object();
-    args.time = gEndTime.getInTimezone(gEndTimezone);
-    args.onOk = function(datetime) {
-        var equalTimezones = false;
-        if (gStartTimezone && gEndTimezone) {
-            if (gStartTimezone == gEndTimezone) {
-                equalTimezones = true;
-            }
-        }
-        if (equalTimezones) {
-            gStartTimezone = datetime.timezone;
-        }
-        gEndTimezone = datetime.timezone;
-        updateDateTime();
-    };
+    args.time = aDateTime;
+    args.onOk = aCallback;
 
     // open the dialog modally
     openDialog(
@@ -2253,7 +1970,15 @@ function updateDateTime() {
           var hasEntryDate = (startTime != null);
           var hasDueDate = (endTime != null);
 
-          if (hasEntryDate) {
+          if (hasEntryDate && hasDueDate) {
+              setElementValue("todo-has-entrydate", hasEntryDate, "checked");
+              startTime.timezone = "floating";
+              setElementValue("todo-entrydate", startTime.jsDate);
+
+              setElementValue("todo-has-duedate", hasDueDate, "checked");
+              endTime.timezone = "floating";
+              setElementValue("todo-duedate", endTime.jsDate);
+          } else if (hasEntryDate) {
               setElementValue("todo-has-entrydate", hasEntryDate, "checked");
               startTime.timezone = "floating";
               setElementValue("todo-entrydate", startTime.jsDate);
@@ -2292,7 +2017,16 @@ function updateDateTime() {
             var endTime = gEndTime && gEndTime.getInTimezone(kDefaultTimezone);
             var hasEntryDate = (startTime != null);
             var hasDueDate = (endTime != null);
-            if (hasEntryDate) {
+
+            if (hasEntryDate && hasDueDate) {
+                setElementValue("todo-has-entrydate", hasEntryDate, "checked");
+                startTime.timezone = "floating";
+                setElementValue("todo-entrydate", startTime.jsDate);
+
+                setElementValue("todo-has-duedate", hasDueDate, "checked");
+                endTime.timezone = "floating";
+                setElementValue("todo-duedate", endTime.jsDate);
+            } else if (hasEntryDate) {
                 setElementValue("todo-has-entrydate", hasEntryDate, "checked");
                 startTime.timezone = "floating";
                 setElementValue("todo-entrydate", startTime.jsDate);
@@ -2339,33 +2073,51 @@ function updateTimezone() {
             }
         }
 
-        var tzStart = document.getElementById('timezone-starttime');
-        var tzEnd = document.getElementById('timezone-endtime');
-
-        if (startTimezone != null) {
-            tzStart.removeAttribute('collapsed');
-            tzStart.value = timezoneString(startTimezone);
-            if (gIsReadOnly) {
-                tzStart.removeAttribute('class');
-                tzStart.removeAttribute('onclick');
-                tzStart.setAttribute('disabled', 'true');
+        function updateTimezoneElement(aTimezone,aId,aDateTime,aCollapse) {
+            var element = document.getElementById(aId);
+            if (element) {
+                if (aTimezone != null && !aCollapse) {
+                    element.removeAttribute('collapsed');
+                    element.value = timezoneString(aTimezone);
+                    if (!aDateTime || !aDateTime.isValid || gIsReadOnly) {
+                        if (element.hasAttribute('class')) {
+                            element.setAttribute('class-on-enabled',
+                                element.getAttribute('class'));
+                            element.removeAttribute('class');
+                        }
+                        if (element.hasAttribute('onclick')) {
+                            element.setAttribute('onclick-on-enabled',
+                                element.getAttribute('onclick'));
+                            element.removeAttribute('onclick');
+                        }
+                        element.setAttribute('disabled', 'true');
+                    } else {
+                        if (element.hasAttribute('class-on-enabled')) {
+                            element.setAttribute('class',
+                                element.getAttribute('class-on-enabled'));
+                            element.removeAttribute('class-on-enabled');
+                        }
+                        if (element.hasAttribute('onclick-on-enabled')) {
+                            element.setAttribute('onclick',
+                                element.getAttribute('onclick-on-enabled'));
+                            element.removeAttribute('onclick-on-enabled');
+                        }
+                        element.removeAttribute('disabled');
+                    }
+                } else {
+                    element.setAttribute('collapsed', 'true');
+                }
             }
-        } else {
-            tzStart.setAttribute('collapsed', 'true');
         }
-
-        // we never display the second timezone if both are equal
-        if (endTimezone != null && !equalTimezones) {
-            tzEnd.removeAttribute('collapsed');
-            tzEnd.value = timezoneString(endTimezone);
-            if (gIsReadOnly) {
-                tzEnd.removeAttribute('class');
-                tzEnd.removeAttribute('onclick');
-                tzEnd.setAttribute('disabled', 'true');
-            }
-        } else {
-            tzEnd.setAttribute('collapsed', 'true');
-        }
+        
+        updateTimezoneElement(startTimezone,
+                              'timezone-starttime',
+                              gStartTime,
+                              false);
+        updateTimezoneElement(endTimezone,
+                              'timezone-endtime',
+                              gEndTime,
+                              equalTimezones);
     } else {
         document.getElementById('timezone-starttime')
                 .setAttribute('collapsed', 'true');
@@ -2395,10 +2147,13 @@ function browseDocument() {
 function updateAttendees() {
     var regexp = new RegExp("^mailto:(.*)", "i");
     var attendeeRow = document.getElementById("attendee-row");
+    var attendeeRow2 = document.getElementById("attendee-row-2");
     if (!window.attendees || !window.attendees.length) {
         attendeeRow.setAttribute('collapsed', 'true');
+        attendeeRow2.setAttribute('collapsed', 'true');
     } else {
         attendeeRow.removeAttribute('collapsed');
+        attendeeRow2.removeAttribute('collapsed');
         var attendeeNames = "";
         var numAttendees = window.attendees.length;
         for (var i = 0; i < numAttendees; i++) {
@@ -2428,313 +2183,166 @@ function updateAttendees() {
 }
 
 function updateRepeatDetails() {
-    // find relevant elements in the document
-    var itemRepeat = document.getElementById("item-repeat");
-    var repeatDetails = document.getElementById("repeat-details");
+    // Don't try to show the details text for
+    // anything but a custom recurrence rule.
     var item = window.calendarItem;
     var recurrenceInfo = window.recurrenceInfo;
+    var itemRepeat = document.getElementById("item-repeat");
+    if (itemRepeat.value == "custom" && recurrenceInfo) {
+        var startDate = jsDateToDateTime(getElementValue("event-starttime"));
+        var endDate = jsDateToDateTime(getElementValue("event-endtime"));
+        var kDefaultTimezone = calendarDefaultTimezone();
+        startDate = startDate.getInTimezone(kDefaultTimezone);
+        endDate = endDate.getInTimezone(kDefaultTimezone);
+        var allDay = getElementValue("event-all-day", "checked");
+        commonUpdateRepeatDetails(recurrenceInfo,startDate,endDate,allDay);
+    } else {
+        var repeatDetails = document.getElementById("repeat-details");
+        repeatDetails.setAttribute("collapsed", "true");
+    }
+}
 
-    // first of all collapse the details text. if we fail to
-    // create a details string, we simply don't show anything.
-    repeatDetails.setAttribute("collapsed", "true");
+/**
+ * This function does not strictly check if the given attendee has the status
+ * TENTATIVE, but also if he hasn't responded.
+ *
+ * @param aAttendee     The attendee to check.
+ * @return              True, if the attendee hasn't responded.
+ */
+function isAttendeeUndecided(aAttendee) {
+    return aAttendee.participationStatus != "ACCEPTED" &&
+           aAttendee.participationStatus != "DECLINED" &&
+           aAttendee.participationStatus != "DELEGATED";
+}
 
-    // Don't try to show the details text for anything but a custom recurrence
-    // rule. Also, we don't currently support tasks.
-    if (itemRepeat.value == "custom" && isEvent(item) && recurrenceInfo) {
-        // Retrieve a valid recurrence rule from the currently
-        // set recurrence info. Bail out if there's more
-        // than a single rule or something other than a rule.
-        recurrenceInfo = recurrenceInfo.clone();
-        var rrules = splitRecurrenceRules(recurrenceInfo);
-        if (rrules[0].length == 1) {
-            var rule = rrules[0][0];
-            // currently we don't allow for any BYxxx-rules.
-            if (rule instanceof Ci.calIRecurrenceRule &&
-                !checkRecurrenceRule(rule, ['BYSECOND',
-                                            'BYMINUTE',
-                                            //'BYDAY',
-                                            'BYHOUR',
-                                            //'BYMONTHDAY',
-                                            'BYYEARDAY',
-                                            'BYWEEKNO',
-                                            //'BYMONTH',
-                                            'BYSETPOS'])) {
-                var sbs = Cc["@mozilla.org/intl/stringbundle;1"]
-                          .getService(Ci.nsIStringBundleService);
-                var props =
-                    sbs.createBundle(
-                        "chrome://calendar/locale/sun-calendar-event-dialog.properties");
+/**
+ * Event handler to set up the attendee-popup. This builds the popup menuitems.
+ *
+ * @param event         The popupshowing event
+ */
+function showAttendeePopup(event) {
+    // Don't do anything for right/middle-clicks
+    if (event.button != 0) {
+        return;
+    }
 
-                function day_of_week(day) {
-                    return Math.abs(day) % 8;
+    var responsiveAttendees = 0;
+
+    // anonymous helper function to
+    // initialize a dynamically created menuitem
+    function setup_node(aNode, aAttendee) {
+        // Count attendees that have done something.
+        if (!isAttendeeUndecided(aAttendee)) {
+            responsiveAttendees++;
+        }
+
+        // Construct the display string from common name and/or email address.
+        var re = new RegExp("^mailto:(.*)", "i");
+        var name = aAttendee.commonName;
+        if (name) {
+            var email = aAttendee.id;
+            if (email && email.length) {
+                if (re.test(email)) {
+                    name += ' <' + RegExp.$1 + '>';
+                } else {
+                    name += ' <' + email + '>';
                 }
-                function day_position(day) {
-                    var dow = day_of_week(day);
-                    return (Math.abs(day) - dow) / 8 * (day < 0 ? -1 : 1);
-                }
-
-                var ruleString = "???";
-                if (rule.type == 'DAILY') {
-                    if (checkRecurrenceRule(rule, ['BYDAY'])) {
-                        var days = rule.getComponent("BYDAY", {});
-                        var weekdays = [2, 3, 4, 5, 6];
-                        if (weekdays.length == days.length) {
-                            for (var i = 0; i < weekdays.length; i++) {
-                                if (weekdays[i] != days[i]) {
-                                    break;
-                                }
-                            }
-                            if (i == weekdays.length) {
-                                ruleString = props.GetStringFromName('repeatDetailsRuleDaily4');
-                            }
-                        }
-                    } else {
-                        if (rule.interval == 1) {
-                            ruleString = props.GetStringFromName('repeatDetailsRuleDaily1');
-                        } else if (rule.interval == 2) {
-                            ruleString = props.GetStringFromName('repeatDetailsRuleDaily2');
-                        } else {
-                            ruleString = props.formatStringFromName(
-                              'repeatDetailsRuleDaily3', [ rule.interval ], 1);
-                        }
-                    }
-                } else if (rule.type == 'WEEKLY') {
-                    // weekly recurrence, currently we
-                    // support a single 'BYDAY'-rule only.
-                    if (checkRecurrenceRule(rule, ['BYDAY'])) {
-                        // create a string like 'Monday, Tuesday and
-                        // Wednesday'
-                        var days = rule.getComponent("BYDAY", {});
-                        var weekdays = "";
-                        for (var i = 0; i < days.length; i++) {
-                            weekdays += props.GetStringFromName('repeatDetailsDay' + days[i]);
-                            if (days.length > 1 && i == (days.length - 2)) {
-                                weekdays += ' ' + props.GetStringFromName('repeatDetailsAnd') + ' ';
-                            } else if (i < days.length - 1) {
-                                weekdays += ', ';
-                            }
-                        }
-
-                        // now decorate this with 'every other week, etc'.
-                        if (rule.interval == 1) {
-                            ruleString = props.formatStringFromName(
-                              'repeatDetailsRuleWeekly1', [ weekdays ], 1);
-                        } else if (rule.interval == 2) {
-                            ruleString = props.formatStringFromName(
-                              'repeatDetailsRuleWeekly2', [ weekdays ], 1);
-                        } else {
-                            ruleString = props.formatStringFromName(
-                              'repeatDetailsRuleWeekly3',
-                              [ rule.interval, weekdays ],
-                              2);
-                        }
-                    }
-                } else if (rule.type == 'MONTHLY') {
-                    if (checkRecurrenceRule(rule, ['BYDAY'])) {
-                        var component = rule.getComponent("BYDAY", {});
-                        var byday = component[0];
-                        var ordinal_string =
-                            props.GetStringFromName(
-                                'repeatDetailsOrdinal' + day_position(byday));
-                        var day_string =
-                            props.GetStringFromName(
-                                'repeatDetailsDay' + day_of_week(byday));
-
-                        if (rule.interval == 1) {
-                            ruleString = props.formatStringFromName(
-                              'repeatDetailsRuleMonthly1',
-                              [ ordinal_string, day_string ],
-                              2);
-                        } else if (rule.interval == 2) {
-                            ruleString = props.formatStringFromName(
-                              'repeatDetailsRuleMonthly2',
-                              [ ordinal_string, day_string ],
-                              2);
-                        } else {
-                            ruleString = props.formatStringFromName(
-                              'repeatDetailsRuleMonthly3',
-                              [ ordinal_string, day_string, rule.interval ],
-                              3);
-                        }
-                    } else if (checkRecurrenceRule(rule, ['BYMONTHDAY'])) {
-                        var component = rule.getComponent("BYMONTHDAY", {});
-
-                        var day_string = "";
-                        for (var i = 0; i < component.length; i++) {
-                            day_string += component[i];
-                            if (component.length > 1 &&
-                                i == (component.length - 2)) {
-                                day_string += ' ' +props.GetStringFromName('repeatDetailsAnd') + ' ';
-                            } else if (i < component.length-1) {
-                                day_string += ', ';
-                            }
-                        }
-
-                        if (rule.interval == 1) {
-                            ruleString = props.formatStringFromName(
-                              'repeatDetailsRuleMonthly4', [ day_string ], 1);
-                        } else if (rule.interval == 2) {
-                            ruleString = props.formatStringFromName(
-                              'repeatDetailsRuleMonthly5', [ day_string ], 1);
-                        } else {
-                            ruleString = props.formatStringFromName(
-                              'repeatDetailsRuleMonthly6',
-                              [ day_string, rule.interval ],
-                              2);
-                        }
-                    }
-                } else if (rule.type == 'YEARLY') {
-                    if (checkRecurrenceRule(rule, ['BYMONTH']) &&
-                        checkRecurrenceRule(rule, ['BYMONTHDAY'])) {
-                        bymonth = rule.getComponent("BYMONTH", {});
-                        bymonthday = rule.getComponent("BYMONTHDAY", {});
-
-                        if (bymonth.length == 1 && bymonthday.length == 1) {
-                            var month_string =
-                                props.GetStringFromName(
-                                    'repeatDetailsMonth' + bymonth[0]);
-
-                            if (rule.interval == 1) {
-                                ruleString = props.formatStringFromName(
-                                  'repeatDetailsRuleYearly1',
-                                  [ month_string, bymonthday[0] ],
-                                  2);
-                            } else if (rule.interval == 2) {
-                                ruleString = props.formatStringFromName(
-                                  'repeatDetailsRuleYearly2',
-                                  [ month_string, bymonthday[0] ],
-                                  2);
-                            } else {
-                                ruleString = props.formatStringFromName(
-                                  'repeatDetailsRuleYearly3',
-                                  [ month_string,
-                                    bymonthday[0],
-                                    rule.interval ],
-                                  3);
-                            }
-                        }
-                    } else if (checkRecurrenceRule(rule, ['BYMONTH']) &&
-                               checkRecurrenceRule(rule, ['BYDAY'])) {
-                        bymonth = rule.getComponent("BYMONTH", {});
-                        byday = rule.getComponent("BYDAY", {});
-
-                        if (bymonth.length == 1 && byday.length == 1) {
-                            var month_string =
-                                props.GetStringFromName(
-                                    'repeatDetailsMonth' + bymonth[0]);
-                            var ordinal_string =
-                                props.GetStringFromName(
-                                    'repeatDetailsOrdinal' +
-                                        day_position(byday[0]));
-                            var day_string =
-                                props.GetStringFromName(
-                                    'repeatDetailsDay' + day_of_week(byday[0]));
-
-                            if (rule.interval == 1) {
-                                ruleString = props.formatStringFromName(
-                                  'repeatDetailsRuleYearly4',
-                                  [ ordinal_string, day_string, month_string ],
-                                  3);
-                            } else if (rule.interval == 2) {
-                                ruleString = props.formatStringFromName(
-                                  'repeatDetailsRuleYearly5',
-                                  [ ordinal_string, day_string, month_string ],
-                                  3);
-                            } else {
-                                ruleString = props.formatStringFromName(
-                                  'repeatDetailsRuleYearly6',
-                                  [ ordinal_string,
-                                    day_string,
-                                    month_string,
-                                    rule.interval ],
-                                  4);
-                            }
-                        }
-                    }
-                }
-
-                var kDefaultTimezone = calendarDefaultTimezone();
-                var startDate = jsDateToDateTime(getElementValue("event-starttime"));
-                var endDate = jsDateToDateTime(getElementValue("event-endtime"));
-                startDate = startDate.getInTimezone(kDefaultTimezone);
-                endDate = endDate.getInTimezone(kDefaultTimezone);
-                var isAllDay = getElementValue("event-all-day", "checked");
-
-                var dateFormatter =
-                    Cc["@mozilla.org/calendar/datetime-formatter;1"]
-                    .getService(Ci.calIDateTimeFormatter);
-
-                var detailsString;
-                if (isAllDay) {
-                    if (rule.isFinite) {
-                        if (rule.isByCount) {
-                            detailsString = props.formatStringFromName(
-                                'repeatDetailsCountAllDay',
-                                [ ruleString,
-                                  dateFormatter.formatDateShort(startDate),
-                                  rule.count ], 3);
-                        } else {
-                            var untilDate = rule.endDate.getInTimezone(kDefaultTimezone);
-                            detailsString = props.formatStringFromName(
-                                'repeatDetailsUntilAllDay',
-                                [ ruleString,
-                                  dateFormatter.formatDateShort(startDate),
-                                  dateFormatter.formatDateShort(untilDate) ],
-                                3);
-                        }
-                      } else {
-                          detailsString = props.formatStringFromName(
-                              'repeatDetailsInfiniteAllDay',
-                              [ ruleString,
-                                dateFormatter.formatDateShort(startDate) ], 2);
-                      }
-                  } else {
-                    if (rule.isFinite) {
-                        if (rule.isByCount) {
-                            detailsString = props.formatStringFromName(
-                                'repeatDetailsCount',
-                                [ ruleString,
-                                  dateFormatter.formatDateShort(startDate),
-                                  rule.count,
-                                  dateFormatter.formatTime(startDate),
-                                  dateFormatter.formatTime(endDate) ], 5);
-                        } else {
-                            var untilDate = rule.endDate.getInTimezone(kDefaultTimezone);
-                            detailsString = props.formatStringFromName(
-                                'repeatDetailsUntil',
-                                [ ruleString,
-                                  dateFormatter.formatDateShort(startDate),
-                                  dateFormatter.formatDateShort(untilDate),
-                                  dateFormatter.formatTime(startDate),
-                                  dateFormatter.formatTime(endDate) ], 5);
-                        }
-                    } else {
-                        detailsString = props.formatStringFromName(
-                            'repeatDetailsInfinite',
-                            [ ruleString,
-                              dateFormatter.formatDateShort(startDate),
-                              dateFormatter.formatTime(startDate),
-                              dateFormatter.formatTime(endDate) ], 4);
-                    }
-                }
-
-                if (detailsString) {
-                    var lines = detailsString.split("\n");
-                    repeatDetails.removeAttribute("collapsed");
-                    while (repeatDetails.childNodes.length > lines.length) {
-                        repeatDetails.removeChild(repeatDetails.lastChild);
-                    }
-                    var numChilds = repeatDetails.childNodes.length;
-                    for (var i = 0; i < lines.length; i++) {
-                        if (i >= numChilds) {
-                            var newNode = repeatDetails.childNodes[0]
-                                                       .cloneNode(true);
-                            repeatDetails.appendChild(newNode);
-                        }
-                        repeatDetails.childNodes[i].value = lines[i];
-                    }
+            }
+        } else {
+            var email = aAttendee.id;
+            if (email && email.length) {
+                if (re.test(email)) {
+                    name = RegExp.$1;
+                } else {
+                    name = email;
                 }
             }
         }
+        aNode.setAttribute("label", name);
+        aNode.setAttribute("status", aAttendee.participationStatus);
+        aNode.attendee = aAttendee;
     }
+
+    // Setup the first menuitem, this one serves as the template for further
+    // menuitems.
+    var attendees = window.attendees;
+    var popup = document.getElementById("attendee-popup");
+    var separator = document.getElementById("attendee-popup-separator");
+    var template = separator.nextSibling;
+
+    setup_node(template, attendees[0]);
+
+    // Remove all remaining menu items after the separator and the template menu
+    // item.
+    while (template.nextSibling) {
+        popup.removeChild(template.nextSibling);
+    }
+
+    // Add the rest of the attendees.
+    for (var i = 1; i < attendees.length; i++) {
+        var attendee = attendees[i];
+        var newNode = template.cloneNode(true);
+        setup_node(newNode, attendee);
+        popup.appendChild(newNode);
+    }
+
+    // Set up the unanswered attendees item.
+    if (responsiveAttendees == attendees.length) {
+        document.getElementById("cmd_email_undecided")
+                .setAttribute("disabled", "true");
+    } else {
+        document.getElementById("cmd_email_undecided")
+                .removeAttribute("disabled");
+    }
+
+    // Show the popup.
+    var attendeeList = document.getElementById("attendee-list");
+    popup.showPopup(attendeeList, -1, -1, "context", "bottomleft", "topleft");
+}
+
+/**
+ * Send Email to all attendees that haven't responded or are tentative.
+ *
+ * @param aAttendees    The attendees to check.
+ */
+function sendMailToUndecidedAttendees(aAttendees) {
+    var targetAttendees = attendees.filter(isAttendeeUndecided);
+    sendMailToAttendees(targetAttendees);
+}
+
+/**
+ * Send Email to all given attendees.
+ *
+ * @param aAttendees    The attendees to send mail to.
+ */
+function sendMailToAttendees(aAttendees) {
+    var toList = "";
+    var item = saveItem();
+
+    for each (var attendee in aAttendees) {
+        if (attendee.id && attendee.id.length) {
+            var email = attendee.id;
+            var re = new RegExp("^mailto:(.*)", "i");
+            if (email && email.length) {
+                if (re.test(email)) {
+                    email = RegExp.$1;
+                } else {
+                    email = email;
+                }
+            }
+            // Prevent trailing commas.
+            if (toList.length > 0) {
+                toList += ",";
+            }
+            // Add this recipient id to the list.
+            toList += email;
+        }
+    }
+
+    // Set up the subject
+    var emailSubject = calGetString("sun-calendar-event-dialog",
+                                    "emailSubjectReply",
+                                    [item.title]);
+
+    sendMailTo(toList, emailSubject);
 }

@@ -269,12 +269,15 @@ function calWcapCalendar_getInvitedAttendee(item)
 
 function equalDatetimes(one, two) {
     return ((!one && !two) ||
-            (one && two && (one.compare(two) == 0)));
+            (one && two &&
+             (one.isDate == two.isDate) &&
+             (one.compare(two) == 0)));
 }
 
 function identicalDatetimes(one, two) {
     return ((!one && !two) ||
-            (one && two && (one.compare(two) == 0) && (one.timezone == two.timezone)));
+            (equalDatetimes(one, two) &&
+             (one.timezone == two.timezone)));
 }
 
 // @return null if nothing has changed else value to be written
@@ -362,6 +365,12 @@ function calWcapCalendar_storeItem(bAddItem, item, oldItem, request, netRespFunc
             //           undefined, assume an allDay todo???
             var dtstart = item.entryDate;
             var dtend = item.dueDate;
+
+            // cs bug: enforce DUE (set to DTSTART) if alarm is set
+            if (!dtend && item.alarmOffset) {
+                dtend = dtstart;
+            }
+            
             bIsAllDay = (dtstart && dtstart.isDate);
             if (!oldItem || !identicalDatetimes(dtstart, oldItem.entryDate)
                          || !identicalDatetimes(dtend, oldItem.dueDate)) {
@@ -1113,6 +1122,7 @@ function calWcapCalendar_getItems(itemFilter, maxResults, rangeStart, rangeEnd, 
     var this_ = this;
     var request = new calWcapRequest(
         function getItems_resp(request, err, data) {
+            log("getItems() complete: " + errorToString(err), this_);
             var rc = getResultCode(err);
             if (err) {
                 if (listener) {
@@ -1124,7 +1134,6 @@ function calWcapCalendar_getItems(itemFilter, maxResults, rangeStart, rangeEnd, 
                 this_.notifyError(err, request.suppressOnError);
             }
             else {
-                log("getItems(): success.", this_);
                 if (listener) {
                     listener.onOperationComplete(
                         this_.superCalendar, rc,
@@ -1186,9 +1195,7 @@ function calWcapCalendar_getItems(itemFilter, maxResults, rangeStart, rangeEnd, 
             request,
             function netResp(err, icalRootComp) {
                 if (err) {
-                    if (getResultCode(err) ==
-                        calIWcapErrors.WCAP_ACCESS_DENIED_TO_CALENDAR)
-                    {
+                    if (getResultCode(err) == calIWcapErrors.WCAP_ACCESS_DENIED_TO_CALENDAR) {
                         // try free-busy times:
                         if (listener &&
                             (itemFilter & calICalendar.ITEM_FILTER_TYPE_EVENT) &&
@@ -1199,14 +1206,14 @@ function calWcapCalendar_getItems(itemFilter, maxResults, rangeStart, rangeEnd, 
                                     if (!request.success)
                                         throw request.status;
                                     var items = [];
-                                    for each (var period in result) {
+                                    for each (var entry in result) {
                                         var item = new CalEvent();
                                         item.id = (g_busyPhantomItemUuidPrefix +
-                                                   getIcalUTC(period.start));
+                                                   getIcalUTC(entry.interval.start));
                                         item.calendar = this_.superCalendar;
                                         item.title = g_busyItemTitle;
-                                        item.startDate = period.start;
-                                        item.endDate = period.end;
+                                        item.startDate = entry.interval.start;
+                                        item.endDate = entry.interval.end;
                                         item.makeImmutable();
                                         items.push(item);
                                     }
@@ -1216,8 +1223,8 @@ function calWcapCalendar_getItems(itemFilter, maxResults, rangeStart, rangeEnd, 
                                 }
                             };
                             request.attachSubRequest(
-                                this_.session.getFreeBusyTimes(
-                                    this_.calId, rangeStart, rangeEnd, true /*bBusy*/,
+                                this_.session.getFreeBusyIntervals(
+                                    this_.calId, rangeStart, rangeEnd, calIFreeBusyInterval.BUSY_ALL,
                                     freeBusyListener));
                         }
                     }

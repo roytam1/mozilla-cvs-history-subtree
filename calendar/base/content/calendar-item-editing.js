@@ -182,6 +182,28 @@ function modifyEventWithDialog(item, job)
 
 function openEventDialog(calendarItem, calendar, mode, callback, job)
 {
+    // Set up some defaults
+    mode = mode || "new";
+    calendar = calendar || getSelectedCalendar();
+    var calendars = getCalendarManager().getCalendars({});
+    calendars = calendars.filter(function(el) { return !el.readOnly; });
+
+    if (calendar.readOnly && mode == "new" && calendars.length < 1) {
+        // All calendars are marked readonly, don't show the dialog
+        return;
+    } else if (calendar.readOnly && mode == "new") {
+        // If the default calendar is marked readOnly, pick the first
+        // non-readOnly calendar
+        calendar = calendars[0];
+        if (calendarItem) {
+            // XXX The dialog currently uses the items calendar as a first
+            // choice. Since we are shortly before a release to keep regression
+            // risk low, explicitly set the item's calendar here.
+            calendarItem.calendar = calendars[0];
+        }
+    }
+
+    // Setup the window arguments
     var args = new Object();
     args.calendarEvent = calendarItem;
     args.calendar = calendar;
@@ -197,8 +219,20 @@ function openEventDialog(calendarItem, calendar, mode, callback, job)
     // the dialog will reset this to auto when it is done loading.
     window.setCursor("wait");
 
+    // ask the provide if this item is an invitation. if this is the case
+    // we'll open the summary dialog since the user is not allowed to change
+    // the details of the item.
+    var isInvitation = false;
+    try {
+        isInvitation = calendar.isInvitation(calendarItem);
+    }
+    catch(e) {}
+
     // open the dialog modeless
     var url = "chrome://calendar/content/sun-calendar-event-dialog.xul";
+    if (isInvitation || calendar.readOnly) {
+        url = "chrome://calendar/content/calendar-summary-dialog.xul";
+    }
     openDialog(url, "_blank", "chrome,titlebar,resizable", args);
 }
 
@@ -265,13 +299,9 @@ function setDefaultAlarmValues(aItem)
             if (alarmsBranch.getIntPref("onforevents") == 1) {
                 var alarmOffset = Components.classes["@mozilla.org/calendar/duration;1"]
                                             .createInstance(Components.interfaces.calIDuration);
-                try {
-                    var units = alarmsBranch.getCharPref("eventalarmunit");
-                    alarmOffset[units] = alarmsBranch.getIntPref("eventalarmlen");
-                    alarmOffset.isNegative = true;
-                } catch(ex) {
-                    alarmOffset.minutes = 15;
-                }
+                var units = alarmsBranch.getCharPref("eventalarmunit");
+                alarmOffset[units] = alarmsBranch.getIntPref("eventalarmlen");
+                alarmOffset.isNegative = true;
                 aItem.alarmOffset = alarmOffset;
                 aItem.alarmRelated = Components.interfaces.calIItemBase.ALARM_RELATED_START;
             }
@@ -288,13 +318,9 @@ function setDefaultAlarmValues(aItem)
                 }
                 var alarmOffset = Components.classes["@mozilla.org/calendar/duration;1"]
                                             .createInstance(Components.interfaces.calIDuration);
-                try {
-                    var units = alarmsBranch.getCharPref("todoalarmunit");
-                    alarmOffset[units] = alarmsBranch.getIntPref("todoalarmlen");
-                    alarmOffset.isNegative = true;
-                } catch(ex) {
-                    alarmOffset.minutes = 15;
-                }
+                var units = alarmsBranch.getCharPref("todoalarmunit");
+                alarmOffset[units] = alarmsBranch.getIntPref("todoalarmlen");
+                alarmOffset.isNegative = true;
                 aItem.alarmOffset = alarmOffset;
                 aItem.alarmRelated = Components.interfaces.calIItemBase.ALARM_RELATED_START;
             }

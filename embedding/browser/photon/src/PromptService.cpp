@@ -148,7 +148,8 @@ CPromptService::InvokeDialogCallback(PtWidget_t *w, int type, char *title, char 
     return (ret);
 }
 
-NS_IMETHODIMP CPromptService::Alert(nsIDOMWindow *parent, const PRUnichar *dialogTitle,
+NS_IMETHODIMP CPromptService::Alert(nsIDOMWindow *parent,
+									const PRUnichar *dialogTitle,
                                     const PRUnichar *text)
 {
 	nsString 			mTitle(dialogTitle);
@@ -252,21 +253,39 @@ NS_IMETHODIMP CPromptService::Prompt(nsIDOMWindow *parent,
 {
 	nsString 	mTitle(dialogTitle);
 	nsString 	mText(text);
+	nsString 	mDefaultResponse(*value);
 	nsString 	mMsg(checkboxMsg);
-	int				ret = 0;
+	PtCallbackList_t *cb;
+	PtCallbackInfo_t cbinfo;
+	PtMozillaPromptCb_t prompt;
 	PtWidget_t *w = GetWebBrowser( parent );
-	char *title = ToNewCString(mTitle), *ptext = ToNewCString(mText), *msg = ToNewCString(mMsg);
+	PtMozillaWidget_t *moz = (PtMozillaWidget_t *) w;
 
-	if(InvokeDialogCallback(w, Pt_MOZ_DIALOG_CONFIRM, title, ptext, msg, &ret) == Pt_CONTINUE)
+	if (!moz->prompt_cb)
+	    return NS_OK;
+
+	cb = moz->prompt_cb;
+	memset(&cbinfo, 0, sizeof(cbinfo));
+	cbinfo.reason = Pt_CB_MOZ_PROMPT;
+	cbinfo.cbdata = &prompt;
+
+	memset(&prompt, 0, sizeof(PtMozillaPromptCb_t));
+	prompt.title = ToNewCString(mTitle);
+	prompt.text = ToNewCString(mText);
+	prompt.dflt_resp = ToNewCString(mDefaultResponse);
+
+	if (PtInvokeCallbackList(cb, (PtWidget_t *)moz, &cbinfo) == Pt_CONTINUE)
+	{
+		nsCString   mResponse(prompt.response);
+		*value = ToNewUnicode(mResponse);
 		*_retval = PR_TRUE;
+	}
 	else
-		*_retval = PR_FALSE;
-	if (checkValue)
-		*checkValue = ret;
+	    *_retval = PR_FALSE;
 
-	if( title ) nsMemory::Free( (void*)title );
-	if( ptext ) nsMemory::Free( (void*)ptext );
-	if( msg ) nsMemory::Free( (void*)msg );
+	free( prompt.title );
+	free( prompt.text );
+	free( prompt.dflt_resp );
 
 	return NS_OK;
 }

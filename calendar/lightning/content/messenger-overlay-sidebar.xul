@@ -81,6 +81,8 @@
 <script type="application/x-javascript" src="chrome://calendar/content/calendar-minimonth-busy.js"/>
 <script type="application/x-javascript" src="chrome://calendar/content/clipboard.js"/>
 <script type="application/x-javascript" src="chrome://lightning/content/messenger-overlay-toolbar.js"/>
+<script type="application/x-javascript" src="chrome://calendar/content/calendar-dnd-listener.js"/>
+<script type="application/x-javascript" src="chrome://global/content/nsDragAndDrop.js"/>
 
 <menupopup id="menu_NewPopup">
   <menuseparator />
@@ -172,30 +174,37 @@
 </menubar>
 
 <window id="messengerWindow">
+  <broadcasterset id="calendar_broadcasters">
+    <broadcaster id="is_editable" hidden="false"/>
+  </broadcasterset>
   <commandset id="calendar_commands">
+    <command id="agenda_delete_event_command" oncommand="agendaTreeView.deleteEvent()"/>
     <command id="calendar_new_event_command" oncommand="createEventWithDialog(getSelectedCalendar());"/>
     <command id="calendar_new_todo_command" oncommand="createTodoWithDialog(getSelectedCalendar());"/>
     <command id="calendar_new_calendar_command" oncommand="openCalendarWizard();"/>
     <command id="calendar_edit_calendar_command" oncommand="openCalendarProperties(getSelectedCalendar());"/>
-    <command id="calendar_delete_calendar_command" oncommand="promptDeleteCalendar(getSelectedCalendar());"/>
+    <command id="calendar_delete_calendar_command" oncommand="promptDeleteCalendar(getSelectedCalendar());" disabled="true"/>
     <command id="modify_command" oncommand="modifyEventWithDialog(currentView().getSelectedItems({})[0])" disabled="true" disabledwhennoeventsselected="true"/>
     <command id="calendar_publish_calendar" oncommand="publishEntireCalendar(getSelectedCalendar());" disabled="true" disabledwhennoeventsselected="true"/>
     <command id="import_command" oncommand="loadEventsFromFile()"/>
-    <command id="export_command" oncommand="exportEntireCalendar()" disabled="true" disabledwhennoeventsselected="true"/>
+    <command id="export_command" oncommand="exportEntireCalendar()"/>
     <command id="calendar_reload_remote_calendars" oncommand="getCompositeCalendar().refresh();"/>
-    <command id="switch2mail" oncommand="ltnSwitch2Mail()"/>
+    <command id="switch2mail" checked="true" oncommand="ltnSwitch2Mail()"/>
     <command id="switch2calendar" oncommand="ltnSwitch2Calendar()"/>
     <command id="switch2task" oncommand="ltnSwitch2Task()"/>
     <command id="cmd_toggleTodayPane" oncommand="toggleTodayPaneinMailMode()"/>
-    <command id="day-view-command" oncommand="showCalendarView('day')"/>
-    <command id="week-view-command" oncommand="showCalendarView('week')"/>
-    <command id="multiweek-view-command" oncommand="showCalendarView('multiweek')"/>
-    <command id="month-view-command" oncommand="showCalendarView('month')"/>
+    <command id="day-view-command" oncommand="showCalendarView('day')" persist="checked"/>
+    <command id="week-view-command" oncommand="showCalendarView('week')" persist="checked"/>
+    <command id="multiweek-view-command" oncommand="showCalendarView('multiweek')" persist="checked"/>
+    <command id="month-view-command" oncommand="showCalendarView('month')" persist="checked"/>
+    <command id="calendar-delete-command" oncommand="ltnDeleteSelectedItem()" disabledwhennoeventsselected="true"/>
+    <command id="calendar_new_todo_command" oncommand="createTodoWithDialog(getSelectedCalendar());"/>
+    <command id="modify_todo_command" oncommand="editToDo()"/>
+    <command id="delete_todo_command" oncommand="deleteToDoCommand()" disabled="true"/>
   </commandset>
 
-  <keyset>
-    <key id="openLightningKey" key="3" modifiers="accel"
-         oncommand="ltnMinimonthPick(document.getElementById('ltnMinimonth'))"/>
+  <keyset id="ltnKeys">
+    <key id="openLightningKey" modifiers="accel" key="3" observes="switch2calendar"/>
     <key id="todaypanekey" modifiers="accel" key="D" command="cmd_toggleTodayPane"/>         
   </keyset>
 
@@ -242,7 +251,12 @@
 
     <deck id="contentPanel" flex="1" minwidth="100" width="200" persist="collapsed width">
 
-      <vbox id="ltnSidebar" height="350" persist="height">
+      <vbox id="ltnSidebar"
+            height="350"
+            persist="height"
+            ondraggesture="nsDragAndDrop.startDrag(event, calendarDNDObserver);"
+            ondragover="nsDragAndDrop.dragOver(event, calendarDNDObserver);"
+            ondragdrop="nsDragAndDrop.drop(event, calendarDNDObserver);">
         <hbox id="ltnMinimonthBox">
           <spacer flex="1"/>
           <minimonth id="ltnMinimonth" onchange="ltnMinimonthPick(this);" flex="2"/>
@@ -268,7 +282,7 @@
                 oncommand="CustomizeApplicationToolbar('mode-toolbox');"/>
     </popup>
 
-    <toolbox id="mode-toolbox" location="bottom">
+    <toolbox id="mode-toolbox" location="bottom" mode="full">
       <toolbarpalette id="mode-toolbox-palette">
         <toolbarbutton class="toolbarbutton-2"
                        mode="mode" 
@@ -303,7 +317,11 @@
 
 <deck id="displayDeck">
   <vbox id="calendar-view-box">
-    <deck flex="1" id="view-deck">
+    <deck flex="1"
+          id="view-deck"
+          ondraggesture="nsDragAndDrop.startDrag(event, calendarDNDObserver);"
+          ondragover="nsDragAndDrop.dragOver(event, calendarDNDObserver);"
+          ondragdrop="nsDragAndDrop.drop(event, calendarDNDObserver);">
       <calendar-decorated-day-view id="day-view" flex="1"
                                          context="calendar-view-context-menu"
                                          item-context="calendar-item-context-menu"/>

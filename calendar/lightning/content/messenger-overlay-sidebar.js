@@ -28,6 +28,7 @@
  *   Thomas Benisch <thomas.benisch@sun.com>
  *   Michael Buettner <michael.buettner@sun.com>
  *   Philipp Kewisch <mozilla@kewis.ch>
+ *   Berend Cornelius <berend.cornelius@sun.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or 
@@ -186,6 +187,13 @@ function today()
     return d.getInTimezone(calendarDefaultTimezone());
 }
 
+function yesterday()
+{
+    var d = today();
+    d.day--;
+    return d;
+}
+
 function nextMonth(dt)
 {
     var d = new Date(dt);
@@ -214,24 +222,7 @@ function ltnMinimonthPick(minimonth)
 
     if (document.getElementById("displayDeck").selectedPanel != 
         document.getElementById("calendar-view-box")) {
-        var view = currentView();
-
-        // If we've never shown the view before, we need to do some special
-        // things here.
-        if (!view.initialized) {
-            showCalendarView('month');
-            view = currentView();
-            cdt = cdt.getInTimezone(view.timezone);
-            cdt.isDate = true;
-            view.goToDay(cdt);
-            return;
-        }
-
-        // showCalendarView is going to use the value passed in to switch to
-        // foo-view, so strip off the -view part of the current view.
-        var viewID = view.getAttribute("id");
-        viewID = viewID.substring(0, viewID.indexOf('-'));
-        showCalendarView(viewID);
+        showCalendarView(gLastShownCalendarView);
     }
 
     cdt = cdt.getInTimezone(currentView().timezone);
@@ -322,7 +313,7 @@ function ltnOnLoad(event)
         var palette = modeToolbox.palette;
         modeToolbox.removeEventListener("DOMAttrModified", onModified, false);
         var bag = retrieveToolbarProperties(modeToolbox);
-        if(aEvent.newValue == "top" && aEvent.prevValue == "bottom") {
+        if(aEvent.newValue == "top" && !aEvent.prevValue || aEvent.prevValue == "bottom") {
           // place the mode toolbox at the top of the left pane
           modeToolbox = contentPanel.parentNode.insertBefore(modeToolbox, contentPanel);
           modeToolbox.palette = palette;
@@ -349,7 +340,33 @@ function ltnOnLoad(event)
     }
     modeToolbox.addEventListener("DOMAttrModified", onModified, false);
 
-    ltnInitializeMode();
+    // To make sure the folder pane doesn't disappear without any possibility
+    // to get it back, we need to reveal it when the mode box is collapsed.
+    function modeBoxAttrModified(event) {
+        if (event.attrName == "collapsed") {
+            document.getElementById("folderPaneBox")
+                    .removeAttribute("collapsed");
+        }
+    }
+
+    document.getElementById("ltnModeBox").addEventListener("DOMAttrModified",
+                                                           modeBoxAttrModified,
+                                                           true);
+
+    // find last shown calendar view (persist="checked")
+    var availableViews = getViewDeck();
+    var numChilds = availableViews.childNodes.length;
+    for (var i = 0; i < numChilds; i++) {
+        var view = availableViews.childNodes[i];
+        var command = document.getElementById(view.id+"-command");
+        if (command && command.getAttribute("checked") == "true") {
+            gLastShownCalendarView = view.id.substring(0, view.id.indexOf('-'));
+            break;
+        }
+    }
+    if (!gLastShownCalendarView) {
+        gLastShownCalendarView = 'month';
+    }
 
     gMiniMonthLoading = true;
 
@@ -380,6 +397,8 @@ function ltnOnLoad(event)
 
     document.getElementById("displayDeck")
             .addEventListener("dayselect", observeViewDaySelect, false);
+
+    prepareCalendarToDoUnifinder();
 
     // Make sure we update ourselves if the program stays open over midnight
     scheduleMidnightUpdate(refreshUIBits);
@@ -428,7 +447,6 @@ function onSelectionChanged(aEvent) {
  * this for normal refresh, since it also calls scheduleMidnightRefresh.
  */
 function refreshUIBits() {
-    agendaTreeView.refreshPeriodDates();
     document.getElementById("ltnMinimonth").refreshDisplay();
 
     // refresh the current view, if it has ever been shown
@@ -437,6 +455,9 @@ function refreshUIBits() {
         cView.goToDay(cView.selectedDay);
     }
 
+    if (TodayPane.showsYesterday()) {
+      TodayPane.setDay(today());
+    }
     // schedule our next update...
     scheduleMidnightUpdate(refreshUIBits);
 }
@@ -444,6 +465,12 @@ function refreshUIBits() {
 function showCalendarView(type)
 {
     gLastShownCalendarView = type;
+
+    if (gCurrentMode != 'calendar') {
+        // This function in turn calls showCalendarView(), so return afterwards.
+        ltnSwitch2Calendar();
+        return;
+    }
 
     // If we got this call while a mail-view is being shown, we need to
     // hide all of the mail stuff so we have room to display the calendar
@@ -468,7 +495,7 @@ function showCalendarView(type)
 
         var tasksMenu = document.getElementById("ltn-tasks-in-view")
         view.tasksInView = (tasksMenu.getAttribute("checked") == 'true');
-        view.showCompleted = document.getElementById("completed-tasks-checkbox").checked;
+        view.showCompleted = !document.getElementById("hide-completed-checkbox").checked;
 
         view.rotated = (rotated.getAttribute("checked") == 'true');
     }
@@ -513,7 +540,7 @@ function goToToday()
 
 function toggleTodayPaneinMailMode()
 {
-  var oTodayPane = document.getElementById("today-pane-box");
+  var oTodayPane = document.getElementById("today-pane-panel");
   var todayPaneCommand = document.getElementById('cmd_toggleTodayPane');
   if (oTodayPane.hasAttribute("collapsed")) {
     oTodayPane.removeAttribute("collapsed");
@@ -557,6 +584,9 @@ function LtnObserveDisplayDeckChange(event)
     // Now we're switching back to the mail view, so put everything back that
     // we collapsed in showCalendarView()
     if (id != "calendar-view-box") {
+        if (gCurrentMode != 'mail') {
+            ltnSwitch2Mail();
+        }
         collapseElement(document.getElementById("calendar-view-box"));
         uncollapseElement(GetMessagePane());
         uncollapseElement(document.getElementById("threadpane-splitter"));
@@ -573,6 +603,8 @@ function LtnObserveDisplayDeckChange(event)
 
 function ltnFinish() {
     getCompositeCalendar().removeObserver(agendaTreeView.calendarObserver);
+
+    finishCalendarToDoUnifinder();
 
     unloadCalendarManager();
 }
@@ -637,6 +669,19 @@ function toggleTasksInView() {
 
     // Refresh the current view
     currentView().goToDay(currentView().selectedDay);
+}
+
+var gSelectFolder = SelectFolder;
+var gSelectMessage = SelectMessage;
+
+SelectFolder = function(folderUri) {
+    document.getElementById("switch2mail").doCommand();
+    gSelectFolder(folderUri);
+}
+
+SelectMessage = function(messageUri) {
+    document.getElementById("switch2mail").doCommand();
+    gSelectMessage(messageUri);
 }
 
 document.getElementById("displayDeck").

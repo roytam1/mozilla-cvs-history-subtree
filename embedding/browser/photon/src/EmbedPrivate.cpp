@@ -484,6 +484,18 @@ EmbedPrivate::ScrollRight(int amount)
 		rv = oDomWindow->ScrollBy(amount, 0);
 }
 
+void
+EmbedPrivate::ScrollTo(int x, int y)
+{
+  	nsCOMPtr<nsIWebBrowser> webBrowser;
+  	mWindow->GetWebBrowser(getter_AddRefs(webBrowser));
+
+	nsCOMPtr<nsIDOMWindow> oDomWindow;
+	nsresult rv = webBrowser->GetContentDOMWindow(getter_AddRefs(oDomWindow));
+
+	if (oDomWindow)
+		rv = oDomWindow->ScrollTo(x, y);
+}
 
 
 

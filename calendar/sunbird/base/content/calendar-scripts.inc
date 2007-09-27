@@ -72,9 +72,11 @@
   <script type="application/x-javascript" src="chrome://calendar/content/calendarWindow.js"/>
   <script type="application/x-javascript" src="chrome://calendar/content/mouseoverPreviews.js"/>
   <script type="application/x-javascript" src="chrome://calendar/content/unifinder.js"/>
-  <script type="application/x-javascript" src="chrome://calendar/content/unifinderToDo.js"/>
+  <script type="application/x-javascript" src="chrome://calendar/content/calendar-unifinder-todo.js"/>
   <script type="application/x-javascript" src="chrome://calendar/content/calendar-views.js"/>
   <script type="application/x-javascript" src="chrome://calendar/content/migration.js"/>
+  <script type="application/x-javascript" src="chrome://calendar/content/calendar-dnd-listener.js"/>
+  <script type="application/x-javascript" src="chrome://global/content/nsDragAndDrop.js"/>
 
   <!-- NEEDED FOR APPLICATION SUPPORT -->
   <script type="application/x-javascript" src="chrome://calendar/content/applicationUtil.js"/>

@@ -125,11 +125,9 @@ function log(msg, context, bForce)
         var ret = "";
         if (context)
             ret += ("[" + context + "]");
-        if (msg) {
-            if (ret.length > 0)
-                ret += "\n";
-            ret += msg;
-        }
+        if (ret.length > 0)
+            ret += "\n";
+        ret += msg;
         var now = getTime();
         if (now && g_logTimezone)
             now = now.getInTimezone(g_logTimezone);
@@ -154,6 +152,19 @@ function log(msg, context, bForce)
     }
     else
         return msg;
+}
+
+function logWarning(err, context)
+{
+    var msg = errorToString(err);
+    var scriptError = Components.classes["@mozilla.org/scripterror;1"]
+                                .createInstance(Components.interfaces.nsIScriptError);
+    scriptError.init(log("warning: " + msg, context, true),
+                     null, null, 0, 0,
+                     Components.interfaces.nsIScriptError.warningFlag,
+                     "component javascript");
+    getConsoleService().logMessage(scriptError);
+    return msg;
 }
 
 function logError(err, context)
@@ -195,6 +206,16 @@ function getIcsService() {
     return g_icsService;
 }
 
+var g_fbService = null;
+function getFreeBusyService() {
+    if (!g_fbService) {
+        g_fbService =
+            Components.classes["@mozilla.org/calendar/freebusy-service;1"]
+                      .getService(Components.interfaces.calIFreeBusyService);
+    }
+    return g_fbService;
+}
+
 var g_domParser = null;
 function getDomParser() {
     if (!g_domParser) {
@@ -209,11 +230,6 @@ function subClass(subCtor, baseCtor) {
     subCtor.prototype = new baseCtor();
     subCtor.prototype.constructor = subCtor;
     subCtor.prototype.superClass = baseCtor;
-}
-
-function qiface(list, iid) {
-    if (!list.some( function(i) { return i.equals(iid); } ))
-        throw Components.results.NS_ERROR_NO_INTERFACE;
 }
 
 function isParent(item) {

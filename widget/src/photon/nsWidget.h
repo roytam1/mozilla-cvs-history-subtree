@@ -304,7 +304,7 @@ protected:
   //////////////////////////////////////////////////////////////////
   static int      RawEventHandler( PtWidget_t *widget, void *data, PtCallbackInfo_t *cbinfo );
   inline PRBool		HandleEvent( PtWidget_t *, PtCallbackInfo_t* aCbInfo );
-  PRBool          DispatchKeyEvent(PhKeyEvent_t *aPhKeyEvent);
+  PRBool          DispatchKeyEvent(PhKeyEvent_t *aPhKeyEvent, int force);
 
   inline void ScreenToWidgetPos( PhPoint_t &pt )
 		{

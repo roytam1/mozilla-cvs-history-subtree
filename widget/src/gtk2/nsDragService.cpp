@@ -57,6 +57,8 @@
 #include <gtk/gtkinvisible.h>
 #include <gdk/gdkx.h>
 #include "nsCRT.h"
+#include "nsString.h"
+#include "nsReadableUtils.h"
 
 
 static PRLogModuleInfo *sDragLm = NULL;
@@ -65,6 +67,9 @@ static const char gMimeListType[] = "application/x-moz-internal-item-list";
 static const char gMozUrlType[] = "_NETSCAPE_URL";
 static const char gTextUriListType[] = "text/uri-list";
 
+static const char gPlainTextUTF16[] = "text/plain;charset=utf-16";
+static const char gPlainTextUTF8[] = "text/plain;charset=utf-8";
+
 NS_IMPL_ADDREF_INHERITED(nsDragService, nsBaseDragService)
 NS_IMPL_RELEASE_INHERITED(nsDragService, nsBaseDragService)
 NS_IMPL_QUERY_INTERFACE4(nsDragService,
@@ -72,6 +77,10 @@ NS_IMPL_QUERY_INTERFACE4(nsDragService,
                          nsIDragSession,
                          nsIDragSessionGTK,
                          nsIObserver)
+
+void addBOM(guchar **data, gint *len);
+void ConvertHTMLtoUCS2(guchar * data, PRInt32 dataLength,
+                       PRUnichar** unicodeData, PRInt32& outUnicodeLen);
 
 static void
 invisibleSourceDragEnd(GtkWidget        *aWidget,
@@ -85,6 +94,38 @@ invisibleSourceDragDataGet(GtkWidget        *aWidget,
                            guint             aInfo,
                            guint32           aTime,
                            gpointer          aData);
+
+struct AutoConvertTargetPair {
+    const char * internal;        // the drag data receiving side
+    const char * outside;      // the drag data providing side
+    TargetConverter out2in;
+    TargetConverter in2out;
+};
+
+//converters
+static void utf8_to_ucs2 (const char *aDataIn, unsigned int aDataInLen,
+                          char **aDataOut, unsigned int *aDataOutLen);
+static void ucs2_to_text (const char *aDataIn, unsigned int aDataInLen,
+                          char **aDataOut, unsigned int *aDataOutLen);
+static void text_to_ucs2 (const char *aDataIn, unsigned int aDataInLen,
+                          char **aDataOut, unsigned int *aDataOutLen);
+
+// The table used to match an internal target to an outside target
+// the entry comes early has high priority in matching
+static const AutoConvertTargetPair autoConvertPair[] = {
+    {kUnicodeMime, "UTF8_STRING", utf8_to_ucs2, ucs2_to_text},
+    {kUnicodeMime, "COMPOUND_TEXT", utf8_to_ucs2, ucs2_to_text},
+    {kUnicodeMime, "TEXT", utf8_to_ucs2, ucs2_to_text},
+    {kUnicodeMime, "STRING", utf8_to_ucs2, ucs2_to_text},
+    {kUnicodeMime, kTextMime, text_to_ucs2, ucs2_to_text},
+    {kUnicodeMime, gPlainTextUTF16, NULL, NULL},
+    {kUnicodeMime, gPlainTextUTF8, text_to_ucs2, ucs2_to_text},
+
+    {kURLMime, gTextUriListType, NULL, ucs2_to_text},
+    {kURLMime, gMozUrlType, text_to_ucs2, ucs2_to_text},
+
+    {NULL, NULL, NULL, NULL},
+};
 
 nsDragService::nsDragService()
 {
@@ -108,7 +149,7 @@ nsDragService::nsDragService()
 
     // set up our logging module
     if (!sDragLm)
-    sDragLm = PR_NewLogModule("nsDragService");
+        sDragLm = PR_NewLogModule("nsDragService");
     PR_LOG(sDragLm, PR_LOG_DEBUG, ("nsDragService::nsDragService"));
     mTargetWidget = 0;
     mTargetDragContext = 0;
@@ -117,6 +158,8 @@ nsDragService::nsDragService()
     mTargetDragDataReceived = PR_FALSE;
     mTargetDragData = 0;
     mTargetDragDataLen = 0;
+    mTargetDragGdkAtom = 0;
+    mTargetConverter = NULL;
 }
 
 nsDragService::~nsDragService()
@@ -191,6 +234,16 @@ nsDragService::InvokeDragSession(nsIDOMNode *aDOMNode,
         event.type = GDK_BUTTON_PRESS;
         event.button.window = mHiddenWidget->window;
         event.button.time = nsWindow::mLastButtonPressTime;
+
+        event.button.send_event = 0;
+        event.button.x = 0;
+        event.button.y = 0;
+        event.button.state = 0;
+        event.button.button = 0;
+        event.button.device = 0;
+        event.button.x_root = 0;
+        event.button.y_root = 0;
+
 
         // start our drag.
         GdkDragContext *context = gtk_drag_begin(mHiddenWidget,
@@ -310,7 +363,7 @@ GetTextUriListItem(const char *data,
 NS_IMETHODIMP
 nsDragService::GetNumDropItems(PRUint32 * aNumItems)
 {
-    PR_LOG(sDragLm, PR_LOG_DEBUG, ("nsDragService::GetNumDropItems"));
+    PR_LOG(sDragLm, PR_LOG_DEBUG, ("==nsDragService::GetNumDropItems==\n"));
     PRBool isList = IsTargetContextList();
     if (isList)
         mSourceDataItems->Count(aNumItems);
@@ -322,8 +375,9 @@ nsDragService::GetNumDropItems(PRUint32 * aNumItems)
             *aNumItems = CountTextUriListItems(data, mTargetDragDataLen);
         } else
             *aNumItems = 1;
+        TargetResetData();
     }
-    PR_LOG(sDragLm, PR_LOG_DEBUG, ("%d items", *aNumItems));
+    PR_LOG(sDragLm, PR_LOG_DEBUG, ("%d items\n", *aNumItems));
     return NS_OK;
 }
 
@@ -379,7 +433,7 @@ nsDragService::GetData(nsITransferable * aTransferable,
                 PRUint32 tmpDataLen = 0;
                 PR_LOG(sDragLm, PR_LOG_DEBUG,
                        ("trying to get transfer data for %s\n",
-                       (const char *)flavorStr));
+                        (const char *)flavorStr));
                 rv = item->GetTransferData(flavorStr,
                                            getter_AddRefs(data),
                                            &tmpDataLen);
@@ -406,6 +460,7 @@ nsDragService::GetData(nsITransferable * aTransferable,
     // Now walk down the list of flavors. When we find one that is
     // actually present, copy out the data into the transferable in that
     // format. SetTransferData() implicitly handles conversions.
+
     for ( i = 0; i < cnt; ++i ) {
         nsCOMPtr<nsISupports> genericWrapper;
         flavorList->GetElementAt(i,getter_AddRefs(genericWrapper));
@@ -418,118 +473,58 @@ nsDragService::GetData(nsITransferable * aTransferable,
             GdkAtom gdkFlavor = gdk_atom_intern(flavorStr, FALSE);
             PR_LOG(sDragLm, PR_LOG_DEBUG,
                    ("looking for data in type %s, gdk flavor %ld\n",
-                   NS_STATIC_CAST(const char*,flavorStr), gdkFlavor));
+                    NS_STATIC_CAST(const char*,flavorStr), gdkFlavor));
             PRBool dataFound = PR_FALSE;
             if (gdkFlavor) {
                 GetTargetDragData(gdkFlavor);
             }
             if (mTargetDragData) {
-                PR_LOG(sDragLm, PR_LOG_DEBUG, ("dataFound = PR_TRUE\n"));
+                PR_LOG(sDragLm, PR_LOG_DEBUG,
+                       ("dataFound = PR_TRUE for %s\n", gdk_atom_name(mTargetDragGdkAtom)));
                 dataFound = PR_TRUE;
+
+                // we need to do extra work for text/uri-list
+                if (mTargetDragGdkAtom ==
+                    gdk_atom_intern(gTextUriListType, FALSE)) {
+                    PR_LOG(sDragLm, PR_LOG_DEBUG,
+                           ("Converting text/uri-list data\n"));
+                    const char *data =
+                        NS_REINTERPRET_CAST(char*, mTargetDragData);
+                    PRUnichar* convertedText = nsnull;
+                    PRInt32 convertedTextLen = 0;
+
+                    GetTextUriListItem(data, mTargetDragDataLen, aItemIndex,
+                                       &convertedText, &convertedTextLen);
+
+                    if (convertedText) {
+                        PR_LOG(sDragLm, PR_LOG_DEBUG,
+                               ("successfully converted \
+                                   %s to unicode.\n", gTextUriListType));
+                        // out with the old, in with the new
+                        g_free(mTargetDragData);
+                        mTargetDragData = convertedText;
+                        mTargetDragDataLen = convertedTextLen * 2;
+                    }
+                }
+                // Convert text/html into our unicode format
+                else if (mTargetDragGdkAtom ==
+                         gdk_atom_intern(kHTMLMime, FALSE)) {
+                    PRUnichar* htmlBody= nsnull;
+                    PRInt32 htmlBodyLen = 0;
+
+                    ConvertHTMLtoUCS2(NS_STATIC_CAST(guchar*, mTargetDragData),
+                                      mTargetDragDataLen,
+                                      &htmlBody, htmlBodyLen);
+                    if (!htmlBodyLen)
+                        break;
+                    g_free(mTargetDragData);
+                    mTargetDragData = (void *)htmlBody;
+                    mTargetDragDataLen = htmlBodyLen * 2;
+                }
             }
             else {
                 PR_LOG(sDragLm, PR_LOG_DEBUG, ("dataFound = PR_FALSE\n"));
-                // if we are looking for text/unicode and we fail to find it
-                // on the clipboard first, try again with text/plain. If that
-                // is present, convert it to unicode.
-                if ( strcmp(flavorStr, kUnicodeMime) == 0 ) {
-                    PR_LOG(sDragLm, PR_LOG_DEBUG,
-                           ("we were looking for text/unicode... \
-                           trying again with text/plain\n"));
-                    gdkFlavor = gdk_atom_intern(kTextMime, FALSE);
-                    GetTargetDragData(gdkFlavor);
-                    if (mTargetDragData) {
-                        PR_LOG(sDragLm, PR_LOG_DEBUG, ("Got textplain data\n"));
-                        const char* castedText =
-                                    NS_REINTERPRET_CAST(char*, mTargetDragData);
-                        PRUnichar* convertedText = nsnull;
-                        PRInt32 convertedTextLen = 0;
-                        nsPrimitiveHelpers::ConvertPlatformPlainTextToUnicode(
-                                            castedText, mTargetDragDataLen,
-                                            &convertedText, &convertedTextLen);
-                        if ( convertedText ) {
-                            PR_LOG(sDragLm, PR_LOG_DEBUG,
-                                   ("successfully converted plain text \
-                                   to unicode.\n"));
-                            // out with the old, in with the new
-                            g_free(mTargetDragData);
-                            mTargetDragData = convertedText;
-                            mTargetDragDataLen = convertedTextLen * 2;
-                            dataFound = PR_TRUE;
-                        } // if plain text data on clipboard
-                    } // if plain text flavor present
-                } // if looking for text/unicode
-
-                // if we are looking for text/x-moz-url and we failed to find
-                // it on the clipboard, try again with text/uri-list, and then
-                // _NETSCAPE_URL
-                if (strcmp(flavorStr, kURLMime) == 0) {
-                    PR_LOG(sDragLm, PR_LOG_DEBUG,
-                           ("we were looking for text/x-moz-url...\
-                           trying again with text/uri-list\n"));
-                    gdkFlavor = gdk_atom_intern(gTextUriListType, FALSE);
-                    GetTargetDragData(gdkFlavor);
-                    if (mTargetDragData) {
-                        PR_LOG(sDragLm, PR_LOG_DEBUG,
-                               ("Got text/uri-list data\n"));
-                        const char *data =
-                                   NS_REINTERPRET_CAST(char*, mTargetDragData);
-                        PRUnichar* convertedText = nsnull;
-                        PRInt32 convertedTextLen = 0;
-
-                        GetTextUriListItem(data, mTargetDragDataLen, aItemIndex,
-                                           &convertedText, &convertedTextLen);
-
-                        if ( convertedText ) {
-                            PR_LOG(sDragLm, PR_LOG_DEBUG,
-                                   ("successfully converted \
-                                   _NETSCAPE_URL to unicode.\n"));
-                            // out with the old, in with the new
-                            g_free(mTargetDragData);
-                            mTargetDragData = convertedText;
-                            mTargetDragDataLen = convertedTextLen * 2;
-                            dataFound = PR_TRUE;
-                        }
-                    }
-                    else {
-                        PR_LOG(sDragLm, PR_LOG_DEBUG,
-                               ("failed to get text/uri-list data\n"));
-                    }
-                    if (!dataFound) {
-                        PR_LOG(sDragLm, PR_LOG_DEBUG,
-                               ("we were looking for text/x-moz-url...\
-                               trying again with _NETSCAP_URL\n"));
-                        gdkFlavor = gdk_atom_intern(gMozUrlType, FALSE);
-                        GetTargetDragData(gdkFlavor);
-                        if (mTargetDragData) {
-                            PR_LOG(sDragLm, PR_LOG_DEBUG,
-                                   ("Got _NETSCAPE_URL data\n"));
-                            const char* castedText =
-                                  NS_REINTERPRET_CAST(char*, mTargetDragData);
-                            PRUnichar* convertedText = nsnull;
-                            PRInt32 convertedTextLen = 0;
-                            nsPrimitiveHelpers::ConvertPlatformPlainTextToUnicode(castedText, mTargetDragDataLen, &convertedText, &convertedTextLen);
-                            if ( convertedText ) {
-                                PR_LOG(sDragLm,
-                                       PR_LOG_DEBUG,
-                                       ("successfully converted _NETSCAPE_URL \
-                                       to unicode.\n"));
-                                // out with the old, in with the new
-                                g_free(mTargetDragData);
-                                mTargetDragData = convertedText;
-                                mTargetDragDataLen = convertedTextLen * 2;
-                                dataFound = PR_TRUE;
-                            }
-                        }
-                        else {
-                            PR_LOG(sDragLm, PR_LOG_DEBUG,
-                                   ("failed to get _NETSCAPE_URL data\n"));
-                        }
-                    }
-                }
-
-            } // else we try one last ditch effort to find our data
-
+            }
             if (dataFound) {
                 // the DOM only wants LF, so convert from MacOS line endings
                 // to DOM line endings.
@@ -561,7 +556,7 @@ NS_IMETHODIMP
 nsDragService::IsDataFlavorSupported(const char *aDataFlavor,
                                      PRBool *_retval)
 {
-    PR_LOG(sDragLm, PR_LOG_DEBUG, ("nsDragService::IsDataFlavorSupported %s",
+    PR_LOG(sDragLm, PR_LOG_DEBUG, ("nsDragService::IsDataFlavorSupported %s\n",
                                    aDataFlavor));
     if (!_retval)
         return NS_ERROR_INVALID_ARG;
@@ -614,7 +609,7 @@ nsDragService::IsDataFlavorSupported(const char *aDataFlavor,
                             currentFlavor->ToString(getter_Copies(flavorStr));
                             PR_LOG(sDragLm, PR_LOG_DEBUG,
                                    ("checking %s against %s\n",
-                                   (const char *)flavorStr, aDataFlavor));
+                                    (const char *)flavorStr, aDataFlavor));
                             if (strcmp(flavorStr, aDataFlavor) == 0) {
                                 PR_LOG(sDragLm, PR_LOG_DEBUG,
                                        ("boioioioiooioioioing!\n"));
@@ -628,50 +623,9 @@ nsDragService::IsDataFlavorSupported(const char *aDataFlavor,
         return NS_OK;
     }
 
-    // check the target context vs. this flavor, one at a time
-    GList *tmp;
-    for (tmp = mTargetDragContext->targets; tmp; tmp = tmp->next) {
-        GdkAtom atom = (GdkAtom)GPOINTER_TO_INT(tmp->data);
-        gchar *name = NULL;
-        name = gdk_atom_name(atom);
-        PR_LOG(sDragLm, PR_LOG_DEBUG,
-               ("checking %s against %s\n", name, aDataFlavor));
-        if (name && (strcmp(name, aDataFlavor) == 0)) {
-            PR_LOG(sDragLm, PR_LOG_DEBUG, ("good!\n"));
-            *_retval = PR_TRUE;
-        }
-        // check for automatic text/uri-list -> text/x-moz-url mapping
-        if (*_retval == PR_FALSE && 
-            name &&
-            (strcmp(name, gTextUriListType) == 0) &&
-            (strcmp(aDataFlavor, kURLMime) == 0)) {
-            PR_LOG(sDragLm, PR_LOG_DEBUG,
-                   ("good! ( it's text/uri-list and \
-                   we're checking against text/x-moz-url )\n"));
-            *_retval = PR_TRUE;
-        }
-        // check for automatic _NETSCAPE_URL -> text/x-moz-url mapping
-        if (*_retval == PR_FALSE && 
-            name &&
-            (strcmp(name, gMozUrlType) == 0) &&
-            (strcmp(aDataFlavor, kURLMime) == 0)) {
-            PR_LOG(sDragLm, PR_LOG_DEBUG,
-                   ("good! ( it's _NETSCAPE_URL and \
-                   we're checking against text/x-moz-url )\n"));
-            *_retval = PR_TRUE;
-        }
-        // check for auto text/plain -> text/unicode mapping
-        if (*_retval == PR_FALSE && 
-            name &&
-            (strcmp(name, kTextMime) == 0) &&
-            (strcmp(aDataFlavor, kUnicodeMime) == 0)) {
-            PR_LOG(sDragLm, PR_LOG_DEBUG,
-                   ("good! ( it's text plain and we're checking \
-                   against text/unicode )\n"));
-            *_retval = PR_TRUE;
-        }
-        g_free(name);
-    }
+    if (LookupFlavorInTargetList(aDataFlavor) ||
+        LookupMatchedOutsideTarget(aDataFlavor, NULL, NULL))
+        *_retval = PR_TRUE;
     return NS_OK;
 }
 
@@ -710,14 +664,14 @@ nsDragService::TargetEndDragMotion(GtkWidget      *aWidget,
         // notify the dragger if we can drop
         switch (mDragAction) {
         case DRAGDROP_ACTION_COPY:
-          action = GDK_ACTION_COPY;
-          break;
+            action = GDK_ACTION_COPY;
+            break;
         case DRAGDROP_ACTION_LINK:
-          action = GDK_ACTION_LINK;
-          break;
+            action = GDK_ACTION_LINK;
+            break;
         default:
-          action = GDK_ACTION_MOVE;
-          break;
+            action = GDK_ACTION_MOVE;
+            break;
         }
         gdk_drag_status(aContext, action, aTime);
     }
@@ -738,12 +692,23 @@ nsDragService::TargetDataReceived(GtkWidget         *aWidget,
                                   guint32            aTime)
 {
     PR_LOG(sDragLm, PR_LOG_DEBUG, ("nsDragService::TargetDataReceived"));
-    TargetResetData();
+    NS_ASSERTION(mTargetDragData == 0, "Data area is NOT empty!!\n");
+    NS_ASSERTION(mTargetDragDataLen == 0, "Data area is NOT empty!!\n");
+
     mTargetDragDataReceived = PR_TRUE;
     if (aSelectionData->length > 0) {
-        mTargetDragDataLen = aSelectionData->length;
-        mTargetDragData = g_malloc(mTargetDragDataLen);
-        memcpy(mTargetDragData, aSelectionData->data, mTargetDragDataLen);
+        if (mTargetDragGdkAtom && mTargetConverter) {
+            // need Converting
+            (*mTargetConverter)((const char*)aSelectionData->data,
+                                aSelectionData->length,
+                                (char **)&mTargetDragData,
+                                &mTargetDragDataLen);
+        }
+        else {
+            mTargetDragDataLen = aSelectionData->length;
+            mTargetDragData = g_malloc(mTargetDragDataLen);
+            memcpy(mTargetDragData, aSelectionData->data, mTargetDragDataLen);
+        }
     }
     else {
         PR_LOG(sDragLm, PR_LOG_DEBUG,
@@ -799,13 +764,31 @@ nsDragService::IsTargetContextList(void)
 void
 nsDragService::GetTargetDragData(GdkAtom aFlavor)
 {
-    PR_LOG(sDragLm, PR_LOG_DEBUG, ("getting data flavor %d\n", aFlavor));
-    PR_LOG(sDragLm, PR_LOG_DEBUG, ("mLastWidget is %p and mLastContext is %p\n",
-                                   mTargetWidget, mTargetDragContext));
+    const char *flavorStr = gdk_atom_name(aFlavor);
+    PR_LOG(sDragLm, PR_LOG_DEBUG, ("GetTargetData with flavor %s\n", flavorStr));
+    PR_LOG(sDragLm, PR_LOG_DEBUG,
+           ("mLastWidget is %p, mLastContext is %p\n",
+            (void*)mTargetWidget, (void*)mTargetDragContext));
     // reset our target data areas
     TargetResetData();
-    gtk_drag_get_data(mTargetWidget, mTargetDragContext, aFlavor, mTargetTime);
-    
+    // if it is a direct match
+    if (LookupFlavorInTargetList(flavorStr)) {
+        gtk_drag_get_data(mTargetWidget, mTargetDragContext,
+                          aFlavor, mTargetTime);
+        mTargetDragGdkAtom = aFlavor;
+
+    }
+    // if it is a auto converting match
+    else if (LookupMatchedOutsideTarget(flavorStr,
+                                        &mTargetDragGdkAtom,
+                                        &mTargetConverter))
+        gtk_drag_get_data(mTargetWidget, mTargetDragContext,
+                          mTargetDragGdkAtom, mTargetTime);
+    else {
+        PR_LOG(sDragLm, PR_LOG_DEBUG, ("Cannot request target %s\n",
+                                       flavorStr));
+        return;
+    }
     PR_LOG(sDragLm, PR_LOG_DEBUG, ("about to start inner iteration."));
     PRTime entryTime = PR_Now();
     while (!mTargetDragDataReceived && mDoingDrag) {
@@ -824,9 +807,11 @@ nsDragService::TargetResetData(void)
     mTargetDragDataReceived = PR_FALSE;
     // make sure to free old data if we have to
     if (mTargetDragData)
-      g_free(mTargetDragData);
+        g_free(mTargetDragData);
     mTargetDragData = 0;
     mTargetDragDataLen = 0;
+    mTargetDragGdkAtom = 0;
+    mTargetConverter = NULL;
 }
 
 GtkTargetList *
@@ -858,7 +843,7 @@ nsDragService::GetSourceList(void)
         listTarget->info = GPOINTER_TO_UINT(listAtom);
         PR_LOG(sDragLm, PR_LOG_DEBUG,
                ("automatically adding target %s with id %ld\n",
-               listTarget->target, listAtom));
+                listTarget->target, listAtom));
         targetArray.AppendElement(listTarget);
 
         // check what flavours are supported so we can decide what other
@@ -878,7 +863,7 @@ nsDragService::GetSourceList(void)
                      ++flavorIndex ) {
                     nsCOMPtr<nsISupports> genericWrapper;
                     flavorList->GetElementAt(flavorIndex,
-                                           getter_AddRefs(genericWrapper));
+                                             getter_AddRefs(genericWrapper));
                     nsCOMPtr<nsISupportsCString> currentFlavor;
                     currentFlavor = do_QueryInterface(genericWrapper);
                     if (currentFlavor) {
@@ -925,51 +910,27 @@ nsDragService::GetSourceList(void)
                     if (currentFlavor) {
                         nsXPIDLCString flavorStr;
                         currentFlavor->ToString(getter_Copies(flavorStr));
-                        // get the atom
-                        GdkAtom atom = gdk_atom_intern(flavorStr, FALSE);
-                        GtkTargetEntry *target =
-                          (GtkTargetEntry *)g_malloc(sizeof(GtkTargetEntry));
-                        target->target = g_strdup(flavorStr);
-                        target->flags = 0;
-                        target->info = GPOINTER_TO_UINT(atom);
+                        //add the target itself
+                        GtkTargetEntry *target = CreateGtkTargetFor(flavorStr);
                         PR_LOG(sDragLm, PR_LOG_DEBUG,
-                               ("adding target %s with id %ld\n",
-                               target->target, atom));
+                               ("+++adding importable target %s\n",
+                                target->target));
                         targetArray.AppendElement(target);
-                        // Check to see if this is text/unicode.
-                        // If it is, add text/plain
-                        // since we automatically support text/plain
-                        // if we support text/unicode.
-                        if (strcmp(flavorStr, kUnicodeMime) == 0) {
-                            // get the atom for the unicode string
-                            GdkAtom plainAtom =
-                              gdk_atom_intern(kTextMime, FALSE);
-                            GtkTargetEntry *plainTarget =
-                             (GtkTargetEntry *)g_malloc(sizeof(GtkTargetEntry));
-                            plainTarget->target = g_strdup(kTextMime);
-                            plainTarget->flags = 0;
-                            plainTarget->info = GPOINTER_TO_UINT(plainAtom);
-                            PR_LOG(sDragLm, PR_LOG_DEBUG,
-                                   ("automatically adding target %s with \
-                                   id %ld\n", plainTarget->target, plainAtom));
-                            targetArray.AppendElement(plainTarget);
-                        }
-                        // Check to see if this is the x-moz-url type.
-                        // If it is, add _NETSCAPE_URL
-                        // this is a type used by everybody.
-                        if (strcmp(flavorStr, kURLMime) == 0) {
-                            // get the atom name for it
-                            GdkAtom urlAtom =
-                             gdk_atom_intern(gMozUrlType, FALSE);
-                            GtkTargetEntry *urlTarget =
-                             (GtkTargetEntry *)g_malloc(sizeof(GtkTargetEntry));
-                            urlTarget->target = g_strdup(gMozUrlType);
-                            urlTarget->flags = 0;
-                            urlTarget->info = GPOINTER_TO_UINT(urlAtom);
-                            PR_LOG(sDragLm, PR_LOG_DEBUG,
-                                   ("automatically adding target %s with \
-                                   id %ld\n", urlTarget->target, urlAtom));
-                            targetArray.AppendElement(urlTarget);
+
+                        //add the auto convert targets
+                        PRUint16 convIndex = 0;
+                        while (autoConvertPair[convIndex].internal &&
+                               autoConvertPair[convIndex].outside) {
+                            if (!strcmp(autoConvertPair[convIndex].internal,
+                                        flavorStr)) {
+                                target = CreateGtkTargetFor( \
+                                          autoConvertPair[convIndex].outside);
+                                PR_LOG(sDragLm, PR_LOG_DEBUG,
+                                       ("  ++auto adding target %s\n",
+                                        target->target));
+                                targetArray.AppendElement(target);
+                            }
+                            ++convIndex;
                         }
                     }
                 } // foreach flavor in item
@@ -982,11 +943,11 @@ nsDragService::GetSourceList(void)
     if (targetCount) {
         // allocate space to create the list of valid targets
         targets =
-          (GtkTargetEntry *)g_malloc(sizeof(GtkTargetEntry) * targetCount);
+            (GtkTargetEntry *)g_malloc(sizeof(GtkTargetEntry) * targetCount);
         PRUint32 targetIndex;
         for ( targetIndex = 0; targetIndex < targetCount; ++targetIndex) {
             GtkTargetEntry *disEntry =
-              (GtkTargetEntry *)targetArray.ElementAt(targetIndex);
+                (GtkTargetEntry *)targetArray.ElementAt(targetIndex);
             // this is a string reference but it will be freed later.
             targets[targetIndex].target = disEntry->target;
             targets[targetIndex].flags = disEntry->flags;
@@ -996,7 +957,7 @@ nsDragService::GetSourceList(void)
         // clean up the target list
         for (PRUint32 cleanIndex = 0; cleanIndex < targetCount; ++cleanIndex) {
             GtkTargetEntry *thisTarget =
-              (GtkTargetEntry *)targetArray.ElementAt(cleanIndex);
+                (GtkTargetEntry *)targetArray.ElementAt(cleanIndex);
             g_free(thisTarget->target);
             g_free(thisTarget);
         }
@@ -1087,7 +1048,7 @@ nsDragService::SourceDataGet(GtkWidget        *aWidget,
                              guint             aInfo,
                              guint32           aTime)
 {
-    PR_LOG(sDragLm, PR_LOG_DEBUG, ("nsDragService::SourceDataGet"));
+    PR_LOG(sDragLm, PR_LOG_DEBUG, ("\nnsDragService::SourceDataGet"));
     GdkAtom atom = (GdkAtom)aInfo;
     nsXPIDLCString mimeFlavor;
     gchar *typeName = 0;
@@ -1124,22 +1085,18 @@ nsDragService::SourceDataGet(GtkWidget        *aWidget,
     nsCOMPtr<nsITransferable> item;
     item = do_QueryInterface(genericItem);
     if (item) {
-        // if someone was asking for text/plain, lookup unicode instead so
-        // we can convert it.
-        PRBool needToDoConversionToPlainText = PR_FALSE;
+        TargetConverter converter = NULL;
         const char* actualFlavor = mimeFlavor;
-        if (strcmp(mimeFlavor,kTextMime) == 0) {
-            actualFlavor = kUnicodeMime;
-            needToDoConversionToPlainText = PR_TRUE;
+        PRUint32 convIndex = 0;
+        while (autoConvertPair[convIndex].outside &&
+               autoConvertPair[convIndex].internal) {
+            if (!strcmp(mimeFlavor, autoConvertPair[convIndex].outside)) {
+                actualFlavor = autoConvertPair[convIndex].internal;
+                converter = autoConvertPair[convIndex].in2out;
+                break;
+            }
+            ++convIndex;
         }
-        // if someone was asking for _NETSCAPE_URL we need to convert to
-        // plain text but we also need to look for x-moz-url
-        else if (strcmp(mimeFlavor, gMozUrlType) == 0) {
-            actualFlavor = kURLMime;
-            needToDoConversionToPlainText = PR_TRUE;
-        }
-        else
-            actualFlavor = mimeFlavor;
 
         PRUint32 tmpDataLen = 0;
         void    *tmpData = NULL;
@@ -1151,18 +1108,24 @@ nsDragService::SourceDataGet(GtkWidget        *aWidget,
         if (NS_SUCCEEDED(rv)) {
             nsPrimitiveHelpers::CreateDataFromPrimitive (actualFlavor, data,
                                                          &tmpData, tmpDataLen);
+
+            if (strcmp(actualFlavor, kHTMLMime) == 0) {
+                PR_LOG(sDragLm, PR_LOG_DEBUG, ("add BOM prefix for %s\n",
+                                               kHTMLMime));
+                addBOM(NS_REINTERPRET_CAST(guchar **, &tmpData),
+                       NS_REINTERPRET_CAST(gint *, &tmpDataLen));
+            }
+
             // if required, do the extra work to convert unicode to plain
             // text and replace the output values with the plain text.
-            if (needToDoConversionToPlainText) {
+            if (converter) {
                 char* plainTextData = nsnull;
                 PRUnichar* castedUnicode = NS_REINTERPRET_CAST(PRUnichar*,
                                                                tmpData);
-                PRInt32 plainTextLen = 0;
-                nsPrimitiveHelpers::ConvertUnicodeToPlatformPlainText(
-                                    castedUnicode,
-                                    tmpDataLen / 2,
-                                    &plainTextData,
-                                    &plainTextLen);
+                PRUint32 plainTextLen = 0;
+                (*converter)((const char*)castedUnicode, tmpDataLen,
+                             &plainTextData, &plainTextLen);
+
                 if (tmpData) {
                     // this was not allocated using glib
                     free(tmpData);
@@ -1210,3 +1173,149 @@ invisibleSourceDragEnd(GtkWidget        *aWidget,
     dragService->SourceEndDrag();
 }
 
+PRBool
+nsDragService::LookupFlavorInTargetList(const char *aDataFlavor)
+{
+    PR_LOG(sDragLm, PR_LOG_DEBUG,
+           ("nsDragService::LookupFlavorInTargetList,"
+            "checking %s \n", aDataFlavor));
+
+    if (!mTargetDragContext || !aDataFlavor)
+        return PR_FALSE;
+
+    GList *targetList = mTargetDragContext->targets;
+    while (targetList) {
+        GdkAtom atom = (GdkAtom)GPOINTER_TO_INT(targetList->data);
+        gchar *atomName = gdk_atom_name(atom);
+        PR_LOG(sDragLm, PR_LOG_DEBUG,
+               ("checking %s against %s\n", aDataFlavor, atomName));
+        if (atomName && (strcmp(atomName, aDataFlavor) == 0)) {
+            PR_LOG(sDragLm, PR_LOG_DEBUG, ("good!\n"));
+            g_free(atomName);
+            return PR_TRUE;
+        }
+        targetList = targetList->next;
+    }
+    return PR_FALSE;
+}
+
+PRBool
+nsDragService::LookupMatchedOutsideTarget(const char *aDataFlavor,
+                                          GdkAtom *aAtom,
+                                          TargetConverter *aConverter)
+{
+    PR_LOG(sDragLm, PR_LOG_DEBUG,
+           ("nsDragService::LookupMatchedOutsideTarget,"
+            "checking %s \n", aDataFlavor));
+
+    if (!mTargetDragContext || !aDataFlavor)
+        return PR_FALSE;
+
+    gint index = 0;
+    while (autoConvertPair[index].internal &&
+           autoConvertPair[index].outside) {
+        if (!strcmp(autoConvertPair[index].internal, aDataFlavor) &&
+            LookupFlavorInTargetList(autoConvertPair[index].outside)) {
+            if (aConverter)
+                *aConverter = autoConvertPair[index].out2in;
+            if (aAtom)
+                *aAtom = gdk_atom_intern(autoConvertPair[index].outside,
+                                         FALSE);
+            return PR_TRUE;
+        }
+        ++index;
+    }
+    return PR_FALSE;
+}
+
+PRBool
+nsDragService::LookupMatchedInternalTarget(const char *aDataFlavor,
+                                           GdkAtom *aAtom,
+                                           TargetConverter *aConverter)
+{
+    PR_LOG(sDragLm, PR_LOG_DEBUG,
+           ("nsDragService::LookupMatchedInternalTarget,"
+            "checking %s \n", aDataFlavor));
+
+    if (!mTargetDragContext || !aDataFlavor)
+        return PR_FALSE;
+
+    gint index = 0;
+    while (autoConvertPair[index].internal &&
+           autoConvertPair[index].outside) {
+        if (!strcmp(autoConvertPair[index].outside, aDataFlavor) &&
+            LookupFlavorInTargetList(autoConvertPair[index].internal)) {
+            if (aConverter)
+                *aConverter = autoConvertPair[index].in2out;
+            if (aAtom)
+                *aAtom = gdk_atom_intern(autoConvertPair[index].internal,
+                                         FALSE);
+            return PR_TRUE;
+        }
+        ++index;
+    }
+    return PR_FALSE;
+}
+
+GtkTargetEntry *
+nsDragService::CreateGtkTargetFor(const char *aFlavorStr)
+{
+    // get the atom
+    GdkAtom atom = gdk_atom_intern(aFlavorStr, FALSE);
+    GtkTargetEntry *target =
+        (GtkTargetEntry *)g_malloc(sizeof(GtkTargetEntry));
+    NS_ASSERTION(target, "No enough mem");
+
+    target->target = g_strdup(aFlavorStr);
+    target->flags = 0;
+    target->info = GPOINTER_TO_UINT(atom);
+
+    return target;
+}
+
+//converters
+
+// static
+void
+utf8_to_ucs2 (const char *aDataIn, unsigned int aDataInLen,
+              char **aDataOut, unsigned int *aDataOutLen)
+{
+    nsAutoString ucs2string = NS_ConvertUTF8toUCS2(aDataIn);
+    *aDataOut = (char *)ToNewUnicode(ucs2string);
+    *aDataOutLen = ucs2string.Length() * 2;
+
+    PR_LOG(sDragLm, PR_LOG_DEBUG,
+           ("AutoConverting:  utf8 --->  unicode.\n"));
+
+}
+
+//static
+void
+ucs2_to_text (const char *aDataIn, unsigned int aDataInLen,
+              char **aDataOut, unsigned int *aDataOutLen)
+{
+    nsPrimitiveHelpers::
+        ConvertUnicodeToPlatformPlainText((PRUnichar *)aDataIn,
+                                          int(aDataInLen / 2),
+                                          aDataOut, (PRInt32 *)aDataOutLen);
+    PR_LOG(sDragLm, PR_LOG_DEBUG,
+           ("AutoConverting:  ucs2 --->  platform text.\n"));
+}
+
+//static
+void
+text_to_ucs2 (const char *aDataIn, unsigned int aDataInLen,
+              char **aDataOut, unsigned int *aDataOutLen)
+{
+    PRUnichar *convertedText = nsnull;
+    PRInt32 convertedTextLen = 0;
+    nsPrimitiveHelpers::
+        ConvertPlatformPlainTextToUnicode(aDataIn, aDataInLen,
+                                          &convertedText, &convertedTextLen);
+    if (convertedText) {
+        PR_LOG(sDragLm, PR_LOG_DEBUG,
+               ("AutoConverting: plain text --->  unicode.\n"));
+        *aDataOut = NS_REINTERPRET_CAST(char*, convertedText);
+        *aDataOutLen = convertedTextLen * 2;
+    }
+}

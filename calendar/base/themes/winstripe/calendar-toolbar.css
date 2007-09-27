@@ -31,6 +31,7 @@
 #                 Kevin Gerich <webmail@kmgerich.com>
 #                 Matthew Willis <mattwillis@gmail.com>
 #                 Simon Paquet <bugzilla@babylonsounds.com>
+#                 Martin Schroeder <mschroeder@mozilla.x-home.org>
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -220,15 +221,15 @@ toolbar[iconsize="small"] #calendar-go-to-today-button:hover:active {
  *-------------------------------------------------------------------*/
 
 #calendar-show-todaypane-button {
-        -moz-image-region: rect(0px 408px 24px 384px);
+        -moz-image-region: rect(0px 504px 24px 480px);
 }
 #calendar-show-todaypane-button[disabled="true"],
 #calendar-show-todaypane-button[disabled="true"]:hover,
 #calendar-show-todaypane-button[disabled="true"]:hover:active {
-        -moz-image-region: rect(48px 408px 72px 384px);
+        -moz-image-region: rect(48px 504px 72px 480px);
 }
 #calendar-show-todaypane-button:hover {
-        -moz-image-region: rect(24px 408px 48px 384px);
+        -moz-image-region: rect(24px 504px 48px 480px);
 }
 #calendar-show-todaypane-button:hover:active {
 }
@@ -238,15 +239,15 @@ toolbar[iconsize="small"] #calendar-go-to-today-button:hover:active {
  *-------------------------------------------------------------------*/
 
 toolbar[iconsize="small"] #calendar-show-todaypane-button {
-        -moz-image-region: rect(0px 272px 16px 256px);
+        -moz-image-region: rect(0px 336px 16px 320px);
 }
 toolbar[iconsize="small"] #calendar-show-todaypane-button[disabled="true"],
 toolbar[iconsize="small"] #calendar-show-todaypane-button[disabled="true"]:hover,
 toolbar[iconsize="small"] #calendar-show-todaypane-button[disabled="true"]:hover:active {
-        -moz-image-region: rect(32px 272px 48px 256px);
+        -moz-image-region: rect(32px 336px 48px 320px);
 }
 toolbar[iconsize="small"] #calendar-show-todaypane-button:hover {
-        -moz-image-region: rect(16px 272px 32px 256px);
+        -moz-image-region: rect(16px 336px 32px 320px);
 }
 toolbar[iconsize="small"] #calendar-show-todaypane-button:hover:active {
 }
@@ -303,7 +304,6 @@ toolbar[iconsize="small"] #calendar-choose-date-button:hover:active {
 #calendar-multiweek-view-button[checked="true"]:hover {
     -moz-image-region: rect(72px 144px 96px 120px);
     border-color: ThreeDShadow ThreeDHighlight ThreeDHighlight ThreeDShadow;
-    padding: 5px 3px 3px 5px;
     color: ButtonText;
 }
 
@@ -337,7 +337,6 @@ toolbar[iconsize="small"] #calendar-multiweek-view-button[checked="true"]:hover 
 #calendar-month-view-button[checked="true"]:hover {
     -moz-image-region: rect(72px 168px 96px 144px);
     border-color: ThreeDShadow ThreeDHighlight ThreeDHighlight ThreeDShadow;
-    padding: 5px 3px 3px 5px;
     color: ButtonText;
 }
 
@@ -372,7 +371,6 @@ toolbar[iconsize="small"] #calendar-month-view-button[checked="true"]:hover {
 #calendar-week-view-button[checked="true"]:hover {
     -moz-image-region: rect(72px 120px 96px 96px);
     border-color: ThreeDShadow ThreeDHighlight ThreeDHighlight ThreeDShadow;
-    padding: 5px 3px 3px 5px;
     color: ButtonText;
 }
 
@@ -407,7 +405,6 @@ toolbar[iconsize="small"] #calendar-week-view-button[checked="true"]:hover {
 #calendar-day-view-button[checked="true"]:hover {
     -moz-image-region: rect(72px 96px 96px 72px);
     border-color: ThreeDShadow ThreeDHighlight ThreeDHighlight ThreeDShadow;
-    padding: 5px 3px 3px 5px;
     color: ButtonText;
 }
 
