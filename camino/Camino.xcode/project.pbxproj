@@ -1013,7 +1013,7 @@
 			isa = PBXFileReference;
 			lastKnownFileType = text.plist.strings;
 			name = English;
-			path = resources/localized/English.lproj/InfoPlist.strings;
+			path = generated/English.lproj/InfoPlist.strings;
 			refType = 2;
 			sourceTree = SOURCE_ROOT;
 		};
@@ -4004,7 +4004,7 @@
 				GCC_PREFIX_HEADER = src/includes/ChimeraPrefix.h;
 				GCC_PREPROCESSOR_DEFINITIONS = "OSTYPE=Darwin1.4 OSARCH=Darwin MOZILLA_INTERNAL_API=1";
 				HEADER_SEARCH_PATHS = "../dist/include/caps ../dist/include/txtsvc ../dist/include/editor ../dist/include/spellchecker ../dist/include/composer ../dist/include/exthandler ../dist/include/helperAppDlg ../dist/include/intl ../dist/include/pipboot ../dist/include/pipnss ../dist/include/webbrwsr ../dist/include/dom ../dist/include/nspr ../dist/include/string ../dist/include/uconv ../dist/include/necko ../dist/include/find ../dist/include/embed_base ../dist/include/commandhandler ../dist/include/windowwatcher ../dist/include/webshell ../dist/include/widget ../dist/include/uriloader ../dist/include/nkcache ../dist/include/docshell ../dist/include/profdirserviceprovider ../dist/include/layout ../dist/include/content ../dist/include/webbrowserpersist ../dist/include/pref ../dist/include/mimetype ../dist/include/shistory ../dist/include/history ../dist/include/view ../dist/include/gfx ../dist/include/xultmpl ../dist/include/xmlextras ../dist/include/htmlparser ../dist/include/locale ../dist/include/chardet ../dist/include/unicharutil ../dist/include/appcomps ../dist/include/chrome ../dist/include/xpcom ../dist/include/xpcom_obsolete ../dist/include/cookie ../dist/include/mork ../dist/include/js ../dist/include/xpconnect ../dist/include/ ../dist/public/nss ../ $(SYSTEM_DEVELOPER_DIR)/Headers/FlatCarbon $(LOCAL_LIBRARY_DIR)/Frameworks/SharedMenusCocoa.framework/Headers";
-				INFOPLIST_FILE = "Info-Camino.plist";
+				INFOPLIST_FILE = "generated/Info-Camino.plist";
 				INSTALL_PATH = "$(HOME)/Applications";
 				LIBRARY_SEARCH_PATHS = "../dist/bin ../dist/lib ../dist/Embed/components ../intl/unicharutil/util";
 				OTHER_CFLAGS = "-fshort-wchar";
@@ -6915,7 +6915,7 @@
 		3F44AD8705BDFB9F00CB4B08 = {
 			isa = PBXFileReference;
 			lastKnownFileType = text.xml;
-			path = "Info-Camino.plist";
+			path = "generated/Info-Camino.plist";
 			refType = 4;
 			sourceTree = "<group>";
 		};
@@ -7912,7 +7912,7 @@
 				GCC_PREFIX_HEADER = src/includes/ChimeraPrefix.h;
 				GCC_PREPROCESSOR_DEFINITIONS = "OSTYPE=Darwin1.4 OSARCH=Darwin _BUILD_STATIC_BIN MOZILLA_INTERNAL_API=1";
 				HEADER_SEARCH_PATHS = "../dist/include/caps ../dist/include/txtsvc ../dist/include/editor ../dist/include/spellchecker ../dist/include/composer ../dist/include/txtsvc ../dist/include/editor ../dist/include/spellchecker ../dist/include/helperAppDlg ../dist/include/exthandler ../dist/include/intl ../dist/include/pipboot ../dist/include/pipnss ../dist/include/webbrwsr ../dist/include/dom ../dist/include/nspr ../dist/include/string ../dist/include/uconv ../dist/include/necko ../dist/include/find ../dist/include/embed_base ../dist/include/commandhandler ../dist/include/windowwatcher ../dist/include/webshell ../dist/include/widget ../dist/include/uriloader ../dist/include/nkcache ../dist/include/docshell ../dist/include/profdirserviceprovider ../dist/include/layout ../dist/include/content ../dist/include/webbrowserpersist ../dist/include/pref ../dist/include/mimetype ../dist/include/shistory ../dist/include/history ../dist/include/view ../dist/include/gfx ../dist/include/xultmpl ../dist/include/xmlextras ../dist/include/htmlparser ../dist/include/locale ../dist/include/chardet ../dist/include/unicharutil ../dist/include/appcomps ../dist/include/chrome ../dist/include/xpcom ../dist/include/xpcom_obsolete ../dist/include/cookie ../dist/include/mork ../dist/include/js ../dist/include/xpconnect ../dist/include/ ../dist/public/nss $(SYSTEM_DEVELOPER_DIR)/Headers/FlatCarbon $(LOCAL_LIBRARY_DIR)/Frameworks/SharedMenusCocoa.framework/Headers";
-				INFOPLIST_FILE = "Info-CaminoStatic.plist";
+				INFOPLIST_FILE = "generated/Info-CaminoStatic.plist";
 				INSTALL_PATH = "$(HOME)/Applications";
 				LIBRARY_SEARCH_PATHS = "../dist/bin ../dist/lib ../dist/lib/components ../js/src/liveconnect ../js/src/xpconnect/loader";
 				OTHER_CFLAGS = "-fshort-wchar";
@@ -10901,7 +10901,7 @@
 		3F44AFC505BDFBA100CB4B08 = {
 			isa = PBXFileReference;
 			lastKnownFileType = text.xml;
-			path = "Info-CaminoStatic.plist";
+			path = "generated/Info-CaminoStatic.plist";
 			refType = 4;
 			sourceTree = "<group>";
 		};
@@ -17015,7 +17015,7 @@
 			isa = PBXFileReference;
 			lastKnownFileType = sourcecode.javascript;
 			name = "all-camino.js";
-			path = "resources/application/all-camino.js";
+			path = "generated/all-camino.js";
 			refType = 2;
 			sourceTree = SOURCE_ROOT;
 		};

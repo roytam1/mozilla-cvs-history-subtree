@@ -20,6 +20,8 @@
 #
 # Contributor(s):
 #  Brian Ryner <bryner@brianryner.com>
+#  Mark Mentovai <mark@moxienet.com>
+#  Smokey Ardisson <alqahira@ardisson.org>
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -49,6 +51,11 @@ DIRS = \
 
 APP_NAME	= Camino
 
+CM_APP_VERSION_FILE = $(srcdir)/config/version.txt
+CM_APP_VERSION := $(shell cat $(CM_APP_VERSION_FILE))
+CM_COPYRIGHT_YEAR_FILE = $(srcdir)/config/year.txt
+CM_COPYRIGHT_YEAR := $(shell cat $(CM_COPYRIGHT_YEAR_FILE))
+
 ifdef MOZ_DEBUG
 BUILDSTYLE	= Development
 else
@@ -65,7 +72,12 @@ else
 TARGET		= Camino
 endif
 
-GARBAGE_DIRS += build 
+GARBAGE_DIRS += build \
+	$(DIST)/$(APP_NAME).app \
+	IBPalette/build \
+	embed-replacements.tmp \
+	generated \
+	$(NULL)
 
 include $(topsrcdir)/config/rules.mk
 
@@ -83,18 +95,37 @@ ifneq ($(ABS_topsrcdir),$(MOZ_BUILD_ROOT))
 	ln -fs $(srcdir)/Info-*.plist .
 endif
 
-clean clobber repackage::
-	rm -rf $(DIST)/$(APP_NAME).app
-	rm -rf embed-replacements.tmp
+generated:
+	mkdir -p $@
+
+generated/English.lproj: generated
+	mkdir -p $@
+
+# Generate files which need to pull version numbers or dates from other files in the tree
+generated/all-camino.js: $(srcdir)/resources/application/all-camino.js.in $(CM_APP_VERSION_FILE) generated
+	sed -e "s/%CM_APP_VERSION%/$(CM_APP_VERSION)/" $< > $@
+
+generated/Info-Camino.plist: $(srcdir)/Info-Camino.plist.in $(CM_APP_VERSION_FILE) $(CM_COPYRIGHT_YEAR_FILE) generated
+	sed -e "s/%CM_APP_VERSION%/$(CM_APP_VERSION)/" \
+	    -e "s/%CM_COPYRIGHT_YEAR%/$(CM_COPYRIGHT_YEAR)/" $< > $@
+
+generated/Info-CaminoStatic.plist: $(srcdir)/Info-CaminoStatic.plist.in $(CM_APP_VERSION_FILE) $(CM_COPYRIGHT_YEAR_FILE) generated
+	sed -e "s/%CM_APP_VERSION%/$(CM_APP_VERSION)/" \
+	    -e "s/%CM_COPYRIGHT_YEAR%/$(CM_COPYRIGHT_YEAR)/" $< > $@
+
+generated/English.lproj/InfoPlist.strings: $(srcdir)/resources/localized/English.lproj/InfoPlist.strings.in $(CM_APP_VERSION_FILE) $(CM_COPYRIGHT_YEAR_FILE) generated/English.lproj
+	sed -e "s/%CM_APP_VERSION%/$(CM_APP_VERSION)/" \
+	    -e "s/%CM_COPYRIGHT_YEAR%/$(CM_COPYRIGHT_YEAR)/" $< | \
+	  iconv -f UTF-8 -t UTF-16 > $@
 
 # The embed-replacements rsync is done for both srcdir and objdir builds
 # to avoid adding CVS stuff to embed.jar.
-libs::
+libs:: generated/all-camino.js generated/Info-Camino.plist generated/Info-CaminoStatic.plist generated/English.lproj/InfoPlist.strings
 	rsync -aC --delete $(srcdir)/embed-replacements/ embed-replacements.tmp
 	cd embed-replacements.tmp && $(ZIP) -r0DX ../../dist/Embed/chrome/embed.jar *
 	$(PBBUILD) -project Camino.xcode -target $(TARGET) -buildstyle $(BUILDSTYLE) $(PBBUILD_SETTINGS)
 
-libs repackage::
+libs::
 	rsync -a --copy-unsafe-links $(XCODE_PRODUCT_DIR)/Camino.app/ $(DIST)/$(APP_NAME).app
 	$(RM) $(DIST)/$(APP_NAME).app/Contents/MacOS/components/camino.xpt
 	$(XPIDL_LINK) $(DIST)/$(APP_NAME).app/Contents/MacOS/camino.xpt $(DIST)/$(APP_NAME).app/Contents/MacOS/components/*.xpt
