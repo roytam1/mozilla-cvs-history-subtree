@@ -1,6 +1,6 @@
 #
-## hostname: sb-linux-tbox
-## uname: Linux sb-linux-tbox.build.mozilla.org 2.6.9-42.ELsmp #1 SMP Sat Aug 12 09:39:11 CDT 2006 i686 i686 i386 GNU/Linux
+## hostname: sb-newref-linux-tbox
+## uname: Linux sb-newref-linux-tbox.build.mozilla.org 2.6.18-8.el5 #1 SMP Thu Mar 15 19:57:35 EDT 2007 i686 athlon i386 GNU/Linux
 #
 
 #- tinder-config.pl - Tinderbox configuration file.
@@ -151,7 +151,7 @@ $moz_cvsroot   = ':ext:calbld@cvs.mozilla.org:/cvsroot';
 $ObjDir = 'lightning-obj';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'Lt-Release';
+$BuildNameExtra = 'Lt-Newref';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -202,8 +202,8 @@ $build_hour    = "3";
 $ssh_version   = "2";
 $ssh_user      = "calbld";
 #$ssh_server    = "stage.mozilla.org";
-$ftp_path      = "/home/ftp/pub/calendar/lightning/nightly";
-$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/calendar/lightning/nightly";
+$ftp_path      = "/home/ftp/pub/calendar/lightning/nightly/experimental/";
+$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/calendar/lightning/nightly/experimental";
 $tbox_ftp_path = "/home/ftp/pub/calendar/lightning/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/calendar/lightning/tinderbox-builds";
 $milestone     = "trunk";
