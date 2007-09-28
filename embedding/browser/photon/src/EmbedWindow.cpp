@@ -503,13 +503,15 @@ EmbedWindow::OnShowTooltip(PRInt32 aXCoords, PRInt32 aYCoords,
   PtWidget_t *window;
   window = NS_STATIC_CAST(PtWidget_t *, mainWidget->GetNativeData(NS_NATIVE_WINDOW));
 
-  PgExtentText(&extent, &pos, font, tipString, 0);
+  PgExtentText(&extent, NULL, font, tipString, 0);
   w = extent.lr.x - extent.ul.x + 1;
   h = extent.lr.y - extent.ul.y + 1;
 
   n = 0;
-  pos.x = aXCoords;
-  pos.y = aYCoords + 10; /* we add 10 so that we don't position it right under the mouse */
+  if (window)
+    PtGetAbsPosition( window, &pos.x, &pos.y);
+  pos.x += aXCoords;
+  pos.y += aYCoords + 10; /* we add 10 so that we don't position it right under the mouse */
 	dim.w = w + 6; dim.h = h + 6;
   PtSetArg(&args[n++], Pt_ARG_POS, &pos, 0);
   PtSetArg(&args[n++], Pt_ARG_DIM, &dim, 0);
@@ -522,7 +524,7 @@ EmbedWindow::OnShowTooltip(PRInt32 aXCoords, PRInt32 aYCoords,
   PtSetArg(&args[n++], Pt_ARG_POS, &pos, 0);
   PtSetArg(&args[n++], Pt_ARG_DIM, &dim, 0);
   PtSetArg(&args[n++], Pt_ARG_FLAGS, Pt_HIGHLIGHTED, -1 );
-  PtSetArg(&args[n++], Pt_ARG_FILL_COLOR, 0xfeffb1, 0);
+  PtSetArg(&args[n++], Pt_ARG_FILL_COLOR, Pg_BALLOONCOLOR, 0);
   PtSetArg(&args[n++], Pt_ARG_TEXT_FONT, font, 0);
   PtSetArg(&args[n++], Pt_ARG_TEXT_STRING, tipString, 0);
   PtSetArg(&args[n++], Pt_ARG_BASIC_FLAGS, Pt_STATIC_GRADIENT | Pt_TOP_OUTLINE | Pt_LEFT_OUTLINE |

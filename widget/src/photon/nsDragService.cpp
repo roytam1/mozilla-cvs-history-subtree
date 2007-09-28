@@ -146,7 +146,10 @@ nsDragService::InvokeDragSession (nsIDOMNode *aDOMNode,
 #endif
   nsBaseDragService::InvokeDragSession (aDOMNode, aArrayTransferables, aRegion, aActionType);
 
-  if(!aArrayTransferables) return NS_ERROR_INVALID_ARG;
+  if(!aArrayTransferables)
+    return NS_ERROR_INVALID_ARG;
+  if(!mDndWidget || !mDndEvent )
+    return NS_ERROR_FAILURE; // Otherwise we seg fault
 
   extern char* __progname;
   if (__progname && strcmp(__progname, "kwww") == 0) {

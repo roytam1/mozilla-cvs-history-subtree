@@ -161,6 +161,7 @@ NS_IMETHODIMP nsDrawingSurfacePh :: Lock( PRInt32 aX, PRInt32 aY,
 		// create an offscreen context to save the locked rectangle into
 		mLockDrawContext = ( PhDrawContext_t * )PdCreateOffscreenContext( format, aWidth, aHeight, Pg_OSC_MEM_PAGE_ALIGN );
 		if( !mLockDrawContext ) return NS_ERROR_FAILURE;
+	    PgSetDrawBufferSizeCx( mLockDrawContext, 0xffff );
 
 		dst_area.pos.x = dst_area.pos.y = 0;
 		dst_area.size.w = aWidth;
