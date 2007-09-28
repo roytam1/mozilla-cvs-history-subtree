@@ -52,8 +52,10 @@ $BuildAdministrator = 'build@mozilla.org';
 # Tests
 $CleanProfile             = 1;
 #$ResetHomeDirForTests     = 1;
-$ProductName              = 'Calendar';
-$MacOSProductName         = 'Calendar';
+#$ProductName              = 'Calendar';
+#$MacOSProductName         = 'Calendar';
+$ProductName              = 'Sunbird';
+$MacOSProductName         = 'Sunbird';
 $VendorName               = "";
 
 $RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
@@ -165,10 +167,11 @@ $BuildNameExtra = 'Sb-Release';
 
 # Configure only, don't build.
 #$ConfigureOnly = 0;
-%WGetFiles = (
-	      "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly/latest-mozilla1.8/sunbird-0.3.en-US.mac.dmg" =>
-	      "/builds/tinderbox/Sunbird-Mozilla1.8/Darwin_8.8.4_Depend/sunbird.dmg"
-	      );
+# only used in l10n tb
+#%WGetFiles = (
+#	      "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly/latest-mozilla1.8/sunbird-0.3.en-US.mac.dmg" =>
+#	      "/builds/tinderbox/Sunbird-Mozilla1.8/Darwin_8.8.4_Depend/sunbird.dmg"
+#	      );
 
 $BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Sunbird-Mozilla1.8/Darwin_8.8.4_Depend/sunbird.dmg";
 
@@ -185,8 +188,8 @@ $BuildTree  = 'Sunbird-Mozilla1.8';
 #$BuildTree  = 'MozillaTest';
 
 #$BuildName = '';
-$BuildTag = 'MOZILLA_1_8_BRANCH';
-#$BuildTag = 'SUNBIRD_0_5_RELEASE';
+#$BuildTag = 'MOZILLA_1_8_BRANCH';
+$BuildTag = 'SUNBIRD_0_7_BRANCH';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 

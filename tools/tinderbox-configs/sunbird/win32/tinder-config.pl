@@ -175,12 +175,13 @@ $BuildNameExtra = 'Sb-Release';
 
 # Configure only, don't build.
 #$ConfigureOnly = 0;
-%WGetFiles = (
-	      "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly/latest-mozilla1.8/sunbird-0.3.en-US.win32.zip" =>
-	      "/cygdrive/d/builds/tinderbox/Sunbird-Branch/WINNT_5.2_Depend/sunbird.zip",
-	      "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly/latest-mozilla1.8/sunbird-0.3.en-US.win32.installer.exe" =>
-	      "/cygdrive/d/builds/tinderbox/Sunbird-Branch/WINNT_5.2_Depend/sunbird-installer.exe"
-	      );
+# only used in l10n tb
+#%WGetFiles = (
+#	      "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly/latest-mozilla1.8/sunbird-0.3.en-US.win32.zip" =>
+#	      "/cygdrive/d/builds/tinderbox/Sunbird-Branch/WINNT_5.2_Depend/sunbird.zip",
+#	      "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly/latest-mozilla1.8/sunbird-0.3.en-US.win32.installer.exe" =>
+#	      "/cygdrive/d/builds/tinderbox/Sunbird-Branch/WINNT_5.2_Depend/sunbird-installer.exe"
+#	      );
 
 $BuildLocalesArgs = "ZIP_IN=/cygdrive/d/builds/tinderbox/Sunbird-Branch/WINNT_5.2_Depend/sunbird.zip WIN32_INSTALLER_IN=/cygdrive/d/builds/tinderbox/Sunbird-Trunk/WINNT_5.2_Depend/sunbird-installer.exe";
 
@@ -197,8 +198,8 @@ $BuildLocalesArgs = "ZIP_IN=/cygdrive/d/builds/tinderbox/Sunbird-Branch/WINNT_5.
 $BuildTree  = 'Sunbird-Mozilla1.8';
 
 #$BuildName = '';
-$BuildTag = 'MOZILLA_1_8_BRANCH';
-#$BuildTag = 'SUNBIRD_0_5_RELEASE';
+#$BuildTag = 'MOZILLA_1_8_BRANCH';
+$BuildTag = 'SUNBIRD_0_7_BRANCH';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 

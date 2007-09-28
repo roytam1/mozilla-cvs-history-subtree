@@ -171,10 +171,11 @@ $BuildNameExtra = 'Sb-Release';
 
 # Configure only, don't build.
 #$ConfigureOnly = 0;
-%WGetFiles = (
-	      "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly/latest-mozilla1.8/sunbird-0.3.en-US.linux-i686.tar.bz2" =>
-	      "/builds/tinderbox/Sb-Branch/Linux_2.4.21-32.0.1.EL_Depend/sunbird.tar.bz2"
-	      );
+# only used in l10n tb
+#%WGetFiles = (
+#	      "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly/latest-mozilla1.8/sunbird-0.3.en-US.linux-i686.tar.bz2" =>
+#	      "/builds/tinderbox/Sb-Branch/Linux_2.4.21-32.0.1.EL_Depend/sunbird.tar.bz2"
+#	      );
 
 $BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Sb-Branch/Linux_2.4.21-32.0.1.EL_Depend/sunbird.tar.bz2";
 
@@ -190,8 +191,8 @@ $BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Sb-Branch/Linux_2.4.21-32.0.1.EL_D
 $BuildTree  = 'Sunbird-Mozilla1.8';
 
 #$BuildName = '';
-$BuildTag = 'MOZILLA_1_8_BRANCH';
-#$BuildTag = 'SUNBIRD_0_5_RELEASE';
+#$BuildTag = 'MOZILLA_1_8_BRANCH';
+$BuildTag = 'SUNBIRD_0_7_BRANCH';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
