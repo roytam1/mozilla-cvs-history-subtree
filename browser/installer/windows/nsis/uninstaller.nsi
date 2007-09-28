@@ -88,6 +88,7 @@ VIAddVersionKey "FileDescription" "${BrandShortName} Helper"
 
 !insertmacro GetLongPath
 !insertmacro AddHandlerValues
+!insertmacro CleanVirtualStore
 !insertmacro RegCleanMain
 !insertmacro RegCleanUninstall
 !insertmacro UpdateUninstallLog
@@ -97,6 +98,7 @@ VIAddVersionKey "FileDescription" "${BrandShortName} Helper"
 !insertmacro un.GetLongPath
 !insertmacro un.RegCleanMain
 !insertmacro un.RegCleanUninstall
+!insertmacro un.CleanVirtualStore
 !insertmacro un.CloseApp
 !insertmacro un.GetSecondInstallPath
 
@@ -255,6 +257,10 @@ Section "Uninstall"
     ; Remove the installation directory if it is empty
     ${RemoveDir} "$INSTDIR"
   ${EndIf}
+
+  ; Remove files that may be left behind by the application in the
+  ; VirtualStore directory.
+  ${un.CleanVirtualStore}
 
   ; Refresh desktop icons otherwise the start menu internet item won't be
   ; removed and other ugly things will happen like recreation of the registry
