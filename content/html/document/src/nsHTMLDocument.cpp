@@ -1827,23 +1827,22 @@ nsHTMLDocument::MatchAnchors(nsIContent *aContent, PRInt32 aNamespaceID,
                              nsIAtom* aAtom, const nsAString& aData)
 {
   nsINodeInfo *ni = aContent->GetNodeInfo();
-
-  if (ni) {
-    NS_ASSERTION(aContent->IsInDoc(),
-                 "This method should never be called on content nodes that "
-                 "are not in a document!");
+  nsIDocument *doc = aContent->GetCurrentDoc();
+  NS_WARN_IF_FALSE(doc,
+                   "This method should not be called on content nodes that "
+                   "are not in a document!");
+  if (ni && doc) {
 #ifdef DEBUG
     {
       nsCOMPtr<nsIHTMLDocument> htmldoc =
-        do_QueryInterface(aContent->GetCurrentDoc());
+        do_QueryInterface(doc);
       NS_ASSERTION(htmldoc,
                    "Huh, how did this happen? This should only be used with "
                    "HTML documents!");
     }
 #endif
 
-    if (ni->Equals(nsHTMLAtoms::a,
-                   aContent->GetCurrentDoc()->GetDefaultNamespaceID())) {
+    if (ni->Equals(nsHTMLAtoms::a, doc->GetDefaultNamespaceID())) {
       return aContent->HasAttr(kNameSpaceID_None, nsHTMLAtoms::name);
     }
   }
