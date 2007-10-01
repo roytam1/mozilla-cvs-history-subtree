@@ -47,6 +47,7 @@
 #include "nsInterfaceHashtable.h"
 #include "nsRefPtrHashtable.h"
 #include "nsURIHashKey.h"
+#include "plevent.h"
 
 class nsIContent;
 class nsIXPConnectWrappedJS;
@@ -66,7 +67,7 @@ class nsBindingManager : public nsIBindingManager,
   NS_DECL_ISUPPORTS
 
 public:
-  nsBindingManager();
+  nsBindingManager(nsIDocument* aDocument);
   ~nsBindingManager();
 
   virtual nsXBLBinding* GetBinding(nsIContent* aContent);
@@ -141,6 +142,26 @@ public:
                               nsIContent* aContainer,
                               nsIContent* aChild,
                               PRInt32 aIndexInContainer);
+  virtual void DocumentWillBeDestroyed(nsIDocument* aDocument);
+
+  struct ProcessAttachedQueueEvent;
+  friend struct ProcessAttachedQueueEvent;
+
+  struct ProcessAttachedQueueEvent : public PLEvent {
+    ProcessAttachedQueueEvent(nsBindingManager* aBindingManager);
+    ~ProcessAttachedQueueEvent();
+
+    void HandleEvent() {
+      mBindingManager->DoProcessAttachedQueue();
+    }
+
+    nsRefPtr<nsBindingManager> mBindingManager;
+  };
+
+  // Notify the binding manager when an outermost update begins and
+  // ends.  The end method can execute script.
+  void BeginOutermostUpdate();
+  void EndOutermostUpdate();
 
 protected:
   nsresult GetXBLChildNodesInternal(nsIContent* aContent,
@@ -155,6 +176,10 @@ protected:
   }
 
   nsresult GetNestedInsertionPoint(nsIContent* aParent, nsIContent* aChild, nsIContent** aResult);
+
+  // Same as ProcessAttachedQueue, but also nulls out
+  // mProcessAttachedQueueEvent
+  void DoProcessAttachedQueue();
 
 // MEMBER VARIABLES
 protected: 
@@ -203,7 +228,14 @@ protected:
 
   // A queue of binding attached event handlers that are awaiting execution.
   nsVoidArray mAttachedStack;
-  PRBool mProcessingAttachedStack;
+  PRPackedBool mProcessingAttachedStack;
+  PRPackedBool mProcessOnEndUpdate;  
+
+  // Our posted event to process the attached queue, if any
+  ProcessAttachedQueueEvent* mProcessAttachedQueueEvent;
+
+  // Our document.  This is a weak ref; the document owns us
+  nsIDocument* mDocument;
 };
 
 PRBool PR_CALLBACK ReleaseInsertionPoint(void* aElement, void* aData);
