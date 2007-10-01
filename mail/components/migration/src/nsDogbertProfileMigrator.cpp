@@ -83,7 +83,7 @@ static NS_DEFINE_CID(kStringBundleServiceCID, NS_STRINGBUNDLESERVICE_CID);
 #endif
 #endif
 
-#if defined(XP_UNIX) || defined(XP_BEOS) && !defined(XP_MACOSX)
+#if (defined(XP_UNIX) || defined(XP_BEOS)) && !defined(XP_MACOSX)
 #define PREF_FILE_NAME_IN_4x      "preferences.js"
 #define IMAP_MAIL_FILTER_FILE_NAME_IN_4x "mailrule"
 #define POP_MAIL_FILTER_FILE_NAME_IN_4x "mailrule"
