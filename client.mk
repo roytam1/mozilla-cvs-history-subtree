@@ -247,7 +247,6 @@ MODULES_suite :=                                \
   $(MODULES_toolkit)                            \
   mozilla/directory/xpcom                       \
   mozilla/mailnews                              \
-  mozilla/themes                                \
   mozilla/suite                                 \
   mozilla/other-licenses/7zstub/seamonkey       \
   $(NULL)
@@ -1037,14 +1036,12 @@ endif
 
 CONFIG_STATUS_DEPS := \
 	$(TOPSRCDIR)/configure \
-	$(TOPSRCDIR)/allmakefiles.sh \
 	$(TOPSRCDIR)/.mozconfig.mk \
 	$(wildcard $(TOPSRCDIR)/nsprpub/configure) \
 	$(wildcard $(TOPSRCDIR)/directory/c-sdk/configure) \
-	$(wildcard $(TOPSRCDIR)/mailnews/makefiles) \
-	$(wildcard $(TOPSRCDIR)/themes/makefiles) \
 	$(wildcard $(TOPSRCDIR)/config/milestone.txt) \
 	$(wildcard $(TOPSRCDIR)/config/chrome-versions.sh) \
+  $(wildcard $(addsuffix confvars.sh,$(wildcard */))) \
 	$(NULL)
 
 # configure uses the program name to determine @srcdir@. Calling it without

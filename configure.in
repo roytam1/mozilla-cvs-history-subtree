@@ -4102,7 +4102,7 @@ MOZ_BRANDING_DIRECTORY=
 MOZ_CALENDAR=
 MOZ_DBGRINFO_MODULES=
 MOZ_ENABLE_CANVAS=1
-MOZ_EXTENSIONS_ALL=" wallet xml-rpc help venkman inspector irc typeaheadfind gnomevfs sroaming datetime finger cview layout-debug tasks sql xforms schema-validation reporter"
+MOZ_EXTENSIONS_ALL=" wallet xml-rpc venkman inspector irc typeaheadfind gnomevfs sroaming datetime finger cview layout-debug tasks sql xforms schema-validation reporter"
 MOZ_FEEDS=1
 MOZ_IMG_DECODERS_DEFAULT="png gif jpeg bmp xbm icon"
 MOZ_IMG_ENCODERS_DEFAULT="png jpeg"
@@ -4163,6 +4163,7 @@ MOZ_XSLT_STANDALONE=
 MOZ_XTF=1
 MOZ_XUL=1
 MOZ_XUL_APP=1
+MOZ_ZIPWRITER=1
 NS_PRINTING=1
 NECKO_COOKIES=1
 NECKO_DISK_CACHE=1
@@ -4281,6 +4282,7 @@ basic)
   MOZ_XPFE_COMPONENTS=
   MOZ_XPINSTALL=
   MOZ_XTF=
+  MOZ_ZIPWRITER=
   NECKO_DISK_CACHE=
   NECKO_PROTOCOLS_DEFAULT="about data http file res"
   NECKO_SMALL_BUFFERS=1
@@ -4331,6 +4333,7 @@ minimal)
   MOZ_XPINSTALL=
   MOZ_XTF=
   MOZ_XUL=
+  MOZ_ZIPWRITER=
   MOZ_RDF=
   NECKO_DISK_CACHE=
   NECKO_PROTOCOLS_DEFAULT="about data http file res"
@@ -4771,26 +4774,6 @@ AC_DEFINE_UNQUOTED(MOZ_DISTRIBUTION_ID,"$MOZ_DISTRIBUTION_ID")
 AC_SUBST(MOZ_DISTRIBUTION_ID)
 
 dnl ========================================================
-dnl = FreeType2
-dnl = Enable freetype by default if building against X11 
-dnl = and freetype is available
-dnl ========================================================
-MOZ_ARG_DISABLE_BOOL(freetype2,
-[  --disable-freetype2     Disable FreeType2 support ],
-    MOZ_ENABLE_FREETYPE2=,
-    MOZ_ENABLE_FREETYPE2=1)
-
-if test "$MOZ_ENABLE_FREETYPE2" && test -z "$MOZ_X11" -o -z "$_HAVE_FREETYPE2"; then
-    AC_MSG_ERROR([Cannot enable FreeType2 support for non-X11 toolkits or if FreeType2 is not detected.])
-fi
-
-if test "$MOZ_ENABLE_FREETYPE2"; then
-    AC_DEFINE(MOZ_ENABLE_FREETYPE2)
-    _NON_GLOBAL_ACDEFINES="$_NON_GLOBAL_ACDEFINES MOZ_ENABLE_FREETYPE2"
-fi
-AC_SUBST(MOZ_ENABLE_FREETYPE2)
-
-dnl ========================================================
 dnl = Xft
 dnl ========================================================
 if test "$MOZ_ENABLE_GTK2"; then
@@ -4804,10 +4787,6 @@ MOZ_ARG_DISABLE_BOOL(xft,
 
 if test "$MOZ_ENABLE_XFT" && test -z "$MOZ_ENABLE_GTK2"; then
     AC_MSG_ERROR([Cannot enable XFT support for non-GTK2 toolkits.])
-fi
-
-if test "$MOZ_ENABLE_XFT" && test "$MOZ_ENABLE_FREETYPE2"; then
-    AC_MSG_ERROR([Cannot enable XFT and FREETYPE2 at the same time.])
 fi
 
 if test "$MOZ_ENABLE_XFT"
@@ -5439,11 +5418,6 @@ if test -z "$MOZ_JSDEBUGGER" && test `echo "$MOZ_EXTENSIONS" | grep -c venkman` 
     MOZ_EXTENSIONS=`echo $MOZ_EXTENSIONS | sed -e 's|venkman||'`
 fi
 
-if test "$MOZ_XUL_APP" && test `echo "$MOZ_EXTENSIONS" | grep -c help` -ne 0; then
-    AC_MSG_WARN([Cannot build old help extension with MOZ_XUL_APP set. Removing help from MOZ_EXTENSIONS.])
-    MOZ_EXTENSIONS=`echo $MOZ_EXTENSIONS | sed -e 's|help||'`
-fi
-
 dnl This might be temporary: build tridentprofile only on Windows
 if test `echo "$MOZ_EXTENSIONS" | grep -c tridentprofile` -ne 0 && test "$OS_ARCH" != "WINNT"; then
     AC_MSG_WARN([tridentprofile extension works only on Windows at this time. Removing tridentprofile from MOZ_EXTENSIONS.])
@@ -5913,6 +5887,15 @@ if test -n "$MOZ_URL_CLASSIFIER"; then
     AC_DEFINE(MOZ_URL_CLASSIFIER)
 fi
 AC_SUBST(MOZ_URL_CLASSIFIER)
+
+dnl ========================================================
+dnl = Disable zipwriter
+dnl ========================================================
+MOZ_ARG_DISABLE_BOOL(zipwriter,
+[  --disable-zipwriter             Disable zipwriter component],
+    MOZ_ZIPWRITER=,
+    MOZ_ZIPWRITER=1 )
+AC_SUBST(MOZ_ZIPWRITER)
 
 dnl ========================================================
 dnl = Enable Ultrasparc specific optimizations for JS
@@ -6761,8 +6744,8 @@ MOZ_ARG_ENABLE_BOOL(static,
     BUILD_STATIC_LIBS=1,
     BUILD_STATIC_LIBS=)
 
-dnl Disable libxul in debug builds.
-if test -n "$MOZ_DEBUG"; then
+dnl Disable libxul in debug builds, but not for xulrunner.
+if test -n "$MOZ_DEBUG" -a "$MOZ_BUILD_APP" != "xulrunner"; then
    MOZ_ENABLE_LIBXUL=
 fi
 
