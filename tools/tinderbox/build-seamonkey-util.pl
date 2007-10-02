@@ -1410,7 +1410,7 @@ sub get_profile_dir {
           $profile_dir = "$build_dir/." . lc($profile_product_name) . "/";
         }
 
-        ($profile_dir) = <$profile_dir . "*" . $Settings::MozProfileName . "*">;
+        ($profile_dir) = glob($profile_dir . "*" . $Settings::MozProfileName . "*");
     }
 
     return $profile_dir;
