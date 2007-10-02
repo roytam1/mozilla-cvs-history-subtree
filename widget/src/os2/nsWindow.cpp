@@ -1,6 +1,6 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
- *
- * ***** BEGIN LICENSE BLOCK *****
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* vim: set sw=2 sts=2 et cin: */
+/* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
  * The contents of this file are subject to the Mozilla Public License Version
@@ -2668,378 +2668,340 @@ void nsWindow::ConstrainZLevel(HWND *aAfter) {
 
 
 // 'Window procedure'
-PRBool nsWindow::ProcessMessage( ULONG msg, MPARAM mp1, MPARAM mp2, MRESULT &rc)
+PRBool nsWindow::ProcessMessage(ULONG msg, MPARAM mp1, MPARAM mp2, MRESULT &rc)
 {
-    PRBool result = PR_FALSE; // call the default window procedure
+  PRBool result = PR_FALSE; // call the default window procedure
 
-    switch (msg) {
-//#if 0
-        case WM_COMMAND: // fire off menu selections
-        {
-           nsMenuEvent event(PR_TRUE, NS_MENU_SELECTED, this);
-           event.mCommand = SHORT1FROMMP(mp1);
-           InitEvent(event);
-           result = DispatchWindowEvent(&event);
-           NS_RELEASE(event.widget);
+  switch (msg) {
+    case WM_COMMAND: // fire off menu selections
+      {
+        nsMenuEvent event(PR_TRUE, NS_MENU_SELECTED, this);
+        event.mCommand = SHORT1FROMMP(mp1);
+        InitEvent(event);
+        result = DispatchWindowEvent(&event);
+        NS_RELEASE(event.widget);
+      }
+
+    case WM_CONTROL: // remember this is resent to the orginator...
+      result = OnControl(mp1, mp2);
+      break;
+
+    case WM_CLOSE:  // close request
+      mWindowState |= nsWindowState_eClosing;
+      DispatchStandardEvent(NS_XUL_CLOSE );
+      result = PR_TRUE; // abort window closure
+      break;
+
+    case WM_DESTROY: // clean up.
+      OnDestroy();
+      result = PR_TRUE;
+      break;
+
+    case WM_PAINT:
+      result = OnPaint();
+      break;
+
+    case WM_TRANSLATEACCEL:
+      {
+        PQMSG pQmsg = (PQMSG)mp1;
+        if (pQmsg->msg == WM_CHAR) {
+          LONG mp1 = (LONG)pQmsg->mp1;
+          LONG mp2 = (LONG)pQmsg->mp2;
+
+          // If we have a shift+enter combination, return false
+          // immediately.  OS/2 considers the shift+enter
+          // combination an accelerator and will translate it into
+          // a WM_OPEN message.  When this happens we do not get a
+          // WM_CHAR for the down transition of the enter key when
+          // shift is also pressed and OnKeyDown will not be called.
+          if (((SHORT1FROMMP(mp1) & (KC_VIRTUALKEY | KC_SHIFT)) &&
+               (SHORT2FROMMP(mp2) == VK_ENTER)) ||
+              // Let Mozilla handle standalone F10, not the OS
+              ((SHORT1FROMMP(mp1) & KC_VIRTUALKEY) &&
+               ((SHORT1FROMMP(mp1) & (KC_SHIFT | KC_ALT | KC_CTRL)) == 0) &&
+               (SHORT2FROMMP(mp2) == VK_F10)) ||
+              // Let Mozilla handle standalone F1, not the OS
+              ((SHORT1FROMMP(mp1) & KC_VIRTUALKEY) &&
+               ((SHORT1FROMMP(mp1) & (KC_SHIFT | KC_ALT | KC_CTRL)) == 0) &&
+               (SHORT2FROMMP(mp2) == VK_F1)) ||
+              // Let Mozilla handle standalone Alt, not the OS
+              ((SHORT1FROMMP(mp1) & KC_KEYUP) && (SHORT1FROMMP(mp1) & KC_LONEKEY) &&
+               (SHORT2FROMMP(mp2) == VK_ALT)) ||
+              // Let Mozilla handle Alt+Enter, not the OS
+              ((SHORT1FROMMP(mp1) & (KC_VIRTUALKEY | KC_ALT)) &&
+               (SHORT2FROMMP(mp2) == VK_NEWLINE))
+             ) {
+            return(PR_TRUE);
+          }
         }
-#if 0
-          USHORT usSrc = SHORT1FROMMP( mp2);
-          if( usSrc == CMDSRC_MENU || usSrc == CMDSRC_ACCELERATOR)
-            result = OnMenuClick( SHORT1FROMMP(mp1));
-          break;
+      }
+      break;
+
+    case WM_CHAR:
+      result = OnKey(mp1, mp2);
+      break;
+
+    case WM_QUERYCONVERTPOS:
+      {
+        PRECTL pCursorRect = (PRECTL)mp1;
+        nsCompositionEvent event(PR_TRUE, NS_COMPOSITION_QUERY, this);
+        nsPoint point;
+        point.x = 0;
+        point.y = 0;
+        InitEvent(event,&point);
+        DispatchWindowEvent(&event);
+        if ((event.theReply.mCursorPosition.x) ||
+            (event.theReply.mCursorPosition.y)) {
+          pCursorRect->xLeft = event.theReply.mCursorPosition.x + 1;
+          pCursorRect->xRight = pCursorRect->xLeft + event.theReply.mCursorPosition.width - 1;
+          pCursorRect->yTop = GetClientHeight() - event.theReply.mCursorPosition.y;
+          pCursorRect->yBottom = pCursorRect->yTop - event.theReply.mCursorPosition.height;
+
+          point.x = 0;
+          point.y = 0;
+          rc = (MRESULT)QCP_CONVERT;
+        } else {
+          rc = (MRESULT)QCP_NOCONVERT;
         }
+      }
+      result = PR_TRUE;
+      break;
 
-        case WM_INITMENU:
-          result = OnActivateMenu( HWNDFROMMP(mp2), TRUE);
-          break;
+    // Mouseclicks: we don't dispatch CLICK events because they just cause
+    // trouble: gecko seems to expect EITHER buttondown/up OR click events
+    // and so that's what we give it.
 
-        case WM_MENUEND:
-          result = OnActivateMenu( HWNDFROMMP(mp2), FALSE);
-          break;
-#endif
+    case WM_BUTTON1DOWN:
+      if (!mIsScrollBar)
+        WinSetCapture(HWND_DESKTOP, mWnd);
+      result = DispatchMouseEvent(NS_MOUSE_LEFT_BUTTON_DOWN, mp1, mp2);
+      // there's no need to clear this on button-up
+      gLastButton1Down.x = XFROMMP(mp1);
+      gLastButton1Down.y = YFROMMP(mp1);
+      WinSetActiveWindow(HWND_DESKTOP, mWnd);
+      result = PR_TRUE;
+      break;
+    case WM_BUTTON1UP:
+      if (!mIsScrollBar)
+        WinSetCapture(HWND_DESKTOP, 0); // release
+      result = DispatchMouseEvent(NS_MOUSE_LEFT_BUTTON_UP, mp1, mp2);
+      break;
+    case WM_BUTTON1DBLCLK:
+      result = DispatchMouseEvent(NS_MOUSE_LEFT_DOUBLECLICK, mp1, mp2);
+      break;
 
-#if 0  // Tooltips appear to be gone
-        case WMU_SHOW_TOOLTIP:
-        {
-          nsTooltipEvent event(PR_TRUE, NS_SHOW_TOOLTIP, this);
-          InitEvent( event );
-          event.tipIndex = LONGFROMMP(mp1);
-          result = DispatchWindowEvent(&event);
-          NS_RELEASE(event.widget);
-          break;
+    case WM_BUTTON2DOWN:
+      if (!mIsScrollBar)
+        WinSetCapture(HWND_DESKTOP, mWnd);
+      result = DispatchMouseEvent(NS_MOUSE_RIGHT_BUTTON_DOWN, mp1, mp2);
+      break;
+    case WM_BUTTON2UP:
+      if (!mIsScrollBar)
+        WinSetCapture(HWND_DESKTOP, 0); // release
+      result = DispatchMouseEvent(NS_MOUSE_RIGHT_BUTTON_UP, mp1, mp2);
+      break;
+    case WM_BUTTON2DBLCLK:
+      result = DispatchMouseEvent(NS_MOUSE_RIGHT_DOUBLECLICK, mp1, mp2);
+      break;
+
+    case WM_CONTEXTMENU:
+      if (SHORT2FROMMP(mp2) == TRUE) {
+        HWND hwndCurrFocus = WinQueryFocus(HWND_DESKTOP);
+        if (hwndCurrFocus != mWnd) {
+          WinSendMsg(hwndCurrFocus, msg, mp1, mp2);
+        } else {
+          result = DispatchMouseEvent(NS_CONTEXTMENU_KEY, mp1, mp2);
         }
+      } else {
+        result = DispatchMouseEvent(NS_CONTEXTMENU, mp1, mp2);
+      }
+      break;
 
-        case WMU_HIDE_TOOLTIP:
-          result = DispatchStandardEvent( NS_HIDE_TOOLTIP );
-          break;
-#endif
-        case WM_CONTROL: // remember this is resent to the orginator...
-          result = OnControl( mp1, mp2);
-          break;
+      // if MB1 & MB2 are both pressed, perform a copy or paste;
+      // see how far the mouse has moved since MB1-down to determine
+      // the operation (this really ought to look for selected content)
+    case WM_CHORD:
+      if (WinGetKeyState(HWND_DESKTOP, VK_BUTTON1) &
+          WinGetKeyState(HWND_DESKTOP, VK_BUTTON2) &
+          0x8000) {
+        PRBool isCopy = PR_FALSE;
+        if (abs(XFROMMP(mp1) - gLastButton1Down.x) >
+              (WinQuerySysValue(HWND_DESKTOP, SV_CXMOTIONSTART) / 2) ||
+            abs(YFROMMP(mp1) - gLastButton1Down.y) >
+              (WinQuerySysValue(HWND_DESKTOP, SV_CYMOTIONSTART) / 2))
+          isCopy = PR_TRUE;
 
-        case WM_CLOSE:  // close request
-          mWindowState |= nsWindowState_eClosing;
-          DispatchStandardEvent( NS_XUL_CLOSE );
-          result = PR_TRUE; // abort window closure
-          break;
+        nsKeyEvent event(PR_TRUE, NS_KEY_PRESS, this);
+        nsPoint point(0,0);
+        InitEvent(event, &point);
 
-        case WM_DESTROY:
-            // clean up.
-            OnDestroy();
+        event.keyCode = NS_VK_INSERT;
+        if (isCopy) {
+          event.isShift = PR_FALSE;
+          event.isControl = PR_TRUE;
+        } else {
+          event.isShift = PR_TRUE;
+          event.isControl = PR_FALSE;
+        }
+        event.isAlt = PR_FALSE;
+        event.isMeta = PR_FALSE;
+        event.eventStructType = NS_KEY_EVENT;
+        event.charCode = 0;
+        result = DispatchWindowEvent(&event);
+      }
+      break;
+
+    case WM_BUTTON3DOWN:
+      result = DispatchMouseEvent(NS_MOUSE_MIDDLE_BUTTON_DOWN, mp1, mp2);
+      break;
+    case WM_BUTTON3UP:
+      result = DispatchMouseEvent(NS_MOUSE_MIDDLE_BUTTON_UP, mp1, mp2);
+      break;
+    case WM_BUTTON3DBLCLK:
+      result = DispatchMouseEvent(NS_MOUSE_MIDDLE_DOUBLECLICK, mp1, mp2);
+      break;
+
+    case WM_MOUSEMOVE:
+      {
+        static POINTL ptlLastPos = { -1, -1 };
+        // See if mouse has actually moved.
+        if (ptlLastPos.x == (SHORT)SHORT1FROMMP(mp1) &&
+            ptlLastPos.y == (SHORT)SHORT2FROMMP(mp1)) {
+          return PR_TRUE;
+        } else {
+          // Yes, remember new position.
+          ptlLastPos.x = (SHORT)SHORT1FROMMP(mp1);
+          ptlLastPos.y = (SHORT)SHORT2FROMMP(mp1);
+        }
+      }
+      result = DispatchMouseEvent(NS_MOUSE_MOVE, mp1, mp2);
+      // don't propogate mouse move or the OS will change the pointer
+      if (!mIsScrollBar)
+        result = PR_TRUE;
+      break;
+    case WM_MOUSEENTER:
+      result = DispatchMouseEvent(NS_MOUSE_ENTER, mp1, mp2);
+      break;
+    case WM_MOUSELEAVE:
+      result = DispatchMouseEvent(NS_MOUSE_EXIT, mp1, mp2);
+      break;
+
+    case WM_APPCOMMAND:
+      {
+        PRUint32 appCommand = GET_APPCOMMAND_LPARAM(mp2);
+        switch (appCommand) {
+          case APPCOMMAND_BROWSER_BACKWARD:
+          case APPCOMMAND_BROWSER_FORWARD:
+          case APPCOMMAND_BROWSER_REFRESH:
+          case APPCOMMAND_BROWSER_STOP:
+            DispatchAppCommandEvent(appCommand);
+            // tell the driver that we handled the event
+            rc = (MRESULT)1;
             result = PR_TRUE;
             break;
 
-        case WM_PAINT:
-            result = OnPaint();
+          default:
+            rc = (MRESULT)0;
+            result = PR_FALSE;
             break;
-
-        case WM_TRANSLATEACCEL:
-            {
-              PQMSG pQmsg = (PQMSG)mp1;
-              if (pQmsg->msg == WM_CHAR) 
-              {
-                LONG mp1 = (LONG)pQmsg->mp1;
-                LONG mp2 = (LONG)pQmsg->mp2;
-
-                // If we have a shift+enter combination, return false
-                // immediately.  OS/2 considers the shift+enter
-                // combination an accelerator and will translate it into
-                // a WM_OPEN message.  When this happens we do not get a
-                // WM_CHAR for the down transition of the enter key when
-                // shift is also pressed and OnKeyDown will not be called.
-                if (((SHORT1FROMMP(mp1) & (KC_VIRTUALKEY | KC_SHIFT)) &&
-                     (SHORT2FROMMP(mp2) == VK_ENTER)) ||
-                // Let Mozilla handle standalone F10, not the OS
-                    ((SHORT1FROMMP(mp1) & KC_VIRTUALKEY) &&    
-                     ((SHORT1FROMMP(mp1) & (KC_SHIFT | KC_ALT | KC_CTRL)) == 0) &&
-                     (SHORT2FROMMP(mp2) == VK_F10)) ||
-                // Let Mozilla handle standalone F1, not the OS
-                    ((SHORT1FROMMP(mp1) & KC_VIRTUALKEY) &&    
-                     ((SHORT1FROMMP(mp1) & (KC_SHIFT | KC_ALT | KC_CTRL)) == 0) &&
-                     (SHORT2FROMMP(mp2) == VK_F1)) ||
-                // Let Mozilla handle standalone Alt, not the OS
-                    ((SHORT1FROMMP(mp1) & KC_KEYUP) && (SHORT1FROMMP(mp1) & KC_LONEKEY) &&
-                     (SHORT2FROMMP(mp2) == VK_ALT)) ||
-                // Let Mozilla handle Alt+Enter, not the OS
-                    ((SHORT1FROMMP(mp1) & (KC_VIRTUALKEY | KC_ALT)) &&
-                     (SHORT2FROMMP(mp2) == VK_NEWLINE)) 
-                   )
-                {
-                  return(PR_TRUE);
-                }
-              }
-            }
-            break;
-
-        case WM_CHAR:
-            result = OnKey( mp1, mp2);
-            break;
-
-        case WM_QUERYCONVERTPOS:
-          {
-            PRECTL pCursorRect = (PRECTL)mp1;
-            nsCompositionEvent event(PR_TRUE, NS_COMPOSITION_QUERY, this);
-            nsPoint point;
-            point.x = 0;
-            point.y = 0;
-            InitEvent(event,&point);
-            DispatchWindowEvent(&event);
-            if ((event.theReply.mCursorPosition.x) || 
-                (event.theReply.mCursorPosition.y)) 
-            {
-              pCursorRect->xLeft = event.theReply.mCursorPosition.x + 1;
-              pCursorRect->xRight = pCursorRect->xLeft + event.theReply.mCursorPosition.width - 1;
-              pCursorRect->yTop = GetClientHeight() - event.theReply.mCursorPosition.y;
-              pCursorRect->yBottom = pCursorRect->yTop - event.theReply.mCursorPosition.height;
-
-              point.x = 0;
-              point.y = 0;
-
-              rc = (MRESULT)QCP_CONVERT;
-            }
-            else
-              rc = (MRESULT)QCP_NOCONVERT;
-
-            result = PR_TRUE;
-            break;
-          }
-
-        // Mouseclicks: we don't dispatch CLICK events because they just cause
-        // trouble: gecko seems to expect EITHER buttondown/up OR click events
-        // and so that's what we give it.
-    
-        case WM_BUTTON1DOWN:
-          if (!mIsScrollBar)
-            WinSetCapture( HWND_DESKTOP, mWnd);
-          result = DispatchMouseEvent( NS_MOUSE_LEFT_BUTTON_DOWN, mp1, mp2);
-            // there's no need to clear this on button-up
-          gLastButton1Down.x = XFROMMP(mp1);
-          gLastButton1Down.y = YFROMMP(mp1);
-          WinSetActiveWindow(HWND_DESKTOP, mWnd);
-          result = PR_TRUE;
-          break;
-        case WM_BUTTON1UP:
-          if (!mIsScrollBar)
-            WinSetCapture( HWND_DESKTOP, 0); // release
-          result = DispatchMouseEvent( NS_MOUSE_LEFT_BUTTON_UP, mp1, mp2);
-          break;
-        case WM_BUTTON1DBLCLK:
-          result = DispatchMouseEvent( NS_MOUSE_LEFT_DOUBLECLICK, mp1, mp2);
-          break;
-    
-        case WM_BUTTON2DOWN:
-          if (!mIsScrollBar)
-            WinSetCapture( HWND_DESKTOP, mWnd);
-          result = DispatchMouseEvent( NS_MOUSE_RIGHT_BUTTON_DOWN, mp1, mp2);
-          break;
-        case WM_BUTTON2UP:
-          if (!mIsScrollBar)
-            WinSetCapture( HWND_DESKTOP, 0); // release
-          result = DispatchMouseEvent( NS_MOUSE_RIGHT_BUTTON_UP, mp1, mp2);
-          break;
-        case WM_BUTTON2DBLCLK:
-          result = DispatchMouseEvent( NS_MOUSE_RIGHT_DOUBLECLICK, mp1, mp2);
-          break;
-        case WM_CONTEXTMENU:
-          if (SHORT2FROMMP(mp2) == TRUE) {
-            HWND hwndCurrFocus = WinQueryFocus(HWND_DESKTOP);
-            if (hwndCurrFocus != mWnd) {
-              WinSendMsg(hwndCurrFocus, msg, mp1, mp2);
-            } else {
-              result = DispatchMouseEvent( NS_CONTEXTMENU_KEY, mp1, mp2);
-            }
-          } else {
-            result = DispatchMouseEvent( NS_CONTEXTMENU, mp1, mp2);
-          }
-          break;
-
-          // if MB1 & MB2 are both pressed, perform a copy or paste;
-          // see how far the mouse has moved since MB1-down to determine
-          // the operation (this really ought to look for selected content)
-        case WM_CHORD:
-          if (WinGetKeyState(HWND_DESKTOP, VK_BUTTON1) & 
-              WinGetKeyState(HWND_DESKTOP, VK_BUTTON2) &
-              0x8000) {
-            PRBool isCopy = FALSE;
-            if (abs(XFROMMP(mp1) - gLastButton1Down.x) >
-                  (WinQuerySysValue(HWND_DESKTOP, SV_CXMOTIONSTART) / 2) ||
-                abs(YFROMMP(mp1) - gLastButton1Down.y) >
-                  (WinQuerySysValue(HWND_DESKTOP, SV_CYMOTIONSTART) / 2))
-              isCopy = TRUE;
-
-            nsKeyEvent event(PR_TRUE, NS_KEY_PRESS, this);
-            nsPoint point(0,0);
-            InitEvent( event, &point);
-
-            event.keyCode   = NS_VK_INSERT;
-            if (isCopy) {
-              event.isShift   = PR_FALSE;
-              event.isControl = PR_TRUE;
-            } else {
-              event.isShift   = PR_TRUE;
-              event.isControl = PR_FALSE;
-            }
-            event.isAlt     = PR_FALSE;
-            event.isMeta    = PR_FALSE;
-            event.eventStructType = NS_KEY_EVENT;
-            event.charCode = 0;
-            result = DispatchWindowEvent( &event);
-          }
-          break;
-
-        case WM_BUTTON3DOWN:
-          result = DispatchMouseEvent( NS_MOUSE_MIDDLE_BUTTON_DOWN, mp1, mp2);
-          break;
-        case WM_BUTTON3UP:
-          result = DispatchMouseEvent( NS_MOUSE_MIDDLE_BUTTON_UP, mp1, mp2);
-          break;
-        case WM_BUTTON3DBLCLK:
-          result = DispatchMouseEvent( NS_MOUSE_MIDDLE_DOUBLECLICK, mp1, mp2);
-          break;
-    
-        case WM_MOUSEMOVE:
-          {
-            static POINTL ptlLastPos = { -1, -1 };
-            // See if mouse has actually moved.
-            if ( ptlLastPos.x == (SHORT)SHORT1FROMMP(mp1) &&
-                 ptlLastPos.y == (SHORT)SHORT2FROMMP(mp1)) {
-                return PR_TRUE;
-            } else {
-                // Yes, remember new position.
-                ptlLastPos.x = (SHORT)SHORT1FROMMP(mp1);
-                ptlLastPos.y = (SHORT)SHORT2FROMMP(mp1);
-            }
-          }
-          result = DispatchMouseEvent( NS_MOUSE_MOVE, mp1, mp2);
-          // don't propogate mouse move or the OS will change the pointer
-          if (!mIsScrollBar)
-            result = PR_TRUE;
-          break;
-        case WM_MOUSEENTER:
-          result = DispatchMouseEvent( NS_MOUSE_ENTER, mp1, mp2);
-          break;
-        case WM_MOUSELEAVE:
-          result = DispatchMouseEvent( NS_MOUSE_EXIT, mp1, mp2);
-          break;
-
-        case WM_APPCOMMAND:
-        {
-          PRUint32 appCommand = GET_APPCOMMAND_LPARAM(mp2);
-
-          switch (appCommand)
-          {
-            case APPCOMMAND_BROWSER_BACKWARD:
-            case APPCOMMAND_BROWSER_FORWARD:
-            case APPCOMMAND_BROWSER_REFRESH:
-            case APPCOMMAND_BROWSER_STOP:
-              DispatchAppCommandEvent(appCommand);
-              // tell the driver that we handled the event
-              rc = (MRESULT)1;
-              result = PR_TRUE;
-              break;
-
-            default:
-              rc = (MRESULT)0;
-              result = PR_FALSE;
-              break;
-          }
-          break;
         }
-    
-        case WM_HSCROLL:
-        case WM_VSCROLL:
-          result = OnScroll( msg, mp1, mp2);
-          break;
+        break;
+      }
 
-        case WM_ACTIVATE:
-          DEBUGFOCUS(WM_ACTIVATE);
-          if (mp1)
-            gJustGotActivate = PR_TRUE;
-          else
-            gJustGotDeactivate = PR_TRUE;
-          break;
+    case WM_HSCROLL:
+    case WM_VSCROLL:
+      result = OnScroll(msg, mp1, mp2);
+      break;
 
-        case WM_FOCUSCHANGED:
-        {
-          PRBool isMozWindowTakingFocus = PR_TRUE;
-          DEBUGFOCUS(WM_FOCUSCHANGED);
+    case WM_ACTIVATE:
+      DEBUGFOCUS(WM_ACTIVATE);
+      if (mp1)
+        gJustGotActivate = PR_TRUE;
+      else
+        gJustGotDeactivate = PR_TRUE;
+      break;
 
-          // If the frame was activated earlier or mp1 is 0, dispatch
-          // focus & activation events.  However, if the frame is minimized,
-          // defer activation and let SetSizeMode() dispatch it after the
-          // window has been restored by the user - otherwise, Show() will
-          // restore it involuntarily.  
+    case WM_FOCUSCHANGED:
+      {
+        PRBool isMozWindowTakingFocus = PR_TRUE;
+        DEBUGFOCUS(WM_FOCUSCHANGED);
 
-          if (SHORT1FROMMP(mp2)) {
-            DEBUGFOCUS(NS_GOTFOCUS);
-            result = DispatchFocus(NS_GOTFOCUS, isMozWindowTakingFocus);
+        // If the frame was activated earlier or mp1 is 0, dispatch
+        // focus & activation events.  However, if the frame is minimized,
+        // defer activation and let SetSizeMode() dispatch it after the
+        // window has been restored by the user - otherwise, Show() will
+        // restore it involuntarily.
 
-            if (gJustGotActivate || mp1 == 0) {
-              HWND hActive = WinQueryActiveWindow( HWND_DESKTOP);
-              if (!(WinQueryWindowULong( hActive, QWL_STYLE) & WS_MINIMIZED)) {
-                DEBUGFOCUS(NS_ACTIVATE);
-                gJustGotActivate = PR_FALSE;
-                gJustGotDeactivate = PR_FALSE;
-                result = DispatchFocus(NS_ACTIVATE, isMozWindowTakingFocus);
-              }
-            }
+        if (SHORT1FROMMP(mp2)) {
+          DEBUGFOCUS(NS_GOTFOCUS);
+          result = DispatchFocus(NS_GOTFOCUS, isMozWindowTakingFocus);
 
-            if ( WinIsChild( mWnd, HWNDFROMMP(mp1)) && mNextID == 1) {
-              DEBUGFOCUS(NS_PLUGIN_ACTIVATE);
-              result = DispatchFocus(NS_PLUGIN_ACTIVATE, isMozWindowTakingFocus);
-              WinSetFocus(HWND_DESKTOP, mWnd);
-            }
-          }
-          // We are losing focus
-          else {
-            char className[19];
-            ::WinQueryClassName((HWND)mp1, 19, className);
-            if (strcmp(className, WindowClass()) != 0 && 
-                strcmp(className, WC_SCROLLBAR_STRING) != 0) {
-              isMozWindowTakingFocus = PR_FALSE;
-            }
-
-            if (gJustGotDeactivate) {
-              DEBUGFOCUS(NS_DEACTIVATE);
+          if (gJustGotActivate || mp1 == 0) {
+            HWND hActive = WinQueryActiveWindow(HWND_DESKTOP);
+            if (!(WinQueryWindowULong(hActive, QWL_STYLE) & WS_MINIMIZED)) {
+              DEBUGFOCUS(NS_ACTIVATE);
+              gJustGotActivate = PR_FALSE;
               gJustGotDeactivate = PR_FALSE;
-              result = DispatchFocus(NS_DEACTIVATE, isMozWindowTakingFocus);
+              result = DispatchFocus(NS_ACTIVATE, isMozWindowTakingFocus);
             }
-
-            DEBUGFOCUS(NS_LOSTFOCUS);
-            result = DispatchFocus(NS_LOSTFOCUS, isMozWindowTakingFocus);
           }
 
-          break;
+          if (WinIsChild(mWnd, HWNDFROMMP(mp1)) && mNextID == 1) {
+            DEBUGFOCUS(NS_PLUGIN_ACTIVATE);
+            result = DispatchFocus(NS_PLUGIN_ACTIVATE, isMozWindowTakingFocus);
+            WinSetFocus(HWND_DESKTOP, mWnd);
+          }
+        }
+        // We are losing focus
+        else {
+          char className[19];
+          ::WinQueryClassName((HWND)mp1, 19, className);
+          if (strcmp(className, WindowClass()) != 0 &&
+              strcmp(className, WC_SCROLLBAR_STRING) != 0) {
+            isMozWindowTakingFocus = PR_FALSE;
+          }
+
+          if (gJustGotDeactivate) {
+            DEBUGFOCUS(NS_DEACTIVATE);
+            gJustGotDeactivate = PR_FALSE;
+            result = DispatchFocus(NS_DEACTIVATE, isMozWindowTakingFocus);
+          }
+
+          DEBUGFOCUS(NS_LOSTFOCUS);
+          result = DispatchFocus(NS_LOSTFOCUS, isMozWindowTakingFocus);
         }
 
-        case WM_WINDOWPOSCHANGED: 
-          result = OnReposition( (PSWP) mp1);
-          break;
-    
-    
-        case WM_REALIZEPALETTE:          // hopefully only nsCanvas & nsFrame
-          result = OnRealizePalette();   // will need this
-          break;
-    
-        case WM_PRESPARAMCHANGED:
-          // This is really for font-change notifies.  Do that first.
-          rc = GetPrevWP()( mWnd, msg, mp1, mp2);
-          OnPresParamChanged( mp1, mp2);
-          result = PR_TRUE;
-          break;
+        break;
+      }
 
-          // all msgs that occur when this window is the target of a drag
-        case DM_DRAGOVER:
-        case DM_DRAGLEAVE:
-        case DM_DROP:
-        case DM_RENDERCOMPLETE:
-        case DM_DROPHELP:
-          OnDragDropMsg(msg, mp1, mp2, rc);
-          result = PR_TRUE;
-          break;
-    }
-    
-    return result;
+    case WM_WINDOWPOSCHANGED:
+      result = OnReposition((PSWP)mp1);
+      break;
+
+
+    case WM_REALIZEPALETTE:          // hopefully only nsCanvas & nsFrame
+      result = OnRealizePalette();   // will need this
+      break;
+
+    case WM_PRESPARAMCHANGED:
+      // This is really for font-change notifies.  Do that first.
+      rc = GetPrevWP()(mWnd, msg, mp1, mp2);
+      OnPresParamChanged(mp1, mp2);
+      result = PR_TRUE;
+      break;
+
+      // all msgs that occur when this window is the target of a drag
+    case DM_DRAGOVER:
+    case DM_DRAGLEAVE:
+    case DM_DROP:
+    case DM_RENDERCOMPLETE:
+    case DM_DROPHELP:
+      OnDragDropMsg(msg, mp1, mp2, rc);
+      result = PR_TRUE;
+      break;
+  }
+
+  return result;
 }
 
 
