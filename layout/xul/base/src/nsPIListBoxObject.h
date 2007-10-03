@@ -60,4 +60,20 @@ class nsPIListBoxObject : public nsIListBoxObject {
   virtual nsIListBoxObject* GetListBoxBody() = 0;
 };
 
+// d0edc03f-9823-4ddf-a304-fb9f645ada94
+#define NS_PILISTBOXOBJECT_MOZILLA_1_8_BRANCH_IID \
+{ 0xd0edc03f, 0x9823, 0x4ddf, \
+  { 0xa3, 0x04, 0xfb, 0x9f, 0x64, 0x5a, 0xda, 0x94 } }
+
+class nsPIListBoxObject_MOZILLA_1_8_BRANCH : public nsPIListBoxObject {
+ public:
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_PILISTBOXOBJECT_MOZILLA_1_8_BRANCH_IID)
+
+  /*
+   * Get the list box body.  This will search for it as needed.
+   * If aFlush is PR_FALSE we don't Flush_Frames though.
+   */
+  virtual nsIListBoxObject* GetListBoxBody(PRBool aFlush) = 0;
+};
+
 #endif // nsPIListBoxObject_h__
