@@ -2786,7 +2786,7 @@ enum BWCOpenDest {
   mThrobberHandler = nil;
   NSToolbarItem* throbberItem = [self throbberItem];
   if (throbberItem)
-    [throbberItem setImage: [[self throbberImages] objectAtIndex: 0]];
+    [throbberItem setImage: [NSImage imageNamed:@"throbber-00"]];
 }
 
 - (BOOL)findInPageWithPattern:(NSString*)text caseSensitive:(BOOL)inCaseSensitive

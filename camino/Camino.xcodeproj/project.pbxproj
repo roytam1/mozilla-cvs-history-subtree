@@ -1301,6 +1301,8 @@
 		DE8C62A00AB67E8A00078871 /* hidemanager.tif in Resources */ = {isa = PBXBuildFile; fileRef = DE8C629E0AB67E8A00078871 /* hidemanager.tif */; };
 		DEA548F00A25227200186C93 /* GeckoUtils.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DEA548EF0A25227200186C93 /* GeckoUtils.cpp */; };
 		DEA548F10A25227200186C93 /* GeckoUtils.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DEA548EF0A25227200186C93 /* GeckoUtils.cpp */; };
+		DEB608960CAF0861006C34F1 /* throbber-00.tif in Resources */ = {isa = PBXBuildFile; fileRef = DEB608950CAF0861006C34F1 /* throbber-00.tif */; };
+		DEB608970CAF0861006C34F1 /* throbber-00.tif in Resources */ = {isa = PBXBuildFile; fileRef = DEB608950CAF0861006C34F1 /* throbber-00.tif */; };
 		DEE349A70B84F45500BCD687 /* FileChangeWatcher.h in Headers */ = {isa = PBXBuildFile; fileRef = DEE349A60B84F45500BCD687 /* FileChangeWatcher.h */; };
 		DEE349A80B84F45500BCD687 /* FileChangeWatcher.h in Headers */ = {isa = PBXBuildFile; fileRef = DEE349A60B84F45500BCD687 /* FileChangeWatcher.h */; };
 		DEE349AA0B84F47400BCD687 /* FileChangeWatcher.m in Sources */ = {isa = PBXBuildFile; fileRef = DEE349A90B84F47400BCD687 /* FileChangeWatcher.m */; settings = {COMPILER_FLAGS = "-fobjc-exceptions"; }; };
@@ -2532,6 +2534,7 @@
 		DE8AD73F0ADB4F67009D44F6 /* bm_horizontal_separator.tif */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; name = bm_horizontal_separator.tif; path = resources/images/chrome/bm_horizontal_separator.tif; sourceTree = SOURCE_ROOT; };
 		DE8C629E0AB67E8A00078871 /* hidemanager.tif */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; name = hidemanager.tif; path = resources/images/toolbar/hidemanager.tif; sourceTree = SOURCE_ROOT; };
 		DEA548EF0A25227200186C93 /* GeckoUtils.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = GeckoUtils.cpp; path = src/extensions/GeckoUtils.cpp; sourceTree = SOURCE_ROOT; };
+		DEB608950CAF0861006C34F1 /* throbber-00.tif */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; name = "throbber-00.tif"; path = "resources/images/throbber/throbber-00.tif"; sourceTree = SOURCE_ROOT; };
 		DEE349A60B84F45500BCD687 /* FileChangeWatcher.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = FileChangeWatcher.h; path = src/download/FileChangeWatcher.h; sourceTree = "<group>"; };
 		DEE349A90B84F47400BCD687 /* FileChangeWatcher.m */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.objc; name = FileChangeWatcher.m; path = src/download/FileChangeWatcher.m; sourceTree = "<group>"; };
 		DEE9EC4D0AF5C613002BC511 /* SessionManager.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = SessionManager.h; path = src/application/SessionManager.h; sourceTree = "<group>"; };
@@ -3862,6 +3865,7 @@
 		F50EA33D02BAAAB701000103 /* throbber */ = {
 			isa = PBXGroup;
 			children = (
+				DEB608950CAF0861006C34F1 /* throbber-00.tif */,
 				3F42EFA705EC13F90045A30C /* throbber-01.tif */,
 				F50EA33F02BAAAB701000103 /* throbber-02.tif */,
 				F50EA34002BAAAB701000103 /* throbber-03.tif */,
@@ -5287,6 +5291,7 @@
 				DE148A490BF543F300F414D9 /* tab_scroll_button_left.tif in Resources */,
 				DE148A4A0BF543F300F414D9 /* tab_menu_button.tif in Resources */,
 				DE148A4B0BF543F300F414D9 /* tab_scroll_button_right.tif in Resources */,
+				DEB608960CAF0861006C34F1 /* throbber-00.tif in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -5493,6 +5498,7 @@
 				DE148A460BF543F300F414D9 /* tab_scroll_button_left.tif in Resources */,
 				DE148A470BF543F300F414D9 /* tab_menu_button.tif in Resources */,
 				DE148A480BF543F300F414D9 /* tab_scroll_button_right.tif in Resources */,
+				DEB608970CAF0861006C34F1 /* throbber-00.tif in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
