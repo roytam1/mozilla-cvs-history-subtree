@@ -51,7 +51,7 @@
 #include "nsIPresShell.h"
 #include "nsGUIEvent.h"
 #include "nsIEventStateManager.h"
-
+#include "nsIDOMHTMLInputElement.h"
 
 class nsHTMLLabelElement : public nsGenericHTMLFormElement,
                            public nsIDOMHTMLLabelElement
@@ -71,6 +71,9 @@ public:
 
   // nsIDOMHTMLElement
   NS_FORWARD_NSIDOMHTMLELEMENT(nsGenericHTMLFormElement::)
+
+  // nsIDOMNSHTMLElement
+  NS_IMETHOD Focus();
 
   // nsIDOMHTMLLabelElement
   NS_DECL_NSIDOMHTMLLABELELEMENT
@@ -108,7 +111,8 @@ protected:
   already_AddRefed<nsIContent> GetFirstFormControl(nsIContent *current);
 
   // XXX It would be nice if we could use an event flag instead.
-  PRBool mHandlingEvent;
+  PRPackedBool mHandlingEvent;
+  PRPackedBool mFocusCalled;
 };
 
 // construction, destruction
@@ -119,7 +123,8 @@ NS_IMPL_NS_NEW_HTML_ELEMENT(Label)
 
 nsHTMLLabelElement::nsHTMLLabelElement(nsINodeInfo *aNodeInfo)
   : nsGenericHTMLFormElement(aNodeInfo),
-    mHandlingEvent(PR_FALSE)
+    mHandlingEvent(PR_FALSE),
+    mFocusCalled(PR_FALSE)
 {
 }
 
@@ -273,14 +278,35 @@ nsHTMLLabelElement::HandleDOMEvent(nsPresContext* aPresContext,
   return rv;
 }
 
+nsresult
+nsHTMLLabelElement::Focus()
+{
+  PRBool oldFocusCalled = mFocusCalled;
+  mFocusCalled = PR_TRUE;
+  nsresult rv = nsGenericHTMLFormElement::Focus();
+  mFocusCalled = oldFocusCalled;
+  return rv;
+}
+
 void
 nsHTMLLabelElement::SetFocus(nsPresContext* aContext)
 {
   // Since we don't have '-moz-user-focus: normal', the only time
   // |SetFocus| will be called is when the accesskey is activated.
   nsCOMPtr<nsIContent> content = GetForContent();
-  if (content)
+  if (content) {
+    if (mFocusCalled) {
+      // Handle input element in a special way, so that focusing
+      // <input type="file"> doesn't focus the input field but the
+      // 'browse...' button.
+      nsCOMPtr<nsIDOMHTMLInputElement> input = do_QueryInterface(content);
+      if (input) {
+        input->Focus();
+        return;
+      }
+    }
     content->SetFocus(aContext);
+  }
 }
 
 nsresult
