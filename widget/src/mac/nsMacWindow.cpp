@@ -285,14 +285,19 @@ nsMacWindow::~nsMacWindow()
     CGrafPtr    windowPort = ::GetWindowPort(mWindowPtr);
     ::GetPort((GrafPtr*)&curPort);
     PRBool      mustResetPort = (curPort == windowPort);
-    
+
     if (mScrollEventHandler)
       ::RemoveEventHandler(mScrollEventHandler);
     if (mWindowEventHandler)
       ::RemoveEventHandler(mWindowEventHandler);
 
-    ::DisposeWindow(mWindowPtr);
+    // Clear references in nsMacEventHandler to this window (bug 388181) and
+    // null out mWindowPtr to prevent handling events beyond this point.
+    if (mMacEventHandler.get())
+      mMacEventHandler->ClearWindowRefs(this);
+    WindowPtr w = mWindowPtr;
     mWindowPtr = nsnull;
+    ::DisposeWindow(w);
     
     if (mustResetPort)
       nsGraphicsUtils::SetPortToKnownGoodPort();
