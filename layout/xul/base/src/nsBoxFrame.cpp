@@ -1350,20 +1350,16 @@ nsBoxFrame::AttributeChanged(nsIContent* aChild,
   }
   else if (aAttribute == nsXULAtoms::ordinal) {
     nsBoxLayoutState state(GetPresContext()->PresShell());
-
-    nsIFrame* frameToMove = this;
-    if (GetStateBits() & NS_FRAME_OUT_OF_FLOW) {
-      GetPresContext()->PresShell()->GetPlaceholderFrameFor(this,
-                                                            &frameToMove);
-      NS_ASSERTION(frameToMove, "Out of flow without placeholder?");
-    }
-    
     nsIBox* parent;
-    frameToMove->GetParentBox(&parent);
+    GetParentBox(&parent);
     // If our parent is not a box, there's not much we can do... but in that
     // case our ordinal doesn't matter anyway, so that's ok.
-    if (parent) {
-      parent->RelayoutChildAtOrdinal(state, frameToMove);
+    // Also don't bother with popup frames since they are kept on the 
+    // nsGkAtoms::popupList and RelayoutChildAtOrdinal() only handles
+    // principal children.
+    if (parent && !(GetStateBits() & NS_FRAME_OUT_OF_FLOW) &&
+        GetStyleDisplay()->mDisplay != NS_STYLE_DISPLAY_POPUP) {
+      parent->RelayoutChildAtOrdinal(state, this);
       parent->MarkDirty(state);
     }
   }
