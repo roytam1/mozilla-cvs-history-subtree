@@ -9241,9 +9241,9 @@ PRBool NotifyListBoxBody(nsPresContext*    aPresContext,
     nsCOMPtr<nsIDOMXULElement> xulElement = do_QueryInterface(aContainer);
     nsCOMPtr<nsIBoxObject> boxObject;
     xulElement->GetBoxObject(getter_AddRefs(boxObject));
-    nsCOMPtr<nsPIListBoxObject> listBoxObject = do_QueryInterface(boxObject);
+    nsCOMPtr<nsPIListBoxObject_MOZILLA_1_8_BRANCH> listBoxObject = do_QueryInterface(boxObject);
     if (listBoxObject) {
-      nsIListBoxObject* listboxBody = listBoxObject->GetListBoxBody();
+      nsIListBoxObject* listboxBody = listBoxObject->GetListBoxBody(PR_FALSE);
       if (listboxBody) {
         nsListBoxBodyFrame *listBoxBodyFrame = NS_STATIC_CAST(nsListBoxBodyFrame*, listboxBody);
         if (aOperation == CONTENT_REMOVED) {

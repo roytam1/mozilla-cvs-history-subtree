@@ -48,7 +48,8 @@
 #include "nsXULAtoms.h"
 #include "nsIScrollableFrame.h"
 
-class nsListBoxObject : public nsPIListBoxObject, public nsBoxObject
+class nsListBoxObject : public nsPIListBoxObject_MOZILLA_1_8_BRANCH,
+                        public nsBoxObject
 {
 public:
   NS_DECL_ISUPPORTS_INHERITED
@@ -56,7 +57,18 @@ public:
 
   // nsPIListBoxObject
   virtual void ClearCachedListBoxBody();
-  virtual nsIListBoxObject* GetListBoxBody();
+  virtual nsIListBoxObject* GetListBoxBody()
+  {
+    return GetListBoxBodyImpl(PR_TRUE);
+  }
+
+  // nsPIListBoxObject_MOZILLA_1_8_BRANCH
+  virtual nsIListBoxObject* GetListBoxBody(PRBool aFlush)
+  {
+    return GetListBoxBodyImpl(aFlush);
+  }
+
+  nsIListBoxObject* GetListBoxBodyImpl(PRBool aFlush);
 
   nsListBoxObject();
   virtual ~nsListBoxObject();
@@ -67,8 +79,8 @@ protected:
   nsIListBoxObject* mListBoxBody;
 };
 
-NS_IMPL_ISUPPORTS_INHERITED2(nsListBoxObject, nsBoxObject, nsIListBoxObject,
-                             nsPIListBoxObject)
+NS_IMPL_ISUPPORTS_INHERITED3(nsListBoxObject, nsBoxObject, nsIListBoxObject,
+                             nsPIListBoxObject, nsPIListBoxObject_MOZILLA_1_8_BRANCH)
 
 nsListBoxObject::nsListBoxObject()
   : mListBoxBody(nsnull)
@@ -198,13 +210,23 @@ FindBodyContent(nsIContent* aParent, nsIContent** aResult)
 }
 
 nsIListBoxObject*
-nsListBoxObject::GetListBoxBody()
+nsListBoxObject::GetListBoxBodyImpl(PRBool aFlush)
 {
   if (mListBoxBody) {
     return mListBoxBody;
   }
 
-  nsIFrame* frame = GetFrame();
+  nsIFrame* frame;
+  if (aFlush) {
+    frame = GetFrame(); // does Flush_Frames
+  }
+  else {
+    frame = nsnull;
+    nsCOMPtr<nsIPresShell> shell = GetPresShell();
+    if (shell) {
+      shell->GetPrimaryFrameFor(mContent, &frame);
+    }
+  }
   if (!frame)
     return nsnull;
 
