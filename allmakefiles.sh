@@ -1530,9 +1530,6 @@ for extension in $MOZ_EXTENSIONS; do
             " ;;
         xmlextras ) MAKEFILES_extensions="$MAKEFILES_extensions
             extensions/xmlextras/Makefile
-            extensions/xmlextras/base/Makefile
-            extensions/xmlextras/base/src/Makefile
-            extensions/xmlextras/base/public/Makefile
             extensions/xmlextras/pointers/Makefile
             extensions/xmlextras/pointers/src/Makefile
             extensions/xmlextras/build/Makefile
