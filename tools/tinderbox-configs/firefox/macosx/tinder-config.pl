@@ -141,7 +141,7 @@ $StartupPerformanceTest   = 0;  # Ts
 $moz_cvsroot   = 'cltbld@cvs.mozilla.org:/cvsroot';
 
 # CONFIG: $MofoRoot   = '%mofoCvsroot%';
-$MofoRoot   = ":ext:cltbld\@cvs.mozilla.org:/mofo";
+$MofoRoot   = 'cltbld@cvs.mozilla.org:/mofo';
 
 #- Set these proper values for your tinderbox server
 #$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
@@ -173,7 +173,7 @@ $BuildTree  = 'MozillaRelease';
 
 #$BuildName = '';
 # CONFIG: $BuildTag = '%productTag%_RELEASE';
-$BuildTag = 'FIREFOX_2_0_0_7_RELEASE';
+$BuildTag = 'FIREFOX_2_0_0_8_RELEASE';
 
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
@@ -212,7 +212,7 @@ $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
 # CONFIG: $milestone     = 'firefox%version%';
-$milestone     = 'firefox2.0.0.7';
+$milestone     = 'firefox2.0.0.8';
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 0;
