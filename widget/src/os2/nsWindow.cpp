@@ -1,6 +1,6 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
- *
- * ***** BEGIN LICENSE BLOCK *****
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* vim: set sw=2 sts=2 et cin: */
+/* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
  * The contents of this file are subject to the Mozilla Public License Version
@@ -26,6 +26,7 @@
  *   Rich Walsh <dragtext@e-vertise.com>
  *   Dan Rosen <dr@netscape.com>
  *   Dainis Jonitis <Dainis_Jonitis@swh-t.lv>
+ *   Peter Weilbacher <mozilla@Weilbacher.org>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -2468,9 +2469,7 @@ BOOL nsWindow::CallMethod(MethodInfo *info)
 }
 
 //-------------------------------------------------------------------------
-//
 // OnKey
-//
 //-------------------------------------------------------------------------
 // Key handler.  Specs for the various text messages are really confused;
 // see other platforms for best results of how things are supposed to work.
@@ -2478,153 +2477,136 @@ BOOL nsWindow::CallMethod(MethodInfo *info)
 // Perhaps more importantly, the main man listening to these events (besides
 // random bits of javascript) is ender -- see 
 // mozilla/editor/base/nsEditorEventListeners.cpp.
-//
-PRBool nsWindow::OnKey( MPARAM mp1, MPARAM mp2)
+PRBool nsWindow::OnKey(MPARAM mp1, MPARAM mp2)
 {
-   nsKeyEvent pressEvent(PR_TRUE, 0, nsnull);
-   USHORT     fsFlags = SHORT1FROMMP(mp1);
-   USHORT     usVKey = SHORT2FROMMP(mp2);
-   USHORT     usChar = SHORT1FROMMP(mp2);
-//   UCHAR      uchScan = CHAR4FROMMP(mp1);
+  nsKeyEvent pressEvent(PR_TRUE, 0, nsnull);
+  USHORT fsFlags = SHORT1FROMMP(mp1);
+  USHORT usVKey = SHORT2FROMMP(mp2);
+  USHORT usChar = SHORT1FROMMP(mp2);
+  UCHAR uchScan = CHAR4FROMMP(mp1);
 
-   // It appears we're not supposed to transmit shift, control & alt events
-   // to gecko.  Shrug.
-   //
-   // XXX this may be wrong, but is what gtk is doing...
-   if( fsFlags & KC_VIRTUALKEY &&
-      (usVKey == VK_SHIFT || usVKey == VK_CTRL ||
-       usVKey == VK_ALTGRAF)) return PR_FALSE;
+  // It appears we're not supposed to transmit shift, control & alt events
+  // to gecko.  Shrug.
+  //
+  // this is what gtk is doing...
+  if (fsFlags & KC_VIRTUALKEY && !(fsFlags & KC_KEYUP) &&
+      (usVKey == VK_SHIFT || usVKey == VK_CTRL || usVKey == VK_ALTGRAF) ) {
+    return PR_FALSE;
+  }
 
-   // My gosh this is ugly
-   // Workaround bug where using Alt+Esc let an Alt key creep through
-   // Only handle alt by itself if the LONEKEY bit is set
-   if ((fsFlags & KC_VIRTUALKEY) &&
-       (usVKey == VK_ALT) &&
-       !usChar && 
-       ((fsFlags & KC_LONEKEY) == 0) &&
-       (fsFlags & KC_KEYUP)) {
-         return PR_FALSE;
-       }
+  // My gosh this is ugly
+  // Workaround bug where using Alt+Esc let an Alt key creep through
+  // Only handle alt by itself if the LONEKEY bit is set
+  if ((fsFlags & KC_VIRTUALKEY) && (usVKey == VK_ALT) && !usChar &&
+      ((fsFlags & KC_LONEKEY) == 0) && (fsFlags & KC_KEYUP)) {
+    return PR_FALSE;
+  }
 
-   // Now check if it's a dead-key
-   if( fsFlags & KC_DEADKEY)
-   {
-      // XXX CUA says we're supposed to give some kind of feedback `display the
-      //     dead key glyph'.  I'm not sure if we can use the COMPOSE messages
-      //     to do this -- it should really be done by someone who can test it
-      //     & has some idea what `ought' to happen...
+  // Now check if it's a dead-key
+  if (fsFlags & KC_DEADKEY) {
+    // CUA says we're supposed to give some kind of feedback `display
+    // the dead key glyph'.  I'm not sure if we can use the COMPOSE
+    // messagesto do this -- it should really be done by someone who can
+    // test it & has some idea what `ought' to happen...
+    return PR_TRUE;
+  }
 
-      return PR_TRUE;
-   }
+  // Now dispatch a keyup/keydown event.  This one is *not* meant to
+  // have the unicode charcode in.
+  nsPoint point(0,0);
+  nsKeyEvent event(PR_TRUE, (fsFlags & KC_KEYUP) ? NS_KEY_UP : NS_KEY_DOWN,
+                   this);
+  InitEvent(event, &point);
+  event.keyCode = WMChar2KeyCode(mp1, mp2);
+  event.isShift = (fsFlags & KC_SHIFT) ? PR_TRUE : PR_FALSE;
+  event.isControl = (fsFlags & KC_CTRL) ? PR_TRUE : PR_FALSE;
+  event.isAlt = (fsFlags & KC_ALT) ? PR_TRUE : PR_FALSE;
+  event.isMeta = PR_FALSE;
+  event.charCode = 0;
 
-   // Now dispatch a keyup/keydown event.  This one is *not* meant to
-   // have the unicode charcode in.
+  // Checking for a scroll mouse event vs. a keyboard event
+  // The way we know this is that the repeat count is 0 and
+  // the key is not physically down
+  // unfortunately, there is an exception here - if alt or ctrl are
+  // held down, repeat count is set so we have to add special checks for them
+  if (((event.keyCode == NS_VK_UP) || (event.keyCode == NS_VK_DOWN)) &&
+      !(fsFlags & KC_KEYUP) &&
+      ((CHAR3FROMMP(mp1) == 0) || fsFlags & KC_CTRL || fsFlags & KC_ALT) ) {
+    if (!(WinGetPhysKeyState(HWND_DESKTOP, uchScan) & 0x8000)) {
+      MPARAM mp2;
+      if (event.keyCode == NS_VK_UP)
+        mp2 = MPFROM2SHORT(0, SB_LINEUP);
+      else
+        mp2 = MPFROM2SHORT(0, SB_LINEDOWN);
+      WinSendMsg(mWnd, WM_VSCROLL, 0, mp2);
+      return FALSE;
+    }
+  }
 
-   nsPoint point(0,0);
-   nsKeyEvent event(PR_TRUE, (fsFlags & KC_KEYUP) ? NS_KEY_UP : NS_KEY_DOWN,
-                    this);
-   InitEvent( event, &point);
-   event.keyCode   = WMChar2KeyCode( mp1, mp2);
-   event.isShift   = (fsFlags & KC_SHIFT) ? PR_TRUE : PR_FALSE;
-   event.isControl = (fsFlags & KC_CTRL) ? PR_TRUE : PR_FALSE;
-   event.isAlt     = (fsFlags & KC_ALT) ? PR_TRUE : PR_FALSE;
-   event.isMeta    = PR_FALSE;
-   event.charCode = 0;
+  pressEvent = event;
+  PRBool rc = DispatchWindowEvent(&event);
 
-   /* Checking for a scroll mouse event vs. a keyboard event */
-   /* The way we know this is that the repeat count is 0 and */
-   /* the key is not physically down */
-   /* unfortunately, there is an exception here - if alt or ctrl are */
-   /* held down, repeat count is set so we have to add special checks for them */
-   if (((event.keyCode == NS_VK_UP) || (event.keyCode == NS_VK_DOWN)) &&
-       (!(fsFlags & KC_KEYUP))
-       && ((CHAR3FROMMP(mp1) == 0) || fsFlags & KC_CTRL || fsFlags & KC_ALT)
-       ) {
-      if (!(WinGetPhysKeyState(HWND_DESKTOP, CHAR4FROMMP(mp1)) & 0x8000)) {
-         MPARAM mp2;
-         if (event.keyCode == NS_VK_UP)
-            mp2 = MPFROM2SHORT(0, SB_LINEUP);
-         else
-            mp2 = MPFROM2SHORT(0, SB_LINEDOWN);
-         WinSendMsg(mWnd, WM_VSCROLL, 0, mp2);
-         return FALSE;
+  // Break off now if this was a key-up.
+  if (fsFlags & KC_KEYUP) {
+    NS_RELEASE(event.widget);
+    return rc;
+  }
+
+  // Break off if we've got an "invalid composition" -- that is, the user
+  // typed a deadkey last time, but has now typed something that doesn't
+  // make sense in that context.
+  if (fsFlags & KC_INVALIDCOMP) {
+    mHaveDeadKey = FALSE;
+    // actually, not sure whether we're supposed to abort the keypress
+    // or process it as though the dead key has been pressed.
+    NS_RELEASE(event.widget);
+    return rc;
+  }
+
+  // Now we need to dispatch a keypress event which has the unicode char.
+  pressEvent.message = NS_KEY_PRESS;
+  if (rc) { // If keydown default was prevented, do same for keypress
+    pressEvent.flags |= NS_EVENT_FLAG_NO_DEFAULT;
+  }
+
+  if (usChar) {
+    USHORT inbuf[2];
+    inbuf[0] = usChar;
+    inbuf[1] = '\0';
+
+    nsAutoChar16Buffer outbuf;
+    PRInt32 bufLength;
+    MultiByteToWideChar(0, (const char*)inbuf, 2, outbuf, bufLength);
+
+    pressEvent.charCode = outbuf.get()[0];
+
+    if (pressEvent.isControl && !(fsFlags & (KC_VIRTUALKEY | KC_DEADKEY))) {
+      if (!pressEvent.isShift && (pressEvent.charCode >= 'A' && pressEvent.charCode <= 'Z')) {
+        pressEvent.charCode = tolower(pressEvent.charCode);
       }
-   }
-
-   pressEvent = event;
-
-   PRBool rc = DispatchWindowEvent( &event);
-
-   // Break off now if this was a key-up.
-   if( fsFlags & KC_KEYUP)
-   {
-      NS_RELEASE( event.widget);
-      return rc;
-   }
-
-   // Break off if we've got an "invalid composition" -- that is, the user
-   // typed a deadkey last time, but has now typed something that doesn't
-   // make sense in that context.
-   if( fsFlags & KC_INVALIDCOMP)
-   {
-      mHaveDeadKey = FALSE;
-      // XXX actually, not sure whether we're supposed to abort the keypress
-      //     or process it as though the dead key has been pressed.
-      NS_RELEASE( event.widget);
-      return rc;
-   }
-
-   // Now we need to dispatch a keypress event which has the unicode char.
-
-   pressEvent.message = NS_KEY_PRESS;
-   if (rc) { // If keydown default was prevented, do same for keypress
-     pressEvent.flags |= NS_EVENT_FLAG_NO_DEFAULT;
-   }
-
-   if( usChar)
-   {
-      USHORT inbuf[2];
-      inbuf[0] = usChar;
-      inbuf[1] = '\0';
-
-      nsAutoChar16Buffer outbuf;
-      PRInt32 bufLength;
-      MultiByteToWideChar(0, (const char*)inbuf, 2, outbuf, bufLength);
-
-      pressEvent.charCode = outbuf.get()[0];
-
-      if (pressEvent.isControl && !(fsFlags & (KC_VIRTUALKEY | KC_DEADKEY))) {
-        if (!pressEvent.isShift && (pressEvent.charCode >= 'A' && pressEvent.charCode <= 'Z'))
-        {
-          pressEvent.charCode = tolower(pressEvent.charCode);
-        }
-        if (pressEvent.isShift && (pressEvent.charCode >= 'a' && pressEvent.charCode <= 'z'))
-        {
-          pressEvent.charCode = toupper(pressEvent.charCode);
-        }
+      if (pressEvent.isShift && (pressEvent.charCode >= 'a' && pressEvent.charCode <= 'z')) {
+        pressEvent.charCode = toupper(pressEvent.charCode);
+      }
+      pressEvent.keyCode = 0;
+    } else if (!pressEvent.isControl && !pressEvent.isAlt && pressEvent.charCode != 0) {
+      if (!(fsFlags & KC_VIRTUALKEY) || // not virtual key
+          ((fsFlags & KC_CHAR) && (pressEvent.keyCode == 0)) ) { //
         pressEvent.keyCode = 0;
-      } else if( !pressEvent.isControl && !pressEvent.isAlt && pressEvent.charCode != 0)
-      {
-         if ( !(fsFlags & KC_VIRTUALKEY) || 
-              ((fsFlags & KC_CHAR) && (pressEvent.keyCode == 0)) )
-         {
-//            pressEvent.isShift = PR_FALSE;
-            pressEvent.keyCode = 0;
-         }
-         else if (usVKey == VK_SPACE)
-         {
-//            pressEvent.isShift = PR_FALSE;
-         }
-         else  // Real virtual key 
-         {
-            pressEvent.charCode = 0;
-         }
+      } else if (usVKey == VK_SPACE) {
+        // space key, do nothing here
+      } else if ((fsFlags & KC_VIRTUALKEY) &&
+                 isNumPadScanCode(uchScan) && pressEvent.keyCode != 0 && isNumlockOn) {
+        // this is NumLock+Numpad (no Alt), handle this like a normal number
+        pressEvent.keyCode = 0;
+      } else { // Real virtual key
+        pressEvent.charCode = 0;
       }
-      rc = DispatchWindowEvent( &pressEvent);
-   }
+    }
+    rc = DispatchWindowEvent(&pressEvent);
+  }
 
-   NS_RELEASE( pressEvent.widget);
-   return rc;
+  NS_RELEASE(pressEvent.widget);
+  return rc;
 }
 
 void nsWindow::ConstrainZLevel(HWND *aAfter) {
@@ -2668,378 +2650,350 @@ void nsWindow::ConstrainZLevel(HWND *aAfter) {
 
 
 // 'Window procedure'
-PRBool nsWindow::ProcessMessage( ULONG msg, MPARAM mp1, MPARAM mp2, MRESULT &rc)
+PRBool nsWindow::ProcessMessage(ULONG msg, MPARAM mp1, MPARAM mp2, MRESULT &rc)
 {
-    PRBool result = PR_FALSE; // call the default window procedure
+  PRBool result = PR_FALSE; // call the default window procedure
 
-    switch (msg) {
-//#if 0
-        case WM_COMMAND: // fire off menu selections
-        {
-           nsMenuEvent event(PR_TRUE, NS_MENU_SELECTED, this);
-           event.mCommand = SHORT1FROMMP(mp1);
-           InitEvent(event);
-           result = DispatchWindowEvent(&event);
-           NS_RELEASE(event.widget);
+  switch (msg) {
+    case WM_COMMAND: // fire off menu selections
+      {
+        nsMenuEvent event(PR_TRUE, NS_MENU_SELECTED, this);
+        event.mCommand = SHORT1FROMMP(mp1);
+        InitEvent(event);
+        result = DispatchWindowEvent(&event);
+        NS_RELEASE(event.widget);
+      }
+
+    case WM_CONTROL: // remember this is resent to the orginator...
+      result = OnControl(mp1, mp2);
+      break;
+
+    case WM_CLOSE:  // close request
+      mWindowState |= nsWindowState_eClosing;
+      DispatchStandardEvent(NS_XUL_CLOSE );
+      result = PR_TRUE; // abort window closure
+      break;
+
+    case WM_DESTROY: // clean up.
+      OnDestroy();
+      result = PR_TRUE;
+      break;
+
+    case WM_PAINT:
+      result = OnPaint();
+      break;
+
+    case WM_TRANSLATEACCEL:
+      {
+        PQMSG pQmsg = (PQMSG)mp1;
+        if (pQmsg->msg == WM_CHAR) {
+          LONG mp1 = (LONG)pQmsg->mp1;
+          LONG mp2 = (LONG)pQmsg->mp2;
+
+          // If we have a shift+enter combination, return false
+          // immediately.  OS/2 considers the shift+enter
+          // combination an accelerator and will translate it into
+          // a WM_OPEN message.  When this happens we do not get a
+          // WM_CHAR for the down transition of the enter key when
+          // shift is also pressed and OnKeyDown will not be called.
+          if (((SHORT1FROMMP(mp1) & (KC_VIRTUALKEY | KC_SHIFT)) &&
+               (SHORT2FROMMP(mp2) == VK_ENTER)) ||
+              // Let Mozilla handle standalone F10, not the OS
+              ((SHORT1FROMMP(mp1) & KC_VIRTUALKEY) &&
+               ((SHORT1FROMMP(mp1) & (KC_SHIFT | KC_ALT | KC_CTRL)) == 0) &&
+               (SHORT2FROMMP(mp2) == VK_F10)) ||
+              // Let Mozilla handle standalone F1, not the OS
+              ((SHORT1FROMMP(mp1) & KC_VIRTUALKEY) &&
+               ((SHORT1FROMMP(mp1) & (KC_SHIFT | KC_ALT | KC_CTRL)) == 0) &&
+               (SHORT2FROMMP(mp2) == VK_F1)) ||
+              // Let Mozilla handle standalone Alt, not the OS
+              ((SHORT1FROMMP(mp1) & KC_KEYUP) && (SHORT1FROMMP(mp1) & KC_LONEKEY) &&
+               (SHORT2FROMMP(mp2) == VK_ALT)) ||
+              // Let Mozilla handle Alt+Enter, not the OS
+              ((SHORT1FROMMP(mp1) & (KC_VIRTUALKEY | KC_ALT)) &&
+               (SHORT2FROMMP(mp2) == VK_NEWLINE))
+             ) {
+            return(PR_TRUE);
+          }
         }
-#if 0
-          USHORT usSrc = SHORT1FROMMP( mp2);
-          if( usSrc == CMDSRC_MENU || usSrc == CMDSRC_ACCELERATOR)
-            result = OnMenuClick( SHORT1FROMMP(mp1));
-          break;
+      }
+      break;
+
+    case WM_CHAR:
+      result = OnKey(mp1, mp2);
+      break;
+
+    case WM_QUERYCONVERTPOS:
+      {
+        PRECTL pCursorRect = (PRECTL)mp1;
+        nsCompositionEvent event(PR_TRUE, NS_COMPOSITION_QUERY, this);
+        nsPoint point;
+        point.x = 0;
+        point.y = 0;
+        InitEvent(event,&point);
+        DispatchWindowEvent(&event);
+        if ((event.theReply.mCursorPosition.x) ||
+            (event.theReply.mCursorPosition.y)) {
+          pCursorRect->xLeft = event.theReply.mCursorPosition.x + 1;
+          pCursorRect->xRight = pCursorRect->xLeft + event.theReply.mCursorPosition.width - 1;
+          pCursorRect->yTop = GetClientHeight() - event.theReply.mCursorPosition.y;
+          pCursorRect->yBottom = pCursorRect->yTop - event.theReply.mCursorPosition.height;
+
+          point.x = 0;
+          point.y = 0;
+          rc = (MRESULT)QCP_CONVERT;
+        } else {
+          rc = (MRESULT)QCP_NOCONVERT;
         }
+      }
+      result = PR_TRUE;
+      break;
 
-        case WM_INITMENU:
-          result = OnActivateMenu( HWNDFROMMP(mp2), TRUE);
-          break;
+    // Mouseclicks: we don't dispatch CLICK events because they just cause
+    // trouble: gecko seems to expect EITHER buttondown/up OR click events
+    // and so that's what we give it.
 
-        case WM_MENUEND:
-          result = OnActivateMenu( HWNDFROMMP(mp2), FALSE);
-          break;
-#endif
+    case WM_BUTTON1DOWN:
+      if (!mIsScrollBar)
+        WinSetCapture(HWND_DESKTOP, mWnd);
+      result = DispatchMouseEvent(NS_MOUSE_LEFT_BUTTON_DOWN, mp1, mp2);
+      // there's no need to clear this on button-up
+      gLastButton1Down.x = XFROMMP(mp1);
+      gLastButton1Down.y = YFROMMP(mp1);
+      WinSetActiveWindow(HWND_DESKTOP, mWnd);
+      result = PR_TRUE;
+      break;
+    case WM_BUTTON1UP:
+      if (!mIsScrollBar)
+        WinSetCapture(HWND_DESKTOP, 0); // release
+      result = DispatchMouseEvent(NS_MOUSE_LEFT_BUTTON_UP, mp1, mp2);
+      break;
+    case WM_BUTTON1DBLCLK:
+      result = DispatchMouseEvent(NS_MOUSE_LEFT_DOUBLECLICK, mp1, mp2);
+      break;
 
-#if 0  // Tooltips appear to be gone
-        case WMU_SHOW_TOOLTIP:
-        {
-          nsTooltipEvent event(PR_TRUE, NS_SHOW_TOOLTIP, this);
-          InitEvent( event );
-          event.tipIndex = LONGFROMMP(mp1);
-          result = DispatchWindowEvent(&event);
-          NS_RELEASE(event.widget);
-          break;
+    case WM_BUTTON2DOWN:
+      if (!mIsScrollBar)
+        WinSetCapture(HWND_DESKTOP, mWnd);
+      result = DispatchMouseEvent(NS_MOUSE_RIGHT_BUTTON_DOWN, mp1, mp2);
+      break;
+    case WM_BUTTON2UP:
+      if (!mIsScrollBar)
+        WinSetCapture(HWND_DESKTOP, 0); // release
+      result = DispatchMouseEvent(NS_MOUSE_RIGHT_BUTTON_UP, mp1, mp2);
+      break;
+    case WM_BUTTON2DBLCLK:
+      result = DispatchMouseEvent(NS_MOUSE_RIGHT_DOUBLECLICK, mp1, mp2);
+      break;
+
+    case WM_CONTEXTMENU:
+      if (SHORT2FROMMP(mp2) == TRUE) {
+        HWND hwndCurrFocus = WinQueryFocus(HWND_DESKTOP);
+        if (hwndCurrFocus != mWnd) {
+          WinSendMsg(hwndCurrFocus, msg, mp1, mp2);
+        } else {
+          result = DispatchMouseEvent(NS_CONTEXTMENU_KEY, mp1, mp2);
         }
+      } else {
+        result = DispatchMouseEvent(NS_CONTEXTMENU, mp1, mp2);
+      }
+      break;
 
-        case WMU_HIDE_TOOLTIP:
-          result = DispatchStandardEvent( NS_HIDE_TOOLTIP );
-          break;
-#endif
-        case WM_CONTROL: // remember this is resent to the orginator...
-          result = OnControl( mp1, mp2);
-          break;
+      // if MB1 & MB2 are both pressed, perform a copy or paste;
+      // see how far the mouse has moved since MB1-down to determine
+      // the operation (this really ought to look for selected content)
+    case WM_CHORD:
+      if (WinGetKeyState(HWND_DESKTOP, VK_BUTTON1) &
+          WinGetKeyState(HWND_DESKTOP, VK_BUTTON2) &
+          0x8000) {
+        PRBool isCopy = PR_FALSE;
+        if (abs(XFROMMP(mp1) - gLastButton1Down.x) >
+              (WinQuerySysValue(HWND_DESKTOP, SV_CXMOTIONSTART) / 2) ||
+            abs(YFROMMP(mp1) - gLastButton1Down.y) >
+              (WinQuerySysValue(HWND_DESKTOP, SV_CYMOTIONSTART) / 2))
+          isCopy = PR_TRUE;
 
-        case WM_CLOSE:  // close request
-          mWindowState |= nsWindowState_eClosing;
-          DispatchStandardEvent( NS_XUL_CLOSE );
-          result = PR_TRUE; // abort window closure
-          break;
+        nsKeyEvent event(PR_TRUE, NS_KEY_PRESS, this);
+        nsPoint point(0,0);
+        InitEvent(event, &point);
 
-        case WM_DESTROY:
-            // clean up.
-            OnDestroy();
+        event.keyCode = NS_VK_INSERT;
+        if (isCopy) {
+          event.isShift = PR_FALSE;
+          event.isControl = PR_TRUE;
+        } else {
+          event.isShift = PR_TRUE;
+          event.isControl = PR_FALSE;
+        }
+        event.isAlt = PR_FALSE;
+        event.isMeta = PR_FALSE;
+        event.eventStructType = NS_KEY_EVENT;
+        event.charCode = 0;
+        // OS/2 does not set the Shift, Ctrl, or Alt on keyup
+        if (SHORT1FROMMP(mp1) & (KC_VIRTUALKEY|KC_KEYUP|KC_LONEKEY)) {
+          USHORT usVKey = SHORT2FROMMP(mp2);
+          if (usVKey == VK_SHIFT)
+            event.isShift = PR_TRUE;
+          if (usVKey == VK_CTRL)
+            event.isControl = PR_TRUE;
+          if (usVKey == VK_ALTGRAF || usVKey == VK_ALT)
+            event.isAlt = PR_TRUE;
+        }
+        result = DispatchWindowEvent(&event);
+      }
+      break;
+
+    case WM_BUTTON3DOWN:
+      result = DispatchMouseEvent(NS_MOUSE_MIDDLE_BUTTON_DOWN, mp1, mp2);
+      break;
+    case WM_BUTTON3UP:
+      result = DispatchMouseEvent(NS_MOUSE_MIDDLE_BUTTON_UP, mp1, mp2);
+      break;
+    case WM_BUTTON3DBLCLK:
+      result = DispatchMouseEvent(NS_MOUSE_MIDDLE_DOUBLECLICK, mp1, mp2);
+      break;
+
+    case WM_MOUSEMOVE:
+      {
+        static POINTL ptlLastPos = { -1, -1 };
+        // See if mouse has actually moved.
+        if (ptlLastPos.x == (SHORT)SHORT1FROMMP(mp1) &&
+            ptlLastPos.y == (SHORT)SHORT2FROMMP(mp1)) {
+          return PR_TRUE;
+        } else {
+          // Yes, remember new position.
+          ptlLastPos.x = (SHORT)SHORT1FROMMP(mp1);
+          ptlLastPos.y = (SHORT)SHORT2FROMMP(mp1);
+        }
+      }
+      result = DispatchMouseEvent(NS_MOUSE_MOVE, mp1, mp2);
+      // don't propogate mouse move or the OS will change the pointer
+      if (!mIsScrollBar)
+        result = PR_TRUE;
+      break;
+    case WM_MOUSEENTER:
+      result = DispatchMouseEvent(NS_MOUSE_ENTER, mp1, mp2);
+      break;
+    case WM_MOUSELEAVE:
+      result = DispatchMouseEvent(NS_MOUSE_EXIT, mp1, mp2);
+      break;
+
+    case WM_APPCOMMAND:
+      {
+        PRUint32 appCommand = GET_APPCOMMAND_LPARAM(mp2);
+        switch (appCommand) {
+          case APPCOMMAND_BROWSER_BACKWARD:
+          case APPCOMMAND_BROWSER_FORWARD:
+          case APPCOMMAND_BROWSER_REFRESH:
+          case APPCOMMAND_BROWSER_STOP:
+            DispatchAppCommandEvent(appCommand);
+            // tell the driver that we handled the event
+            rc = (MRESULT)1;
             result = PR_TRUE;
             break;
 
-        case WM_PAINT:
-            result = OnPaint();
+          default:
+            rc = (MRESULT)0;
+            result = PR_FALSE;
             break;
-
-        case WM_TRANSLATEACCEL:
-            {
-              PQMSG pQmsg = (PQMSG)mp1;
-              if (pQmsg->msg == WM_CHAR) 
-              {
-                LONG mp1 = (LONG)pQmsg->mp1;
-                LONG mp2 = (LONG)pQmsg->mp2;
-
-                // If we have a shift+enter combination, return false
-                // immediately.  OS/2 considers the shift+enter
-                // combination an accelerator and will translate it into
-                // a WM_OPEN message.  When this happens we do not get a
-                // WM_CHAR for the down transition of the enter key when
-                // shift is also pressed and OnKeyDown will not be called.
-                if (((SHORT1FROMMP(mp1) & (KC_VIRTUALKEY | KC_SHIFT)) &&
-                     (SHORT2FROMMP(mp2) == VK_ENTER)) ||
-                // Let Mozilla handle standalone F10, not the OS
-                    ((SHORT1FROMMP(mp1) & KC_VIRTUALKEY) &&    
-                     ((SHORT1FROMMP(mp1) & (KC_SHIFT | KC_ALT | KC_CTRL)) == 0) &&
-                     (SHORT2FROMMP(mp2) == VK_F10)) ||
-                // Let Mozilla handle standalone F1, not the OS
-                    ((SHORT1FROMMP(mp1) & KC_VIRTUALKEY) &&    
-                     ((SHORT1FROMMP(mp1) & (KC_SHIFT | KC_ALT | KC_CTRL)) == 0) &&
-                     (SHORT2FROMMP(mp2) == VK_F1)) ||
-                // Let Mozilla handle standalone Alt, not the OS
-                    ((SHORT1FROMMP(mp1) & KC_KEYUP) && (SHORT1FROMMP(mp1) & KC_LONEKEY) &&
-                     (SHORT2FROMMP(mp2) == VK_ALT)) ||
-                // Let Mozilla handle Alt+Enter, not the OS
-                    ((SHORT1FROMMP(mp1) & (KC_VIRTUALKEY | KC_ALT)) &&
-                     (SHORT2FROMMP(mp2) == VK_NEWLINE)) 
-                   )
-                {
-                  return(PR_TRUE);
-                }
-              }
-            }
-            break;
-
-        case WM_CHAR:
-            result = OnKey( mp1, mp2);
-            break;
-
-        case WM_QUERYCONVERTPOS:
-          {
-            PRECTL pCursorRect = (PRECTL)mp1;
-            nsCompositionEvent event(PR_TRUE, NS_COMPOSITION_QUERY, this);
-            nsPoint point;
-            point.x = 0;
-            point.y = 0;
-            InitEvent(event,&point);
-            DispatchWindowEvent(&event);
-            if ((event.theReply.mCursorPosition.x) || 
-                (event.theReply.mCursorPosition.y)) 
-            {
-              pCursorRect->xLeft = event.theReply.mCursorPosition.x + 1;
-              pCursorRect->xRight = pCursorRect->xLeft + event.theReply.mCursorPosition.width - 1;
-              pCursorRect->yTop = GetClientHeight() - event.theReply.mCursorPosition.y;
-              pCursorRect->yBottom = pCursorRect->yTop - event.theReply.mCursorPosition.height;
-
-              point.x = 0;
-              point.y = 0;
-
-              rc = (MRESULT)QCP_CONVERT;
-            }
-            else
-              rc = (MRESULT)QCP_NOCONVERT;
-
-            result = PR_TRUE;
-            break;
-          }
-
-        // Mouseclicks: we don't dispatch CLICK events because they just cause
-        // trouble: gecko seems to expect EITHER buttondown/up OR click events
-        // and so that's what we give it.
-    
-        case WM_BUTTON1DOWN:
-          if (!mIsScrollBar)
-            WinSetCapture( HWND_DESKTOP, mWnd);
-          result = DispatchMouseEvent( NS_MOUSE_LEFT_BUTTON_DOWN, mp1, mp2);
-            // there's no need to clear this on button-up
-          gLastButton1Down.x = XFROMMP(mp1);
-          gLastButton1Down.y = YFROMMP(mp1);
-          WinSetActiveWindow(HWND_DESKTOP, mWnd);
-          result = PR_TRUE;
-          break;
-        case WM_BUTTON1UP:
-          if (!mIsScrollBar)
-            WinSetCapture( HWND_DESKTOP, 0); // release
-          result = DispatchMouseEvent( NS_MOUSE_LEFT_BUTTON_UP, mp1, mp2);
-          break;
-        case WM_BUTTON1DBLCLK:
-          result = DispatchMouseEvent( NS_MOUSE_LEFT_DOUBLECLICK, mp1, mp2);
-          break;
-    
-        case WM_BUTTON2DOWN:
-          if (!mIsScrollBar)
-            WinSetCapture( HWND_DESKTOP, mWnd);
-          result = DispatchMouseEvent( NS_MOUSE_RIGHT_BUTTON_DOWN, mp1, mp2);
-          break;
-        case WM_BUTTON2UP:
-          if (!mIsScrollBar)
-            WinSetCapture( HWND_DESKTOP, 0); // release
-          result = DispatchMouseEvent( NS_MOUSE_RIGHT_BUTTON_UP, mp1, mp2);
-          break;
-        case WM_BUTTON2DBLCLK:
-          result = DispatchMouseEvent( NS_MOUSE_RIGHT_DOUBLECLICK, mp1, mp2);
-          break;
-        case WM_CONTEXTMENU:
-          if (SHORT2FROMMP(mp2) == TRUE) {
-            HWND hwndCurrFocus = WinQueryFocus(HWND_DESKTOP);
-            if (hwndCurrFocus != mWnd) {
-              WinSendMsg(hwndCurrFocus, msg, mp1, mp2);
-            } else {
-              result = DispatchMouseEvent( NS_CONTEXTMENU_KEY, mp1, mp2);
-            }
-          } else {
-            result = DispatchMouseEvent( NS_CONTEXTMENU, mp1, mp2);
-          }
-          break;
-
-          // if MB1 & MB2 are both pressed, perform a copy or paste;
-          // see how far the mouse has moved since MB1-down to determine
-          // the operation (this really ought to look for selected content)
-        case WM_CHORD:
-          if (WinGetKeyState(HWND_DESKTOP, VK_BUTTON1) & 
-              WinGetKeyState(HWND_DESKTOP, VK_BUTTON2) &
-              0x8000) {
-            PRBool isCopy = FALSE;
-            if (abs(XFROMMP(mp1) - gLastButton1Down.x) >
-                  (WinQuerySysValue(HWND_DESKTOP, SV_CXMOTIONSTART) / 2) ||
-                abs(YFROMMP(mp1) - gLastButton1Down.y) >
-                  (WinQuerySysValue(HWND_DESKTOP, SV_CYMOTIONSTART) / 2))
-              isCopy = TRUE;
-
-            nsKeyEvent event(PR_TRUE, NS_KEY_PRESS, this);
-            nsPoint point(0,0);
-            InitEvent( event, &point);
-
-            event.keyCode   = NS_VK_INSERT;
-            if (isCopy) {
-              event.isShift   = PR_FALSE;
-              event.isControl = PR_TRUE;
-            } else {
-              event.isShift   = PR_TRUE;
-              event.isControl = PR_FALSE;
-            }
-            event.isAlt     = PR_FALSE;
-            event.isMeta    = PR_FALSE;
-            event.eventStructType = NS_KEY_EVENT;
-            event.charCode = 0;
-            result = DispatchWindowEvent( &event);
-          }
-          break;
-
-        case WM_BUTTON3DOWN:
-          result = DispatchMouseEvent( NS_MOUSE_MIDDLE_BUTTON_DOWN, mp1, mp2);
-          break;
-        case WM_BUTTON3UP:
-          result = DispatchMouseEvent( NS_MOUSE_MIDDLE_BUTTON_UP, mp1, mp2);
-          break;
-        case WM_BUTTON3DBLCLK:
-          result = DispatchMouseEvent( NS_MOUSE_MIDDLE_DOUBLECLICK, mp1, mp2);
-          break;
-    
-        case WM_MOUSEMOVE:
-          {
-            static POINTL ptlLastPos = { -1, -1 };
-            // See if mouse has actually moved.
-            if ( ptlLastPos.x == (SHORT)SHORT1FROMMP(mp1) &&
-                 ptlLastPos.y == (SHORT)SHORT2FROMMP(mp1)) {
-                return PR_TRUE;
-            } else {
-                // Yes, remember new position.
-                ptlLastPos.x = (SHORT)SHORT1FROMMP(mp1);
-                ptlLastPos.y = (SHORT)SHORT2FROMMP(mp1);
-            }
-          }
-          result = DispatchMouseEvent( NS_MOUSE_MOVE, mp1, mp2);
-          // don't propogate mouse move or the OS will change the pointer
-          if (!mIsScrollBar)
-            result = PR_TRUE;
-          break;
-        case WM_MOUSEENTER:
-          result = DispatchMouseEvent( NS_MOUSE_ENTER, mp1, mp2);
-          break;
-        case WM_MOUSELEAVE:
-          result = DispatchMouseEvent( NS_MOUSE_EXIT, mp1, mp2);
-          break;
-
-        case WM_APPCOMMAND:
-        {
-          PRUint32 appCommand = GET_APPCOMMAND_LPARAM(mp2);
-
-          switch (appCommand)
-          {
-            case APPCOMMAND_BROWSER_BACKWARD:
-            case APPCOMMAND_BROWSER_FORWARD:
-            case APPCOMMAND_BROWSER_REFRESH:
-            case APPCOMMAND_BROWSER_STOP:
-              DispatchAppCommandEvent(appCommand);
-              // tell the driver that we handled the event
-              rc = (MRESULT)1;
-              result = PR_TRUE;
-              break;
-
-            default:
-              rc = (MRESULT)0;
-              result = PR_FALSE;
-              break;
-          }
-          break;
         }
-    
-        case WM_HSCROLL:
-        case WM_VSCROLL:
-          result = OnScroll( msg, mp1, mp2);
-          break;
+        break;
+      }
 
-        case WM_ACTIVATE:
-          DEBUGFOCUS(WM_ACTIVATE);
-          if (mp1)
-            gJustGotActivate = PR_TRUE;
-          else
-            gJustGotDeactivate = PR_TRUE;
-          break;
+    case WM_HSCROLL:
+    case WM_VSCROLL:
+      result = OnScroll(msg, mp1, mp2);
+      break;
 
-        case WM_FOCUSCHANGED:
-        {
-          PRBool isMozWindowTakingFocus = PR_TRUE;
-          DEBUGFOCUS(WM_FOCUSCHANGED);
+    case WM_ACTIVATE:
+      DEBUGFOCUS(WM_ACTIVATE);
+      if (mp1)
+        gJustGotActivate = PR_TRUE;
+      else
+        gJustGotDeactivate = PR_TRUE;
+      break;
 
-          // If the frame was activated earlier or mp1 is 0, dispatch
-          // focus & activation events.  However, if the frame is minimized,
-          // defer activation and let SetSizeMode() dispatch it after the
-          // window has been restored by the user - otherwise, Show() will
-          // restore it involuntarily.  
+    case WM_FOCUSCHANGED:
+      {
+        PRBool isMozWindowTakingFocus = PR_TRUE;
+        DEBUGFOCUS(WM_FOCUSCHANGED);
 
-          if (SHORT1FROMMP(mp2)) {
-            DEBUGFOCUS(NS_GOTFOCUS);
-            result = DispatchFocus(NS_GOTFOCUS, isMozWindowTakingFocus);
+        // If the frame was activated earlier or mp1 is 0, dispatch
+        // focus & activation events.  However, if the frame is minimized,
+        // defer activation and let SetSizeMode() dispatch it after the
+        // window has been restored by the user - otherwise, Show() will
+        // restore it involuntarily.
 
-            if (gJustGotActivate || mp1 == 0) {
-              HWND hActive = WinQueryActiveWindow( HWND_DESKTOP);
-              if (!(WinQueryWindowULong( hActive, QWL_STYLE) & WS_MINIMIZED)) {
-                DEBUGFOCUS(NS_ACTIVATE);
-                gJustGotActivate = PR_FALSE;
-                gJustGotDeactivate = PR_FALSE;
-                result = DispatchFocus(NS_ACTIVATE, isMozWindowTakingFocus);
-              }
-            }
+        if (SHORT1FROMMP(mp2)) {
+          DEBUGFOCUS(NS_GOTFOCUS);
+          result = DispatchFocus(NS_GOTFOCUS, isMozWindowTakingFocus);
 
-            if ( WinIsChild( mWnd, HWNDFROMMP(mp1)) && mNextID == 1) {
-              DEBUGFOCUS(NS_PLUGIN_ACTIVATE);
-              result = DispatchFocus(NS_PLUGIN_ACTIVATE, isMozWindowTakingFocus);
-              WinSetFocus(HWND_DESKTOP, mWnd);
-            }
-          }
-          // We are losing focus
-          else {
-            char className[19];
-            ::WinQueryClassName((HWND)mp1, 19, className);
-            if (strcmp(className, WindowClass()) != 0 && 
-                strcmp(className, WC_SCROLLBAR_STRING) != 0) {
-              isMozWindowTakingFocus = PR_FALSE;
-            }
-
-            if (gJustGotDeactivate) {
-              DEBUGFOCUS(NS_DEACTIVATE);
+          if (gJustGotActivate || mp1 == 0) {
+            HWND hActive = WinQueryActiveWindow(HWND_DESKTOP);
+            if (!(WinQueryWindowULong(hActive, QWL_STYLE) & WS_MINIMIZED)) {
+              DEBUGFOCUS(NS_ACTIVATE);
+              gJustGotActivate = PR_FALSE;
               gJustGotDeactivate = PR_FALSE;
-              result = DispatchFocus(NS_DEACTIVATE, isMozWindowTakingFocus);
+              result = DispatchFocus(NS_ACTIVATE, isMozWindowTakingFocus);
             }
-
-            DEBUGFOCUS(NS_LOSTFOCUS);
-            result = DispatchFocus(NS_LOSTFOCUS, isMozWindowTakingFocus);
           }
 
-          break;
+          if (WinIsChild(mWnd, HWNDFROMMP(mp1)) && mNextID == 1) {
+            DEBUGFOCUS(NS_PLUGIN_ACTIVATE);
+            result = DispatchFocus(NS_PLUGIN_ACTIVATE, isMozWindowTakingFocus);
+            WinSetFocus(HWND_DESKTOP, mWnd);
+          }
+        }
+        // We are losing focus
+        else {
+          char className[19];
+          ::WinQueryClassName((HWND)mp1, 19, className);
+          if (strcmp(className, WindowClass()) != 0 &&
+              strcmp(className, WC_SCROLLBAR_STRING) != 0) {
+            isMozWindowTakingFocus = PR_FALSE;
+          }
+
+          if (gJustGotDeactivate) {
+            DEBUGFOCUS(NS_DEACTIVATE);
+            gJustGotDeactivate = PR_FALSE;
+            result = DispatchFocus(NS_DEACTIVATE, isMozWindowTakingFocus);
+          }
+
+          DEBUGFOCUS(NS_LOSTFOCUS);
+          result = DispatchFocus(NS_LOSTFOCUS, isMozWindowTakingFocus);
         }
 
-        case WM_WINDOWPOSCHANGED: 
-          result = OnReposition( (PSWP) mp1);
-          break;
-    
-    
-        case WM_REALIZEPALETTE:          // hopefully only nsCanvas & nsFrame
-          result = OnRealizePalette();   // will need this
-          break;
-    
-        case WM_PRESPARAMCHANGED:
-          // This is really for font-change notifies.  Do that first.
-          rc = GetPrevWP()( mWnd, msg, mp1, mp2);
-          OnPresParamChanged( mp1, mp2);
-          result = PR_TRUE;
-          break;
+        break;
+      }
 
-          // all msgs that occur when this window is the target of a drag
-        case DM_DRAGOVER:
-        case DM_DRAGLEAVE:
-        case DM_DROP:
-        case DM_RENDERCOMPLETE:
-        case DM_DROPHELP:
-          OnDragDropMsg(msg, mp1, mp2, rc);
-          result = PR_TRUE;
-          break;
-    }
-    
-    return result;
+    case WM_WINDOWPOSCHANGED:
+      result = OnReposition((PSWP)mp1);
+      break;
+
+
+    case WM_REALIZEPALETTE:          // hopefully only nsCanvas & nsFrame
+      result = OnRealizePalette();   // will need this
+      break;
+
+    case WM_PRESPARAMCHANGED:
+      // This is really for font-change notifies.  Do that first.
+      rc = GetPrevWP()(mWnd, msg, mp1, mp2);
+      OnPresParamChanged(mp1, mp2);
+      result = PR_TRUE;
+      break;
+
+      // all msgs that occur when this window is the target of a drag
+    case DM_DRAGOVER:
+    case DM_DRAGLEAVE:
+    case DM_DROP:
+    case DM_RENDERCOMPLETE:
+    case DM_DROPHELP:
+      OnDragDropMsg(msg, mp1, mp2, rc);
+      result = PR_TRUE;
+      break;
+  }
+
+  return result;
 }
 
 
@@ -4057,92 +4011,137 @@ PRBool nsWindow::ReleaseIfDragHPS(HPS aHps)
 // --------------------------------------------------------------------------
 
 // 'Native data'
-// function to translate from a WM_CHAR to an NS VK_ constant ---------------
-PRUint32 WMChar2KeyCode( MPARAM mp1, MPARAM mp2)
+// function to translate from a WM_CHAR to an NS_VK_ constant ---------------
+PRUint32 WMChar2KeyCode(MPARAM mp1, MPARAM mp2)
 {
-   PRUint32 rc = 0;
-   USHORT   flags = SHORT1FROMMP( mp1);
+  PRUint32 rc = SHORT1FROMMP(mp2);  // character code
+  PRUint32 rcmask = rc & 0x00FF;    // masked character code for key up events
+  USHORT sc = CHAR4FROMMP(mp1);     // scan code
+  USHORT flags = SHORT1FROMMP(mp1); // flag word
 
-   // First check for characters.
-   // This is complicated by keystrokes such as Ctrl+K not having the KC_CHAR
-   // bit set, but thankfully they do have the character actually there.
-   //
-   // So go on the assumption that `if not vkey or deadkey then char'
-   //
-   if( !(flags & (KC_VIRTUALKEY | KC_DEADKEY)))
-   {
-      rc = SHORT1FROMMP(mp2);
+  // First check for characters.
+  // This is complicated by keystrokes such as Ctrl+K not having the KC_CHAR
+  // bit set, but thankfully they do have the character actually there.
+  //
+  // Assume that `if not vkey or deadkey or valid number then char'
+  if (!(flags & (KC_VIRTUALKEY | KC_DEADKEY)) ||
+      (rcmask >= '0' && rcmask <= '9' &&             // handle keys on Numpad, too,
+       (isNumPadScanCode(sc) ? isNumlockOn : 1)) ) { // if NumLock is on
+    if (flags & KC_KEYUP) { // On OS/2 the scancode is in the upper byte of
+                            // usChar when KC_KEYUP is set so mask it off
+      rc = rcmask;
+    } else { // not KC_KEYUP
+      if (! (flags & KC_CHAR)) {
+        if ((flags & KC_ALT) || (flags & KC_CTRL))
+          rc = rcmask;
+        else
+          rc = 0;
+      }
+    }
 
-      if( rc < 0xFF)
-      {
-         switch( rc)
-         {
-            case ';':  rc = NS_VK_SEMICOLON;     break;
-            case '=':  rc = NS_VK_EQUALS;        break;
-            case '*':  rc = NS_VK_MULTIPLY;      break;
-            case '+':  rc = NS_VK_ADD;           break;
-            case '-':  rc = NS_VK_SUBTRACT;      break;
-            case '.':  rc = NS_VK_PERIOD;        break; // NS_VK_DECIMAL ?
-            case '|':  rc = NS_VK_SEPARATOR;     break;
-            case ',':  rc = NS_VK_COMMA;         break;
-            case '/':  rc = NS_VK_SLASH;         break; // NS_VK_DIVIDE ?
-            case '`':  rc = NS_VK_BACK_QUOTE;    break;
-            case '(':  rc = NS_VK_OPEN_BRACKET;  break;
-            case '\\': rc = NS_VK_BACK_SLASH;    break;
-            case ')':  rc = NS_VK_CLOSE_BRACKET; break;
-            case '\'': rc = NS_VK_QUOTE;         break;
-         }
+    if (rc < 0xFF) {
+      if (rc >= 'a' && rc <= 'z') { // The DOM_VK are for upper case only so
+                                    // if rc is lower case upper case it.
+        rc = rc - 'a' + NS_VK_A;
+      } else if (rc >= 'A' && rc <= 'Z') { // Upper case
+        rc = rc - 'A' + NS_VK_A;
+      } else if (rc >= '0' && rc <= '9') {
+        // Number keys, including Numpad if NumLock is not set
+        rc = rc - '0' + NS_VK_0;
+      } else {
+        /* For some characters, map the scan code to the NS_VK value */
+        /* This only happens in the char case NOT the VK case! */
+        switch (sc) {
+          case 0x02: rc = NS_VK_1;             break;
+          case 0x03: rc = NS_VK_2;             break;
+          case 0x04: rc = NS_VK_3;             break;
+          case 0x05: rc = NS_VK_4;             break;
+          case 0x06: rc = NS_VK_5;             break;
+          case 0x07: rc = NS_VK_6;             break;
+          case 0x08: rc = NS_VK_7;             break;
+          case 0x09: rc = NS_VK_8;             break;
+          case 0x0A: rc = NS_VK_9;             break;
+          case 0x0B: rc = NS_VK_0;             break;
+          case 0x0D: rc = NS_VK_EQUALS;        break;
+          case 0x1A: rc = NS_VK_OPEN_BRACKET;  break;
+          case 0x1B: rc = NS_VK_CLOSE_BRACKET; break;
+          case 0x27: rc = NS_VK_SEMICOLON;     break;
+          case 0x28: rc = NS_VK_QUOTE;         break;
+          case 0x29: rc = NS_VK_BACK_QUOTE;    break;
+          case 0x2B: rc = NS_VK_BACK_SLASH;    break;
+          case 0x33: rc = NS_VK_COMMA;         break;
+          case 0x34: rc = NS_VK_PERIOD;        break;
+          case 0x35: rc = NS_VK_SLASH;         break;
+          case 0x37: rc = NS_VK_MULTIPLY;      break;
+          case 0x4A: rc = NS_VK_SUBTRACT;      break;
+          case 0x4C: rc = NS_VK_CLEAR;         break; // numeric case is handled above
+          case 0x4E: rc = NS_VK_ADD;           break;
+          case 0x5C: rc = NS_VK_DIVIDE;        break;
+          default: break;
+        } // switch
+      } // else
+    } // if (rc < 0xFF)
+  } else if (flags & KC_VIRTUALKEY) {
+    USHORT vk = SHORT2FROMMP(mp2);
+    if (flags & KC_KEYUP) { // On OS/2 there are extraneous bits in the upper byte of
+                            // usChar when KC_KEYUP is set so mask them off
+      rc = rcmask;
+    }
+    if (isNumPadScanCode(sc) &&
+        (((flags & KC_ALT) && (sc != PMSCAN_PADPERIOD)) ||
+          ((flags & (KC_CHAR | KC_SHIFT)) == KC_CHAR)  ||
+          ((flags & KC_KEYUP) && rc != 0) )) {
+      CHAR numpadMap[] = {NS_VK_NUMPAD7, NS_VK_NUMPAD8, NS_VK_NUMPAD9, 0,
+                          NS_VK_NUMPAD4, NS_VK_NUMPAD5, NS_VK_NUMPAD6, 0,
+                          NS_VK_NUMPAD1, NS_VK_NUMPAD2, NS_VK_NUMPAD3,
+                          NS_VK_NUMPAD0, NS_VK_DECIMAL};
+      // If this is the Numpad must not return VK for ALT+Numpad or ALT+NumLock+Numpad
+      // NumLock+Numpad is OK
+      if (numpadMap[sc - PMSCAN_PAD7] != 0) { // not plus or minus on Numpad
+        if (flags & KC_ALT ) // do not react on Alt plus ASCII-code sequences
+          rc = 0;
+        else
+          rc = numpadMap[sc - PMSCAN_PAD7];
+      } else {                                // plus or minus of Numpad
+        rc = 0; // No virtual key for Alt+Numpad or NumLock+Numpad
       }
-   }
-   else if( flags & KC_VIRTUALKEY)
-   {
-      USHORT vk = SHORT2FROMMP( mp2);
-      if( isNumPadScanCode(CHAR4FROMMP(mp1)) && 
-          ( ((flags & KC_ALT) && (CHAR4FROMMP(mp1) != PMSCAN_PADPERIOD)) || 
-            ((flags & (KC_CHAR | KC_SHIFT)) == KC_CHAR) ) )
-      {
-         // No virtual key for Alt+NumPad or NumLock+NumPad
-         rc = 0;
-      }
-      else if( !(flags & KC_CHAR) || isNumPadScanCode(CHAR4FROMMP(mp1)) ||
-          (vk == VK_BACKSPACE) || (vk == VK_TAB) || (vk == VK_BACKTAB) ||
-          (vk == VK_ENTER) || (vk == VK_NEWLINE) || (vk == VK_SPACE) )
-      {
-         if( vk >= VK_F1 && vk <= VK_F24)
-            rc = NS_VK_F1 + (vk - VK_F1);
-         else switch( vk)
-         {
-            case VK_NUMLOCK:   rc = NS_VK_NUM_LOCK; break;
-            case VK_SCRLLOCK:  rc = NS_VK_SCROLL_LOCK; break;
-            case VK_ESC:       rc = NS_VK_ESCAPE; break; // NS_VK_CANCEL
-            case VK_BACKSPACE: rc = NS_VK_BACK; break;
-            case VK_TAB:       rc = NS_VK_TAB; break;
-            case VK_BACKTAB:   rc = NS_VK_TAB; break; // layout tests for isShift
-            case VK_CLEAR:     rc = NS_VK_CLEAR; break;
-            case VK_NEWLINE:   rc = NS_VK_RETURN; break;
-            case VK_ENTER:     rc = NS_VK_RETURN; break;
-            case VK_SHIFT:     rc = NS_VK_SHIFT; break;
-            case VK_CTRL:      rc = NS_VK_CONTROL; break;
-            case VK_ALT:       rc = NS_VK_ALT; break;
-            case VK_PAUSE:     rc = NS_VK_PAUSE; break;
-            case VK_CAPSLOCK:  rc = NS_VK_CAPS_LOCK; break;
-            case VK_SPACE:     rc = NS_VK_SPACE; break;
-            case VK_PAGEUP:    rc = NS_VK_PAGE_UP; break;
-            case VK_PAGEDOWN:  rc = NS_VK_PAGE_DOWN; break;
-            case VK_END:       rc = NS_VK_END; break;
-            case VK_HOME:      rc = NS_VK_HOME; break;
-            case VK_LEFT:      rc = NS_VK_LEFT; break;
-            case VK_UP:        rc = NS_VK_UP; break;
-            case VK_RIGHT:     rc = NS_VK_RIGHT; break;
-            case VK_DOWN:      rc = NS_VK_DOWN; break;
-            case VK_PRINTSCRN: rc = NS_VK_PRINTSCREEN; break;
-            case VK_INSERT:    rc = NS_VK_INSERT; break;
-            case VK_DELETE:    rc = NS_VK_DELETE; break;
-         }
-      }
-   }
+    } else if (!(flags & KC_CHAR) || isNumPadScanCode(sc) ||
+               (vk == VK_BACKSPACE) || (vk == VK_TAB) || (vk == VK_BACKTAB) ||
+               (vk == VK_ENTER) || (vk == VK_NEWLINE) || (vk == VK_SPACE)) {
+      if (vk >= VK_F1 && vk <= VK_F24)
+        rc = NS_VK_F1 + (vk - VK_F1);
+      else switch (vk) {
+        case VK_NUMLOCK:   rc = NS_VK_NUM_LOCK;    break;
+        case VK_SCRLLOCK:  rc = NS_VK_SCROLL_LOCK; break;
+        case VK_ESC:       rc = NS_VK_ESCAPE;      break; // NS_VK_CANCEL
+        case VK_BACKSPACE: rc = NS_VK_BACK;        break;
+        case VK_TAB:       rc = NS_VK_TAB;         break;
+        case VK_BACKTAB:   rc = NS_VK_TAB;         break; // layout tests for isShift
+        case VK_CLEAR:     rc = NS_VK_CLEAR;       break;
+        case VK_NEWLINE:   rc = NS_VK_RETURN;      break;
+        case VK_ENTER:     rc = NS_VK_RETURN;      break;
+        case VK_SHIFT:     rc = NS_VK_SHIFT;       break;
+        case VK_CTRL:      rc = NS_VK_CONTROL;     break;
+        case VK_ALT:       rc = NS_VK_ALT;         break;
+        case VK_PAUSE:     rc = NS_VK_PAUSE;       break;
+        case VK_CAPSLOCK:  rc = NS_VK_CAPS_LOCK;   break;
+        case VK_SPACE:     rc = NS_VK_SPACE;       break;
+        case VK_PAGEUP:    rc = NS_VK_PAGE_UP;     break;
+        case VK_PAGEDOWN:  rc = NS_VK_PAGE_DOWN;   break;
+        case VK_END:       rc = NS_VK_END;         break;
+        case VK_HOME:      rc = NS_VK_HOME;        break;
+        case VK_LEFT:      rc = NS_VK_LEFT;        break;
+        case VK_UP:        rc = NS_VK_UP;          break;
+        case VK_RIGHT:     rc = NS_VK_RIGHT;       break;
+        case VK_DOWN:      rc = NS_VK_DOWN;        break;
+        case VK_PRINTSCRN: rc = NS_VK_PRINTSCREEN; break;
+        case VK_INSERT:    rc = NS_VK_INSERT;      break;
+        case VK_DELETE:    rc = NS_VK_DELETE;      break;
+      } // switch
+    }
+  }
 
-   return rc;
+  return rc;
 }
 
 PCSZ nsWindow::WindowClass()

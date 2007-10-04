@@ -63,8 +63,12 @@ Var TmpVal
 !include WordFunc.nsh
 !include MUI.nsh
 
+!insertmacro FileJoin
 !insertmacro GetOptions
 !insertmacro GetParameters
+!insertmacro LineFind
+!insertmacro TextCompare
+!insertmacro TrimNewLines
 !insertmacro WordFind
 !insertmacro WordReplace
 
@@ -82,12 +86,16 @@ Var TmpVal
 ; post update cleanup.
 VIAddVersionKey "FileDescription" "${BrandShortName} Helper"
 
+!insertmacro GetLongPath
 !insertmacro GetPathFromString
 !insertmacro AddHandlerValues
 !insertmacro RegCleanMain
 !insertmacro RegCleanUninstall
+!insertmacro UpdateUninstallLog
 !insertmacro WriteRegStr2
 !insertmacro WriteRegDWORD2
+
+!insertmacro un.GetLongPath
 !insertmacro un.RegCleanMain
 !insertmacro un.RegCleanUninstall
 !insertmacro un.CloseApp
@@ -224,7 +232,7 @@ Section "Uninstall"
   ${If} ${FileExists} "$INSTDIR\uninstall\uninstall.log"
     ; Copy the uninstall log file to a temporary file
     GetTempFileName $TmpVal
-    CopyFiles "$INSTDIR\uninstall\uninstall.log" "$TmpVal"
+    CopyFiles /SILENT /FILESONLY "$INSTDIR\uninstall\uninstall.log" "$TmpVal"
 
     ; Unregister DLL's
     ${un.LineFind} "$TmpVal" "/NUL" "1:-1" "un.UnRegDLLsCallback"
@@ -449,7 +457,7 @@ Function .onInit
               ${If} ${FileExists} "$R3"
                 Delete "$INSTDIR\uninstall\*wizard*"
                 Delete "$INSTDIR\uninstall\uninstall.log"
-                CopyFiles /SILENT "$R3" "$INSTDIR\uninstall\"
+                CopyFiles /SILENT /FILESONLY "$R3" "$INSTDIR\uninstall\"
                 Push $R3
                 ${GetParentDir}
                 Pop $R4
@@ -457,6 +465,8 @@ Function .onInit
                 RmDir "$R4"
               ${EndIf}
             ${EndUnless}
+          ${Else}
+            ${UpdateUninstallLog}
           ${EndUnless}
           StrCpy $R1 "true"
         ${EndUnless}

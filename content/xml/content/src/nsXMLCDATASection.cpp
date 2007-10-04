@@ -161,7 +161,7 @@ nsXMLCDATASection::GetNodeType(PRUint16* aNodeType)
 NS_IMETHODIMP
 nsXMLCDATASection::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
 {
-  nsCOMPtr<nsITextContent> textContent = CloneContent(PR_TRUE, mNodeInfoManager);
+  nsCOMPtr<nsITextContent> textContent = CloneContent(PR_TRUE, GetNodeInfoManager());
   NS_ENSURE_TRUE(textContent, NS_ERROR_OUT_OF_MEMORY);
 
   return CallQueryInterface(textContent, aReturn);

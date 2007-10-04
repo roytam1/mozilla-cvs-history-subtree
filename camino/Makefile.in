@@ -51,6 +51,10 @@ DIRS = \
 
 APP_NAME	= Camino
 
+CM_APP_VERSION_FILE = $(srcdir)/config/version.txt
+CM_APP_VERSION := $(shell cat $(CM_APP_VERSION_FILE))
+CM_COPYRIGHT_YEAR_FILE = $(srcdir)/config/year.txt
+CM_COPYRIGHT_YEAR := $(shell cat $(CM_COPYRIGHT_YEAR_FILE))
 FOX_APP_VERSION_FILE = $(topsrcdir)/browser/config/version.txt
 FOX_APP_VERSION := $(shell cat $(FOX_APP_VERSION_FILE))
 
@@ -97,13 +101,26 @@ endif
 generated:
 	mkdir -p $@
 
-# Generate files which need to pull version numbers from elsewhere in the tree
-generated/all-camino.js: $(srcdir)/resources/application/all-camino.js.in $(FOX_APP_VERSION_FILE) generated
-	sed -e "s/%FOX_APP_VERSION%/$(FOX_APP_VERSION)/" $< > $@
+generated/English.lproj: generated
+	mkdir -p $@
+
+# Generate files which need to pull version numbers or dates from other files in the tree
+generated/all-camino.js: $(srcdir)/resources/application/all-camino.js.in $(FOX_APP_VERSION_FILE) $(CM_APP_VERSION_FILE) generated
+	sed -e "s/%FOX_APP_VERSION%/$(FOX_APP_VERSION)/" \
+	    -e "s/%CM_APP_VERSION%/$(CM_APP_VERSION)/" $< > $@
+
+generated/Info-Camino.plist: $(srcdir)/Info-Camino.plist.in $(CM_APP_VERSION_FILE) $(CM_COPYRIGHT_YEAR_FILE) generated
+	sed -e "s/%CM_APP_VERSION%/$(CM_APP_VERSION)/" \
+	    -e "s/%CM_COPYRIGHT_YEAR%/$(CM_COPYRIGHT_YEAR)/" $< > $@
+
+generated/English.lproj/InfoPlist.strings: $(srcdir)/resources/localized/English.lproj/InfoPlist.strings.in $(CM_APP_VERSION_FILE) $(CM_COPYRIGHT_YEAR_FILE) generated/English.lproj
+	sed -e "s/%CM_APP_VERSION%/$(CM_APP_VERSION)/" \
+	    -e "s/%CM_COPYRIGHT_YEAR%/$(CM_COPYRIGHT_YEAR)/" $< | \
+	  iconv -f UTF-8 -t UTF-16 > $@
 
 # The embed-replacements rsync is done for both srcdir and objdir builds
 # to avoid adding CVS stuff to embed.jar.
-libs:: generated/all-camino.js
+libs:: generated/all-camino.js generated/Info-Camino.plist generated/English.lproj/InfoPlist.strings
 	rsync -aC --delete $(srcdir)/embed-replacements/ embed-replacements.tmp
 	cd embed-replacements.tmp && $(ZIP) -r0DX ../../dist/Embed/chrome/embed.jar *
 	$(PBBUILD) -project Camino.xcodeproj -target $(TARGET) -configuration $(BUILDSTYLE) $(PBBUILD_SETTINGS)

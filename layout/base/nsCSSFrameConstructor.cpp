@@ -3476,6 +3476,20 @@ nsCSSFrameConstructor::AdjustParentFrame(nsIContent* aChildContent,
     return NS_OK;
   }
 
+  PRBool childIsSpecialContent = PR_FALSE; // lazy lookup
+  // Only use the outer table frame as parent if the child is going to use a
+  // tableCaptionFrame, otherwise the inner table frame is the parent
+  // (bug 341858).
+  if (aParentFrame->GetType() == nsLayoutAtoms::tableOuterFrame) {
+    childIsSpecialContent = IsSpecialContent(aChildContent, aTag, aNameSpaceID,
+                                             aChildStyle);
+    if (childIsSpecialContent ||
+       (aChildStyle->GetStyleDisplay()->mDisplay !=
+       NS_STYLE_DISPLAY_TABLE_CAPTION)) {
+      aParentFrame = aParentFrame->GetContentInsertionFrame();
+    }
+  }
+
   // If our parent is a table, table-row-group, or table-row, and
   // we're not table-related in any way, we have to create table
   // pseudo-frames so that we have a table cell to live in.
@@ -3483,6 +3497,7 @@ nsCSSFrameConstructor::AdjustParentFrame(nsIContent* aChildContent,
       (!IsTableRelated(aChildDisplay->mDisplay, PR_TRUE) ||
        // Also need to create a pseudo-parent if the child is going to end up
        // with a frame based on something other than display.
+       childIsSpecialContent || // looked it up before
        IsSpecialContent(aChildContent, aTag, aNameSpaceID, aChildStyle))) {
     nsTableCreator tableCreator(aState.mPresShell);
     nsresult rv = GetPseudoCellFrame(tableCreator, aState, *aParentFrame);
@@ -3892,7 +3907,7 @@ nsCSSFrameConstructor::ConstructTableColFrame(nsFrameConstructorState& aState,
       rv = aTableCreator.CreateTableColFrame(&newCol);
       if (NS_FAILED(rv)) return rv;
       InitAndRestoreFrame(aState, aContent, parentFrame, styleContext, nsnull,
-                          newCol);
+                          newCol, PR_FALSE);
       ((nsTableColFrame*)newCol)->SetColType(eColAnonymousCol);
       lastCol->SetNextSibling(newCol);
       lastCol = newCol;
@@ -8368,6 +8383,7 @@ nsCSSFrameConstructor::IsValidSibling(nsIFrame*              aParentFrame,
 {
   if ((NS_STYLE_DISPLAY_TABLE_COLUMN_GROUP == aSiblingDisplay) ||
       (NS_STYLE_DISPLAY_TABLE_COLUMN       == aSiblingDisplay) ||
+      (NS_STYLE_DISPLAY_TABLE_CAPTION      == aSiblingDisplay) ||
       (NS_STYLE_DISPLAY_TABLE_HEADER_GROUP == aSiblingDisplay) ||
       (NS_STYLE_DISPLAY_TABLE_ROW_GROUP    == aSiblingDisplay) ||
       (NS_STYLE_DISPLAY_TABLE_FOOTER_GROUP == aSiblingDisplay)) {
@@ -8384,6 +8400,8 @@ nsCSSFrameConstructor::IsValidSibling(nsIFrame*              aParentFrame,
       return (NS_STYLE_DISPLAY_TABLE_COLUMN_GROUP == aDisplay);
     case NS_STYLE_DISPLAY_TABLE_COLUMN:
       return (NS_STYLE_DISPLAY_TABLE_COLUMN == aDisplay);
+    case NS_STYLE_DISPLAY_TABLE_CAPTION:
+      return (NS_STYLE_DISPLAY_TABLE_CAPTION == aDisplay);
     default: // all of the row group types
       return (NS_STYLE_DISPLAY_TABLE_HEADER_GROUP == aDisplay) ||
              (NS_STYLE_DISPLAY_TABLE_ROW_GROUP    == aDisplay) ||
@@ -8391,22 +8409,14 @@ nsCSSFrameConstructor::IsValidSibling(nsIFrame*              aParentFrame,
              (NS_STYLE_DISPLAY_TABLE_CAPTION      == aDisplay);
     }
   }
-  else if (NS_STYLE_DISPLAY_TABLE_CAPTION == aSiblingDisplay) {
-    // Nothing can be a sibling of a caption since there can only be one caption.
-    // But this check is necessary since a row group and caption are siblings
-    // from a content perspective (they share the table content as parent)
-    return PR_FALSE;
-  }
-  else {
-    if (nsLayoutAtoms::fieldSetFrame == aParentFrame->GetType()) {
-      // Legends can be sibling of legends but not of other content in the fieldset
-      nsIAtom* sibType = aSibling.GetType();
-      nsCOMPtr<nsIDOMHTMLLegendElement> legendContent(do_QueryInterface(&aContent));
+  else if (nsLayoutAtoms::fieldSetFrame == aParentFrame->GetType()) {
+    // Legends can be sibling of legends but not of other content in the fieldset
+    nsIAtom* sibType = aSibling.GetType();
+    nsCOMPtr<nsIDOMHTMLLegendElement> legendContent(do_QueryInterface(&aContent));
 
-      if ((legendContent  && (nsLayoutAtoms::legendFrame != sibType)) ||
-          (!legendContent && (nsLayoutAtoms::legendFrame == sibType)))
-        return PR_FALSE;
-    }
+    if ((legendContent  && (nsLayoutAtoms::legendFrame != sibType)) ||
+        (!legendContent && (nsLayoutAtoms::legendFrame == sibType)))
+      return PR_FALSE;
   }
 
   return PR_TRUE;
@@ -8834,11 +8844,10 @@ nsCSSFrameConstructor::ContentAppended(nsIContent*     aContainer,
   PRBool haveFirstLetterStyle = PR_FALSE, haveFirstLineStyle = PR_FALSE;
   nsIFrame* containingBlock = state.mFloatedItems.containingBlock;
   if (containingBlock) {
-    nsIContent* blockContent = containingBlock->GetContent();
-    nsStyleContext* blockSC = containingBlock->GetStyleContext();
-    HaveSpecialBlockStyle(blockContent, blockSC,
-                          &haveFirstLetterStyle,
-                          &haveFirstLineStyle);
+    haveFirstLetterStyle = HaveFirstLetterStyle(containingBlock);
+    haveFirstLineStyle =
+      HaveFirstLineStyle(containingBlock->GetContent(),
+                         containingBlock->GetStyleContext());
   }
 
   if (haveFirstLetterStyle) {
@@ -8851,15 +8860,6 @@ nsCSSFrameConstructor::ContentAppended(nsIContent*     aContainer,
   // the outer table frame's additional child list. 
   nsFrameItems captionItems;
   
-  PRBool hasCaption = PR_FALSE;
-  if (nsLayoutAtoms::tableFrame == frameType) {
-    nsIFrame* outerTable = parentFrame->GetParent();
-    if (outerTable) { 
-      if (outerTable->GetFirstChild(nsLayoutAtoms::captionList)) {
-        hasCaption = PR_TRUE;
-      }
-    }  
-  }
   PRUint32 i;
   count = aContainer->GetChildCount();
   for (i = aNewIndexInContainer; i < count; i++) {
@@ -8867,20 +8867,11 @@ nsCSSFrameConstructor::ContentAppended(nsIContent*     aContainer,
     // lookup the table child frame type as it is much more difficult to remove a frame
     // and all it descendants (abs. pos. for instance) than to prevent the frame creation.
     if (nsLayoutAtoms::tableFrame == frameType) {
-      if (hasCaption) {
-        // Resolve the style context and get its display
-        nsRefPtr<nsStyleContext> childStyleContext;
-        childStyleContext = ResolveStyleContext(parentFrame, childContent);
-        if (childStyleContext->GetStyleDisplay()->mDisplay == NS_STYLE_DISPLAY_TABLE_CAPTION)
-          continue; //don't create a table caption frame and its descendants
-      }
       nsFrameItems tempItems;
       ConstructFrame(state, childContent, parentFrame, tempItems);
       if (tempItems.childList) {
         if (nsLayoutAtoms::tableCaptionFrame == tempItems.childList->GetType()) {
-          NS_ASSERTION(!captionItems.childList, "don't append twice a caption");
-          hasCaption = PR_TRUE; // remember that we have a caption now
-          captionItems.AddChild(tempItems.childList);        
+          captionItems.AddChild(tempItems.childList);
         }
         else {
           frameItems.AddChild(tempItems.childList);
@@ -8901,9 +8892,6 @@ nsCSSFrameConstructor::ContentAppended(nsIContent*     aContainer,
       ConstructFrame(state, childContent, parentFrame, frameItems);
     }
   }
-
-  // We built some new frames.  Initialize any newly-constructed bindings.
-  mDocument->BindingManager()->ProcessAttachedQueue();
 
   // process the current pseudo frame state
   if (!state.mPseudoFrames.IsEmpty()) {
@@ -9097,7 +9085,8 @@ nsCSSFrameConstructor::NeedSpecialFrameReframe(nsIContent*     aParent1,
   if (aChild->IsContentOfType(nsIContent::eELEMENT)) {
     nsRefPtr<nsStyleContext> styleContext;
     styleContext = ResolveStyleContext(aParentFrame, aChild);
-    childIsBlock = styleContext->GetStyleDisplay()->IsBlockLevel();
+    const nsStyleDisplay* display = styleContext->GetStyleDisplay();
+    childIsBlock = display->IsBlockLevel() || IsTableRelated(display->mDisplay, PR_TRUE);
   }
   nsIFrame* prevParent; // parent of prev sibling
   nsIFrame* nextParent; // parent of next sibling
@@ -9215,9 +9204,9 @@ PRBool NotifyListBoxBody(nsPresContext*    aPresContext,
     nsCOMPtr<nsIDOMXULElement> xulElement = do_QueryInterface(aContainer);
     nsCOMPtr<nsIBoxObject> boxObject;
     xulElement->GetBoxObject(getter_AddRefs(boxObject));
-    nsCOMPtr<nsPIListBoxObject> listBoxObject = do_QueryInterface(boxObject);
+    nsCOMPtr<nsPIListBoxObject_MOZILLA_1_8_BRANCH> listBoxObject = do_QueryInterface(boxObject);
     if (listBoxObject) {
-      nsIListBoxObject* listboxBody = listBoxObject->GetListBoxBody();
+      nsIListBoxObject* listboxBody = listBoxObject->GetListBoxBody(PR_FALSE);
       if (listboxBody) {
         nsListBoxBodyFrame *listBoxBodyFrame = NS_STATIC_CAST(nsListBoxBodyFrame*, listboxBody);
         if (aOperation == CONTENT_REMOVED) {
@@ -9242,11 +9231,12 @@ PRBool NotifyListBoxBody(nsPresContext*    aPresContext,
                                           getter_AddRefs(tag));
 
   // Just ignore tree tags, anyway we don't create any frames for them.
-  if (tag == nsXULAtoms::treechildren ||
-      tag == nsXULAtoms::treeitem ||
-      tag == nsXULAtoms::treerow ||
-      (namespaceID == kNameSpaceID_XUL && aUseXBLForms &&
-       ShouldIgnoreSelectChild(aContainer)))
+  if (aContainer->GetParent() &&
+      (tag == nsXULAtoms::treechildren ||
+       tag == nsXULAtoms::treeitem ||
+       tag == nsXULAtoms::treerow ||
+       (namespaceID == kNameSpaceID_XUL && aUseXBLForms &&
+        ShouldIgnoreSelectChild(aContainer))))
     return PR_TRUE;
 
   return PR_FALSE;
@@ -9333,8 +9323,6 @@ nsCSSFrameConstructor::ContentInserted(nsIContent*            aContainer,
       }
 #endif
     }
-
-    mDocument->BindingManager()->ProcessAttachedQueue();
 
     // otherwise this is not a child of the root element, and we
     // won't let it have a frame.
@@ -9443,21 +9431,11 @@ nsCSSFrameConstructor::ContentInserted(nsIContent*            aContainer,
     }
   }
 
-  nsFrameItems            frameItems;
   nsFrameConstructorState state(mPresShell, mFixedContainingBlock,
                                 GetAbsoluteContainingBlock(parentFrame),
                                 GetFloatContainingBlock(parentFrame),
                                 aFrameState);
 
-  PRBool hasCaption = PR_FALSE;
-  if (nsLayoutAtoms::tableFrame == parentFrame->GetType()) {
-    nsIFrame* outerTable = parentFrame->GetParent();
-    if (outerTable) {
-      if (outerTable->GetFirstChild(nsLayoutAtoms::captionList)) {
-        hasCaption = PR_TRUE;
-      }
-    }
-  }
 
   // Recover state for the containing block - we need to know if
   // it has :first-letter or :first-line style applied to it. The
@@ -9485,11 +9463,10 @@ nsCSSFrameConstructor::ContentInserted(nsIContent*            aContainer,
       (NS_STYLE_DISPLAY_INLINE_BLOCK == parentDisplay->mDisplay)) {
     // Recover the special style flags for the containing block
     if (containingBlock) {
-      blockSC = containingBlock->GetStyleContext();
-      blockContent = containingBlock->GetContent();
-      HaveSpecialBlockStyle(blockContent, blockSC,
-                            &haveFirstLetterStyle,
-                            &haveFirstLineStyle);
+      haveFirstLetterStyle = HaveFirstLetterStyle(containingBlock);
+      haveFirstLineStyle =
+        HaveFirstLineStyle(containingBlock->GetContent(),
+                           containingBlock->GetStyleContext());
     }
 
     if (haveFirstLetterStyle) {
@@ -9555,36 +9532,40 @@ nsCSSFrameConstructor::ContentInserted(nsIContent*            aContainer,
       if (childStyleContext->GetStyleDisplay()->mDisplay != NS_STYLE_DISPLAY_TABLE_COLUMN)
         return NS_OK; //don't create anything else than columns below a colgroup  
   }
-  else if (parentFrame->GetType() == nsLayoutAtoms::tableFrame && hasCaption) {
-    // Resolve the style context and get its display
-    nsRefPtr<nsStyleContext> childStyleContext;
-    childStyleContext = ResolveStyleContext(parentFrame, aChild);
-    if (childStyleContext->GetStyleDisplay()->mDisplay == NS_STYLE_DISPLAY_TABLE_CAPTION)
-      return NS_OK; //don't create a second table caption frame and its descendants
-  }
 
   // if the container is a table and a caption will be appended, it needs to be
   // put in the outer table frame's additional child list.
   
-  nsFrameItems tempItems, captionItems;
+  nsFrameItems frameItems, captionItems;
 
-  ConstructFrame(state, aChild, parentFrame, tempItems);
-  if (tempItems.childList) {
-    if (nsLayoutAtoms::tableCaptionFrame == tempItems.childList->GetType()) {
-      captionItems.AddChild(tempItems.childList);
-    }
-    else {
-      frameItems.AddChild(tempItems.childList);
+  ConstructFrame(state, aChild, parentFrame, frameItems);
+  if (frameItems.childList) {
+    if (nsLayoutAtoms::tableCaptionFrame == frameItems.childList->GetType()) {
+      NS_ASSERTION(frameItems.childList == frameItems.lastChild ,
+                   "adding a non caption frame to the caption childlist?");
+      captionItems.AddChild(frameItems.childList);
+      frameItems = nsFrameItems();
     }
   }
-
-  // Now that we've created frames, run the attach queue.
-  //XXXwaterson should we do this after we've processed pseudos, too?
-  mDocument->BindingManager()->ProcessAttachedQueue();
 
   // process the current pseudo frame state
   if (!state.mPseudoFrames.IsEmpty())
     ProcessPseudoFrames(state, frameItems);
+
+  // If the final parent frame (decided by AdjustParentFrame()) is different
+  // from the parent of the insertion point we calculated above then
+  // parentFrame/prevSibling/appendAfterFrame are now invalid and  as it is
+  // unknown where to insert correctly we append instead (bug 341858).
+  if (frameItems.childList &&
+      frameItems.childList->GetParent() != parentFrame) {
+    prevSibling = nsnull;
+    isAppend = PR_TRUE;
+    parentFrame =
+      ::AdjustAppendParentForAfterContent(mPresShell->GetPresContext(),
+                                          aContainer,
+                                          frameItems.childList->GetParent(),
+                                         &appendAfterFrame);
+   }
 
   // XXX Bug 19949
   // Although select frame are inline we do not want to call
@@ -9616,6 +9597,7 @@ nsCSSFrameConstructor::ContentInserted(nsIContent*            aContainer,
       
   nsIFrame* newFrame = frameItems.childList;
   if (NS_SUCCEEDED(rv) && newFrame) {
+    NS_ASSERTION(!captionItems.childList, "leaking caption frames");
     // Notify the parent frame
     if (isAppend) {
       AppendFrames(state, aContainer, parentFrame, newFrame, appendAfterFrame);
@@ -9654,13 +9636,16 @@ nsCSSFrameConstructor::ContentInserted(nsIContent*            aContainer,
         // will get lost
         NS_ASSERTION(nsLayoutAtoms::tableOuterFrame == outerTableFrame->GetType(),
                      "Pseudo frame construction failure, a caption can be only a child of a outer table frame");
-        // the double caption creation was prevented above, so we are sure
-        // that we can append
-        NS_ASSERTION(!outerTableFrame->GetFirstChild(nsLayoutAtoms::captionList),
-                     "No double captions please");
-        state.mFrameManager->AppendFrames(outerTableFrame,
-                                          nsLayoutAtoms::captionList,
-                                          newCaptionFrame);
+        if (isAppend) {
+          state.mFrameManager->AppendFrames(outerTableFrame,
+                                            nsLayoutAtoms::captionList,
+                                            newCaptionFrame);
+        }
+        else {
+          state.mFrameManager->InsertFrames(outerTableFrame,
+                                            nsLayoutAtoms::captionList,
+                                            prevSibling, newCaptionFrame);
+        }
       }
     }
   }
@@ -9989,10 +9974,7 @@ nsCSSFrameConstructor::ContentRemoved(nsIContent*     aContainer,
     // Examine the containing-block for the removed content and see if
     // :first-letter style applies.
     nsIFrame* containingBlock = GetFloatContainingBlock(parentFrame);
-    PRBool haveFLS = containingBlock ?
-      HaveFirstLetterStyle(containingBlock->GetContent(),
-                           containingBlock->GetStyleContext()) :
-      PR_FALSE;
+    PRBool haveFLS = containingBlock && HaveFirstLetterStyle(containingBlock);
     if (haveFLS) {
       // Trap out to special routine that handles adjusting a blocks
       // frame tree when first-letter style is present.
@@ -10057,38 +10039,39 @@ nsCSSFrameConstructor::ContentRemoved(nsIContent*     aContainer,
     if (display->mDisplay == NS_STYLE_DISPLAY_POPUP)
       // Get the placeholder frame
       placeholderFrame = frameManager->GetPlaceholderFrameFor(childFrame);
-      if (placeholderFrame) {
-        // Remove the mapping from the frame to its placeholder
-        frameManager->UnregisterPlaceholderFrame(placeholderFrame);
+    if (placeholderFrame) {
+      // Remove the mapping from the frame to its placeholder
+      frameManager->UnregisterPlaceholderFrame(placeholderFrame);
     
-        // Locate the root popup set and remove ourselves from the popup set's list
-        // of popup frames.
-        nsIFrame* rootFrame = frameManager->GetRootFrame();
-        if (rootFrame)
-          rootFrame = rootFrame->GetFirstChild(nsnull);
+      // Locate the root popup set and remove ourselves from the popup set's list
+      // of popup frames.
+      nsIFrame* rootFrame = frameManager->GetRootFrame();
+      if (rootFrame)
+        rootFrame = rootFrame->GetFirstChild(nsnull);
 #ifdef MOZ_XUL
-        nsCOMPtr<nsIRootBox> rootBox(do_QueryInterface(rootFrame));
-        if (rootBox) {
-          nsIFrame* popupSetFrame;
-          rootBox->GetPopupSetFrame(&popupSetFrame);
-          if (popupSetFrame) {
-            nsCOMPtr<nsIPopupSetFrame> popupSet(do_QueryInterface(popupSetFrame));
-            if (popupSet)
-              popupSet->RemovePopupFrame(childFrame);
-          }
-        }
-#endif
-
-        // Remove the placeholder frame first (XXX second for now) (so
-        // that it doesn't retain a dangling pointer to memory)
-        if (placeholderFrame) {
-          parentFrame = placeholderFrame->GetParent();
-          ::DeletingFrameSubtree(presContext, frameManager, placeholderFrame);
-          frameManager->RemoveFrame(parentFrame, nsnull, placeholderFrame);
-          return NS_OK;
+      nsCOMPtr<nsIRootBox> rootBox(do_QueryInterface(rootFrame));
+      if (rootBox) {
+        nsIFrame* popupSetFrame;
+        rootBox->GetPopupSetFrame(&popupSetFrame);
+        if (popupSetFrame) {
+          nsCOMPtr<nsIPopupSetFrame> popupSet(do_QueryInterface(popupSetFrame));
+          if (popupSet)
+            popupSet->RemovePopupFrame(childFrame);
         }
       }
-      else if (display->IsFloating()) {
+#endif
+
+      // Remove the placeholder frame first (XXX second for now) (so
+      // that it doesn't retain a dangling pointer to memory)
+      if (placeholderFrame) {
+        parentFrame = placeholderFrame->GetParent();
+        ::DeletingFrameSubtree(presContext, frameManager, placeholderFrame);
+        frameManager->RemoveFrame(parentFrame, nsnull, placeholderFrame);
+        return NS_OK;
+      }
+    }
+    else if (childFrame->GetStateBits() & NS_FRAME_OUT_OF_FLOW) {
+      if (display->IsFloating()) {
 #ifdef NOISY_FIRST_LETTER
         printf("  ==> child display is still floating!\n");
 #endif
@@ -10152,43 +10135,44 @@ nsCSSFrameConstructor::ContentRemoved(nsIContent*     aContainer,
                                          placeholderFrame);
         }
 
-      } else {
-        // Notify the parent frame that it should delete the frame
-        // check for a table caption which goes on an additional child list with a different parent
-        nsIFrame* outerTableFrame; 
-        if (GetCaptionAdjustedParent(parentFrame, childFrame, &outerTableFrame)) {
-          rv = frameManager->RemoveFrame(outerTableFrame,
-                                         nsLayoutAtoms::captionList,
-                                         childFrame);
-        }
-        else {
-          rv = frameManager->RemoveFrame(parentFrame, nsnull, childFrame);
-        }
       }
+    } else {
+      // Notify the parent frame that it should delete the frame
+      // check for a table caption which goes on an additional child list with a different parent
+      nsIFrame* outerTableFrame; 
+      if (GetCaptionAdjustedParent(parentFrame, childFrame, &outerTableFrame)) {
+        rv = frameManager->RemoveFrame(outerTableFrame,
+                                       nsLayoutAtoms::captionList,
+                                       childFrame);
+      }
+      else {
+        rv = frameManager->RemoveFrame(parentFrame, nsnull, childFrame);
+      }
+    }
 
-      if (mInitialContainingBlock == childFrame) {
-        mInitialContainingBlock = nsnull;
-        mInitialContainingBlockIsAbsPosContainer = PR_FALSE;
-      }
+    if (mInitialContainingBlock == childFrame) {
+      mInitialContainingBlock = nsnull;
+      mInitialContainingBlockIsAbsPosContainer = PR_FALSE;
+    }
 
-      if (haveFLS && mInitialContainingBlock) {
-        NS_ASSERTION(containingBlock == GetFloatContainingBlock(parentFrame),
-                     "What happened here?");
-        nsFrameConstructorState state(mPresShell, mFixedContainingBlock,
-                                      GetAbsoluteContainingBlock(parentFrame),
-                                      containingBlock);
-        RecoverLetterFrames(state, containingBlock);
-      }
+    if (haveFLS && mInitialContainingBlock) {
+      NS_ASSERTION(containingBlock == GetFloatContainingBlock(parentFrame),
+                   "What happened here?");
+      nsFrameConstructorState state(mPresShell, mFixedContainingBlock,
+                                    GetAbsoluteContainingBlock(parentFrame),
+                                    containingBlock);
+      RecoverLetterFrames(state, containingBlock);
+    }
 
 #ifdef DEBUG
-      if (gReallyNoisyContentUpdates && parentFrame) {
-        nsIFrameDebug* fdbg = nsnull;
-        CallQueryInterface(parentFrame, &fdbg);
-        if (fdbg) {
-          printf("nsCSSFrameConstructor::ContentRemoved: resulting frame model:\n");
-          fdbg->List(presContext, stdout, 0);
-        }
+    if (gReallyNoisyContentUpdates && parentFrame) {
+      nsIFrameDebug* fdbg = nsnull;
+      CallQueryInterface(parentFrame, &fdbg);
+      if (fdbg) {
+        printf("nsCSSFrameConstructor::ContentRemoved: resulting frame model:\n");
+        fdbg->List(presContext, stdout, 0);
       }
+    }
 #endif
   }
 
@@ -10404,42 +10388,45 @@ nsCSSFrameConstructor::CharacterDataChanged(nsIContent* aContent,
         aSubContent, frame));
 #endif
 
-    // Special check for text content that is a child of a letter
-    // frame. There are two interesting cases that we have to handle
-    // carefully: text content that is going empty (which means we
-    // should select a new text node as the first-letter text) or text
-    // content that empty but is no longer empty (it might be the
-    // first-letter text but isn't currently).
-    //
-    // To deal with both of these we make a simple change: map a
-    // CharacterDataChanged into a ReinsertContent when we are changing text
-    // that is part of a first-letter situation.
-    PRBool doCharacterDataChanged = PR_TRUE;
+    // Special check for text content that is a child of a letter frame.  If
+    // this happens, we should remove the letter frame, do whatever we're
+    // planning to do with this notification, then put the letter frame back.
+    // Note that this is basically what ReinsertContent ends up doing; the
+    // reason we dont' want to call that here is that our text content could be
+    // native anonymous, in which case ReinsertContent would completely barf on
+    // it.  And reinserting the non-anonymous ancestor would just lead us to
+    // come back into this notification (e.g. if quotes or counters are
+    // involved), leading to a loop.
+    PRBool haveFirstLetterStyle = PR_FALSE;
+    nsIFrame* block = nsnull;
     nsCOMPtr<nsITextContent> textContent(do_QueryInterface(aContent));
     if (textContent) {
       // Ok, it's text content. Now do some real work...
-      nsIFrame* block = GetFloatContainingBlock(frame);
+      block = GetFloatContainingBlock(frame);
       if (block) {
         // See if the block has first-letter style applied to it.
-        nsIContent* blockContent = block->GetContent();
-        nsStyleContext* blockSC = block->GetStyleContext();
-        PRBool haveFirstLetterStyle =
-          HaveFirstLetterStyle(blockContent, blockSC);
+        haveFirstLetterStyle = HaveFirstLetterStyle(block);
         if (haveFirstLetterStyle) {
-          // The block has first-letter style. Use content-replaced to
-          // repair the blocks frame structure properly.
-          nsCOMPtr<nsIContent> container = aContent->GetParent();
-          if (container) {
-            doCharacterDataChanged = PR_FALSE;
-            rv = ReinsertContent(container, aContent);
-          }
+          RemoveLetterFrames(mPresShell->GetPresContext(), mPresShell,
+                             mPresShell->FrameManager(), block);
+          // Reget |frame|, since we might have killed it.  Do we
+          // really need to call CharacterDataChanged in this case,
+          // though?
+          mPresShell->GetPrimaryFrameFor(aContent, &frame);
+          NS_ASSERTION(frame, "Should have frame here!");
         }
       }
     }
 
-    if (doCharacterDataChanged) {
-      frame->CharacterDataChanged(mPresShell->GetPresContext(), aContent,
-                                  aAppend);
+    frame->CharacterDataChanged(mPresShell->GetPresContext(), aContent,
+                                aAppend);
+
+    if (haveFirstLetterStyle) {
+      // Note that if we got here |block| is not null
+      nsFrameConstructorState state(mPresShell, mFixedContainingBlock,
+                                    GetAbsoluteContainingBlock(frame),
+                                    block, nsnull);
+      RecoverLetterFrames(state, block);
     }
   }
 
@@ -10492,6 +10479,10 @@ nsCSSFrameConstructor::ProcessRestyledFrames(nsStyleChangeList& aChangeList)
   PRInt32 count = aChangeList.Count();
   if (!count)
     return NS_OK;
+
+  // Make sure to not rebuild quote or counter lists while we're
+  // processing restyles
+  BeginUpdate();
 
   nsPropertyTable *propTable = mPresShell->GetPresContext()->PropertyTable();
 
@@ -10559,6 +10550,8 @@ nsCSSFrameConstructor::ProcessRestyledFrames(nsStyleChangeList& aChangeList)
 #endif
   }
 
+  EndUpdate();
+  
   // cleanup references
   index = count;
   while (0 <= --index) {
@@ -11249,47 +11242,18 @@ nsCSSFrameConstructor::CreateContinuingOuterTableFrame(nsIPresShell*    aPresShe
     nsFrameItems  newChildFrames;
 
     nsIFrame* childFrame = aFrame->GetFirstChild(nsnull);
-    while (childFrame) {
-      // See if it's the inner table frame
-      if (nsLayoutAtoms::tableFrame == childFrame->GetType()) {
-        nsIFrame* continuingTableFrame;
-
-        // It's the inner table frame, so create a continuing frame
-        rv = CreateContinuingFrame(aPresContext, childFrame, newFrame,
-                                   &continuingTableFrame);
-        if (NS_FAILED(rv)) {
-          newFrame->Destroy(aPresContext);
-          *aContinuingFrame = nsnull;
-          return rv;
-        }
-        newChildFrames.AddChild(continuingTableFrame);
-      } else {
-        // XXX remove this code and the above checks. We don't want to replicate 
-        // the caption (that is what the thead is for). This code is not executed 
-        // anyway, because the caption was put in a different child list.
-        nsStyleContext*       captionStyle = childFrame->GetStyleContext();
-        nsIContent*           caption = childFrame->GetContent();
-        NS_ASSERTION(NS_STYLE_DISPLAY_TABLE_CAPTION ==
-                       captionStyle->GetStyleDisplay()->mDisplay,
-                     "expected caption");
-
-        // Replicate the caption frame
-        // XXX We have to do it this way instead of calling ConstructFrameByDisplayType(),
-        // because of a bug in the way ConstructTableFrame() handles the initial child
-        // list...
-        nsIFrame*               captionFrame;
-        nsFrameItems            childItems;
-        NS_NewTableCaptionFrame(aPresShell, &captionFrame);
-        nsFrameConstructorState state(mPresShell, mFixedContainingBlock,
-                                      GetAbsoluteContainingBlock(newFrame),
-                                      captionFrame);
-        captionFrame->Init(aPresContext, caption, newFrame, captionStyle, nsnull);
-        ProcessChildren(state, caption, captionFrame, PR_TRUE, childItems,
-                        PR_TRUE);
-        captionFrame->SetInitialChildList(aPresContext, nsnull, childItems.childList);
-        newChildFrames.AddChild(captionFrame);
+    if (childFrame) {
+      nsIFrame* continuingTableFrame;
+      rv = CreateContinuingFrame(aPresContext, childFrame, newFrame,
+                                 &continuingTableFrame);
+      if (NS_FAILED(rv)) {
+        newFrame->Destroy(aPresContext);
+        *aContinuingFrame = nsnull;
+        return rv;
       }
-      childFrame = childFrame->GetNextSibling();
+      newChildFrames.AddChild(continuingTableFrame);
+      
+      NS_ASSERTION(!childFrame->GetNextSibling(),"there can be only one inner table frame");
     }
 
     // Set the outer table's initial child list
@@ -12154,6 +12118,22 @@ nsCSSFrameConstructor::HaveFirstLetterStyle(nsIContent* aContent,
 }
 
 PRBool
+nsCSSFrameConstructor::HaveFirstLetterStyle(nsIFrame* aBlockFrame)
+{
+  NS_PRECONDITION(aBlockFrame, "Need a frame");
+  
+#ifdef DEBUG
+  nsBlockFrame* block;
+  NS_ASSERTION(NS_SUCCEEDED(aBlockFrame->QueryInterface(kBlockFrameCID,
+                                                        (void**)&block)) &&
+               block,
+               "Not a block frame?");
+#endif
+
+  return (aBlockFrame->GetStateBits() & NS_BLOCK_HAS_FIRST_LETTER_STYLE) != 0;
+}
+
+PRBool
 nsCSSFrameConstructor::HaveFirstLineStyle(nsIContent* aContent,
                                           nsStyleContext* aStyleContext)
 {
@@ -12664,7 +12644,14 @@ nsCSSFrameConstructor::CreateFloatingLetterFrame(
   nsStyleSet *styleSet = mPresShell->StyleSet();
 
   NS_NewFirstLetterFrame(mPresShell, &letterFrame);  
-  InitAndRestoreFrame(aState, aTextContent, aParentFrame, aStyleContext,
+  // We don't want to use a text content for a non-text frame (because we want
+  // its primary frame to be a text frame).  So use its parent for the
+  // first-letter.
+  nsIContent* letterContent = aTextContent->GetParent();
+  NS_ASSERTION(letterContent->GetBindingParent() != letterContent,
+               "Reframes of this letter frame will mess with the root of a "
+               "native anonymous content subtree!");
+  InitAndRestoreFrame(aState, letterContent, aParentFrame, aStyleContext,
                       nsnull, letterFrame);
 
   // Init the text frame to refer to the letter frame. Make sure we
@@ -12683,7 +12670,7 @@ nsCSSFrameConstructor::CreateFloatingLetterFrame(
   nsIFrame* placeholderFrame;
   CreatePlaceholderFrameFor(mPresShell,
                             aState.mPresContext, aState.mFrameManager,
-                            aTextContent, letterFrame,
+                            letterContent, letterFrame,
                             aStyleContext, aParentFrame,
                             &placeholderFrame);
 
@@ -12760,8 +12747,14 @@ nsCSSFrameConstructor::CreateLetterFrame(nsFrameConstructorState& aState,
         nsIFrame* letterFrame;
         nsresult rv = NS_NewFirstLetterFrame(mPresShell, &letterFrame);
         if (NS_SUCCEEDED(rv)) {
-          // Initialize the first-letter-frame.
-          letterFrame->Init(aState.mPresContext, aTextContent, aParentFrame,
+          // Initialize the first-letter-frame.  We don't want to use a text
+          // content for a non-text frame (because we want its primary frame to
+          // be a text frame).  So use its parent for the first-letter.
+          nsIContent* letterContent = aTextContent->GetParent();
+          NS_ASSERTION(letterContent->GetBindingParent() != letterContent,
+                       "Reframes of this letter frame will mess with the root "
+                       "of a native anonymous content subtree!");
+          letterFrame->Init(aState.mPresContext, letterContent, aParentFrame,
                             sc, nsnull);
           nsRefPtr<nsStyleContext> textSC;
           textSC = mPresShell->StyleSet()->ResolveStyleForNonElement(sc);
@@ -12788,6 +12781,8 @@ nsCSSFrameConstructor::WrapFramesInFirstLetterFrame(
   nsFrameItems&            aBlockFrames)
 {
   nsresult rv = NS_OK;
+
+  aBlockFrame->AddStateBits(NS_BLOCK_HAS_FIRST_LETTER_STYLE);
 
   nsIFrame* parentFrame = nsnull;
   nsIFrame* textFrame = nsnull;
@@ -13109,6 +13104,8 @@ nsCSSFrameConstructor::RecoverLetterFrames(nsFrameConstructorState& aState,
 {
   nsresult rv = NS_OK;
 
+  aBlockFrame->AddStateBits(NS_BLOCK_HAS_FIRST_LETTER_STYLE);
+
   nsIFrame* blockKids = aBlockFrame->GetFirstChild(nsnull);
   nsIFrame* parentFrame = nsnull;
   nsIFrame* textFrame = nsnull;
@@ -13182,8 +13179,6 @@ nsCSSFrameConstructor::CreateListBoxContent(nsPresContext* aPresContext,
     *aNewFrame = newFrame;
 
     if (NS_SUCCEEDED(rv) && (nsnull != newFrame)) {
-      mDocument->BindingManager()->ProcessAttachedQueue();
-
       // Notify the parent frame
       if (aIsAppend)
         rv = ((nsListBoxBodyFrame*)aParentFrame)->ListBoxAppendFrames(newFrame);
@@ -14200,11 +14195,11 @@ nsCSSFrameConstructor::ProcessPendingRestyles()
                       currentRestyle->mChangeHint);
   }
 
+  delete [] restylesToProcess;
+
   EndUpdate();
 
   viewManager->EndUpdateViewBatch(NS_VMREFRESH_NO_SYNC);
-
-  delete [] restylesToProcess;
 }
 
 void
@@ -14216,6 +14211,9 @@ nsCSSFrameConstructor::PostRestyleEvent(nsIContent* aContent,
     // Nothing to do here
     return;
   }
+
+  NS_ASSERTION(aContent->IsContentOfType(nsIContent::eELEMENT),
+               "Shouldn't be trying to restyle non-elements directly");
   
   RestyleData existingData;
   existingData.mRestyleHint = nsReStyleHint(0);
@@ -14246,7 +14244,7 @@ nsCSSFrameConstructor::PostRestyleEvent(nsIContent* aContent,
 void nsCSSFrameConstructor::RestyleEvent::HandleEvent() {
   nsCSSFrameConstructor* constructor =
     NS_STATIC_CAST(nsCSSFrameConstructor*, owner);
-  nsIViewManager* viewManager =
+  nsCOMPtr<nsIViewManager> viewManager =
     constructor->mDocument->GetShellAt(0)->GetPresContext()->GetViewManager();
   NS_ASSERTION(viewManager, "Must have view manager for update");
 
@@ -14262,6 +14260,7 @@ void nsCSSFrameConstructor::RestyleEvent::HandleEvent() {
   constructor->mRestyleEventQueue = nsnull;
 
   constructor->ProcessPendingRestyles();
+  constructor->mDocument->BindingManager()->ProcessAttachedQueue();
   viewManager->EndUpdateViewBatch(NS_VMREFRESH_NO_SYNC);
 }
 

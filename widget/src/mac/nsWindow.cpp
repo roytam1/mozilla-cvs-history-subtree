@@ -449,6 +449,8 @@ nsIWidget* nsWindow::GetParent(void)
 //-------------------------------------------------------------------------
 void* nsWindow::GetNativeData(PRUint32 aDataType)
 {
+	NS_ASSERTION(mWindowPtr, "GetNativeData was called after the window was destroyed?");
+  
 	nsPoint		point;
 	void*		retVal = nsnull;
 

@@ -91,7 +91,9 @@
 #include "nsILocalFileMac.h"
 #include "nsIInternetConfigService.h"
 #include "nsIAppleFileDecoder.h"
-#endif // defined(XP_MAC) || defined (XP_MACOSX)
+#elif defined(XP_OS2)
+#include "nsILocalFileOS2.h"
+#endif
 
 #include "nsIPluginHost.h" // XXX needed for ext->type mapping (bug 233289)
 #include "nsEscape.h"
@@ -1107,9 +1109,6 @@ NS_IMETHODIMP nsExternalHelperAppService::LoadURI(nsIURI * aURL, nsIPrompt * aPr
 {
   nsCAutoString spec;
   aURL->GetSpec(spec);
-
-  if (spec.Find("%00") != -1)
-    return NS_ERROR_MALFORMED_URI;
 
   spec.ReplaceSubstring("\"", "%22");
   spec.ReplaceSubstring("`", "%60");
@@ -2305,6 +2304,19 @@ nsresult nsExternalAppHandler::MoveFile(nsIFile * aNewFileLocation)
        SendStatusChange(kWriteError, rv, nsnull, path);
        Cancel(rv); // Cancel (and clean up temp file).
      }
+#if defined(XP_OS2)
+     else
+     {
+       // tag the file with its source URI
+       nsCOMPtr<nsILocalFileOS2> localFileOS2 = do_QueryInterface(fileToUse);
+       if (localFileOS2)
+       {
+         nsCAutoString url;
+         mSourceUrl->GetSpec(url);
+         localFileOS2->SetFileSource(url);
+       }
+     }
+#endif
   }
 
   return rv;

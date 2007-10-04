@@ -1773,6 +1773,8 @@ nsXULContentBuilder::OpenContainer(nsIContent* aElement)
         if (! doc)
             return NS_ERROR_UNEXPECTED;
 
+        mozAutoDocUpdate upd(container->GetCurrentDoc(), UPDATE_CONTENT_MODEL,
+                             PR_TRUE);        
         doc->ContentAppended(container, newIndex);
     }
 
@@ -1907,6 +1909,8 @@ nsXULContentBuilder::RebuildAll()
         if (! doc)
             return NS_ERROR_UNEXPECTED;
 
+        mozAutoDocUpdate upd(container->GetCurrentDoc(), UPDATE_CONTENT_MODEL,
+                             PR_TRUE);
         doc->ContentAppended(container, newIndex);
     }
 

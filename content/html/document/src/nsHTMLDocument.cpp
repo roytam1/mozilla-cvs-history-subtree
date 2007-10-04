@@ -1827,23 +1827,22 @@ nsHTMLDocument::MatchAnchors(nsIContent *aContent, PRInt32 aNamespaceID,
                              nsIAtom* aAtom, const nsAString& aData)
 {
   nsINodeInfo *ni = aContent->GetNodeInfo();
-
-  if (ni) {
-    NS_ASSERTION(aContent->IsInDoc(),
-                 "This method should never be called on content nodes that "
-                 "are not in a document!");
+  nsIDocument *doc = aContent->GetCurrentDoc();
+  NS_WARN_IF_FALSE(doc,
+                   "This method should not be called on content nodes that "
+                   "are not in a document!");
+  if (ni && doc) {
 #ifdef DEBUG
     {
       nsCOMPtr<nsIHTMLDocument> htmldoc =
-        do_QueryInterface(aContent->GetCurrentDoc());
+        do_QueryInterface(doc);
       NS_ASSERTION(htmldoc,
                    "Huh, how did this happen? This should only be used with "
                    "HTML documents!");
     }
 #endif
 
-    if (ni->Equals(nsHTMLAtoms::a,
-                   aContent->GetCurrentDoc()->GetDefaultNamespaceID())) {
+    if (ni->Equals(nsHTMLAtoms::a, doc->GetDefaultNamespaceID())) {
       return aContent->HasAttr(kNameSpaceID_None, nsHTMLAtoms::name);
     }
   }
@@ -1958,6 +1957,17 @@ nsHTMLDocument::OpenCommon(const nsACString& aContentType, PRBool aReplace)
       if (frameElement && !nsContentUtils::CanCallerAccess(frameElement)) {
         return NS_ERROR_DOM_SECURITY_ERR;
       }
+    }
+  }
+
+  // check whether we're in the middle of unload.  If so, ignore this call.
+  nsCOMPtr<nsIDocShell_MOZILLA_1_8_BRANCH2> shell =
+    do_QueryReferent(mDocumentContainer);
+  if (shell) {
+    PRBool inUnload;
+    shell->GetIsInUnload(&inUnload);
+    if (inUnload) {
+      return NS_OK;
     }
   }
 

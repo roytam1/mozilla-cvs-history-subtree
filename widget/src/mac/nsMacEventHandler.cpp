@@ -2507,3 +2507,12 @@ nsMacEventHandler::IsPluginFocused()
   }
   return retval;
 }
+
+void
+nsMacEventHandler::ClearWindowRefs(nsWindow* aWindow)
+{
+  if (sLastActive && sLastActive->mTopLevelWidget == aWindow) {
+    sLastActive = nsnull;
+  }
+}
+

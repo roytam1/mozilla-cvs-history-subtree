@@ -900,7 +900,9 @@ NS_IMETHODIMP nsImapMailFolder::CreateClientSubfolderInfo(const char *folderName
     NS_ConvertASCIItoUTF16 leafName(folderName);
     nsAutoString folderNameStr;
     nsAutoString parentName = leafName;
-    PRInt32 folderStart = leafName.FindChar('/');
+    // use RFind, because folder can start with a delimiter and
+    // not be a leaf folder.
+    PRInt32 folderStart = leafName.RFindChar('/');
     if (folderStart > 0)
     {
         nsCOMPtr<nsIRDFService> rdf(do_GetService(kRDFServiceCID, &rv));
@@ -2139,9 +2141,9 @@ nsImapMailFolder::AllocateUidStringFromKeys(nsMsgKey *keys, PRUint32 numKeys, ns
     }
     else if (curSequenceEnd > startSequence)
     {
-      msgIds.AppendInt(startSequence);
+      AppendUid(msgIds, startSequence);
       msgIds += ':';
-      msgIds.AppendInt(curSequenceEnd);
+      AppendUid(msgIds,curSequenceEnd);
       if (!lastKey)
         msgIds += ',';
       startSequence = nextKey;
@@ -2151,7 +2153,7 @@ nsImapMailFolder::AllocateUidStringFromKeys(nsMsgKey *keys, PRUint32 numKeys, ns
     {
       startSequence = nextKey;
       curSequenceEnd = startSequence;
-      msgIds.AppendInt(keys[keyIndex]);
+      AppendUid(msgIds, keys[keyIndex]);
       if (!lastKey)
         msgIds += ',';
     }

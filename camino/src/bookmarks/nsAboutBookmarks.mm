@@ -43,7 +43,7 @@
 #include "nsIStringStream.h"
 #include "nsNetUtil.h"
 
-#import "NSString+Utils.h"
+#import "NSString+Gecko.h"
 
 NS_IMPL_ISUPPORTS1(nsAboutBookmarks, nsIAboutModule)
 

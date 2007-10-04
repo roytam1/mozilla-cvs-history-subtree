@@ -52,6 +52,7 @@ class nsIDOMWindow;
 class nsIWebBrowser;
 class nsIDocShell;
 class nsIDOMNode;
+class nsIDOMElement;
 class nsIDOMPopupBlockedEvent;
 class nsIDOMEvent;
 class nsIEventSink;
@@ -60,6 +61,7 @@ class nsIPrintSettings;
 class nsIURI;
 class nsISupports;
 class nsISecureBrowserUI;
+class nsIFocusController;
 
 // Protocol implemented by anyone interested in progress
 // related to a BrowserView. A listener should explicitly
@@ -261,6 +263,11 @@ typedef enum {
 - (BOOL)canMakeTextSmaller;
 - (BOOL)isTextDefaultSize;
 
+// Verifies that the browser view can be unloaded (e.g., validates
+// onbeforeunload handlers). Should be called before any action that would
+// destroy the browser view.
+- (BOOL)shouldUnload;
+
 // ideally these would not have to be called from outside the CHBrowerView, but currently
 // the cocoa impl of nsIPromptService is at the app level, so it needs to call down
 // here. We'll just turn around and call the CHBrowserContainer methods
@@ -273,9 +280,17 @@ typedef enum {
 - (NSWindow*)getNativeWindow;
 
 - (void)destroyWebBrowser;
+// Returns the underlying nsIWebBrowser, addref'd
 - (nsIWebBrowser*)getWebBrowser;
-- (CHBrowserListener*)getCocoaBrowserListener;
 - (void)setWebBrowser:(nsIWebBrowser*)browser;
+- (CHBrowserListener*)getCocoaBrowserListener;
+
+- (BOOL)isTextFieldFocused;
+- (BOOL)isPluginFocused;
+// Returns the currently focused DOM element, addref'd
+- (nsIDOMElement*)getFocusedDOMElement;
+// Returns the focus controller, addref'd
+- (nsIFocusController*)getFocusController;
 
 - (NSString*)getFocusedURLString;
 
@@ -291,7 +306,9 @@ typedef enum {
 - (CHSecurityStrength)securityStrength;
 - (CertificateItem*)siteCertificate;
 
-- (already_AddRefed<nsISupports>)getPageDescriptor;
+// Gets the current page descriptor. If |byFocus| is true, the page descriptor
+// is for the currently focused frame; if not, it's for the top-level frame.
+- (already_AddRefed<nsISupports>)pageDescriptorByFocus:(BOOL)byFocus;
 - (void)setPageDescriptor:(nsISupports*)aDesc displayType:(PRUint32)aDisplayType;
 
 - (already_AddRefed<nsIDocShell>)findDocShellForURI:(nsIURI*)aURI;

@@ -963,6 +963,9 @@ nsContinuingTextFrame::Init(nsPresContext*  aPresContext,
                             nsStyleContext*  aContext,
                             nsIFrame*        aPrevInFlow)
 {
+  NS_PRECONDITION(aContent->IsContentOfType(nsIContent::eTEXT),
+                  "Bogus content!");
+
   nsresult  rv;
   
   rv = nsTextFrame::Init(aPresContext, aContent, aParent, aContext, aPrevInFlow);
@@ -5919,7 +5922,7 @@ nsTextFrame::Reflow(nsPresContext*          aPresContext,
   // Setup text transformer to transform this frames text content
   nsIDocument* doc = mContent->GetDocument();
   if (!doc) {
-    NS_WARNING("Content has no document.");
+    NS_NOTREACHED("Content has no document");
     return NS_ERROR_FAILURE; 
   }
   PRBool forceArabicShaping = (ts.mSmallCaps ||
@@ -6609,6 +6612,7 @@ nsTextFrame::List(nsPresContext* aPresContext, FILE* out, PRInt32 aIndent) const
       fprintf(out, " [state=%08x]", mState);
     }
   }
+  fprintf(out, " [content=%p]", NS_STATIC_CAST(void*, mContent));
   fprintf(out, " sc=%p", NS_STATIC_CAST(void*, mStyleContext));
   nsIAtom* pseudoTag = mStyleContext->GetPseudoType();
   if (pseudoTag) {

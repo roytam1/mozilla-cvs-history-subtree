@@ -39,7 +39,7 @@
 #import <Cocoa/Cocoa.h>
 #import <ApplicationServices/ApplicationServices.h>
 
-#import "NSString+Utils.h"
+#import "NSString+Gecko.h"
 
 #import "mozView.h"
 
@@ -504,7 +504,8 @@ CHBrowserListener::SetFocus()
   // if we're already the keyWindow, we certainly don't need to do it again. This
   // ends up fixing a problem where we try to bring ourselves to the front while we're
   // in the process of miniaturizing or showing the window
-  if ([window isVisible] && (window != [NSApp keyWindow]))
+  if ([window isVisible] || [window isMiniaturized] &&
+      (window != [NSApp keyWindow]))
   {
     BOOL suppressed = NO;
     if ([window respondsToSelector:@selector(suppressMakeKeyFront)])
@@ -532,7 +533,7 @@ CHBrowserListener::GetVisibility(PRBool *aVisibility)
     return NS_ERROR_FAILURE;
   }
 
-  *aVisibility = [window isVisible];
+  *aVisibility = [window isVisible] || [window isMiniaturized];
   return NS_OK;
 }
 

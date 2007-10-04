@@ -93,6 +93,9 @@
 #include "nsILocalFile.h"
 #include "nsILookAndFeel.h"
 #include "nsIProcess.h"
+#include "nsIIOService.h"
+#include "nsIJARURI.h"
+#include "nsNetCID.h"
 
 #ifdef MOZ_XPINSTALL
 #include "InstallCleanupDefines.h"
@@ -581,6 +584,24 @@ LaunchApplicationWithArgs(const char *commandLineArg,
           rv = OpenWindow(chromeUrlForTask, cmdArgs);
         }
         else {
+          // We need to emulate checkLoadURI because we don't have a window yet
+          nsCOMPtr<nsIIOService> ioService = do_GetService(NS_IOSERVICE_CONTRACTID, &rv);
+          if (NS_FAILED(rv)) return rv;
+          nsCOMPtr<nsIURI> baseURI;
+          rv = ioService->NewURI(cmdResult, nsnull, nsnull, getter_AddRefs(baseURI));
+          if (NS_FAILED(rv)) return rv;
+          nsCOMPtr<nsIJARURI> jarURI(do_QueryInterface(baseURI));
+          while (jarURI) {
+            rv = jarURI->GetJARFile(getter_AddRefs(baseURI));
+            if (NS_FAILED(rv)) return rv;
+            jarURI = do_QueryInterface(baseURI);
+          }
+          PRBool scriptOrData = PR_FALSE;
+          baseURI->SchemeIs("javascript", &scriptOrData);
+          if (!scriptOrData)
+            baseURI->SchemeIs("data", &scriptOrData);
+          if (scriptOrData)
+            return NS_ERROR_FAILURE;
 #ifdef DEBUG_CMD_LINE
           printf("opening %s with %s\n", cmdResult.get(), "OpenWindow");
 #endif /* DEBUG_CMD_LINE */
@@ -1648,6 +1669,9 @@ int main(int argc, char* argv[])
   // in nsAppShell::Create, but we need to get in before gtk
   // has been initialized to make sure everything is running
   // consistently.
+#if defined(MOZ_WIDGET_GTK2)
+  g_thread_init(NULL);
+#endif
   for (i=1; i<argc; i++)
     if ((PL_strcasecmp(argv[i], "-install") == 0)
         || (PL_strcasecmp(argv[i], "--install") == 0)) {

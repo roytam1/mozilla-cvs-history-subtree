@@ -59,6 +59,9 @@ REQUIRES	= xpcom \
 		  content \
 		  widget \
 		  nkcache \
+		  caps \
+		  xpconnect \
+		  js \
 		  $(NULL)
 
 CPPSRCS		= nsSHEntry.cpp        \

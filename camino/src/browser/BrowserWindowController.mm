@@ -41,6 +41,7 @@
 #import "ABAddressBook+Utils.h"
 
 #import "NSString+Utils.h"
+#import "NSString+Gecko.h"
 #import "NSSplitView+Utils.h"
 #import "NSMenu+Utils.h"
 #import "NSPasteboard+Utils.h"
@@ -113,11 +114,6 @@
 #include "nsIPermissionManager.h"
 #include "nsIWebPageDescriptor.h"
 #include "nsPIDOMWindow.h"
-#include "nsIDOMHTMLInputElement.h"
-#include "nsIDOMHTMLTextAreaElement.h"
-#include "nsIDOMHTMLEmbedElement.h"
-#include "nsIDOMHTMLObjectElement.h"
-#include "nsIDOMHTMLAppletElement.h"
 #include "nsIDOMHTMLImageElement.h"
 #include "nsIFocusController.h"
 #include "nsIX509Cert.h"
@@ -178,6 +174,7 @@ const int kSelectionRelatedItemsTag = 102;
 const int kSpellingRelatedItemsTag = 103;
 const int kItemsNeedingOpenBehaviorAlternatesTag = 104;
 const int kItemsNeedingForceAlternateTag = 105;
+const int kLinkOpeningItemsTag = 106;
 
 // Cached toolbar defaults read in from a plist. If null, we'll use
 // hardcoded defaults.
@@ -534,11 +531,10 @@ enum BWCOpenDest {
 - (void)setGeckoActive:(BOOL)inActive;
 - (BOOL)isResponderGeckoView:(NSResponder*) responder;
 - (NSString*)getContextMenuNodeDocumentURL;
-- (void)loadSourceOfURL:(NSString*)urlStr inBackground:(BOOL)loadInBackground;
+- (void)loadSourceForFrame:(BOOL)forFrame inBackground:(BOOL)loadInBackground;
 - (void)transformFormatString:(NSMutableString*)inFormat domain:(NSString*)inDomain search:(NSString*)inSearch;
 - (void)openNewWindowWithDescriptor:(nsISupports*)aDesc displayType:(PRUint32)aDisplayType loadInBackground:(BOOL)aLoadInBG;
 - (void)openNewTabWithDescriptor:(nsISupports*)aDesc displayType:(PRUint32)aDisplayType loadInBackground:(BOOL)aLoadInBG;
-- (BOOL)isPageTextFieldFocused;
 - (void)performSearch:(WebSearchField*)inSearchField inView:(BWCOpenDest)inDest inBackground:(BOOL)inLoadInBG;
 - (int)historyIndexOfPageBeforeBookmarkManager;
 - (void)goToLocationFromToolbarURLField:(AutoCompleteTextField *)inURLField inView:(BWCOpenDest)inDest inBackground:(BOOL)inLoadInBG;
@@ -574,8 +570,6 @@ enum BWCOpenDest {
 
 - (void)currentEditor:(nsIEditor**)outEditor;
 - (void)getMisspelledWordRange:(nsIDOMRange**)outRange inlineSpellChecker:(nsIInlineSpellChecker**)outInlineChecker;
-- (void)focusedElement:(nsIDOMElement**)outElement;
-- (void)focusController:(nsIFocusController**)outController;
 
 - (void)setUpSearchFields;
 
@@ -721,12 +715,12 @@ enum BWCOpenDest {
 
 - (BOOL)windowShouldClose:(id)sender 
 {
-  if (!mWindowClosesQuietly &&
-      [[PreferenceManager sharedInstance] getBooleanPref:"camino.warn_when_closing" withSuccess:NULL])
-  {
+  if (mWindowClosesQuietly)
+    return YES;
+
+  if ([[PreferenceManager sharedInstance] getBooleanPref:"camino.warn_when_closing" withSuccess:NULL]) {
     unsigned int numberOfTabs = [mTabBrowser numberOfTabViewItems];
-    if (numberOfTabs > 1)
-    {
+    if (numberOfTabs > 1) {
       NSString* closeMultipleTabWarning = NSLocalizedString(@"CloseWindowWithMultipleTabsExplFormat", @"");
 
       nsAlertController* controller = CHBrowserService::GetAlertController();
@@ -751,10 +745,13 @@ enum BWCOpenDest {
       if (dontShowAgain)
         [[PreferenceManager sharedInstance] setPref:"camino.warn_when_closing" toBoolean:NO];
       
-      return (result == NSAlertDefaultReturn);
+      if (result != NSAlertDefaultReturn)
+        return NO;
     }
   }
-  return YES;
+
+  // Check that all the tabs are closable
+  return [mTabBrowser windowShouldClose];
 }
 
 - (void)windowWillClose:(NSNotification *)notification
@@ -2417,30 +2414,20 @@ enum BWCOpenDest {
   [[mBrowserView getBrowserView] saveURL:aFilterView url:aURLSpec suggestedFilename:aFilename];
 }
 
-- (void)loadSourceOfURL:(NSString*)urlStr inBackground:(BOOL)loadInBackground
+- (void)loadSourceForFrame:(BOOL)forFrame inBackground:(BOOL)loadInBackground
 {
-  BOOL shouldUseTab = [[PreferenceManager sharedInstance] getBooleanPref:"camino.viewsource_in_tab" withSuccess:NULL];
-  NSString* viewSource = [kViewSourceProtocolString stringByAppendingString:urlStr];
-  
-  // first attempt to get the source that's already loaded
-  BOOL canUseCache = NO;
-  nsCOMPtr<nsISupports> desc = [[mBrowserView getBrowserView] getPageDescriptor];
-  if (desc) {
-    // make sure we're not trying to load a subframe by checking |urlStr| against the url in
-    // the desc (which is a history entry). We can only use the desc if it's the toplevel page.
-    nsCOMPtr<nsIHistoryEntry> entry(do_QueryInterface(desc));
-    if (entry) {
-      nsCOMPtr<nsIURI> uri;
-      entry->GetURI(getter_AddRefs(uri));
-      nsCAutoString spec;
-      uri->GetSpec(spec);
-      if ([urlStr isEqualToString:[NSString stringWithUTF8String:spec.get()]])
-        canUseCache = YES;
-    }
+  // First, to get a descriptor so we can load the source from cache
+  nsCOMPtr<nsISupports> desc = [[mBrowserView getBrowserView] pageDescriptorByFocus:forFrame];
+  // If that somehow fails, we'll do it by URL
+  NSString* viewSource = nil;
+  if (!desc) {
+    NSString* urlStr = forFrame ? [[mBrowserView getBrowserView] getFocusedURLString]
+                                : [mBrowserView currentURI];
+    viewSource = [kViewSourceProtocolString stringByAppendingString:urlStr];
   }
 
-  if (shouldUseTab) {
-    if (canUseCache)
+  if ([[PreferenceManager sharedInstance] getBooleanPref:"camino.viewsource_in_tab" withSuccess:NULL]) {
+    if (desc)
       [self openNewTabWithDescriptor:desc displayType:nsIWebPageDescriptor::DISPLAY_AS_SOURCE loadInBackground:loadInBackground];
     else
       [self openNewTabWithURL:viewSource referrer:nil loadInBackground:loadInBackground allowPopups:NO setJumpback:NO];
@@ -2456,7 +2443,7 @@ enum BWCOpenDest {
     else
       [controller showWindow:nil];
 
-    if (canUseCache)
+    if (desc)
       [[[controller getBrowserWrapper] getBrowserView] setPageDescriptor:desc displayType:nsIWebPageDescriptor::DISPLAY_AS_SOURCE];
     else
       [controller loadURL:viewSource];
@@ -2496,17 +2483,14 @@ enum BWCOpenDest {
 - (IBAction)viewSource:(id)aSender
 {
   BOOL loadInBackground = (([[NSApp currentEvent] modifierFlags] & NSShiftKeyMask) != 0);
-  NSString* urlStr = [[mBrowserView getBrowserView] getFocusedURLString];
-  [self loadSourceOfURL:urlStr inBackground:loadInBackground];
+  [self loadSourceForFrame:YES inBackground:loadInBackground];
 }
 
 - (IBAction)viewPageSource:(id)aSender
 {
   // If it's a capital V, shift is down
   BOOL loadInBackground = ([[aSender keyEquivalent] isEqualToString:@"V"]);
-
-  NSString* urlStr = [mBrowserView currentURI];
-  [self loadSourceOfURL:urlStr inBackground:loadInBackground];
+  [self loadSourceForFrame:NO inBackground:loadInBackground];
 }
 
 - (IBAction)printDocument:(id)aSender
@@ -2802,7 +2786,7 @@ enum BWCOpenDest {
   mThrobberHandler = nil;
   NSToolbarItem* throbberItem = [self throbberItem];
   if (throbberItem)
-    [throbberItem setImage: [[self throbberImages] objectAtIndex: 0]];
+    [throbberItem setImage: [NSImage imageNamed:@"throbber-00"]];
 }
 
 - (BOOL)findInPageWithPattern:(NSString*)text caseSensitive:(BOOL)inCaseSensitive
@@ -3234,45 +3218,6 @@ enum BWCOpenDest {
   [self forward:sender];
 }
 
-- (void)focusController:(nsIFocusController**)outController
-{
-  #define ENSURE_TRUE(x) if (!x) return;
-  if (!outController)
-    return;
-  *outController = nsnull;
-
-  nsCOMPtr<nsIWebBrowser> webBrizzle = dont_AddRef([[[self getBrowserWrapper] getBrowserView] getWebBrowser]);
-  ENSURE_TRUE(webBrizzle);
-  nsCOMPtr<nsIDOMWindow> domWindow;
-  webBrizzle->GetContentDOMWindow(getter_AddRefs(domWindow));
-  nsCOMPtr<nsPIDOMWindow> privateWindow = do_QueryInterface(domWindow);
-  ENSURE_TRUE(privateWindow);
-  *outController = privateWindow->GetRootFocusController();
-  NS_IF_ADDREF(*outController);
-  #undef ENSURE_TRUE
-}
-
-//
-// -focusedElement
-//
-// Returns the currently focused DOM element in the currently visible tab
-//
-- (void)focusedElement:(nsIDOMElement**)outElement
-{
-  if (!outElement)
-    return;
-  *outElement = nsnull;
-
-  nsCOMPtr<nsIFocusController> controller;
-  [self focusController:getter_AddRefs(controller)];
-  if (!controller)
-    return;
-  nsCOMPtr<nsIDOMElement> focusedItem;
-  controller->GetFocusedElement(getter_AddRefs(focusedItem));
-  *outElement = focusedItem.get();
-  NS_IF_ADDREF(*outElement);
-}
-
 //
 // -currentEditor:
 //
@@ -3284,8 +3229,8 @@ enum BWCOpenDest {
     return;
   *outEditor = nsnull;
 
-  nsCOMPtr<nsIDOMElement> focusedElement;
-  [self focusedElement:getter_AddRefs(focusedElement)];
+  nsCOMPtr<nsIDOMElement> focusedElement =
+    dont_AddRef([[[self getBrowserWrapper] getBrowserView] getFocusedDOMElement]);
   nsCOMPtr<nsIDOMNSEditableElement> editElement = do_QueryInterface(focusedElement);
   if (editElement) {
     editElement->GetEditor(outEditor);
@@ -3293,8 +3238,8 @@ enum BWCOpenDest {
   // if there's no element focused, we're probably in a Midas editor
   else {
     #define ENSURE_TRUE(x) if (!x) return;
-    nsCOMPtr<nsIFocusController> controller;
-    [self focusController:getter_AddRefs(controller)];
+    nsCOMPtr<nsIFocusController> controller =
+      dont_AddRef([[[self getBrowserWrapper] getBrowserView] getFocusController]);
     ENSURE_TRUE(controller);
     nsCOMPtr<nsIDOMWindowInternal> winInternal;
     controller->GetFocusedWindow(getter_AddRefs(winInternal));
@@ -3317,78 +3262,6 @@ enum BWCOpenDest {
     }
     #undef ENSURE_TRUE
   }
-}
-
-//
-// -isPageTextFieldFocused
-//
-// Determine if a text field in the content area has focus. Returns YES if the
-// focus is in a <input type="text"> or <textarea>
-//
-- (BOOL)isPageTextFieldFocused
-{
-  BOOL isFocused = NO;
-  
-  nsCOMPtr<nsIDOMElement> focusedItem;
-  [self focusedElement:getter_AddRefs(focusedItem)];
-  
-  // we got it, now check if it's what we care about
-  nsCOMPtr<nsIDOMHTMLInputElement> input = do_QueryInterface(focusedItem);
-  nsCOMPtr<nsIDOMHTMLTextAreaElement> textArea = do_QueryInterface(focusedItem);
-  if (input) {
-    nsAutoString type;
-    input->GetType(type);
-    if (type == NS_LITERAL_STRING("text"))
-      isFocused = YES;
-  }
-  else if (textArea)
-    isFocused = YES;
-  
-  return isFocused;
-}
-
-//
-// -isPagePluginFocused
-//
-// Determine if a plugin/applet in the content area has focus. Returns YES if the
-// focus is in a <embed>, <object>, or <applet>
-//
-- (BOOL)isPagePluginFocused
-{
-  BOOL isFocused = NO;
-  
-  nsCOMPtr<nsIDOMElement> focusedItem;
-  [self focusedElement:getter_AddRefs(focusedItem)];
-  
-  // we got it, now check if it's what we care about
-  nsCOMPtr<nsIDOMHTMLEmbedElement> embed = do_QueryInterface(focusedItem);
-  nsCOMPtr<nsIDOMHTMLObjectElement> object = do_QueryInterface(focusedItem);
-  nsCOMPtr<nsIDOMHTMLAppletElement> applet = do_QueryInterface(focusedItem);
-  if (embed || object || applet)
-    isFocused = YES;
-  
-  return isFocused;
-}
-
-// map delete key to Back according to browser.backspace_action pref
-- (void)deleteBackward:(id)sender
-{
-  // there are times when backspaces can seep through from IME gone wrong. As a 
-  // workaround until we can get them all fixed, ignore backspace when the
-  // focused widget is a text field (<input type="text"> or <textarea>)
-  if ([self isPageTextFieldFocused] || [self isPagePluginFocused])
-    return;
-
-  int deleteKeyAction = [[PreferenceManager sharedInstance] getIntPref:"browser.backspace_action" withSuccess:NULL];  
-
-  if (deleteKeyAction == 0) { // map to back/forward
-    if ([[NSApp currentEvent] modifierFlags] & NSShiftKeyMask)
-      [self forward:sender];
-    else
-      [self back:sender];
-  }
-  // all other values for browser.backspace_action should give no mapping at all,
-  // including 1 (PgUp/PgDn mapping has no precedent on Mac OS, and we're not supporting it)
 }
 
 -(void)loadURL:(NSString*)aURLSpec referrer:(NSString*)aReferrer focusContent:(BOOL)focusContent allowPopups:(BOOL)inAllowPopups
@@ -3439,6 +3312,8 @@ enum BWCOpenDest {
 
 - (void)willShowPromptForBrowser:(BrowserWrapper*)inBrowser
 {
+  // Remember where the user was, so we can come back.
+  mLastBrowserView = mBrowserView;
   // bring the tab to the front (for security reasons)
   BrowserTabViewItem* tabItem = [self tabForBrowser:inBrowser];
   [mTabBrowser selectTabViewItem:tabItem];
@@ -3448,6 +3323,12 @@ enum BWCOpenDest {
 
 - (void)didDismissPromptForBrowser:(BrowserWrapper*)inBrowser
 {
+  // Return the user to the tab they were looking at.
+  if (mLastBrowserView) {
+    BrowserTabViewItem* lastTab = [self tabForBrowser:mLastBrowserView];
+    [mTabBrowser selectTabViewItem:lastTab];
+  }
+  mLastBrowserView = nil;
 }
 
 - (void)createNewTab:(ENewTabContents)contents
@@ -3537,25 +3418,24 @@ enum BWCOpenDest {
 - (IBAction)closeOtherTabs:(id)sender
 {
   if ([sender isMemberOfClass:[NSMenuItem class]]) {
-    BrowserTabViewItem* tabViewItem = [mTabBrowser itemWithTag:[sender tag]];
-    if (tabViewItem) {
-      while ([mTabBrowser numberOfTabViewItems] > 1) {
-        NSTabViewItem* doomedItem = nil;
-        if ([mTabBrowser indexOfTabViewItem:tabViewItem] == 0)
-          doomedItem = [mTabBrowser tabViewItemAtIndex:1];
-        else
-          doomedItem = [mTabBrowser tabViewItemAtIndex:0];
-
-        [self closeTab:doomedItem];
+    BrowserTabViewItem* savedTab = [mTabBrowser itemWithTag:[sender tag]];
+    if (savedTab) {
+      int tabCount = [mTabBrowser numberOfTabViewItems];
+      // Any tab may refuse to close, so we walk the tabs in reverse so that any
+      // that are left open don't throw off the count.
+      for (int i = (tabCount - 1); i >= 0; --i) {
+        BrowserTabViewItem* doomedTab = (BrowserTabViewItem*)[mTabBrowser tabViewItemAtIndex:i];
+        if (doomedTab != savedTab)
+          [doomedTab closeTab:self];
       }
     }
   }
+  [[NSApp delegate] delayedAdjustBookmarksMenuItemsEnabling];
 }
 
 - (void)closeTab:(NSTabViewItem *)tab
 {
-  [[tab view] windowClosed];
-  [mTabBrowser removeTabViewItem:tab];
+  [(BrowserTabViewItem*)tab closeTab:self];
   [[NSApp delegate] delayedAdjustBookmarksMenuItemsEnabling];
 }
 
@@ -4180,13 +4060,9 @@ enum BWCOpenDest {
   NSMenu* result = [[menuPrototype copy] autorelease];
 
   if (isUnsafeLink) {
-    // To avoid updating the BrowserWindow.nib close to release time, the
-    // menu items to remove will be removed from index 0 three times. After
-    // the 1.1 release, this needs to be changed (see bug 378081). The first
-    // two remove calls will pull out the "Open Link in *" menu items.
-    [result removeItemAtIndex:0];
-    [result removeItemAtIndex:0];
-    [result removeItemAtIndex:0];  // remove separator 
+    NSMenuItem* frameItem;
+    while ((frameItem = [result itemWithTag:kLinkOpeningItemsTag]) != nil)
+      [result removeItem:frameItem];
   }
 
   // validate View Page/Frame Source

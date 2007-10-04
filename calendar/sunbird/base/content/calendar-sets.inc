@@ -71,7 +71,7 @@
   <command id="calendar_new_calendar_command" oncommand="openCalendarWizard();"/>
   <command id="open_local_calendar_command" oncommand="openLocalCalendar()"/>
   <command id="calendar_edit_calendar_command" oncommand="openCalendarProperties(getSelectedCalendar(), null);"/>
-  <command id="calendar_delete_calendar_command" oncommand="promptDeleteCalendar(getSelectedCalendar());"/>
+  <command id="calendar_delete_calendar_command" oncommand="promptDeleteCalendar(getSelectedCalendar());" disabled="true"/>
   <command id="find_new_calendar_command" oncommand="goFindNewCalendars()"/>
 
   <command id="next_command" oncommand="moveView(1)"/>
@@ -107,7 +107,7 @@
   <command id="cmd_CustomizeToolbars"   oncommand="CalendarCustomizeToolbar()"/>
   <command id="cmd_showSearchToolbar"   oncommand="goToggleToolbar('searchBox', 'menu_showSearchToolbar');"/>
   <command id="cmd_showStatusBar"       oncommand="goToggleToolbar('status-bar', 'menu_showStatusBar');"/>
-  <command id="cmd_showTaskBox"         oncommand="goToggleToolbar('taskBox', 'menu_showTaskBox'); goToggleToolbar('calendar-todo-splitter');"/>
+  <command id="cmd_showTaskBox"         oncommand="goToggleToolbar('todo-tab-panel', 'menu_showTaskBox'); goToggleToolbar('calendar-todo-splitter');"/>
 
   <command id="Tools:Addons" oncommand="goOpenAddons();"/>
 

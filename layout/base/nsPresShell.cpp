@@ -1064,7 +1064,7 @@ ReflowCommandHashMatchEntry(PLDHashTable *table, const PLDHashEntryHdr *entry,
 
 struct CantRenderReplacedElementEvent;
 
-class PresShell : public nsIPresShell_MOZILLA_1_8_BRANCH, public nsIViewObserver,
+class PresShell : public nsIPresShell_MOZILLA_1_8_BRANCH2, public nsIViewObserver,
                   public nsStubDocumentObserver,
                   public nsISelectionController, public nsIObserver,
                   public nsSupportsWeakReference
@@ -1223,6 +1223,8 @@ public:
 #endif
 
   virtual void HidePopups();
+  virtual void BlockFlushing();
+  virtual void UnblockFlushing();  
 
   //nsIViewObserver interface
 
@@ -1705,8 +1707,9 @@ PresShell::PresShell()
   new (this) nsFrameManager();
 }
 
-NS_IMPL_ISUPPORTS8(PresShell, nsIPresShell, nsIPresShell_MOZILLA_1_8_BRANCH,
-                   nsIDocumentObserver, nsIViewObserver, nsISelectionController,
+NS_IMPL_ISUPPORTS9(PresShell, nsIPresShell, nsIPresShell_MOZILLA_1_8_BRANCH,
+                   nsIPresShell_MOZILLA_1_8_BRANCH2, nsIDocumentObserver,
+                   nsIViewObserver, nsISelectionController,
                    nsISelectionDisplay, nsIObserver, nsISupportsWeakReference)
 
 PresShell::~PresShell()
@@ -2984,6 +2987,9 @@ PresShell::InitialReflow(nscoord aWidth, nscoord aHeight)
                                                    nsITimer::TYPE_ONE_SHOT);
     }
   }
+
+  // Run the XBL binding constructors for any new frames we've constructed
+  mDocument->BindingManager()->ProcessAttachedQueue();
 
   return NS_OK; //XXX this needs to be real. MMP
 }
@@ -5387,7 +5393,24 @@ PresShell::FlushPendingNotifications(mozFlushType aType)
     mViewManager->BeginUpdateViewBatch();
 
     if (aType & Flush_StyleReresolves) {
+      // Processing pending restyles can kill us, and some callers only
+      // hold weak refs when calling FlushPendingNotifications().  :(
+      nsCOMPtr<nsIPresShell> kungFuDeathGrip(this);
       mFrameConstructor->ProcessPendingRestyles();
+      if (mIsDestroying) {
+        // We no longer have a view manager and all that.
+        // XXX FIXME: Except we're in the middle of a view update batch...  We
+        // need to address that somehow.  See bug 369165.
+        return NS_OK;
+      }
+
+      mDocument->BindingManager()->ProcessAttachedQueue();
+      if (mIsDestroying) {
+        // We no longer have a view manager and all that.
+        // XXX FIXME: Except we're in the middle of a view update batch...  We
+        // need to address that somehow.  See bug 369165.
+        return NS_OK;
+      }
     }
 
     if (aType & Flush_OnlyReflow) {
@@ -6736,6 +6759,18 @@ PresShell::HidePopups()
     if (rootView)
       HideViewIfPopup(rootView);
   }
+}
+
+void
+PresShell::BlockFlushing()
+{
+  ++mChangeNestCount;
+}
+
+void
+PresShell::UnblockFlushing()
+{
+  --mChangeNestCount;
 }
 
 //--------------------------------------------------------
@@ -8592,4 +8627,23 @@ void ColorToString(nscolor aColor, nsAutoString &aString)
   PR_snprintf(buf, sizeof(buf), "#%02x%02x%02x",
               NS_GET_R(aColor), NS_GET_G(aColor), NS_GET_B(aColor));
   CopyASCIItoUTF16(buf, aString);
+}
+
+PRBool
+nsPresContext::IsChrome()
+{
+  PRBool isChrome = PR_FALSE;
+  nsCOMPtr<nsISupports> container = GetContainer();
+  if (container) {
+    nsresult result;
+    nsCOMPtr<nsIDocShellTreeItem> docShell(do_QueryInterface(container, &result));
+    if (NS_SUCCEEDED(result) && docShell) {
+      PRInt32 docShellType;
+      result = docShell->GetItemType(&docShellType);
+      if (NS_SUCCEEDED(result)) {
+        isChrome = nsIDocShellTreeItem::typeChrome == docShellType;
+      }
+    }
+  }
+  return isChrome;
 }

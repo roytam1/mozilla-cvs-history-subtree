@@ -161,6 +161,7 @@ NS_IMETHODIMP nsDrawingSurfacePh :: Lock( PRInt32 aX, PRInt32 aY,
 		// create an offscreen context to save the locked rectangle into
 		mLockDrawContext = ( PhDrawContext_t * )PdCreateOffscreenContext( format, aWidth, aHeight, Pg_OSC_MEM_PAGE_ALIGN );
 		if( !mLockDrawContext ) return NS_ERROR_FAILURE;
+	    PgSetDrawBufferSizeCx( mLockDrawContext, 0xffff );
 
 		dst_area.pos.x = dst_area.pos.y = 0;
 		dst_area.size.w = aWidth;
@@ -262,11 +263,14 @@ int nsDrawingSurfacePh::prefChanged(const char *aPref, void *aClosure)
 		}
 
 	if(surface->mIsOffscreen) {
+		PhDrawContext_t *newdc;
+
+		newdc = (PhDrawContext_t *)PdCreateOffscreenContext(0, surface->mWidth, surface->mHeight, Pg_OSC_MEM_PAGE_ALIGN);
+		if ( !newdc )
+			return NS_ERROR_FAILURE;
 		surface->mDrawContext->gc = nsnull; /* because we do not want to destroy the one we have since other have it */
 		PhDCRelease( surface->mDrawContext ); 
-		surface->mDrawContext = (PhDrawContext_t *)PdCreateOffscreenContext(0, surface->mWidth, surface->mHeight, Pg_OSC_MEM_PAGE_ALIGN);
-		if( !surface->mDrawContext ) return NS_ERROR_FAILURE;
-
+		surface->mDrawContext = newdc;
 		PgSetDrawBufferSizeCx( surface->mDrawContext, 0xffff );
 
 		PgDestroyGC(surface->mDrawContext->gc);

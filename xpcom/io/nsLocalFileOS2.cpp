@@ -1204,6 +1204,167 @@ nsLocalFile::IsFileType(const nsACString& fileType, PRBool *_retval)
 
 //-----------------------------------------------------------------------------
 
+// this struct combines an FEA2LIST, an FEA2, plus additional fields
+// needed to write a .TYPE EA in the correct EAT_MVMT format
+
+#pragma pack(1)
+    typedef struct _TYPEEA {
+        struct {
+            ULONG   ulcbList;
+            ULONG   uloNextEntryOffset;
+            BYTE    bfEA;
+            BYTE    bcbName;
+            USHORT  uscbValue;
+            char    chszName[sizeof(".TYPE")];
+        } hdr;
+        struct {
+            USHORT  usEAType;
+            USHORT  usCodePage;
+            USHORT  usNumEntries;
+            USHORT  usDataType;
+            USHORT  usDataLth;
+        } info;
+        char    data[1];
+    } TYPEEA;
+
+    typedef struct _TYPEEA2 {
+      USHORT  usDataType;
+      USHORT  usDataLth;
+    } TYPEEA2;
+#pragma pack()
+
+
+// writes one or more .TYPE extended attributes taken
+// from a comma-delimited string
+
+NS_IMETHODIMP
+nsLocalFile::SetFileTypes(const nsACString& fileTypes)
+{
+    if (fileTypes.IsEmpty())
+        return NS_ERROR_FAILURE;
+
+    PRUint32 cnt = CountCharInReadable(fileTypes, ',');
+    PRUint32 lth = fileTypes.Length() - cnt + (cnt * sizeof(TYPEEA2));
+    PRUint32 size = sizeof(TYPEEA) + lth;
+
+    char *   pBuf = (char*)NS_Alloc(size);
+    if (!pBuf)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    TYPEEA * pEA = (TYPEEA *)pBuf;
+
+    // the buffer has an extra byte due to TYPEEA.data[1]
+    pEA->hdr.ulcbList = size - 1;
+    pEA->hdr.uloNextEntryOffset = 0;
+    pEA->hdr.bfEA = 0;
+    pEA->hdr.bcbName = sizeof(".TYPE") - 1;
+    pEA->hdr.uscbValue = sizeof(pEA->info) + lth;
+    strcpy(pEA->hdr.chszName, ".TYPE");
+
+    pEA->info.usEAType = EAT_MVMT;
+    pEA->info.usCodePage = 0;
+    pEA->info.usNumEntries = ++cnt;
+
+    nsACString::const_iterator begin, end, delim;
+    fileTypes.BeginReading(begin);
+    fileTypes.EndReading(end);
+    delim = begin;
+
+    // fill in type & length, copy the current type name (which
+    // is not zero-terminated), then advance the ptr so the next
+    // iteration can reuse the trailing members of the structure
+    do {
+        FindCharInReadable( ',', delim, end);
+        lth = delim.get() - begin.get();
+        pEA->info.usDataType = EAT_ASCII;
+        pEA->info.usDataLth = lth;
+        memcpy(pEA->data, begin.get(), lth);
+        pEA = (TYPEEA *)((char*)pEA + lth + sizeof(TYPEEA2));
+        begin = ++delim;
+    } while (--cnt);
+
+    // write the EA, then free the buffer
+    EAOP2 eaop2;
+    eaop2.fpGEA2List = 0;
+    eaop2.fpFEA2List = (PFEA2LIST)pBuf;
+
+    int rc = DosSetPathInfo(mWorkingPath.get(), FIL_QUERYEASIZE,
+                            &eaop2, sizeof(eaop2), 0);
+    NS_Free(pBuf);
+
+    if (rc)
+        return ConvertOS2Error(rc);
+
+    return NS_OK;
+}
+
+//-----------------------------------------------------------------------------
+
+// this struct combines an FEA2LIST, an FEA2, plus additional fields
+// needed to write a .SUBJECT EA in the correct EAT_ASCII format;
+
+#pragma pack(1)
+    typedef struct _SUBJEA {
+        struct {
+            ULONG   ulcbList;
+            ULONG   uloNextEntryOffset;
+            BYTE    bfEA;
+            BYTE    bcbName;
+            USHORT  uscbValue;
+            char    chszName[sizeof(".SUBJECT")];
+        } hdr;
+        struct {
+            USHORT  usEAType;
+            USHORT  usDataLth;
+        } info;
+        char    data[1];
+    } SUBJEA;
+#pragma pack()
+
+// saves the file's source URI in its .SUBJECT extended attribute
+
+NS_IMETHODIMP
+nsLocalFile::SetFileSource(const nsACString& aURI)
+{
+    if (aURI.IsEmpty())
+        return NS_ERROR_FAILURE;
+
+    // this includes an extra character for the spec's trailing null
+    PRUint32    lth = sizeof(SUBJEA) + aURI.Length();
+    char *      pBuf = (char*)NS_Alloc(lth);
+    if (!pBuf)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    SUBJEA *    pEA = (SUBJEA *)pBuf;
+
+    // the trailing null doesn't get saved, so don't include it in the size
+    pEA->hdr.ulcbList = lth - 1;
+    pEA->hdr.uloNextEntryOffset = 0;
+    pEA->hdr.bfEA = 0;
+    pEA->hdr.bcbName = sizeof(".SUBJECT") - 1;
+    pEA->hdr.uscbValue = sizeof(pEA->info) + aURI.Length();
+    strcpy(pEA->hdr.chszName, ".SUBJECT");
+    pEA->info.usEAType = EAT_ASCII;
+    pEA->info.usDataLth = aURI.Length();
+    strcpy(pEA->data, PromiseFlatCString(aURI).get());
+
+    // write the EA, then free the buffer
+    EAOP2 eaop2;
+    eaop2.fpGEA2List = 0;
+    eaop2.fpFEA2List = (PFEA2LIST)pEA;
+
+    int rc = DosSetPathInfo(mWorkingPath.get(), FIL_QUERYEASIZE,
+                            &eaop2, sizeof(eaop2), 0);
+    NS_Free(pBuf);
+
+    if (rc)
+        return ConvertOS2Error(rc);
+
+    return NS_OK;
+}
+
+//-----------------------------------------------------------------------------
+
 nsresult
 nsLocalFile::CopySingleFile(nsIFile *sourceFile, nsIFile *destParent,
                             const nsACString &newName, PRBool move)
@@ -1939,13 +2100,17 @@ nsLocalFile::IsExecutable(PRBool *_retval)
     if (pathEnd == leaf)
         return NS_OK;
 
-    // get the extension, including the dot
-    char* ext = (char*) _mbsrchr((const unsigned char*)leaf, '.');
-    if (!ext)
-        return NS_OK;
+    // get the extension, including the dot, max. of 4 chars for comparison
+    // (copy the extension so that the original filename stays untouched)
+    char ext[5];
+    strncpy(ext, (char*) _mbsrchr((const unsigned char*)leaf, '.'), 4);
+    ext[4] = '\0'; // ensure trailing nullbyte
 
     // upper-case the extension, then see if it claims to be an executable
-    WinUpper(0, 0, 0, ext);
+    // WinUpper() cannot be used because it crashes with high memory.
+    // strupr() does not take into account non-ASCII characters but this is
+    // irrelevant for the possible extensions below
+    strupr(ext);
     if (strcmp(ext, ".EXE") == 0 ||
         strcmp(ext, ".CMD") == 0 ||
         strcmp(ext, ".COM") == 0 ||

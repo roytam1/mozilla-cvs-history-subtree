@@ -53,9 +53,9 @@ function calItipProcessor() {
 calItipProcessor.prototype = {
     getInterfaces: function cipGI(count) {
         var ifaces = [
-            Ci.nsIClassInfo,
-            Ci.nsISupports,
-            Ci.calIItipProcessor
+            Components.interfaces.nsIClassInfo,
+            Components.interfaces.nsISupports,
+            Components.interfaces.calIItipProcessor
         ];
         count.value = ifaces.length;
         return ifaces;
@@ -68,12 +68,13 @@ calItipProcessor.prototype = {
     contractID: "@mozilla.org/calendar/itip-processor;1",
     classDescription: "Calendar iTIP processor",
     classID: Components.ID("{9787876b-0780-4464-8282-b7f86fb221e8}"),
-    implementationLanguage: Ci.nsIProgrammingLanguage.JAVASCRIPT,
+    implementationLanguage: Components.interfaces.nsIProgrammingLanguage.JAVASCRIPT,
     flags: 0,
 
     QueryInterface: function cipQI(aIid) {
-        if (!aIid.equals(Ci.nsIClassInfo) && !aIid.equals(Ci.nsISupports) &&
-            !aIid.equals(Ci.calIItipProcessor))
+        if (!aIid.equals(Components.interfaces.nsIClassInfo) &&
+            !aIid.equals(Components.interfaces.nsISupports) &&
+            !aIid.equals(Components.interfaces.calIItipProcessor))
         {
             throw Components.results.NS_ERROR_NO_INTERFACE;
         }
@@ -116,8 +117,8 @@ calItipProcessor.prototype = {
 
         // XXX Support for transports other than email go here.
         //     For now we just assume it's email.
-        var transport = Cc["@mozilla.org/calendar/itip-transport;1?type=email"].
-                        createInstance(Ci.calIItipTransport);
+        var transport = Components.classes["@mozilla.org/calendar/itip-transport;1?type=email"].
+                        createInstance(Components.interfaces.calIItipTransport);
 
         // Sanity checks using the first item
         var itemList = respItipItem.getItemList({ });
@@ -147,19 +148,20 @@ calItipProcessor.prototype = {
                     // Only add to calendar if we accepted invite
                     var replyStat = this._getReplyStatus(calItem,
                                                          transport.defaultIdentity);
-                    if (replyStat != "DECLINED") {
-                        if (!this._processCalendarAction(calItem,
-                                                         CAL_ITIP_PROC_ADD_OP,
-                                                         targetCalendar,
-                                                         aListener))
-                        {
-                            throw new Error ("processItipItem: " +
-                                             "_processCalendarAction failed!");
-                        }
+                    if (replyStat == "DECLINED") {
+                        break;
+                    }
+                    // else fall through
+                case "PUBLISH":
+                    if (!this._processCalendarAction(calItem,
+                                                     CAL_ITIP_PROC_ADD_OP,
+                                                     targetCalendar,
+                                                     aListener))
+                    {
+                        throw new Error ("processItipItem: " +
+                                         "_processCalendarAction failed!");
                     }
                     break;
-
-                case "PUBLISH":
                 case "REPLY":
                 case "REFRESH":
                 case "ADD":
@@ -211,7 +213,10 @@ calItipProcessor.prototype = {
         }
 
         // Send the appropriate response
-        transport.simpleSendResponse(respItipItem);
+        // figure out a good way to determine when a response is needed!
+        if (recvMethod != respMethod) {
+            transport.simpleSendResponse(respItipItem);
+        }
 
         // Yay it worked!
         // XXX TODO: Actually tie this to success/failure of the transport
@@ -262,8 +267,8 @@ calItipProcessor.prototype = {
                 if (!(aRespMethod == "ADD" ||
                      (aRespMethod == "REFRESH" &&
                      // REFRESH is not a valid response to an ADD for VJOURNAL
-                     (aCalItemType == Ci.calIEvent ||
-                      aCalItemType == Ci.calITodo))))
+                     (aCalItemType == Components.interfaces.calIEvent ||
+                      aCalItemType == Components.interfaces.calITodo))))
                 {
                     return false;
                 }
@@ -324,10 +329,10 @@ calItipProcessor.prototype = {
      * Helper to return whether an item is an event, todo, etc.
      */
     _getCalItemType: function cipGCIT(aCalItem) {
-        if (aCalItem instanceof Ci.calIEvent) {
-            return Ci.calIEvent;
-        } else if (aCalItem instanceof Ci.calITodo) {
-            return Ci.calITodo;
+        if (aCalItem instanceof Components.interfaces.calIEvent) {
+            return Components.interfaces.calIEvent;
+        } else if (aCalItem instanceof Components.interfaces.calITodo) {
+            return Components.interfaces.calITodo;
         }
 
         throw new Error ("_getCalItemType: " +

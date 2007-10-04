@@ -2620,8 +2620,9 @@ nsMsgDBEnumerator::~nsMsgDBEnumerator()
 {
   if (mRowCursor)
     mRowCursor->Release();
-  NS_RELEASE(mDB);
+  mTable = nsnull;
   NS_IF_RELEASE(mResultHdr);
+  NS_RELEASE(mDB);
 }
 
 NS_IMPL_ISUPPORTS1(nsMsgDBEnumerator, nsISimpleEnumerator)
@@ -2827,7 +2828,7 @@ protected:
     nsresult					GetTableCursor(void);
     nsresult					PrefetchNext();
     nsMsgDatabase*              mDB;
-    nsIMdbPortTableCursor*       mTableCursor;
+    nsCOMPtr <nsIMdbPortTableCursor>  mTableCursor;
     nsIMsgThread*                 mResultThread;
     PRBool                      mDone;
     PRBool						mNextPrefetched;
@@ -2845,7 +2846,7 @@ nsMsgDBThreadEnumerator::nsMsgDBThreadEnumerator(nsMsgDatabase* db,
 
 nsMsgDBThreadEnumerator::~nsMsgDBThreadEnumerator()
 {
-  mTableCursor->Release();
+  mTableCursor = nsnull;
   NS_IF_RELEASE(mResultThread);
   if (mDB)
     mDB->RemoveListener(this);
@@ -2881,6 +2882,8 @@ NS_IMETHODIMP nsMsgDBThreadEnumerator::OnParentChanged(nsMsgKey aKeyChanged, nsM
 /* void onAnnouncerGoingAway (in nsIDBChangeAnnouncer instigator); */
 NS_IMETHODIMP nsMsgDBThreadEnumerator::OnAnnouncerGoingAway(nsIDBChangeAnnouncer *instigator)
 {
+  mTableCursor = nsnull;
+  NS_IF_RELEASE(mResultThread);
   mDB->RemoveListener(this);
   mDB = nsnull;
   return NS_OK;
@@ -2906,7 +2909,7 @@ nsresult nsMsgDBThreadEnumerator::GetTableCursor(void)
     return NS_ERROR_NULL_POINTER;
 		
   mDB->m_mdbStore->GetPortTableCursor(mDB->GetEnv(),   mDB->m_hdrRowScopeToken, mDB->m_threadTableKindToken,
-    &mTableCursor);
+    getter_AddRefs(mTableCursor));
   
   if (NS_FAILED(rv)) 
     return rv;
@@ -3006,8 +3009,7 @@ nsMsgDatabase::EnumerateThreads(nsISimpleEnumerator* *result)
   nsMsgDBThreadEnumerator* e = new nsMsgDBThreadEnumerator(this, nsnull);
   if (e == nsnull)
     return NS_ERROR_OUT_OF_MEMORY;
-  NS_ADDREF(e);
-  *result = e;
+  NS_ADDREF(*result = e);
   return NS_OK;
 }
 
@@ -3027,8 +3029,7 @@ nsMsgDatabase::EnumerateMessagesWithFlag(nsISimpleEnumerator* *result, PRUint32 
     nsMsgDBEnumerator* e = new nsMsgDBEnumerator(this, m_mdbAllMsgHeadersTable, nsMsgFlagSetFilter, pFlag);
     if (e == nsnull)
         return NS_ERROR_OUT_OF_MEMORY;
-    NS_ADDREF(e);
-    *result = e;
+    NS_ADDREF(*result = e);
     return NS_OK;
 }
 
@@ -3406,8 +3407,6 @@ nsresult nsMsgDatabase::RowCellColumnToCharPtr(nsIMdbRow *row, mdb_token columnT
         err = NS_ERROR_OUT_OF_MEMORY;
       
     }
-    else if (err == NS_OK)	// guarantee a non-null result
-      *result = nsCRT::strdup("");
   }
   return err;
 }

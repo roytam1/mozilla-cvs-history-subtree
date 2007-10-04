@@ -141,6 +141,7 @@ public:
 		 
 		virtual void	HandleActivateEvent(EventRef aEvent);
 		inline nsMacEventDispatchHandler* GetEventDispatchHandler() { return mEventDispatchHandler; }
+		void ClearWindowRefs(nsWindow* aWindow);
 protected:
 		void InitializeMouseEvent(nsMouseEvent& aMouseEvent,
                                           nsPoint&      aPoint,

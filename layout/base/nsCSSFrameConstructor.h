@@ -138,11 +138,24 @@ public:
 
   // Note: It's the caller's responsibility to make sure to wrap a
   // ProcessRestyledFrames call in a view update batch.
+  // This function does not call ProcessAttachedQueue() on the binding manager.
+  // If the caller wants that to happen synchronously, it needs to handle that
+  // itself.
   nsresult ProcessRestyledFrames(nsStyleChangeList& aRestyleArray);
 
+private:
+  // This function does not call ProcessAttachedQueue() on the binding manager.
+  // If the caller wants that to happen synchronously, it needs to handle that
+  // itself.
   void ProcessOneRestyle(nsIContent* aContent, nsReStyleHint aRestyleHint,
                          nsChangeHint aChangeHint);
+
+public:
+  // This function does not call ProcessAttachedQueue() on the binding manager.
+  // If the caller wants that to happen synchronously, it needs to handle that
+  // itself.
   void ProcessPendingRestyles();
+
   void PostRestyleEvent(nsIContent* aContent, nsReStyleHint aRestyleHint,
                         nsChangeHint aMinChangeHint);
 
@@ -740,6 +753,10 @@ private:
 
   PRBool HaveFirstLetterStyle(nsIContent*      aContent,
                               nsStyleContext*  aStyleContext);
+
+  // Check whether a given block has first-letter style.  Make sure to
+  // only pass in blocks!  And don't pass in null either.
+  PRBool HaveFirstLetterStyle(nsIFrame* aBlockFrame);
 
   PRBool HaveFirstLineStyle(nsIContent*      aContent,
                             nsStyleContext*  aStyleContext);

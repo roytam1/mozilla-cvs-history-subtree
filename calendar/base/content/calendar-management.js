@@ -43,8 +43,8 @@ var gCompositeCalendar = null;
 function getCompositeCalendar() {
     if (!gCompositeCalendar) {
         gCompositeCalendar =
-            Cc["@mozilla.org/calendar/calendar;1?type=composite"]
-            .createInstance(Ci.calICompositeCalendar);
+            Components.classes["@mozilla.org/calendar/calendar;1?type=composite"]
+            .createInstance(Components.interfaces.calICompositeCalendar);
 
         gCompositeCalendar.prefPrefix = 'calendar-main';
     }
@@ -54,12 +54,18 @@ function getCompositeCalendar() {
 function getSelectedCalendar() {
     var tree = document.getElementById("calendar-list-tree");
     return (tree.currentIndex > -1) &&
-           calendarListTreeView.mCalendarList[tree.currentIndex];
+           calendarListTreeView.mCalendarList[tree.currentIndex] || null;
 }
 
 function promptDeleteCalendar(aCalendar) {
-    var promptService = Cc["@mozilla.org/embedcomp/prompt-service;1"]
-                        .getService(Ci.nsIPromptService);
+    var calendars = getCalendarManager().getCalendars({});
+    if (calendars.length <= 1) {
+        // If this is the last calendar, don't delete it.
+        return;
+    }
+
+    var promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"]
+                        .getService(Components.interfaces.nsIPromptService);
     var ok = promptService.confirm(
         window,
         calGetString("calendar", "unsubscribeCalendarTitle"),
@@ -89,20 +95,9 @@ function loadCalendarManager() {
     var calMgr = getCalendarManager();
     var composite = getCompositeCalendar();
     var calendars = calMgr.getCalendars({});
-    var prefService = Cc["@mozilla.org/preferences-service;1"]
-                      .getService(Ci.nsIPrefService);
-    var branch = prefService.getBranch("").QueryInterface(Ci.nsIPrefBranch2);
-
-    calendarListInitColors();
-
-    // Set up the tree view
-    var tree = document.getElementById("calendar-list-tree");
-    calendarListTreeView.tree = tree;
-    tree.view = calendarListTreeView;
-
-    calMgr.addObserver(calendarManagerObserver);
-    composite.addObserver(calendarManagerObserver);
-    branch.addObserver("calendar.", calendarManagerObserver, false);
+    var prefService = Components.classes["@mozilla.org/preferences-service;1"]
+                      .getService(Components.interfaces.nsIPrefService);
+    var branch = prefService.getBranch("").QueryInterface(Components.interfaces.nsIPrefBranch2);
 
     if (calendars.length == 0) {
         var url = makeURL("moz-profile-calendar://");
@@ -121,21 +116,34 @@ function loadCalendarManager() {
         } catch (e) {
             Components.utils.reportError("Migrator error: " + e);
         }
+
+        calendars = [homeCalendar];
     }
 
+    calendarListInitCategoryColors();
+
+    // Set up the tree view
+    var tree = document.getElementById("calendar-list-tree");
+    calendarListTreeView.tree = tree;
+    tree.view = calendarListTreeView;
+
+    calMgr.addObserver(calendarManagerObserver);
+    composite.addObserver(calendarManagerObserver);
+    branch.addObserver("calendar.", calendarManagerObserver, false);
+
     // The calendar manager will not notify for existing calendars. Go through
-    // them all and fire our observers manually.
+    // them all and set up manually.
     for each (var calendar in calendars) {
-        calendarManagerObserver.onCalendarRegistered(calendar);
+        calendarManagerObserver.initializeCalendar(calendar);
     }
 }
 
 function unloadCalendarManager() {
     var calMgr = getCalendarManager();
     var composite = getCompositeCalendar();
-    var prefService = Cc["@mozilla.org/preferences-service;1"]
-                      .getService(Ci.nsIPrefService);
-    var branch = prefService.getBranch("").QueryInterface(Ci.nsIPrefBranch2);
+    var prefService = Components.classes["@mozilla.org/preferences-service;1"]
+                      .getService(Components.interfaces.nsIPrefService);
+    var branch = prefService.getBranch("").QueryInterface(Components.interfaces.nsIPrefBranch2);
 
     branch.removeObserver("calendar.", calendarManagerObserver);
     composite.removeObserver(calendarManagerObserver);
@@ -146,21 +154,15 @@ function unloadCalendarManager() {
  * Color specific functions
  */
 var gCachedStyleSheet;
-function calendarListInitColors() {
+function calendarListInitCategoryColors() {
     var calendars = getCalendarManager().getCalendars({});
     if (!gCachedStyleSheet) {
         var cssUri = "chrome://calendar/content/calendar-view-bindings.css";
         gCachedStyleSheet = getStyleSheet(cssUri);
     }
 
-    // Update All Calendars
-    for each (var calendar in calendars) {
-        updateStyleSheetForObject(calendar, gCachedStyleSheet);
-        calendarListUpdateColor(calendar);
-    }
-
-    var prefService = Cc["@mozilla.org/preferences-service;1"]
-                      .getService(Ci.nsIPrefService);
+    var prefService = Components.classes["@mozilla.org/preferences-service;1"]
+                      .getService(Components.interfaces.nsIPrefService);
     var categoryPrefBranch = prefService.getBranch("calendar.category.color.");
     var categories = categoryPrefBranch.getChildList("", {});
 
@@ -218,10 +220,15 @@ var calendarListTreeView = {
     },
 
     addCalendar: function cLTV_addCalendar(aCalendar) {
+        var composite = getCompositeCalendar();
         this.mCalendarList.push(aCalendar);
         calendarListUpdateColor(aCalendar);
         this.treebox.rowCountChanged(this.mCalendarList.length - 1, 1);
-        this.tree.view.selection.select(Math.max(0, this.tree.currentIndex));
+
+        if (!composite.defaultCalendar ||
+            aCalendar.id == composite.defaultCalendar.id) {
+            this.tree.view.selection.select(this.mCalendarList.length - 1);
+        }
     },
 
     removeCalendar: function cLTV_removeCalendar(aCalendar) {
@@ -385,7 +392,7 @@ var calendarListTreeView = {
      * Calendar Tree Events
      */
     onKeyPress: function cLTV_onKeyPress(event) {
-        const kKE = Ci.nsIDOMKeyEvent;
+        const kKE = Components.interfaces.nsIDOMKeyEvent;
         switch (event.keyCode || event.which) {
             case kKE.DOM_VK_DELETE:
                 promptDeleteCalendar(getSelectedCalendar());
@@ -428,6 +435,7 @@ var calendarListTreeView = {
         var col = {};
         var row = {};
         var calendar;
+        var calendars = getCalendarManager().getCalendars({});
 
         if (document.popupNode.localName == "tree") {
             // Using VK_APPS to open the context menu will target the tree
@@ -459,16 +467,20 @@ var calendarListTreeView = {
         if (calendar) {
             document.getElementById("list-calendars-context-edit")
                     .removeAttribute("disabled");
-            document.getElementById("list-calendars-context-delete")
-                    .removeAttribute("disabled");
             document.getElementById("list-calendars-context-publish")
                     .removeAttribute("disabled");
+            // Only enable the delete calendars item if there is more than one
+            // calendar. We don't want to have the last calendar deleted.
+            if (calendars.length > 1) {
+                document.getElementById("list-calendars-context-delete")
+                        .removeAttribute("disabled");
+            }
         } else {
             document.getElementById("list-calendars-context-edit")
                     .setAttribute("disabled", "true");
-            document.getElementById("list-calendars-context-delete")
-                    .setAttribute("disabled", "true");
             document.getElementById("list-calendars-context-publish")
+                    .setAttribute("disabled", "true");
+            document.getElementById("list-calendars-context-delete")
                     .setAttribute("disabled", "true");
         }
         return true;
@@ -479,37 +491,48 @@ var calendarManagerObserver = {
     mDefaultCalendarItem: null,
 
     QueryInterface: function cMO_QueryInterface(aIID) {
-        if (!aIID.equals(Ci.calICalendarManagerObserver) &&
-            !aIID.equals(Ci.calICompositeObserver) &&
-            !aIID.equals(Ci.calIObserver) &&
-            !aIID.equals(Ci.nsIObserver) &&
-            !aIID.equals(Ci.nsISupports)) {
-            throw Cr.NS_ERROR_NO_INTERFACE;
+        if (!aIID.equals(Components.interfaces.calICalendarManagerObserver) &&
+            !aIID.equals(Components.interfaces.calICompositeObserver) &&
+            !aIID.equals(Components.interfaces.calIObserver) &&
+            !aIID.equals(Components.interfaces.nsIObserver) &&
+            !aIID.equals(Components.interfaces.nsISupports)) {
+            throw Components.results.NS_ERROR_NO_INTERFACE;
         }
         return this;
     },
 
-    // calICalendarManagerObserver
-    onCalendarRegistered: function cMO_onCalendarRegistered(aCalendar) {
-        // Enable new calendars by default
+    /**
+     * Set up the UI for a new calendar.
+     *
+     * @param aCalendar     The calendar to add.
+     */
+    initializeCalendar: function cMO_initializeCalendar(aCalendar) {
+        var calendars = getCalendarManager().getCalendars({});
         calendarListTreeView.addCalendar(aCalendar);
-        getCompositeCalendar().addCalendar(aCalendar);
+
+        updateStyleSheetForObject(aCalendar, gCachedStyleSheet);
+        calendarListUpdateColor(aCalendar);
 
         // Watch the calendar for changes, to ensure its visibility when adding
         // or changing items.
         aCalendar.addObserver(this);
 
-        document.getElementById("calendar_new_event_command")
-                .removeAttribute("disabled");
-        document.getElementById("calendar_new_todo_command")
-                .removeAttribute("disabled");
-        document.getElementById("calendar_delete_calendar_command")
-                .removeAttribute("disabled");
+        // Make sure we can delete calendars when there is more than one.
+        if (calendars.length > 1) {
+            document.getElementById("calendar_delete_calendar_command")
+                    .removeAttribute("disabled");
+        }
 
         if (aCalendar.canRefresh) {
             document.getElementById("calendar_reload_remote_calendars")
                     .removeAttribute("disabled");
         }
+    },
+
+    // calICalendarManagerObserver
+    onCalendarRegistered: function cMO_onCalendarRegistered(aCalendar) {
+        this.initializeCalendar(aCalendar);
+        getCompositeCalendar().addCalendar(aCalendar);
     },
 
     onCalendarUnregistering: function cMO_onCalendarUnregistering(aCalendar) {
@@ -518,14 +541,10 @@ var calendarManagerObserver = {
         calendarListTreeView.removeCalendar(aCalendar);
         aCalendar.removeObserver(this);
 
-        // Since the calendar hasn't been removed yet, <= 1 is correct.
-        if (calendars.length <= 1) {
-            // If there are no calendars, you can't create events/tasks or
-            // delete calendars
-            document.getElementById("calendar_new_event_command")
-                    .setAttribute("disabled", true);
-            document.getElementById("calendar_new_todo_command")
-                    .setAttribute("disabled", true);
+        // We want to make sure its not possible to delete the last calendar.
+        // Since at this point the current calendar hasn't been deleted yet,
+        // start disabling when there are two calendars.
+        if (calendars.length <= 2) {
             document.getElementById("calendar_delete_calendar_command")
                     .setAttribute("disabled", true);
         }
@@ -548,9 +567,10 @@ var calendarManagerObserver = {
         getCompositeCalendar().removeCalendar(aCalendar.uri);
     },
 
-    onCalendarPrefSet: function cMO_onCalendarPrefSet(aCalendar,
-                                                      aName,
-                                                      aValue) {
+    onCalendarPrefChanged: function cMO_onCalendarPrefChanged(aCalendar,
+                                                              aName,
+                                                              aValue,
+                                                              aOldValue) {
         switch (aName) {
             case "color":
                 updateStyleSheetForObject(aCalendar, gCachedStyleSheet);
@@ -564,7 +584,10 @@ var calendarManagerObserver = {
 
     onCalendarPrefDeleting: function cMO_onCalendarPrefDeleting(aCalendar,
                                                                 aName) {
-        this.onCalendarPrefSet(aCalendar, aName, null);
+        // Since the old value is not used directly in onCalendarPrefChanged,
+        // but should not be the same as the value, set it to a different
+        // value.
+        this.onCalendarPrefChanged(aCalendar, aName, null, true);
     },
 
     // calICompositeObserver
@@ -619,11 +642,11 @@ var calendarManagerObserver = {
 
                 if (isSunbird()) {
                     refreshEventTree();
-                    toDoUnifinderRefresh();
                 }
+                toDoUnifinderRefresh();
                 break;
             case "calendar.timezone.local":
-                var subject = aSubject.QueryInterface(Ci.nsIPrefBranch2);
+                var subject = aSubject.QueryInterface(Components.interfaces.nsIPrefBranch2);
                 gDefaultTimezone = subject.getCharPref(aPrefName);
 
                 var view = currentView();
@@ -636,8 +659,8 @@ var calendarManagerObserver = {
 
                 if (isSunbird()) {
                     refreshEventTree();
-                    toDoUnifinderRefresh();
                 }
+                toDoUnifinderRefresh();
                 break;
             default :
                 break;

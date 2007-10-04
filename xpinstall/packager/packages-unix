@@ -37,11 +37,8 @@ bin/defaults/profile/search.rdf
 bin/defaults/profile/mimeTypes.rdf
 bin/defaults/messenger/mailViews.dat
 bin/defaults/isp/movemail.rdf
-bin/defaults/messenger/Habeas.sfd
-bin/defaults/messenger/SpamAssassin.sfd
-bin/defaults/messenger/SpamCatcher.sfd
-bin/defaults/messenger/SpamPal.sfd
-
+bin/isp/SpamAssassin.sfd
+bin/isp/SpamPal.sfd
 
 [xpcom]
 bin/libmozjs.so
@@ -252,7 +249,6 @@ bin/components/embed_base.xpt
 bin/components/commandhandler.xpt
 bin/components/webbrowserpersist.xpt
 bin/components/windowwatcher.xpt
-bin/components/xmlextras.xpt
 bin/components/libxmlextras.so
 bin/components/nsHelperAppDlg.js
 bin/components/helperAppDlg.xpt

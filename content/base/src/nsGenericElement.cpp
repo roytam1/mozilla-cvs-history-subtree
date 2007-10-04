@@ -3295,18 +3295,43 @@ public:
         // reenter Notify() we won't double-notify.
         mChildrenBound = 0;
         mOldChildCount = boundCount;
+        PRUint32 i;
+        nsIContent *child;
         if (boundCount == mParent->GetChildCount()) {
           // All the kids have been bound already.  Just append
           mDocument->ContentAppended(mParent, notifySlot);
         } else {
           // Just notify on the already-bound kids
-          for (PRUint32 i = notifySlot; i < boundCount; ++i) {
-            nsIContent* child = mParent->GetChildAt(i);
+          for (i = notifySlot; i < boundCount; ++i) {
+            child = mParent->GetChildAt(i);
             // Could have no child if script has rearranged the DOM or
             // something...
             if (child) {
               mDocument->ContentInserted(mParent, child, i);
             }
+          }
+        }
+        
+        const PRUint32 eventBits = NS_EVENT_BITS_MUTATION_NODEINSERTED;
+        if (nsGenericElement::HasMutationListeners(mParent, eventBits)) {
+          // Walk over the child nodes and collect those we will fire
+          // notifications for
+          nsCOMArray<nsIContent> kidsToNotify;
+          for (i = notifySlot; i < boundCount; ++i) {
+            kidsToNotify.AppendObject(mParent->GetChildAt(i));
+          }
+
+          nsCOMPtr<nsIDOMNode> parentNode = do_QueryInterface(mParent);
+
+          PRUint32 length = kidsToNotify.Count();
+          for (i = 0; i < length; ++i) {
+            child = kidsToNotify[i];
+            nsMutationEvent mutation(PR_TRUE, NS_MUTATION_NODEINSERTED, child);
+            mutation.mRelatedNode = parentNode;
+            
+            nsEventStatus status = nsEventStatus_eIgnore;
+            child->HandleDOMEvent(nsnull, &mutation, nsnull,
+                                  NS_EVENT_FLAG_INIT, &status);
           }
         }
       }
@@ -3981,6 +4006,10 @@ nsGenericElement::SetAttr(PRInt32 aNamespaceID, nsIAtom* aName,
       binding->AttributeChanged(aName, aNamespaceID, PR_FALSE, aNotify);
 
     if (aNotify) {
+      PRInt32 modHint = modification ? PRInt32(nsIDOMMutationEvent::MODIFICATION)
+                                     : PRInt32(nsIDOMMutationEvent::ADDITION);
+      document->AttributeChanged(this, aNamespaceID, aName, modHint);
+
       if (HasMutationListeners(this, NS_EVENT_BITS_MUTATION_ATTRMODIFIED)) {
         nsCOMPtr<nsIDOMEventTarget> node =
           do_QueryInterface(NS_STATIC_CAST(nsIContent *, this));
@@ -4011,10 +4040,6 @@ nsGenericElement::SetAttr(PRInt32 aNamespaceID, nsIAtom* aName,
         HandleDOMEvent(nsnull, &mutation, nsnull,
                        NS_EVENT_FLAG_INIT, &status);
       }
-
-      PRInt32 modHint = modification ? PRInt32(nsIDOMMutationEvent::MODIFICATION)
-                                     : PRInt32(nsIDOMMutationEvent::ADDITION);
-      document->AttributeChanged(this, aNamespaceID, aName, modHint);
     }
   }
 

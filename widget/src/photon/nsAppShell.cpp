@@ -144,6 +144,7 @@ NS_IMETHODIMP nsAppShell::Create(int *bac, char **bav)
 		PtInit( NULL );
 		PtChannelCreate(); // Force use of pulses
 		mPtInited = PR_TRUE;
+		PgSetDrawBufferSize( 0xffff );
 	}
 
   return NS_OK;

@@ -60,7 +60,7 @@ function onDismissAlarm(event) {
 function onDismissAllAlarms(event) {
     // removes widgets on the fly:
     var alarmlist = document.getElementById("alarmlist");
-    for (var i = 0; i < alarmlist.childNodes.length; ++i) {
+    for (var i = alarmlist.childNodes.length-1; i >= 0; i--) {
         getAlarmService().dismissAlarm(alarmlist.childNodes[i].item);
     }
     return true; // close dialog
@@ -78,6 +78,22 @@ function addWidgetFor(item) {
     widget.addEventListener("dismiss", onDismissAlarm, false);
     widget.item = item;
     document.getElementById("alarmlist").appendChild(widget);
+
+    var snoozePref = getPrefSafe("calendar.alarms.defaultsnoozelength", 0);
+    if (snoozePref <= 0) {
+        snoozePref = 5;
+    }
+    if ((snoozePref % 60) == 0) {
+        snoozePref = snoozePref / 60;
+        if ((snoozePref % 24) == 0) {
+            snoozePref = snoozePref / 24;
+            document.getAnonymousElementByAttribute(widget, "anonid", "alarm-widget-snooze-unit").selectedIndex = 2;
+        } else {
+            document.getAnonymousElementByAttribute(widget, "anonid", "alarm-widget-snooze-unit").selectedIndex = 1;
+        }
+    }
+    document.getAnonymousElementByAttribute(widget, "anonid", "alarm-widget-snooze-value").value = snoozePref;
+
     window.getAttention();
 }
 

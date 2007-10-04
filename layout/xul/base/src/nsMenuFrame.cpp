@@ -699,6 +699,36 @@ nsMenuFrame::MarkAsGenerated()
   return NS_OK;
 }
 
+struct nsASyncUngenerate : public PLEvent
+{
+  nsASyncUngenerate(nsIContent* aContent)
+    : mContent(aContent)
+  {
+  }
+
+  void HandleEvent() {
+    nsAutoString genVal;
+    mContent->GetAttr(kNameSpaceID_None, nsXULAtoms::menugenerated, genVal);
+    if (!genVal.IsEmpty()) {
+      mContent->UnsetAttr(kNameSpaceID_None, nsXULAtoms::menugenerated,
+                          PR_TRUE);
+    }
+  }
+
+  nsCOMPtr<nsIContent> mContent;
+};
+
+static void* PR_CALLBACK HandleASyncUngenerate(PLEvent* aEvent)
+{
+  NS_STATIC_CAST(nsASyncUngenerate*, aEvent)->HandleEvent();
+  return nsnull;
+}
+
+static void PR_CALLBACK DestroyASyncUngenerate(PLEvent* aEvent)
+{
+  delete NS_STATIC_CAST(nsASyncUngenerate*, aEvent);
+}
+
 NS_IMETHODIMP
 nsMenuFrame::UngenerateMenu()
 {
@@ -706,10 +736,25 @@ nsMenuFrame::UngenerateMenu()
   GetMenuChildrenElement(getter_AddRefs(child));
   
   if (child) {
-    nsAutoString genVal;
-    child->GetAttr(kNameSpaceID_None, nsXULAtoms::menugenerated, genVal);
-    if (!genVal.IsEmpty())
-      child->UnsetAttr(kNameSpaceID_None, nsXULAtoms::menugenerated, PR_TRUE);
+    nsCOMPtr<nsIEventQueueService> eventService =
+      do_GetService(kEventQueueServiceCID);
+    if (eventService) {
+      nsCOMPtr<nsIEventQueue> eventQueue;
+        eventService->GetThreadEventQueue(PR_GetCurrentThread(),
+                                          getter_AddRefs(eventQueue));
+      if (eventQueue) {
+        nsASyncUngenerate* ungenerate =
+          new nsASyncUngenerate(child);
+        if (ungenerate) {
+          PL_InitEvent(ungenerate, nsnull,
+                       ::HandleASyncUngenerate,
+                       ::DestroyASyncUngenerate);
+          if (NS_FAILED(eventQueue->PostEvent(ungenerate))) {
+            PL_DestroyEvent(ungenerate);
+          }
+        }
+      }
+    }
   }
 
   return NS_OK;

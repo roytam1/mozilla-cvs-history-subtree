@@ -223,6 +223,7 @@ calDateTime::SetTimezone(const nsACString& aTimezone)
             return rv;
         mTimezone.Assign(aTimezone);
     }
+    normalize();
     return NS_OK;
 }
 
@@ -696,6 +697,15 @@ calDateTime::Compare(calIDateTime *aOther, PRInt32 *aResult)
     icaltimetype a, b;
     ToIcalTime(&a);
     aOther->ToIcalTime(&b);
+
+    // If either this or aOther is floating, both objects are treated
+    // as floating for the comparison.
+    if (!a.zone || !b.zone) {
+        a.zone = NULL;
+        a.is_utc = 0;
+        b.zone = NULL;
+        b.is_utc = 0;
+    }
 
     if (mIsDate || otherIsDate) {
         icaltimezone const* tz;

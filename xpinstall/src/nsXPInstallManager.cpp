@@ -121,17 +121,12 @@ nsXPInstallManager::nsXPInstallManager()
 
     // initialize mLastUpdate to the current time
     mLastUpdate = PR_Now();
-
-    nsCOMPtr<nsIObserverService> os(do_GetService("@mozilla.org/observer-service;1"));
-    if (os)
-        os->AddObserver(this, XPI_PROGRESS_TOPIC, PR_TRUE);
 }
 
 
 nsXPInstallManager::~nsXPInstallManager()
 {
-    if (mTriggers)
-        delete mTriggers;
+    NS_ASSERTION(!mTriggers, "Shutdown not called, triggers still alive");
 }
 
 
@@ -176,6 +171,10 @@ nsXPInstallManager::InitManagerWithHashes(const PRUnichar **aURLs,
 
     mNeedsShutdown = PR_TRUE;
 
+    nsCOMPtr<nsIObserverService> os(do_GetService("@mozilla.org/observer-service;1"));
+    if (os)
+        os->AddObserver(this, XPI_PROGRESS_TOPIC, PR_TRUE);
+
     for (PRUint32 i = 0; i < aURLCount; ++i) 
     {
         nsXPITriggerItem* item = new nsXPITriggerItem(0, aURLs[i], nsnull,
@@ -219,9 +218,9 @@ nsXPInstallManager::InitManager(nsIScriptGlobalObject* aGlobalObject, nsXPITrigg
 
     nsresult rv = NS_OK;
 
+    mNeedsShutdown = PR_TRUE;
     mTriggers = aTriggers;
     mChromeType = aChromeType;
-    mNeedsShutdown = PR_TRUE;
 
     mParentWindow = do_QueryInterface(aGlobalObject);
 
@@ -312,6 +311,10 @@ nsXPInstallManager::InitManagerInternal()
 
         if (OKtoInstall)
         {
+            nsCOMPtr<nsIObserverService> os(do_GetService("@mozilla.org/observer-service;1"));
+            if (os)
+                os->AddObserver(this, XPI_PROGRESS_TOPIC, PR_TRUE);
+
             //-----------------------------------------------------
             // Open the progress dialog
             //-----------------------------------------------------
@@ -889,6 +892,12 @@ void nsXPInstallManager::Shutdown()
                 if (NS_SUCCEEDED(rv))
                     pos->RemoveObserver(this, XPI_PROGRESS_TOPIC);
             }
+        }
+
+        if (mTriggers)
+        {
+            delete mTriggers;
+            mTriggers = nsnull;
         }
 
         NS_RELEASE_THIS();

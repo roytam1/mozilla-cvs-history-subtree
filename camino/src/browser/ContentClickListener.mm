@@ -50,11 +50,12 @@
 // Common helper routines (also used by the context menu code)
 #include "GeckoUtils.h"
 
-#import "NSString+Utils.h"
-#import "PreferenceManager.h"
-#import "CHBrowserView.h"
+#import "NSString+Gecko.h"
 
 #import "ContentClickListener.h"
+#import "PreferenceManager.h"
+#import "CHBrowserView.h"
+#import "BrowserWindowController.h"
 
 NS_IMPL_ISUPPORTS2(ContentClickListener, nsIDOMMouseListener, nsIDOMEventListener)
 

@@ -494,7 +494,8 @@
           <template>
             <rule nc:CanFileMessages="true">
               <menupopup>
-                <menuitem uri="..." class="folderMenuItem menuitem-iconic" label="rdf:http://home.netscape.com/NC-rdf#Name" 
+                <menuitem uri="..." class="folderMenuItem menuitem-iconic"
+                  label="rdf:http://home.netscape.com/NC-rdf#FolderTreeSimpleName"
                   oncommand="MsgMoveMessage(event.target.id)" 
                   SpecialFolder="rdf:http://home.netscape.com/NC-rdf#SpecialFolder"
                   BiffState="rdf:http://home.netscape.com/NC-rdf#BiffState"
@@ -585,7 +586,8 @@
           <template>
             <rule nc:CanFileMessages="true">
               <menupopup>
-                <menuitem uri="..." class="folderMenuItem menuitem-iconic" label="rdf:http://home.netscape.com/NC-rdf#Name" 
+                <menuitem uri="..." class="folderMenuItem menuitem-iconic"
+                  label="rdf:http://home.netscape.com/NC-rdf#FolderTreeSimpleName"
                   oncommand="MsgCopyMessage(event.target.id)" 
                   SpecialFolder="rdf:http://home.netscape.com/NC-rdf#SpecialFolder"
                   BiffState="rdf:http://home.netscape.com/NC-rdf#BiffState"
@@ -858,7 +860,8 @@
           <template>
             <rule nc:CanFileMessages="true">
               <menupopup>
-                <menuitem uri="..." class="folderMenuItem menuitem-iconic" label="rdf:http://home.netscape.com/NC-rdf#Name" 
+                <menuitem uri="..." class="folderMenuItem menuitem-iconic"
+                  label="rdf:http://home.netscape.com/NC-rdf#FolderTreeSimpleName"
                   oncommand="MsgMoveMessage(event.target.id)" 
                   SpecialFolder="rdf:http://home.netscape.com/NC-rdf#SpecialFolder"
                   BiffState="rdf:http://home.netscape.com/NC-rdf#BiffState"
@@ -948,7 +951,8 @@
           <template>
             <rule nc:CanFileMessages="true">
               <menupopup>
-                <menuitem uri="..." class="folderMenuItem menuitem-iconic" label="rdf:http://home.netscape.com/NC-rdf#Name" 
+                <menuitem uri="..." class="folderMenuItem menuitem-iconic"
+                  label="rdf:http://home.netscape.com/NC-rdf#FolderTreeSimpleName"
                   oncommand="MsgCopyMessage(event.target.id)" 
                   SpecialFolder="rdf:http://home.netscape.com/NC-rdf#SpecialFolder"
                   BiffState="rdf:http://home.netscape.com/NC-rdf#BiffState"
@@ -1230,7 +1234,9 @@
           <menuseparator/>
 
           <menuitem id="printSetupMenuItem" label="&printSetupCmd.label;" accesskey="&printSetupCmd.accesskey;" command="cmd_printSetup"/>
+#ifndef XP_MACOSX
           <menuitem id="printPreviewMenuItem" label="&printPreviewCmd.label;" accesskey="&printPreviewCmd.accesskey;" command="cmd_printpreview"/>
+#endif
           <menuitem id="printMenuItem" key="key_print" label="&printCmd.label;" accesskey="&printCmd.accesskey;" command="cmd_print"/>
         </menupopup>
       </menu>
@@ -1563,7 +1569,8 @@
                   <template>
                     <rule nc:CanFileMessages="true">
                       <menupopup>
-                        <menuitem uri="..." class="folderMenuItem menuitem-iconic" label="rdf:http://home.netscape.com/NC-rdf#Name" 
+                        <menuitem uri="..." class="folderMenuItem menuitem-iconic"
+                          label="rdf:http://home.netscape.com/NC-rdf#FolderTreeSimpleName"
                           oncommand="MsgMoveMessage(event.target.id)" 
                           SpecialFolder="rdf:http://home.netscape.com/NC-rdf#SpecialFolder"
                           BiffState="rdf:http://home.netscape.com/NC-rdf#BiffState"
@@ -1651,7 +1658,8 @@
                   <template>
                     <rule nc:CanFileMessages="true">
                       <menupopup>
-                        <menuitem uri="..." class="folderMenuItem menuitem-iconic" label="rdf:http://home.netscape.com/NC-rdf#Name" 
+                        <menuitem uri="..." class="folderMenuItem menuitem-iconic"
+                          label="rdf:http://home.netscape.com/NC-rdf#FolderTreeSimpleName"
                           oncommand="MsgCopyMessage(event.target.id)" 
                           SpecialFolder="rdf:http://home.netscape.com/NC-rdf#SpecialFolder"
                           BiffState="rdf:http://home.netscape.com/NC-rdf#BiffState"
@@ -1939,7 +1947,8 @@
             <template>
               <rule nc:CanFileMessages="true">
                 <menupopup>
-                  <menuitem uri="..." class="folderMenuItem menuitem-iconic" label="rdf:http://home.netscape.com/NC-rdf#Name" 
+                  <menuitem uri="..." class="folderMenuItem menuitem-iconic"
+                    label="rdf:http://home.netscape.com/NC-rdf#FolderTreeSimpleName"
                     oncommand="MsgMoveMessage(event.target.id)" 
                     SpecialFolder="rdf:http://home.netscape.com/NC-rdf#SpecialFolder"
                     BiffState="rdf:http://home.netscape.com/NC-rdf#BiffState"
@@ -2121,7 +2130,9 @@
 
       <toolbaritem id ="folder-location-container" title="&folderLocationToolbarItem.title;"
                    align="center" class="chromeclass-toolbar-additional">
-        <menulist id="locationFolders" class="folderMenuItem" label=" " context="folderPaneContext" width="170" crop="center">
+        <!--XXX The src attribute is there to give the menulist icon horizontal margin (bug 381364).
+                Remove it once bug 381548 is fixed. -->
+        <menulist id="locationFolders" class="folderMenuItem" label=" " src="" context="folderPaneContext" width="170" crop="center">
           <menupopup id="folderLocationPopup" class="folderLocationPopup" height="400" flex="1" 
                      oncommand="OnLocationTreeSelect(this);"/>
         </menulist>

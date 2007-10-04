@@ -57,6 +57,8 @@
 #ifdef PHOTON_DND
 #include "nsDragService.h"
 #endif
+#include "nsIViewManager.h"
+#include "nsIScrollableView.h"
 #include "nsReadableUtils.h"
 
 #include "nsIPref.h"
@@ -64,6 +66,8 @@
 
 #include <errno.h>
 #include <photon/PtServer.h>
+
+extern char *__progname;
 
 static NS_DEFINE_CID(kLookAndFeelCID, NS_LOOKANDFEEL_CID);
 static NS_DEFINE_CID(kCClipboardCID, NS_CLIPBOARD_CID);
@@ -740,6 +744,7 @@ PRBool nsWidget::DispatchMouseEvent( nsMouseEvent& aEvent ) {
   PRBool result = PR_FALSE;
   if (nsnull == mEventCallback && nsnull == mMouseListener) return result;
 
+  //printf("* DispatchMouseEvent %d\n", aEvent.message);
   // call the event callback
   if (nsnull != mEventCallback) {
     result = DispatchWindowEvent(&aEvent);
@@ -865,7 +870,7 @@ PRUint32 nsWidget::nsConvertKey( PhKeyEvent_t *aPhKeyEvent ) {
   return((int) 0);
 	}
 
-PRBool  nsWidget::DispatchKeyEvent( PhKeyEvent_t *aPhKeyEvent ) {
+PRBool  nsWidget::DispatchKeyEvent( PhKeyEvent_t *aPhKeyEvent, int force ) {
   NS_ASSERTION(aPhKeyEvent, "nsWidget::DispatchKeyEvent a NULL PhKeyEvent was passed in");
 
   if( !(aPhKeyEvent->key_flags & (Pk_KF_Cap_Valid|Pk_KF_Sym_Valid) ) ) {
@@ -874,7 +879,7 @@ PRBool  nsWidget::DispatchKeyEvent( PhKeyEvent_t *aPhKeyEvent ) {
 		return PR_FALSE;
 		}
 
-  if ( PtIsFocused(mWidget) != 2) {
+  if ( !force && PtIsFocused(mWidget) != 2) {
      //printf("nsWidget::DispatchKeyEvent Not on focus leaf! PtIsFocused(mWidget)=<%d>\n", PtIsFocused(mWidget));
      return PR_FALSE;
   	}
@@ -979,6 +984,7 @@ inline void nsWidget::InitKeyPressEvent(PhKeyEvent_t *aPhKeyEvent, nsKeyEvent &a
 inline PRBool nsWidget::HandleEvent( PtWidget_t *widget, PtCallbackInfo_t* aCbInfo ) {
   PRBool  result = PR_TRUE; // call the default nsWindow proc
   PhEvent_t* event = aCbInfo->event;
+  static int prevx=-1, prevy=-1, left_button_down, kwww_outbound_valid;
 
 	if (event->processing_flags & Ph_CONSUMED) return PR_TRUE;
 
@@ -1016,18 +1022,22 @@ inline PRBool nsWidget::HandleEvent( PtWidget_t *widget, PtCallbackInfo_t* aCbIn
 					PtContainerGiveFocus( widget, aCbInfo->event );
 
         if( ptrev ) {
+		  prevx = ptrev->pos.x;
+		  prevy = ptrev->pos.y;
           ScreenToWidgetPos( ptrev->pos );
 
-          if( ptrev->buttons & Ph_BUTTON_SELECT ) // Normally the left mouse button
-						InitMouseEvent(ptrev, this, theMouseEvent, NS_MOUSE_LEFT_BUTTON_DOWN );
-          else if( ptrev->buttons & Ph_BUTTON_MENU ) // the right button
-						InitMouseEvent(ptrev, this, theMouseEvent, NS_MOUSE_RIGHT_BUTTON_DOWN );
+          if( ptrev->buttons & Ph_BUTTON_SELECT ) { // Normally the left mouse button
+			InitMouseEvent(ptrev, this, theMouseEvent, NS_MOUSE_LEFT_BUTTON_DOWN );
+			left_button_down = 1;
+          } else if( ptrev->buttons & Ph_BUTTON_MENU ) // the right button
+			InitMouseEvent(ptrev, this, theMouseEvent, NS_MOUSE_RIGHT_BUTTON_DOWN );
           else // middle button
-						InitMouseEvent(ptrev, this, theMouseEvent, NS_MOUSE_MIDDLE_BUTTON_DOWN );
+			InitMouseEvent(ptrev, this, theMouseEvent, NS_MOUSE_MIDDLE_BUTTON_DOWN );
 
-		  		result = DispatchMouseEvent(theMouseEvent);
+		  //printf("*** Button down\n");
+		  result = DispatchMouseEvent(theMouseEvent);
 
-					// if we're a right-button-up we're trying to popup a context menu. send that event to gecko also
+					// if we're a right-button-down we're trying to popup a context menu. send that event to gecko also
 					if( ptrev->buttons & Ph_BUTTON_MENU ) {
 						nsMouseEvent contextMenuEvent(PR_TRUE, 0, nsnull,
                                                       nsMouseEvent::eReal);
@@ -1056,19 +1066,69 @@ inline PRBool nsWidget::HandleEvent( PtWidget_t *widget, PtCallbackInfo_t* aCbIn
 			  if (event->subtype==Ph_EV_RELEASE_REAL || event->subtype==Ph_EV_RELEASE_PHANTOM) {
 				  if (ptrev) {
 					  ScreenToWidgetPos( ptrev->pos );
-					  if ( ptrev->buttons & Ph_BUTTON_SELECT ) // Normally the left mouse button
+					  if ( ptrev->buttons & Ph_BUTTON_SELECT ) { // Normally the left mouse button
 						 InitMouseEvent(ptrev, this, theMouseEvent, NS_MOUSE_LEFT_BUTTON_UP );
-					  else if( ptrev->buttons & Ph_BUTTON_MENU ) // the right button
+						 kwww_outbound_valid = 0;
+						 //
+						 // To be clean, let's not send multiple left button up
+						 // events.
+						 //
+						 if (!left_button_down)
+						   break; //case
+						 left_button_down = 0;
+					  } else if( ptrev->buttons & Ph_BUTTON_MENU ) // the right button
 						 InitMouseEvent(ptrev, this, theMouseEvent, NS_MOUSE_RIGHT_BUTTON_UP );
 					  else // middle button
 						 InitMouseEvent(ptrev, this, theMouseEvent, NS_MOUSE_MIDDLE_BUTTON_UP );
 					  
+				      //printf("*** Button up %s\n", event->subtype==Ph_EV_RELEASE_PHANTOM ? "(phantom)" : "");
 					  result = DispatchMouseEvent(theMouseEvent);
 				  }
 			  }
 			  else if (event->subtype==Ph_EV_RELEASE_OUTBOUND) {
 				  PhRect_t rect = {{0,0},{0,0}};
 				  PhRect_t boundary = {{-10000,-10000},{10000,10000}};
+
+				  //printf("*** OUTBOUND\n");
+		          if (__progname && strcmp(__progname, "kwww") == 0) {
+					//
+					// In kscope we only use dragging to scroll the view. So
+					// we don't want Mozilla to do any special drag processing,
+					// and fake this out by immediately doing a left-button-up.
+					// We do it at (999999,999999) so any control or link under
+					// the pointer doesn't get activated.
+					//
+			        ptrev->pos.x = ptrev->pos.y = 999999;
+                    InitMouseEvent(ptrev, this, theMouseEvent, NS_MOUSE_LEFT_BUTTON_UP );
+                    result = DispatchMouseEvent(theMouseEvent);
+ 	      	        InitMouseEvent(ptrev, this, theMouseEvent, NS_MOUSE_MOVE );
+        	        result = DispatchMouseEvent(theMouseEvent);
+					left_button_down = 0;
+					kwww_outbound_valid = 1;
+					//
+					// In case we activated a combo box, do another down/up
+					// Sending an Esc key also works. Which is better?
+					// The mouse button method may prevent drag initiation
+					// within (multiline?) input fields. 
+					//
+#if 0
+                    InitMouseEvent(ptrev, this, theMouseEvent, NS_MOUSE_LEFT_BUTTON_DOWN );
+                    result = DispatchMouseEvent(theMouseEvent);
+                    InitMouseEvent(ptrev, this, theMouseEvent, NS_MOUSE_LEFT_BUTTON_UP );
+                    result = DispatchMouseEvent(theMouseEvent);
+#else
+					PhKeyEvent_t kev;
+                    memset( &kev, 0, sizeof(kev) );
+					kev.key_cap = kev.key_sym = Pk_Escape;
+					kev.key_flags = Pk_KF_Key_Down | Pk_KF_Cap_Valid | Pk_KF_Sym_Valid;
+					DispatchKeyEvent( &kev, 1 );
+                    memset( &kev, 0, sizeof(kev) );
+					kev.key_cap = Pk_Escape;
+					kev.key_flags = Pk_KF_Cap_Valid;
+					DispatchKeyEvent( &kev, 1 );
+#endif
+				  }
+
 				  PhInitDrag( PtWidgetRid(mWidget), ( Ph_DRAG_KEY_MOTION | Ph_DRAG_TRACK | Ph_TRACK_DRAG),&rect, &boundary, aCbInfo->event->input_group , NULL, NULL, NULL, NULL, NULL);
 			  }
 		  }
@@ -1092,10 +1152,16 @@ inline PRBool nsWidget::HandleEvent( PtWidget_t *widget, PtCallbackInfo_t* aCbIn
 						}
 #endif
 
-          ScreenToWidgetPos( ptrev->pos );
+		  if (!__progname || strcmp(__progname, "kwww") != 0) {
+		    //
+			// We don't send these events in kscope. Dragging is devoted to
+			// scrolling.
+			//
+            ScreenToWidgetPos( ptrev->pos );
  	      	InitMouseEvent(ptrev, this, theMouseEvent, NS_MOUSE_MOVE );
-          result = DispatchMouseEvent(theMouseEvent);
-        	}
+            result = DispatchMouseEvent(theMouseEvent);
+			}
+          }
       	}
       	break;
 
@@ -1104,7 +1170,7 @@ inline PRBool nsWidget::HandleEvent( PtWidget_t *widget, PtCallbackInfo_t* aCbIn
         // covers both mozserver and mozilla.
         if (sClipboard)
           sClipboard->SetInputGroup(event->input_group);
-				result = DispatchKeyEvent( (PhKeyEvent_t*) PhGetData( event ) );
+				result = DispatchKeyEvent( (PhKeyEvent_t*) PhGetData( event ), 0 );
         break;
 
       case Ph_EV_DRAG:
@@ -1112,26 +1178,107 @@ inline PRBool nsWidget::HandleEvent( PtWidget_t *widget, PtCallbackInfo_t* aCbIn
           nsMouseEvent theMouseEvent(PR_TRUE, 0, nsnull, nsMouseEvent::eReal);
 
           switch(event->subtype) {
+        	static int is_kwww=-1;
 
-		  			case Ph_EV_DRAG_COMPLETE: 
-            	{  
- 		      		nsMouseEvent theMouseEvent(PR_TRUE, 0, nsnull,
+            case Ph_EV_DRAG_COMPLETE: {
+                nsMouseEvent theMouseEvent(PR_TRUE, 0, nsnull,
                                                nsMouseEvent::eReal);
-              PhPointerEvent_t* ptrev2 = (PhPointerEvent_t*) PhGetData( event );
-              ScreenToWidgetPos( ptrev2->pos );
-              InitMouseEvent(ptrev2, this, theMouseEvent, NS_MOUSE_LEFT_BUTTON_UP );
-              result = DispatchMouseEvent(theMouseEvent);
-            	}
-							break;
-		  			case Ph_EV_DRAG_MOTION_EVENT: {
-      		    PhPointerEvent_t* ptrev2 = (PhPointerEvent_t*) PhGetData( event );
-      		    ScreenToWidgetPos( ptrev2->pos );
-  	  		    InitMouseEvent(ptrev2, this, theMouseEvent, NS_MOUSE_MOVE );
-      		    result = DispatchMouseEvent(theMouseEvent);
-							}
-							break;
-		  			}
+                PhPointerEvent_t* ptrev2 = (PhPointerEvent_t*) PhGetData( event );
+				//printf("*** Drag complete\n");
+                if (is_kwww) {  
+        	      // Already did the button up
+				  kwww_outbound_valid = 0;
+				  prevx = prevy = -1;
+			    } else {
+                  ScreenToWidgetPos( ptrev2->pos );
+                  InitMouseEvent(ptrev2, this, theMouseEvent, NS_MOUSE_LEFT_BUTTON_UP );
+                  result = DispatchMouseEvent(theMouseEvent);
+				  left_button_down = 0;
+                }
+			  }
+              break;
+            case Ph_EV_DRAG_MOTION_EVENT: {
+                PhPointerEvent_t* ptrev2 = (PhPointerEvent_t*) PhGetData( event );
+				//printf("*** Drag motion\n");
+			    if (is_kwww == -1) {
+			      is_kwww = 0;
+				  if (__progname && strcmp(__progname, "kwww") == 0)
+			      	is_kwww = 1;
+			    }
+
+			    if (is_kwww) {
+				  nsIWidget *nsw = this;
+				  nsIWidget *top_widget = nsw;
+
+				  if (!kwww_outbound_valid) {
+                    struct dragevent {
+                        PhEvent_t hdr;
+                        PhDragEvent_t drag;
+                        } ev;
+
+					//
+					// If the user does a drag where he releases the left mouse
+					// button almost right away, then we will start getting
+					// drag events even though the mouse button is not pressed!
+					// Work around this Photon bug by cancelling the drag
+					// ourselves. In 6.4.0 we can use PhCancelDrag() to do this.
+					//
+				  	//printf("*** CANCELLING DRAG!\n");
+                    memset( &ev, 0, sizeof(ev) );
+                    ev.hdr.type = Ph_EV_DRAG;
+                    ev.hdr.emitter.rid = Ph_DEV_RID;
+                    ev.hdr.flags = Ph_EVENT_INCLUSIVE | Ph_EMIT_TOWARD;
+                    ev.hdr.data_len = sizeof( ev.drag );
+					ev.hdr.subtype = Ph_EV_DRAG_COMPLETE;
+					ev.hdr.input_group = aCbInfo->event->input_group;
+					ev.drag.rid = PtWidgetRid(mWidget);
+					ev.drag.flags = 0;
+					PhEmit( &ev.hdr, NULL, &ev.drag );
+					break; //case
+				  }
+
+				  while (nsw) {
+					top_widget = nsw;
+					nsw = nsw->GetParent();
+				  }
+			try_again:
+                  nsIView *view = nsToolkit::GetViewFor(top_widget);
+				  if (view) {
+					nsIViewManager* vm = view->GetViewManager();
+					if (vm) {
+				      nsIScrollableView* scrollView = nsnull;
+				      vm->GetRootScrollableView(&scrollView);
+					  if (scrollView) {
+						if (prevx != -1 || prevy != -1) {
+						  //
+						  // The -1 check is to handle prevx and prevy not set
+						  // to the button press location, which happens when
+						  // you click on flash.
+						  //
+						  nsresult rc = ((nsIScrollableView_MOZILLA_1_8_BRANCH*)scrollView)->ScrollByPixels(prevx - ptrev2->pos.x, prevy - ptrev2->pos.y);
+						  //printf("*** rc %d from ScrollByPixels\n");
+						}
+					  } else if (top_widget != this) {
+					    //
+						// There is no scrollable view for the top level widget.
+						// See if there is one for the original widget.
+						//
+						top_widget = this;
+						goto try_again;
+					  }
 					}
+			      }
+			      prevx = ptrev2->pos.x;
+			      prevy = ptrev2->pos.y;
+			    } else {
+                  ScreenToWidgetPos( ptrev2->pos );
+                  InitMouseEvent(ptrev2, this, theMouseEvent, NS_MOUSE_MOVE );
+                  result = DispatchMouseEvent(theMouseEvent);
+			    }
+              }
+              break;
+            }
+          }
         break;
 
       case Ph_EV_BOUNDARY:

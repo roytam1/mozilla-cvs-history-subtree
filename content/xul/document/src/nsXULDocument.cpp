@@ -1101,7 +1101,9 @@ nsXULDocument::AttributeChanged(nsIContent* aElement, PRInt32 aNameSpaceID,
             nsAutoString value;
             rv = aElement->GetAttr(kNameSpaceID_None, aAttribute, value);
 
-            for (PRInt32 i = entry->mListeners.Count() - 1; i >= 0; --i) {
+            nsCOMArray<nsIContent> listenerArray;
+            PRInt32 i;
+            for (i = entry->mListeners.Count() - 1; i >= 0; --i) {
                 BroadcastListener* bl =
                     NS_STATIC_CAST(BroadcastListener*, entry->mListeners[i]);
 
@@ -1109,20 +1111,23 @@ nsXULDocument::AttributeChanged(nsIContent* aElement, PRInt32 aNameSpaceID,
                     (bl->mAttribute == nsXULAtoms::_star)) {
                     nsCOMPtr<nsIContent> listener
                         = do_QueryInterface(bl->mListener);
-
-                    if (rv == NS_CONTENT_ATTR_NO_VALUE ||
-                        rv == NS_CONTENT_ATTR_HAS_VALUE) {
-                        listener->SetAttr(kNameSpaceID_None, aAttribute, value,
-                                          PR_TRUE);
-                    }
-                    else {
-                        listener->UnsetAttr(kNameSpaceID_None, aAttribute,
-                                            PR_TRUE);
-                    }
-
-                    ExecuteOnBroadcastHandlerFor(aElement, bl->mListener,
-                                                 aAttribute);
+                    listenerArray.AppendObject(listener);
                 }
+            }
+            for (i = 0; i < listenerArray.Count(); ++i) {
+                nsIContent* listener = listenerArray[i];
+                 if (rv == NS_CONTENT_ATTR_NO_VALUE ||
+                     rv == NS_CONTENT_ATTR_HAS_VALUE) {
+                     listener->SetAttr(kNameSpaceID_None, aAttribute, value,
+                                       PR_TRUE);
+                 }
+                 else {
+                     listener->UnsetAttr(kNameSpaceID_None, aAttribute,
+                                         PR_TRUE);
+                 }
+
+                nsCOMPtr<nsIDOMElement> listenerEl = do_QueryInterface(listener);
+                ExecuteOnBroadcastHandlerFor(aElement, listenerEl, aAttribute);
             }
         }
     }

@@ -92,6 +92,7 @@ class EmbedPrivate {
   void 		  ScrollDown(int amount);
   void 		  ScrollLeft(int amount);
   void 		  ScrollRight(int amount);
+  void 		  ScrollTo(int x, int y);
   void        Cut  (int ig);
   void        Copy  (int ig);
   void        Paste  (int ig);

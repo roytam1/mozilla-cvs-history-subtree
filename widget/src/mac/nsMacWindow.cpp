@@ -249,6 +249,8 @@ nsMacWindow::nsMacWindow() : Inherited()
 #if MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_3
   , mNeedsResize(PR_FALSE)
 #endif
+  , mScrollEventHandler(NULL)
+  , mWindowEventHandler(NULL)
 {
   WIDGET_SET_CLASSNAME("nsMacWindow");  
 
@@ -283,10 +285,19 @@ nsMacWindow::~nsMacWindow()
     CGrafPtr    windowPort = ::GetWindowPort(mWindowPtr);
     ::GetPort((GrafPtr*)&curPort);
     PRBool      mustResetPort = (curPort == windowPort);
-    
-    
-    ::DisposeWindow(mWindowPtr);
+
+    if (mScrollEventHandler)
+      ::RemoveEventHandler(mScrollEventHandler);
+    if (mWindowEventHandler)
+      ::RemoveEventHandler(mWindowEventHandler);
+
+    // Clear references in nsMacEventHandler to this window (bug 388181) and
+    // null out mWindowPtr to prevent handling events beyond this point.
+    if (mMacEventHandler.get())
+      mMacEventHandler->ClearWindowRefs(this);
+    WindowPtr w = mWindowPtr;
     mWindowPtr = nsnull;
+    ::DisposeWindow(w);
     
     if (mustResetPort)
       nsGraphicsUtils::SetPortToKnownGoodPort();
@@ -295,6 +306,11 @@ nsMacWindow::~nsMacWindow()
     (void)::RemoveWindowProperty(mWindowPtr, kTopLevelWidgetPropertyCreator,
         kTopLevelWidgetRefPropertyTag);
   }
+
+  // Explicitly reset mMacEventHandler to null so that any use after free of
+  // this object crashes on a null-ptr deref rather than using freed memory.
+  // ~auto_ptr() only deletes the pointer, it does not set it to null.
+  mMacEventHandler.reset(nsnull);
 }
 
 //-------------------------------------------------------------------------
@@ -637,7 +653,7 @@ nsresult nsMacWindow::StandardCreate(nsIWidget *aParent,
                                         GetEventTypeCount(kScrollEventList),
                                         kScrollEventList,
                                         (void*)this,
-                                        NULL);
+                                        &mScrollEventHandler);
       NS_ASSERTION(err == noErr, "Couldn't install scroll event handler");
     }
 
@@ -669,7 +685,7 @@ nsresult nsMacWindow::StandardCreate(nsIWidget *aParent,
                                       GetEventTypeCount(kWindowEventList),
                                       kWindowEventList,
                                       (void*)this,
-                                      NULL);
+                                      &mWindowEventHandler);
     NS_ASSERTION(err == noErr, "Couldn't install window event handler");
 
     // Key event handler

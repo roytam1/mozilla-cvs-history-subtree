@@ -34,8 +34,7 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
- 
-#import "NSString+Utils.h"
+
 #import "NSView+Utils.h"
 #import "ImageAdditions.h"
 
@@ -221,7 +220,12 @@ enum StatusPriority {
   return YES;
 }
 
--(void)windowClosed
+- (BOOL)browserShouldClose
+{
+  return [mBrowserView shouldUnload];
+}
+
+-(void)browserClosed
 {
   // Break the cycle, but don't clear ourselves as the container 
   // before we call |destroyWebBrowser| or onUnload handlers won't be
@@ -815,6 +819,31 @@ enum StatusPriority {
 {
   // presumably this is only called on the primary tab
   [[mWindow delegate] onShowContextMenu:flags domEvent:aEvent domNode:aNode];
+}
+
+// -deleteBackward:
+//
+// map backspace key to Back according to browser.backspace_action pref
+//
+- (void)deleteBackward:(id)sender
+{
+  // there are times when backspaces can seep through from IME gone wrong. As a 
+  // workaround until we can get them all fixed, ignore backspace when the
+  // focused widget is a text field or plugin
+  if ([mBrowserView isTextFieldFocused] || [mBrowserView isPluginFocused])
+    return;
+
+  int backspaceAction = [[PreferenceManager sharedInstance] getIntPref:"browser.backspace_action"
+                                                           withSuccess:NULL];
+
+  if (backspaceAction == 0) { // map to back/forward
+    if ([[NSApp currentEvent] modifierFlags] & NSShiftKeyMask)
+      [mBrowserView goForward];
+    else
+      [mBrowserView goBack];
+  }
+  // Any other value means no action for backspace. We deliberately don't
+  // support 1 (PgUp/PgDn) as it has no precedent on Mac OS.
 }
 
 -(NSMenu*)getContextMenu

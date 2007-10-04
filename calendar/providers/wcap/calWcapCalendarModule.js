@@ -43,12 +43,15 @@
 // constants:
 const NS_OK = Components.results.NS_OK;
 const nsIException = Components.interfaces.nsIException;
+const nsISupports = Components.interfaces.nsISupports;
 const calIWcapSession = Components.interfaces.calIWcapSession;
 const calIWcapCalendar = Components.interfaces.calIWcapCalendar;
 const calIWcapErrors = Components.interfaces.calIWcapErrors;
 const calICalendar = Components.interfaces.calICalendar;
 const calIItemBase = Components.interfaces.calIItemBase;
 const calIOperationListener = Components.interfaces.calIOperationListener;
+const calIFreeBusyProvider = Components.interfaces.calIFreeBusyProvider;
+const calIFreeBusyInterval = Components.interfaces.calIFreeBusyInterval;
 const calIErrors = Components.interfaces.calIErrors;
 
 // ctors:
@@ -141,8 +144,7 @@ var calWcapCalendarFactory = { // nsIFactory:
     createInstance: function calWcapCalendarFactory_createInstance(outer, iid) {
         if (outer)
             throw Components.results.NS_ERROR_NO_AGGREGATION;
-        var session = new calWcapSession();
-        return session.defaultCalendar.QueryInterface(iid);
+        return (new calWcapCalendar()).QueryInterface(iid);
     }
 };
 

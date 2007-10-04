@@ -44,6 +44,7 @@
 #include "prsystem.h"
 #include "nsEscape.h"
 #include "nsIFileSpec.h"
+#include "prprf.h"
 #include "nsNetCID.h"
 
 // stuff for temporary root folder hack
@@ -459,5 +460,12 @@ void ParseUidString(const char *uidString, nsMsgKeyArray &keys)
     if (isRange)
       saveStartToken = curToken + 1;
   }
+}
+
+void AppendUid(nsCString &msgIds, PRUint32 uid)
+{
+  char buf[20];
+  PR_snprintf(buf, sizeof(buf), "%u", uid);
+  msgIds.Append(buf);
 }
 

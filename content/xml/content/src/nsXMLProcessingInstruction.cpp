@@ -175,7 +175,7 @@ nsXMLProcessingInstruction::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
   GetData(data);
 
   nsXMLProcessingInstruction *pi =
-    new nsXMLProcessingInstruction(mNodeInfoManager, mTarget, data);
+    new nsXMLProcessingInstruction(GetNodeInfoManager(), mTarget, data);
   if (!pi) {
     return NS_ERROR_OUT_OF_MEMORY;
   }

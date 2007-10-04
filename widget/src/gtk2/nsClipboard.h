@@ -87,4 +87,6 @@ private:
 
 };
 
+void addBOM(guchar **data, gint *len);
+
 #endif /* __nsClipboard_h_ */

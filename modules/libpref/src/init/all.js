@@ -618,6 +618,7 @@ pref("network.IDN.whitelist.kr", true);
 pref("network.IDN.whitelist.li", true);
 pref("network.IDN.whitelist.lt", true);
 pref("network.IDN.whitelist.no", true);
+pref("network.IDN.whitelist.pl", true);
 pref("network.IDN.whitelist.se", true);
 pref("network.IDN.whitelist.sh", true);
 pref("network.IDN.whitelist.th", true);
@@ -2373,4 +2374,8 @@ pref("print.postscript.print_command", "lp -c -s ${MOZ_PRINTER_NAME:+'-d '}${MOZ
 pref("print.print_command", "lp -c -s ${MOZ_PRINTER_NAME:+'-d '}${MOZ_PRINTER_NAME}");
 
 # Solaris
+#endif
+
+#ifdef MOZ_X11
+pref("network.gnomevfs.supported-protocols", "smb:,sftp:");
 #endif

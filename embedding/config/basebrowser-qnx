@@ -8,7 +8,9 @@ LICENSE
 ; 
 ; Sample App + launch script
 ; 
+kwww
 TestPhEmbed
+mozserver
 libphembedmoz.so
 run-mozilla.sh
 
@@ -230,6 +232,8 @@ chrome/classic.jar
 chrome/classic.manifest
 chrome/en-US.jar
 chrome/en-US.manifest
+chrome/browser.jar
+chrome/browser.manifest
 
 ; 
 ; res:

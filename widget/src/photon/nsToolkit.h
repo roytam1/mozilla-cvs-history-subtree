@@ -40,6 +40,8 @@
 
 #include <Pt.h>
 #include "nsIToolkit.h"
+#include "nsIView.h"
+#include "nsIInterfaceRequestor.h"
 
 class nsToolkit : public nsIToolkit
 {
@@ -51,6 +53,9 @@ public:
   NS_DECL_ISUPPORTS
 
   NS_IMETHOD   Init( PRThread *aThread );
+  // Utility routine for wringing nsIView info from an nsIWidget
+  //  (taken from mac/nsToolkit.h)
+  static nsIView *GetViewFor(nsIWidget *aWidget);
 };
 
 

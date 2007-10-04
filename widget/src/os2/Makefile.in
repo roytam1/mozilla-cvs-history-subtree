@@ -65,6 +65,7 @@ REQUIRES	= gfx \
 		  docshell \
 		  webbrowserpersist \
      		  imglib2 \
+     		  content \
 		  $(NULL)
 
 ifdef BUILD_STATIC_LIBS

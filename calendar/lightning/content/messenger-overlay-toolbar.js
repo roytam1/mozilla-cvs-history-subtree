@@ -1,4 +1,3 @@
-/* -*- Mode: javascript; tab-width: 20; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -20,6 +19,7 @@
  *
  * Contributor(s):
  *   Michael Buettner <michael.buettner@sun.com>
+ *   Philipp Kewisch <mozilla@kewis.ch>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -48,45 +48,11 @@ var gCustomizeId;
  *  - 'calendar'
  *  - 'task'
  */
-var gCurrentMode;
-
-/**
- * ltnInitializeMode() is called from messenger-overlay-sidebar.js during
- * handling of the load event. the purpose of this function is to provide
- * a dedicated location for the initialization of the mode toolbar stuff.
- */
-
-function ltnInitializeMode()
-{
-  gCurrentMode = 'mail';
-
-  // per default we check the mail command.
-  // we don't need to do anything else since the
-  // mail view is also shown by default.
-  var command = document.getElementById("switch2mail");
-  command.setAttribute("checked", "true");
-  
-  var printbutton = document.getElementById("button-print");
-  printbutton.setAttribute("mode", "calendar");
-  var deletebutton = document.getElementById("button-delete");
-  deletebutton.setAttribute("mode", "calendar");
-}
-
-/**
- * this function returns the mode the application is currently in
- */
-
-function ltnCurrentMode()
-{
-  if (!gCurrentMode) {
-    ltnInitializeMode();
-  }
-  return gCurrentMode;
-}
+var gCurrentMode = 'mail';
 
 /**
  * Helper function to get the view deck in a neutral way, regardless of whether
- * we're in Tunderbird 1.x or 2.x
+ * we're in Thunderbird 1.x or 2.x
  */
 function getMailBar() {
   return document.getElementById("mail-bar2") ||
@@ -94,17 +60,41 @@ function getMailBar() {
 }
 
 /**
+ * Ensure that switching to the messenger window also switches to mail mode.
+ * We probably should also catch this from other windows (compose, addressbook),
+ * but for now we'll keep it here. This function overrides the toMessengerWindow
+ * function in /mail/base/content/mailCore.js.
+ */
+var toMessengerWindow = function ltnToMessengerWindow() {
+    var wm = Components.classes['@mozilla.org/appshell/window-mediator;1']
+             .getService(Components.interfaces.nsIWindowMediator);
+
+    var topWindow = wm.getMostRecentWindow("mail:3pane");
+
+    if (topWindow) {
+        var tomail = topWindow.document.getElementById("switch2mail");
+        tomail.doCommand();
+        topWindow.focus();
+    } else {
+        window.open("chrome://messenger/content/messenger.xul",
+                    "_blank",
+                    "chrome,extrachrome,menubar,resizable,scrollbars,status,toolbar");
+    }
+};
+
+/**
  * ltnSwitch2Mail() switches to the mail mode
  */
 
-function ltnSwitch2Mail()
-{
-  if (ltnCurrentMode() != 'mail') {
+function ltnSwitch2Mail() {
+  if (gCurrentMode != 'mail') {
 
     var switch2mail = document.getElementById("switch2mail");
     var switch2calendar = document.getElementById("switch2calendar");
     switch2mail.setAttribute("checked", "true");
     switch2calendar.removeAttribute("checked");
+
+    gCurrentMode = 'mail';
 
     var mailToolbar = getMailBar();
     var calendarToolbar = document.getElementById("calendar-toolbar");
@@ -126,8 +116,6 @@ function ltnSwitch2Mail()
     
     document.commandDispatcher.updateCommands('mail-toolbar');
     document.commandDispatcher.updateCommands('calendar_commands');
-    
-    gCurrentMode = 'mail';
   }
 }
 
@@ -135,14 +123,15 @@ function ltnSwitch2Mail()
  * ltnSwitch2Calendar() switches to the calendar mode
  */
 
-function ltnSwitch2Calendar()
-{
-  if (ltnCurrentMode() != 'calendar') {
+function ltnSwitch2Calendar() {
+  if (gCurrentMode != 'calendar') {
 
     var switch2mail = document.getElementById("switch2mail");
     var switch2calendar = document.getElementById("switch2calendar");
     switch2calendar.setAttribute("checked", "true");
     switch2mail.removeAttribute("checked");
+
+    gCurrentMode = 'calendar';
 
     var mailToolbar = getMailBar();
     var calendarToolbar = document.getElementById("calendar-toolbar");
@@ -158,14 +147,10 @@ function ltnSwitch2Calendar()
     deck.selectedPanel = document.getElementById("calendar-view-box");
 
     // show the last displayed type of calendar view
-    if(gLastShownCalendarView == null)
-      gLastShownCalendarView = 'week';
     showCalendarView(gLastShownCalendarView);
 
     document.commandDispatcher.updateCommands('mail-toolbar');
     document.commandDispatcher.updateCommands('calendar_commands');
-    
-    gCurrentMode = 'calendar';
   }
 }
 
@@ -173,9 +158,8 @@ function ltnSwitch2Calendar()
  * ltnSwitch2Task() switches to the task mode
  */
 
-function ltnSwitch2Task()
-{
-  if (ltnCurrentMode() != 'task') {
+function ltnSwitch2Task() {
+  if (gCurrentMode != 'task') {
 
     document.commandDispatcher.updateCommands('mail-toolbar');
     document.commandDispatcher.updateCommands('calendar_commands');
@@ -191,15 +175,13 @@ function ltnSwitch2Task()
 
 // this shadows CustomizeMailToolbar from mail/base/content/mailCore.js
 // but adds the specific bits and pieces for lightning.
-function CustomizeApplicationToolbar(id)
-{
-debugger;
+function CustomizeApplicationToolbar(id) {
   // the following code operates different whether
   // or not we're actually customizing the mode toolbar or
   // any other toolbar.
   gCustomizeId = id;
   var isModeToolbox = (id == 'mode-toolbox');
-  var modeName = isModeToolbox ? 'mode' : ltnCurrentMode();
+  var modeName = isModeToolbox ? 'mode' : gCurrentMode;
 
   // retrieve the toolbars from the tree
   var mailbar = getMailBar();
@@ -211,16 +193,20 @@ debugger;
 
   // install the callback that handles what needs to be
   // done after a toolbar has been customized.
-  mailbox.customizeDone = ModeToolboxCustomizeDone;
-  modebox.customizeDone = ModeToolboxCustomizeDone;
+  if (modebox) {
+    mailbox.customizeDone = ModeToolboxCustomizeDone;
+    modebox.customizeDone = ModeToolboxCustomizeDone;
 
-  // disable elements on the toolbars
-  if (isModeToolbox) {
-    EnableDisableHierarchy(menubar,true);
-    EnableDisableHierarchy(mailbar,true);
-    EnableDisableHierarchy(calendarbar,true);
+    // disable elements on the toolbars
+    if (isModeToolbox) {
+      EnableDisableHierarchy(menubar, true);
+      EnableDisableHierarchy(mailbar, true);
+      EnableDisableHierarchy(calendarbar, true);
+    } else {
+      EnableDisableHierarchy(modebar, true);
+    }
   } else {
-    EnableDisableHierarchy(modebar,true);
+    modeName = null;
   }
 
   var customizePopup = document.getElementById("CustomizeMailToolbar"); 
@@ -251,10 +237,10 @@ debugger;
 
     // enable/disable all toolbar to reflect the new state
     var isMode = (aMode == 'mode');
-    EnableDisableHierarchy(modebar,!isMode);
-    EnableDisableHierarchy(menubar,isMode);
-    EnableDisableHierarchy(mailbar,isMode);
-    EnableDisableHierarchy(calendarbar,isMode);
+    EnableDisableHierarchy(modebar, !isMode);
+    EnableDisableHierarchy(menubar, isMode);
+    EnableDisableHierarchy(mailbar, isMode);
+    EnableDisableHierarchy(calendarbar, isMode);
     
     // remember the current toolbox
     gCustomizeId = toolbox;
@@ -279,8 +265,7 @@ debugger;
  * and commands of all customizable toolbars.
  */
 
-function ModeToolboxCustomizeDone(aToolboxChanged)
-{
+function ModeToolboxCustomizeDone(aToolboxChanged) {
   // the following code operates different whether
   // or not we're actually customizing the mode toolbar or
   // any other toolbar.
@@ -288,9 +273,9 @@ function ModeToolboxCustomizeDone(aToolboxChanged)
   
   // enable elements on the toolbars
   if (isModeToolbox) {
-    EnableDisableHierarchy(document.getElementById('mail-menubar'),false);
-    EnableDisableHierarchy(getMailBar(),false);
-    EnableDisableHierarchy(document.getElementById('calendar-toolbar'),false);
+    EnableDisableHierarchy(document.getElementById('mail-menubar'), false);
+    EnableDisableHierarchy(getMailBar(), false);
+    EnableDisableHierarchy(document.getElementById('calendar-toolbar'), false);
   }
 
   // Unconditionally enable the mode toolbar
@@ -311,8 +296,7 @@ function ModeToolboxCustomizeDone(aToolboxChanged)
 
 // step along the hierarchy where the top-node is to be passed
 // as argument and enable/disable all nodes depending on the given flag.
-function EnableDisableHierarchy(item,disable)
-{
+function EnableDisableHierarchy(item, disable) {
   // iterate all nodes on this particular level
   for (var i = 0; i < item.childNodes.length; ++i) {
   
@@ -345,7 +329,7 @@ function EnableDisableHierarchy(item,disable)
     // recursively step down the hierarchy if this node
     // exposes any further child nodes.
     if (child.childNodes.length > 0) {
-      EnableDisableHierarchy(child,disable);
+      EnableDisableHierarchy(child, disable);
     }
   }
 }
@@ -357,8 +341,7 @@ function EnableDisableHierarchy(item,disable)
 
 // step along the hierarchy where the top-node is to be passed
 // as argument and enable all nodes unconditionally.
-function EnableHierarchy(item)
-{
+function EnableHierarchy(item) {
   // iterate all nodes on this particular level
   for (var i = 0; i < item.childNodes.length; ++i) {
   

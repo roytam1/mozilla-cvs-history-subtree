@@ -176,6 +176,13 @@ private:
     PRBool      mInitialized;
     nsIThread  *mThread;
     PRFileDesc *mThreadEvent;
+                            // protected by mEventQLock.  mThreadEvent may
+                            // change if the old pollable event is broken.
+                            // only the socket thread may change mThreadEvent;
+                            // it needs to lock mEventQLock only when it
+                            // changes mThreadEvent.  other threads don't
+                            // change mThreadEvent; they need to lock
+                            // mEventQLock whenever they access mThreadEvent.
 
     // pref to control autodial code
     PRBool      mAutodialEnabled;

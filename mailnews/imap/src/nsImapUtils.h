@@ -67,5 +67,6 @@ nsCreateImapBaseMessageURI(const char *baseURI, char **baseMessageURI);
 
 void AllocateImapUidString(PRUint32 *msgUids, PRUint32 &msgCount, nsImapFlagAndUidState *flagState, nsCString &returnString);
 void ParseUidString(const char *uidString, nsMsgKeyArray &keys);
+void AppendUid(nsCString &msgIds, PRUint32 uid);
 
 #endif //NS_IMAPUTILS_H

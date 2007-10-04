@@ -251,6 +251,7 @@ bin\js\calProtocolHandler.js
 bin\js\calRecurrenceInfo.js
 bin\js\calTodo.js
 bin\js\calTransactionManager.js
+bin\js\calFreeBusyService.js
 bin\js\calUtils.js
 bin\js\calWeekPrinter.js
 bin\js\calWeekTitleService.js
@@ -273,6 +274,7 @@ bin\chrome\calendar.manifest
 bin\chrome\classic.jar
 bin\chrome\classic.manifest
 bin\extensions\{972ce4c6-7e08-4474-a285-3208198ce6fd}\install.rdf
+bin\extensions\{e2fda1a4-762b-4020-b5ad-a41df1933103}\install.rdf
 bin\chrome\comm.jar
 bin\chrome\comm.manifest
 bin\chrome\toolkit.jar
@@ -335,15 +337,6 @@ bin\chrome\pippki.manifest
 ; [Updater]
 ;
 bin\updater.exe
-
-; [Additional Developer Tools]
-[adt]
-;bin\extensions\inspector@mozilla.org\install.rdf
-;bin\extensions\inspector@mozilla.org\components\inspector-cmdline.js
-;bin\extensions\inspector@mozilla.org\chrome.manifest
-;bin\extensions\inspector@mozilla.org\chrome\inspector.jar
-;bin\extensions\inspector@mozilla.org\defaults\preferences\inspector.js
-;bin\extensions\inspector@mozilla.org\chrome\icons\default\winInspectorMain.ico
 
 [talkback]
 bin\extensions\talkback@mozilla.org\install.rdf
