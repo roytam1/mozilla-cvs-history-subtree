@@ -189,6 +189,7 @@ NS_IMETHODIMP nsOSHelperAppService::ExternalProtocolHandlerExists(const char * a
 #endif
 }
 
+typedef ULONG SFGAOF;
 typedef HRESULT (STDMETHODCALLTYPE *MySHParseDisplayName)
                  (PCWSTR pszName,
                   IBindCtx *pbc,
