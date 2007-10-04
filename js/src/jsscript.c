@@ -232,9 +232,14 @@ script_compile(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
             fp->scopeChain = scopeobj;  /* for the compiler's benefit */
         }
 
-        file = caller->script->filename;
-        line = js_PCToLineNumber(cx, caller->script, caller->pc);
         principals = JS_EvalFramePrincipals(cx, fp, caller);
+        if (principals == caller->script->principals) {
+            file = caller->script->filename;
+            line = js_PCToLineNumber(cx, caller->script, caller->pc);
+        } else {
+            file = principals->codebase;
+            line = 0;
+        }
     } else {
         file = NULL;
         line = 0;
