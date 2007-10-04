@@ -328,7 +328,7 @@ void nsXPITriggerInfo::SendStatus(const PRUnichar* URL, PRInt32 status)
     nsCOMPtr<nsIEventQueue> eq;
     nsresult rv;
 
-    if ( mCx && mGlobalWrapper && mCbval )
+    if ( mCx && mGlobalWrapper && !JSVAL_IS_NULL(mCbval) )
     {
         nsCOMPtr<nsIEventQueueService> EQService =
                  do_GetService(kEventQueueServiceCID, &rv);

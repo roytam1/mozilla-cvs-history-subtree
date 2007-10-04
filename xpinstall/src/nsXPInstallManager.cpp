@@ -126,8 +126,7 @@ nsXPInstallManager::nsXPInstallManager()
 
 nsXPInstallManager::~nsXPInstallManager()
 {
-    if (mTriggers)
-        delete mTriggers;
+    NS_ASSERTION(!mTriggers, "Shutdown not called, triggers still alive");
 }
 
 
@@ -219,9 +218,9 @@ nsXPInstallManager::InitManager(nsIScriptGlobalObject* aGlobalObject, nsXPITrigg
 
     nsresult rv = NS_OK;
 
+    mNeedsShutdown = PR_TRUE;
     mTriggers = aTriggers;
     mChromeType = aChromeType;
-    mNeedsShutdown = PR_TRUE;
 
     mParentWindow = do_QueryInterface(aGlobalObject);
 
@@ -893,6 +892,12 @@ void nsXPInstallManager::Shutdown()
                 if (NS_SUCCEEDED(rv))
                     pos->RemoveObserver(this, XPI_PROGRESS_TOPIC);
             }
+        }
+
+        if (mTriggers)
+        {
+            delete mTriggers;
+            mTriggers = nsnull;
         }
 
         NS_RELEASE_THIS();
