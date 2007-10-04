@@ -58,8 +58,9 @@
 #include "prprf.h"
 
 nsGenericDOMDataNode::nsGenericDOMDataNode(nsNodeInfoManager *aNodeInfoManager)
-  : mNodeInfoManager(aNodeInfoManager)
+  : mNodeInfoManagerBits(aNodeInfoManager)
 {
+  NS_IF_ADDREF(aNodeInfoManager);
 }
 
 nsGenericDOMDataNode::~nsGenericDOMDataNode()
@@ -87,6 +88,9 @@ nsGenericDOMDataNode::~nsGenericDOMDataNode()
     PL_DHashTableOperate(&nsGenericElement::sRangeListsHash,
                          this, PL_DHASH_REMOVE);
   }
+
+  nsNodeInfoManager* nim = GetNodeInfoManager();
+  NS_IF_RELEASE(nim);
 }
 
 
@@ -645,6 +649,19 @@ nsGenericDOMDataNode::AppendReachableList(nsCOMArray<nsIDOMGCParticipant>& aArra
   aArray.AppendObject(participant);
 }
 
+void
+nsGenericDOMDataNode::SetNodeInfoManager(nsNodeInfoManager* aNodeInfoManager)
+{
+  nsNodeInfoManager* old = GetNodeInfoManager();
+  if (old != aNodeInfoManager) {
+    NS_IF_ADDREF(aNodeInfoManager);
+    NS_IF_RELEASE(old);
+    mNodeInfoManagerBits = (void*)(PtrBits(aNodeInfoManager) |
+                                   (PtrBits(mNodeInfoManagerBits) &
+                                    NODEINFOMANAGER_BIT_IS_NATIVE_ANONYMOUS));
+  }
+}
+
 nsresult
 nsGenericDOMDataNode::BindToTree(nsIDocument* aDocument, nsIContent* aParent,
                                  nsIContent* aBindingParent,
@@ -704,7 +721,7 @@ nsGenericDOMDataNode::BindToTree(nsIDocument* aDocument, nsIContent* aParent,
     oldOwnerDocument->PropertyTable()->DeleteAllPropertiesFor(this);
   }
 
-  mNodeInfoManager = nodeInfoManager;
+  SetNodeInfoManager(nodeInfoManager);
 
   NS_POSTCONDITION(aDocument == GetCurrentDoc(), "Bound to wrong document");
   NS_POSTCONDITION(aParent == GetParent(), "Bound to wrong parent");
@@ -728,14 +745,15 @@ nsGenericDOMDataNode::UnbindFromTree(PRBool aDeep, PRBool aNullParent)
 PRBool
 nsGenericDOMDataNode::IsNativeAnonymous() const
 {
-  nsIContent* parent = GetParent();
-  return parent && parent->IsNativeAnonymous();
+  return !!(PtrBits(mNodeInfoManagerBits) & NODEINFOMANAGER_BIT_IS_NATIVE_ANONYMOUS);
 }
 
 void
 nsGenericDOMDataNode::SetNativeAnonymous(PRBool aAnonymous)
 {
-  // XXX Need to fix this to do something - bug 165110
+  mNodeInfoManagerBits = (void*)
+    (aAnonymous ? (PtrBits(mNodeInfoManagerBits) | NODEINFOMANAGER_BIT_IS_NATIVE_ANONYMOUS) :
+                  (PtrBits(mNodeInfoManagerBits) & ~NODEINFOMANAGER_BIT_IS_NATIVE_ANONYMOUS));
 }
 
 PRInt32
@@ -832,7 +850,8 @@ nsGenericDOMDataNode::HandleDOMEvent(nsPresContext* aPresContext,
   nsIContent *parent = GetParent();
 
   //Capturing stage evaluation
-  if (NS_EVENT_FLAG_CAPTURE & aFlags) {
+  if ((NS_EVENT_FLAG_CAPTURE & aFlags) &&
+      !(IsNativeAnonymous() && aEvent->eventStructType == NS_MUTATION_EVENT)) {
     //Initiate capturing phase.  Special case first call to document
     if (parent) {
       parent->HandleDOMEvent(aPresContext, aEvent, aDOMEvent,
@@ -865,7 +884,8 @@ nsGenericDOMDataNode::HandleDOMEvent(nsPresContext* aPresContext,
   }
 
   //Bubbling stage
-  if (NS_EVENT_FLAG_BUBBLE & aFlags && parent) {
+  if ((NS_EVENT_FLAG_BUBBLE & aFlags) && parent &&
+      !(IsNativeAnonymous() && aEvent->eventStructType == NS_MUTATION_EVENT)) {
     ret = parent->HandleDOMEvent(aPresContext, aEvent, aDOMEvent,
                                  aFlags & NS_EVENT_BUBBLE_MASK, aEventStatus);
   }
@@ -1113,7 +1133,7 @@ nsGenericDOMDataNode::SplitText(PRUint32 aOffset, nsIDOMText** aReturn)
    */
 
   nsCOMPtr<nsITextContent> newContent = CloneContent(PR_FALSE,
-                                                     mNodeInfoManager);
+                                                     GetNodeInfoManager());
   if (!newContent) {
     return NS_ERROR_OUT_OF_MEMORY;
   }

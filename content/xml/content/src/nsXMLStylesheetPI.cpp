@@ -148,7 +148,7 @@ nsXMLStylesheetPI::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
   nsAutoString data;
   GetData(data);
 
-  nsXMLStylesheetPI *pi = new nsXMLStylesheetPI(mNodeInfoManager, data);
+  nsXMLStylesheetPI *pi = new nsXMLStylesheetPI(GetNodeInfoManager(), data);
   if (!pi) {
     return NS_ERROR_OUT_OF_MEMORY;
   }
