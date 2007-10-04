@@ -1064,7 +1064,7 @@ ReflowCommandHashMatchEntry(PLDHashTable *table, const PLDHashEntryHdr *entry,
 
 struct CantRenderReplacedElementEvent;
 
-class PresShell : public nsIPresShell_MOZILLA_1_8_BRANCH, public nsIViewObserver,
+class PresShell : public nsIPresShell_MOZILLA_1_8_BRANCH2, public nsIViewObserver,
                   public nsStubDocumentObserver,
                   public nsISelectionController, public nsIObserver,
                   public nsSupportsWeakReference
@@ -1223,6 +1223,8 @@ public:
 #endif
 
   virtual void HidePopups();
+  virtual void BlockFlushing();
+  virtual void UnblockFlushing();  
 
   //nsIViewObserver interface
 
@@ -1705,8 +1707,9 @@ PresShell::PresShell()
   new (this) nsFrameManager();
 }
 
-NS_IMPL_ISUPPORTS8(PresShell, nsIPresShell, nsIPresShell_MOZILLA_1_8_BRANCH,
-                   nsIDocumentObserver, nsIViewObserver, nsISelectionController,
+NS_IMPL_ISUPPORTS9(PresShell, nsIPresShell, nsIPresShell_MOZILLA_1_8_BRANCH,
+                   nsIPresShell_MOZILLA_1_8_BRANCH2, nsIDocumentObserver,
+                   nsIViewObserver, nsISelectionController,
                    nsISelectionDisplay, nsIObserver, nsISupportsWeakReference)
 
 PresShell::~PresShell()
@@ -6756,6 +6759,18 @@ PresShell::HidePopups()
     if (rootView)
       HideViewIfPopup(rootView);
   }
+}
+
+void
+PresShell::BlockFlushing()
+{
+  ++mChangeNestCount;
+}
+
+void
+PresShell::UnblockFlushing()
+{
+  --mChangeNestCount;
 }
 
 //--------------------------------------------------------

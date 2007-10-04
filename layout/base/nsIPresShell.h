@@ -764,6 +764,19 @@ protected:
   nsWeakFrame* mWeakFrames;
 };
 
+#define NS_IPRESSHELL_MOZILLA_1_8_BRANCH2_IID \
+{ 0x5187f765, 0x895b, 0x4566, \
+ { 0x99, 0x7d, 0xd8, 0xd8, 0xbf, 0xa4, 0x74, 0x21 } }
+
+class nsIPresShell_MOZILLA_1_8_BRANCH2 : public nsIPresShell_MOZILLA_1_8_BRANCH
+{
+public: 
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IPRESSHELL_MOZILLA_1_8_BRANCH2_IID)
+
+  virtual void BlockFlushing() = 0;
+  virtual void UnblockFlushing() = 0;
+};
+
 /**
  * Create a new empty presentation shell. Upon success, call Init
  * before attempting to use the shell.

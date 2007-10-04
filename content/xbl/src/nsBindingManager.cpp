@@ -1366,7 +1366,17 @@ nsBindingManager::EndOutermostUpdate()
 {
   if (mProcessOnEndUpdate) {
     mProcessOnEndUpdate = PR_FALSE;
-    ProcessAttachedQueue();
+    if (mAttachedStack.Count() != 0 && mDocument) {
+      nsCOMPtr<nsIPresShell_MOZILLA_1_8_BRANCH2> shell =
+        do_QueryInterface(mDocument->GetShellAt(0));
+      if (shell) {
+        shell->BlockFlushing();
+      }
+      ProcessAttachedQueue();
+      if (shell) {
+        shell->UnblockFlushing();
+      }
+    }
   }
 }
 
