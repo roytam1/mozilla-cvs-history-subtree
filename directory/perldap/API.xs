@@ -14,10 +14,10 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is PerLDAP. The Initial Developer of the Original Code is Netscape Communications Corp. and Clayton Donley. Portions created by Netscape are Copyright (C) Netscape Communications Corp., portions created by Clayton Donley are Copyright (C) Clayton Donley, portions created by Leif Hedstrom are Copyright (C) Leif Hedstrom. All Rights Reserved.
+ * The Original Code is PerLDAP. 
  *
  * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
+ * Netscape Communications Corporation. and Clayton Donley.
  * Portions created by the Initial Developer are Copyright (C) 2001
  * the Initial Developer. All Rights Reserved.
  *
