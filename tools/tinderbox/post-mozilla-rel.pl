@@ -74,15 +74,8 @@ sub mail_locale_started_message {
 
     my $platform = $Settings::OS =~ /^WIN/ ? 'windows' : 'unix';
 
-    my $BuildTreeLocale;
-    if ( defined($Settings::BuildTreeLocale) ) {
-        $BuildTreeLocale = $Settings::BuildTreeLocale;
-    } else {
-        $BuildTreeLocale = "$Settings::BuildTree-%s";
-    }
-
     print_locale_log "\n";
-    print_locale_log "tinderbox: tree: " . sprintf($BuildTreeLocale, $locale) . "\n";
+    print_locale_log "tinderbox: tree: $Settings::BuildTree-$locale\n";
     print_locale_log "tinderbox: builddate: $start_time\n";
     print_locale_log "tinderbox: status: building\n";
     print_locale_log "tinderbox: build: $Settings::BuildName $locale\n";
@@ -111,17 +104,10 @@ sub mail_locale_finished_message {
 
     my $platform = $Settings::OS =~ /^WIN/ ? 'windows' : 'unix';
 
-    my $BuildTreeLocale;
-    if ( defined($Settings::BuildTreeLocale) ) {
-        $BuildTreeLocale = $Settings::BuildTreeLocale;
-    } else {
-        $BuildTreeLocale = "$Settings::BuildTree-%s";
-    }
-
     # Put the status at the top of the log, so the server will not
     # have to search through the entire log to find it.
     print OUTLOG "\n";
-    print OUTLOG "tinderbox: tree: " . sprintf($BuildTreeLocale, $locale) . "\n";
+    print OUTLOG "tinderbox: tree: $Settings::BuildTree-$locale\n";
     print OUTLOG "tinderbox: builddate: $start_time\n";
     print OUTLOG "tinderbox: status: $build_status\n";
     print OUTLOG "tinderbox: build: $Settings::BuildName $locale\n";
@@ -335,10 +321,6 @@ sub packit {
       $push_raw_xpis = 1;
     } else {
       $push_raw_xpis = $Settings::push_raw_xpis;
-    }
-
-    if ($Settings::TestWithJprof) {
-        TinderUtils::run_shell_command("cp $package_location/../*-jprof.html $stagedir/");
     }
 
     if (TinderUtils::is_windows() || TinderUtils::is_os2()) {
@@ -996,10 +978,8 @@ sub packit_l10n {
 
   } # foreach
 
-  # remove en-US files if we're building that on a different system
-  if ($Settings::ConfigureOnly) {
-    TinderUtils::run_shell_command("rm -f $stagedir/*en-US* $stagedir/*-xpi");
-  }
+  # remove en-US files since we're building that on a different system
+  TinderUtils::run_shell_command("rm -f $stagedir/*en-US* $stagedir/*-xpi");
 
   TinderUtils::print_log("locales completed.\n");
 
@@ -1049,16 +1029,12 @@ sub pushit {
     $ssh_opts = "-".$Settings::ssh_version;
     $scp_opts = "-oProtocol=".$Settings::ssh_version;
   }
-  if (defined($Settings::ssh_key) && $Settings::ssh_key !~ /^\s*$/) {
-    $ssh_opts .= " -i ".$Settings::ssh_key;
-    $scp_opts .= " -i ".$Settings::ssh_key;
-  }
 
   # The ReleaseToDated and ReleaseToLatest configuration settings give us the
   # ability to fine-tune where release files are stored.  ReleaseToDated
   # will store the release files in a directory of the form
   #
-  #   nightly/YYYY/MM/YYYY-MM-DD-HH-<milestone>
+  #   nightly/YYYY-MM-DD-HH-<milestone>
   #
   # while ReleaseToLatest stores the release files in a directory of the form
   #
@@ -1069,42 +1045,29 @@ sub pushit {
   # variables defined yet, we want to set them to default values here.
   # Hopefully, though, we'll have also updated tinder-defaults.pl if we've
   # updated post-mozilla-rel.pl from CVS.
-  #
-  # Note that we traverse this code for "hourlies" as well as nightlies/clobbers
-  # $package_name, and hence $short_ud,  will be (eg) "fx-linux-tbox-trunk" and 
-  # "2007-09-27-04-trunk" respectively.
 
   $Settings::ReleaseToDated = 1 if !defined($Settings::ReleaseToDated);
   $Settings::ReleaseToLatest = 1 if !defined($Settings::ReleaseToLatest);
 
   if ( $Settings::ReleaseToDated ) {
-    my $datedir = '';
-    if( $cachebuild && ($short_ud =~ /^(\d{4})-(\d{2}).*/) ) {
-      $datedir = "$1/$2/";
-    }
-    my $complete_remote_path = "$remote_path/" . $datedir . "$short_ud";
-    my $makedirs = $complete_remote_path;
+    my $makedirs = "$remote_path/$short_ud";
     if ($cachebuild && $Settings::ReleaseToLatest) {
       $makedirs .= " $remote_path/latest-$Settings::milestone";
     }
     push(@cmds,"ssh $ssh_opts -l $Settings::ssh_user $ssh_server mkdir -p $makedirs");
     # this is a workaround for pacifica-vm, which doesn't support the <dir>/. notation for scp (bug 383775)
     if ($^O eq "cygwin") {
-      push(@cmds,"rsync -av -e \"ssh $ssh_opts\" $upload_directory/ $Settings::ssh_user\@$ssh_server:$complete_remote_path/");
+      push(@cmds,"rsync -av -e \"ssh $ssh_opts\" $upload_directory/ $Settings::ssh_user\@$ssh_server:$remote_path/$short_ud/");
     } else {
-      push(@cmds,"scp -r -p $scp_opts $upload_directory/. $Settings::ssh_user\@$ssh_server:$complete_remote_path/");
+      push(@cmds,"scp -r -p $scp_opts $upload_directory/. $Settings::ssh_user\@$ssh_server:$remote_path/$short_ud/");
     }
-    push(@cmds,"ssh $ssh_opts -l $Settings::ssh_user $ssh_server chmod -R 775 $complete_remote_path");
+    push(@cmds,"ssh $ssh_opts -l $Settings::ssh_user $ssh_server chmod -R 775 $remote_path/$short_ud");
     if ($Settings::ReleaseGroup ne '') {
-      push(@cmds,"ssh $ssh_opts -l $Settings::ssh_user $ssh_server chgrp -R $Settings::ReleaseGroup $complete_remote_path");
+      push(@cmds,"ssh $ssh_opts -l $Settings::ssh_user $ssh_server chgrp -R $Settings::ReleaseGroup $remote_path/$short_ud");
     }
 
     if ( $cachebuild and $Settings::ReleaseToLatest ) {
-      push(@cmds,"ssh $ssh_opts -l $Settings::ssh_user $ssh_server  rsync -avz $complete_remote_path/ $remote_path/latest-$Settings::milestone/");
-    }
-
-    if ( $cachebuild ) {
-      push(@cmds,"ssh $ssh_opts -l $Settings::ssh_user $ssh_server 'cd $remote_path && ln -s $datedir/$short_ud/ .'");
+      push(@cmds,"ssh $ssh_opts -l $Settings::ssh_user $ssh_server  rsync -avz $remote_path/$short_ud/ $remote_path/latest-$Settings::milestone/");
     }
   } elsif ( $Settings::ReleaseToLatest ) {
     push(@cmds,"ssh $ssh_opts -l $Settings::ssh_user $ssh_server mkdir -p $remote_path/latest-$Settings::milestone");
