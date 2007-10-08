@@ -2677,7 +2677,7 @@ PresShell::RepaintSelection(SelectionType aType)
 NS_IMETHODIMP
 PresShell::BeginObservingDocument()
 {
-  if (mDocument) {
+  if (mDocument && !mIsDestroying) {
     mDocument->AddObserver(this);
     if (mIsDocumentGone) {
       NS_WARNING("Adding a presshell that was disconnected from the document "
@@ -2874,6 +2874,28 @@ PresShell::InitialReflow(nscoord aWidth, nscoord aHeight)
     MOZ_TIMER_DEBUGLOG(("Stop: Frame Creation: PresShell::InitialReflow(), this=%p\n",
                         (void*)this));
     MOZ_TIMER_STOP(mFrameCreationWatch);
+
+    NS_ENSURE_STATE(!mHaveShutDown);
+
+    // Run the XBL binding constructors for any new frames we've constructed
+    // Hold a strong ref to ourselves while we do that
+    nsCOMPtr<nsIPresShell> kungFuDeathGrip(this);
+    mDocument->BindingManager()->ProcessAttachedQueue();
+
+    // Constructors may have killed us too
+    NS_ENSURE_STATE(!mHaveShutDown);
+
+    // Now flush out pending restyles before we actually reflow, in
+    // case XBL constructors changed styles somewhere.
+    mFrameConstructor->ProcessPendingRestyles();
+
+    // And that might have run _more_ XBL constructors
+    NS_ENSURE_STATE(!mHaveShutDown);
+
+    // Now reget the root frame, since all that script might have affected it
+    // somehow.  Currently that can't happen, as long as mHaveShutDown is
+    // false, but let's not rely on that.
+    rootFrame = FrameManager()->GetRootFrame();
   }
 
   if (rootFrame) {
@@ -2987,9 +3009,6 @@ PresShell::InitialReflow(nscoord aWidth, nscoord aHeight)
                                                    nsITimer::TYPE_ONE_SHOT);
     }
   }
-
-  // Run the XBL binding constructors for any new frames we've constructed
-  mDocument->BindingManager()->ProcessAttachedQueue();
 
   return NS_OK; //XXX this needs to be real. MMP
 }
