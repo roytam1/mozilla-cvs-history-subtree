@@ -46,8 +46,6 @@
 #include "nsIObserver.h"
 #include <gtk/gtk.h>
 
-typedef void (*TargetConverter) (const char *aDataIn, unsigned int aDataInLen,
-                                 char **aDataOut, unsigned int *aDataOutLen);
 
 /**
  * Native GTK DragService wrapper
@@ -79,8 +77,7 @@ public:
     NS_IMETHOD GetNumDropItems       (PRUint32 * aNumItems);
     NS_IMETHOD GetData               (nsITransferable * aTransferable,
                                       PRUint32 aItemIndex);
-    NS_IMETHOD IsDataFlavorSupported (const char *aDataFlavor,
-                                      PRBool *_retval);
+    NS_IMETHOD IsDataFlavorSupported (const char *aDataFlavor, PRBool *_retval);
 
     // nsIDragSessionGTK
 
@@ -128,9 +125,6 @@ private:
     // last data received and its length
     void           *mTargetDragData;
     PRUint32        mTargetDragDataLen;
-    GdkAtom         mTargetDragGdkAtom;  // the real target we asked for
-    TargetConverter mTargetConverter;    //
-
     // is the current target drag context contain a list?
     PRBool         IsTargetContextList(void);
     // this will get the native data from the last target given a
@@ -148,17 +142,7 @@ private:
     // get a list of the sources in gtk's format
     GtkTargetList *GetSourceList(void);
 
-    // check if a flavor supported by source target list
-    PRBool LookupFlavorInTargetList(const char *aDataFlavor);
-    PRBool LookupMatchedOutsideTarget(const char *aDataFlavor,
-                                      GdkAtom *aAtom,
-                                      TargetConverter *aConverter);
-    PRBool LookupMatchedInternalTarget(const char *aDataFlavor,
-                                       GdkAtom *aAtom,
-                                       TargetConverter *aConverter);
-
-    GtkTargetEntry *CreateGtkTargetFor(const char *aFlavorStr);
-
 };
 
 #endif // nsDragService_h__
+
