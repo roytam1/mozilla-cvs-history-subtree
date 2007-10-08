@@ -73,7 +73,7 @@ selection_clear_event_cb   (GtkWidget          *aWidget,
                             GdkEventSelection  *aEvent,
                             nsClipboard        *aClipboard);
 
-void
+static void
 ConvertHTMLtoUCS2          (guchar             *data,
                             PRInt32             dataLength,
                             PRUnichar         **unicodeData,
@@ -464,6 +464,7 @@ nsClipboard::SelectionGetEvent (GtkWidget        *aWidget,
     // utf-8.
 
     PRInt32 whichClipboard;
+
     // which clipboard?
     if (aSelectionData->selection == GDK_SELECTION_PRIMARY)
         whichClipboard = kSelectionClipboard;
@@ -537,8 +538,16 @@ nsClipboard::SelectionGetEvent (GtkWidget        *aWidget,
              * Byte Order Mark (BOM)). Adding BOM can help other app to
              * detect mozilla use UCS2 encoding when copy-paste.
              */
-            addBOM(NS_REINTERPRET_CAST(guchar **, &primitive_data),
-                   NS_REINTERPRET_CAST(gint *, &len));
+            guchar *buffer = (guchar *)
+                    nsMemory::Alloc((len * sizeof(guchar)) + sizeof(PRUnichar));
+            if (!buffer)
+                return;
+            PRUnichar prefix = 0xFEFF;
+            memcpy(buffer, &prefix, sizeof(prefix));
+            memcpy(buffer + sizeof(prefix), primitive_data, len);
+            nsMemory::Free((guchar *)primitive_data);
+            primitive_data = (guchar *)buffer;
+            len += sizeof(prefix);
         }
   
         gtk_selection_data_set(aSelectionData, aSelectionData->target,
@@ -718,22 +727,6 @@ void GetHTMLCharset(guchar * data, PRInt32 dataLength, nsCString& str)
         return;
     }
     str.AssignLiteral("UNKNOWN");
-}
-
-void addBOM(guchar **data, gint *len)
-{
-    guchar* indata = *data;
-    gint inlen = *len;
-    guchar *buffer = (guchar *)
-        nsMemory::Alloc((inlen * sizeof(guchar)) + sizeof(PRUnichar));
-    if (!buffer)
-        return;
-    PRUnichar prefix = 0xFEFF;
-    memcpy(buffer, &prefix, sizeof(prefix));
-    memcpy(buffer + sizeof(prefix), indata, inlen);
-    nsMemory::Free((guchar *)indata);
-    *data = (guchar *)buffer;
-    *len += sizeof(prefix);
 }
 
 static void
