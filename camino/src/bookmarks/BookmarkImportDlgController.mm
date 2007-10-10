@@ -194,7 +194,7 @@
   [openPanel setCanChooseDirectories:NO];
   [openPanel setAllowsMultipleSelection:NO];
   [openPanel setPrompt:@"Import"];
-  NSArray* array = [NSArray arrayWithObjects:@"htm", @"html", @"plist", nil];
+  NSArray* array = [NSArray arrayWithObjects:@"htm", @"html", @"xml", @"plist", nil];
   int result = [openPanel runModalForDirectory:nil
                                           file:nil
                                          types:array];
@@ -211,7 +211,7 @@
   NSMutableArray *titleArray= [NSMutableArray array];
   NSString* curFilename = nil;
   NSString *curPath = nil;
-  while ((curPath = [enumerator nextObject])) {
+  while (curPath = [enumerator nextObject]) {
     curFilename = [curPath lastPathComponent];
     // What folder we import into depends on what OmniWeb file we're importing.
     if ([curFilename isEqualToString:@"Bookmarks.html"])

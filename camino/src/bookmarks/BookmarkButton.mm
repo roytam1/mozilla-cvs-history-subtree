@@ -51,12 +51,6 @@
 #import "MainController.h"
 #import "PreferenceManager.h"
 
-#if MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_4
-@interface NSCell(TigerCellMethods)
-- (void)setLineBreakMode:(NSLineBreakMode)mode;
-@end
-#endif
-
 @interface BookmarkButton(Private)
 
 - (void)showFolderPopupAction:(id)aSender;
@@ -80,8 +74,6 @@
     [self setImagePosition:NSImageLeft];
     [self setRefusesFirstResponder:YES];
     [self setFont:[NSFont labelFontOfSize:11.0]];
-    if ([[self cell] respondsToSelector:@selector(setLineBreakMode:)])
-      [[self cell] setLineBreakMode:NSLineBreakByTruncatingTail];
 
     mLastEventWasMenu = NO;
   }

@@ -40,7 +40,6 @@
 
 #import "WebFeatures.h"
 #import "NSString+Utils.h"
-#import "ExtendedTableView.h"
 
 #include "nsCOMPtr.h"
 #include "nsServiceManagerUtils.h"

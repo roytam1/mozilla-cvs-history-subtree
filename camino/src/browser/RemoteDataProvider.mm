@@ -36,7 +36,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 #import "ChimeraUtils.h"
-#import "NSString+Gecko.h"
+#import "NSString+Utils.h"
 
 #import "RemoteDataProvider.h"
 

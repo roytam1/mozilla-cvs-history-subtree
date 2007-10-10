@@ -36,11 +36,11 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#import "NSString+Gecko.h"
+#import "NSString+Utils.h"
 #import "NSPasteboard+Utils.h"
 #import "NSDate+Utils.h"
 
-#import "CHSelectHandler.h"
+#import "CHClickListener.h"
 
 #include "nsCWebBrowser.h"
 #include "nsIBaseWindow.h"
@@ -91,17 +91,6 @@
 #include "nsNetUtil.h"
 #include "SaveHeaderSniffer.h"
 #include "nsIWebPageDescriptor.h"
-
-// Focus accessors
-#include "nsIFocusController.h"
-#include "nsIDOMElement.h"
-
-// Focus tests
-#include "nsIDOMHTMLInputElement.h"
-#include "nsIDOMHTMLTextAreaElement.h"
-#include "nsIDOMHTMLEmbedElement.h"
-#include "nsIDOMHTMLObjectElement.h"
-#include "nsIDOMHTMLAppletElement.h"
 
 // security
 #include "nsISecureBrowserUI.h"
@@ -212,68 +201,66 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
   {
     nsresult rv = CHBrowserService::InitEmbedding();
     if (NS_FAILED(rv)) {
-      // XXX need to throw
+// XXX need to throw
     }
 
     _listener = new CHBrowserListener(self);
     NS_ADDREF(_listener);
-
-    // Create the web browser instance
+    
+// Create the web browser instance
     nsCOMPtr<nsIWebBrowser> browser = do_CreateInstance(NS_WEBBROWSER_CONTRACTID, &rv);
     if (NS_FAILED(rv)) {
-      // XXX need to throw
+// XXX need to throw
     }
 
     _webBrowser = browser;
     NS_ADDREF(_webBrowser);
-
-    // Set the container nsIWebBrowserChrome
+    
+// Set the container nsIWebBrowserChrome
     _webBrowser->SetContainerWindow(NS_STATIC_CAST(nsIWebBrowserChrome *, _listener));
-
-    // Register as a listener for web progress
+    
+// Register as a listener for web progress
     nsCOMPtr<nsIWeakReference> weak = do_GetWeakReference(NS_STATIC_CAST(nsIWebProgressListener*, _listener));
     _webBrowser->AddWebBrowserListener(weak, NS_GET_IID(nsIWebProgressListener));
-
-    // Hook up the widget hierarchy with us as the parent
+    
+// Hook up the widget hierarchy with us as the parent
     nsCOMPtr<nsIBaseWindow> baseWin = do_QueryInterface(_webBrowser);
     baseWin->InitWindow((NSView*)self, nsnull, 0, 0, (int)frame.size.width, (int)frame.size.height);
     baseWin->Create();
-
-    // register the view as a drop site for text, files, and urls. 
+    
+// register the view as a drop site for text, files, and urls. 
     [self registerForDraggedTypes: [NSArray arrayWithObjects:
               NSStringPboardType, NSURLPboardType, NSFilenamesPboardType, nil]];
-
+              
     // The value of mUseGlobalPrintSettings can't change during our lifetime. 
     nsCOMPtr<nsIPrefBranch> pref(do_GetService("@mozilla.org/preferences-service;1"));
     PRBool tempBool = PR_TRUE;
     pref->GetBoolPref("print.use_global_printsettings", &tempBool);
     mUseGlobalPrintSettings = tempBool;
-
+              
     // hookup the listener for creating our own native menus on <SELECTS>
-    CHSelectHandler* selectHandler = new CHSelectHandler();
-    if (!selectHandler)
+    CHClickListener* clickListener = new CHClickListener();
+    if (!clickListener)
       return nil;
-
+    
     nsCOMPtr<nsIDOMWindow> contentWindow = [self getContentWindow];
     nsCOMPtr<nsPIDOMWindow> piWindow(do_QueryInterface(contentWindow));
     nsIChromeEventHandler *chromeHandler = piWindow->GetChromeEventHandler();
     nsCOMPtr<nsIDOMEventReceiver> rec(do_QueryInterface(chromeHandler));
-    if (rec) {
-      rec->AddEventListenerByIID((nsIDOMMouseListener*)selectHandler, NS_GET_IID(nsIDOMMouseListener));
-      rec->AddEventListenerByIID((nsIDOMKeyListener*)selectHandler, NS_GET_IID(nsIDOMKeyListener));
-    }
-
+    if ( rec )
+      rec->AddEventListenerByIID(clickListener, NS_GET_IID(nsIDOMMouseListener));
+    
     // register the CHBrowserListener as an event listener for popup-blocking events,
     // and link-added events.
     nsCOMPtr<nsIDOMEventTarget> eventTarget = do_QueryInterface(rec);
     if (eventTarget)
     {
-      rv = eventTarget->AddEventListener(NS_LITERAL_STRING("DOMPopupBlocked"),
-                                         NS_STATIC_CAST(nsIDOMEventListener*, _listener), PR_FALSE);
+      rv = eventTarget->AddEventListener(NS_LITERAL_STRING("DOMPopupBlocked"), 
+                                          NS_STATIC_CAST(nsIDOMEventListener*, _listener), PR_FALSE);
       NS_ASSERTION(NS_SUCCEEDED(rv), "AddEventListener failed");
 
-      rv = eventTarget->AddEventListener(NS_LITERAL_STRING("DOMLinkAdded"),
-                                         NS_STATIC_CAST(nsIDOMEventListener*, _listener), PR_FALSE);
+      rv = eventTarget->AddEventListener(NS_LITERAL_STRING("DOMLinkAdded"), 
+                                          NS_STATIC_CAST(nsIDOMEventListener*, _listener), PR_FALSE);
       NS_ASSERTION(NS_SUCCEEDED(rv), "AddEventListener failed");
     }
   }
@@ -653,32 +640,6 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
     baseWin->Create();
   }
 
-}
-
-- (nsIFocusController*)getFocusController
-{
-  if (!_webBrowser)
-    return nsnull;
-  nsCOMPtr<nsIDOMWindow> domWindow;
-  _webBrowser->GetContentDOMWindow(getter_AddRefs(domWindow));
-  nsCOMPtr<nsPIDOMWindow> privateWindow = do_QueryInterface(domWindow);
-  if (!privateWindow)
-    return nsnull;
-  nsIFocusController* focusController = privateWindow->GetRootFocusController();
-  NS_IF_ADDREF(focusController);
-  return focusController;
-}
-
-- (nsIDOMElement*)getFocusedDOMElement
-{
-  nsCOMPtr<nsIFocusController> controller = dont_AddRef([self getFocusController]);
-  if (!controller)
-    return nsnull;
-  nsCOMPtr<nsIDOMElement> focusedItem;
-  controller->GetFocusedElement(getter_AddRefs(focusedItem));
-  nsIDOMElement* domElement = focusedItem.get();
-  NS_IF_ADDREF(domElement);
-  return domElement;
 }
 
 -(void) saveInternal: (nsIURI*)aURI
@@ -1180,49 +1141,6 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
   PRBool canUnload;
   contentViewer->PermitUnload(&canUnload);
   return canUnload ? YES : NO;
-}
-
-// -isTextFieldFocused
-//
-// Determine if a text field in the content area has focus. Returns YES if the
-// focus is in a <input type="text"> or <textarea>
-//
-// XXX - should we be counting Midas here as well?
-- (BOOL)isTextFieldFocused
-{
-  BOOL isFocused = NO;
-  
-  nsCOMPtr<nsIDOMElement> focusedItem = dont_AddRef([self getFocusedDOMElement]);
-  
-  // we got it, now check if it's what we care about
-  nsCOMPtr<nsIDOMHTMLInputElement> input = do_QueryInterface(focusedItem);
-  nsCOMPtr<nsIDOMHTMLTextAreaElement> textArea = do_QueryInterface(focusedItem);
-  if (input) {
-    nsAutoString type;
-    input->GetType(type);
-    if (type == NS_LITERAL_STRING("text"))
-      isFocused = YES;
-  }
-  else if (textArea)
-    isFocused = YES;
-  
-  return isFocused;
-}
-
-// -isPluginFocused
-//
-// Determine if a plugin/applet in the content area has focus. Returns YES if the
-// focus is in a <embed>, <object>, or <applet>
-//
-- (BOOL)isPluginFocused
-{
-  nsCOMPtr<nsIDOMElement> focusedItem = dont_AddRef([self getFocusedDOMElement]);
-  
-  // we got it, now check if it's what we care about
-  nsCOMPtr<nsIDOMHTMLEmbedElement> embed = do_QueryInterface(focusedItem);
-  nsCOMPtr<nsIDOMHTMLObjectElement> object = do_QueryInterface(focusedItem);
-  nsCOMPtr<nsIDOMHTMLAppletElement> applet = do_QueryInterface(focusedItem);
-  return (embed || object || applet);
 }
 
 - (void)moveToBeginningOfDocument:(id)sender
@@ -1771,7 +1689,6 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
     nsCOMPtr<nsIDOMWindow> focussedWindow = [self focussedDOMWindow];
     if (!focussedWindow)
       return NULL;
-    nsCOMPtr<nsPIDOMWindow> privWin(do_QueryInterface(focussedWindow));
     nsCOMPtr<nsIScriptGlobalObject> global(do_QueryInterface(focussedWindow));
     if (!global)
       return NULL;

@@ -129,9 +129,11 @@ enum {
 - (BOOL)readPListBookmarks:(NSString *)pathToFile;    // camino or safari
 - (BOOL)readCaminoPListBookmarks:(NSDictionary *)plist;
 - (BOOL)readSafariPListBookmarks:(NSDictionary *)plist;
+- (BOOL)readCaminoXMLBookmarks:(NSString *)pathToFile;
 
 // these are "import" methods that import into a subfolder.
 - (BOOL)importHTMLFile:(NSString *)pathToFile intoFolder:(BookmarkFolder *)aFolder;
+- (BOOL)importCaminoXMLFile:(NSString *)pathToFile intoFolder:(BookmarkFolder *)aFolder settingToolbarFolder:(BOOL)setToolbarFolder;
 - (BOOL)importPropertyListFile:(NSString *)pathToFile intoFolder:(BookmarkFolder *)aFolder;
 - (void)importBookmarksThreadReturn:(NSDictionary *)aDict;
 
@@ -295,7 +297,7 @@ static BookmarkManager* gBookmarkManager = nil;
   [self startSuppressingChangeNotifications];
 
   // handle exceptions to ensure that turn notification suppression back off
-  @try {
+  NS_DURING
     BookmarkFolder* root = [[BookmarkFolder alloc] init];
 
     // We used to do this:
@@ -310,7 +312,8 @@ static BookmarkManager* gBookmarkManager = nil;
     BOOL bookmarksReadOK = [self readBookmarks];
     if (!bookmarksReadOK) {
       // We'll come here either when reading the bookmarks totally failed, or
-      // when we did a partial read of the bookmark file.
+      // when we did a partial read of the xml file. The xml reading code already
+      // fixed up the toolbar folder.
       if ([root count] == 0) {
         // failed to read any folders. make some by hand.
         BookmarkFolder* menuFolder = [[[BookmarkFolder alloc] initWithIdentifier:kBookmarksMenuFolderIdentifier] autorelease];
@@ -335,10 +338,10 @@ static BookmarkManager* gBookmarkManager = nil;
     // set the localized titles of these folders
     [[self toolbarFolder] setTitle:NSLocalizedString(@"Bookmark Bar", nil)];
     [[self bookmarkMenuFolder] setTitle:NSLocalizedString(@"Bookmark Menu", nil)];
-  }
-  @catch (id exception) {
-      NSLog(@"Exception caught in loadBookmarks: %@", exception);
-  }
+
+  NS_HANDLER
+      NSLog(@"Exception caught in loadBookmarks: %@", localException);
+  NS_ENDHANDLER
 
   [self stopSuppressingChangeNotifications];
 
@@ -658,29 +661,29 @@ static BookmarkManager* gBookmarkManager = nil;
   // XXX this will fire a lot of changed notifications.
   NSEnumerator* bookmarksEnum = [[self rootBookmarks] objectEnumerator];
   BookmarkItem* curItem;
-  while ((curItem = [bookmarksEnum nextObject])) {
+  while (curItem = [bookmarksEnum nextObject]) {
     if ([curItem isKindOfClass:[Bookmark class]])
       [(Bookmark*)curItem setNumberOfVisits:0];
   }
 }
 
 
-- (NSArray *)resolveBookmarksShortcut:(NSString *)shortcut
+- (NSArray *)resolveBookmarksKeyword:(NSString *)keyword
 {
   NSArray *resolvedArray = nil;
-  if ([shortcut length] > 0) {
-    NSRange spaceRange = [shortcut rangeOfString:@" "];
+  if ([keyword length] > 0) {
+    NSRange spaceRange = [keyword rangeOfString:@" "];
     NSString *firstWord = nil;
     NSString *secondWord = nil;
     if (spaceRange.location != NSNotFound) {
-      firstWord = [shortcut substringToIndex:spaceRange.location];
-      secondWord = [shortcut substringFromIndex:(spaceRange.location + spaceRange.length)];
+      firstWord = [keyword substringToIndex:spaceRange.location];
+      secondWord = [keyword substringFromIndex:(spaceRange.location + spaceRange.length)];
     }
     else {
-      firstWord = shortcut;
+      firstWord = keyword;
       secondWord = @"";
     }
-    resolvedArray = [[self rootBookmarks] resolveShortcut:firstWord withArgs:secondWord];
+    resolvedArray = [[self rootBookmarks] resolveKeyword:firstWord withArgs:secondWord];
   }
   return resolvedArray;
 }
@@ -690,7 +693,8 @@ static BookmarkManager* gBookmarkManager = nil;
 {
   if ((searchString) && [searchString length] > 0) {
     BookmarkFolder* searchContainer = container ? container : [self rootBookmarks];
-    return [searchContainer bookmarksWithString:searchString inFieldWithTag:tag];
+    NSSet *matchingSet = [searchContainer bookmarksWithString:searchString inFieldWithTag:tag];
+    return [matchingSet allObjects];
   }
   return nil;
 }
@@ -955,7 +959,7 @@ static BookmarkManager* gBookmarkManager = nil;
   NSMutableSet* seenBookmarks = [NSMutableSet setWithCapacity:[bookmarkItems count]];
   NSEnumerator* bookmarkItemsEnum = [bookmarkItems objectEnumerator];
   BookmarkItem* curItem;
-  while ((curItem = [bookmarkItemsEnum nextObject])) {
+  while (curItem = [bookmarkItemsEnum nextObject]) {
     if ([curItem isKindOfClass:[Bookmark class]] && ![curItem isSeparator] && ![seenBookmarks containsObject:curItem]) {
       [seenBookmarks addObject:curItem]; // now we've seen it
       [urlList addObject:[(Bookmark*)curItem url]];
@@ -965,7 +969,7 @@ static BookmarkManager* gBookmarkManager = nil;
       NSArray* children = [(BookmarkFolder*)curItem allChildBookmarks];
       NSEnumerator* childrenEnum = [children objectEnumerator];
       Bookmark* curChild;
-      while ((curChild = [childrenEnum nextObject])) {
+      while (curChild = [childrenEnum nextObject]) {
         if (![seenBookmarks containsObject:curChild] && ![curItem isSeparator]) {
           [seenBookmarks addObject:curChild]; // now we've seen it
           [urlList addObject:[curChild url]];
@@ -1289,23 +1293,20 @@ static BookmarkManager* gBookmarkManager = nil;
 //
 - (BOOL)readBookmarks
 {
+  NSString *profileDir = [[PreferenceManager sharedInstance] profilePath];
+
+  //
   // figure out where Bookmarks.plist is and store it as mPathToBookmarkFile
   // if there is a Bookmarks.plist, read it
-  // if there isn't (or it's corrupt), but there's a backup, restore from the backup
-  // otherwise, move default Bookmarks.plist to profile dir & read it.
-  NSString *profileDir = [[PreferenceManager sharedInstance] profilePath];
-  NSString *bookmarkPath = [profileDir stringByAppendingPathComponent:@"bookmarks.plist"];
-  NSString *backupPath = [bookmarkPath stringByAppendingString:@".bak"];
-  [self setPathToBookmarkFile:bookmarkPath];
-
+  // if there isn't a Bookmarks.plist, but there is a bookmarks.xml, read it.
+  // if there isn't either, move default Bookmarks.plist to profile dir & read it.
+  //
   NSFileManager *fM = [NSFileManager defaultManager];
-
-  // If the bookmark file is somehow missing, grab the backup if there is one.
-  if (![fM fileExistsAtPath:bookmarkPath] && [fM fileExistsAtPath:backupPath])
-    [fM copyPath:backupPath toPath:bookmarkPath handler:self];
-
+  NSString *bookmarkPath = [profileDir stringByAppendingPathComponent:@"bookmarks.plist"];
+  [self setPathToBookmarkFile:bookmarkPath];
   BOOL bookmarksAreCorrupt = NO;
   if ([fM isReadableFileAtPath:bookmarkPath]) {
+    NSString *backupPath = [bookmarkPath stringByAppendingString:@".bak"];
     if ([self readPListBookmarks:bookmarkPath]) {
       // since the bookmarks look good, save them aside as a backup in case something goes
       // wrong later (e.g., bug 337750) since users really don't like losing their bookmarks.
@@ -1334,6 +1335,10 @@ static BookmarkManager* gBookmarkManager = nil;
         }
       }
     }
+  }
+  else if ([fM isReadableFileAtPath:[profileDir stringByAppendingPathComponent:@"bookmarks.xml"]]) {
+    if ([self readCaminoXMLBookmarks:[profileDir stringByAppendingPathComponent:@"bookmarks.xml"]])
+      return YES;
   }
 
   // if we're here, we have either no bookmarks or corrupted bookmarks with no backup; either way,
@@ -1463,6 +1468,37 @@ static BookmarkManager* gBookmarkManager = nil;
   return YES;
 }
 
+- (BOOL)readCaminoXMLBookmarks:(NSString *)pathToFile
+{
+  BookmarkFolder* menuFolder = [[[BookmarkFolder alloc] initWithIdentifier:kBookmarksMenuFolderIdentifier] autorelease];
+  [menuFolder setTitle:NSLocalizedString(@"Bookmark Menu", nil)];
+  [[self rootBookmarks] appendChild:menuFolder];
+
+  BOOL readOK = [self importCaminoXMLFile:pathToFile intoFolder:menuFolder settingToolbarFolder:YES];
+
+  // even if we didn't do a full read, try to fix up the toolbar folder
+  BookmarkFolder* toolbarFolder = nil;
+  NSEnumerator* bookmarksEnum = [[self rootBookmarks] objectEnumerator];
+  BookmarkItem* curItem;
+  while ((curItem = [bookmarksEnum nextObject])) {
+    if ([curItem isKindOfClass:[BookmarkFolder class]]) {
+      BookmarkFolder* curFolder = (BookmarkFolder*)curItem;
+      if ([curFolder isToolbar]) {
+        toolbarFolder = curFolder;
+        break;
+      }
+    }
+  }
+
+  if (toolbarFolder) {
+    [[toolbarFolder parent] moveChild:toolbarFolder toBookmarkFolder:[self rootBookmarks] atIndex:kToolbarContainerIndex];
+    [toolbarFolder setTitle:NSLocalizedString(@"Bookmark Toolbar", nil)];
+    [toolbarFolder setIdentifier:kBookmarksToolbarFolderIdentifier];
+  }
+
+  return readOK;
+}
+
 - (void)startImportBookmarks
 {
   if (!mImportDlgController)
@@ -1498,6 +1534,8 @@ static BookmarkManager* gBookmarkManager = nil;
       success = [self readOperaFile:pathToFile intoFolder:importFolder];
     else if ([extension isEqualToString:@"html"] || [extension isEqualToString:@"htm"])
       success = [self importHTMLFile:pathToFile intoFolder:importFolder];
+    else if ([extension isEqualToString:@"xml"])
+      success = [self importCaminoXMLFile:pathToFile intoFolder:importFolder settingToolbarFolder:NO];
     else if ([extension isEqualToString:@"plist"] || !success)
       success = [self importPropertyListFile:pathToFile intoFolder:importFolder];
     // we don't know the extension, or we failed to load.  we'll take another
@@ -1506,6 +1544,9 @@ static BookmarkManager* gBookmarkManager = nil;
       success = [self readOperaFile:pathToFile intoFolder:importFolder];
       if (!success) {
         success = [self importHTMLFile:pathToFile intoFolder:importFolder];
+        if (!success) {
+          success = [self importCaminoXMLFile:pathToFile intoFolder:importFolder settingToolbarFolder:NO];
+        }
       }
     }
 
@@ -1681,8 +1722,8 @@ static BookmarkManager* gBookmarkManager = nil;
         [tokenScanner scanUpToString:@"href=\"" intoString:nil];  // tokenScanner now contains HREF="[URL]">[TITLE]
         // check for a menu spacer, which will look like this: HREF="">&lt;Menu Spacer&gt; (bug 309008)
         if (![tokenScanner isAtEnd] && [[tokenString substringFromIndex:([tokenScanner scanLocation] + 8)] isEqualToString:@"&lt;Menu Spacer&gt;"])  {
-          currentItem = [Bookmark separator];
-          [currentArray appendChild:currentItem];
+          currentItem = [currentArray addBookmark];
+          [(Bookmark *)currentItem setIsSeparator:YES];
           [tokenScanner release];
           [tokenTag release];
           [fileScanner setScanLocation:([fileScanner scanLocation] + 1)];
@@ -1701,24 +1742,22 @@ static BookmarkManager* gBookmarkManager = nil;
             [fileScanner setScanLocation:([fileScanner scanLocation] + 1)];
             continue;
           }
-          NSString* url = [tempItem stringByRemovingAmpEscapes];
-          NSString* title = nil;
+          currentItem = [currentArray addBookmark];
+          [(Bookmark *)currentItem setUrl:[tempItem stringByRemovingAmpEscapes]];
           [tokenScanner scanUpToString:@">" intoString:&tempItem];
           if (![tokenScanner isAtEnd]) {     // protect against malformed files
-            title = [[tokenString substringFromIndex:([tokenScanner scanLocation] + 1)] stringByRemovingAmpEscapes];
+            [currentItem setTitle:[[tokenString substringFromIndex:([tokenScanner scanLocation] + 1)] stringByRemovingAmpEscapes]];
             justSetTitle = YES;
           }
-          currentItem = [Bookmark bookmarkWithTitle:title url:url];
-          [currentArray appendChild:currentItem];
-          // see if we had a shortcut
+          // see if we had a keyword
           if (isNetscape) {
             tempRange = [tempItem rangeOfString:@"SHORTCUTURL=\"" options:NSCaseInsensitiveSearch];
             if (tempRange.location != NSNotFound) {
-              // throw everything to next " into shortcut. A malformed bookmark might not have a closing " which
+              // throw everything to next " into keyword. A malformed bookmark might not have a closing " which
               // will throw things out of whack slightly, but it's better than crashing.
               keyRange = [tempItem rangeOfString:@"\"" options:0 range:NSMakeRange(tempRange.location + tempRange.length, [tempItem length] - (tempRange.location + tempRange.length))];
               if (keyRange.location != NSNotFound)
-                [currentItem setShortcut:[tempItem substringWithRange:NSMakeRange(tempRange.location + tempRange.length, keyRange.location - (tempRange.location + tempRange.length))]];
+                [currentItem setKeyword:[tempItem substringWithRange:NSMakeRange(tempRange.location + tempRange.length, keyRange.location - (tempRange.location + tempRange.length))]];
             }
           }
         }
@@ -1805,9 +1844,9 @@ static BookmarkManager* gBookmarkManager = nil;
       }
       // Firefox menu separator
       else if ([tokenTag isEqualToString:@"<HR"]) {
-        currentItem = [Bookmark separator];
-        [currentArray appendChild:currentItem];
-        [fileScanner setScanLocation:(scanIndex + 1)];
+          currentItem = [currentArray addBookmark];
+          [(Bookmark *)currentItem setIsSeparator:YES];
+          [fileScanner setScanLocation:(scanIndex + 1)];
       }
       else { //beats me.  just close the tag out and continue.
         [fileScanner scanUpToString:@">" intoString:NULL];
@@ -1817,6 +1856,64 @@ static BookmarkManager* gBookmarkManager = nil;
   }
   [fileScanner release];
   return YES;
+}
+
+
+- (BOOL)importCaminoXMLFile:(NSString *)pathToFile intoFolder:(BookmarkFolder *)aFolder settingToolbarFolder:(BOOL)setToolbarFolder
+{
+  NSURL* fileURL = [NSURL fileURLWithPath:pathToFile];
+  if (!fileURL) {
+    NSLog(@"URL creation failed");
+    return NO;
+  }
+  // Thanks, Apple, for example XML parsing code.
+  // Create CFXMLTree from file.  This needs to be released later
+  CFXMLTreeRef xmlFileTree = CFXMLTreeCreateWithDataFromURL (kCFAllocatorDefault,
+                                                             (CFURLRef)fileURL,
+                                                             kCFXMLParserSkipWhitespace,
+                                                             kCFXMLNodeCurrentVersion);
+  if (!xmlFileTree) {
+    NSLog(@"XMLTree creation failed");
+    return NO;
+  }
+
+  // process top level nodes.  I think we'll find DTD
+  // before data - so only need to make 1 pass.
+  int count = CFTreeGetChildCount(xmlFileTree);
+  for (int index = 0; index < count; index++) {
+    CFXMLTreeRef subFileTree = CFTreeGetChildAtIndex(xmlFileTree, index);
+    if (subFileTree) {
+      CFXMLNodeRef bookmarkNode = CFXMLTreeGetNode(subFileTree);
+      if (bookmarkNode) {
+        switch (CFXMLNodeGetTypeCode(bookmarkNode)) {
+          // make sure it's Camino/Chimera DTD
+          case kCFXMLNodeTypeDocumentType:
+            {
+              CFXMLDocumentTypeInfo* docTypeInfo = (CFXMLDocumentTypeInfo *)CFXMLNodeGetInfoPtr(bookmarkNode);
+              CFURLRef dtdURL = docTypeInfo->externalID.systemID;
+              if (![[(NSURL *)dtdURL absoluteString] isEqualToString:@"http://www.mozilla.org/DTDs/ChimeraBookmarks.dtd"]) {
+                NSLog(@"not a ChimeraBookmarks xml file. Bail");
+                CFRelease(xmlFileTree);
+                return NO;
+              }
+              break;
+            }
+
+          case kCFXMLNodeTypeElement:
+            {
+              BOOL readOK = [aFolder readCaminoXML:subFileTree settingToolbar:setToolbarFolder];
+              CFRelease (xmlFileTree);
+              return readOK;
+            }
+          default:
+            break;
+        }
+      }
+    }
+  }
+  CFRelease(xmlFileTree);
+  NSLog(@"run through the tree and didn't find anything interesting.  Bailed out");
+  return NO;
 }
 
 - (BOOL)importPropertyListFile:(NSString *)pathToFile intoFolder:(BookmarkFolder *)aFolder
@@ -1862,15 +1959,15 @@ static BookmarkManager* gBookmarkManager = nil;
     }
     // Maybe it's a new URL!
     else if ([aLine hasPrefix:@"#URL"]) {
-      currentItem = [Bookmark bookmarkWithTitle:nil url:nil];
-      [currentArray appendChild:currentItem];
+      currentItem = [currentArray addBookmark];
     }
     // Perhaps a separator? This isn't how I'd spell it, but
     // then again, I'm not Norwagian, so what do I know.
     //                         ^
     //                     That's funny
     else if ([aLine hasPrefix:@"#SEPERATOR"]) {
-      [currentArray appendChild:[Bookmark separator]];
+      currentItem = [currentArray addBookmark];
+      [(Bookmark *)currentItem setIsSeparator:YES];
       currentItem = nil;
     }
     // Or maybe this folder is being closed out.
@@ -1885,7 +1982,7 @@ static BookmarkManager* gBookmarkManager = nil;
       if (NSNotFound != aRange.location) {
         NSRange sRange = [aLine rangeOfString:@"SHORT NAME="];
         if (NSNotFound != sRange.location) {
-          [currentItem setShortcut:[aLine substringFromIndex:(sRange.location + sRange.length)]];
+          [currentItem setKeyword:[aLine substringFromIndex:(sRange.location + sRange.length)]];
         }
         else {
           [currentItem setTitle:[aLine substringFromIndex:(aRange.location + aRange.length)]];

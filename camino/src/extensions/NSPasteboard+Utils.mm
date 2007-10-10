@@ -86,11 +86,11 @@ NSString* const kWebURLsWithTitlesPboardType  = @"WebURLsWithTitlesPboardType"; 
   unsigned int urlCount = [inUrls count];
 
   // Best format that we know about is Safari's URL + title arrays - build these up
+  NSMutableArray* tmpTitleArray = inTitles;
   if (!inTitles) {
-    NSMutableArray* tmpTitleArray = [NSMutableArray arrayWithCapacity:urlCount];
+    tmpTitleArray = [NSMutableArray array];
     for (unsigned int i = 0; i < urlCount; ++i)
       [tmpTitleArray addObject:@""];
-    inTitles = tmpTitleArray;
   }
 
   NSMutableArray* filePaths = [NSMutableArray array];
@@ -106,7 +106,7 @@ NSString* const kWebURLsWithTitlesPboardType  = @"WebURLsWithTitlesPboardType"; 
 
   NSMutableArray* clipboardData = [NSMutableArray array];
   [clipboardData addObject:[NSArray arrayWithArray:inUrls]];
-  [clipboardData addObject:inTitles];
+  [clipboardData addObject:tmpTitleArray];
 
   [self setPropertyList:clipboardData forType:kWebURLsWithTitlesPboardType];
 

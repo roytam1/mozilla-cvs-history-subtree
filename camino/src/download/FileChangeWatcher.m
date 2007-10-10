@@ -172,16 +172,15 @@ static NSString* const kFileDescriptorKey = @"fdes";
     }
 
     NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
-    @try {
+    NS_DURING
       struct kevent event;
       int n = kevent(mQueueFileDesc, NULL, 0, &event, 1, &timeInterval);
       if (n > 0 && event.filter == EVFILT_VNODE && event.fflags) {
         [self directoryChanged:(NSString*)event.udata];
       }
-    }
-    @catch (id exception) {
-      NSLog(@"Error in watcherThread: %@", exception);
-    }
+    NS_HANDLER
+      NSLog(@"Error in watcherThread: %@", localException);
+    NS_ENDHANDLER
     
     [pool release];
   }

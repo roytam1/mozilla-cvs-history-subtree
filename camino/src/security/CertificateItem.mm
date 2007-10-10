@@ -37,7 +37,6 @@
  * ***** END LICENSE BLOCK ***** */
 
 #import "NSString+Utils.h"
-#import "NSString+Gecko.h"
 #import "NSDate+Utils.h"
 
 #import "nsCOMPtr.h"
@@ -614,6 +613,7 @@ NSString* const CertificateChangedNotificationName = @"CertificateChangedNotific
 
 - (BOOL)canGetTrust
 {
+  PRUint32 trustMask = nsIX509CertDB::UNTRUSTED;
   nsCOMPtr<nsIX509CertDB> certDB = do_GetService("@mozilla.org/security/x509certdb;1");
   if (!certDB) return NO;
 

@@ -39,7 +39,6 @@
 
 #import "ProgressView.h"
 
-#import "ProgressViewController.h"
 
 NSString* const kDownloadInstanceSelectedNotificationName = @"DownloadInstanceSelected";
 NSString* const kDownloadInstanceOpenedNotificationName   = @"DownloadInstanceOpened";

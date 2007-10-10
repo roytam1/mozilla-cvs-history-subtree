@@ -13,4 +13,3 @@ Checklist of things to do before releasing a new Camino version:
 - Move the build to releases/
 - Flip the wizard UI switch back to off on the Talkback server
 - Update version number in config/version.txt to (N.npre)
-

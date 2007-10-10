@@ -104,8 +104,8 @@ typedef enum
 @class BrowserContentView;
 @class BrowserTabViewItem;
 @class AutoCompleteTextField;
+@class SearchTextField;
 @class ExtendedSplitView;
-@class WebSearchField;
 
 
 @interface BrowserWindowController : NSWindowController<Find, BrowserUIDelegate, BrowserUICreationDelegate>
@@ -114,7 +114,7 @@ typedef enum
   IBOutlet ExtendedSplitView* mLocationToolbarView;     // parent splitter of location and search, strong
   IBOutlet AutoCompleteTextField* mURLBar;
   IBOutlet NSTextField*       mStatus;
-  IBOutlet NSProgressIndicator* mProgress;
+  IBOutlet NSProgressIndicator* mProgress;              // STRONG reference
   IBOutlet NSWindow*          mLocationSheetWindow;
   IBOutlet NSTextField*       mLocationSheetURLField;
   IBOutlet NSView*            mStatusBar;     // contains the status text, progress bar, and lock
@@ -123,8 +123,8 @@ typedef enum
   
   IBOutlet BookmarkToolbar*     mPersonalToolbar;
 
-  IBOutlet WebSearchField*      mSearchBar;
-  IBOutlet WebSearchField*      mSearchSheetTextField;
+  IBOutlet SearchTextField*     mSearchBar;
+  IBOutlet SearchTextField*     mSearchSheetTextField;
   IBOutlet NSWindow*            mSearchSheetWindow;
   
   // Context menu outlets.
@@ -152,9 +152,6 @@ typedef enum
   
   BrowserWrapper*               mBrowserView;   // browser wrapper of frontmost tab
 
-  // The browser view that the user was on before a prompt forced a switch (weak)
-  BrowserWrapper*               mLastBrowserView;
-
   BOOL mMoveReentrant;
   BOOL mClosingWindow;
 
@@ -178,6 +175,11 @@ typedef enum
 
   // Funky field editor for URL bar
   NSTextView *mURLFieldEditor;
+  
+  // cached superview for progress meter so we know where to add/remove it. This
+  // could be an outlet, but i figure it's easier to get it at runtime thereby saving
+  // someone from messing up in the nib when making changes.
+  NSView* mProgressSuperview;                // WEAK ptr
 }
 
 - (BrowserTabView*)getTabBrowser;
@@ -209,7 +211,6 @@ typedef enum
 
 - (NSSize)windowWillResize:(NSWindow *)sender toSize:(NSSize)proposedFrameSize;
 
-- (IBAction)toggleStatusBar:(id)aSender;
 - (IBAction)viewSource:(id)aSender;			// focussed frame or page
 - (IBAction)viewPageSource:(id)aSender;	// top-level page
 
@@ -218,7 +219,7 @@ typedef enum
 
 - (IBAction)printDocument:(id)aSender;
 - (IBAction)pageSetup:(id)aSender;
-- (IBAction)searchFieldTriggered:(id)aSender;
+- (IBAction)performSearch:(id)aSender;
 - (IBAction)searchForSelection:(id)aSender;
 - (IBAction)sendURL:(id)aSender;
 - (IBAction)sendURLFromLink:(id)aSender;
@@ -336,6 +337,10 @@ typedef enum
 - (IBAction)copyImageLocation:(id)sender;
 
 - (BookmarkToolbar*) bookmarkToolbar;
+
+- (NSProgressIndicator*) progressIndicator;
+- (void) showProgressIndicator;
+- (void) hideProgressIndicator;
 
 - (BOOL)windowClosesQuietly;
 - (void)setWindowClosesQuietly:(BOOL)inClosesQuietly;

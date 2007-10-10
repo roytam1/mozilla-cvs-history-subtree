@@ -40,7 +40,6 @@
 #import "NSBezierPath+Utils.h"
 
 #import "TabButtonCell.h"
-#import "BrowserTabViewItem.h"
 #import "RolloverImageButton.h"
 #import "TruncatingTextAndImageCell.h"
 

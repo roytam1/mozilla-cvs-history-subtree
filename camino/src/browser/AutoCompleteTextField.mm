@@ -40,10 +40,8 @@
  * ***** END LICENSE BLOCK ***** */
 
 #import "NSString+Utils.h"
-#import "NSString+Gecko.h"
 
 #import "AutoCompleteTextField.h"
-#import "AutoCompleteDataSource.h"
 #import "BrowserWindowController.h"
 #import "PageProxyIcon.h"
 #import "CHBrowserService.h"

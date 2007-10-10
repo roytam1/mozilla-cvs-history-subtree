@@ -92,6 +92,7 @@ static const int kBMBarScanningStep = 5;
                                                             NSURLPboardType,
                                                             nil]];
 
+    mIsShowing = YES;
     mButtonListDirty = YES;
 
     // Generic notifications for Bookmark Client
@@ -426,16 +427,28 @@ static void VerticalGrayGradient(void* inInfo, float const* inData, float* outDa
 
 - (BOOL)isVisible
 {
-  return ![self isHidden];
+  return mIsShowing;
 }
 
-- (void)setVisible:(BOOL)isVisible
+- (void)setVisible:(BOOL)aShow
 {
-  [self setHidden:!isVisible];
-  [[self superview] resizeSubviewsWithOldSize:[[self superview] frame].size];
+  mIsShowing = aShow;
 
-  if (isVisible)
+  if (!aShow) {
+    [[self superview] setNeedsDisplayInRect:[self frame]];
+    NSRect newFrame = [self frame];
+    newFrame.origin.y += newFrame.size.height;
+    newFrame.size.height = 0;
+    [self setFrame:newFrame];
+
+    // tell the superview to resize its subviews
+    [[self superview] resizeSubviewsWithOldSize:[[self superview] frame].size];
+  }
+  else {
     [self reflowButtons];
+    [self setNeedsDisplay:YES];
+  }
+
 }
 
 - (void)setDrawBottomBorder:(BOOL)drawBorder
@@ -694,13 +707,8 @@ static void VerticalGrayGradient(void* inInfo, float const* inData, float* outDa
     [[sender draggingPasteboard] getURLs:&urls andTitles:&titles];
 
     // Add in reverse order to preserve order
-    for (int i = [urls count] - 1; i >= 0; --i) {
-      NSString* url = [urls objectAtIndex:i];
-      NSString* title = [titles objectAtIndex:i];
-      if ([title length] == 0)
-        title = url;
-      [toolbar insertChild:[Bookmark bookmarkWithTitle:title url:url] atIndex:index isMove:NO];
-    }
+    for (int i = [urls count] - 1; i >= 0; --i)
+      [toolbar addBookmark:[titles objectAtIndex:i] url:[urls objectAtIndex:i] inPosition:index isSeparator:NO];
     dropHandled = YES;
   }
 

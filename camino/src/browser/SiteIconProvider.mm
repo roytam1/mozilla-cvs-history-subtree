@@ -35,7 +35,7 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#import "NSString+Gecko.h"
+#import "NSString+Utils.h"
 
 #import "SiteIconProvider.h"
 
@@ -382,13 +382,12 @@ NeckoCacheHelper::ClearCache()
     faviconImage = [[NSWorkspace sharedWorkspace] iconForFile:[inURIAsNSURL path]];
   }
   else {
-    @try {
+    NS_DURING
       faviconImage = [[[NSImage alloc] initWithData:data] autorelease];
-    }
-    @catch (id exception) {
-      NSLog(@"Exception \"%@\" making favicon image for %@", exception, inURI);
+    NS_HANDLER
+      NSLog(@"Exception \"%@\" making favicon image for %@", localException, inURI);
       faviconImage = nil;
-    }
+    NS_ENDHANDLER
   }
 
   BOOL gotImageData = loadOK && (faviconImage != nil);

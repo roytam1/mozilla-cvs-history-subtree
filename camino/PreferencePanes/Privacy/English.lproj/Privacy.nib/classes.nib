@@ -1,6 +1,5 @@
 {
     IBClasses = (
-        {CLASS = CookieDateFormatter; LANGUAGE = ObjC; SUPERCLASS = NSDateFormatter; }, 
         {CLASS = ExtendedTableView; LANGUAGE = ObjC; SUPERCLASS = NSTableView; }, 
         {CLASS = FirstResponder; LANGUAGE = ObjC; SUPERCLASS = NSObject; }, 
         {
@@ -19,15 +18,14 @@
             ACTIONS = {
                 blockCookiesFromSites = id; 
                 clickAskAboutCookies = id; 
+                clickAutoFillPasswords = id; 
                 clickCookieBehavior = id; 
                 clickStorePasswords = id; 
-                cookieFilterChanged = id; 
                 editCookies = id; 
                 editCookiesDone = id; 
                 editPermissions = id; 
                 editPermissionsDone = id; 
                 launchKeychainAccess = id; 
-                permissionFilterChanged = id; 
                 removeAllCookiePermissions = id; 
                 removeAllCookies = id; 
                 removeCookiePermissions = id; 
@@ -39,11 +37,11 @@
             OUTLETS = {
                 mAskAboutCookies = NSButton; 
                 mCookieBehavior = NSMatrix; 
-                mCookiesFilterField = NSSearchField; 
+                mCookiesFilterField = SearchTextField; 
                 mCookiesPanel = id; 
                 mCookiesTable = ExtendedTableView; 
                 mPermissionColumn = NSTableColumn; 
-                mPermissionFilterField = NSSearchField; 
+                mPermissionFilterField = SearchTextField; 
                 mPermissionsPanel = id; 
                 mPermissionsTable = ExtendedTableView; 
                 mStorePasswords = NSButton; 
