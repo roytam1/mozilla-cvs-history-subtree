@@ -2499,6 +2499,7 @@ function EditorSetDefaultPrefsAndDoctype()
           element.setAttribute("http-equiv", "content-type");
           element.setAttribute("content", "text/html; charset=" + prefCharsetString);
           headelement.insertBefore( element, headelement.firstChild );
+          editor.documentCharacterSet = prefCharsetString;
         }
     }
 
