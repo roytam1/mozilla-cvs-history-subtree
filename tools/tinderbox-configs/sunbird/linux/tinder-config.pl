@@ -243,7 +243,7 @@ $update_platform = "Linux_x86-gcc3";
 $update_hash = "sha1";
 $update_filehost = "ftp.mozilla.org";
 $update_ver_file = "calendar/sunbird/config/version.txt";
-$update_pushinfo = 1;
+$update_pushinfo = 0;
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
