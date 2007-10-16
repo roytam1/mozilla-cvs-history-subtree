@@ -13,7 +13,7 @@ $MozConfigFileName = 'mozconfig';
 
 $UseMozillaProfile = 0;
 
-$moz_cvsroot   = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
+$moz_cvsroot   = ':ext:xrbld@cvs.mozilla.org:/cvsroot';
 
 #- Set these proper values for your tinderbox server
 #$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
