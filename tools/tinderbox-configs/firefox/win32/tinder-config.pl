@@ -1,5 +1,5 @@
 #
-## hostname: fx-win32-tbox
+## hostname: fxdbug-win32-tbox
 ## uname: MINGW32_NT-5.2 FX-WIN32-TBOX 1.0.11(0.46/3/2) 2007-01-12 12:05 i686 Msys
 #
 
@@ -8,9 +8,10 @@
 #-    The default values are the same as the commented variables.
 
 $ENV{MOZ_INSTALLER_USE_7ZIP} = '1';
-$ENV{NO_EM_RESTART} = '1';
 $ENV{MOZ_PACKAGE_NSIS} = '1';
 $ENV{MOZ_CRASHREPORTER_NO_REPORT} = '1';
+$ENV{NO_EM_RESTART} = '1';
+$ENV{XPCOM_DEBUG_BREAK}    = 'warn';
 
 # $ENV{MOZ_PACKAGE_MSI}
 #-----------------------------------------------------------------------------
@@ -57,28 +58,28 @@ $ProductName              = "Firefox";
 $VendorName               = "Mozilla";
 
 $RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
-$RegxpcomTest             = 1;
-$AliveTest                = 1;
-$JavaTest                 = 0;
-$ViewerTest               = 0;
-$BloatTest                = 0;  # warren memory bloat test
-$BloatTest2               = 0;  # dbaron memory bloat test, require tracemalloc
-$DomToTextConversionTest  = 0;  
-$XpcomGlueTest            = 0;
-$CodesizeTest             = 0;  # Z,  require mozilla/tools/codesighs
-$EmbedCodesizeTest        = 0;  # mZ, require mozilla/tools/codesigns
-$MailBloatTest            = 0;
-$EmbedTest                = 0;  # Assumes you wanted $BuildEmbed=1
-$LayoutPerformanceTest    = 0;  # Tp
-$DHTMLPerformanceTest     = 0;  # Tdhtml
-$QATest                   = 0;  
-$XULWindowOpenTest        = 0;  # Txul
-$StartupPerformanceTest   = 0;  # Ts
-$NeckoUnitTest            = 0;
-$RenderPerformanceTest    = 0;  # Tgfx
+#$RegxpcomTest             = 1;
+#$AliveTest                = 1;
+#$JavaTest                 = 0;
+#$ViewerTest               = 0;
+$BloatTest                = 1;  # warren memory bloat test
+$BloatTest2               = 1;  # dbaron memory bloat test, require tracemalloc
+#$DomToTextConversionTest  = 0;  
+#$XpcomGlueTest            = 0;
+#$CodesizeTest             = 0;  # Z,  require mozilla/tools/codesighs
+#$EmbedCodesizeTest        = 0;  # mZ, require mozilla/tools/codesigns
+#$MailBloatTest            = 0;
+#$EmbedTest                = 0;  # Assumes you wanted $BuildEmbed=1
+#$LayoutPerformanceTest    = 0;  # Tp
+#$DHTMLPerformanceTest     = 0;  # Tdhtml
+#$QATest                   = 0;  
+#$XULWindowOpenTest        = 0;  # Txul
+#$StartupPerformanceTest   = 0;  # Ts
+#$NeckoUnitTest            = 0;
+#$RenderPerformanceTest    = 0;  # Tgfx
 
-$TestsPhoneHome           = 0;  # Should test report back to server?
-$GraphNameOverride        = 'fx-win32-tbox';
+$TestsPhoneHome           = 1;  # Should test report back to server?
+#$GraphNameOverride        = 'fxdbug-win32-tbox';
 
 # $results_server
 #----------------------------------------------------------------------------
@@ -100,7 +101,7 @@ $pageload_server          = "pageload.build.mozilla.org";  # localhost
 #$AliveTestTimeout                 = 30;
 #$ViewerTestTimeout                = 45;
 #$EmbedTestTimeout                 = 45;
-#$BloatTestTimeout                 = 120;   # seconds
+$BloatTestTimeout                 = 1800;   # seconds
 #$MailBloatTestTimeout             = 120;   # seconds
 #$JavaTestTimeout                  = 45;
 #$DomTestTimeout	                  = 45;    # seconds
@@ -154,7 +155,7 @@ $MofoRoot = ':ext:cltbld@cvs.mozilla.org:/mofo';
 $ObjDir = 'obj-fx-trunk';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'Nightly';
+$BuildNameExtra = 'Debug + Leak Test';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -169,8 +170,8 @@ $BuildNameExtra = 'Nightly';
 
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
-#$BuildTree  = 'MozillaTest';
-$BuildTree  = 'Firefox';
+$BuildTree  = 'MozillaTest';
+#$BuildTree  = 'Firefox';
 
 #$BuildName = '';
 #$BuildTag = '';
@@ -192,41 +193,8 @@ $BinaryName = 'firefox.exe';
 #$NSPRArgs = '';
 #$ShellOverride = '';
 
-# Release build options
-$ReleaseBuild  = 1;
-$shiptalkback  = 0;
-$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
-$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
-$build_hour    = "4";
-$package_creation_path = "/browser/installer";
-# needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
-$ssh_version   = "2";
-#$ssh_user      = "cltbld";
-#$ssh_server    = "stage.mozilla.org";
-$ftp_path      = "/home/ftp/pub/firefox/nightly";
-$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
-$tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
-$tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
-$milestone     = "trunk";
-$notify_list   = 'build-announce@mozilla.org';
-$stub_installer = 0;
-$sea_installer = 1;
-$archive       = 1;
-$push_raw_xpis = 1;
-$update_package = 1;
-$update_product = "Firefox";
-$update_version = "trunk";
-$update_platform = "WINNT_x86-msvc";
-$update_hash = "sha1";
-$update_filehost = "ftp.mozilla.org";
-$update_ver_file = 'browser/config/version.txt';
-$update_pushinfo = 1;
-$crashreporter_buildsymbols = 1;
-$crashreporter_pushsymbols = 1;
-$ENV{SYMBOL_SERVER_HOST} = 'stage.mozilla.org';
-$ENV{SYMBOL_SERVER_USER}   = 'ffxbld';
-$ENV{SYMBOL_SERVER_PATH}   = '/mnt/netapp/breakpad/symbols_ffx/';
-$ENV{SYMBOL_SERVER_SSH_KEY}   = "$ENV{HOME}/.ssh/ffxbld_dsa";
+# allow override of timezone value (for win32 POSIX::strftime)
+#$Timezone = '';
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
@@ -248,7 +216,3 @@ $ENV{SYMBOL_SERVER_SSH_KEY}   = "$ENV{HOME}/.ssh/ffxbld_dsa";
 # this needs to be set to 'base64' or 'uuencode' to ensure that the
 # binary data is transferred properly.
 #$LogEncoding = '';
-
-# Prevent Extension Manager from spawning child processes during tests
-# - processes that tbox scripts cannot kill. 
-#$ENV{NO_EM_RESTART} = '1';
