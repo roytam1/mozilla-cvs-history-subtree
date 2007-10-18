@@ -1,10 +1,10 @@
 import time
-from urllib import urlopen
 from xml.dom import minidom, Node
 
 from twisted.python import log, failure
 from twisted.internet import defer, reactor
 from twisted.internet.task import LoopingCall
+from twisted.web.client import getPage
 
 from buildbot.changes import base, changes
 
@@ -64,9 +64,16 @@ class FileNode:
 class BonsaiParser:
     """I parse the XML result from a bonsai cvsquery."""
 
-    def __init__(self, bonsaiQuery):
+    def __init__(self, data):
         try:
-            self.dom = minidom.parse(bonsaiQuery)
+        # this is a fix for non-ascii characters
+        # because bonsai does not give us an encoding to work with
+        # it impossible to be 100% sure what to decode it as but latin1 covers
+        # the broadest base
+            data = data.decode("latin1")
+            data = data.encode("ascii", "replace")
+            self.dom = minidom.parseString(data)
+            log.msg(data)
         except:
             raise InvalidResultError("Malformed XML in result")
 
@@ -93,8 +100,16 @@ class BonsaiParser:
                     pass
                 except InvalidResultError:
                     raise
-                nodes.append(CiNode(self._getLog(), self._getWho(),
-                                    self._getDate(), files))
+                cinode = CiNode(self._getLog(), self._getWho(),
+                                self._getDate(), files)
+                # hack around bonsai xml output bug for empty check-in comments
+                if not cinode.log and nodes and \
+                        not nodes[-1].log and \
+                        cinode.who == nodes[-1].who and \
+                        cinode.date == nodes[-1].date:
+                    nodes[-1].files += cinode.files
+                else:
+                    nodes.append(cinode)
 
         except NoMoreCiNodes:
             pass
@@ -139,7 +154,10 @@ class BonsaiParser:
         elif len(logs) > 1:
             raise InvalidResultError("Multiple logs present")
 
-        return logs[0].firstChild.data
+        # catch empty check-in comments
+        if logs[0].firstChild:
+            return logs[0].firstChild.data
+        return ''
 
     def _getWho(self):
         """Returns the e-mail address of the commiter"""
@@ -166,12 +184,7 @@ class BonsaiParser:
         return filename
 
     def _getRevision(self):
-        """Returns the revision of the current <f> node"""
-        rev = self.currentFileNode.getAttribute("rev")
-        if rev == "":
-            raise InvalidResultError("A revision was missing from a file")
-
-        return rev
+        return self.currentFileNode.getAttribute("rev")
 
 
 class BonsaiPoller(base.ChangeSource):
@@ -206,7 +219,8 @@ class BonsaiPoller(base.ChangeSource):
         @param  cvsroot:        The cvsroot of the repository. Usually this is
                                 '/cvsroot'
         @type   pollInterval:   int
-        @param  pollInterval:   The time (in seconds) between queries for changes
+        @param  pollInterval:   The time (in seconds) between queries for
+                                changes
         """
 
         self.bonsaiURL = bonsaiURL
@@ -243,17 +257,24 @@ class BonsaiPoller(base.ChangeSource):
             self.working = True
             d = self._get_changes()
             d.addCallback(self._process_changes)
-            d.addBoth(self._finished)
+            d.addCallbacks(self._finished_ok, self._finished_failure)
         return
 
-    def _finished(self, res):
+    def _finished_ok(self, res):
         assert self.working
         self.working = False
 
-        # check for failure
+        # check for failure -- this is probably never hit but the twisted docs
+        # are not clear enough to be sure. it is being kept "just in case"
         if isinstance(res, failure.Failure):
             log.msg("Bonsai poll failed: %s" % res)
         return res
+
+    def _finished_failure(self, res):
+        log.msg("Bonsai poll failed: %s" % res)
+        assert self.working
+        self.working = False
+        return None # eat the failure
 
     def _make_url(self):
         args = ["treeid=%s" % self.tree, "module=%s" % self.module,
@@ -275,10 +296,9 @@ class BonsaiPoller(base.ChangeSource):
 
         self.lastPoll = time.time()
         # get the page, in XML format
-        return defer.maybeDeferred(urlopen, url)
+        return getPage(url, timeout=self.pollInterval)
 
     def _process_changes(self, query):
-        files = []
         try:
             bp = BonsaiParser(query)
             result = bp.getData()
@@ -289,8 +309,8 @@ class BonsaiPoller(base.ChangeSource):
             return
 
         for cinode in result.nodes:
-            for file in cinode.files:
-                files.append(file.filename+' (revision '+file.revision+')')
+            files = [file.filename + ' (revision '+file.revision+')'
+                     for file in cinode.files]
             c = changes.Change(who = cinode.who,
                                files = files,
                                comments = cinode.log,
