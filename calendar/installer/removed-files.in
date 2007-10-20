@@ -51,24 +51,6 @@ components/calWeekTitleService.js
 # Clean out obsolete files from Sunbird 0.2 installer
 #
 chrome/overlayinfo/
-chrome/calendar-ca-AD.jar
-chrome/calendar-cs-CZ.jar
-chrome/calendar-cy-GB.jar
-chrome/calendar-de-AT.jar
-chrome/calendar-es-ES.jar
-chrome/calendar-fr-FR.jar
-chrome/calendar-hu-HU.jar
-chrome/calendar-it-IT.jar
-chrome/calendar-ja-JP.jar
-chrome/calendar-lt-LT.jar
-chrome/calendar-nl-NL.jar
-chrome/calendar-pl-PL.jar
-chrome/calendar-pt-BR.jar
-chrome/calendar-sk-SK.jar
-chrome/calendar-sl-SI.jar
-chrome/calendar-sv-SE.jar
-chrome/calendar-tr-TR.jar
-chrome/calendar-wen-DE.jar
 chrome/help.jar
 chrome/pipnss.jar
 components/browser.xpt
