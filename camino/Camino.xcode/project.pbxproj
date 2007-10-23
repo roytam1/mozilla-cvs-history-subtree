@@ -1959,7 +1959,11 @@
 				F6BD639401B3131201A962F7,
 				82CE28C40736625800B4DE07,
 				F6BD63D901B313EE01A962F7,
+				DE371E8C0CCE9A06004FA874,
+				DE371E8E0CCE9A06004FA874,
+				DE371E8F0CCE9A06004FA874,
 				82AC0D5D065A5F2300776B02,
+				DE371E8D0CCE9A06004FA874,
 				F6BD639601B3131201A962F7,
 				F6BD63A201B3131201A962F7,
 				F6BD639701B3131201A962F7,
@@ -1968,7 +1972,9 @@
 				F6BD639901B3131201A962F7,
 				F6BD639A01B3131201A962F7,
 				F6BD639B01B3131201A962F7,
+				DE371F470CCEA2F2004FA874,
 				F6BD639C01B3131201A962F7,
+				DE371F420CCEA1D5004FA874,
 				F6BD639D01B3131201A962F7,
 				F6BD639D01B3131201A963F7,
 				F6BD639E01B3131201A962F7,
@@ -5696,11 +5702,13 @@
 			dstPath = components;
 			dstSubfolderSpec = 6;
 			files = (
+				DE371F480CCEA2F2004FA874,
 				E4C7DA4C0A449A2200B455AD,
 				0F66E4A807D6D8D500444E2A,
 				82180AC607368B03002EFA6D,
 				82180AC707368B03002EFA6D,
 				82AC0D65065A602200776B02,
+				DE371F430CCEA1D5004FA874,
 				82AC0D66065A602200776B02,
 				3F44ACD105BDFB9F00CB4B08,
 				3F44ACD705BDFB9F00CB4B08,
@@ -5760,6 +5768,10 @@
 				3F44AD2405BDFB9F00CB4B08,
 				3F44AD2C05BDFB9F00CB4B08,
 				3F44ADB105BDFB9F00CB4B08,
+				DE371E900CCE9A06004FA874,
+				DE371E910CCE9A06004FA874,
+				DE371E920CCE9A06004FA874,
+				DE371E930CCE9A06004FA874,
 				3F44AD2705BDFB9F00CB4B08,
 			);
 			isa = PBXCopyFilesBuildPhase;
@@ -9608,6 +9620,12 @@
 			dstPath = components;
 			dstSubfolderSpec = 6;
 			files = (
+				DE371F490CCEA2F2004FA874,
+				DE371F440CCEA1D5004FA874,
+				DE371E940CCE9A06004FA874,
+				DE371E950CCE9A06004FA874,
+				DE371E960CCE9A06004FA874,
+				DE371E970CCE9A06004FA874,
 				E4C7DA470A4499E600B455AD,
 				E4C7DA4A0A449A1100B455AD,
 				E4C7DA4D0A449A2200B455AD,
@@ -13891,6 +13909,126 @@
 		};
 		DE1179E20A15F97700006DD6 = {
 			fileRef = DE1179E00A15F97700006DD6;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		DE371E8C0CCE9A06004FA874 = {
+			isa = PBXFileReference;
+			lastKnownFileType = file;
+			name = content_html.xpt;
+			path = ../dist/bin/components/content_html.xpt;
+			refType = 2;
+			sourceTree = SOURCE_ROOT;
+		};
+		DE371E8D0CCE9A06004FA874 = {
+			isa = PBXFileReference;
+			lastKnownFileType = file;
+			name = content_xtf.xpt;
+			path = ../dist/bin/components/content_xtf.xpt;
+			refType = 2;
+			sourceTree = SOURCE_ROOT;
+		};
+		DE371E8E0CCE9A06004FA874 = {
+			isa = PBXFileReference;
+			lastKnownFileType = file;
+			name = content_htmldoc.xpt;
+			path = ../dist/bin/components/content_htmldoc.xpt;
+			refType = 2;
+			sourceTree = SOURCE_ROOT;
+		};
+		DE371E8F0CCE9A06004FA874 = {
+			isa = PBXFileReference;
+			lastKnownFileType = file;
+			name = content_xmldoc.xpt;
+			path = ../dist/bin/components/content_xmldoc.xpt;
+			refType = 2;
+			sourceTree = SOURCE_ROOT;
+		};
+		DE371E900CCE9A06004FA874 = {
+			fileRef = DE371E8C0CCE9A06004FA874;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		DE371E910CCE9A06004FA874 = {
+			fileRef = DE371E8D0CCE9A06004FA874;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		DE371E920CCE9A06004FA874 = {
+			fileRef = DE371E8E0CCE9A06004FA874;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		DE371E930CCE9A06004FA874 = {
+			fileRef = DE371E8F0CCE9A06004FA874;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		DE371E940CCE9A06004FA874 = {
+			fileRef = DE371E8C0CCE9A06004FA874;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		DE371E950CCE9A06004FA874 = {
+			fileRef = DE371E8D0CCE9A06004FA874;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		DE371E960CCE9A06004FA874 = {
+			fileRef = DE371E8E0CCE9A06004FA874;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		DE371E970CCE9A06004FA874 = {
+			fileRef = DE371E8F0CCE9A06004FA874;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		DE371F420CCEA1D5004FA874 = {
+			isa = PBXFileReference;
+			lastKnownFileType = file;
+			name = dom_storage.xpt;
+			path = ../dist/bin/components/dom_storage.xpt;
+			refType = 2;
+			sourceTree = SOURCE_ROOT;
+		};
+		DE371F430CCEA1D5004FA874 = {
+			fileRef = DE371F420CCEA1D5004FA874;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		DE371F440CCEA1D5004FA874 = {
+			fileRef = DE371F420CCEA1D5004FA874;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		DE371F470CCEA2F2004FA874 = {
+			isa = PBXFileReference;
+			lastKnownFileType = file;
+			name = dom_loadsave.xpt;
+			path = ../dist/bin/components/dom_loadsave.xpt;
+			refType = 2;
+			sourceTree = SOURCE_ROOT;
+		};
+		DE371F480CCEA2F2004FA874 = {
+			fileRef = DE371F470CCEA2F2004FA874;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		DE371F490CCEA2F2004FA874 = {
+			fileRef = DE371F470CCEA2F2004FA874;
 			isa = PBXBuildFile;
 			settings = {
 			};
