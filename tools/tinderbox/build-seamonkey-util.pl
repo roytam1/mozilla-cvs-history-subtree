@@ -3625,8 +3625,7 @@ sub BloatTest2 {
                "--trace-malloc", $malloc_log);
     }
 
-    # win32 builds crash on multiple runs when --shutdown-leaks is used
-    @args = (@args, "--shutdown-leaks", $sdleak_log) unless is_windows();
+    @args = (@args, "--shutdown-leaks", $sdleak_log);
     my $result = run_cmd($build_dir, $binary_dir, \@args, $binary_log,
                          $timeout_secs);
 
