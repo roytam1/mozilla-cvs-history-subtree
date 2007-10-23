@@ -452,6 +452,11 @@ Section "-Application" Section1
     SetShellVarContext all  ; Set SHCTX to HKLM
     DeleteRegKey HKLM "Software\Mozilla\InstallerTest"
     StrCpy $TmpVal "HKLM" ; used primarily for logging
+
+    ReadRegStr $0 HKLM "Software\mozilla.org\Mozilla" "CurrentVersion"
+    ${If} "$0" != "${GREVersion}"
+      WriteRegStr HKLM "Software\mozilla.org\Mozilla" "CurrentVersion" "${GREVersion}"
+    ${EndIf}
   ${EndIf}
 
   ; The previous installer adds several regsitry values to both HKLM and HKCU.
