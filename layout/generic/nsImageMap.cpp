@@ -791,8 +791,8 @@ nsImageMap::Init(nsIPresShell* aPresShell, nsIFrame* aImageFrame, nsIDOMHTMLMapE
   mMap = do_QueryInterface(aMap, &rv);
   NS_ASSERTION(mMap, "aMap is not an nsIContent!");
   mDocument = mMap->GetDocument();
-  if (mDocument) {
-    mDocument->AddObserver(this);
+  if (mPresShell) {
+    NS_STATIC_CAST(nsIPresShell_MOZILLA_1_8_BRANCH2*, mPresShell)->AddObserver(this);
   }
 
   // "Compile" the areas in the map into faster access versions
@@ -1048,7 +1048,7 @@ void
 nsImageMap::Destroy(void)
 {
   FreeAreas();
-  if (mDocument) {
-    mDocument->RemoveObserver(this);
+  if (mPresShell) {
+    NS_STATIC_CAST(nsIPresShell_MOZILLA_1_8_BRANCH2*, mPresShell)->RemoveObserver(this);
   }
 }

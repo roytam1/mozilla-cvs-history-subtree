@@ -1225,6 +1225,8 @@ public:
   virtual void HidePopups();
   virtual void BlockFlushing();
   virtual void UnblockFlushing();  
+  virtual void AddObserver(nsIDocumentObserver* aObserver);
+  virtual PRBool RemoveObserver(nsIDocumentObserver* aObserver);
 
   //nsIViewObserver interface
 
@@ -1506,6 +1508,15 @@ protected:
   ReflowCountMgr * mReflowCountMgr;
 #endif
 
+  // Array of document observers that actually need to observe
+  // the PresShell.  See bug 400421.
+  // XXXdholbert: The PresShell only passes on document-observer notifications
+  // for AttributeChanged, ContentAppended, ContentInserted, and
+  // ContentRemoved.  If PresShell has observers with non-null implementations
+  // of any other observer functions, we need to pass on notifications for
+  // those, too.
+  nsAutoVoidArray mObservers;
+
 private:
 
   PRBool InZombieDocument(nsIContent *aContent);
@@ -1533,6 +1544,16 @@ private:
                         const nsString &aPluginTag,
                         nsPluginEnumCallback aCallback);
 };
+
+// Based on NS_DOCUMENT_NOTIFY_OBSERVERS
+#define NS_PRESSHELL_NOTIFY_OBSERVERS(func_, params_)                          \
+  do {                                                                        \
+    for (PRInt32 i_ = 0; i_ < mObservers.Count(); ++i_) {                     \
+      nsIDocumentObserver* obs_ = NS_STATIC_CAST(nsIDocumentObserver*,        \
+                                                 mObservers[i_]);             \
+      obs_ -> func_ params_ ;                                                 \
+    }                                                                         \
+  } while (0)
 
 #ifdef PR_LOGGING
 PRLogModuleInfo* PresShell::gLog;
@@ -5531,6 +5552,10 @@ PresShell::AttributeChanged(nsIDocument *aDocument,
   NS_PRECONDITION(!mIsDocumentGone, "Unexpected AttributeChanged");
   NS_PRECONDITION(aDocument == mDocument, "Unexpected aDocument");
 
+  NS_PRESSHELL_NOTIFY_OBSERVERS(AttributeChanged, 
+                                (aDocument, aContent, aNameSpaceID,
+                                 aAttribute, aModType));
+
   // XXXwaterson it might be more elegant to wait until after the
   // initial reflow to begin observing the document. That would
   // squelch any other inappropriate notifications as well.
@@ -5551,6 +5576,10 @@ PresShell::ContentAppended(nsIDocument *aDocument,
   NS_PRECONDITION(!mIsDocumentGone, "Unexpected ContentAppended");
   NS_PRECONDITION(aDocument == mDocument, "Unexpected aDocument");
   
+  NS_PRESSHELL_NOTIFY_OBSERVERS(ContentAppended,
+                                (aDocument, aContainer,
+                                 aNewIndexInContainer));
+
   if (!mDidInitialReflow) {
     return;
   }
@@ -5576,6 +5605,10 @@ PresShell::ContentInserted(nsIDocument* aDocument,
   NS_PRECONDITION(!mIsDocumentGone, "Unexpected ContentInserted");
   NS_PRECONDITION(aDocument == mDocument, "Unexpected aDocument");
 
+  NS_PRESSHELL_NOTIFY_OBSERVERS(ContentInserted,
+                                (aDocument, aContainer, aChild,
+                                 aIndexInContainer));
+  
   if (!mDidInitialReflow) {
     return;
   }
@@ -5595,6 +5628,10 @@ PresShell::ContentRemoved(nsIDocument *aDocument,
 {
   NS_PRECONDITION(!mIsDocumentGone, "Unexpected ContentRemoved");
   NS_PRECONDITION(aDocument == mDocument, "Unexpected aDocument");
+
+  NS_PRESSHELL_NOTIFY_OBSERVERS(ContentRemoved,
+                                (aDocument, aContainer, aChild, 
+                                 aIndexInContainer));
 
   // XXX fix for bug 304383. Remove when bug 287813 is fixed?
   if (mCaret) {
@@ -6790,6 +6827,33 @@ void
 PresShell::UnblockFlushing()
 {
   --mChangeNestCount;
+}
+
+// Based on nsDocument::AddObserver and nsDocumentObserverList::Contains
+void 
+PresShell::AddObserver(nsIDocumentObserver* aObserver)
+{
+ if (mObservers.IndexOf(aObserver) == -1) {
+    mObservers.AppendElement(aObserver);
+  }
+}
+
+// Based on nsDocumentObserverList::RemoveElement
+PRBool
+PresShell::RemoveObserver(nsIDocumentObserver* aObserver)
+{
+  PRInt32 index = mObservers.IndexOf(aObserver);
+  if (index == -1) {
+    return PR_FALSE;
+  }
+
+#ifdef DEBUG
+  PRBool removed =
+#endif
+    mObservers.RemoveElementAt(index);
+  NS_ASSERTION(removed, "How could we fail to remove by index?");
+
+  return PR_TRUE;
 }
 
 //--------------------------------------------------------

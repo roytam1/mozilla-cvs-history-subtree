@@ -775,6 +775,10 @@ public:
 
   virtual void BlockFlushing() = 0;
   virtual void UnblockFlushing() = 0;
+
+  // Added in Gecko 1.8.1.9. For internal use only.
+  virtual void AddObserver(nsIDocumentObserver* aObserver) = 0;
+  virtual PRBool RemoveObserver(nsIDocumentObserver* aObserver) = 0;
 };
 
 /**
