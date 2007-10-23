@@ -11,7 +11,6 @@ $ENV{MOZ_INSTALLER_USE_7ZIP} = '1';
 $ENV{MOZ_PACKAGE_NSIS} = '1';
 $ENV{MOZ_CRASHREPORTER_NO_REPORT} = '1';
 $ENV{NO_EM_RESTART} = '1';
-$ENV{XPCOM_DEBUG_BREAK}    = 'warn';
 
 # $ENV{MOZ_PACKAGE_MSI}
 #-----------------------------------------------------------------------------
@@ -121,6 +120,12 @@ $RenderPerformanceTestTimeout     = 1800;  # seconds
 
 #$UseMozillaProfile = 1;
 #$MozProfileName = 'default';
+
+# This sets the value of the XPCOM_DEBUG_BREAK environment variable.  We
+# default to 'warn', which suppresses the assertion dialogs on Windows
+# and gives platform parity.  Use 'abort' (or, on trunk after 2007-08-10,
+# 'stack-and-abort') for fatal assertions.
+$MozAssertBehavior = 'stack-and-abort';
 
 #- Set these to what makes sense for your system
 $Make          = 'make';       # Must be GNU make
