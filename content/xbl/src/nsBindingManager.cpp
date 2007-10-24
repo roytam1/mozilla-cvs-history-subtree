@@ -857,26 +857,28 @@ nsBindingManager::ProcessAttachedQueue()
   return NS_OK;
 }
 
+// Keep bindings and bound elements alive while executing detached handlers.
+struct BindingTableReadClosure
+{
+  nsCOMArray<nsIContent> mBoundElements;
+  nsVoidArray            mBindings;
+};
+
 PR_STATIC_CALLBACK(PLDHashOperator)
 AccumulateBindingsToDetach(nsISupports *aKey, nsXBLBinding *aBinding,
-                           void* aVoidArray)
+                           void* aClosure)
 {
-  nsVoidArray* arr = NS_STATIC_CAST(nsVoidArray*, aVoidArray);
-  // Hold an owning reference to this binding, just in case
-  if (arr->AppendElement(aBinding))
-    NS_ADDREF(aBinding);
-  return PL_DHASH_NEXT;
-}
+  BindingTableReadClosure* closure =
+    NS_STATIC_CAST(BindingTableReadClosure*, aClosure);
+  if (aBinding && closure->mBindings.AppendElement(aBinding)) {
+    if (!closure->mBoundElements.AppendObject(aBinding->GetBoundElement())) {
+      closure->mBindings.RemoveElementAt(closure->mBindings.Count() - 1);
+    } else {
+      NS_ADDREF(aBinding);
+    }
+  }
 
-PR_STATIC_CALLBACK(PRBool)
-ExecuteDetachedHandler(void* aBinding, void* aClosure)
-{
-  NS_PRECONDITION(aBinding, "Null binding in list?");
-  nsXBLBinding* binding = NS_STATIC_CAST(nsXBLBinding*, aBinding);
-  binding->ExecuteDetachedHandler();
-  // Drop our ref to the binding now
-  NS_RELEASE(binding);
-  return PR_TRUE;
+  return PL_DHASH_NEXT;
 }
 
 NS_IMETHODIMP
@@ -884,9 +886,17 @@ nsBindingManager::ExecuteDetachedHandlers()
 {
   // Walk our hashtable of bindings.
   if (mBindingTable.IsInitialized()) {
-    nsVoidArray bindingsToDetach;
-    mBindingTable.EnumerateRead(AccumulateBindingsToDetach, &bindingsToDetach);
-    bindingsToDetach.EnumerateForwards(ExecuteDetachedHandler, nsnull);
+    BindingTableReadClosure closure;
+    mBindingTable.EnumerateRead(AccumulateBindingsToDetach, &closure);
+    PRUint32 i, count = closure.mBindings.Count();
+    for (i = 0; i < count; ++i) {
+      NS_STATIC_CAST(nsXBLBinding*, closure.mBindings[i])
+        ->ExecuteDetachedHandler();
+    }
+    for (i = 0; i < count; ++i) {
+      nsXBLBinding* b = NS_STATIC_CAST(nsXBLBinding*, closure.mBindings[i]);
+      NS_RELEASE(b);
+    }
   }
   return NS_OK;
 }
