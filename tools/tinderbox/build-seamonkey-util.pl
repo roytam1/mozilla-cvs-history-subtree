@@ -3438,7 +3438,12 @@ sub BloatTest {
         send_results_to_server($leaks, "--", $leaks_testname);
     }
 
-    return 'success';
+    if ($leaks <= $Settings::LeakFailureThreshold) {
+        return 'success';
+    } else {
+        print_log "Error: Leak Test Failed: Number of leaks $leaks is greater than LeakFailureThreshold $Settings::LeakFailureThreshold";
+        return 'testfailed';
+    }
 }
 
 #
