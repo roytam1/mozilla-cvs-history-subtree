@@ -701,21 +701,42 @@ nsMenuFrame::MarkAsGenerated()
 
 struct nsASyncUngenerate : public PLEvent
 {
-  nsASyncUngenerate(nsIContent* aContent)
-    : mContent(aContent)
+  nsASyncUngenerate(nsIContent* aMenu, nsIContent* aPopup)
+    : mMenu(aMenu), mPopup(aPopup)
   {
   }
 
   void HandleEvent() {
+    nsIDocument* doc = mMenu->GetCurrentDoc();
+    if (doc) {
+      nsIPresShell* shell = doc->GetShellAt(0);
+      if (shell) {
+        nsIFrame* frame = nsnull;
+        shell->GetPrimaryFrameFor(mMenu, &frame);
+        if (frame) {
+          nsIMenuFrame* newMenu = nsnull;
+          CallQueryInterface(frame, &newMenu);
+          if (newMenu) {
+            // Menu has been recreated.
+            return;
+          }
+        }
+      }
+    }
+    nsIContent* popupParent = mPopup->GetParent();
+    if (popupParent && popupParent != mMenu) {
+      // Popup has been moved to be a child of some other element than mMenu.
+      return;
+    }
     nsAutoString genVal;
-    mContent->GetAttr(kNameSpaceID_None, nsXULAtoms::menugenerated, genVal);
+    mPopup->GetAttr(kNameSpaceID_None, nsXULAtoms::menugenerated, genVal);
     if (!genVal.IsEmpty()) {
-      mContent->UnsetAttr(kNameSpaceID_None, nsXULAtoms::menugenerated,
-                          PR_TRUE);
+      mPopup->UnsetAttr(kNameSpaceID_None, nsXULAtoms::menugenerated, PR_TRUE);
     }
   }
 
-  nsCOMPtr<nsIContent> mContent;
+  nsCOMPtr<nsIContent> mMenu;
+  nsCOMPtr<nsIContent> mPopup;
 };
 
 static void* PR_CALLBACK HandleASyncUngenerate(PLEvent* aEvent)
@@ -744,7 +765,7 @@ nsMenuFrame::UngenerateMenu()
                                           getter_AddRefs(eventQueue));
       if (eventQueue) {
         nsASyncUngenerate* ungenerate =
-          new nsASyncUngenerate(child);
+          new nsASyncUngenerate(GetContent(), child);
         if (ungenerate) {
           PL_InitEvent(ungenerate, nsnull,
                        ::HandleASyncUngenerate,
