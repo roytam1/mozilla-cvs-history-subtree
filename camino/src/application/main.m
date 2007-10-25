@@ -38,8 +38,9 @@
 
 #import <Cocoa/Cocoa.h>
 
-#include <sys/resource.h>
 #include <sys/types.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 
 static void SetupRuntimeOptions(int argc, const char *argv[])
 {
