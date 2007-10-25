@@ -362,8 +362,12 @@ nsBindingManager::SetBinding(nsIContent* aContent, nsXBLBinding* aBinding)
   // after aContent has been deleted (if aBinding is null and the content node
   // dies before we process mAttachedStack).
   nsXBLBinding* oldBinding = mBindingTable.GetWeak(aContent);
-  if (oldBinding && mAttachedStack.RemoveElement(oldBinding)) {
-    NS_RELEASE(oldBinding);
+  if (oldBinding) {
+    nsXBLBinding* oldBindingWithCtor =
+      oldBinding->GetFirstBindingWithConstructor();
+    if (oldBindingWithCtor && mAttachedStack.RemoveElement(oldBindingWithCtor)) {
+      NS_RELEASE(oldBindingWithCtor);
+    }
   }
   
   PRBool result = PR_TRUE;
@@ -1416,6 +1420,7 @@ nsBindingManager::ProcessAttachedQueueEvent::ProcessAttachedQueueEvent(nsBinding
 nsBindingManager::ProcessAttachedQueueEvent::~ProcessAttachedQueueEvent()
 {
   if (mBindingManager->mDocument) {
-    mBindingManager->mDocument->UnblockOnload();
+    nsCOMPtr<nsIDocument> doc = mBindingManager->mDocument;
+    doc->UnblockOnload();
   }
 }
