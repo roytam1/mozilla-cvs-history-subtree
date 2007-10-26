@@ -35,6 +35,8 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+#import "NSString+Utils.h"
+
 #include "nsXPIDLString.h"
 
 #include "nsIDOMWindow.h"

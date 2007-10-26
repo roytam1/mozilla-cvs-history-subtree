@@ -194,6 +194,7 @@ class nsIArray;
 
 - (NSString*)pendingURI;
 - (NSString*)currentURI;
+- (NSString*)displayTitle;
 - (NSString*)pageTitle;
 - (NSImage*)siteIcon;
 - (NSString*)statusString;

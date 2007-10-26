@@ -65,7 +65,7 @@
 
 - (NSFont*)getFontOfType:(NSString*)fontType fromDict:(NSDictionary*)regionDict;
 
-- (void)setFontSampleOfType:(NSString *)fontType withFont:(NSFont*)font andDict:(NSDictionary*)regionDict;
+- (void)setFontSampleOfType:(NSString *)fontType withFont:(NSFont*)font andDict:(NSMutableDictionary*)regionDict;
 - (void)saveFont:(NSFont*)font toDict:(NSMutableDictionary*)regionDict forType:(NSString*)fontType;
 
 - (void)updateFontSampleOfType:(NSString *)fontType;
@@ -549,11 +549,7 @@
   [self setFontSampleOfType:fontType withFont:foundFont andDict:regionDict];
 }
 
-// TODO: This code modifies sub-dictionaries of regionDict, which works only
-// because they happen to have been constructed as mutableDictionaries. This
-// API (and likely others in this class) should be re-worked to either remove or
-// enforce that assumption.
-- (void)setFontSampleOfType:(NSString *)fontType withFont:(NSFont*)font andDict:(NSDictionary*)regionDict
+- (void)setFontSampleOfType:(NSString *)fontType withFont:(NSFont*)font andDict:(NSMutableDictionary*)regionDict
 {
   NSMutableDictionary *fontTypeDict = [regionDict objectForKey:fontType];
   NSString *fontInformationFormat = @"%@, %dpt";
@@ -583,7 +579,7 @@
 
     font = [NSFont userFontOfSize:14.0];
     if (!regionDict) // Should never happen, but this would mean a displayString with no info
-      displayString = [self getLocalizedString:@"FontMissing"];
+      displayString = @"Font missing"; // XXX localize
   }
 
   // Set the font of the sample to a font that is not bold, italic etc.

@@ -36,7 +36,7 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#import "NSString+Gecko.h"
+#import "NSString+Utils.h"
 
 #import "nsAlertController.h"
 #import "CHBrowserService.h"
@@ -243,7 +243,7 @@ NS_IMETHODIMP SecurityDialogs::GetPKCS12FilePassword(nsIInterfaceRequestor *ctx,
   BOOL confirmed = NO;
   
   nsresult rv = NS_OK;
-  @try {
+  NS_DURING
     confirmed = [controller promptPassword:nil /* no parent, sucky APIs */
                                      title:NSLocalizedStringFromTable(@"PKCS12BackupRestoreTitle", @"CertificateDialogs", @"")
                                       text:NSLocalizedStringFromTable(@"PKCS12BackupRestoreMsg", @"CertificateDialogs", @"")
@@ -251,10 +251,9 @@ NS_IMETHODIMP SecurityDialogs::GetPKCS12FilePassword(nsIInterfaceRequestor *ctx,
                                   checkMsg:nil
                                 checkValue:NULL
                                    doCheck:NO];
-  }
-  @catch (id exception) {
+  NS_HANDLER
     rv = NS_ERROR_FAILURE;
-  }
+  NS_ENDHANDLER
 
   if (NS_SUCCEEDED(rv))
   {
@@ -683,7 +682,7 @@ SecurityDialogs::GetPassword(nsIInterfaceRequestor *ctx, const PRUnichar *tokenN
 
   BOOL confirmed = NO;
   nsresult rv = NS_OK;
-  @try {
+  NS_DURING
     confirmed = [controller promptPassword:nil /* no parent, sucky APIs */
                                      title:messageStr
                                       text:NSLocalizedStringFromTable(@"GetTokenPasswordMsg", @"CertificateDialogs", @"")
@@ -691,10 +690,9 @@ SecurityDialogs::GetPassword(nsIInterfaceRequestor *ctx, const PRUnichar *tokenN
                                   checkMsg:nil
                                 checkValue:NULL
                                    doCheck:NO];
-  }
-  @catch (id exception) {
+  NS_HANDLER
     rv = NS_ERROR_FAILURE;
-  }
+  NS_ENDHANDLER
 
   if (NS_SUCCEEDED(rv))
   {

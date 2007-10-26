@@ -39,7 +39,7 @@
 
 #import <Cocoa/Cocoa.h>
 
-@class BrowserTabViewItem;
+#import "BrowserTabViewItem.h"
 @class BrowserTabBarView;
 
 // notification sent when someone double-clicks on the background of the tab bar.

@@ -390,7 +390,7 @@ static inline u_int ns_get16(u_char* buffer)
             NSMutableString* userName = [NSMutableString string];
             
             BOOL confirmed = NO;
-            @try {
+            NS_DURING
               confirmed = [controller prompt:[NSApp mainWindow]
                                        title:NSLocalizedString(@"UserNameRequestTitle", @"")
                                         text:[NSString stringWithFormat:NSLocalizedString(@"UsernameRequestFormat", @""), [NSString stringWithCString:escapedTarget]]
@@ -398,9 +398,8 @@ static inline u_int ns_get16(u_char* buffer)
                                     checkMsg:@""
                                   checkValue:nsnull
                                      doCheck:NO];
-            }
-            @catch (id exception) {
-            }
+            NS_HANDLER
+            NS_ENDHANDLER
             
             if (!confirmed)
               return;   // fix

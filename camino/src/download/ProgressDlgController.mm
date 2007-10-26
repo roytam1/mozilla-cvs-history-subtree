@@ -47,7 +47,6 @@
 #import "ProgressDlgController.h"
 
 #import "PreferenceManager.h"
-#import "ProgressViewController.h"
 #import "ProgressView.h"
 
 static NSString* const kProgressWindowFrameSaveName = @"ProgressWindow";

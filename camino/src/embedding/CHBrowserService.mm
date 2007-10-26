@@ -36,7 +36,7 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#import "NSString+Gecko.h"
+#import "NSString+Utils.h"
 
 #import "CHBrowserService.h"
 #import "CHBrowserView.h"

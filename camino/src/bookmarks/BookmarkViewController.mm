@@ -45,6 +45,7 @@
 #import "BookmarkViewController.h"
 
 #import "NSArray+Utils.h"
+#import "NSString+Utils.h"
 #import "NSPasteboard+Utils.h"
 #import "NSSplitView+Utils.h"
 #import "NSView+Utils.h"
@@ -288,16 +289,16 @@ const int kOutlineViewLeftMargin = 19; // determined empirically, since it doesn
 
   [self ensureBookmarks];
 
-  // set a formatter on the shortcut column
-  BookmarkShortcutFormatter* shortcutFormatter = [[[BookmarkShortcutFormatter alloc] init] autorelease];
-  [[[mBookmarksOutlineView tableColumnWithIdentifier:@"shortcut"] dataCell] setFormatter:shortcutFormatter];
+  // set a formatter on the keyword column
+  BookmarkKeywordFormatter* keywordFormatter = [[[BookmarkKeywordFormatter alloc] init] autorelease];
+  [[[mBookmarksOutlineView tableColumnWithIdentifier:@"keyword"] dataCell] setFormatter:keywordFormatter];
 
   // these should be settable in the nib.  however, whenever
   // I try, they disappear as soon as I've saved.  Very annoying.
   [mContainersTableView setAutosaveName:@"BMContainerView"];
   [mContainersTableView setAutosaveTableColumns:YES];
 
-  [mBookmarksOutlineView setAutosaveName:@"BookmarksOutlineViewV2"];
+  [mBookmarksOutlineView setAutosaveName:@"BookmarksOutlineView"];
   [mBookmarksOutlineView setAutosaveTableColumns:YES];
 
   [mHistoryOutlineView setAutosaveName:@"HistoryOutlineView"];
@@ -392,14 +393,16 @@ const int kOutlineViewLeftMargin = 19; // determined empirically, since it doesn
 
 - (IBAction)addBookmarkSeparator:(id)aSender
 {
-  Bookmark *separator = [Bookmark separator];
+  Bookmark *aBookmark = [[Bookmark alloc] init];
+  [aBookmark setIsSeparator:YES];
 
   int index;
   BookmarkFolder *parentFolder = [self selectedItemFolderAndIndex:&index];
 
-  [parentFolder insertChild:separator atIndex:index isMove:NO];
+  [parentFolder insertChild:aBookmark atIndex:index isMove:NO];
 
-  [self revealItem:separator scrollIntoView:YES selecting:YES byExtendingSelection:NO];
+  [self revealItem:aBookmark scrollIntoView:YES selecting:YES byExtendingSelection:NO];
+  [aBookmark release];
 }
 
 - (IBAction)addBookmarkFolder:(id)aSender
@@ -985,7 +988,7 @@ const int kOutlineViewLeftMargin = 19; // determined empirically, since it doesn
   mBookmarkUpdatesDisabled = YES;
 
   // make sure we re-enable updates
-  @try {
+  NS_DURING
     NSEnumerator *enumerator = [mozBookmarkList objectEnumerator];
 
     id aKid;
@@ -1010,9 +1013,8 @@ const int kOutlineViewLeftMargin = 19; // determined empirically, since it doesn
         }
       }
     }
-  }
-  @catch (id exception) {
-  }
+  NS_HANDLER
+  NS_ENDHANDLER
 
   mBookmarkUpdatesDisabled = NO;
   [self reloadDataForItem:nil reloadChildren:YES];
@@ -1032,19 +1034,16 @@ const int kOutlineViewLeftMargin = 19; // determined empirically, since it doesn
 
   NSMutableArray* newBookmarks = [NSMutableArray arrayWithCapacity:[urls count]];
   // make sure we re-enable updates
-  @try {
+  NS_DURING
     for (unsigned int i = 0; i < [urls count]; ++i) {
-      NSString* url = [urls objectAtIndex:i];
       NSString* title = [titles objectAtIndex:i];
       if ([title length] == 0)
-        title = url;
-      Bookmark* bookmark = [Bookmark bookmarkWithTitle:title url:url];
-      [dropFolder insertChild:bookmark atIndex:(index + i) isMove:NO];
-      [newBookmarks addObject:bookmark];
+        title = [urls objectAtIndex:i];
+
+      [newBookmarks addObject:[dropFolder addBookmark:title url:[urls objectAtIndex:i] inPosition:(index + i) isSeparator:NO]];
     }
-  }
-  @catch (id exception) {
-  }
+  NS_HANDLER
+  NS_ENDHANDLER
 
   mBookmarkUpdatesDisabled = NO;
   [self reloadDataForItem:nil reloadChildren:YES];
@@ -1122,7 +1121,7 @@ const int kOutlineViewLeftMargin = 19; // determined empirically, since it doesn
   NSMutableArray* titleList = [NSMutableArray array];
   NSEnumerator* bookmarkItemsEnum = [bookmarkItemsToCopy objectEnumerator];
   BookmarkItem* curItem;
-  while ((curItem = [bookmarkItemsEnum nextObject])) {
+  while (curItem = [bookmarkItemsEnum nextObject]) {
     if ([curItem isKindOfClass:[Bookmark class]]) {
       [urlList addObject:[(Bookmark*)curItem url]];
       [titleList addObject:[(Bookmark*)curItem title]];
@@ -1233,12 +1232,18 @@ const int kOutlineViewLeftMargin = 19; // determined empirically, since it doesn
 
 - (id)tableView:(NSTableView *)tableView objectValueForTableColumn:(NSTableColumn *)tableColumn row:(int)row
 {
+  id retValue = nil;
   id item = nil;
 
   if (tableView == mContainersTableView)
     item = [mRootBookmarks objectAtIndex:row];
 
-  return [item valueForKey:[tableColumn identifier]];
+  NS_DURING
+    retValue = [item valueForKey:[tableColumn identifier]];
+  NS_HANDLER
+    retValue = nil;
+  NS_ENDHANDLER
+  return retValue;
 }
 
 - (void)tableView:(NSTableView *)inTableView willDisplayCell:(id)inCell forTableColumn:(NSTableColumn *)inTableColumn row:(int)inRowIndex
@@ -1444,11 +1449,14 @@ const int kOutlineViewLeftMargin = 19; // determined empirically, since it doesn
 - (id)outlineView:(NSOutlineView *)outlineView objectValueForTableColumn:(NSTableColumn *)tableColumn byItem:(id)item
 {
   id retValue = nil;
-  if ([item isKindOfClass:[BookmarkFolder class]] && [[tableColumn identifier] isEqualToString:@"url"])
-    retValue = [BookmarkViewController greyStringWithItemCount:[item count]];
-  else
+  NS_DURING
     retValue = [item valueForKey:[tableColumn identifier]];
-
+  NS_HANDLER
+    if ([item isKindOfClass:[BookmarkFolder class]] && [[tableColumn identifier] isEqualToString:@"url"])
+      retValue = [BookmarkViewController greyStringWithItemCount:[item count]];
+    else
+      retValue = nil;
+  NS_ENDHANDLER
   return retValue;
 }
 
@@ -1474,9 +1482,11 @@ const int kOutlineViewLeftMargin = 19; // determined empirically, since it doesn
 
 - (void)outlineView:(NSOutlineView *)outlineView setObjectValue:(id)object forTableColumn:(NSTableColumn *)tableColumn byItem:(id)item
 {
-  // The only time this wouldn't work is the url column for folders, but that
-  // cell isn't editable, so if we are here it's always safe.
-  [item takeValue:object forKey:[tableColumn identifier]];
+  NS_DURING
+    [item takeValue:object forKey:[tableColumn identifier]];
+  NS_HANDLER
+    return;
+  NS_ENDHANDLER
 }
 
 - (BOOL)outlineView:(NSOutlineView *)outlineView writeItems:(NSArray*)items toPasteboard:(NSPasteboard*)pboard
@@ -1740,8 +1750,8 @@ const int kOutlineViewLeftMargin = 19; // determined empirically, since it doesn
     case kArrangeBookmarksByTitleMask:
       return @selector(compareTitle:sortDescending:);
 
-    case kArrangeBookmarksByShortcutMask:
-      return @selector(compareShortcut:sortDescending:);
+    case kArrangeBookmarksByKeywordMask:
+      return @selector(compareKeyword:sortDescending:);
 
     case kArrangeBookmarksByDescriptionMask:
       return @selector(compareDescription:sortDescending:);
@@ -1914,7 +1924,7 @@ const int kOutlineViewLeftMargin = 19; // determined empirically, since it doesn
   const unsigned int kVisibleAttributeChangedFlags = (kBookmarkItemTitleChangedMask |
                                                       kBookmarkItemIconChangedMask |
                                                       kBookmarkItemURLChangedMask |
-                                                      kBookmarkItemShortcutChangedMask |
+                                                      kBookmarkItemKeywordChangedMask |
                                                       kBookmarkItemDescriptionChangedMask |
                                                       kBookmarkItemLastVisitChangedMask |
                                                       kBookmarkItemStatusChangedMask);

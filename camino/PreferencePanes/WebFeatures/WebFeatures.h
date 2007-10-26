@@ -41,8 +41,7 @@
 #import <Cocoa/Cocoa.h>
 #import <PreferencePanes/NSPreferencePane.h>
 #import "PreferencePaneBase.h"
-
-@class ExtendedTableView;
+#import "ExtendedTableView.h"
 
 class nsIPref;
 class nsIPermissionManager;

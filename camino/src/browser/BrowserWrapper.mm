@@ -34,7 +34,8 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
+ 
+#import "NSString+Utils.h"
 #import "NSView+Utils.h"
 #import "ImageAdditions.h"
 
@@ -50,12 +51,12 @@
 #import "KeychainService.h"
 #import "AutoCompleteTextField.h"
 #import "RolloverImageButton.h"
-#import "CHPermissionManager.h"
 
 #include "CHBrowserService.h"
 #include "ContentClickListener.h"
 
 #include "nsCOMPtr.h"
+#include "nsIServiceManager.h"
 
 #ifdef MOZILLA_1_8_BRANCH
 #include "nsIArray.h"
@@ -79,6 +80,7 @@
 #include "nsIDOMEventReceiver.h"
 #include "nsIWebProgressListener.h"
 #include "nsIBrowserDOMWindow.h"
+#include "nsIPermissionManager.h"
 #include "nsIScriptSecurityManager.h"
 
 class nsIDOMPopupBlockedEvent;
@@ -335,9 +337,14 @@ enum StatusPriority {
   return mIsBusy;
 }
 
-- (NSString*)pageTitle
+- (NSString*)displayTitle
 {
   return mDisplayTitle;
+}
+
+- (NSString*)pageTitle
+{
+  return [mBrowserView pageTitle];
 }
 
 - (NSImage*)siteIcon
@@ -520,7 +527,7 @@ enum StatusPriority {
   [(BrowserTabViewItem*)mTabItem stopLoadAnimation];
 
   NSString *urlString = [self currentURI];
-  NSString *titleString = [mBrowserView pageTitle];
+  NSString *titleString = [self pageTitle];
   
   // If we never got a page title, then the tab title will be stuck at "Loading..."
   // so be sure to set the title here
@@ -821,31 +828,6 @@ enum StatusPriority {
   [[mWindow delegate] onShowContextMenu:flags domEvent:aEvent domNode:aNode];
 }
 
-// -deleteBackward:
-//
-// map backspace key to Back according to browser.backspace_action pref
-//
-- (void)deleteBackward:(id)sender
-{
-  // there are times when backspaces can seep through from IME gone wrong. As a 
-  // workaround until we can get them all fixed, ignore backspace when the
-  // focused widget is a text field or plugin
-  if ([mBrowserView isTextFieldFocused] || [mBrowserView isPluginFocused])
-    return;
-
-  int backspaceAction = [[PreferenceManager sharedInstance] getIntPref:"browser.backspace_action"
-                                                           withSuccess:NULL];
-
-  if (backspaceAction == 0) { // map to back/forward
-    if ([[NSApp currentEvent] modifierFlags] & NSShiftKeyMask)
-      [mBrowserView goForward];
-    else
-      [mBrowserView goBack];
-  }
-  // Any other value means no action for backspace. We deliberately don't
-  // support 1 (PgUp/PgDn) as it has no precedent on Mac OS.
-}
-
 -(NSMenu*)getContextMenu
 {
   return [[mWindow delegate] getContextMenu];
@@ -960,18 +942,12 @@ enum StatusPriority {
   CHBrowserView* viewToUse = mBrowserView;
   int openNewWindow = [[PreferenceManager sharedInstance] getIntPref:"browser.link.open_newwindow" withSuccess:NULL];
   if (openNewWindow == nsIBrowserDOMWindow::OPEN_NEWTAB) {
-    // If browser.tabs.loadDivertedInBackground isn't set, we decide whether or
-    // not to open the new tab in the background based on whether we're the fg
-    // tab. If we are, we assume the user wants to see the new tab because it's 
-    // contextually relevant. If this tab is in the bg, the user doesn't want to
-    // be bothered with a bg tab throwing things up in their face. We know
+    // we decide whether or not to open the new tab in the background based on
+    // if we're the fg tab. If we are, we assume the user wants to see the new tab
+    // because it's contextually relevat. If this tab is in the bg, the user doesn't
+    // want to be bothered with a bg tab throwing things up in their face. We know
     // we're in the bg if our delegate is nil.
-    BOOL loadInBackground;
-    if ([[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.loadDivertedInBackground" withSuccess:NULL])
-      loadInBackground = YES;
-    else
-      loadInBackground = (mDelegate == nil);
-    viewToUse = [mCreateDelegate createNewTabBrowser:loadInBackground];
+    viewToUse = [mCreateDelegate createNewTabBrowser:(mDelegate == nil)];
   }
 
   return viewToUse;
@@ -1185,9 +1161,15 @@ enum StatusPriority {
 
 - (BOOL)popupsAreBlacklistedForURL:(NSString*)inURL
 {
-  int policy = [[CHPermissionManager permissionManager] policyForURI:inURL
-                                                                type:CHPermissionTypePopup];
-  return (policy == CHPermissionDeny);
+  nsCOMPtr<nsIURI> uri;
+  NS_NewURI(getter_AddRefs(uri), [inURL UTF8String]);
+  nsCOMPtr<nsIPermissionManager> pm(do_GetService(NS_PERMISSIONMANAGER_CONTRACTID));
+  if (pm && uri) {
+    PRUint32 permission;
+    pm->TestPermission(uri, "popup", &permission);
+    return (permission == nsIPermissionManager::DENY_ACTION);
+  }
+  return NO;
 }
 
 //

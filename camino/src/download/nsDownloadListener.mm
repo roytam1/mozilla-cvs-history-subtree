@@ -37,7 +37,7 @@
  *
  * ***** END LICENSE BLOCK ***** */
  
-#import "NSString+Gecko.h"
+#import "NSString+Utils.h"
 
 #include "nsDownloadListener.h"
 

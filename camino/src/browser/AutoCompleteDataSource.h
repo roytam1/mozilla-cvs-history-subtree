@@ -39,6 +39,7 @@
 
 #import <AppKit/AppKit.h>
 
+@class AutoCompleteTextField;
 class nsIAutoCompleteResults;
 
 @interface AutoCompleteDataSource : NSObject

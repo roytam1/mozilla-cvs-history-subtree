@@ -21,7 +21,6 @@
  *
  * Contributor(s):
  *   David Haas <haasd@cae.wisc.edu>
- *   Stuart Morgan <stuart.morgan@alumni.case.edu>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -101,10 +100,12 @@ static int BookmarkItemSort(id firstItem, id secondItem, void* context)
 // ways to add a new bookmark
 - (BOOL)addBookmarkFromNativeDict:(NSDictionary *)aDict;
 - (BOOL)addBookmarkFromSafariDict:(NSDictionary *)aDict;
+- (BOOL)addBookmarkFromXML:(CFXMLTreeRef)aTreeRef;
 
 // ways to add a new bookmark folder
 - (BOOL)addBookmarkFolderFromNativeDict:(NSDictionary *)aDict; //read in - adds sequentially
 - (BOOL)addBookmarkFolderFromSafariDict:(NSDictionary *)aDict;
+- (BOOL)addBookmarkFolderFromXML:(CFXMLTreeRef)aTreeRef settingToolbar:(BOOL)setupToolbar;
 
 // deletes the bookmark or bookmark array
 - (BOOL)deleteBookmark:(Bookmark *)childBookmark;
@@ -338,7 +339,7 @@ static int BookmarkItemSort(id firstItem, id secondItem, void* context)
 
 - (BOOL)isSpecial
 {
-  return ([self identifier] != nil);
+  return ([self isToolbar] || [self isRoot] || [self isSmartFolder]);
 }
 
 - (BOOL)isToolbar
@@ -480,10 +481,6 @@ static int BookmarkItemSort(id firstItem, id secondItem, void* context)
 
 - (void)insertChild:(BookmarkItem *)aChild atIndex:(unsigned)aPosition isMove:(BOOL)inIsMove
 {
-  // Ensure that only folders are added to the root.
-  if ([self isRoot] && ![aChild isKindOfClass:[BookmarkFolder class]])
-    return;
-
   [aChild setParent:self];
   unsigned insertPoint = [mChildArray count];
   if (insertPoint > aPosition)
@@ -621,41 +618,73 @@ static int BookmarkItemSort(id firstItem, id secondItem, void* context)
 // Adding bookmarks
 //
 
+// XXX fix to nicely autorelease etc.
 - (Bookmark *)addBookmark
 {
-  if ([self isRoot])
-    return nil;
-
-  Bookmark* theBookmark = [[[Bookmark alloc] init] autorelease];
-  [self appendChild:theBookmark];
-  return theBookmark;
+  if (![self isRoot]) {
+    Bookmark* theBookmark = [[Bookmark alloc] init];
+    [self appendChild:theBookmark];
+    [theBookmark release]; //retained on insert
+    return theBookmark;
+  }
+  return nil;
 }
 
 // adding from native plist
 - (BOOL)addBookmarkFromNativeDict:(NSDictionary *)aDict
 {
-  if ([self isRoot])
-    return NO;
-
-  Bookmark* theBookmark = [Bookmark bookmarkWithNativeDictionary:aDict];
-  if (!theBookmark)
-    return NO;
-
-  [self appendChild:theBookmark];
-  return YES;
+  return [[self addBookmark] readNativeDictionary:aDict];
 }
 
 - (BOOL)addBookmarkFromSafariDict:(NSDictionary *)aDict
 {
-  if ([self isRoot])
-    return NO;
+  return [[self addBookmark] readSafariDictionary:aDict];
+}
 
-  Bookmark* theBookmark = [Bookmark bookmarkWithSafariDictionary:aDict];
-  if (!theBookmark)
-    return NO;
+// add from camino xml
+- (BOOL)addBookmarkFromXML:(CFXMLTreeRef)aTreeRef
+{
+  return [[self addBookmark] readCaminoXML:aTreeRef settingToolbar:NO];
+}
 
-  [self appendChild:theBookmark];
-  return YES;
+- (Bookmark *)addBookmark:(NSString *)aTitle url:(NSString *)aURL inPosition:(unsigned)aIndex isSeparator:(BOOL)aBool
+{
+  if ([aTitle length] == 0)
+    aTitle = aURL;
+  return [self addBookmark:aTitle
+                inPosition:aIndex
+                   keyword:@""
+                       url:aURL
+               description:@""
+                 lastVisit:[NSDate date]
+                    status:kBookmarkOKStatus
+               isSeparator:aBool];
+}
+
+// full bodied addition
+- (Bookmark *)addBookmark:(NSString *)aTitle
+               inPosition:(unsigned)aPosition
+                  keyword:(NSString *)aKeyword
+                      url:(NSString *)aURL
+              description:(NSString *)aDescription
+                lastVisit:(NSDate *)aDate
+                   status:(unsigned)aStatus
+              isSeparator:(BOOL)aSeparator
+{
+  if (![self isRoot]) {
+    Bookmark *theBookmark = [[Bookmark alloc] init];
+    [theBookmark setTitle:aTitle];
+    [theBookmark setKeyword:aKeyword];
+    [theBookmark setUrl:aURL];
+    [theBookmark setItemDescription:aDescription];
+    [theBookmark setLastVisit:aDate];
+    [theBookmark setStatus:aStatus];
+    [theBookmark setIsSeparator:aSeparator];
+    [self insertChild:theBookmark atIndex:aPosition isMove:NO];
+    [theBookmark release];
+    return theBookmark;
+  }
+  return nil;
 }
 
 //
@@ -679,6 +708,11 @@ static int BookmarkItemSort(id firstItem, id secondItem, void* context)
 - (BOOL)addBookmarkFolderFromSafariDict:(NSDictionary *)aDict
 {
   return [[self addBookmarkFolder] readSafariDictionary:aDict];
+}
+
+- (BOOL)addBookmarkFolderFromXML:(CFXMLTreeRef)aTreeRef settingToolbar:(BOOL)setupToolbar
+{
+  return [[self addBookmarkFolder] readCaminoXML:aTreeRef settingToolbar:setupToolbar];
 }
 
 // normal add while programming running
@@ -945,15 +979,15 @@ static int BookmarkItemSort(id firstItem, id secondItem, void* context)
 }
 
 //
-// searching/shortcut processing
+// searching/keywords processing
 //
-- (NSArray*)resolveShortcut:(NSString *)shortcut withArgs:(NSString *)args
+- (NSArray*)resolveKeyword:(NSString *)keyword withArgs:(NSString *)args
 {
-  if (!shortcut)
+  if (!keyword)
     return nil;
 
   // see if it's us
-  if ([[self shortcut] caseInsensitiveCompare:shortcut] == NSOrderedSame) {
+  if ([[self keyword] caseInsensitiveCompare:keyword] == NSOrderedSame) {
     NSMutableArray *urlArray = (NSMutableArray *)[self childURLs];
     int i, j = [urlArray count];
     for (i = 0; i < j; i++) {
@@ -967,12 +1001,12 @@ static int BookmarkItemSort(id firstItem, id secondItem, void* context)
   id aKid;
   while ((aKid = [enumerator nextObject])) {
     if ([aKid isKindOfClass:[Bookmark class]]) {
-      if ([[aKid shortcut] caseInsensitiveCompare:shortcut] == NSOrderedSame)
+      if ([[aKid keyword] caseInsensitiveCompare:keyword] == NSOrderedSame)
         return [NSArray arrayWithObject:[self expandURL:[aKid url] withString:args]];
     }
     else if ([aKid isKindOfClass:[BookmarkFolder class]]) {
       // recurse into sub-folders
-      NSArray *childArray = [aKid resolveShortcut:shortcut withArgs:args];
+      NSArray *childArray = [aKid resolveKeyword:keyword withArgs:args];
       if (childArray)
         return childArray;
     }
@@ -999,9 +1033,9 @@ static int BookmarkItemSort(id firstItem, id secondItem, void* context)
   return url;
 }
 
-- (NSArray*)bookmarksWithString:(NSString*)searchString inFieldWithTag:(int)tag
+- (NSSet*)bookmarksWithString:(NSString *)searchString inFieldWithTag:(int)tag
 {
-  NSMutableArray *matchingBookmarks = [NSMutableArray array];
+  NSMutableSet *foundSet = [NSMutableSet set];
 
   // see if our kids match
   NSEnumerator *enumerator = [[self childArray] objectEnumerator];
@@ -1009,15 +1043,15 @@ static int BookmarkItemSort(id firstItem, id secondItem, void* context)
   while ((childItem = [enumerator nextObject])) {
     if ([childItem isKindOfClass:[Bookmark class]]) {
       if ([childItem matchesString:searchString inFieldWithTag:tag])
-        [matchingBookmarks addObject:childItem];
+        [foundSet addObject:childItem];
     }
     else if ([childItem isKindOfClass:[BookmarkFolder class]]) {
-      // recurse, adding found items to the existing matches
-      NSArray *matchingDescendents = [childItem bookmarksWithString:searchString inFieldWithTag:tag];
-      [matchingBookmarks addObjectsFromArray:matchingDescendents];
+      // recurse, adding found items to the existing set
+      NSSet *childFoundSet = [childItem bookmarksWithString:searchString inFieldWithTag:tag];
+      [foundSet unionSet:childFoundSet];
     }
   }
-  return matchingBookmarks;
+  return foundSet;
 }
 
 - (BOOL)containsChildItem:(BookmarkItem*)inItem
@@ -1095,7 +1129,7 @@ static int BookmarkItemSort(id firstItem, id secondItem, void* context)
 {
   [self setTitle:[aDict objectForKey:BMTitleKey]];
   [self setItemDescription:[aDict objectForKey:BMFolderDescKey]];
-  [self setShortcut:[aDict objectForKey:BMFolderShortcutKey]];
+  [self setKeyword:[aDict objectForKey:BMFolderKeywordKey]];
   [self setUUID:[aDict objectForKey:BMUUIDKey]];
 
   unsigned int flag = [[aDict objectForKey:BMFolderTypeKey] unsignedIntValue];
@@ -1141,6 +1175,61 @@ static int BookmarkItemSort(id firstItem, id secondItem, void* context)
 
   if ([[aDict objectForKey:SafariAutoTab] boolValue])
     [self setIsGroup:YES];
+
+  return success;
+}
+
+- (BOOL)readCaminoXML:(CFXMLTreeRef)aTreeRef settingToolbar:(BOOL)setupToolbar
+{
+  BOOL success = YES;
+  CFXMLNodeRef myNode = CFXMLTreeGetNode(aTreeRef);
+  if (myNode) {
+    // Process our info - we load info into tempMuteString,
+    // then send a cleaned up version to temp string, which gets
+    // dropped into appropriate variable
+    if (CFXMLNodeGetTypeCode(myNode) == kCFXMLNodeTypeElement) {
+      CFXMLElementInfo* elementInfoPtr = (CFXMLElementInfo*)CFXMLNodeGetInfoPtr(myNode);
+      if (elementInfoPtr) {
+        NSDictionary* attribDict = (NSDictionary*)elementInfoPtr->attributes;
+        [self setTitle:[[attribDict objectForKey:CaminoNameKey] stringByRemovingAmpEscapes]];
+        [self setItemDescription:[[attribDict objectForKey:CaminoDescKey] stringByRemovingAmpEscapes]];
+
+        if ([[attribDict objectForKey:CaminoTypeKey] isEqualToString:CaminoToolbarKey] && setupToolbar) {
+          // we move the toolbar folder to its correct location later
+          [self setIsToolbar:YES];
+        }
+
+        if ([[attribDict objectForKey:CaminoGroupKey] isEqualToString:CaminoTrueKey])
+          [self setIsGroup:YES];
+
+        // Process children
+        unsigned int i = 0;
+        CFXMLTreeRef childTreeRef;
+        while ((childTreeRef = CFTreeGetChildAtIndex(aTreeRef, i++)) && success) {
+          CFXMLNodeRef childNodeRef = CFXMLTreeGetNode(childTreeRef);
+          if (childNodeRef) {
+            NSString *tempString = (NSString *)CFXMLNodeGetString(childNodeRef);
+            if ([tempString isEqualToString:CaminoBookmarkKey])
+              success = [self addBookmarkFromXML:childTreeRef];
+            else if ([tempString isEqualToString:CaminoFolderKey])
+              success = [self addBookmarkFolderFromXML:childTreeRef settingToolbar:setupToolbar];
+          }
+        }
+      }
+      else  {
+        NSLog(@"BookmarkFolder: readCaminoXML- elementInfoPtr null - children not imported");
+        success = NO;
+      }
+    }
+    else {
+      NSLog(@"BookmarkFolder: readCaminoXML - should be, but isn't a CFXMLNodeTypeElement");
+      success = NO;
+    }
+  }
+  else {
+    NSLog(@"BookmarkFolder: readCaminoXML - myNode null - bookmark not imported");
+    success = NO;
+  }
 
   return success;
 }
@@ -1204,8 +1293,8 @@ static int BookmarkItemSort(id firstItem, id secondItem, void* context)
   if ([[self itemDescription] length])
     [folderDict setObject:[self itemDescription] forKey:BMFolderDescKey];
 
-  if ([[self shortcut] length])
-    [folderDict setObject:[self shortcut] forKey:BMFolderShortcutKey];
+  if ([[self keyword] length])
+    [folderDict setObject:[self keyword] forKey:BMFolderKeywordKey];
 
   return folderDict;
 }
@@ -1315,4 +1404,336 @@ static int BookmarkItemSort(id firstItem, id secondItem, void* context)
   return [htmlString stringByAppendingString:[NSString stringWithFormat:@"%@</DL><p>\n", padString]];
 }
 
-@end
+#pragma mark -
+
+//
+// Scripting methods
+//
+- (NSScriptObjectSpecifier *)objectSpecifier
+{
+  id parent = [self parent];
+  NSScriptObjectSpecifier *containerRef = [parent objectSpecifier];
+  NSScriptClassDescription *arrayScriptClassDesc = (NSScriptClassDescription *)[NSClassDescription classDescriptionForClass:[BookmarkFolder class]];
+  if ([parent isKindOfClass:[BookmarkFolder class]]) {
+    unsigned index = [[parent childArray] indexOfObjectIdenticalTo:self];
+    if (index != NSNotFound) {
+      // need to get the appropriate class description
+      return [[[NSIndexSpecifier allocWithZone:[self zone]] initWithContainerClassDescription:arrayScriptClassDesc
+                                                                           containerSpecifier:containerRef
+                                                                                          key:@"childArray"
+                                                                                        index:index] autorelease];
+    }
+    return nil;
+  }
+  // root bookmark
+  return [[[NSPropertySpecifier allocWithZone:[self zone]] initWithContainerSpecifier:containerRef key:@"rootArray"] autorelease];
+}
+
+- (NSArray *)folderItemsWithClass:(Class)theClass
+{
+  NSArray *kiddies = [self childArray];
+  NSMutableArray *result = [NSMutableArray array];
+  unsigned i, c = [kiddies count];
+  id curItem;
+  for (i = 0; i < c; i++) {
+    curItem = [kiddies objectAtIndex:i];
+    if ([curItem isKindOfClass:theClass]) {
+      [result addObject:curItem];
+    }
+  }
+  return result;
+}
+
+// both childBookmarks and childFolders are read-only functions.
+- (NSArray *)childBookmarks
+{
+  return [self folderItemsWithClass:[Bookmark class]];
+}
+
+- (NSArray *)childFolders
+{
+  return [self folderItemsWithClass:[BookmarkFolder class]];
+}
+
+// all the insert, add, remove, replace methods for the 3 sets of items in a bookmark array
+- (void)insertInChildArray:(BookmarkItem *)aItem atIndex:(unsigned)aIndex
+{
+  [self insertChild:aItem atIndex:aIndex isMove:NO];
+}
+
+- (void)addInChildArray:(BookmarkItem *)aItem
+{
+  [self appendChild:aItem];
+}
+
+- (void)removeFromChildArrayAtIndex:(unsigned)aIndex
+{
+  BookmarkItem* aKid = [[self childArray] objectAtIndex:aIndex];
+  [self deleteChild:aKid];
+}
+
+- (void)replaceInChildArray:(BookmarkItem *)aItem atIndex:(unsigned)aIndex
+{
+  [self removeFromChildArrayAtIndex:aIndex];
+  [self insertChild:aItem atIndex:aIndex isMove:NO];
+}
+
+//
+// child bookmark stuff
+//
+- (void)insertInChildBookmarks:(Bookmark *)aItem atIndex:(unsigned)aIndex
+{
+  NSArray *bookmarkArray = [self childBookmarks];
+  Bookmark *aBookmark;
+  unsigned realIndex;
+  if (aIndex < [bookmarkArray count])  {
+    aBookmark = [bookmarkArray objectAtIndex:aIndex];
+    realIndex = [[self childArray] indexOfObject:aBookmark];
+  }
+  else {
+    aBookmark = [bookmarkArray lastObject];
+    realIndex = 1 + [[self childArray] indexOfObject:aBookmark];
+  }
+  [self insertChild:aItem atIndex:realIndex isMove:NO];
+}
+
+- (void)addInChildBookmarks:(Bookmark *)aItem
+{
+  NSArray *bookmarkArray = [self childBookmarks];
+  Bookmark *aBookmark = [bookmarkArray lastObject];
+  unsigned index = [[self childArray] indexOfObject:aBookmark];
+  [self insertChild:aItem atIndex:++index isMove:NO];
+}
+
+- (void)removeFromChildBookmarksAtIndex:(unsigned)aIndex
+{
+  Bookmark* aKid = [[self childBookmarks] objectAtIndex:aIndex];
+  [self deleteChild:aKid];
+}
+
+- (void)replaceInChildBookmarks:(Bookmark *)aItem atIndex:(unsigned)aIndex
+{
+  [self removeFromChildBookmarksAtIndex:aIndex];
+  [self insertInChildBookmarks:aItem atIndex:aIndex];
+}
+
+//
+// child bookmark folder stuff
+//
+- (void)insertInChildFolders:(BookmarkFolder *)aItem atIndex:(unsigned)aIndex
+{
+  NSArray *folderArray = [self childFolders];
+  BookmarkFolder *aFolder;
+  unsigned realIndex;
+  if (aIndex < [folderArray count]) {
+    aFolder = [folderArray objectAtIndex:aIndex];
+    realIndex = [[self childArray] indexOfObject:aFolder];
+  }
+  else {
+    aFolder = [folderArray lastObject];
+    realIndex = 1 + [[self childArray] indexOfObject:aFolder];
+  }
+  [self insertChild:aItem atIndex:realIndex isMove:NO];
+}
+
+- (void)addInChildFolders:(BookmarkFolder *)aItem
+{
+  NSArray *folderArray = [self childFolders];
+  BookmarkFolder *aFolder = [folderArray lastObject];
+  unsigned index = [[self childArray] indexOfObject:aFolder];
+  [self insertChild:aItem atIndex:++index isMove:NO];
+}
+
+- (void)removeFromChildFoldersAtIndex:(unsigned)aIndex
+{
+  BookmarkFolder* aKid = [[self childFolders] objectAtIndex:aIndex];
+  [self deleteChild:aKid];
+}
+
+- (void)replaceInChildFolders:(BookmarkFolder *)aItem atIndex:(unsigned)aIndex
+{
+  [self removeFromChildFoldersAtIndex:aIndex];
+  [self insertInChildFolders:aItem atIndex:aIndex];
+}
+
+//
+// These next 3 methods swiped almost exactly out of sketch.app by apple.
+// look there for an explanation if you're confused.
+//
+- (NSArray *)indicesOfObjectsByEvaluatingObjectSpecifier:(NSScriptObjectSpecifier *)specifier
+{
+  if ([specifier isKindOfClass:[NSRangeSpecifier class]])
+    return [self indicesOfObjectsByEvaluatingRangeSpecifier:(NSRangeSpecifier *)specifier];
+  else if ([specifier isKindOfClass:[NSRelativeSpecifier class]])
+    return [self indicesOfObjectsByEvaluatingRelativeSpecifier:(NSRelativeSpecifier *)specifier];
+  // If we didn't handle it, return nil so that the default object specifier evaluation will do it.
+  return nil;
+}
+
+- (NSArray *)indicesOfObjectsByEvaluatingRelativeSpecifier:(NSRelativeSpecifier *)relSpec
+{
+  NSString *key = [relSpec key];
+  if ([key isEqualToString:@"childBookmarks"] ||
+      [key isEqualToString:@"childArray"] ||
+      [key isEqualToString:@"childFolders"])
+  {
+    NSScriptObjectSpecifier *baseSpec = [relSpec baseSpecifier];
+    NSString *baseKey = [baseSpec key];
+    NSArray *kiddies = [self childArray];
+    NSRelativePosition relPos = [relSpec relativePosition];
+    if (baseSpec == nil)
+      return nil;
+
+    if ([kiddies count] == 0)
+      return [NSArray array];
+
+    if ([baseKey isEqualToString:@"childBookmarks"] ||
+        [baseKey isEqualToString:@"childArray"] ||
+        [baseKey isEqualToString:@"childFolders"])
+    {
+      unsigned baseIndex;
+      id baseObject = [baseSpec objectsByEvaluatingWithContainers:self];
+      if ([baseObject isKindOfClass:[NSArray class]]) {
+        int baseCount = [baseObject count];
+        if (baseCount == 0)
+          baseObject = nil;
+        else {
+          if (relPos == NSRelativeBefore)
+            baseObject = [baseObject objectAtIndex:0];
+          else
+            baseObject = [baseObject objectAtIndex:(baseCount-1)];
+        }
+      }
+
+      if (!baseObject)
+        // Oops.  We could not find the base object.
+        return nil;
+
+      baseIndex = [kiddies indexOfObjectIdenticalTo:baseObject];
+      if (baseIndex == NSNotFound)
+        // Oops.  We couldn't find the base object in the child array.  This should not happen.
+        return nil;
+
+      NSMutableArray *result = [NSMutableArray array];
+      BOOL keyIsArray = [key isEqualToString:@"childArray"];
+      NSArray *relKeyObjects = (keyIsArray ? nil : [self valueForKey:key]);
+      id curObj;
+      unsigned curKeyIndex, kiddiesCount = [kiddies count];
+      if (relPos == NSRelativeBefore)
+          baseIndex--;
+      else
+          baseIndex++;
+
+      while ((baseIndex >= 0) && (baseIndex < kiddiesCount)) {
+        if (keyIsArray) {
+          [result addObject:[NSNumber numberWithInt:baseIndex]];
+          break;
+        }
+        else {
+          curObj = [kiddies objectAtIndex:baseIndex];
+          curKeyIndex = [relKeyObjects indexOfObjectIdenticalTo:curObj];
+          if (curKeyIndex != NSNotFound) {
+            [result addObject:[NSNumber numberWithInt:curKeyIndex]];
+            break;
+          }
+        }
+
+        if (relPos == NSRelativeBefore)
+          baseIndex--;
+        else
+          baseIndex++;
+      }
+      return result;
+    }
+  }
+  return nil;
+}
+
+- (NSArray *)indicesOfObjectsByEvaluatingRangeSpecifier:(NSRangeSpecifier *)rangeSpec
+{
+  NSString *key = [rangeSpec key];
+  if ([key isEqualToString:@"childBookmarks"] ||
+      [key isEqualToString:@"childArray"] ||
+      [key isEqualToString:@"childFolders"])
+  {
+    NSScriptObjectSpecifier *startSpec = [rangeSpec startSpecifier];
+    NSScriptObjectSpecifier *endSpec = [rangeSpec endSpecifier];
+    NSString *startKey = [startSpec key];
+    NSString *endKey = [endSpec key];
+    NSArray *kiddies = [self childArray];
+
+    if ((startSpec == nil) && (endSpec == nil))
+      return nil;
+    if ([kiddies count] == 0)
+      return [NSArray array];
+
+    if ((!startSpec || [startKey isEqualToString:@"childBookmarks"] ||
+         [startKey isEqualToString:@"childArray"] || [startKey isEqualToString:@"childFolders"]) &&
+        (!endSpec || [endKey isEqualToString:@"childBookmarks"] || [endKey isEqualToString:@"childArray"] ||
+         [endKey isEqualToString:@"childFolders"]))
+    {
+      unsigned startIndex;
+      unsigned endIndex;
+      if (startSpec) {
+        id startObject = [startSpec objectsByEvaluatingSpecifier];
+        if ([startObject isKindOfClass:[NSArray class]]) {
+          if ([startObject count] == 0)
+            startObject = nil;
+          else
+            startObject = [startObject objectAtIndex:0];
+        }
+        if (!startObject)
+          return nil;
+        startIndex = [kiddies indexOfObjectIdenticalTo:startObject];
+        if (startIndex == NSNotFound)
+          return nil;
+      }
+      else
+        startIndex = 0;
+
+      if (endSpec) {
+        id endObject = [endSpec objectsByEvaluatingSpecifier];
+        if ([endObject isKindOfClass:[NSArray class]]) {
+          unsigned endObjectsCount = [endObject count];
+          if (endObjectsCount == 0)
+            endObject = nil;
+          else
+            endObject = [endObject objectAtIndex:(endObjectsCount-1)];
+        }
+        if (!endObject)
+          return nil;
+        endIndex = [kiddies indexOfObjectIdenticalTo:endObject];
+        if (endIndex == NSNotFound)
+          return nil;
+      }
+      else
+        endIndex = [kiddies count] - 1;
+
+      if (endIndex < startIndex) {
+        int temp = endIndex;
+        endIndex = startIndex;
+        startIndex = temp;
+      }
+
+      NSMutableArray *result = [NSMutableArray array];
+      BOOL keyIsArray = [key isEqual:@"childArray"];
+      NSArray *rangeKeyObjects = (keyIsArray ? nil : [self valueForKey:key]);
+      id curObj;
+      unsigned curKeyIndex, i;
+      for (i = startIndex; i <= endIndex; i++) {
+        if (keyIsArray)
+          [result addObject:[NSNumber numberWithInt:i]];
+        else {
+          curObj = [kiddies objectAtIndex:i];
+          curKeyIndex = [rangeKeyObjects indexOfObjectIdenticalTo:curObj];
+          if (curKeyIndex != NSNotFound)
+            [result addObject:[NSNumber numberWithInt:curKeyIndex]];
+        }
+      }
+      return result;
+    }
+  }
+  return nil;
+}
+
+@end;
