@@ -3358,7 +3358,7 @@ enum BWCOpenDest {
       if (loadHomepage)
         urlToLoad = [[PreferenceManager sharedInstance] homePageUsingStartPage:NO];
 
-      focusURLBar = locationBarVisible && [MainController isBlankURL:urlToLoad];      
+      focusURLBar = locationBarVisible && (!urlToLoad || [urlToLoad isBlankURL]);
 
       [newView loadURI:urlToLoad referrer:nil flags:NSLoadFlagsNone focusContent:!focusURLBar allowPopups:NO];
     }
@@ -3516,7 +3516,7 @@ enum BWCOpenDest {
 // this should really be a class method
 -(BrowserWindowController*)openNewWindowWithURL:(NSString*)aURLSpec referrer:(NSString*)aReferrer loadInBackground:(BOOL)aLoadInBG allowPopups:(BOOL)inAllowPopups
 {
-  BOOL focusURLBar = [MainController isBlankURL:aURLSpec];
+  BOOL focusURLBar = !aURLSpec || [aURLSpec isBlankURL];
   BrowserWindowController* browser = [self openNewWindow:aLoadInBG];
   [browser loadURL:aURLSpec referrer:aReferrer focusContent:!focusURLBar allowPopups:inAllowPopups];
   return browser;
@@ -3554,7 +3554,7 @@ enum BWCOpenDest {
 {
   BrowserTabViewItem* previouslySelected = (BrowserTabViewItem*)[mTabBrowser selectedTabViewItem];
   BrowserTabViewItem* newTab             = [self openNewTab:aLoadInBG];
-  BOOL focusURLBar                       = [MainController isBlankURL:aURLSpec];
+  BOOL focusURLBar                       = !aURLSpec || [aURLSpec isBlankURL];
 
   // if instructed, tell the tab browser to remember the currently selected tab to
   // jump back to if this new one is closed w/out switching to any other tabs.
