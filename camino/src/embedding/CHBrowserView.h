@@ -199,7 +199,7 @@ typedef enum {
 - (void)addListener:(id <CHBrowserListener>)listener;
 - (void)removeListener:(id <CHBrowserListener>)listener;
 - (void)setContainer:(NSView<CHBrowserListener, CHBrowserContainer>*)container;
-- (already_AddRefed<nsIDOMWindow>)getContentWindow;	// addrefs
+- (already_AddRefed<nsIDOMWindow>)contentWindow;	// addrefs
 
 // nsIWebNavigation methods
 - (void)loadURI:(NSString *)urlSpec referrer:(NSString*)referrer flags:(unsigned int)flags allowPopups:(BOOL)inAllowPopups;
@@ -211,9 +211,9 @@ typedef enum {
 - (void)stop:(unsigned int)flags;   // NSStop flags
 - (void)goToSessionHistoryIndex:(int)index;
 
-- (NSString*)getCurrentURI;
+- (NSString*)currentURI;
 
-- (NSString*)pageLocation;  // from window.location. can differ from the document's URI, and possibly from getCurrentURI
+- (NSString*)pageLocation;  // from window.location. can differ from the document's URI, and possibly from currentURI
 - (NSString*)pageLocationHost;
 - (NSString*)pageTitle;
 - (NSDate*)pageLastModifiedDate;
@@ -247,7 +247,7 @@ typedef enum {
 -(IBAction)selectAll:(id)aSender;
 
 // Returns the currently selected text as a NSString. 
-- (NSString*)getSelection;
+- (NSString*)selectedText;
 
 -(IBAction)undo:(id)aSender;
 -(IBAction)redo:(id)aSender;
@@ -281,18 +281,18 @@ typedef enum {
 
 - (void)destroyWebBrowser;
 // Returns the underlying nsIWebBrowser, addref'd
-- (nsIWebBrowser*)getWebBrowser;
+- (nsIWebBrowser*)webBrowser;
 - (void)setWebBrowser:(nsIWebBrowser*)browser;
-- (CHBrowserListener*)getCocoaBrowserListener;
+- (CHBrowserListener*)cocoaBrowserListener;
 
 - (BOOL)isTextFieldFocused;
 - (BOOL)isPluginFocused;
 // Returns the currently focused DOM element, addref'd
-- (nsIDOMElement*)getFocusedDOMElement;
+- (nsIDOMElement*)focusedDOMElement;
 // Returns the focus controller, addref'd
-- (nsIFocusController*)getFocusController;
+- (nsIFocusController*)focusController;
 
-- (NSString*)getFocusedURLString;
+- (NSString*)focusedURLString;
 
 // charset
 - (IBAction)reloadWithNewCharset:(NSString*)charset;

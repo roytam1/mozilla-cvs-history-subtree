@@ -1314,7 +1314,7 @@ KeychainFormSubmitObserver::Notify(nsIContent* node, nsIDOMWindowInternal* windo
     return;
   
   // prime the pump with the top dom window.
-  nsCOMPtr<nsIDOMWindow> domWin = [mBrowserView getContentWindow];
+  nsCOMPtr<nsIDOMWindow> domWin = [mBrowserView contentWindow];
   if (!domWin)
     return;
   
