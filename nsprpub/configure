@@ -44,7 +44,7 @@ ac_help="$ac_help
 ac_help="$ac_help
   --enable-macos-target=VER
                           Set the minimum MacOS version needed at runtime
-                          [10.1 for ppc, 10.4 for x86]"
+                          [10.2 for ppc, 10.4 for x86]"
 ac_help="$ac_help
   --enable-strip          Enable stripping of shared libs and programs"
 ac_help="$ac_help
@@ -3349,7 +3349,7 @@ EOF
         elif test -z "$MACOSX_DEPLOYMENT_TARGET" ; then
                                                 case "${target_cpu}" in
                 powerpc*)
-                                        export MACOSX_DEPLOYMENT_TARGET=10.1
+                                        export MACOSX_DEPLOYMENT_TARGET=10.2
                     ;;
                 i*86*)
                                         export MACOSX_DEPLOYMENT_TARGET=10.4
