@@ -143,11 +143,11 @@ $ConfigureOnly = 1;
 $LocalizationVersionFile = 'mail/config/version.txt';
 %WGetFiles = (
 # CONFIG:          "http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/%version%-candidates/rc%rc%/unsigned/thunderbird-%version%.en-US.win32.installer.exe" =>
-"http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/2.0.0.6-candidates/rc2/unsigned/thunderbird-2.0.0.6.en-US.win32.installer.exe" =>
+"http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/2.0.0.9-candidates/rc1/unsigned/thunderbird-2.0.0.9.en-US.win32.installer.exe" =>
 # CONFIG:  	      "/cygdrive/c/builds/tinderbox/Tb-Mozilla1.8-l10n-Release/%l10n_buildPlatform%/thunderbird-installer.exe",
 "/cygdrive/c/builds/tinderbox/Tb-Mozilla1.8-l10n-Release/WINNT_5.2_Depend/thunderbird-installer.exe",
 # CONFIG:         "http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/%version%-candidates/rc%rc%/unsigned/thunderbird-%version%.en-US.win32.zip" =>
-"http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/2.0.0.6-candidates/rc2/unsigned/thunderbird-2.0.0.6.en-US.win32.zip" =>
+"http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/2.0.0.9-candidates/rc1/unsigned/thunderbird-2.0.0.9.en-US.win32.zip" =>
 # CONFIG: 	      "/cygdrive/c/builds/tinderbox/Tb-Mozilla1.8-l10n-Release/%l10n_buildPlatform%/thunderbird.zip");
 "/cygdrive/c/builds/tinderbox/Tb-Mozilla1.8-l10n-Release/WINNT_5.2_Depend/thunderbird.zip");
 
@@ -164,11 +164,11 @@ $BuildLocalesArgs = "ZIP_IN=/cygdrive/c/builds/tinderbox/Tb-Mozilla1.8-l10n-Rele
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
 # CONFIG: $BuildTree  = '%buildTree%';
-$BuildTree  = 'Mozilla1.8-l10n';
+$BuildTree  = 'MozillaRelease';
 
 #$BuildName = '';
 # CONFIG: $BuildTag = '%productTag%_RELEASE';
-$BuildTag = 'THUNDERBIRD_2_0_0_6_RELEASE';
+$BuildTag = 'THUNDERBIRD_2_0_0_9_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -203,13 +203,13 @@ $ssh_version   = "2";
 # CONFIG: $ssh_user      = "%sshUser%";
 $ssh_user      = "cltbld";
 # CONFIG: $ssh_server    = "%sshServer%";
-$ssh_server    = "stage.mozilla.org";
+$ssh_server    = "build-console.build.mozilla.org";
 $ftp_path      = "/home/ftp/pub/thunderbird/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly";
 $tbox_ftp_path = "/home/ftp/pub/thunderbird/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/tinderbox-builds";
 # CONFIG: $milestone     = "thunderbird%version%-l10n";
-$milestone     = "thunderbird2.0.0.6-l10n";
+$milestone     = "thunderbird2.0.0.9-l10n";
 $notify_list   = "build-announce\@mozilla.org";
 $stub_installer = 0;
 $sea_installer = 1;
