@@ -242,6 +242,9 @@ $update_filehost = "ftp.mozilla.org";
 $update_ver_file = "calendar/sunbird/config/version.txt";
 $update_pushinfo = 1;
 
+# override tinder-defaults.pl to use community server
+$update_aus_host = 'aus2-community.mozilla.org';
+
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
 # locking up (and testing would be suspect even after a couple of cycles).
