@@ -499,9 +499,10 @@ NS_METHOD nsWindow::Scroll( PRInt32 aDx, PRInt32 aDy, nsRect *aClipRect ) {
 	PhRect_t source = {{widget->area.pos.x, widget->area.pos.y},{widget->area.pos.x+ widget->area.size.w-1, widget->area.pos.y + widget->area.size.h-1}};
 	PhPoint_t point = { aDx, aDy };
 
-	if( !widget->damage_list )
+	if( !widget->damage_list ) {
+		static int count;
 		PtBlit( widget, &source, &point );
-	else {
+	} else {
 		/* first noticed as a scrolling problem in netscape email */
 		/* the scrolling should be clipped out by the rectangles given by Invalidate(). These are accumulated in widget->damage_list */
 		PhTile_t original = { source, NULL }, *clip;
@@ -563,14 +564,17 @@ NS_IMETHODIMP nsWindow::Resize(PRInt32 aWidth, PRInt32 aHeight, PRBool aRepaint)
 	
 	if (mWidget) {
 		PtWidget_t *parent;
-		for (parent = mWidget; parent; parent = parent->parent) {
+		int n = 1;
+		for (parent = mWidget; parent && n <= 3; parent = parent->parent, n++) {
 			char *description = parent->class_rec->description;
 
 			if (description && strcmp(description, "PtMozilla") == 0) {
 				//
 				// For embedding, make sure the browser does not try to 
 				// resize itself bigger than the PtMozilla widget or else our
-				// scroll bars will be clipped.
+				// scroll bars will be clipped. We don't go more than 3 levels
+				// deep or else we get into iframes, which we don't want to 
+				// cut off.
 				//
 				if (aWidth > parent->area.size.w)
 					aWidth = parent->area.size.w;
@@ -708,7 +712,13 @@ void nsWindow::RawDrawFunc( PtWidget_t * pWidget, PhTile_t * damage )
 		/* Build a List of Tiles that might be in front of me.... */
 		PhTile_t *new_damage, *clip_tiles, *intersect;
 		/* Intersect the Damage tile list w/ the clipped out list and see whats left! */
-		new_damage = PhRectsToTiles(&damage->rect, 1);
+#if 0
+		int count = 0;
+		for (new_damage = damage->next; new_damage; new_damage = new_damage->next)
+			count++;
+		printf("*** nsWindow::RawDrawFunc got %d damage tiles\n", count);
+#endif
+		new_damage = PhCopyTiles(damage->next);
 		PhDeTranslateTiles(new_damage, &offset);
 		clip_tiles = GetWindowClipping( pWidget );
 		if (clip_tiles) {

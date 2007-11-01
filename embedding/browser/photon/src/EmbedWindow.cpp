@@ -345,7 +345,16 @@ EmbedWindow::SetDimensions(PRUint32 aFlags, PRInt32 aX, PRInt32 aY,
     rv =  mBaseWindow->SetPositionAndSize(aX, aY, aCX, aCY, PR_TRUE);
   }
   else if (aFlags & nsIEmbeddingSiteWindow::DIM_FLAGS_POSITION) {
-    rv =  mBaseWindow->SetPosition(aX, aY);
+    //
+    // This position should never be called because it gets the
+    // PtRawDrawContainer under the PtMozilla widget out of sync with
+    // the PtMozilla widget. In the past with mozserver the position
+    // synchronizing in PtMozilla.cpp's mozilla_extent() function was enough,
+    // but with kwww it does not wait as long to realize PtMozilla, so we need
+    // this position setting commented out. This fixes problems when a new win-
+    // dow is opened and there is a large position offset to the actual content.
+    //
+    //rv =  mBaseWindow->SetPosition(aX, aY);
   }
   else if (aFlags & (nsIEmbeddingSiteWindow::DIM_FLAGS_SIZE_INNER |
          nsIEmbeddingSiteWindow::DIM_FLAGS_SIZE_OUTER)) {

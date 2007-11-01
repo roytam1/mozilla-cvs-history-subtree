@@ -182,7 +182,8 @@ printf( "\n\n\t\t\tIn nsFontMetricsPh::Init str=%s\n", str );
 	PRInt32 sizePoints;
 	if( mFont.systemFont == PR_TRUE )
 		sizePoints = NSToIntRound( app2dev * mFont.size * 0.68 );
-	else sizePoints = NSToIntRound( app2dev * mFont.size * 0.74 );
+	else
+		sizePoints = NSToIntRound( app2dev * mFont.size * 0.74 );
 	
 	char NSFullFontName[MAX_FONT_TAG];
 
@@ -194,7 +195,9 @@ printf( "\n\n\t\t\tIn nsFontMetricsPh::Init str=%s\n", str );
 	if(aFont.style & (NS_FONT_STYLE_ITALIC|NS_FONT_STYLE_OBLIQUE) )
 	   uiFlags |= PF_STYLE_ITALIC;
 
-	if(aFont.style & NS_FONT_STYLE_ANTIALIAS)
+	PRInt32 antialias_pref = 0;
+	gPref->GetIntPref("font.antialias_qnx", &antialias_pref);
+	if(antialias_pref || aFont.style & NS_FONT_STYLE_ANTIALIAS)
 		uiFlags |= PF_STYLE_ANTIALIAS;
 
 	if( PfGenerateFontName( (char *)str, uiFlags, sizePoints, (char *)NSFullFontName ) == NULL )

@@ -286,5 +286,12 @@ defaults/profile/mimeTypes.rdf
 defaults/profile/prefs.js
 defaults/profile/search.rdf
 
-; Needed, or else FTP crashes (others?)
+; Needed, or else FTP crashes
 components/libappcomps.so
+
+; Needed, or else kwww crashes. Test case: Go to www.google.ca.
+; Then click "Go to google.com", then click "Go to Google Canada". Repeat.
+; You will get a nasty stack corruption that is next to impossible to
+; debug. I even tried gcc -finstrument-functions.
+components/libtoolkitcomps.so
+components/libmork.so
