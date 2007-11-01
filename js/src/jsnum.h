@@ -61,7 +61,9 @@ JS_BEGIN_EXTERN_C
  */
 
 #if defined(__arm) || defined(__arm32__) || defined(__arm26__) || defined(__arm__)
+#ifndef __QNXNTO__
 #define CPU_IS_ARM
+#endif
 #endif
 
 typedef union jsdpun {
