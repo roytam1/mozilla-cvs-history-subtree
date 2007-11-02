@@ -63,5 +63,5 @@ $tbox_ftp_path = "/home/ftp/pub/xulrunner/tinderbox-builds/experimental";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/xulrunner/tinderbox-builds/experimental";
 $milestone     = "xulrunner-apps";
 $stub_installer = 0;
-$sea_installer = 1;
+$sea_installer = 0;
 $archive       = 1;
