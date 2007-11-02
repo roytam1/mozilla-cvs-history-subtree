@@ -22,6 +22,8 @@ $moz_cvsroot   = ':ext:xrbld@cvs.mozilla.org:/cvsroot';
 $ObjDir = 'obj-combined';
 $SubObjDir = 'browser/';
 
+$XULRunnerApp = 1;
+
 $UserComment = 'bsmedberg';
 
 $BuildTree  = 'MozillaExperimental';
@@ -54,7 +56,7 @@ $ftp_path      = "/home/ftp/pub/firefox/nightly/experimental/ff-xr";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/experimental/ff-xr";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds/experimental";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds/experimental";
-$milestone     = "trunk";
+$milestone     = "xulrunner-apps";
 #$notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 1;
