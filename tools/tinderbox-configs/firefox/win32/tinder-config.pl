@@ -167,7 +167,7 @@ $BuildTree  = 'MozillaRelease';
 #$BuildTree  = 'Mozilla1.8';
 
 #$BuildName = '';
-$BuildTag = 'FIREFOX_2_0_0_7_RELEASE';
+$BuildTag = 'FIREFOX_2_0_0_9_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
