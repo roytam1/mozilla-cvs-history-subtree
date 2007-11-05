@@ -1809,6 +1809,7 @@
 				E4C7DA490A449A1100B455AD,
 				0E6A98A1097E0091007962C1,
 				82180ACB07368BF2002EFA6D,
+				82AC0D63865A601500776B02,
 				82AC0D64065A601500776B02,
 				3F44ACD005BDFB9F00CB4B08,
 				3F44ACD605BDFB9F00CB4B08,
@@ -1916,6 +1917,7 @@
 				DE56E9220B73E71500D27D57,
 				E4C7DA480A449A1100B455AD,
 				82180AC907368BDF002EFA6D,
+				82AC0D5F865A5FD600776B02,
 				82AC0D60065A5FD600776B02,
 				F5F181C90208006F0124611D,
 				F507A82C030BFB7901026D5D,
@@ -1975,6 +1977,7 @@
 				DE371F470CCEA2F2004FA874,
 				F6BD639C01B3131201A962F7,
 				DE371F420CCEA1D5004FA874,
+				DE371F428CCEA1D5004FA874,
 				F6BD639D01B3131201A962F7,
 				F6BD639D01B3131201A963F7,
 				F6BD639E01B3131201A962F7,
@@ -5709,6 +5712,7 @@
 				82180AC707368B03002EFA6D,
 				82AC0D65065A602200776B02,
 				DE371F430CCEA1D5004FA874,
+				DE371F438CCEA1D5004FA874,
 				82AC0D66065A602200776B02,
 				3F44ACD105BDFB9F00CB4B08,
 				3F44ACD705BDFB9F00CB4B08,
@@ -9622,6 +9626,7 @@
 			files = (
 				DE371F490CCEA2F2004FA874,
 				DE371F440CCEA1D5004FA874,
+				DE371F448CCEA1D5004FA874,
 				DE371E940CCE9A06004FA874,
 				DE371E950CCE9A06004FA874,
 				DE371E960CCE9A06004FA874,
@@ -10633,6 +10638,7 @@
 				3F44AFC205BDFBA000CB4B08,
 				3F44AFC305BDFBA000CB4B08,
 				3FECC8E705D1FE800068E7ED,
+				82C39663865B156600A82035,
 				82C39664065B156600A82035,
 				3FE5BA0C068A1A140001CECD,
 				82CE286E0736605800B4DE07,
@@ -13297,6 +13303,14 @@
 			refType = 2;
 			sourceTree = SOURCE_ROOT;
 		};
+		82AC0D5F865A5FD600776B02 = {
+			isa = PBXFileReference;
+			lastKnownFileType = "compiled.mach-o.bundle";
+			name = libstoragecomps.dylib;
+			path = ../storage/build/libstoragecomps.dylib;
+			refType = 2;
+			sourceTree = SOURCE_ROOT;
+		};
 		82AC0D60065A5FD600776B02 = {
 			isa = PBXFileReference;
 			lastKnownFileType = "compiled.mach-o.bundle";
@@ -13304,6 +13318,12 @@
 			path = ../dist/bin/components/libtransformiix.dylib;
 			refType = 2;
 			sourceTree = SOURCE_ROOT;
+		};
+		82AC0D63865A601500776B02 = {
+			fileRef = 82AC0D5F865A5FD600776B02;
+			isa = PBXBuildFile;
+			settings = {
+			};
 		};
 		82AC0D64065A601500776B02 = {
 			fileRef = 82AC0D60065A5FD600776B02;
@@ -13323,6 +13343,14 @@
 			settings = {
 			};
 		};
+		82C39662865B156600A82035 = {
+			isa = PBXFileReference;
+			lastKnownFileType = archive.ar;
+			name = libstoragecomps.a;
+			path = ../dist/lib/components/libstoragecomps.a;
+			refType = 2;
+			sourceTree = SOURCE_ROOT;
+		};
 		82C39663065B156600A82035 = {
 			isa = PBXFileReference;
 			lastKnownFileType = archive.ar;
@@ -13330,6 +13358,12 @@
 			path = ../dist/lib/components/libtransformiix.a;
 			refType = 2;
 			sourceTree = SOURCE_ROOT;
+		};
+		82C39663865B156600A82035 = {
+			fileRef = 82C39662865B156600A82035;
+			isa = PBXBuildFile;
+			settings = {
+			};
 		};
 		82C39664065B156600A82035 = {
 			fileRef = 82C39663065B156600A82035;
@@ -14001,14 +14035,34 @@
 			refType = 2;
 			sourceTree = SOURCE_ROOT;
 		};
+		DE371F428CCEA1D5004FA874 = {
+			isa = PBXFileReference;
+			lastKnownFileType = file;
+			name = storage.xpt;
+			path = ../dist/bin/components/storage.xpt;
+			refType = 2;
+			sourceTree = SOURCE_ROOT;
+		};
 		DE371F430CCEA1D5004FA874 = {
 			fileRef = DE371F420CCEA1D5004FA874;
 			isa = PBXBuildFile;
 			settings = {
 			};
 		};
+		DE371F438CCEA1D5004FA874 = {
+			fileRef = DE371F428CCEA1D5004FA874;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
 		DE371F440CCEA1D5004FA874 = {
 			fileRef = DE371F420CCEA1D5004FA874;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		DE371F448CCEA1D5004FA874 = {
+			fileRef = DE371F428CCEA1D5004FA874;
 			isa = PBXBuildFile;
 			settings = {
 			};
@@ -16615,6 +16669,7 @@
 			children = (
 				82CE286D0736605800B4DE07,
 				3FE5BA0B068A1A140001CECD,
+				82C39662865B156600A82035,
 				82C39663065B156600A82035,
 				0FA8EFCA0423EAAD00A80166,
 				F56F242602AC706801A967F3,
