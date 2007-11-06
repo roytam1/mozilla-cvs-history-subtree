@@ -55,8 +55,8 @@ $UseTimeStamp      = 0;      # Use the CVS 'pull-by-timestamp' option, or not
 # Tests
 $CleanProfile             = 1;
 #$ResetHomeDirForTests     = 1;
-$ProductName              = 'GranParadiso';
-$VendorName               = "";
+$ProductName              = 'Firefox';
+$VendorName               = "Mozilla";
 
 $RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
 $RegxpcomTest             = 1;
@@ -175,7 +175,7 @@ $BuildTree  = 'MozillaRelease';
 
 #$BuildName = '';
 # CONFIG: $BuildTag = '%productTag%_RELEASE';
-$BuildTag = 'MOZILLA_1_9a8_RELEASE';
+$BuildTag = 'FIREFOX_3_0b1_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -213,7 +213,7 @@ $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
 # CONFIG: $milestone     = 'firefox%version%';
-$milestone     = "mozilla1.9a8";
+$milestone     = "firefox3.0b1";
 $notify_list   = "build-announce\@mozilla.org";
 $stub_installer = 0;
 $sea_installer = 0;
