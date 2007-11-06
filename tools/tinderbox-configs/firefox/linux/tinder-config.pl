@@ -67,6 +67,7 @@ $VendorName               = 'Mozilla';
   "toolkit",
   "security/manager",
   "other-licenses/branding/firefox",
+  "extensions/reporter",
 );
 #$CompareLocalesAviary     = 0;  # Should the compare-locales commands use the
 #                                # aviary directory structure?

@@ -63,6 +63,7 @@ $LocaleProduct = "browser";
   "security/manager",
   "browser",
   "other-licenses/branding/firefox",
+  "extensions/reporter",
 );
 
 #$TestsPhoneHome           = 0;  # Should test report back to server?
