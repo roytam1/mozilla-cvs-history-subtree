@@ -1,16 +1,14 @@
 #
-## hostname: fxnewref-linux-tbox
-## uname: Linux fxnewref-linux-tbox.build.mozilla.org 2.6.18-8.el5 #1 SMP Thu Mar 15 19:57:35 EDT 2007 i686 i686 i386 GNU/Linux
+## hostname: fx-linux-tbox
+## uname: Linux fx-linux-tbox.build.mozilla.org 2.6.18-8.el5 #1 SMP Thu Mar 15 19:57:35 EDT 2007 i686 i686 i386 GNU/Linux
 #
 
 #- tinder-config.pl - Tinderbox configuration file.
 #-    Uncomment the variables you need to set.
 #-    The default values are the same as the commented variables.
 
-$ENV{MOZILLA_OFFICIAL} = 1;
 $ENV{CVS_RSH} = "ssh";
-#$ENV{PATH} = "/usr/gcc-3.3.2rh/bin:$ENV{PATH}";
-# $ENV{PAGELOAD_URL} = "http://spider/page-loader";
+$ENV{MOZ_CRASHREPORTER_NO_REPORT} = '1';
 
 # To ensure Talkback client builds properly on some Linux boxen where LANG
 # is set to "en_US.UTF-8" by default, override that setting here by setting
@@ -35,12 +33,6 @@ $ENV{LANG} = "en_US.iso885915";
 # Requires: The selected type requires the command be available both locally
 #           and on the Talkback server.
 #$ENV{MOZ_SYMBOLS_TRANSFER_TYPE} = "scp";
-
-# Breakpad server variables
-$ENV{'SYMBOL_SERVER_HOST'} = 'stage.mozilla.org';
-$ENV{'SYMBOL_SERVER_USER'}   = 'ffxbld';
-$ENV{'SYMBOL_SERVER_PATH'}   = '/mnt/netapp/breakpad/symbols_ffx/';
-$ENV{'SYMBOL_SERVER_SSH_KEY'}   = "$ENV{'HOME'}/.ssh/ffxbld_dsa";
 
 #- PLEASE FILL THIS IN WITH YOUR PROPER EMAIL ADDRESS
 $BuildAdministrator = 'build@mozilla.org';
@@ -89,7 +81,7 @@ $DHTMLPerformanceTest     = 0;  # Tdhtml
 $StartupPerformanceTest   = 0;  # Ts
 
 $TestsPhoneHome           = 0;  # Should test report back to server?
-$GraphNameOverride        = 'argo-vm';
+$GraphNameOverride        = 'fx-linux-tbox';
 
 # $results_server
 #----------------------------------------------------------------------------
@@ -100,7 +92,7 @@ $GraphNameOverride        = 'argo-vm';
 #$results_server           = "build-graphs.mozilla.org";
 
 #$pageload_server          = "spider";  # localhost
-$pageload_server      = "axolotl.mozilla.org";
+$pageload_server      = "pageload.build.mozilla.org";
 
 
 #
@@ -207,8 +199,6 @@ $BinaryName = 'firefox-bin';
 # Release build options
 $ReleaseBuild  = 1;
 $shiptalkback  = 0;
-$crashreporter_buildsymbols = 1;
-$crashreporter_pushsymbols = 1;
 $ReleaseToLatest = 0; # Push the release to latest-<milestone>?
 $ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
 $build_hour    = 4;
@@ -238,6 +228,12 @@ $update_platform = "Linux_x86-gcc3";
 $update_hash = "sha1";
 $update_filehost = 'ftp.mozilla.org';
 $update_ver_file = 'browser/config/version.txt';
+$crashreporter_buildsymbols = 1;
+$crashreporter_pushsymbols = 1;
+$ENV{'SYMBOL_SERVER_HOST'} = 'stage.mozilla.org';
+$ENV{'SYMBOL_SERVER_USER'}   = 'ffxbld';
+$ENV{'SYMBOL_SERVER_PATH'}   = '/mnt/netapp/breakpad/symbols_ffx/';
+$ENV{'SYMBOL_SERVER_SSH_KEY'}   = "$ENV{'HOME'}/.ssh/ffxbld_dsa";
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before

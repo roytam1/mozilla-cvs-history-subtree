@@ -1,15 +1,15 @@
 #
 ## hostname: fx-win32-tbox
-## uname: CYGWIN_NT-5.2 fx-win32-tbox 1.5.19(0.150/4/2) 2006-01-20 13:28 i686 Cygwin
+## uname: MINGW32_NT-5.2 FX-WIN32-TBOX 1.0.11(0.46/3/2) 2007-01-12 12:05 i686 Msys
 #
 
 #- tinder-config.pl - Tinderbox configuration file.
 #-    Uncomment the variables you need to set.
 #-    The default values are the same as the commented variables.
 
-$ENV{MOZ_INSTALLER_USE_7ZIP} = '1';
 $ENV{NO_EM_RESTART} = '1';
-$ENV{MOZ_PACKAGE_NSIS} = '1';
+$ENV{CVS_RSH} = "ssh";
+$ENV{MOZ_CRASHREPORTER_NO_REPORT} = '1';
 
 # $ENV{MOZ_PACKAGE_MSI}
 #-----------------------------------------------------------------------------
@@ -27,12 +27,6 @@ $ENV{MOZ_PACKAGE_NSIS} = '1';
 # Requires: The selected type requires the command be available both locally
 #           and on the Talkback server.
 #$ENV{MOZ_SYMBOLS_TRANSFER_TYPE} = "scp";
-
-# Breakpad server variables
-$ENV{'SYMBOL_SERVER_HOST'} = 'stage.mozilla.org';
-$ENV{'SYMBOL_SERVER_USER'}   = 'ffxbld';
-$ENV{'SYMBOL_SERVER_PATH'}   = '/mnt/netapp/breakpad/symbols_ffx/';
-$ENV{'SYMBOL_SERVER_SSH_KEY'}   = "$ENV{'HOME'}/.ssh/ffxbld_dsa";
 
 #- PLEASE FILL THIS IN WITH YOUR PROPER EMAIL ADDRESS
 $BuildAdministrator = 'build@mozilla.org';
@@ -93,7 +87,7 @@ $GraphNameOverride        = 'fx-win32-tbox';
 # - cmp@mozilla.org
 #$results_server           = "build-graphs.mozilla.org";
 
-$pageload_server          = "axolotl.mozilla.org";  # localhost
+$pageload_server          = "pageload.build.mozilla.org";  # localhost
 
 #
 # Timeouts, values are in seconds.
@@ -135,7 +129,7 @@ $Make          = 'make';       # Must be GNU make
 
 # win32 usually doesn't have /bin/mail
 $blat           = '/d/mozilla-build/blat261/full/blat';
-$use_blat       = 0;
+#$use_blat       = 1;
 
 # Set moz_cvsroot to something like:
 # :pserver:$ENV{USER}%netscape.com\@cvs.mozilla.org:/cvsroot
@@ -144,7 +138,6 @@ $use_blat       = 0;
 # Note that win32 may not need \@, depends on ' or ".
 # :pserver:$ENV{USER}%netscape.com@cvs.mozilla.org:/cvsroot
 
-#$moz_cvsroot   = $ENV{CVSROOT};
 # CONFIG: $moz_cvsroot = '%mozillaCvsroot%';
 $moz_cvsroot = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 
@@ -201,8 +194,6 @@ $BinaryName = 'firefox.exe';
 # Release build options
 $ReleaseBuild  = 1;
 $shiptalkback  = 0;
-$crashreporter_buildsymbols = 1;
-$crashreporter_pushsymbols = 1;
 $ReleaseToLatest = 0; # Push the release to latest-<milestone>?
 $ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
 $build_hour    = "4";
@@ -223,7 +214,7 @@ $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 1;
 $archive       = 1;
-$push_raw_xpis = 1;
+$push_raw_xpis = 0;
 $update_package = 1;
 $update_product = "Firefox";
 $update_version = "trunk";
@@ -232,6 +223,12 @@ $update_hash = "sha1";
 $update_filehost = "ftp.mozilla.org";
 $update_ver_file = 'browser/config/version.txt';
 $update_pushinfo = 0;
+$crashreporter_buildsymbols = 1;
+$crashreporter_pushsymbols = 1;
+$ENV{'SYMBOL_SERVER_HOST'} = 'stage.mozilla.org';
+$ENV{'SYMBOL_SERVER_USER'}   = 'ffxbld';
+$ENV{'SYMBOL_SERVER_PATH'}   = '/mnt/netapp/breakpad/symbols_ffx/';
+$ENV{'SYMBOL_SERVER_SSH_KEY'}   = "$ENV{'HOME'}/.ssh/ffxbld_dsa";
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
