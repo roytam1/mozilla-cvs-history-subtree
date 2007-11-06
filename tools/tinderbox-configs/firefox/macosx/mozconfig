@@ -5,7 +5,9 @@
 
 # . $topsrcdir/browser/config/mozconfig
 
+mk_add_options MOZ_CO_MODULE="mozilla/tools/update-packaging"
 mk_add_options MOZ_CO_PROJECT=browser
+
 mk_add_options MOZ_CO_LOCALES=all
 mk_add_options LOCALES_CVSROOT=:ext:ffxbld@cvs.mozilla.org:/l10n
 
@@ -13,5 +15,8 @@ ac_add_options --enable-application=browser
 ac_add_options --enable-optimize="-O2 -g"
 ac_add_options --disable-debug
 ac_add_options --disable-tests
-ac_add_options --enable-prebinding
+ac_add_options --enable-update-packaging
+
+# ac_add_options --enable-official-branding
+ac_add_app_options ppc --enable-prebinding
 

@@ -3,15 +3,18 @@
 ## uname: Linux l10n-linux-tbox.build.mozilla.org 2.6.18-8.el5 #1 SMP Thu Mar 15 19:57:35 EDT 2007 i686 i686 i386 GNU/Linux
 #
 
-export MOZILLA_OFFICIAL=1
-
 mk_add_options MOZ_CO_PROJECT=browser
+mk_add_options MOZ_CO_MODULE="mozilla/tools/update-packaging"
+ac_add_options --enable-application=browser 
+
 mk_add_options MOZ_CO_LOCALES=all
 mk_add_options LOCALES_CVSROOT=:ext:ffxbld@cvs.mozilla.org:/l10n
-mk_add_options MOZ_CO_MODULE="mozilla/tools/update-packaging"
 
-ac_add_options --enable-application=browser 
 ac_add_options --enable-update-packaging
-ac_add_options --disable-debug
+
 ac_add_options --enable-optimize="-Os -freorder-blocks -fno-reorder-functions -gstabs+"
+ac_add_options --disable-debug
 ac_add_options --disable-tests
+
+CC=/tools/gcc/bin/gcc
+CXX=/tools/gcc/bin/g++
