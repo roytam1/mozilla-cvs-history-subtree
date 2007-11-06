@@ -109,8 +109,7 @@ static char	*token = NULL;
 
 typedef enum {
     UNKNOWN_OPT,
-    HELP_OPT,
-    LONG_HELP_OPT,
+    QUESTION_OPT,
     BASE_OPT,
     COMPRESSION_OPT,
     CERT_DIR_OPT,
@@ -356,6 +355,9 @@ parse_args(int argc, char *argv[])
 		}
 
 		switch (opt[1]) {
+		case '?':
+		    type = QUESTION_OPT;
+		    break;
 		case 'b':
 		    type = BASE_OPT;
 		    break;
@@ -370,12 +372,6 @@ parse_args(int argc, char *argv[])
 		    break;
 		case 'f':
 		    type = COMMAND_FILE_OPT;
-		    break;
-		case 'h':
-		    type = HELP_OPT;
-		    break;
-		case 'H':
-		    type = LONG_HELP_OPT;
 		    break;
 		case 'i':
 		    type = INSTALL_SCRIPT_OPT;
@@ -498,11 +494,8 @@ ProcessOneOpt(OPT_TYPE type, char *arg)
     int	ate = 0;
 
     switch (type) {
-    case HELP_OPT:
-	Usage();
-	break;
-    case LONG_HELP_OPT:
-	LongUsage();
+    case QUESTION_OPT:
+	usage();
 	break;
     case BASE_OPT:
 	if (base) {
@@ -872,7 +865,7 @@ main(int argc, char *argv[])
     progName = argv[0];
 
     if (argc < 2) {
-	Usage();
+	usage();
     }
 
     excludeDirs = PL_NewHashTable(10, PL_HashString, PL_CompareStrings,
@@ -1081,7 +1074,7 @@ main(int argc, char *argv[])
 	SignArchive(jartree, keyName, zipfile, javascript, metafile,
 	     		install_script, optimize, !noRecurse);
     } else
-	Usage();
+	usage();
 
 cleanup:
     if (extensions) {

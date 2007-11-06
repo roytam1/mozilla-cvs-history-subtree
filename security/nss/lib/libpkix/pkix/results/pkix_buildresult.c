@@ -271,8 +271,6 @@ pkix_BuildResult_RegisterSelf(void *plContext)
         PKIX_ENTER(BUILDRESULT, "pkix_BuildResult_RegisterSelf");
 
         entry.description = "BuildResult";
-        entry.objCounter = 0;
-        entry.typeObjectSize = sizeof(PKIX_BuildResult);
         entry.destructor = pkix_BuildResult_Destroy;
         entry.equalsFunction = pkix_BuildResult_Equals;
         entry.hashcodeFunction = pkix_BuildResult_Hashcode;
@@ -365,7 +363,6 @@ PKIX_BuildResult_GetValidateResult(
         PKIX_INCREF(result->valResult);
         *pResult = result->valResult;
 
-cleanup:
         PKIX_RETURN(BUILDRESULT);
 }
 
@@ -387,6 +384,5 @@ PKIX_BuildResult_GetCertChain(
         PKIX_INCREF(result->certChain);
         *pChain = result->certChain;
 
-cleanup:
         PKIX_RETURN(BUILDRESULT);
 }

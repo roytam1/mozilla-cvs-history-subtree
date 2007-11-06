@@ -63,17 +63,16 @@ static const SEC_ASN1Template CERTIA5TypeTemplate[] = {
     { SEC_ASN1_IA5_STRING }
 };
 
-SEC_ASN1_MKSUB(SEC_GeneralizedTimeTemplate);
 
 static const SEC_ASN1Template CERTPrivateKeyUsagePeriodTemplate[] = {
     { SEC_ASN1_SEQUENCE,
       0, NULL, sizeof(CERTPrivKeyUsagePeriod) },
-    { SEC_ASN1_OPTIONAL | SEC_ASN1_CONTEXT_SPECIFIC  | SEC_ASN1_XTRN | 0,
+    { SEC_ASN1_OPTIONAL | SEC_ASN1_CONTEXT_SPECIFIC  | 0,	
 	  offsetof(CERTPrivKeyUsagePeriod, notBefore), 
-	  SEC_ASN1_SUB(SEC_GeneralizedTimeTemplate) },
-    { SEC_ASN1_OPTIONAL | SEC_ASN1_CONTEXT_SPECIFIC  | SEC_ASN1_XTRN | 1,
+	  SEC_GeneralizedTimeTemplate},
+    { SEC_ASN1_OPTIONAL | SEC_ASN1_CONTEXT_SPECIFIC  | 1,
 	  offsetof(CERTPrivKeyUsagePeriod, notAfter), 
-	  SEC_ASN1_SUB(SEC_GeneralizedTimeTemplate)},
+	  SEC_GeneralizedTimeTemplate},
     { 0, } 
 };
 

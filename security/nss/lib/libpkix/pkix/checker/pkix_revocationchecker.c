@@ -141,8 +141,6 @@ pkix_RevocationChecker_RegisterSelf(void *plContext)
         PKIX_ENTER(REVOCATIONCHECKER, "pkix_RevocationChecker_RegisterSelf");
 
         entry.description = "RevocationChecker";
-        entry.objCounter = 0;
-        entry.typeObjectSize = sizeof(PKIX_RevocationChecker);
         entry.destructor = pkix_RevocationChecker_Destroy;
         entry.equalsFunction = NULL;
         entry.hashcodeFunction = NULL;
@@ -232,7 +230,6 @@ PKIX_RevocationChecker_GetRevCheckerContext(
 
         *pRevCheckerContext = checker->revCheckerContext;
 
-cleanup:
         PKIX_RETURN(REVOCATIONCHECKER);
 
 }

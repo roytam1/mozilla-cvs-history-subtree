@@ -37,8 +37,6 @@
 #ifndef _SECDER_H_
 #define _SECDER_H_
 
-#include "utilrename.h"
-
 /*
  * secder.h - public data structures and prototypes for the DER encoding and
  *	      decoding utilities library

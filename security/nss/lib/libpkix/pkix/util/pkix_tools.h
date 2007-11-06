@@ -349,7 +349,6 @@ extern const PKIX_StdVars zeroStdVars;
     { \
 	pkixErrorReceived = PKIX_TRUE; \
 	pkixErrorMsg = PKIX_ErrorText[descNum]; \
-	pkixErrorCode = descNum; \
 	_PKIX_LOG_ERROR(pkixErrorMsg, PKIX_LOGGER_LEVEL_FATALERROR); \
 	PKIX_RETURN(FATAL); \
     }
@@ -428,10 +427,8 @@ extern const PKIX_StdVars zeroStdVars;
 	if (obj){ \
 	    pkixTempResult = PKIX_PL_Object_IncRef \
 			((PKIX_PL_Object *)(obj), plContext); \
-	    if (pkixTempResult) { \
-		   pkixErrorResult = pkixTempResult; \
-           goto cleanup; \
-		} \
+	    if (pkixTempResult)  \
+		return pkixTempResult; \
 	} \
     } while (0)
 
@@ -1360,8 +1357,6 @@ extern const PKIX_StdVars zeroStdVars;
 typedef struct pkix_ClassTable_EntryStruct pkix_ClassTable_Entry;
 struct pkix_ClassTable_EntryStruct {
         char *description;
-        PKIX_Int32 objCounter;
-        PKIX_Int32 typeObjectSize;
         PKIX_PL_DestructorCallback destructor;
         PKIX_PL_EqualsCallback equalsFunction;
         PKIX_PL_HashcodeCallback hashcodeFunction;

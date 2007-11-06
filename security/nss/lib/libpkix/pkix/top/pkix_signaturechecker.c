@@ -100,8 +100,6 @@ pkix_SignatureCheckerState_RegisterSelf(void *plContext)
                     "pkix_SignatureCheckerState_RegisterSelf");
 
         entry.description = "SignatureCheckerState";
-        entry.objCounter = 0;
-        entry.typeObjectSize = sizeof(pkix_SignatureCheckerState);
         entry.destructor = pkix_SignatureCheckerState_Destroy;
         entry.equalsFunction = NULL;
         entry.hashcodeFunction = NULL;

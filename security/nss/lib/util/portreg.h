@@ -61,7 +61,6 @@
 #ifndef SHEXP_H
 #define SHEXP_H
 
-#include "utilrename.h"
 /*
  * Requires that the macro MALLOC be set to a "safe" malloc that will 
  * exit if no memory is available. 

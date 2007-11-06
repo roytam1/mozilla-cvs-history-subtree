@@ -92,7 +92,6 @@ pkix_PolicyNode_GetChildrenMutable(
 
         *pChildren = node->children;
 
-cleanup:
         PKIX_RETURN(CERTPOLICYNODE);
 }
 
@@ -1215,8 +1214,6 @@ pkix_PolicyNode_RegisterSelf(void *plContext)
         PKIX_ENTER(CERTPOLICYNODE, "pkix_PolicyNode_RegisterSelf");
 
         entry.description = "PolicyNode";
-        entry.objCounter = 0;
-        entry.typeObjectSize = sizeof(PKIX_PolicyNode);
         entry.destructor = pkix_PolicyNode_Destroy;
         entry.equalsFunction = pkix_PolicyNode_Equals;
         entry.hashcodeFunction = pkix_PolicyNode_Hashcode;
@@ -1287,7 +1284,6 @@ PKIX_PolicyNode_GetParent(
         PKIX_INCREF(node->parent);
         *pParent = node->parent;
 
-cleanup:
         PKIX_RETURN(CERTPOLICYNODE);
 }
 
@@ -1309,7 +1305,6 @@ PKIX_PolicyNode_GetValidPolicy(
         PKIX_INCREF(node->validPolicy);
         *pValidPolicy = node->validPolicy;
 
-cleanup:
         PKIX_RETURN(CERTPOLICYNODE);
 }
 
@@ -1365,7 +1360,6 @@ PKIX_PolicyNode_GetExpectedPolicies(
         PKIX_INCREF(node->expectedPolicySet);
         *pExpPolicies = node->expectedPolicySet;
 
-cleanup:
         PKIX_RETURN(CERTPOLICYNODE);
 }
 

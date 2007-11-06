@@ -189,8 +189,7 @@ SGN_End(SGNContext *cx, SECItem *result)
 	}
 
 	/* Der encode the digest as a DigestInfo */
-        rv = DER_Encode(arena, &digder, SEC_ASN1_GET(SGNDigestInfoTemplate),
-                        di);
+	rv = DER_Encode(arena, &digder, SGNDigestInfoTemplate, di);
 	if (rv != SECSuccess) {
 	    goto loser;
 	}
@@ -280,16 +279,6 @@ SEC_SignData(SECItem *res, unsigned char *buf, int len,
 
 /************************************************************************/
     
-static DERTemplate SECAlgorithmIDTemplate[] = {
-    { DER_SEQUENCE,
-	  0, NULL, sizeof(SECAlgorithmID) },
-    { DER_OBJECT_ID,
-	  offsetof(SECAlgorithmID,algorithm), },
-    { DER_OPTIONAL | DER_ANY,
-	  offsetof(SECAlgorithmID,parameters), },
-    { 0, }
-};
-
 DERTemplate CERTSignedDataTemplate[] =
 {
     { DER_SEQUENCE,
@@ -304,17 +293,15 @@ DERTemplate CERTSignedDataTemplate[] =
     { 0, }
 };
 
-SEC_ASN1_MKSUB(SECOID_AlgorithmIDTemplate);
-
 const SEC_ASN1Template CERT_SignedDataTemplate[] =
 {
     { SEC_ASN1_SEQUENCE,
 	  0, NULL, sizeof(CERTSignedData) },
     { SEC_ASN1_ANY,
 	  offsetof(CERTSignedData,data), },
-    { SEC_ASN1_INLINE | SEC_ASN1_XTRN,
+    { SEC_ASN1_INLINE,
 	  offsetof(CERTSignedData,signatureAlgorithm),
-	  SEC_ASN1_SUB(SECOID_AlgorithmIDTemplate), },
+	  SECOID_AlgorithmIDTemplate, },
     { SEC_ASN1_BIT_STRING,
 	  offsetof(CERTSignedData,signature), },
     { 0, }
@@ -405,8 +392,7 @@ SGN_Digest(SECKEYPrivateKey *privKey,
 	}
 
 	/* Der encode the digest as a DigestInfo */
-        rv = DER_Encode(arena, &digder, SEC_ASN1_GET(SGNDigestInfoTemplate),
-                        di);
+	rv = DER_Encode(arena, &digder, SGNDigestInfoTemplate, di);
 	if (rv != SECSuccess) {
 	    goto loser;
 	}

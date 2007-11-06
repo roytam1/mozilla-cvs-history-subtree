@@ -2413,35 +2413,22 @@ sec_pkcs12_add_cert(sec_PKCS12SafeBag *cert, PRBool keyExists, void *wincx)
     return rv;
 }
 
-static SECItem *
-sec_pkcs12_get_public_value_and_type(SECKEYPublicKey *pubKey, KeyType *type);
-
 static SECStatus
-sec_pkcs12_add_key(sec_PKCS12SafeBag *key, SECKEYPublicKey *pubKey, 
-		   unsigned int keyUsage, 
+sec_pkcs12_add_key(sec_PKCS12SafeBag *key, SECItem *publicValue, 
+		   KeyType keyType, unsigned int keyUsage, 
 		   SECItem *nickName, void *wincx)
 {
     SECStatus rv;
-    SECItem *publicValue = NULL;
-    KeyType keyType;
 
-    /* We should always have values for "key" and "pubKey"
-       so they can be dereferenced later. */
-    if(!key || !pubKey) {
+   /* We should always have values for "key" and "publicValue"
+      so they can be dereferenced later. */
+   if(!key || !publicValue) {
 	PORT_SetError(SEC_ERROR_INVALID_ARGS);
 	return SECFailure;
     }
 
     if(key->problem || key->noInstall) {
 	return SECSuccess;
-    }
-
-    /* get the value and type from the public key */
-    publicValue = sec_pkcs12_get_public_value_and_type(pubKey, &keyType);
-    if (!publicValue) {
-	key->error = SEC_ERROR_PKCS12_UNABLE_TO_IMPORT_KEY;
-	key->problem = PR_TRUE;
-	return SECFailure;
     }
 
     switch(SECOID_FindOIDTag(&key->safeBagType))
@@ -2472,11 +2459,6 @@ sec_pkcs12_add_key(sec_PKCS12SafeBag *key, SECKEYPublicKey *pubKey,
 	key->error = SEC_ERROR_PKCS12_UNABLE_TO_IMPORT_KEY;
 	key->problem = PR_TRUE;
     } else {
-	/* try to import the public key. Failure to do so is not fatal,
-	 * not all tokens can store the public key */
-	if (pubKey) {
-	    PK11_ImportPublicKey(key->slot, pubKey, PR_TRUE);
-	}
 	key->installed = PR_TRUE;
     }
 
@@ -2789,19 +2771,20 @@ SEC_PKCS12DecoderValidateBags(SEC_PKCS12DecoderContext *p12dcx,
     return rv;
 }
 
-
-static SECKEYPublicKey *
-sec_pkcs12_get_public_key_and_usage(sec_PKCS12SafeBag *certBag,
-					 unsigned int *usage)
+static SECItem *
+sec_pkcs12_get_public_value_and_type(sec_PKCS12SafeBag *certBag,
+					KeyType *type, unsigned int *usage)
 {
     SECKEYPublicKey *pubKey = NULL;
     CERTCertificate *cert = NULL;
+    SECItem *pubValue;
 
-    if(!certBag || !usage) {
+    if(!certBag || !type || !usage) {
 	PORT_SetError(SEC_ERROR_INVALID_ARGS);
 	return NULL;
     }
 
+    *type = nullKey;
     *usage = 0;
 
     cert = CERT_DecodeDERCertificate(
@@ -2813,37 +2796,29 @@ sec_pkcs12_get_public_key_and_usage(sec_PKCS12SafeBag *certBag,
     *usage = cert->keyUsage;
     pubKey = CERT_ExtractPublicKey(cert);
     CERT_DestroyCertificate(cert);
-    return pubKey;
-}
-
-static SECItem *
-sec_pkcs12_get_public_value_and_type(SECKEYPublicKey *pubKey,
-					KeyType *type)
-{
-    SECItem *pubValue = NULL;
-
-    if(!type || !pubKey) {
-	PORT_SetError(SEC_ERROR_INVALID_ARGS);
+    if(!pubKey) {
 	return NULL;
     }
 
     *type = pubKey->keyType;
     switch(pubKey->keyType) {
 	case dsaKey:
-	    pubValue = &pubKey->u.dsa.publicValue;
+	    pubValue = SECITEM_DupItem(&pubKey->u.dsa.publicValue);
 	    break;
 	case dhKey:
-	    pubValue = &pubKey->u.dh.publicValue;
+	    pubValue = SECITEM_DupItem(&pubKey->u.dh.publicValue);
 	    break;
 	case rsaKey:
-	    pubValue = &pubKey->u.rsa.modulus;
+	    pubValue = SECITEM_DupItem(&pubKey->u.rsa.modulus);
 	    break;
         case ecKey:
-	    pubValue = &pubKey->u.ec.publicValue;
+	    pubValue = SECITEM_DupItem(&pubKey->u.ec.publicValue);
 	    break;
 	default:
 	    pubValue = NULL;
     }
+
+    SECKEY_DestroyPublicKey(pubKey);
 
     return pubValue;
 }
@@ -2875,10 +2850,11 @@ sec_pkcs12_install_bags(sec_PKCS12SafeBag **safeBags, void *wincx)
     if(keyList) {
 	for (i = 0; keyList[i]; i++) {
 	    SECStatus rv;
-	    SECKEYPublicKey *pubKey = NULL;
+	    SECItem *publicValue = NULL;
 	    SECItem *nickName    = NULL;
 	    sec_PKCS12SafeBag *key = keyList[i];
 	    sec_PKCS12SafeBag **certList;
+	    KeyType keyType;
 	    unsigned int keyUsage;
 
 	    if(key->problem) {
@@ -2888,8 +2864,8 @@ sec_pkcs12_install_bags(sec_PKCS12SafeBag **safeBags, void *wincx)
 
 	    certList = sec_pkcs12_find_certs_for_key(safeBags, key);
 	    if(certList && certList[0]) {
-		pubKey = sec_pkcs12_get_public_key_and_usage(certList[0],
-					&keyUsage);
+		publicValue = sec_pkcs12_get_public_value_and_type(certList[0],
+							&keyType, &keyUsage);
 		/* use the cert's nickname, if it has one, else use the 
 		 * key's nickname, else fail.
 		 */
@@ -2902,16 +2878,17 @@ sec_pkcs12_install_bags(sec_PKCS12SafeBag **safeBags, void *wincx)
 		key->error = SEC_ERROR_BAD_NICKNAME;
 		key->problem = PR_TRUE;
 		rv = SECFailure;
-	    } else if (!pubKey) {
+	    } else if (!publicValue) {
                 key->error = SEC_ERROR_PKCS12_UNABLE_TO_IMPORT_KEY;
 		key->problem = PR_TRUE;
                 rv = SECFailure;
 	    } else {
-		rv = sec_pkcs12_add_key(key, pubKey, keyUsage, nickName, wincx);
+		rv = sec_pkcs12_add_key(key, publicValue, keyType, 
+		                        keyUsage, nickName, wincx);
             }
-	    if (pubKey) {
-		SECKEY_DestroyPublicKey(pubKey);
-		pubKey = NULL;
+	    if (publicValue) {
+		SECITEM_FreeItem(publicValue, PR_TRUE);
+		publicValue = NULL;
 	    }
 	    if (nickName) {
 		SECITEM_FreeItem(nickName, PR_TRUE);

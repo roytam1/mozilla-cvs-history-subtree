@@ -96,8 +96,6 @@ pkix_pl_Mutex_RegisterSelf(
         PKIX_ENTER(MUTEX, "pkix_pl_Mutex_RegisterSelf");
 
         entry.description = "Mutex";
-        entry.objCounter = 0;
-        entry.typeObjectSize = sizeof(PKIX_PL_Mutex);
         entry.destructor = pkix_pl_Mutex_Destroy;
         entry.equalsFunction = NULL;
         entry.hashcodeFunction = NULL;
@@ -191,6 +189,5 @@ PKIX_PL_Mutex_Unlock(
                 PKIX_ERROR_FATAL(PKIX_ERRORUNLOCKINGMUTEX);
         }
 
-cleanup:
         PKIX_RETURN(MUTEX);
 }

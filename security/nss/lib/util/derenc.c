@@ -36,8 +36,6 @@
 
 #include "secder.h"
 #include "secerr.h"
-
-#if 0
 /*
  * Generic templates for individual/simple items.
  */
@@ -97,7 +95,6 @@ DERTemplate SECUTCTimeTemplate[] = {
 	  0, NULL, sizeof(SECItem) }
 };
 
-#endif
 
 static int
 header_length(DERTemplate *dtemplate, PRUint32 contents_len)

@@ -376,7 +376,6 @@ pkix_duplicateImmutable(
 
         *pNewObject = object;
 
-cleanup:
         PKIX_RETURN(OBJECT);
 }
 

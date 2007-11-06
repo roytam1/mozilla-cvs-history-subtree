@@ -579,8 +579,6 @@ pkix_Logger_RegisterSelf(void *plContext)
         PKIX_ENTER(LOGGER, "pkix_Logger_RegisterSelf");
 
         entry.description = "Logger";
-        entry.objCounter = 0;
-        entry.typeObjectSize = sizeof(PKIX_Logger);
         entry.destructor = pkix_Logger_Destroy;
         entry.equalsFunction = pkix_Logger_Equals;
         entry.hashcodeFunction = pkix_Logger_Hashcode;
@@ -663,7 +661,6 @@ PKIX_Logger_GetLoggerContext(
         PKIX_INCREF(logger->context);
         *pLoggerContext = logger->context;
 
-cleanup:
         PKIX_RETURN(LOGGER);
 }
 

@@ -589,8 +589,6 @@ pkix_CRLSelector_RegisterSelf(void *plContext)
         PKIX_ENTER(CRLSELECTOR, "pkix_CRLSelector_RegisterSelf");
 
         entry.description = "CRLSelector";
-        entry.objCounter = 0;
-        entry.typeObjectSize = sizeof(PKIX_CRLSelector);
         entry.destructor = pkix_CRLSelector_Destroy;
         entry.equalsFunction = pkix_CRLSelector_Equals;
         entry.hashcodeFunction = pkix_CRLSelector_Hashcode;
@@ -690,7 +688,6 @@ PKIX_CRLSelector_GetCRLSelectorContext(
 
         *pCrlSelectorContext = selector->context;
 
-cleanup:
         PKIX_RETURN(CRLSELECTOR);
 }
 
@@ -711,7 +708,6 @@ PKIX_CRLSelector_GetCommonCRLSelectorParams(
 
         *pParams = selector->params;
 
-cleanup:
         PKIX_RETURN(CRLSELECTOR);
 }
 

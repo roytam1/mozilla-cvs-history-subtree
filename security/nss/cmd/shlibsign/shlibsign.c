@@ -155,7 +155,7 @@ main (int argc, char **argv)
     int keySize = 1024;
     PQGParams *pqgParams = NULL;
     PQGVerify *pqgVerify = NULL;
-    const char *nssDir = NULL;
+    char* nssDir = NULL;
 #ifdef USES_LINKS
     int ret;
     struct stat stat_buf;

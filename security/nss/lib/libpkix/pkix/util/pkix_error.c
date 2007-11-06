@@ -391,8 +391,6 @@ pkix_Error_RegisterSelf(void *plContext)
         PKIX_ENTER(ERROR, "pkix_Error_RegisterSelf");
 
         entry.description = "Error";
-        entry.objCounter = 0;
-        entry.typeObjectSize = sizeof(PKIX_Error);
         entry.destructor = pkix_Error_Destroy;
         entry.equalsFunction = pkix_Error_Equals;
         entry.hashcodeFunction = pkix_Error_Hashcode;
@@ -460,7 +458,6 @@ PKIX_Error_Create(
 
         *pError = error;
 
-cleanup:
         PKIX_RETURN(ERROR);
 }
 
@@ -516,7 +513,6 @@ PKIX_Error_GetCause(
 
         *pCause = error->cause;
 
-cleanup:
         PKIX_RETURN(ERROR);
 }
 
@@ -536,7 +532,6 @@ PKIX_Error_GetSupplementaryInfo(
 
         *pInfo = error->info;
 
-cleanup:
         PKIX_RETURN(ERROR);
 }
 

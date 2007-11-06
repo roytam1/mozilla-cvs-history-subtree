@@ -372,15 +372,7 @@ typedef enum {
     PK11_DIS_TOKEN_NOT_PRESENT = 4
 } PK11DisableReasons;
 
-/* types of PKCS #11 objects 
- * used to identify which NSS data structure is 
- * passed to the PK11_Raw* functions. Types map as follows:
- *   PK11_TypeGeneric            PK11GenericObject *
- *   PK11_TypePrivKey            SECKEYPrivateKey *
- *   PK11_TypePubKey             SECKEYPublicKey *
- *   PK11_TypeSymKey             PK11SymKey *
- *   PK11_TypeCert               CERTCertificate * (currently not used).
- */
+/* types of PKCS #11 objects */
 typedef enum {
    PK11_TypeGeneric = 0,
    PK11_TypePrivKey = 1,

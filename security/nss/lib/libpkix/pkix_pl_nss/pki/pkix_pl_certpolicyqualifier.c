@@ -334,8 +334,6 @@ pkix_pl_CertPolicyQualifier_RegisterSelf(void *plContext)
                 "pkix_pl_CertPolicyQualifier_RegisterSelf");
 
         entry.description = "CertPolicyQualifier";
-        entry.objCounter = 0;
-        entry.typeObjectSize = sizeof(PKIX_PL_CertPolicyQualifier);
         entry.destructor = pkix_pl_CertPolicyQualifier_Destroy;
         entry.equalsFunction = pkix_pl_CertPolicyQualifier_Equals;
         entry.hashcodeFunction = pkix_pl_CertPolicyQualifier_Hashcode;
@@ -368,8 +366,6 @@ PKIX_PL_PolicyQualifier_GetPolicyQualifierId(
         PKIX_INCREF(policyQualifierInfo->policyQualifierId);
 
         *pPolicyQualifierId = policyQualifierInfo->policyQualifierId;
-
-cleanup:
         PKIX_RETURN(CERTPOLICYQUALIFIER);
 }
 
@@ -391,6 +387,5 @@ PKIX_PL_PolicyQualifier_GetQualifier(
 
         *pQualifier = policyQualifierInfo->qualifier;
 
-cleanup:
         PKIX_RETURN(CERTPOLICYQUALIFIER);
 }

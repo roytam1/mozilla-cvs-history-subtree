@@ -53,7 +53,6 @@
 #ifndef nssrwlk_h___
 #define nssrwlk_h___
 
-#include "utilrename.h"
 #include "prtypes.h"
 #include "nssrwlkt.h"
 

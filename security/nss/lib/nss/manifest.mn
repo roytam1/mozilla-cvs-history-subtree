@@ -49,7 +49,6 @@ MODULE = nss
 CSRCS = \
 	nssinit.c \
 	nssver.c \
-	utilwrap.c \
 	$(NULL)
 
 REQUIRES = dbm

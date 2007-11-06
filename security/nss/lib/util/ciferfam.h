@@ -44,7 +44,6 @@
 #ifndef _CIFERFAM_H_
 #define _CIFERFAM_H_
 
-#include "utilrename.h"
 /* Cipher Suite "Families" */
 #define CIPHER_FAMILY_PKCS12			"PKCS12"
 #define CIPHER_FAMILY_SMIME			"SMIME"

@@ -101,8 +101,6 @@ pkix_DefaultRevocationChecker_RegisterSelf(void *plContext)
                     "pkix_DefaultRevocationChecker_RegisterSelf");
 
         entry.description = "DefaultRevocationChecker";
-        entry.objCounter = 0;
-        entry.typeObjectSize = sizeof(PKIX_DefaultRevocationChecker);
         entry.destructor = pkix_DefaultRevChecker_Destroy;
         entry.equalsFunction = NULL;
         entry.hashcodeFunction = NULL;

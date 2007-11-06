@@ -47,6 +47,7 @@
 #include "secerr.h"
 
 #ifdef NSS_ENABLE_ECC
+#include "secdert.h"    /* Required for ECDSA */
 #include "ec.h"         /* Required for ECDSA */
 #endif
 

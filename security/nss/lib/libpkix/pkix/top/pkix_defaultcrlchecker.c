@@ -126,8 +126,6 @@ pkix_DefaultCRLCheckerState_RegisterSelf(void *plContext)
                     "pkix_DefaultCRLCheckerState_RegisterSelf");
 
         entry.description = "DefaultCRLCheckerState";
-        entry.objCounter = 0;
-        entry.typeObjectSize = sizeof(pkix_DefaultCRLCheckerState);
         entry.destructor = pkix_DefaultCRLCheckerState_Destroy;
         entry.equalsFunction = NULL;
         entry.hashcodeFunction = NULL;

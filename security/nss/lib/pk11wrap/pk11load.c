@@ -445,7 +445,9 @@ fail2:
     }
 fail:
     mod->functionList = NULL;
+#ifdef DEBUG
     disableUnload = PR_GetEnv("NSS_DISABLE_UNLOAD");
+#endif
     if (library && !disableUnload) {
         PR_UnloadLibrary(library);
     }
@@ -472,7 +474,9 @@ SECMOD_UnloadModule(SECMODModule *mod) {
     if (mod->internal) {
         if (0 == PR_AtomicDecrement(&softokenLoadCount)) {
           if (softokenLib) {
+#ifdef DEBUG
               disableUnload = PR_GetEnv("NSS_DISABLE_UNLOAD");
+#endif
               if (!disableUnload) {
                   PRStatus status = PR_UnloadLibrary(softokenLib);
                   PORT_Assert(PR_SUCCESS == status);
@@ -490,7 +494,9 @@ SECMOD_UnloadModule(SECMODModule *mod) {
 	return SECFailure;
     }
 
+#ifdef DEBUG
     disableUnload = PR_GetEnv("NSS_DISABLE_UNLOAD");
+#endif
     if (!disableUnload) {
         PR_UnloadLibrary(library);
     }

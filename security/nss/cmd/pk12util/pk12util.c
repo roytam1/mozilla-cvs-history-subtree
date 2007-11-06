@@ -741,6 +741,7 @@ P12U_ListPKCS12File(char *in_file, PK11SlotInfo *slot,
     SECItem uniPwitem = { 0 };
     SECStatus rv = SECFailure;
     const SEC_PKCS12DecoderItem *dip;
+    int error;
 
     p12dcx = p12U_ReadPKCS12File(&uniPwitem, in_file, slot, slotPw,
                              p12FilePw);
