@@ -406,11 +406,11 @@ MODULES_all :=                                  \
 #
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
-MOZ_CO_TAG           = GECKO190_20071106_RELBRANCH
-NSPR_CO_TAG          = GECKO190_20071106_RELBRANCH
-NSS_CO_TAG           = GECKO190_20071106_RELBRANCH
-LDAPCSDK_CO_TAG      = GECKO190_20071106_RELBRANCH
-LOCALES_CO_TAG       = GECKO190_20071106_RELBRANCH
+MOZ_CO_TAG           = FIREFOX_3_0b1_RELEASE
+NSPR_CO_TAG          = FIREFOX_3_0b1_RELEASE
+NSS_CO_TAG           = FIREFOX_3_0b1_RELEASE
+LDAPCSDK_CO_TAG      = FIREFOX_3_0b1_RELEASE
+LOCALES_CO_TAG       = FIREFOX_3_0b1_RELEASE
 
 #######################################################################
 # Defines
