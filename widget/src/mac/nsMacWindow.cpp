@@ -558,19 +558,26 @@ nsresult nsMacWindow::StandardCreate(nsIWidget *aParent,
     else
       ::OffsetRect(&wRect, hOffset, vOffset);
 
-    nsCOMPtr<nsIScreenManager> screenmgr = do_GetService(sScreenManagerContractID);
-    if (screenmgr) {
-      nsCOMPtr<nsIScreen> screen;
-      //screenmgr->GetPrimaryScreen(getter_AddRefs(screen));
-      screenmgr->ScreenForRect(wRect.left, wRect.top,
-                                 wRect.right - wRect.left, wRect.bottom - wRect.top,
-                                 getter_AddRefs(screen));
-      if (screen) {
-        PRInt32 left, top, width, height;
-        screen->GetAvailRect(&left, &top, &width, &height);
-        if (wRect.bottom > top+height) {
-          bottomPinDelta = wRect.bottom - (top+height);
-          wRect.bottom -= bottomPinDelta;
+    // If aRect is empty (zero width and/or zero height, as often happens at
+    // least with eWindowType_popup windows), wRect.bottom can end up set here
+    // to a a wildly inappropriate value.  This in turn can can cause
+    // bottomPinDelta to to be set incorrectly, which leads to the bounds
+    // being set incorrectly by the call to Inherited::StandardCreate() below.
+    if (!aRect.IsEmpty()) {
+      nsCOMPtr<nsIScreenManager> screenmgr = do_GetService(sScreenManagerContractID);
+      if (screenmgr) {
+        nsCOMPtr<nsIScreen> screen;
+        //screenmgr->GetPrimaryScreen(getter_AddRefs(screen));
+        screenmgr->ScreenForRect(wRect.left, wRect.top,
+                                   wRect.right - wRect.left, wRect.bottom - wRect.top,
+                                   getter_AddRefs(screen));
+        if (screen) {
+          PRInt32 left, top, width, height;
+          screen->GetAvailRect(&left, &top, &width, &height);
+          if (wRect.bottom > top+height) {
+            bottomPinDelta = wRect.bottom - (top+height);
+            wRect.bottom -= bottomPinDelta;
+          }
         }
       }
     }
@@ -579,12 +586,38 @@ nsresult nsMacWindow::StandardCreate(nsIWidget *aParent,
 
     mWindowMadeHere = PR_TRUE;
 
-    // Getting kWindowContentRgn can give back bad values on Panther
-    // (fixed on Tiger), but wRect is already set to the content rect anyway.
-    Rect structure;
-    ::GetWindowBounds(mWindowPtr, kWindowStructureRgn, &structure);
-    mBoundsOffset.v = wRect.top - structure.top;
-    mBoundsOffset.h = wRect.left - structure.left;
+    // If aRect is empty (zero width and/or zero height, as often happens at
+    // least with eWindowType_popup windows), we've just created an empty
+    // window.  This isn't a problem in itself.  But calling GetWindowBounds()
+    // on an empty window can (and usually does) return a rectangle which,
+    // though empty, has arbitrarily different dimensions than the rectangle
+    // that was used to create the window (i.e. wRect).  If the upper-left
+    // corners of these rectangles are different, this will cause mBoundsOffset
+    // to be set incorrectly -- which is likely to cause trouble elsewhere.
+    // It's possible that this never happened before OS X Leopard (10.5) was
+    // released.  But it _can_ happen on Leopard, where it caused bmo bug
+    // 400082 (and probably also other bugs).
+    //
+    // Bmo bug 400082 happened (on Leopard) as follows:  For some kinds of
+    // (empty) popup windows (those that don't yet have any content?, that
+    // aren't yet visible?), often (always?) structure.top != wRect.top.
+    // This caused mBoundsOffset.v to be set incorrectly here, which caused
+    // nsMacWindow::Resize() to always reset its height to 0, which in turn
+    // made nsMacWindow::Show() always fail to display the window (because
+    // the window's mBounds was always empty).
+    if (aRect.IsEmpty()) {
+      // An empty window's mBoundsOffset was (I think) always zeroed by the
+      // pre-patch code below on Tiger.  So it makes sense to continue doing
+      // this.
+      mBoundsOffset.v = mBoundsOffset.h = 0;
+    } else {
+      // Getting kWindowContentRgn can give back bad values on Panther
+      // (fixed on Tiger), but wRect is already set to the content rect anyway.
+      Rect structure;
+      ::GetWindowBounds(mWindowPtr, kWindowStructureRgn, &structure);
+      mBoundsOffset.v = wRect.top - structure.top;
+      mBoundsOffset.h = wRect.left - structure.left;
+    }
   }
   else
   {
