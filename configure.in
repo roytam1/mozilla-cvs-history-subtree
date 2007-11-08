@@ -1471,6 +1471,7 @@ case "$target" in
     ;;
 
 *-darwin*) 
+    AC_DEFINE(STDC_HEADERS)
     MKSHLIB='$(CXX) $(CXXFLAGS) $(DSO_PIC_CFLAGS) $(DSO_LDOPTS) -o $@'
     MKCSHLIB='$(CC) $(CFLAGS) $(DSO_PIC_CFLAGS) $(DSO_LDOPTS) -o $@'
 
