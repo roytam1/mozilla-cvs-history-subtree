@@ -75,8 +75,7 @@
 #include "nsBidiPresUtils.h"
 #endif // IBMBIDI
 
-// horizontal ellipsis (U+2026)
-#define ELLIPSIS PRUnichar(0x2026)
+#define ELLIPSIS "..."
 
 #define CROP_LEFT   "left"
 #define CROP_RIGHT  "right"
@@ -594,7 +593,7 @@ nsTextBoxFrame::CalculateTitleForWidth(nsPresContext*      aPresContext,
     }
 
     // start with an ellipsis
-    mCroppedTitle.Assign(ELLIPSIS);
+    mCroppedTitle.AssignASCII(ELLIPSIS);
 
     // see if the width is even smaller than the ellipsis
     // if so, clear the text (XXX set as many '.' as we can?).
@@ -736,7 +735,7 @@ nsTextBoxFrame::CalculateTitleForWidth(nsPresContext*      aPresContext,
 
             // form the new cropped string
             nsAutoString ellipsisString;
-            ellipsisString.Assign(ELLIPSIS);
+            ellipsisString.AssignASCII(ELLIPSIS);
 
             mCroppedTitle = leftString + ellipsisString + rightString;
         }
