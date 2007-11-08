@@ -208,6 +208,7 @@ Gdiplus.h
 gdk/gdkevents.h
 gdk/gdk.h
 gdk/gdkkeysyms.h
+gdk/gdkpango.h
 gdk/gdkprivate.h
 gdk/gdkregion.h
 gdk/gdkwindow.h
