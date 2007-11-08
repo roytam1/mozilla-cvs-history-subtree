@@ -135,6 +135,7 @@ public:
   // Have to override tabindex for <embed> to act right
   NS_IMETHOD GetTabIndex(PRInt32* aTabIndex);
   NS_IMETHOD SetTabIndex(PRInt32 aTabIndex);
+  virtual void SetFocus(nsPresContext* aPresContext);
   // Let plugin decide whether it wants focus from mouse clicks
   virtual PRBool IsFocusable(PRInt32 *aTabIndex = nsnull);
   
@@ -146,6 +147,7 @@ public:
 
 protected:
   nsCString mActualType;
+  PRPackedBool mInSetFocus; // Used in SetFocus(nsPresContext*)
 };
 
 
@@ -153,7 +155,7 @@ NS_IMPL_NS_NEW_HTML_ELEMENT(Shared)
 
 
 nsHTMLSharedElement::nsHTMLSharedElement(nsINodeInfo *aNodeInfo)
-  : nsGenericHTMLElement(aNodeInfo)
+  : nsGenericHTMLElement(aNodeInfo), mInSetFocus(PR_FALSE)
 {
 }
 
@@ -510,6 +512,18 @@ nsHTMLSharedElement::GetAttributeMappingFunction() const
   }
 
   return nsGenericHTMLElement::GetAttributeMappingFunction();
+}
+
+void
+nsHTMLSharedElement::SetFocus(nsPresContext* aPresContext)
+{
+  if (mInSetFocus) {
+    NS_WARNING("nsHTMLSharedElement::SetFocus() called recursively on same element");
+    return;
+  }
+  mInSetFocus = PR_TRUE;
+  nsGenericHTMLElement::SetFocus(aPresContext);
+  mInSetFocus = PR_FALSE;
 }
 
 PRBool

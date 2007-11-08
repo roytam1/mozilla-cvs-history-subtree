@@ -79,6 +79,7 @@ public:
   NS_DECL_NSIDOMHTMLOBJECTELEMENT
 
   // nsIContent
+  virtual void SetFocus(nsPresContext* aPresContext);
   virtual PRBool IsFocusable(PRInt32 *aTabIndex = nsnull);
 
   // Overriden nsIFormControl methods
@@ -101,6 +102,7 @@ public:
 protected:
   PRPackedBool mIsDoneAddingChildren;
   nsCString mActualType;
+  PRPackedBool mInSetFocus; // Used in SetFocus(nsPresContext*)
 };
 
 
@@ -109,7 +111,9 @@ NS_IMPL_NS_NEW_HTML_ELEMENT_CHECK_PARSER(Object)
 
 nsHTMLObjectElement::nsHTMLObjectElement(nsINodeInfo *aNodeInfo,
                                          PRBool aFromParser)
-  : nsGenericHTMLFormElement(aNodeInfo), mIsDoneAddingChildren(!aFromParser)
+  : nsGenericHTMLFormElement(aNodeInfo),
+    mIsDoneAddingChildren(!aFromParser),
+    mInSetFocus(PR_FALSE)
 {
 }
 
@@ -175,6 +179,18 @@ nsHTMLObjectElement::GetForm(nsIDOMHTMLFormElement** aForm)
 }
 
 // nsIContent
+
+void
+nsHTMLObjectElement::SetFocus(nsPresContext* aPresContext)
+{
+  if (mInSetFocus) {
+    NS_WARNING("nsHTMLObjectElement::SetFocus() called recursively on same element");
+    return;
+  }
+  mInSetFocus = PR_TRUE;
+  nsGenericHTMLFormElement::SetFocus(aPresContext);
+  mInSetFocus = PR_FALSE;
+}
 
 PRBool
 nsHTMLObjectElement::IsFocusable(PRInt32 *aTabIndex)
