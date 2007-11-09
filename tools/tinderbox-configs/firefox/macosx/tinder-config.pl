@@ -167,7 +167,7 @@ $LocaleProduct = "browser";
 $LocalizationVersionFile = 'browser/config/version.txt';
 %WGetFiles = (
 # CONFIG:             "http://%stagingServer%/pub/mozilla.org/firefox/nightly/%version%-candidates/rc%rc%/firefox-%version%.en-US.mac.dmg" => 
-	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/1.9b1-candidates/rc1/firefox-%version%.en-US.mac.dmg" =>
+	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/1.9b1-candidates/rc3/firefox-%version%.en-US.mac.dmg" =>
 # CONFIG:             "%l10n_buildDir%/%l10n_buildPlatform%/firefox.dmg"
 	      "/builds/tinderbox/Fx-Trunk-l10n-Release/Darwin_8.8.4_Depend/firefox.dmg"
 	      );

@@ -163,11 +163,11 @@ $LocaleProduct = "browser";
 $LocalizationVersionFile = 'browser/config/version.txt';
 %WGetFiles = (
 # CONFIG:             'http://%stagingServer%/pub/mozilla.org/firefox/nightly/%version%-candidates/rc%rc%/unsigned/firefox-%version%.en-US.win32.installer.exe' =>
-	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/1.9b1-candidates/rc1/unsigned/firefox-%version%.en-US.win32.installer.exe" =>
+	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/1.9b1-candidates/rc3/unsigned/firefox-%version%.en-US.win32.installer.exe" =>
 # CONFIG:             "%l10n_buildDir%/%l10n_buildPlatform%/firefox-installer.exe",
 	      "/e/builds/tinderbox/Fx-Trunk-l10n-Release/WINNT_5.2_Depend/firefox-installer.exe",
 # CONFIG:             'http://%stagingServer%/pub/mozilla.org/firefox/nightly/%version%-candidates/rc%rc%/unsigned/firefox-%version%.en-US.win32.zip' =>
-	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/1.9b1-candidates/rc1/unsigned/firefox-%version%.en-US.win32.zip" =>
+	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/1.9b1-candidates/rc3/unsigned/firefox-%version%.en-US.win32.zip" =>
 # CONFIG:             "%l10n_buildDir%/%l10n_buildPlatform%/firefox.zip"
 	      "/e/builds/tinderbox/Fx-Trunk-l10n-Release/WINNT_5.2_Depend/firefox.zip"
 	      );
