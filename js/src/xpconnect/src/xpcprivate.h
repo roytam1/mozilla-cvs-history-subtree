@@ -109,6 +109,8 @@
 #include "nsIProperty.h"
 #include "nsSupportsArray.h"
 #include "nsTArray.h"
+#include "nsBaseHashtable.h"
+#include "nsHashKeys.h"
 
 #include "nsIXPCScriptNotify.h"  // used to notify: ScriptEvaluated
 
@@ -426,12 +428,11 @@ private:
 
 const PRBool OBJ_IS_GLOBAL = PR_TRUE;
 const PRBool OBJ_IS_NOT_GLOBAL = PR_FALSE;
-struct JSObjectRefcounts;
 
 class nsXPConnect : public nsIXPConnect,
                     public nsIThreadObserver,
                     public nsSupportsWeakReference,
-                    public nsCycleCollectionLanguageRuntime,
+                    public nsCycleCollectionJSRuntime,
                     public nsCycleCollectionParticipant
 {
 public:
@@ -489,15 +490,34 @@ public:
                         nsCycleCollectionTraversalCallback &cb);
     
     // nsCycleCollectionLanguageRuntime
-    virtual nsresult BeginCycleCollection();
+    virtual nsresult BeginCycleCollection(nsCycleCollectionTraversalCallback &cb);
     virtual nsresult FinishCycleCollection();
     virtual nsCycleCollectionParticipant *ToParticipant(void *p);
+    virtual PRUint32 Collect();
 #ifdef DEBUG_CC
     virtual void PrintAllReferencesTo(void *p);
-    virtual void SuspectExtraPointers();
 #endif
 
-    JSObjectRefcounts* GetJSObjectRefcounts() {return mObjRefcounts;}
+    // We should not trace XPConnect JS roots when tracing the graph for the
+    // cycle collector. Those should be traced from the XPCOM objects that hold
+    // them when we know that they won't be collected by the cycle collector.
+    PRBool ShouldTraceRoots()
+    {
+        return !mCycleCollecting;
+    }
+
+    static uint8 GetTraceKind(void *thing);
+
+    XPCCallContext* GetCycleCollectionContext()
+    {
+        return mCycleCollectionContext;
+    }
+
+    PRInt32 GetRequestDepth(JSContext* cx);
+
+    // This returns the singleton nsCycleCollectionParticipant for JSContexts.
+    static nsCycleCollectionParticipant *JSContextParticipant();
+
 #ifndef XPCONNECT_STANDALONE
     void RecordTraversal(void *p, nsISupports *s);
 #endif
@@ -526,14 +546,22 @@ private:
     nsIXPCSecurityManager*   mDefaultSecurityManager;
     PRUint16                 mDefaultSecurityManagerFlags;
     JSBool                   mShuttingDown;
-    JSObjectRefcounts*       mObjRefcounts;
     XPCCallContext*          mCycleCollectionContext;
+#ifdef DEBUG_CC
+    nsAutoPtr<XPCCallContext> mExplainCycleCollectionContext;
+    PLDHashTable             mJSRoots;
+#endif
+    PRBool                   mCycleCollecting;
 
 #ifdef XPC_TOOLS_SUPPORT
     nsCOMPtr<nsIXPCToolsProfiler> mProfiler;
     nsCOMPtr<nsILocalFile>        mProfilerOutputFile;
 #endif
 
+#ifndef XPCONNECT_STANDALONE
+    typedef nsBaseHashtable<nsVoidPtrHashKey, nsISupports*, nsISupports*> ScopeSet;
+    ScopeSet mScopes;
+#endif
 };
 
 /***************************************************************************/
@@ -676,12 +704,22 @@ public:
     }
 
     static void JS_DLL_CALLBACK TraceJS(JSTracer* trc, void* data);
+    void TraceXPConnectRoots(JSTracer *trc);
+    void AddXPConnectRoots(JSContext* cx,
+                           nsCycleCollectionTraversalCallback& cb);
 
     static JSBool JS_DLL_CALLBACK GCCallback(JSContext *cx, JSGCStatus status);
 
     inline void AddVariantRoot(XPCTraceableVariant* variant);
     inline void AddWrappedJSRoot(nsXPCWrappedJS* wrappedJS);
     inline void AddObjectHolderRoot(XPCJSObjectHolder* holder);
+
+    nsresult AddJSHolder(void* aHolder, nsScriptObjectTracer* aTracer);
+    nsresult RemoveJSHolder(void* aHolder);
+
+    void UnsetContextGlobals();
+    void RestoreContextGlobals();
+    JSObject* GetUnsetContextGlobal(JSContext* cx);
 
     void DebugDump(PRInt16 depth);
 
@@ -746,6 +784,8 @@ private:
     XPCRootSetElem *mVariantRoots;
     XPCRootSetElem *mWrappedJSRoots;
     XPCRootSetElem *mObjectHolderRoots;
+    JSDHashTable mJSHolders;
+    JSDHashTable mClearedGlobalObjects;
 };
 
 /***************************************************************************/
@@ -1152,7 +1192,8 @@ public:
     TraceJS(JSTracer* trc, XPCJSRuntime* rt);
 
     static void
-    SuspectAllWrappers(XPCJSRuntime* rt);
+    SuspectAllWrappers(XPCJSRuntime* rt, JSContext* cx,
+                       nsCycleCollectionTraversalCallback &cb);
 
     static void
     FinishedMarkPhaseOfGC(JSContext* cx, XPCJSRuntime* rt);
@@ -1190,8 +1231,6 @@ public:
     void SetGlobal(XPCCallContext& ccx, JSObject* aGlobal);
 
     static void InitStatics() { gScopes = nsnull; gDyingScopes = nsnull; }
-
-    void Traverse(nsCycleCollectionTraversalCallback &cb);
 
 #ifndef XPCONNECT_STANDALONE
     /**
@@ -1931,10 +1970,11 @@ private:
 class XPCWrappedNative : public nsIXPConnectWrappedNative
 {
 public:
-    NS_DECL_CYCLE_COLLECTING_ISUPPORTS
+    NS_DECL_ISUPPORTS
     NS_DECL_NSIXPCONNECTJSOBJECTHOLDER
     NS_DECL_NSIXPCONNECTWRAPPEDNATIVE
     NS_DECL_CYCLE_COLLECTION_CLASS(XPCWrappedNative)
+    NS_DECL_CYCLE_COLLECTION_UNMARK_PURPLE_STUB(XPCWrappedNative)
 
 #ifndef XPCONNECT_STANDALONE
     virtual nsIPrincipal* GetObjectPrincipal() const;
@@ -2044,7 +2084,7 @@ public:
                            nsISupports* aCOMObj,
                            XPCWrappedNative** aWrapper);
 
-    void FlatJSObjectFinalized(JSContext *cx, JSObject *obj);
+    void FlatJSObjectFinalized(JSContext *cx);
 
     void SystemIsBeingShutDown(JSContext* cx);
 
@@ -2147,6 +2187,8 @@ public:
     JSObject* GetWrapper()              { return mWrapper; }
     void      SetWrapper(JSObject *obj) { mWrapper = obj; }
 
+    void NoteTearoffs(nsCycleCollectionTraversalCallback& cb);
+
     // Make ctor and dtor protected (rather than private) to placate nsCOMPtr.
 protected:
     XPCWrappedNative(); // not implemented
@@ -2196,8 +2238,10 @@ private:
     XPCWrappedNativeTearOffChunk mFirstChunk;
     JSObject*                    mWrapper;
 
+#ifdef XPC_CHECK_WRAPPER_THREADSAFETY
 public:
     nsCOMPtr<nsIThread>          mThread; // Don't want to overload _mOwningThread
+#endif
 };
 
 /***************************************************************************
@@ -2395,6 +2439,8 @@ protected:
                    nsXPCWrappedJSClass* aClass,
                    nsXPCWrappedJS* root,
                    nsISupports* aOuter);
+
+   void Unlink();
 
 private:
     JSObject* mJSObj;
@@ -3028,7 +3074,6 @@ private:
     JSUint32             mWrappedNativeThreadsafetyReportDepth;
 #endif
     PRThread*            mThread;
-    nsVoidArray          mNativesToReleaseArray;
 
     static PRLock*           gLock;
     static XPCPerThreadData* gThreads;
