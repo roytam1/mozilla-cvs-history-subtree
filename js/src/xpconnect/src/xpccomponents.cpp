@@ -3624,6 +3624,8 @@ nsXPCComponents_Utils::GetObjectId()
     if (!cx)
         return NS_ERROR_FAILURE;
 
+    JSAutoRequest ar(cx);
+    
     PRUint32 argc = 0;
     cc->GetArgc(&argc);
     if (argc < 1)
