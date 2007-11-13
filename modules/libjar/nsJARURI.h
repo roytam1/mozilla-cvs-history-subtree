@@ -64,13 +64,14 @@
 }
 
 
-class nsJARURI : public nsIJARURI, nsISerializable, nsIClassInfo
+class nsJARURI : public nsIJARURI, nsIJARURI_MOZILLA_1_8_BRANCH, nsISerializable, nsIClassInfo
 {
 public:    
     NS_DECL_ISUPPORTS
     NS_DECL_NSIURI
     NS_DECL_NSIURL
     NS_DECL_NSIJARURI
+    NS_DECL_NSIJARURI_MOZILLA_1_8_BRANCH
     NS_DECL_NSISERIALIZABLE
     NS_DECL_NSICLASSINFO
 
