@@ -59,9 +59,11 @@ function createDateTime() {
 }
 
 /* Returns a clean new calIRecurrenceInfo */
-function createRecurrenceInfo() {
-    return Components.classes["@mozilla.org/calendar/recurrence-info;1"].
+function createRecurrenceInfo(aItem) {
+    var recInfo = Components.classes["@mozilla.org/calendar/recurrence-info;1"].
            createInstance(Components.interfaces.calIRecurrenceInfo);
+    recInfo.item = aItem;
+    return recInfo;
 }
 
 /* Returns a clean new calIRecurrenceRule */
@@ -328,17 +330,30 @@ function now() {
 }
 
 /**
- * Returns a calIDateTime corresponding to a javascript Date
+ * Returns a calIDateTime corresponding to a javascript Date.
  *
- * @param aDate  a javascript date
- * @returns      a calIDateTime whose jsDate is aDate
+ * @param aDate     a javascript date
+ * @param aTimezone (optional) a timezone that should be enforced
+ * @returns         a calIDateTime
  *
  * @warning  Use of this function is strongly discouraged.  calIDateTime should
  *           be used directly whenever possible.
+ *           If you pass a timezone, then the passed jsDate's timezone will be ignored,
+ *           but only its local time portions are be taken.
  */
-function jsDateToDateTime(aDate) {
+function jsDateToDateTime(aDate, aTimezone) {
     var newDate = createDateTime();
-    newDate.jsDate = aDate;
+    if (aTimezone) {
+        newDate.resetTo(aDate.getFullYear(),
+                        aDate.getMonth(),
+                        aDate.getDate(),
+                        aDate.getHours(),
+                        aDate.getMinutes(),
+                        aDate.getSeconds(),
+                        aTimezone);
+    } else {
+        newDate.jsDate = aDate;
+    }
     return newDate;
 }
 
@@ -874,18 +889,6 @@ function checkIfInRange(item, rangeStart, rangeEnd)
 }
 
 /**
- *  Delete the current selected items with focus from the unifinder list
- */
-function deleteEventCommand(doNotConfirm)
-{
-    var selectedItems = currentView().getSelectedItems({});
-    calendarViewController.deleteOccurrences(selectedItems.length,
-                                             selectedItems,
-                                             false,
-                                             false);
-}
-
-/**
  * Returns true if we are Sunbird (according to our UUID), false otherwise.
  */
 function isSunbird()
@@ -1265,7 +1268,7 @@ calOperationGroup.prototype = {
     mSubOperations: null,
 
     add: function calOperationGroup_add(op) {
-        if (op) {
+        if (op && op.isPending) {
             this.mSubOperations.push(op);
         }
     },
@@ -1310,27 +1313,23 @@ calOperationGroup.prototype = {
         return this.mStatus;
     },
 
-    get success() {
-        return (!this.isPending && Components.isSuccessCode(this.status));
-    },
-
     cancel: function calOperationGroup_cancel(status) {
         if (this.isPending) {
             if (!status) {
                 status = Components.interfaces.calIErrors.OPERATION_CANCELLED;
             }
             this.notifyCompleted(status);
-            var subOperations = this.mSubOperations;
-            this.mSubOperations = [];
-            function forEachFunc(op) {
-                op.cancel(null);
-            }
-            subOperations.forEach(forEachFunc);
             var cancelFunc = this.mCancelFunc;
             if (cancelFunc) {
                 this.mCancelFunc = null;
                 cancelFunc();
             }
+            var subOperations = this.mSubOperations;
+            this.mSubOperations = [];
+            function forEachFunc(op) {
+                op.cancel(Components.interfaces.calIErrors.OPERATION_CANCELLED);
+            }
+            subOperations.forEach(forEachFunc);
         }
     }
 };
@@ -1346,3 +1345,21 @@ function sameDay(date1, date2) {
     return false;
 }
 
+/**
+ * This is a centralized function for setting the prodid and version on an
+ * ical components.  This should be used whenever you need to set the prodid
+ * and version on a calIcalComponent object.
+ *
+ * @param
+ *      aIcalComponent  The ical component to set the prodid and version on.
+ */
+function calSetProdidVersion(aIcalComponent) {
+  
+  // Throw for an invalid parameter
+  if (!aIcalComponent instanceof Components.interfaces.calIIcalComponent)
+      throw Components.results.NS_ERROR_INVALID_ARG;
+  
+  // Set the prodid and version
+  aIcalComponent.prodid = "-//Mozilla.org/NONSGML Mozilla Calendar V1.1//EN";
+  aIcalComponent.version = "2.0";  
+}

@@ -56,8 +56,10 @@ extern NSString* const kDownloadInstanceCancelledNotificationName;
 @interface ProgressView : NSView
 {
 @private
-  int mLastModifier;
+  IBOutlet NSImageView*   mFileIconView;
   ProgressViewController* mProgressController;     // WEAK reference
+  NSEvent*                mFileIconMouseDownEvent; // STRONG reference
+  int                     mLastModifier;
 }
 
 // returns the most recent modifier key used during the last 
@@ -66,6 +68,6 @@ extern NSString* const kDownloadInstanceCancelledNotificationName;
 
 // get/set our owning controller, to which we maintain a weak link
 -(void)setController:(ProgressViewController*)controller;
--(ProgressViewController*)getController;
+-(ProgressViewController*)controller;
 
 @end

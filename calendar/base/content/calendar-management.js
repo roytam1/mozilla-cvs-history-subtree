@@ -128,7 +128,7 @@ function loadCalendarManager() {
     tree.view = calendarListTreeView;
 
     calMgr.addObserver(calendarManagerObserver);
-    composite.addObserver(calendarManagerObserver);
+    composite.addObserver(calendarManagerCompositeObserver);
     branch.addObserver("calendar.", calendarManagerObserver, false);
 
     // The calendar manager will not notify for existing calendars. Go through
@@ -146,7 +146,7 @@ function unloadCalendarManager() {
     var branch = prefService.getBranch("").QueryInterface(Components.interfaces.nsIPrefBranch2);
 
     branch.removeObserver("calendar.", calendarManagerObserver);
-    composite.removeObserver(calendarManagerObserver);
+    composite.removeObserver(calendarManagerCompositeObserver);
     calMgr.removeObserver(calendarManagerObserver);
 }
 
@@ -175,7 +175,7 @@ function calendarListInitCategoryColors() {
 function calendarListUpdateColor(aCalendar) {
     var selectorPrefix = "treechildren::-moz-tree-cell";
 
-    var color = getCalendarManager().getCalendarPref(aCalendar, "color");
+    var color = aCalendar.getProperty("color");
     if (!color) {
         return;
     }
@@ -219,6 +219,15 @@ var calendarListTreeView = {
         return -1;
     },
 
+    findIndexByUri: function cLTV_findIndexByUri(aUri) {
+        for (var i = 0; i < this.mCalendarList.length; i++) {
+            if (this.mCalendarList[i].uri.equals(aUri)) {
+                return i;
+            }
+        }
+        return -1;
+    },
+
     addCalendar: function cLTV_addCalendar(aCalendar) {
         var composite = getCompositeCalendar();
         this.mCalendarList.push(aCalendar);
@@ -228,6 +237,11 @@ var calendarListTreeView = {
         if (!composite.defaultCalendar ||
             aCalendar.id == composite.defaultCalendar.id) {
             this.tree.view.selection.select(this.mCalendarList.length - 1);
+        }
+
+        if (!aCalendar.readOnly) {
+            calendarManagerObserver.mWritableCalendars++;
+            calendarManagerObserver.setupWritableCalendars();
         }
     },
 
@@ -245,6 +259,11 @@ var calendarListTreeView = {
         }
 
         this.tree.view.selection.select(index);
+
+        if (!aCalendar.readOnly) {
+            calendarManagerObserver.mWritableCalendars--;
+            calendarManagerObserver.setupWritableCalendars();
+        }
     },
 
     updateCalendar: function cLTV_updateCalendar(aCalendar) {
@@ -295,22 +314,43 @@ var calendarListTreeView = {
                 }
                 break;
             case "calendar-list-tree-color":
-                var color = getCalendarManager().getCalendarPref(calendar,
-                                                                 "color");
-                color = "color-" + (color ? color.substr(1) : "default");
-                aProps.AppendElement(getAtomFromService(color));
+                // Get the calendar color
+                var color = calendar.getProperty("color");
+                color = color && color.substr(1);
+
+                // Set up the calendar color (background)
+                var bgColorProp = "color-" + (color || "default");
+                aProps.AppendElement(getAtomFromService(bgColorProp));
+
+                // Set a property to get the contrasting text color (foreground)
+                var fgColorProp = getContrastingTextColor(color || "a8c2e1");
+                aProps.AppendElement(getAtomFromService(fgColorProp));
+
+                // Set up the readonly symbol
+                if (calendar.readOnly) {
+                    aProps.AppendElement(getAtomFromService("readOnly"));
+                }
+
                 break;
-       }
+        }
     },
 
     cycleCell: function cLTV_cycleCell(aRow, aCol) {
         var calendar = this.mCalendarList[aRow];
         var composite = getCompositeCalendar();
 
-        if (composite.getCalendar(calendar.uri)) {
-            composite.removeCalendar(calendar.uri);
-        } else {
-            composite.addCalendar(calendar);
+        switch (aCol.id) {
+            case "calendar-list-tree-checkbox":
+                if (composite.getCalendar(calendar.uri)) {
+                    composite.removeCalendar(calendar.uri);
+                } else {
+                    composite.addCalendar(calendar);
+                }
+                break;
+            case "calendar-list-tree-color":
+                // Clicking on the color should toggle the readonly state.
+                calendar.readOnly = !calendar.readOnly;
+                break;
         }
         this.treebox.invalidateRow(aRow);
     },
@@ -322,6 +362,9 @@ var calendarListTreeView = {
         switch (aCol.id) {
             case "calendar-list-tree-checkbox":
                 return composite.getCalendar(calendar.uri) ? "true" : "false";
+            case "calendar-list-tree-color":
+                // The value of this cell shows the calendar readonly state
+                return (calendar.readOnly ? "true" : "false");
         }
         return null;
     },
@@ -337,9 +380,14 @@ var calendarListTreeView = {
                 } else {
                     composite.removeCalendar(calendar);
                 }
-                return aValue;
+                break;
+            case "calendar-list-tree-color":
+                calendar.readOnly = (aValue == "true");
+                break;
+            default:
+                return null;
         }
-        return null;
+        return aValue;
     },
 
     getCellText: function cLTV_getCellText(aRow, aCol) {
@@ -401,7 +449,7 @@ var calendarListTreeView = {
                 if (this.tree.currentIndex > -1 ) {
                     var cbCol =
                         this.treebox.columns
-                            .getNamedColumn("list-calendarsr-tree-checkbox");
+                            .getNamedColumn("calendar-list-tree-checkbox");
                     this.cycleCell(this.tree.currentIndex, cbCol);
                 }
                 break;
@@ -487,12 +535,62 @@ var calendarListTreeView = {
     }
 };
 
+var calendarManagerCompositeObserver = {
+    QueryInterface: function cMCO_QueryInterface(aIID) {
+        if (!aIID.equals(Components.interfaces.calICompositeObserver) &&
+            !aIID.equals(Components.interfaces.calIObserver) &&
+            !aIID.equals(Components.interfaces.nsISupports)) {
+            throw Components.results.NS_ERROR_NO_INTERFACE;
+        }
+        return this;
+    },
+
+    onCalendarAdded: function cMO_onCalendarAdded(aCalendar) {
+        // Make sure the checkbox state is updated
+        var index = calendarListTreeView.findIndex(aCalendar);
+        calendarListTreeView.treebox.invalidateRow(index);
+    },
+
+    onCalendarRemoved: function cMO_onCalendarRemoved(aCalendar) {
+        // Make sure the checkbox state is updated
+        var index = calendarListTreeView.findIndex(aCalendar);
+        calendarListTreeView.treebox.invalidateRow(index);
+    },
+
+    onDefaultCalendarChanged: function cMO_onDefaultCalendarChanged(aCalendar) {
+    },
+
+    // calIObserver. Note that each registered calendar uses this observer, not
+    // only the composite calendar.
+    onStartBatch: function cMO_onStartBatch() { },
+    onEndBatch: function cMO_onEndBatch() { },
+    onLoad: function cMO_onLoad() { },
+
+    onAddItem: function cMO_onAddItem(aItem) {
+        ensureCalendarVisible(aItem.calendar);
+    },
+
+    onModifyItem: function cMO_onModifyItem(aNewItem, aOldItem) {
+        ensureCalendarVisible(aNewItem.calendar);
+    },
+
+    onDeleteItem: function cMO_onDeleteItem(aDeletedItem) { },
+    onError: function cMO_onError(aErrNo, aMessage) { },
+
+    onPropertyChanged: function cMO_onPropertyChanged(aCalendar,
+                                                      aName,
+                                                      aValue,
+                                                      aOldValue) {},
+    onPropertyDeleting: function cMO_onPropertyDeleting(aCalendar,
+                                                        aName) {}
+}
+
 var calendarManagerObserver = {
     mDefaultCalendarItem: null,
+    mWritableCalendars: 0,
 
     QueryInterface: function cMO_QueryInterface(aIID) {
         if (!aIID.equals(Components.interfaces.calICalendarManagerObserver) &&
-            !aIID.equals(Components.interfaces.calICompositeObserver) &&
             !aIID.equals(Components.interfaces.calIObserver) &&
             !aIID.equals(Components.interfaces.nsIObserver) &&
             !aIID.equals(Components.interfaces.nsISupports)) {
@@ -529,10 +627,26 @@ var calendarManagerObserver = {
         }
     },
 
+    setupWritableCalendars: function cMO_setupWritableCalendars() {
+        var nodes = document.getElementsByAttribute("disable-when-no-writable-calendars", "true");
+        for (var i = 0; i < nodes.length; i++) {
+            if (this.mWritableCalendars < 1) {
+                nodes[i].setAttribute("disabled", "true");
+            } else {
+                nodes[i].removeAttribute("disabled");
+            }
+        }
+    },
+
     // calICalendarManagerObserver
     onCalendarRegistered: function cMO_onCalendarRegistered(aCalendar) {
         this.initializeCalendar(aCalendar);
-        getCompositeCalendar().addCalendar(aCalendar);
+        var composite = getCompositeCalendar();
+        var inComposite = aCalendar.getProperty(composite.prefPrefix +
+                                                "-in-composite");
+        if ((inComposite === null) || inComposite) {
+            composite.addCalendar(aCalendar);
+        }
     },
 
     onCalendarUnregistering: function cMO_onCalendarUnregistering(aCalendar) {
@@ -567,45 +681,6 @@ var calendarManagerObserver = {
         getCompositeCalendar().removeCalendar(aCalendar.uri);
     },
 
-    onCalendarPrefChanged: function cMO_onCalendarPrefChanged(aCalendar,
-                                                              aName,
-                                                              aValue,
-                                                              aOldValue) {
-        switch (aName) {
-            case "color":
-                updateStyleSheetForObject(aCalendar, gCachedStyleSheet);
-                calendarListUpdateColor(aCalendar);
-                // Fall through, update item in any case
-            case "name":
-                calendarListTreeView.updateCalendar(aCalendar);
-                break;
-        }
-    },
-
-    onCalendarPrefDeleting: function cMO_onCalendarPrefDeleting(aCalendar,
-                                                                aName) {
-        // Since the old value is not used directly in onCalendarPrefChanged,
-        // but should not be the same as the value, set it to a different
-        // value.
-        this.onCalendarPrefChanged(aCalendar, aName, null, true);
-    },
-
-    // calICompositeObserver
-    onCalendarAdded: function cMO_onCalendarAdded(aCalendar) {
-        // Make sure the checkbox state is updated
-        var index = calendarListTreeView.findIndex(aCalendar);
-        calendarListTreeView.treebox.invalidateRow(index);
-    },
-
-    onCalendarRemoved: function cMO_onCalendarRemoved(aCalendar) {
-        // Make sure the checkbox state is updated
-        var index = calendarListTreeView.findIndex(aCalendar);
-        calendarListTreeView.treebox.invalidateRow(index);
-    },
-
-    onDefaultCalendarChanged: function cMO_onDefaultCalendarChanged(aCalendar) {
-    },
-
     // calIObserver. Note that each registered calendar uses this observer, not
     // only the composite calendar.
     onStartBatch: function cMO_onStartBatch() { },
@@ -623,6 +698,34 @@ var calendarManagerObserver = {
     onDeleteItem: function cMO_onDeleteItem(aDeletedItem) { },
     onError: function cMO_onError(aErrNo, aMessage) { },
 
+    onPropertyChanged: function cMO_onPropertyChanged(aCalendar,
+                                                      aName,
+                                                      aValue,
+                                                      aOldValue) {
+        switch (aName) {
+            case "color":
+                updateStyleSheetForObject(aCalendar, gCachedStyleSheet);
+                calendarListUpdateColor(aCalendar);
+                // Fall through, update item in any case
+            case "name":
+                calendarListTreeView.updateCalendar(aCalendar);
+                break;
+            case "readOnly":
+                this.mWritableCalendars += (aValue ? -1 : 1);
+                this.setupWritableCalendars();
+                calendarListTreeView.updateCalendar(aCalendar);
+                break;
+        }
+    },
+
+    onPropertyDeleting: function cMO_onPropertyDeleting(aCalendar,
+                                                        aName) {
+        // Since the old value is not used directly in onPropertyChanged,
+        // but should not be the same as the value, set it to a different
+        // value.
+        this.onPropertyChanged(aCalendar, aName, null, null);
+    },
+
     // nsIObserver
     observe: function cMO_observe(aSubject, aTopic, aPrefName) {
 
@@ -638,7 +741,6 @@ var calendarManagerObserver = {
                     // a selected day.
                     view.goToDay(day);
                 }
-
 
                 if (isSunbird()) {
                     refreshEventTree();

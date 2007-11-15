@@ -41,6 +41,8 @@
 #include "nsMimeTypes.h"
 #include "nsNetUtil.h"
 #include "nsInt64.h"
+#include "nsIPrefService.h"
+#include "nsIPrefBranch.h"
 
 #include "nsIScriptSecurityManager.h"
 #include "nsIPrincipal.h"
@@ -193,6 +195,7 @@ nsJARChannel::nsJARChannel()
     , mLoadFlags(LOAD_NORMAL)
     , mStatus(NS_OK)
     , mIsPending(PR_FALSE)
+    , mIsUnsafe(PR_TRUE)
     , mJarInput(nsnull)
 {
 #if defined(PR_LOGGING)
@@ -214,13 +217,14 @@ nsJARChannel::~nsJARChannel()
     NS_RELEASE(handler); // NULL parameter
 }
 
-NS_IMPL_ISUPPORTS6(nsJARChannel,
+NS_IMPL_ISUPPORTS7(nsJARChannel,
                    nsIRequest,
                    nsIChannel,
                    nsIStreamListener,
                    nsIRequestObserver,
                    nsIDownloadObserver,
-                   nsIJARChannel)
+                   nsIJARChannel,
+                   nsIJARChannel_MOZILLA_1_8_BRANCH)
 
 nsresult 
 nsJARChannel::Init(nsIURI *uri)
@@ -288,6 +292,8 @@ nsJARChannel::EnsureJarInput(PRBool blocking)
     }
 
     if (mJarFile) {
+        mIsUnsafe = PR_FALSE;
+
         // NOTE: we do not need to deal with mSecurityInfo here,
         // because we're loading from a local file
         rv = CreateJarInput(gJarHandler->JarCache());
@@ -302,7 +308,7 @@ nsJARChannel::EnsureJarInput(PRBool blocking)
         if (NS_SUCCEEDED(rv))
             rv = NS_OpenURI(mDownloader, nsnull, mJarBaseURI, nsnull,
                             mLoadGroup, mCallbacks,
-                            mLoadFlags & ~LOAD_DOCUMENT_URI);
+                            mLoadFlags & ~(LOAD_DOCUMENT_URI | LOAD_CALL_CONTENT_SNIFFERS));
     }
     return rv;
 
@@ -604,6 +610,9 @@ nsJARChannel::Open(nsIInputStream **stream)
     NS_ENSURE_TRUE(!mJarInput, NS_ERROR_IN_PROGRESS);
     NS_ENSURE_TRUE(!mIsPending, NS_ERROR_IN_PROGRESS);
 
+    mJarFile = nsnull;
+    mIsUnsafe = PR_TRUE;
+
     nsresult rv = EnsureJarInput(PR_TRUE);
     if (NS_FAILED(rv)) return rv;
 
@@ -624,6 +633,9 @@ nsJARChannel::AsyncOpen(nsIStreamListener *listener, nsISupports *ctx)
     LOG(("nsJARChannel::AsyncOpen [this=%x]\n", this));
 
     NS_ENSURE_TRUE(!mIsPending, NS_ERROR_IN_PROGRESS);
+
+    mJarFile = nsnull;
+    mIsUnsafe = PR_TRUE;
 
     // Initialize mProgressSink
     NS_QueryNotificationCallbacks(mCallbacks, mLoadGroup, mProgressSink);
@@ -650,6 +662,16 @@ nsJARChannel::AsyncOpen(nsIStreamListener *listener, nsISupports *ctx)
 }
 
 //-----------------------------------------------------------------------------
+// nsIJARChannel
+//-----------------------------------------------------------------------------
+NS_IMETHODIMP
+nsJARChannel::GetIsUnsafe(PRBool *isUnsafe)
+{
+    *isUnsafe = mIsUnsafe;
+    return NS_OK;
+}
+
+//-----------------------------------------------------------------------------
 // nsIDownloadObserver
 //-----------------------------------------------------------------------------
 
@@ -660,15 +682,80 @@ nsJARChannel::OnDownloadComplete(nsIDownloader *downloader,
                                  nsresult       status,
                                  nsIFile       *file)
 {
+    nsresult rv;
+
     // Grab the security info from our base channel
     nsCOMPtr<nsIChannel> channel(do_QueryInterface(request));
-    if (channel)
+    if (channel) {
         channel->GetSecurityInfo(getter_AddRefs(mSecurityInfo));
-    
+
+        PRUint32 loadFlags;
+        channel->GetLoadFlags(&loadFlags);
+        if (loadFlags & LOAD_REPLACE) {
+            mLoadFlags |= LOAD_REPLACE;
+
+            if (!mOriginalURI) {
+                SetOriginalURI(mJarURI);
+            }
+
+            nsCOMPtr<nsIURI> innerURI;
+            rv = channel->GetURI(getter_AddRefs(innerURI));
+            if (NS_SUCCEEDED(rv)) {
+                nsCOMPtr<nsIJARURI> newURI;
+                nsCOMPtr<nsIJARURI_MOZILLA_1_8_BRANCH> jarURIBranch =
+                    do_QueryInterface(mJarURI);
+                rv = jarURIBranch->CloneWithJARFile(innerURI,
+                                                    getter_AddRefs(newURI));
+                if (NS_SUCCEEDED(rv)) {
+                    mJarURI = newURI;
+                }
+            }
+            status = rv;
+        }
+
+        nsCOMPtr<nsIHttpChannel> httpChannel(do_QueryInterface(channel));
+        if (httpChannel) {
+            // We only want to run scripts if the server really intended to
+            // send us a JAR file.  Check the server-supplied content type for
+            // a JAR type.
+            nsCAutoString header;
+            httpChannel->GetResponseHeader(NS_LITERAL_CSTRING("Content-Type"),
+                                           header);
+
+            nsCAutoString contentType;
+            nsCAutoString charset;
+            NS_ParseContentType(header, contentType, charset);
+
+            mIsUnsafe = !contentType.EqualsLiteral("application/java-archive") &&
+                        !contentType.EqualsLiteral("application/x-jar");
+        } else {
+            nsCOMPtr<nsIJARChannel_MOZILLA_1_8_BRANCH> innerJARChannel(do_QueryInterface(channel));
+            if (innerJARChannel) {
+                PRBool unsafe;
+                innerJARChannel->GetIsUnsafe(&unsafe);
+                mIsUnsafe = unsafe;
+            }
+        }
+    }
+
+    if (mIsUnsafe) {
+        PRBool allowUnpack = PR_FALSE;
+
+        nsCOMPtr<nsIPrefBranch> prefs =
+            do_GetService(NS_PREFSERVICE_CONTRACTID);
+        if (prefs) {
+            prefs->GetBoolPref("network.jar.open-unsafe-types", &allowUnpack);
+        }
+
+        if (!allowUnpack) {
+            status = NS_ERROR_UNSAFE_CONTENT_TYPE;
+        }
+    }
+
     if (NS_SUCCEEDED(status)) {
         mJarFile = file;
     
-        nsresult rv = CreateJarInput(nsnull);
+        rv = CreateJarInput(nsnull);
         if (NS_SUCCEEDED(rv)) {
             // create input stream pump
             rv = NS_NewInputStreamPump(getter_AddRefs(mPump), mJarInput);
@@ -679,6 +766,7 @@ nsJARChannel::OnDownloadComplete(nsIDownloader *downloader,
     }
 
     if (NS_FAILED(status)) {
+        mStatus = status;
         OnStartRequest(nsnull, nsnull);
         OnStopRequest(nsnull, nsnull, status);
     }

@@ -46,21 +46,26 @@ MODULE		= lightning
 
 export XPI_NAME	= lightning
 DIST_FILES	= chrome.manifest install.rdf
-ifdef MOZ_SUITE
 USE_EXTENSION_MANIFEST = 1
 NO_JAR_AUTO_REG        = 1
+ifndef MOZ_SUNBIRD
+# install Lightning as a global extension in dist/bin/extensions/
 INSTALL_EXTENSION_ID   = {e2fda1a4-762b-4020-b5ad-a41df1933103}
 endif
 XPI_PKGNAME	= lightning
 STRIP_XPI = 1
 
-DIRS		= ../../db/sqlite3/src ../../storage \
-		  ../../extensions/webdav            \
+DIRS		= ../../extensions/webdav            \
                   ../libical ../base ../providers    \
                   ../import-export                   \
                   components                         \
                   ../itip                            \
 		  $(NULL)
+
+ifdef MOZILLA_1_8_BRANCH
+# package storage for Thunderbird 1.5
+DIRS += ../../db/sqlite3/src ../../storage
+endif
 
 # Select a theme from which to pull our skin goodness
 # OS X: pinstripe

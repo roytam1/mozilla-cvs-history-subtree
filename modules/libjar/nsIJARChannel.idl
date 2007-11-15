@@ -41,3 +41,15 @@
 interface nsIJARChannel : nsIChannel 
 {
 };
+
+[scriptable, uuid(2ee6d5ab-248b-47d0-aac3-3c29417e2164)]
+interface nsIJARChannel_MOZILLA_1_8_BRANCH : nsISupports
+{
+    /**
+     * Returns TRUE if the JAR file is not safe (if the content type reported
+     * by the server for a remote JAR is not of an expected type).  Scripting,
+     * redirects, and plugins should be disabled when loading from this
+     * channel.
+     */
+    readonly attribute boolean isUnsafe;
+};

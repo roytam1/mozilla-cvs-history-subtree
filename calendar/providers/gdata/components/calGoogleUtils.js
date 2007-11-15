@@ -38,6 +38,11 @@
 // This global keeps the session Objects for the usernames
 var g_sessionMap;
 
+function getCalendarManager() {
+    return Components.classes["@mozilla.org/calendar/manager;1"]
+                     .getService(Components.interfaces.calICalendarManager);
+}
+
 /**
  * setCalendarPref
  * Helper to set an independant Calendar Preference, since I cannot use the
@@ -641,10 +646,12 @@ function ItemToXMLEntry(aItem, aAuthorEmail, aAuthorName) {
     var duration = aItem.endDate.subtractDate(aItem.startDate);
     entry.gd::when.@startTime = toRFC3339(aItem.startDate);
 
-    if (duration != "PT0S") {
-        // Zero Duration Events must not have an end time
-        entry.gd::when.@endTime = toRFC3339(aItem.endDate);
-    }
+    // Google's documentation says that zero length events should be defined by
+    // omitting the end time. This currently does not work though. Workaround is
+    // to always pass an end time. See
+    // http://code.google.com/p/gdata-issues/issues/detail?id=198
+    // for more details.
+    entry.gd::when.@endTime = toRFC3339(aItem.endDate);
 
     // gd:reminder
     if (aItem.alarmOffset) {
@@ -1000,9 +1007,9 @@ function XMLEntryToItem(aXMLEntry, aTimezone, aCalendar) {
             var attendee = Components.classes["@mozilla.org/calendar/attendee;1"]
                            .createInstance(Components.interfaces.calIAttendee);
 
-            var rel = who.@rel.substring(33);
-            var type = who.gd::attendeeType.@value.substring(33);
-            var status = who.gd::attendeeStatus.@value.substring(33);
+            var rel = who.@rel.toString().substring(33);
+            var type = who.gd::attendeeType.@value.toString().substring(33);
+            var status = who.gd::attendeeStatus.@value.toString().substring(33);
 
             attendee.id = "mailto:" + who.@email.toString();
             attendee.commonName = who.@valueString.toString();

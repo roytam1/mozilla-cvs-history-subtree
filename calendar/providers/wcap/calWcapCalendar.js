@@ -21,6 +21,7 @@
  *
  * Contributor(s):
  *   Daniel Boelzle <daniel.boelzle@sun.com>
+ *   Philipp Kewisch <mozilla@kewis.ch>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -36,16 +37,11 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-var g_lastOnErrorTime = 0;
-var g_lastOnErrorNo = 0;
-var g_lastOnErrorMsg = null;
-
 function calWcapCalendar(/*optional*/session, /*optional*/calProps) {
     this.wrappedJSObject = this;
     this.m_session = session;
     this.m_calProps = calProps;
     this.m_observers = new calListenerBag(Components.interfaces.calIObserver);
-    this.m_bSuppressAlarms = SUPPRESS_ALARMS;
 }
 calWcapCalendar.prototype = {
     m_ifaces: [ calIWcapCalendar,
@@ -102,21 +98,32 @@ calWcapCalendar.prototype = {
             str += ", default calendar";
         return str;
     },
-    notifyError: function calWcapCalendar_notifyError(err, suppressOnError)
+    notifyError_: function calWcapCalendar_notifyError_(err, context, suppressOnError)
     {
-        if (getResultCode(err) == calIErrors.OPERATION_CANCELLED) {
+        var rc = getResultCode(err);
+        if ((rc == calIErrors.OPERATION_CANCELLED) ||
+            (rc == NS_ERROR_OFFLINE)) { // no real error
             return;
         }
-        debugger;
-        var msg = logError(err, this);
+        var msg;
+        if (checkResultCode(rc, calIErrors.WCAP_ERROR_BASE, 8) ||
+            (getErrorModule(rc) == NS_ERROR_MODULE_NETWORK)) {
+            // don't bloat the js error console with these errors:
+            msg = errorToString(err);
+            log("error: " + msg, context);
+        } else {
+            msg = logError(err, context);
+        }
         if (!suppressOnError) {
-            this.notifyObservers(
-                "onError",
-                err instanceof Components.interfaces.nsIException
-                ? [err.result, err.message] : [isNaN(err) ? -1 : err, msg]);
+            this.notifyObservers("onError",
+                                 err instanceof Components.interfaces.nsIException
+                                 ? [err.result, err.message] : [isNaN(err) ? -1 : err, msg]);
         }
     },
-    
+    notifyError: function calWcapCalendar_notifyError(err, suppressOnError) {
+        this.notifyError_(err, this, suppressOnError);
+    },
+
     // calICalendarProvider:
     get prefChromeOverlay() {
         return null;
@@ -144,15 +151,14 @@ calWcapCalendar.prototype = {
     },
 
     get name() {
-        var name = getCalendarManager().getCalendarPref(this, "name");
+        var name = this.getProperty("name");
         if (!name) {
             name = this.displayName;
         }
         return name;
     },
     set name(name) {
-        getCalendarManager().setCalendarPref(this, "name", name);
-        return name;
+        return this.setProperty("name", name);
     },
     
     get type() { return "wcap"; },
@@ -164,21 +170,12 @@ calWcapCalendar.prototype = {
     set superCalendar(cal) {
         return (this.m_superCalendar = cal);
     },
-    
-    m_bReadOnly: undefined,
+
     get readOnly() {
-        // xxx todo:
-        // read-only if not logged in, this flag is tested quite
-        // early, so don't log in here if not logged in already...
-        return (this.m_bReadOnly ||
-                !this.session.isLoggedIn ||
-                // limit to write permission on components:
-                !this.checkAccess(calIWcapCalendar.AC_COMP_WRITE) ||
-                ((this.m_bReadOnly === undefined) && // has not been explicitly set
-                 !this.isOwnedCalendar));
+        return this.getProperty("readOnly");
     },
     set readOnly(bReadOnly) {
-        return (this.m_bReadOnly = bReadOnly);
+        return this.setProperty("readOnly", bReadOnly);
     },
 
     m_uri: null,
@@ -201,25 +198,61 @@ calWcapCalendar.prototype = {
         return this.uri;
     },
 
+    m_bReadOnly: false,
+    getProperty: function calWcapCalendar_getProperty(aName) {
+        var value = getCalendarManager().getCalendarPref_(this, aName);
+        switch (aName) {
+        case "readOnly":
+            value = this.m_bReadOnly;
+            break;
+        case "calendar-main-in-composite":
+            if (value === null && !this.isDefaultCalendar) {
+                // tweak in-composite to false for secondary calendars:
+                value = false;
+            }
+            break;
+        case "suppressAlarms":
+            // CS cannot store X-props reliably (thus writing X-MOZ stamps etc is not possible).
+            // Popup alarms not available no matter what; wtf.
+            value = true;
+            break;
+        }
+        // xxx future: return getPrefSafe("calendars." + this.id + "." + aName, null);
+        return value;
+    },
+    setProperty: function calWcapCalendar_setProperty(aName, aValue) {
+        var oldValue = this.getProperty(aName);
+        if (oldValue != aValue) {
+            switch (aName) {
+            case "readOnly":
+                this.m_bReadOnly = aValue;
+                break;
+            case "suppressAlarms":
+            case "calendar-main-in-composite":
+                if (!aValue) {
+                    getCalendarManager().deleteCalendarPref_(this, aName);
+                    break;
+                }
+                // fallthru intended
+            default:
+                // xxx future: setPrefSafe("calendars." + this.id + "." + aName, aValue);
+                getCalendarManager().setCalendarPref_(this, aName, aValue);
+                break;
+            }
+            this.m_observers.notify("onPropertyChanged",
+                                    [this, aName, aValue, oldValue]);
+        }
+        return aValue;
+    },
+    deleteProperty: function calWcapCalendar_deleteProperty(aName) {
+        this.notifyObservers("onPropertyDeleting", [this, aName]);
+        getCalendarManager().deleteCalendarPref_(this, aName);
+    },
+
     m_observers: null,
     notifyObservers: function calWcapCalendar_notifyObservers(func, args) {
         if (g_bShutdown)
             return;
-        if (func == "onError") {
-            // xxx todo: hack
-            // suppress identical error bursts when multiple similar calls eg on getItems() fail.
-            var now = (new Date()).getTime();
-            if ((now - g_lastOnErrorTime) < 1000 &&
-                (args[0] == g_lastOnErrorNo) &&
-                (args[1] == g_lastOnErrorMsg)) {
-                log("suppressing calIObserver::onError.", this);
-                return;
-            }
-            g_lastOnErrorTime = now;
-            g_lastOnErrorNo = args[0];
-            g_lastOnErrorMsg = args[1];
-        }
-
         this.m_observers.notify(func, args);
     },
     addObserver: function calWcapCalendar_addObserver(observer) {
@@ -236,26 +269,7 @@ calWcapCalendar.prototype = {
     endBatch: function calWcapCalendar_endBatch() {
         this.notifyObservers("onEndBatch");
     },
-    
-    // xxx todo: rework like in
-    //           https://bugzilla.mozilla.org/show_bug.cgi?id=257428
-    m_bSuppressAlarms: false,
-    get suppressAlarms() {
-        return (this.m_bSuppressAlarms ||
-                // writing lastAck does currently not work on readOnly cals,
-                // so avoid alarms if not writable at all... discuss!
-                // use m_bReadOnly here instead of attribute, because this
-                // calendar acts read-only if not logged in
-                this.m_bReadOnly ||
-                // xxx todo: check write permissions in advance
-                // alarms only for own calendars:
-                // xxx todo: assume alarms if not logged in already
-                (this.session.isLoggedIn && !this.isOwnedCalendar));
-    },
-    set suppressAlarms(bSuppressAlarms) {
-        return (this.m_bSuppressAlarms = bSuppressAlarms);
-    },
-    
+
     get sendItipInvitations() {
         return false;
     },
@@ -353,8 +367,8 @@ calWcapCalendar.prototype = {
         var name = ar[0];
         var defaultCal = this.session.defaultCalendar;
         if (defaultCal) {
-            var defName = (getCalendarManager().getCalendarPref(defaultCal, "account_name") ||
-                           getCalendarManager().getCalendarPref(defaultCal, "name"));
+            var defName = (defaultCal.getProperty("account_name") ||
+                           defaultCal.getProperty("name"));
             if (defName) {
                 name += (" (" + defName + ")");
             }

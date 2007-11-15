@@ -57,12 +57,6 @@ interface calIOperation : nsISupports
     readonly attribute nsIVariant status;
 
     /**
-     * Determines whether the request has succeeded, i.e. it has successfully
-     * been completed.
-     */
-    readonly attribute boolean success;
-
-    /**
      * Cancels a pending request and changes status.
      * @param aStatus operation status to be set;
      *                defaults to calIErrors.OPERATION_CANCELLED if null
@@ -75,6 +69,8 @@ interface calIGenericOperationListener : nsISupports
 {
     /**
      * Generic callback receiving result.
+     * Results may appear in multiple calls, i.e. callees have to collect
+     * until isPending is false.
      *
      * @param aOperation operation object
      * @param aResult    result or null in case of an error

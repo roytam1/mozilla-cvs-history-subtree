@@ -73,6 +73,9 @@ const int kSortReverse = 1;
 
 - (void)addPermission:(int)inPermission forHost:(NSString*)inHost;
 
+// helper method for blocking/allowing multiple sites at once
+- (void)addPermissionForSelection:(int)inPermission;
+
 - (int)numCookiesSelectedInCookiePanel;
 - (int)numPermissionsSelectedInPermissionsPanel;
 // get the number of unique cookie sites that are selected,
@@ -278,9 +281,9 @@ PR_STATIC_CALLBACK(int) compareValues(nsICookie* aCookie1, nsICookie* aCookie2, 
   // set up policy popups
   NSPopUpButtonCell *popupButtonCell = [mPermissionColumn dataCell];
   [popupButtonCell setEditable:YES];
-  [popupButtonCell addItemsWithTitles:[NSArray arrayWithObjects:[self getLocalizedString:@"Allow"],
-                                                                [self getLocalizedString:@"Allow for Session"],
-                                                                [self getLocalizedString:@"Deny"],
+  [popupButtonCell addItemsWithTitles:[NSArray arrayWithObjects:[self localizedStringForKey:@"Allow"],
+                                                                [self localizedStringForKey:@"Allow for Session"],
+                                                                [self localizedStringForKey:@"Deny"],
                                                                 nil]];
 }
 
@@ -342,7 +345,7 @@ PR_STATIC_CALLBACK(int) compareValues(nsICookie* aCookie1, nsICookie* aCookie2, 
   
   // ensure a row is selected (cocoa doesn't do this for us, but will keep
   // us from unselecting a row once one is set; go figure).
-  [mCookiesTable selectRow: 0 byExtendingSelection: NO];
+  [mCookiesTable selectRow:0 byExtendingSelection:NO];
   
   [mCookiesTable setUsesAlternatingRowBackgroundColors:YES];
   NSArray* columns = [mCookiesTable tableColumns];
@@ -407,10 +410,10 @@ PR_STATIC_CALLBACK(int) compareValues(nsICookie* aCookie1, nsICookie* aCookie2, 
 
 -(IBAction) removeAllCookies: (id)aSender
 {
-  if (NSRunCriticalAlertPanel([self getLocalizedString:@"RemoveAllCookiesWarningTitle"],
-                              [self getLocalizedString:@"RemoveAllCookiesWarning"],
-                              [self getLocalizedString:@"Remove All Cookies"],
-                              [self getLocalizedString:@"CancelButtonText"],
+  if (NSRunCriticalAlertPanel([self localizedStringForKey:@"RemoveAllCookiesWarningTitle"],
+                              [self localizedStringForKey:@"RemoveAllCookiesWarning"],
+                              [self localizedStringForKey:@"Remove All Cookies"],
+                              [self localizedStringForKey:@"CancelButtonText"],
                               nil) == NSAlertDefaultReturn)
   {
     if (mCookieManager) {
@@ -424,21 +427,14 @@ PR_STATIC_CALLBACK(int) compareValues(nsICookie* aCookie1, nsICookie* aCookie2, 
   }
 }
 
+-(IBAction) allowCookiesFromSites:(id)aSender
+{
+  [self addPermissionForSelection:nsIPermissionManager::ALLOW_ACTION];
+}
+
 -(IBAction) blockCookiesFromSites:(id)aSender
 {
-  if (mCachedCookies && mPermissionManager) {
-    NSArray *rows = [[mCookiesTable selectedRowEnumerator] allObjects];
-    NSEnumerator *e = [rows reverseObjectEnumerator];
-    NSNumber *index;
-    while ((index = [e nextObject]))
-    {
-      int row = [index intValue];
-
-      nsCAutoString host, name, path;
-      mCachedCookies->ObjectAt(row)->GetHost(host);
-      [self addPermission:nsIPermissionManager::DENY_ACTION forHost:[NSString stringWith_nsACString:host]];
-    }
-  }
+  [self addPermissionForSelection:nsIPermissionManager::DENY_ACTION];
 }
 
 -(IBAction) removeCookiesAndBlockSites:(id)aSender
@@ -598,10 +594,10 @@ PR_STATIC_CALLBACK(int) compareValues(nsICookie* aCookie1, nsICookie* aCookie2, 
 
 -(IBAction) removeAllCookiePermissions: (id)aSender
 {
-  if (NSRunCriticalAlertPanel([self getLocalizedString:@"RemoveAllCookiePermissionsWarningTitle"],
-                              [self getLocalizedString:@"RemoveAllCookiePermissionsWarning"],
-                              [self getLocalizedString:@"Remove All Exceptions"],
-                              [self getLocalizedString:@"CancelButtonText"],
+  if (NSRunCriticalAlertPanel([self localizedStringForKey:@"RemoveAllCookiePermissionsWarningTitle"],
+                              [self localizedStringForKey:@"RemoveAllCookiePermissionsWarning"],
+                              [self localizedStringForKey:@"Remove All Exceptions"],
+                              [self localizedStringForKey:@"CancelButtonText"],
                               nil) == NSAlertDefaultReturn)
   {
     if (mPermissionManager)
@@ -661,7 +657,7 @@ PR_STATIC_CALLBACK(int) compareValues(nsICookie* aCookie1, nsICookie* aCookie2, 
   mCachedPermissions = nsnull;
 }
 
--(int) getRowForPermissionWithHost:(NSString *)aHost
+-(int) rowForPermissionWithHost:(NSString *)aHost
 {
   nsCAutoString host;
   if (mCachedPermissions) {
@@ -723,9 +719,9 @@ PR_STATIC_CALLBACK(int) compareValues(nsICookie* aCookie1, nsICookie* aCookie2, 
         PRBool secure = PR_FALSE;
         mCachedCookies->ObjectAt(rowIndex)->GetIsSecure(&secure);
         if (secure)
-          retVal = [self getLocalizedString:@"yes"];
+          retVal = [self localizedStringForKey:@"yes"];
         else
-          retVal = [self getLocalizedString:@"no"];
+          retVal = [self localizedStringForKey:@"no"];
         return retVal;
       } else if ([[aTableColumn identifier] isEqualToString: @"Expires"]) {
         PRUint64 expires = 0;
@@ -787,7 +783,7 @@ PR_STATIC_CALLBACK(int) compareValues(nsICookie* aCookie1, nsICookie* aCookie2, 
         //re-filter
         [self filterCookiesPermissionsWithString:[mPermissionFilterField stringValue]];
         // re-aquire selection of the changed permission
-        int selectedRowIndex = [self getRowForPermissionWithHost:[NSString stringWithUTF8String:host.get()]];
+        int selectedRowIndex = [self rowForPermissionWithHost:[NSString stringWithUTF8String:host.get()]];
         nsCOMPtr<nsIPermission> selectedItem = (selectedRowIndex != -1) ?
           mCachedPermissions->ObjectAt(selectedRowIndex) : nsnull;
         // re-sort
@@ -1054,6 +1050,23 @@ PR_STATIC_CALLBACK(int) compareValues(nsICookie* aCookie1, nsICookie* aCookie2, 
   }
 }
 
+- (void)addPermissionForSelection:(int)inPermission
+{
+  if (mCachedCookies && mPermissionManager) {
+    NSArray* rows = [[mCookiesTable selectedRowEnumerator] allObjects];
+    NSEnumerator* e = [rows reverseObjectEnumerator];
+    NSNumber* index;
+    while ((index = [e nextObject]))
+    {
+      int row = [index intValue];
+
+      nsCAutoString host;
+      mCachedCookies->ObjectAt(row)->GetHost(host);
+      [self addPermission:inPermission forHost:[NSString stringWith_nsACString:host]];
+    }
+  }
+}
+
 - (void)addPermission:(int)inPermission forHost:(NSString*)inHost
 {
   nsCOMPtr<nsIURI> hostURI;
@@ -1135,13 +1148,24 @@ PR_STATIC_CALLBACK(int) compareValues(nsICookie* aCookie1, nsICookie* aCookie2, 
   if (action == @selector(removeAllCookies:))
     return ([[mCookiesFilterField stringValue] length] == 0);
 
+  if (action == @selector(allowCookiesFromSites:))
+  {
+    NSString* siteName = nil;
+    int numCookieSites = [self numUniqueCookieSitesSelected:&siteName];
+    NSString* menuTitle = (numCookieSites == 1) ?
+                            [NSString stringWithFormat:[self localizedStringForKey:@"AllowCookieFromSite"], siteName] :
+                            [self localizedStringForKey:@"AllowCookiesFromSites"];
+    [inMenuItem setTitle:menuTitle];
+    return (numCookieSites > 0);
+  }
+
   if (action == @selector(blockCookiesFromSites:))
   {
     NSString* siteName = nil;
     int numCookieSites = [self numUniqueCookieSitesSelected:&siteName];
     NSString* menuTitle = (numCookieSites == 1) ?
-                            [NSString stringWithFormat:[self getLocalizedString:@"BlockCookieFromSite"], siteName] :
-                            [self getLocalizedString:@"BlockCookiesFromSites"];
+                            [NSString stringWithFormat:[self localizedStringForKey:@"BlockCookieFromSite"], siteName] :
+                            [self localizedStringForKey:@"BlockCookiesFromSites"];
     [inMenuItem setTitle:menuTitle];
     return (numCookieSites > 0);
   }
@@ -1152,8 +1176,8 @@ PR_STATIC_CALLBACK(int) compareValues(nsICookie* aCookie1, nsICookie* aCookie2, 
     int numCookieSites = [self numUniqueCookieSitesSelected:&siteName];
 
     NSString* menuTitle = (numCookieSites == 1) ?
-                            [NSString stringWithFormat:[self getLocalizedString:@"RemoveAndBlockCookieFromSite"], siteName] :
-                            [self getLocalizedString:@"RemoveAndBlockCookiesFromSites"];
+                            [NSString stringWithFormat:[self localizedStringForKey:@"RemoveAndBlockCookieFromSite"], siteName] :
+                            [self localizedStringForKey:@"RemoveAndBlockCookiesFromSites"];
     [inMenuItem setTitle:menuTitle];
     return (numCookieSites > 0);
   }

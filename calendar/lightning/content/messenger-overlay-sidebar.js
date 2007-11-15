@@ -180,16 +180,9 @@ var CalendarController =
   }
 };
 
-function today()
-{
-    var d = Components.classes['@mozilla.org/calendar/datetime;1'].createInstance(Components.interfaces.calIDateTime);
-    d.jsDate = new Date();
-    return d.getInTimezone(calendarDefaultTimezone());
-}
-
 function yesterday()
 {
-    var d = today();
+    var d = now();
     d.day--;
     return d;
 }
@@ -222,7 +215,7 @@ function ltnMinimonthPick(minimonth)
 
     if (document.getElementById("displayDeck").selectedPanel != 
         document.getElementById("calendar-view-box")) {
-        showCalendarView(gLastShownCalendarView);
+        ltnShowCalendarView(gLastShownCalendarView);
     }
 
     cdt = cdt.getInTimezone(currentView().timezone);
@@ -353,21 +346,10 @@ function ltnOnLoad(event)
                                                            modeBoxAttrModified,
                                                            true);
 
-    // find last shown calendar view (persist="checked")
-    var availableViews = getViewDeck();
-    var numChilds = availableViews.childNodes.length;
-    for (var i = 0; i < numChilds; i++) {
-        var view = availableViews.childNodes[i];
-        var command = document.getElementById(view.id+"-command");
-        if (command && command.getAttribute("checked") == "true") {
-            gLastShownCalendarView = view.id.substring(0, view.id.indexOf('-'));
-            break;
-        }
-    }
-    if (!gLastShownCalendarView) {
-        gLastShownCalendarView = 'month';
-    }
+    // Set up the views
+    initializeViews();
 
+    // Initialize Minimonth
     gMiniMonthLoading = true;
 
     var today = new Date();
@@ -456,13 +438,34 @@ function refreshUIBits() {
     }
 
     if (TodayPane.showsYesterday()) {
-      TodayPane.setDay(today());
+      TodayPane.setDay(now());
     }
     // schedule our next update...
     scheduleMidnightUpdate(refreshUIBits);
 }
 
-function showCalendarView(type)
+/**
+ * Select the calendar view in the background, not switching to calendar mode if
+ * in mail mode.
+ */
+function ltnSelectCalendarView(type) {
+    gLastShownCalendarView = type;
+
+    // Sunbird/Lightning Common view switching code
+    switchToView(type);
+
+    // Set the labels for the context-menu
+    var nextCommand = document.getElementById("context_next");
+    nextCommand.setAttribute("label", nextCommand.getAttribute("label-"+type));
+    var previousCommand = document.getElementById("context_previous")
+    previousCommand.setAttribute("label", previousCommand.getAttribute("label-"+type));
+
+}
+
+/**
+ * Show the calendar view, also switching to calendar mode if in mail mode
+ */
+function ltnShowCalendarView(type)
 {
     gLastShownCalendarView = type;
 
@@ -472,71 +475,8 @@ function showCalendarView(type)
         return;
     }
 
-    // If we got this call while a mail-view is being shown, we need to
-    // hide all of the mail stuff so we have room to display the calendar
-    var calendarViewBox = document.getElementById("calendar-view-box");
-    if (calendarViewBox.style.visibility == "collapse") {
-        collapseElement(GetMessagePane());
-        collapseElement(document.getElementById("threadpane-splitter"));
-        var searchBox = findMailSearchBox();
-        if (searchBox) {
-            collapseElement(searchBox);
-        }
-        uncollapseElement(calendarViewBox);
-    }
-
-    var view = document.getElementById(type+"-view");
-    var rotated = document.getElementById("ltn-multiday-rotated");
-
-    if (!view.initialized) {
-        // Set up this view with the current view-checkbox values
-        var workdaysMenu = document.getElementById("ltn-workdays-only");
-        view.workdaysOnly = (workdaysMenu.getAttribute("checked") == 'true');
-
-        var tasksMenu = document.getElementById("ltn-tasks-in-view")
-        view.tasksInView = (tasksMenu.getAttribute("checked") == 'true');
-        view.showCompleted = !document.getElementById("hide-completed-checkbox").checked;
-
-        view.rotated = (rotated.getAttribute("checked") == 'true');
-    }
-
-    // Disable the menuitem when not in day or week view.
-    if (type == "day" || type == "week") {
-        rotated.removeAttribute("disabled");
-    } else {
-        rotated.setAttribute("disabled", true);
-    }
-
-    document.getElementById("displayDeck").selectedPanel =  calendarViewBox;
-    switchToView(type);
-
-    // Set the labels for the context-menu
-    var nextCommand = document.getElementById("context_next");
-    nextCommand.setAttribute("label", nextCommand.getAttribute("label-"+type));
-    var previousCommand = document.getElementById("context_previous")
-    previousCommand.setAttribute("label", previousCommand.getAttribute("label-"+type));
-
-    // Set up the commands
-    var availableViews = getViewDeck();
-    for (var i = 0; i < availableViews.childNodes.length; i++) {
-        var view = availableViews.childNodes[i];
-        var command = document.getElementById(view.id+"-command");
-        if (view.id == type+"-view") {
-           command.setAttribute("checked", true);
-        } else {
-           command.removeAttribute("checked");
-        }
-    }
+    ltnSelectCalendarView(type);
 }
-
-function goToToday()
-{
-    // set the current date in the minimonth control;
-    // note, that the current view in the calendar-view-box is automatically updated
-    var currentDay = today();
-    document.getElementById("ltnMinimonth").value = currentDay.jsDate;
-}
-
 
 function toggleTodayPaneinMailMode()
 {
@@ -565,11 +505,23 @@ function selectedCalendarPane(event)
 
     deck.selectedPanel = document.getElementById("calendar-view-box");
 
-    showCalendarView('week');
+    ltnShowCalendarView('week');
 }
 
-function LtnObserveDisplayDeckChange(event)
-{
+/**
+ * This function has the sole responsibility to switch back to
+ * mail mode (by calling ltnSwitch2Mail()) if we are getting
+ * notifications from other panels (besides the calendar views)
+ * but find out that we're not in mail mode. This situation can
+ * for example happen if we're in calendar mode but the 'new mail'
+ * slider gets clicked and wants to display the appropriate mail.
+ * All necessary logic for switching between the different modes
+ * should live inside of the corresponding functions:
+ * - ltnSwitch2Mail()
+ * - ltnSwitch2Calendar()
+ * - ltnSwitch2Task()
+ */
+function LtnObserveDisplayDeckChange(event) {
     var deck = event.target;
 
     // Bug 309505: The 'select' event also fires when we change the selected
@@ -581,23 +533,10 @@ function LtnObserveDisplayDeckChange(event)
     var id = null;
     try { id = deck.selectedPanel.id } catch (e) { }
 
-    // Now we're switching back to the mail view, so put everything back that
-    // we collapsed in showCalendarView()
-    if (id != "calendar-view-box") {
-        if (gCurrentMode != 'mail') {
-            ltnSwitch2Mail();
-        }
-        collapseElement(document.getElementById("calendar-view-box"));
-        uncollapseElement(GetMessagePane());
-        uncollapseElement(document.getElementById("threadpane-splitter"));
-        var searchBox = findMailSearchBox();
-        if (searchBox) {
-            uncollapseElement(searchBox);
-        }
-
-        // Disable the rotate view menuitem
-        document.getElementById("ltn-multiday-rotated")
-                .setAttribute("disabled", true);
+    // Switch back to mail mode in case we find that this
+    // notification has been fired but we're still in calendar mode.
+    if (id != "calendar-view-box" && gCurrentMode != 'mail') {
+        ltnSwitch2Mail();
     }
 }
 
@@ -607,21 +546,6 @@ function ltnFinish() {
     finishCalendarToDoUnifinder();
 
     unloadCalendarManager();
-}
-
-function ltnEditSelectedItem() {
-    var selectedItems = currentView().getSelectedItems({});
-    for each (var item in selectedItems) {
-        calendarViewController.modifyOccurrence(item);
-    }
-}
-
-function ltnDeleteSelectedItem() {
-    var selectedItems = currentView().getSelectedItems({});
-    calendarViewController.deleteOccurrences(selectedItems.length,
-                                             selectedItems,
-                                             false,
-                                             false);
 }
 
 // After 1.5 was released, the search box was moved into an optional toolbar
@@ -640,35 +564,6 @@ function findMailSearchBox() {
     // In later versions, it's possible that a user removed the search box from
     // the toolbar.
     return null;
-}
-
-function updateOrientation() {
-
-    var value = (document.getElementById("ltn-multiday-rotated")
-                         .getAttribute("checked") == 'true');
-
-    var deck = getViewDeck();
-    for each (view in deck.childNodes) {
-        view.rotated = value;
-    }
-}
-
-function toggleWorkdaysOnly() {
-    for each (view in getViewDeck().childNodes) {
-        view.workdaysOnly = !view.workdaysOnly;
-    }
-
-    // Refresh the current view
-    currentView().goToDay(currentView().selectedDay);
-}
-
-function toggleTasksInView() {
-    for each (view in getViewDeck().childNodes) {
-        view.tasksInView = !view.tasksInView;
-    }
-
-    // Refresh the current view
-    currentView().goToDay(currentView().selectedDay);
 }
 
 var gSelectFolder = SelectFolder;

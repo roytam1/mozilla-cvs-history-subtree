@@ -86,7 +86,7 @@ var calTodoClassInfo = {
 };
 
 calTodo.prototype = {
-    __proto__: calItemBase ? (new calItemBase()) : {},
+    __proto__: calItemBase.prototype,
 
     QueryInterface: function (aIID) {
         if (aIID.equals(Components.interfaces.calITodo) ||
@@ -182,8 +182,7 @@ calTodo.prototype = {
           classes["@mozilla.org/calendar/ics-service;1"].
           getService(Components.interfaces.calIICSService);
         var calcomp = icssvc.createIcalComponent("VCALENDAR");
-        calcomp.prodid = "-//Mozilla Calendar//NONSGML Sunbird//EN";
-        calcomp.version = "2.0";
+        calSetProdidVersion(calcomp);
         calcomp.addSubcomponent(this.icalComponent);
         return calcomp.serializeToICS();
     },

@@ -21,6 +21,7 @@
    -   Mike Shaver <shaver@mozilla.org>
    -   Simon Paquet <bugzilla@babylonsounds.com>
    -   Matthew Willis <mattwillis@mac.com>
+   -   Philipp Kewisch <mozilla@kewis.ch>
    -
    - Alternatively, the contents of this file may be used under the terms of
    - either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -50,9 +51,16 @@
 <!ENTITY lightning.menupopup.new.task.label     "Task…">
 <!ENTITY lightning.menupopup.new.calendar.label "Calendar…">
 
+<!-- Open menu popup in File menu -->
+<!ENTITY lightning.menupopup.open.label               "Open">
+<!ENTITY lightning.menupopup.open.accesskey           "O">
+<!ENTITY lightning.menupopup.open.message.label       "Saved Message…">
+<!ENTITY lightning.menupopup.open.message.accesskey   "M">
+<!ENTITY lightning.menupopup.open.calendar.label      "Calendar File…">
+<!ENTITY lightning.menupopup.open.calendar.accesskey  "C">
+
 <!-- Agenda Tree View -->
 <!ENTITY agenda.treeview.label           "View:">
-<!ENTITY agenda.treeview.menu.label      "View">
 <!ENTITY agenda.treeview.all.label       "All">
 <!ENTITY agenda.treeview.events.label    "Events">
 <!ENTITY agenda.treeview.tasks.label     "Tasks">
@@ -67,8 +75,6 @@
 <!ENTITY lightning.sidebar.calendars.label   "Calendars">
 <!ENTITY lightning.calendar.label            "Calendar">
 <!ENTITY lightning.calendar.accesskey        "C">
-<!ENTITY lightning.sidebar.showCompletedTasks.label "Show completed tasks">
-<!ENTITY lightning.sidebar.showCompletedTasks.accesskey "k">
 
 <!-- Mode Toolbar -->
 <!ENTITY lightning.toolbar.mail.label         "Mail">
@@ -102,7 +108,6 @@
 <!ENTITY lightning.toolbar.month.accesskey           "M">
 
 <!--Views' context menu-->
-<!ENTITY lightning.context.deleteitem.accesskey  "D">
 <!-- This access key is in the same menu as 'Go to Next' which gets the 'N'-->
 <!ENTITY lightning.context.newevent.accesskey  "E">
 

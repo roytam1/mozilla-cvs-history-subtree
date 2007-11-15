@@ -4092,6 +4092,21 @@ nsEventStateManager::SetContentState(nsIContent *aContent, PRInt32 aState)
 
         if (docShell && mCurrentFocus)
           docShell->SetCanvasHasFocus(PR_FALSE);
+
+        // Also make sure that gLastFocusedDocument and gLastFocusedPresContext
+        // aren't NULL if we have focused content.  Not doing this can mess up
+        // the NS_GOTFOCUS case in nsEventStateManager::PreHandleEvent().
+        // gLastFocusedDocument is NULLed by the call to SendFocusBlur() above.
+        // gLastFocusedPresContext is NULLed by the NS_DEACTIVATE case in
+        // nsEventStateManager::PreHandleEvent() (which is invoked switching
+        // from one browser window to another).
+        if (!gLastFocusedDocument) {
+          gLastFocusedDocument = mDocument;
+          NS_ADDREF(gLastFocusedDocument);
+        }
+        if (!gLastFocusedPresContext) {
+          gLastFocusedPresContext = mPresContext;
+        }
       }
     }
   }

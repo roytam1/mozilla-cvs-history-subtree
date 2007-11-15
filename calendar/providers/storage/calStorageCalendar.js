@@ -1,4 +1,3 @@
-/* -*- Mode: javascript; tab-width: 20; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -280,10 +279,10 @@ calStorageCalendar.prototype = {
 
     // attribute AUTF8String name;
     get name() {
-        return getCalendarManager().getCalendarPref(this, "NAME");
+        return this.getProperty("name");
     },
     set name(name) {
-        getCalendarManager().setCalendarPref(this, "NAME", name);
+        return this.setProperty("name", name);
     },
     // readonly attribute AUTF8String type;
     get type() { return "storage"; },
@@ -291,14 +290,44 @@ calStorageCalendar.prototype = {
     mReadOnly: false,
 
     get readOnly() { 
-        return this.mReadOnly;
+        return this.getProperty("readOnly");
     },
-    set readOnly(bool) {
-        this.mReadOnly = bool;
+    set readOnly(aValue) {
+        return this.setProperty("readOnly", aValue);
     },
 
     get canRefresh() {
         return false;
+    },
+
+    getProperty: function calStorageCalendar_getProperty(aName) {
+        switch (aName) {
+            case "readOnly":
+                return this.mReadOnly;
+            default:
+                // xxx future: return getPrefSafe("calendars." + this.id + "." + aName, null);
+                return getCalendarManager().getCalendarPref_(this, aName);
+        }
+    },
+    setProperty: function calStorageCalendar_setProperty(aName, aValue) {
+        var oldValue = this.getProperty(aName);
+        if (oldValue != aValue) {
+            switch (aName) {
+                case "readOnly":
+                    this.mReadOnly = aValue;
+                    break;
+                default:
+                    // xxx future: setPrefSafe("calendars." + this.id + "." + aName, aValue);
+                    getCalendarManager().setCalendarPref_(this, aName, aValue);
+            }
+            this.mObservers.notify("onPropertyChanged",
+                                   [this, aName, aValue, oldValue]);
+        }
+        return aValue;
+    },
+    deleteProperty: function(aName) {
+        this.mObservers.notify("onPropertyDeleting", [this, aName]);
+        getCalendarManager().deleteCalendarPref_(this, aName);
     },
 
     mURI: null,
@@ -352,10 +381,6 @@ calStorageCalendar.prototype = {
     refresh: function() {
         // no-op
     },
-
-    // attribute boolean suppressAlarms;
-    get suppressAlarms() { return false; },
-    set suppressAlarms(aSuppressAlarms) { throw Components.results.NS_ERROR_NOT_IMPLEMENTED; },
 
     get sendItipInvitations() { return true; },
 
@@ -2108,6 +2133,14 @@ calStorageCalendar.prototype = {
     }
 }
 
+// nsIFactory
+const calStorageCalendarFactory = {
+    createInstance: function (outer, iid) {
+        if (outer != null)
+            throw Components.results.NS_ERROR_NO_AGGREGATION;
+        return (new calStorageCalendar()).QueryInterface(iid);
+    }
+};
 
 /****
  **** module registration
@@ -2177,15 +2210,7 @@ var calStorageCalendarModule = {
             initCalStorageCalendarComponent();
         }
 
-        return this.mFactory;
-    },
-
-    mFactory: {
-        createInstance: function (outer, iid) {
-            if (outer != null)
-                throw Components.results.NS_ERROR_NO_AGGREGATION;
-            return (new calStorageCalendar()).QueryInterface(iid);
-        }
+        return calStorageCalendarFactory;
     },
 
     canUnload: function(compMgr) {

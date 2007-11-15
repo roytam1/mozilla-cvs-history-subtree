@@ -236,24 +236,11 @@
 <!ENTITY event.repeat.until.label                       "Repeat until" >
 <!ENTITY event.recurrence.preview.label                 "Preview">
 
-<!ENTITY month.1.name "January" >
-<!ENTITY month.2.name "February" >
-<!ENTITY month.3.name "March" >
-<!ENTITY month.4.name "April" >
-<!ENTITY month.5.name "May" >
-<!ENTITY month.6.name "June" >
-<!ENTITY month.7.name "July" >
-<!ENTITY month.8.name "August" >
-<!ENTITY month.9.name "September" >
-<!ENTITY month.10.name "October" >
-<!ENTITY month.11.name "November" >
-<!ENTITY month.12.name "December" >
-
 <!-- Reminder dialog -->
 
 <!ENTITY reminder.title.label                           "Custom Reminder">
 <!ENTITY reminder.reminder.label                        "Reminder">
-<!ENTITY reminder.due.label                             "When Reminder becomes Due">
+<!ENTITY reminder.action.label                          "Choose a Reminder Action">
 <!ENTITY reminder.action.alert.label                    "Show an Alert">
 <!ENTITY reminder.action.sound.label                    "Play a Sound">
 <!ENTITY reminder.action.email.label                    "Send an E-mail">
@@ -291,6 +278,7 @@
 <!ENTITY read.only.date.label            "Date:">
 <!ENTITY read.only.repeat.label          "Repeat:">
 <!ENTITY read.only.location.label        "Location:">
+<!ENTITY read.only.category.label        "Category:">
 <!ENTITY read.only.organizer.label       "Organizer:">
 <!ENTITY read.only.reply.label           "Reply:">
 <!ENTITY read.only.accept.label          "I will attend">

@@ -220,7 +220,7 @@ nsLocation::CheckURL(nsIURI* aURI, nsIDocShellLoadInfo** aLoadInfo)
       return NS_ERROR_FAILURE;
     owner = do_QueryInterface(principal);
 
-    GetSourceURL(cx, getter_AddRefs(sourceURI));
+    GetSourceURL(cx, principal, getter_AddRefs(sourceURI));
   }
 
   // Create load info
@@ -1026,14 +1026,24 @@ nsLocation::GetSourceBaseURL(JSContext* cx, nsIURI** sourceURL)
 }
 
 nsresult
-nsLocation::GetSourceURL(JSContext* cx, nsIURI** sourceURL)
+nsLocation::GetSourceURL(JSContext* cx, nsIPrincipal* callerPrincipal,
+                         nsIURI** sourceURL)
 {
+  NS_PRECONDITION(callerPrincipal, "Must have caller principal here");
+  
+  *sourceURL = nsnull;
+  
   nsCOMPtr<nsIDocument> doc;
   nsresult rv = GetSourceDocument(cx, getter_AddRefs(doc));
   if (doc) {
-    NS_IF_ADDREF(*sourceURL = doc->GetDocumentURI());
-  } else {
-    *sourceURL = nsnull;
+    nsIPrincipal* docPrincipal = doc->GetPrincipal();
+    if (docPrincipal) {
+      PRBool subsumes;
+      rv = callerPrincipal->Subsumes(docPrincipal, &subsumes);
+      if (NS_SUCCEEDED(rv) && subsumes) {
+        NS_IF_ADDREF(*sourceURL = doc->GetDocumentURI());
+      }
+    }
   }
 
   return rv;

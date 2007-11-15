@@ -1,4 +1,3 @@
-/* -*- Mode: javascript; tab-width: 20; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -21,6 +20,7 @@
  *
  * Contributor(s):
  *   Vladimir Vukicevic <vladimir.vukicevic@oracle.com>
+ *   Philipp Kewisch <mozilla@kewis.ch>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -77,6 +77,7 @@ calMemoryCalendar.prototype = {
     initMemoryCalendar: function() {
         this.mObservers = new calListenerBag(Components.interfaces.calIObserver);
         this.mItems = { };
+        this.mProperties = {};
     },
 
     //
@@ -120,10 +121,10 @@ calMemoryCalendar.prototype = {
     },
 
     get name() {
-        return getCalendarManager().getCalendarPref(this, "NAME");
+        return this.getProperty("name");
     },
     set name(name) {
-        getCalendarManager().setCalendarPref(this, "NAME", name);
+        return this.setProperty("name", name);
     },
 
     // readonly attribute AUTF8String type;
@@ -133,10 +134,10 @@ calMemoryCalendar.prototype = {
 
     // Most of the time you can just let the ics calendar handle this
     get readOnly() { 
-        return this.mReadOnly;
+        return this.getProperty("readOnly");
     },
     set readOnly(bool) {
-        this.mReadOnly = bool;
+        return this.setProperty("readOnly", bool);
     },
 
     get canRefresh() {
@@ -148,14 +149,27 @@ calMemoryCalendar.prototype = {
     get uri() { return this.mUri; },
     set uri(aURI) { this.mUri = aURI; },
 
+    mProperties: null,
+    getProperty: function(aName) {
+        return this.mProperties[aName];
+    },
+    setProperty: function(aName, aValue) {
+        var oldValue = this.getProperty(aName);
+        if (oldValue != aValue) {
+            this.mProperties[aName] = aValue;
+            this.mObservers.notify("onPropertyChanged",
+                                   [this, aName, aValue, oldValue]);
+        }
+        return aValue;
+    },
+    deleteProperty: function(aName) {
+        this.mObservers.notify("onPropertyDeleting", [this, aName]);
+        delete this.mProperties[aName];
+    },
 
     refresh: function() {
         // no-op
     },
-
-    // attribute boolean suppressAlarms;
-    get suppressAlarms() { return false; },
-    set suppressAlarms(aSuppressAlarms) { throw Components.results.NS_ERROR_NOT_IMPLEMENTED; },
 
     get sendItipInvitations() { return true; },
 
@@ -526,6 +540,15 @@ calMemoryCalendar.prototype = {
     }
 }
 
+// nsIFactory
+const calMemoryCalendarFactory = {
+    createInstance: function (outer, iid) {
+        if (outer != null)
+            throw Components.results.NS_ERROR_NO_AGGREGATION;
+        return (new calMemoryCalendar()).QueryInterface(iid);
+    }
+};
+
 /****
  **** module registration
  ****/
@@ -588,15 +611,7 @@ var calMemoryCalendarModule = {
 
         this.loadUtils();
 
-        return this.mFactory;
-    },
-
-    mFactory: {
-        createInstance: function (outer, iid) {
-            if (outer != null)
-                throw Components.results.NS_ERROR_NO_AGGREGATION;
-            return (new calMemoryCalendar()).QueryInterface(iid);
-        }
+        return calMemoryCalendarFactory;
     },
 
     canUnload: function(compMgr) {

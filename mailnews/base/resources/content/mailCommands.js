@@ -505,9 +505,7 @@ function ViewPageSource(messages)
             var url = mailSession.ConvertMsgURIToMsgURL(messages[i], msgWindow);
 
             window.openDialog( "chrome://navigator/content/viewSource.xul",
-                               "_blank",
-                               "scrollbars,resizable,chrome,dialog=no",
-                               url,
+                               "_blank", "all,dialog=no", url,
                                mailCharacterSet);
         }
         return true;

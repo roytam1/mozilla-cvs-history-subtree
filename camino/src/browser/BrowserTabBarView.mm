@@ -265,7 +265,7 @@ static const float kScrollButtonInterval = 0.15;  // time (in seconds) between f
 {
   // draw tab bar background, omitting the selected Tab
   NSRect barFrame = [self bounds];
-  NSPoint patternOrigin = [self convertPoint:NSMakePoint(0.0f, 0.0f) toView:nil];
+  NSPoint patternOrigin = [self convertPoint:NSMakePoint(0.0f, 0.0f) toView:[[self window] contentView]];
   NSRect fillRect;
 
   // first, fill to the left of the active tab
@@ -487,13 +487,13 @@ static const float kScrollButtonInterval = 0.15;  // time (in seconds) between f
   int numberOfTabs = [mTabView numberOfTabViewItems];
 
   // check to see whether or not the tabs will fit without the overflows
-  float widthOfATab = NSWidth([self tabsRectWithOverflow:NO]) / numberOfTabs;
+  float widthOfATab = floor(NSWidth([self tabsRectWithOverflow:NO]) / numberOfTabs);
   mOverflowTabs = widthOfATab < kMinTabWidth;
 
   if (mOverflowTabs) {
     float widthOfTabBar = NSWidth([self tabsRect]);
     mNumberOfVisibleTabs = (int)floor(widthOfTabBar / kMinTabWidth);
-    widthOfATab = widthOfTabBar / mNumberOfVisibleTabs;
+    widthOfATab = floor(widthOfTabBar / mNumberOfVisibleTabs);
     if (mNumberOfVisibleTabs + mLeftMostVisibleTabIndex > numberOfTabs)
       [self setLeftMostVisibleTabIndex:(numberOfTabs - mNumberOfVisibleTabs)];
     if (keepCurrentTabVisible && selectedTab)
@@ -507,7 +507,11 @@ static const float kScrollButtonInterval = 0.15;  // time (in seconds) between f
 
   [self setOverflowButtonsVisible:mOverflowTabs];
 
-  float nextTabXOrigin  = NSMinX([self tabsRect]);
+  NSRect tabsRect = [self tabsRect];
+  float extraWidth = 0.0;
+  if (widthOfATab < kMaxTabWidth)
+    extraWidth = NSWidth(tabsRect) - widthOfATab * mNumberOfVisibleTabs;
+  float nextTabXOrigin  = NSMinX(tabsRect);
   NSRect invisibleTabRect = NSMakeRect(nextTabXOrigin, 0, 0, 0);
   for (int i = 0; i < numberOfTabs; i++) {
     TabButtonCell* tabButtonCell = [(BrowserTabViewItem*)[mTabView tabViewItemAtIndex:i] tabButtonCell];
@@ -520,9 +524,15 @@ static const float kScrollButtonInterval = 0.15;  // time (in seconds) between f
     }
     // Regular visible tab
     else {
-      [tabButtonCell setFrame:NSMakeRect(nextTabXOrigin, 0, widthOfATab, [self tabBarHeight])];
+      NSRect tabRect = NSMakeRect(nextTabXOrigin, 0, widthOfATab, [self tabBarHeight]);
+      // spread the extra width from rounding tab sizes over the leftmost tabs.
+      if (extraWidth > 0.5) {
+        extraWidth -= 1.0;
+        tabRect.size.width += 1.0;
+      }
+      [tabButtonCell setFrame:tabRect];
       [tabButtonCell setDrawDivider:YES];
-      nextTabXOrigin += (int)widthOfATab;
+      nextTabXOrigin += NSWidth(tabRect);
     }
   }
 
@@ -641,26 +651,43 @@ static const float kScrollButtonInterval = 0.15;  // time (in seconds) between f
     [self scrollLeft:nil];
 }
 
-// Scrolls the tab bar one place to the right, if possible.
 -(void)scrollLeft:(id)aSender
 {
-  if (mLeftMostVisibleTabIndex > 0)
-    [self setLeftMostVisibleTabIndex:(mLeftMostVisibleTabIndex - 1)];
-}
- 
-// Scrolls the tab bar one place to the left, if possible.
--(void)scrollRight:(id)aSender
-{
-  if ((mLeftMostVisibleTabIndex + mNumberOfVisibleTabs) < [mTabView numberOfTabViewItems])
-    [self setLeftMostVisibleTabIndex:(mLeftMostVisibleTabIndex + 1)];
+  int numberOfTabsToScroll = 1;
+  // We can safely scroll up to the number of tabs hidden to the left
+  int tabsHiddenToTheLeft = mLeftMostVisibleTabIndex;
+
+  // If option's down and we're being called from a button-click
+  if (([[NSApp currentEvent] modifierFlags] & NSAlternateKeyMask) && [aSender isKindOfClass:[NSButton class]])
+    // Scroll up to a window's width (if possible)
+    numberOfTabsToScroll = MIN(tabsHiddenToTheLeft, mNumberOfVisibleTabs);
+
+  if (tabsHiddenToTheLeft > 0)
+    [self setLeftMostVisibleTabIndex:(mLeftMostVisibleTabIndex - numberOfTabsToScroll)];
 }
 
-// Sets the left most visible tab index depending on the the relationship between
-// index and mLeftMostVisibleTabIndex.
+-(void)scrollRight:(id)aSender
+{
+  int numberOfTabsToScroll = 1;
+  // We can safely scroll up to the the number of tabs hidden to the right
+  int tabsHiddenToTheRight = [mTabView numberOfTabViewItems] - (mLeftMostVisibleTabIndex + mNumberOfVisibleTabs);
+  
+  // If option's down and we're being called from a button-click
+  if (([[NSApp currentEvent] modifierFlags] & NSAlternateKeyMask) && [aSender isKindOfClass:[NSButton class]])
+    // Scroll up to a window's width (if possible)
+    numberOfTabsToScroll = MIN(tabsHiddenToTheRight, mNumberOfVisibleTabs);
+
+  if (tabsHiddenToTheRight > 0)
+    [self setLeftMostVisibleTabIndex:(mLeftMostVisibleTabIndex + numberOfTabsToScroll)];
+}
+
+// Scrolls the tab bar to make index visible
 -(void)scrollTabIndexToVisible:(int)index
 {
+  // if it's to the left of screen, make it leftmost
   if (index < mLeftMostVisibleTabIndex)
     [self setLeftMostVisibleTabIndex:index];
+  // if it's to the right of screen, make it rightmost
   else if (index >= mLeftMostVisibleTabIndex + mNumberOfVisibleTabs)
     [self setLeftMostVisibleTabIndex:(index - mNumberOfVisibleTabs + 1)];
 }

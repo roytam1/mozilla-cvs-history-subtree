@@ -102,8 +102,7 @@
 #include "nsBidiPresUtils.h"
 #endif
 
-// horizontal ellipsis (U+2026)
-#define ELLIPSIS PRUnichar(0x2026)
+#define ELLIPSIS "..."
 
 NS_IMPL_ISUPPORTS1(nsTreeReflowCallback, nsIReflowCallback)
 
@@ -2816,7 +2815,7 @@ nsTreeBodyFrame::PaintText(PRInt32              aRowIndex,
     if (ellipsisWidth > width)
       text.SetLength(0);
     else if (ellipsisWidth == width)
-      text.Assign(ELLIPSIS);
+      text.AssignLiteral(ELLIPSIS);
     else {
       // We will be drawing an ellipsis, thank you very much.
       // Subtract out the required width of the ellipsis.
@@ -2840,7 +2839,7 @@ nsTreeBodyFrame::PaintText(PRInt32              aRowIndex,
             twidth += cwidth;
           }
           text.Truncate(i);
-          text.Append(ELLIPSIS);
+          text.AppendLiteral(ELLIPSIS);
         }
         break;
 
@@ -2860,7 +2859,7 @@ nsTreeBodyFrame::PaintText(PRInt32              aRowIndex,
 
           nsAutoString copy;
           text.Right(copy, length-1-i);
-          text.Assign(ELLIPSIS);
+          text.AssignLiteral(ELLIPSIS);
           text += copy;
         }
         break;
@@ -2888,9 +2887,7 @@ nsTreeBodyFrame::PaintText(PRInt32              aRowIndex,
             rightStr.Insert(ch, 0);
             --rightPos;
           }
-          text = leftStr;
-          text.Append(ELLIPSIS);
-          text += rightStr;
+          text = leftStr + NS_LITERAL_STRING(ELLIPSIS) + rightStr;
         }
         break;
       }

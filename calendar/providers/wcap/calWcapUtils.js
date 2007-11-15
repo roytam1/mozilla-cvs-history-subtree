@@ -84,8 +84,10 @@ function initLogging()
                 logError(exc, "init logging");
             }
         }
-        log("################################# NEW LOG (0.5) #################################",
+        log("################################# NEW WCAP LOG #################################",
             "init logging");
+        logWarning("WCAP logging enabled! level=" + LOG_LEVEL +
+                   (g_logFilestream ? (", file=" + logFileName) : ""));
     }
     if (!g_logPrefObserver) {
         g_logPrefObserver = { // nsIObserver:
@@ -170,7 +172,9 @@ function logWarning(err, context)
 function logError(err, context)
 {
     var msg = errorToString(err);
-    Components.utils.reportError( log("error: " + msg, context, true) );
+    Components.utils.reportError(
+        log("error: " + msg + "\nstack:\n" + STACK(), context, true));
+    debugger;
     return msg;
 }
 
@@ -214,6 +218,16 @@ function getFreeBusyService() {
                       .getService(Components.interfaces.calIFreeBusyService);
     }
     return g_fbService;
+}
+
+var g_calendarSearchService = null;
+function getCalendarSearchService() {
+    if (!g_calendarSearchService) {
+        g_calendarSearchService =
+            Components.classes["@mozilla.org/calendar/calendarsearch-service;1"]
+                      .getService(Components.interfaces.calICalendarSearchService);
+    }
+    return g_calendarSearchService;
 }
 
 var g_domParser = null;

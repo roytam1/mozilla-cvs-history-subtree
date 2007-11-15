@@ -400,6 +400,8 @@ private:
   nsresult DispatchFocusToPlugin(nsIDOMEvent* aFocusEvent);
 
   nsresult EnsureCachedAttrParamArrays();
+
+  PRPackedBool mInDispatchFocus; // Used in DispatchFocusToPlugin()
 };
 
 #if defined(XP_WIN) || (defined(DO_DIRTY_INTERSECT) && (defined(XP_MAC) || defined(XP_MACOSX)))
@@ -2298,6 +2300,7 @@ nsPluginInstanceOwner::nsPluginInstanceOwner()
   mNumCachedParams = 0;
   mCachedAttrParamNames = nsnull;
   mCachedAttrParamValues = nsnull;
+  mInDispatchFocus = PR_FALSE;
 }
 
 nsPluginInstanceOwner::~nsPluginInstanceOwner()
@@ -3523,6 +3526,12 @@ nsresult nsPluginInstanceOwner::DispatchFocusToPlugin(nsIDOMEvent* aFocusEvent)
   }
 #endif
 
+  if (mInDispatchFocus) {
+    NS_WARNING("nsPluginInstanceOwner::DispatchFocusToPlugin() called recursively on same plugin instance owner");
+    return aFocusEvent->PreventDefault();
+  }
+  mInDispatchFocus = PR_TRUE;
+
   nsCOMPtr<nsIPrivateDOMEvent> privateEvent(do_QueryInterface(aFocusEvent));
   if (privateEvent) {
     nsEvent * theEvent;
@@ -3541,6 +3550,7 @@ nsresult nsPluginInstanceOwner::DispatchFocusToPlugin(nsIDOMEvent* aFocusEvent)
   }
   else NS_ASSERTION(PR_FALSE, "nsPluginInstanceOwner::DispatchFocusToPlugin failed, privateEvent null");   
   
+  mInDispatchFocus = PR_FALSE;
   return NS_OK;
 }    
 

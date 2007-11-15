@@ -66,8 +66,6 @@
 
 #miniday-dropdown-button {
   margin: 2px;
-  padding-left: 3px;
-  padding-right: 3px;
   max-width: 15px;
 }
 
@@ -85,7 +83,6 @@
 
 .miniday-nav-buttons {
   margin-top: 2px;
-  -moz-padding-end: 0px !important;
   list-style-image: url("chrome://calendar/skin/mini-day-nav-buttons.png");
 }
 
@@ -125,4 +122,35 @@
 
 #next-day-button[disabled] {
   -moz-image-region: rect(26px 21px 39px 16px);
-} 
+}
+
+#miniday-dropdown-button > .toolbarbutton-icon,
+  .miniday-nav-buttons > .toolbarbutton-icon {
+  margin: 1px;
+}
+
+#miniday-dropdown-button > .toolbarbutton-text,
+  .miniday-nav-buttons > .toolbarbutton-text  {
+  display: none;
+}
+
+.today-closebutton {
+  list-style-image: url("chrome://messenger/skin/icons/close-button.png");
+  -moz-image-region: rect(0 16px 16px 0);
+  -moz-appearance: none;
+  border: none !important;
+  padding: 2px;
+}
+
+
+.today-closebutton:hover {
+  -moz-image-region: rect(0 32px 16px 16px);
+}
+
+.today-closebutton:hover:active {
+  -moz-image-region: rect(0 48px 16px 32px);
+}
+
+.today-closebutton > .toolbarbutton-icon {
+  -moz-margin-end: 0px; /* override toolkit's default value */
+}

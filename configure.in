@@ -675,12 +675,26 @@ tools are selected during the Xcode/Developer Tools installation.])
     CPP="$CPP -nostdinc ${SDK_C_INCLUDE}"
     CXXCPP="$CXXCPP -nostdinc -nostdinc++ ${SDK_CXX_INCLUDE} ${SDK_C_INCLUDE}"
 
-    dnl ld support for -syslibroot is compiler-agnostic, but only available
-    dnl on Tiger.  Although it's possible to switch on the build host's
-    dnl OS release to use ld -syslibroot when available, ld -syslibroot will
-    dnl cause warnings as long as NEXT_ROOT is set.  NEXT_ROOT should be
-    dnl set because both the compiler and linker use it.
-    LIBS="-L${MACOS_SDK_DIR}/usr/lib/gcc/darwin -L${MACOS_SDK_DIR}/usr/lib/gcc/darwin/${GCC_VERSION_FULL} -L${MACOS_SDK_DIR}/usr/lib $LIBS"
+    changequote(,)
+    HOST_DARWIN_MAJOR=`echo "$build_os" | sed -E -e 's/^darwin([0-9]+).*$/\1/'`
+    changequote([,])
+    if test "$HOST_DARWIN_MAJOR" -lt 9 ; then
+      dnl The build host is running Tiger (10.4) or earlier.  ld support for
+      dnl -syslibroot is compiler-agnostic, but only available on Tiger and
+      dnl later.  On Tiger and earlier build hosts, just rely on NEXT_ROOT,
+      dnl because it's not been shown to cause any problems.
+
+      LIBS="-L${MACOS_SDK_DIR}/usr/lib/gcc/darwin -L${MACOS_SDK_DIR}/usr/lib/gcc/darwin/${GCC_VERSION_FULL} -L${MACOS_SDK_DIR}/usr/lib $LIBS"
+    else
+      dnl The build host is running Leopard (10.5) or later.  With NEXT_ROOT
+      dnl set, the linker will still not apply it when resolving dependencies.
+      dnl This causes problems on Leopard, where an SDK depends on frameworks
+      dnl which were present in earlier OS releases (and the associated SDK)
+      dnl but not in Leopard.  -syslibroot does not have this problem, but it
+      dnl results in harmless warnings when NEXT_ROOT is set.  NEXT_ROOT needs
+      dnl to remain set even on Leopard because the compiler uses it too.
+      LIBS="-Wl,-syslibroot,${MACOS_SDK_DIR} $LIBS"
+    fi
     export NEXT_ROOT=$MACOS_SDK_DIR
 
     if test -n "$CROSS_COMPILE" ; then
@@ -1471,6 +1485,7 @@ case "$target" in
     ;;
 
 *-darwin*) 
+    AC_DEFINE(STDC_HEADERS)
     MKSHLIB='$(CXX) $(CXXFLAGS) $(DSO_PIC_CFLAGS) $(DSO_LDOPTS) -o $@'
     MKCSHLIB='$(CC) $(CFLAGS) $(DSO_PIC_CFLAGS) $(DSO_LDOPTS) -o $@'
 
@@ -4672,7 +4687,7 @@ MOZ_ARG_ENABLE_BOOL(pango,
 if test "$MOZ_ENABLE_PANGO"
 then
     AC_DEFINE(MOZ_ENABLE_PANGO)
-    PKG_CHECK_MODULES(MOZ_PANGO, pangoxft >= 1.6.0)
+    PKG_CHECK_MODULES(MOZ_PANGO, pango >= 1.6.0 pangoft2 >= 1.6.0)
 
     AC_SUBST(MOZ_ENABLE_PANGO)
     AC_SUBST(MOZ_PANGO_CFLAGS)

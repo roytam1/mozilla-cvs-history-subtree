@@ -38,7 +38,6 @@
 #ifndef CALPERIOD_H_
 #define CALPERIOD_H_
 
-#include "nsString.h"
 #include "nsCOMPtr.h"
 
 #include "calIPeriod.h"

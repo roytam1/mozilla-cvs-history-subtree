@@ -19,6 +19,7 @@
  *
  * Contributor(s):
  *   Berend Cornelius <berend.cornelius@sun.com>
+ *   Philipp Kewisch <mozilla@kewis.ch>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or 
@@ -42,7 +43,10 @@ var TodayPane = {
   stodaypaneButton: "calendar-show-todaypane-button",
   start: null,
   cwlabel: null,
-  dateFormatter: null,
+  dateFormatter: Components.classes["@mozilla.org/calendar/datetime-formatter;1"]
+                      .getService(Components.interfaces.calIDateTimeFormatter),
+  weekFormatter: Components.classes["@mozilla.org/calendar/weektitle-service;1"]
+                .getService(Components.interfaces.calIWeekTitleService),
 
   onLoad: function () {
     var addToolbarbutton = false;
@@ -142,11 +146,6 @@ var TodayPane = {
   {
     if (this.cwlabel == null) {
       this.cwlabel = calGetString("calendar", "shortcalendarweek");
-    }
-    if (this.dateFormatter == null) {
-      this.dateFormatter =
-            Components.classes["@mozilla.org/calendar/datetime-formatter;1"]
-                      .getService(Components.interfaces.calIDateTimeFormatter);
     }
     return aMonthLabel.value = this.dateFormatter.shortMonthName(aIndex)
             + " " + aYear +  ", " + this.cwlabel + " " +  aCalWeek;
@@ -280,9 +279,9 @@ setDaywithjsDate: function(aNewDate)
     if (agendaTreeView.initialized) {
       this.updatePeriod();
     }
-    return this.setMonthDescription(selMonthPanel, this.start.month
-                                   , this.start.year
-                                   , Math.ceil(this.start.yearday/7));
+    return this.setMonthDescription(selMonthPanel, this.start.month,
+                                   this.start.year,
+                                   this.weekFormatter.getWeekTitle(this.start));
   },
 
   advance: function(dir)
@@ -293,7 +292,7 @@ setDaywithjsDate: function(aNewDate)
 
   showsToday: function()
   {
-    return (sameDay(today(), this.start));
+    return (sameDay(now(), this.start));
   },
   
   showsYesterday: function()

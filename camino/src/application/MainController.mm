@@ -41,7 +41,6 @@
 
 #import "NSArray+Utils.h"
 #import "NSString+Utils.h"
-#import "NSResponder+Utils.h"
 #import "NSMenu+Utils.h"
 #import "NSURL+Utils.h"
 #import "NSWorkspace+Utils.h"
@@ -329,7 +328,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
   if (shouldRestoreWindowState) {
     // if we've already opened a window (e.g., command line argument or apple event), we need
     // to pull it to the front after restoring the window state
-    NSWindow* existingWindow = [self getFrontmostBrowserWindow];
+    NSWindow* existingWindow = [self frontmostBrowserWindow];
     [[SessionManager sharedInstance] restoreWindowState];
     [existingWindow makeKeyAndOrderFront:self];
   }
@@ -346,7 +345,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 
   // open a new browser window if we don't already have one or we have a specific
   // start URL we need to show
-  NSWindow* browserWindow = [self getFrontmostBrowserWindow];
+  NSWindow* browserWindow = [self frontmostBrowserWindow];
   if (!browserWindow || mStartURL)
     [self newWindow:self];
 
@@ -374,7 +373,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
     NSArray* openBrowserWins = [self browserWindows];
     if ([openBrowserWins count] == 1) {
       BrowserWindowController* bwc = [[openBrowserWins firstObject] windowController];
-      unsigned int numTabs = [[bwc getTabBrowser] numberOfTabViewItems];
+      unsigned int numTabs = [[bwc tabBrowser] numberOfTabViewItems];
       if (numTabs > 1) {
         quitAlertMsg = NSLocalizedString(@"QuitWithMultipleTabsMsg", @"");
         quitAlertExpl = [NSString stringWithFormat:NSLocalizedString(@"QuitWithMultipleTabsExpl", @""), numTabs];
@@ -421,7 +420,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
       continue;
 
     BrowserWindowController* bwc = [curWindow windowController];
-    if (![[bwc getTabBrowser] windowShouldClose])
+    if (![[bwc tabBrowser] windowShouldClose])
       return NSTerminateCancel;
   }
 
@@ -594,7 +593,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
   return windowArray;
 }
 
-- (NSWindow*)getFrontmostBrowserWindow
+- (NSWindow*)frontmostBrowserWindow
 {
   // for some reason, [NSApp mainWindow] doesn't always work, so we have to
   // do this manually
@@ -619,7 +618,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
   return foundWindow;
 }
 
-- (BrowserWindowController*)getMainWindowBrowserController
+- (BrowserWindowController*)mainWindowBrowserController
 {
   // note that [NSApp mainWindow] will return NULL if we are not frontmost
   NSWindowController* mainWindowController = [[mApplication mainWindow] windowController];
@@ -629,20 +628,13 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
   return nil;
 }
 
-- (BrowserWindowController*)getKeyWindowBrowserController
+- (BrowserWindowController*)keyWindowBrowserController
 {
   NSWindowController* keyWindowController = [[mApplication keyWindow] windowController];
   if (keyWindowController && [keyWindowController isMemberOfClass:[BrowserWindowController class]])
     return (BrowserWindowController*)keyWindowController;
 
   return nil;
-}
-
-- (BOOL)isMainWindowABrowserWindow
-{
-  // see also getFrontmostBrowserWindow. That will always return a browser
-  // window if one exists. This will only return one if it is frontmost.
-  return [[[mApplication mainWindow] windowController] isMemberOfClass:[BrowserWindowController class]];
 }
 
 #pragma mark -
@@ -664,7 +656,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 
   // The process of creating a new tab in this brand new window loads about:blank for us as a
   // side effect of calling GetDocument(). We don't need to do it again.
-  if ([MainController isBlankURL:aURL])
+  if (!aURL || [aURL isBlankURL])
     [browser disableLoadPage];
   else
     [browser loadURL:aURL referrer:aReferrer focusContent:YES allowPopups:inAllowPopups];
@@ -709,7 +701,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
   while ((window = [windowEnumerator nextObject])) {
     if ([[window windowController] isMemberOfClass:[BrowserWindowController class]]) {
       BrowserWindowController* browser = (BrowserWindowController*)[window windowController];
-      BrowserTabView* tabView = [browser getTabBrowser];
+      BrowserTabView* tabView = [browser tabBrowser];
       int tabIndex = [tabView indexOfTabViewItemWithURL:aURL];
       if (tabIndex != NSNotFound) {
         [tabView selectTabViewItemAtIndex:tabIndex];
@@ -721,9 +713,9 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
   }
 
   // If we got here, we didn't find it already open. Open it based on user prefs.
-  BrowserWindowController* controller = (BrowserWindowController*)[[self getFrontmostBrowserWindow] windowController];
+  BrowserWindowController* controller = (BrowserWindowController*)[[self frontmostBrowserWindow] windowController];
   if (controller) {
-    BOOL tabOrWindowIsAvailable = ([[controller getBrowserWrapper] isEmpty] && ![[controller getBrowserWrapper] isBusy]);
+    BOOL tabOrWindowIsAvailable = ([[controller browserWrapper] isEmpty] && ![[controller browserWrapper] isBusy]);
 
     if (tabOrWindowIsAvailable || reuseWindow == kReuseWindowOnAE)
       [controller loadURL:aURL];
@@ -741,7 +733,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 // tab as appropriate for the user prefs and the current browser state.
 - (void)loadApplicationPage:(NSString*)pageURL
 {
-  BrowserWindowController* browserController = [self getMainWindowBrowserController];
+  BrowserWindowController* browserController = [self mainWindowBrowserController];
   if (browserController && [[browserController window] attachedSheet])
     [self openBrowserWindowWithURL:pageURL andReferrer:nil behind:nil allowPopups:NO];
   else
@@ -766,7 +758,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
      reverseBgToggle:(BOOL)reverseBackgroundPref
 {
   if (!browserWindowController)
-    browserWindowController = [self getMainWindowBrowserController];
+    browserWindowController = [self mainWindowBrowserController];
 
   BOOL openInNewWindow = (browserWindowController == nil);
   BOOL openInNewTab = NO;
@@ -868,6 +860,27 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
   }
 }
 
+//
+// This takes an NSURL to a local file, and if that file is a file that contains
+// a URL we want and isn't the content itself, we return the URL it contains.
+// Otherwise, we return the URL we originally got. Right now this supports .url,
+// .webloc and .ftploc files.
+//
++ (NSURL*)decodeLocalFileURL:(NSURL*)url
+{
+  NSString* urlPathString = [url path];
+  NSString* ext = [[urlPathString pathExtension] lowercaseString];
+  OSType fileType = NSHFSTypeCodeFromFileType(NSHFSTypeOfFile(urlPathString));
+
+  if ([ext isEqualToString:@"url"] || fileType == 'LINK')
+    url = [NSURL URLFromIEURLFile:urlPathString];
+  else if ([ext isEqualToString:@"webloc"] || [ext isEqualToString:@"ftploc"] ||
+           fileType == 'ilht' || fileType == 'ilft')
+    url = [NSURL URLFromInetloc:urlPathString];
+
+  return url;
+}
+
 #pragma mark -
 #pragma mark Delegate/Notification
 
@@ -882,7 +895,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
   // ignore |hasVisibleWindows| because we always want to show a browser window when
   // the user clicks on the app icon, even if, say, prefs or the d/l window are open.
   // If there is no browser, create one. If there is one, unminimize it if it's in the dock.
-  NSWindow* frontBrowser = [self getFrontmostBrowserWindow];
+  NSWindow* frontBrowser = [self frontmostBrowserWindow];
   if (!frontBrowser)
     [self newWindow:self];
   else if ([frontBrowser isMiniaturized])
@@ -1041,10 +1054,10 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
   NSString* homePage = mStartURL ? mStartURL : [[PreferenceManager sharedInstance] homePageUsingStartPage:YES];
   BrowserWindowController* controller = [self openBrowserWindowWithURL:homePage andReferrer:nil behind:nil allowPopups:NO];
 
-  if ([MainController isBlankURL:homePage])
+  if (!homePage || [homePage isBlankURL])
     [controller focusURLBar];
   else
-    [[[controller getBrowserWrapper] getBrowserView] setActive:YES];
+    [[[controller browserWrapper] browserView] setActive:YES];
 
   // Only load the command-line specified URL for the first window we open
   if (mStartURL) {
@@ -1055,7 +1068,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 
 - (IBAction)newTab:(id)aSender
 {
-  BrowserWindowController* browserController = [self getMainWindowBrowserController];
+  BrowserWindowController* browserController = [self mainWindowBrowserController];
   if (browserController)
     [browserController newTab:aSender];
   else {
@@ -1087,7 +1100,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
                                                  NSFileTypeForHFSTypeCode('TEXT'),
                                                  nil];
 
-  BrowserWindowController* browserController = [self getMainWindowBrowserController];
+  BrowserWindowController* browserController = [self mainWindowBrowserController];
   if (browserController) {
     [openPanel beginSheetForDirectory:nil
                                  file:nil
@@ -1133,7 +1146,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 
 - (IBAction)openLocation:(id)aSender
 {
-    NSWindow* browserWindow = [self getFrontmostBrowserWindow];
+    NSWindow* browserWindow = [self frontmostBrowserWindow];
     if (!browserWindow) {
       [self openBrowserWindowWithURL:@"about:blank" andReferrer:nil behind:nil allowPopups:NO];
       browserWindow = [mApplication mainWindow];
@@ -1147,7 +1160,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 
 - (IBAction)doSearch:(id)aSender
 {
-  NSWindow* browserWindow = [self getFrontmostBrowserWindow];
+  NSWindow* browserWindow = [self frontmostBrowserWindow];
 
   if (browserWindow) {
     if (![browserWindow isMainWindow])
@@ -1155,7 +1168,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
   }
   else {
     [self newWindow:self];
-    browserWindow = [self getFrontmostBrowserWindow];
+    browserWindow = [self frontmostBrowserWindow];
   }
 
   [[browserWindow windowController] performAppropriateSearchAction];
@@ -1177,8 +1190,8 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
     // We need different warnings depending on whether there's only a single window with multiple tabs,
     // or multiple windows open
     if ([openBrowserWins count] == 1) {
-      BrowserWindowController* bwc = [self getMainWindowBrowserController];
-      unsigned int numTabs = [[bwc getTabBrowser] numberOfTabViewItems];
+      BrowserWindowController* bwc = [self mainWindowBrowserController];
+      unsigned int numTabs = [[bwc tabBrowser] numberOfTabViewItems];
       if (numTabs > 1) { // only show the warning if there are multiple tabs
         closeAlertMsg  = NSLocalizedString(@"CloseWindowWithMultipleTabsMsg", @"");
         closeAlertExpl = [NSString stringWithFormat:NSLocalizedString(@"CloseWindowWithMultipleTabsExplFormat", @""),
@@ -1227,17 +1240,17 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 
 - (IBAction)closeCurrentTab:(id)aSender
 {
-  [[self getMainWindowBrowserController] closeCurrentTab:aSender];
+  [[self mainWindowBrowserController] closeCurrentTab:aSender];
 }
 
 - (IBAction)savePage:(id)aSender
 {
-  [[self getMainWindowBrowserController] saveDocument:NO filterView:[self getSavePanelView]];
+  [[self mainWindowBrowserController] saveDocument:NO filterView:[self savePanelView]];
 }
 
 - (IBAction)sendURL:(id)aSender
 {
-  [[self getMainWindowBrowserController] sendURL:aSender];
+  [[self mainWindowBrowserController] sendURL:aSender];
 }
 - (IBAction)importBookmarks:(id)aSender
 {
@@ -1272,12 +1285,12 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 
 - (IBAction)pageSetup:(id)aSender
 {
-  [[self getMainWindowBrowserController] pageSetup:aSender];
+  [[self mainWindowBrowserController] pageSetup:aSender];
 }
 
 - (IBAction)printDocument:(id)aSender
 {
-  [[self getMainWindowBrowserController] printDocument:aSender];
+  [[self mainWindowBrowserController] printDocument:aSender];
 }
 
 - (IBAction)toggleOfflineMode:(id)aSender
@@ -1316,7 +1329,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 //
 - (IBAction)findInPage:(id)aSender
 {
-  BrowserWindowController* browserController = [self getMainWindowBrowserController];
+  BrowserWindowController* browserController = [self mainWindowBrowserController];
 
   if (browserController && ![browserController performFindCommand]) {
     if (!mFindDialog)
@@ -1330,7 +1343,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 
 - (IBAction)toggleBookmarksToolbar:(id)aSender
 {
-  BrowserWindowController* browserController = [self getMainWindowBrowserController];
+  BrowserWindowController* browserController = [self mainWindowBrowserController];
   if (!browserController)
     return;
 
@@ -1344,44 +1357,44 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 
 - (IBAction)stop:(id)aSender
 {
-  [[self getMainWindowBrowserController] stop:aSender];
+  [[self mainWindowBrowserController] stop:aSender];
 }
 
 - (IBAction)reload:(id)aSender
 {
-  [[self getMainWindowBrowserController] reload:aSender];
+  [[self mainWindowBrowserController] reload:aSender];
 }
 
 - (IBAction)reloadAllTabs:(id)aSender
 {
-  [[self getMainWindowBrowserController] reloadAllTabs:aSender];
+  [[self mainWindowBrowserController] reloadAllTabs:aSender];
 }
 
 - (IBAction)makeTextBigger:(id)aSender
 {
-  [[self getMainWindowBrowserController] makeTextBigger:aSender];
+  [[self mainWindowBrowserController] makeTextBigger:aSender];
 }
 
 - (IBAction)makeTextDefaultSize:(id)aSender
 {
-  [[self getMainWindowBrowserController] makeTextDefaultSize:aSender];
+  [[self mainWindowBrowserController] makeTextDefaultSize:aSender];
 }
 
 - (IBAction)makeTextSmaller:(id)aSender
 {
-  [[self getMainWindowBrowserController] makeTextSmaller:aSender];
+  [[self mainWindowBrowserController] makeTextSmaller:aSender];
 }
 
 - (IBAction)viewPageSource:(id)aSender
 {
-  [[self getMainWindowBrowserController] viewPageSource:aSender];  // top-level page, not focussed frame
+  [[self mainWindowBrowserController] viewPageSource:aSender];  // top-level page, not focussed frame
 }
 
 - (IBAction)reloadWithCharset:(id)aSender
 {
   // Figure out which charset to tell gecko to load based on the sender's tag. There
   // is guaranteed to only be 1 key that matches this tag, so we just take the first one.
-  BrowserWindowController* browserController = [self getMainWindowBrowserController];
+  BrowserWindowController* browserController = [self mainWindowBrowserController];
   if (browserController) {
     NSArray* charsetList = [mCharsets allKeysForObject:[NSNumber numberWithInt:[aSender tag]]];
     NS_ASSERTION([charsetList count] == 1, "OOPS, multiply defined charsets in plist");
@@ -1404,7 +1417,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 
 - (IBAction)goHome:(id)aSender
 {
-  NSWindow* browserWindow = [self getFrontmostBrowserWindow];
+  NSWindow* browserWindow = [self frontmostBrowserWindow];
   if (browserWindow) {
     if (![browserWindow isMainWindow])
       [browserWindow makeKeyAndOrderFront:self];
@@ -1422,12 +1435,12 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 
 - (IBAction)goBack:(id)aSender
 {
-  [[self getMainWindowBrowserController] back:aSender];
+  [[self mainWindowBrowserController] back:aSender];
 }
 
 - (IBAction)goForward:(id)aSender
 {
-  [[self getMainWindowBrowserController] forward:aSender];
+  [[self mainWindowBrowserController] forward:aSender];
 }
 
 //
@@ -1438,7 +1451,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 //
 - (IBAction)showHistory:(id)aSender
 {
-  NSWindow* browserWindow = [self getFrontmostBrowserWindow];
+  NSWindow* browserWindow = [self frontmostBrowserWindow];
   if (browserWindow) {
     if (![browserWindow isMainWindow])
       [browserWindow makeKeyAndOrderFront:self];
@@ -1481,7 +1494,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 //
 - (IBAction)manageBookmarks:(id)aSender
 {
-  NSWindow* browserWindow = [self getFrontmostBrowserWindow];
+  NSWindow* browserWindow = [self frontmostBrowserWindow];
   if (browserWindow) {
     if (![browserWindow isMainWindow])
       [browserWindow makeKeyAndOrderFront:self];
@@ -1509,7 +1522,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
   else if ([[NSApp currentEvent] modifierFlags] & NSCommandKeyMask)
     openBehavior = eBookmarkOpenBehavior_NewPreferred;
 
-  [self loadBookmark:item withBWC:[self getMainWindowBrowserController] openBehavior:openBehavior reverseBgToggle:reverseBackgroundPref];
+  [self loadBookmark:item withBWC:[self mainWindowBrowserController] openBehavior:openBehavior reverseBgToggle:reverseBackgroundPref];
 }
 
 - (IBAction)aboutServers:(id)aSender
@@ -1540,12 +1553,12 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 
 - (IBAction)previousTab:(id)aSender
 {
-  [[self getMainWindowBrowserController] previousTab:aSender];
+  [[self mainWindowBrowserController] previousTab:aSender];
 }
 
 - (IBAction)nextTab:(id)aSender
 {
-  [[self getMainWindowBrowserController] nextTab:aSender];
+  [[self mainWindowBrowserController] nextTab:aSender];
 }
 
 - (IBAction)downloadsWindow:(id)aSender
@@ -1592,7 +1605,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 
 - (BOOL)validateMenuItem:(NSMenuItem*)aMenuItem
 {
-  BrowserWindowController* browserController = [self getMainWindowBrowserController];
+  BrowserWindowController* browserController = [self mainWindowBrowserController];
   SEL action = [aMenuItem action];
 
   // NSLog(@"MainController validateMenuItem for %@ (%s)", [aMenuItem title], action);
@@ -1648,9 +1661,18 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
   }
 
   // only enable newTab if there is a browser window frontmost, or if there is no window
-  // (i.e., disable it for non-browser windows).
+  // (i.e., disable it for non-browser windows and popups).
   if (action == @selector(newTab:))
-    return (browserController || ![NSApp mainWindow]);
+    return (((browserController && ([NSApp mainWindow] == [self frontmostBrowserWindow]))) ||
+            ![NSApp mainWindow]);
+
+  // disable openFile if the frontmost window is a popup or view-source window
+  if (action == @selector(openFile:)) {
+    if (browserController)
+      return ([NSApp mainWindow] == [self frontmostBrowserWindow]);
+    else
+      return YES;
+  }
 
   // disable non-BWC items that aren't relevant if there's no main browser window open
   // or the bookmark/history manager is open
@@ -1659,7 +1681,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 
   // disable the find panel if there's no text content
   if (action == @selector(findInPage:))
-    return (browserController && [[[browserController getBrowserWrapper] getBrowserView] isTextBasedContent]);
+    return (browserController && [[[browserController browserWrapper] browserView] isTextBasedContent]);
 
   // BrowserWindowController decides about actions that are just sent on to
   // the front window's BrowserWindowController. This works because the selectors
@@ -1707,10 +1729,10 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 
 - (void)adjustTextEncodingMenu
 {
-  BrowserWindowController* browserController = [self getMainWindowBrowserController];
+  BrowserWindowController* browserController = [self mainWindowBrowserController];
   if (browserController && ![browserController bookmarkManagerIsVisible] &&
       ![[browserController window] attachedSheet] &&
-      [[[browserController getBrowserWrapper] getBrowserView] isTextBasedContent])
+      [[[browserController browserWrapper] browserView] isTextBasedContent])
   {
     // enable all items
     [mTextEncodingsMenu setAllItemsEnabled:YES startingWithItemAtIndex:0 includingSubmenus:YES];
@@ -1823,8 +1845,8 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 // Close Tab/Close Window accordingly
 - (void)fixCloseMenuItemKeyEquivalents
 {
-  BrowserWindowController* browserController = [self getKeyWindowBrowserController];
-  BOOL windowWithMultipleTabs = (browserController && [[browserController getTabBrowser] numberOfTabViewItems] > 1);
+  BrowserWindowController* browserController = [self keyWindowBrowserController];
+  BOOL windowWithMultipleTabs = (browserController && [[browserController tabBrowser] numberOfTabViewItems] > 1);
   [self adjustCloseWindowMenuItemKeyEquivalent:windowWithMultipleTabs];
   [self adjustCloseTabMenuItemKeyEquivalent:windowWithMultipleTabs];
   mFileMenuUpdatePending = NO;
@@ -1946,7 +1968,7 @@ static int SortByProtocolAndName(NSDictionary* item1, NSDictionary* item2, void*
 #pragma mark -
 #pragma mark Supplemental View Helpers
 
-- (NSView*)getSavePanelView
+- (NSView*)savePanelView
 {
   if (!mFilterView) {
     // note that this will cause our -awakeFromNib to get called again
@@ -1965,7 +1987,7 @@ static int SortByProtocolAndName(NSDictionary* item1, NSDictionary* item2, void*
 
 - (void)updatePageInfo
 {
-  BrowserWindowController* browserController = [self getMainWindowBrowserController];
+  BrowserWindowController* browserController = [self mainWindowBrowserController];
   [[PageInfoWindowController visiblePageInfoWindowController] updateFromBrowserView:[browserController activeBrowserView]];
   mPageInfoUpdatePending = NO;
 }
@@ -1990,65 +2012,7 @@ static int SortByProtocolAndName(NSDictionary* item1, NSDictionary* item2, void*
 }
 
 #pragma mark -
-#pragma mark Miscellaneous Utilities
-//which may not belong in MainController at all
-
-//
-// This takes an NSURL to a local file, and if that file is a file that contains
-// a URL we want and isn't the content itself, we return the URL it contains.
-// Otherwise, we return the URL we originally got. Right now this supports .url,
-// .webloc and .ftploc files.
-//
-+ (NSURL*)decodeLocalFileURL:(NSURL*)url
-{
-  NSString* urlPathString = [url path];
-  NSString* ext = [[urlPathString pathExtension] lowercaseString];
-  OSType fileType = NSHFSTypeCodeFromFileType(NSHFSTypeOfFile(urlPathString));
-
-  if ([ext isEqualToString:@"url"] || fileType == 'LINK')
-    url = [NSURL URLFromIEURLFile:urlPathString];
-  else if ([ext isEqualToString:@"webloc"] || [ext isEqualToString:@"ftploc"] || fileType == 'ilht' || fileType == 'ilft')
-    url = [NSURL URLFromInetloc:urlPathString];
-
-  return url;
-}
-
-+ (NSImage*)createImageForDragging:(NSImage*)aIcon title:(NSString*)aTitle
-{
-  const float kTitleOffset = 2.0f;
-
-  NSDictionary* stringAttrs = [NSDictionary dictionaryWithObjectsAndKeys:
-    [[NSColor textColor] colorWithAlphaComponent:0.8], NSForegroundColorAttributeName,
-    [NSFont systemFontOfSize:[NSFont smallSystemFontSize]], NSFontAttributeName,
-    nil];
-
-  // get the size of the new image we are creating
-  NSSize titleSize = [aTitle sizeWithAttributes:stringAttrs];
-  NSSize imageSize = NSMakeSize(titleSize.width + [aIcon size].width + kTitleOffset + 2,
-                                titleSize.height > [aIcon size].height ? titleSize.height
-                                                                       : [aIcon size].height);
-
-  // create the image and lock drawing focus on it
-  NSImage* dragImage = [[[NSImage alloc] initWithSize:imageSize] autorelease];
-  [dragImage lockFocus];
-
-  // draw the image and title in image with translucency
-  NSRect imageRect = NSMakeRect(0, 0, [aIcon size].width, [aIcon size].height);
-  [aIcon drawAtPoint:NSMakePoint(0, 0) fromRect:imageRect operation:NSCompositeCopy fraction:0.8];
-
-  [aTitle drawAtPoint:NSMakePoint([aIcon size].width + kTitleOffset, 0.0) withAttributes:stringAttrs];
-
-  [dragImage unlockFocus];
-  return dragImage;
-}
-
-+ (BOOL)isBlankURL:(NSString*)inURL
-{
-  BOOL isBlank = NO;
-  if (!inURL || [inURL isEqualToString:@"about:blank"] || [inURL isEqualToString:@""])
-    isBlank = YES;
-  return isBlank;
-}
+#pragma mark Find Panel
 
 - (void)closeFindDialog
 {

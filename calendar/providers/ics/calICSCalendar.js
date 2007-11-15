@@ -1,4 +1,3 @@
-/* -*- Mode: java; tab-width: 20; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -23,6 +22,7 @@
  *   Vladimir Vukicevic <vladimir.vukicevic@oracle.com>
  *   Dan Mosedale <dan.mosedale@oracle.com>
  *   Joey Minta <jminta@gmail.com>
+ *   Philipp Kewisch <mozilla@kewis.ch>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -128,21 +128,50 @@ calICSCalendar.prototype = {
     },
 
     get name() {
-        return getCalendarManager().getCalendarPref(this, "NAME");
+        return this.getProperty("name");
     },
     set name(name) {
-        getCalendarManager().setCalendarPref(this, "NAME", name);
+        return this.setProperty("name", name);
     },
 
     get type() { return "ics"; },
 
     mReadOnly: false,
 
-    get readOnly() { 
-        return this.mReadOnly;
+    get readOnly() {
+        return this.getProperty("readOnly");
     },
-    set readOnly(bool) {
-        this.mReadOnly = bool;
+    set readOnly(aValue) {
+        return this.setProperty("readOnly", aValue);
+    },
+
+    getProperty: function calICSCalendar_getProperty(aName) {
+        switch (aName) {
+            case "readOnly":
+                return this.mReadOnly;
+            default:
+                // xxx future: return getPrefSafe("calendars." + this.id + "." + aName, null);
+                return getCalendarManager().getCalendarPref_(this, aName);
+        }
+    },
+    setProperty: function calICSCalendar_setProperty(aName, aValue) {
+        var oldValue = this.getProperty(aName);
+        if (oldValue != aValue) {
+            switch (aName) {
+                case "readOnly":
+                    this.mReadOnly = aValue;
+                    break;
+                default:
+                    // xxx future: setPrefSafe("calendars." + this.id + "." + aName, aValue);
+                    getCalendarManager().setCalendarPref_(this, aName, aValue);
+            }
+            this.mObserver.onPropertyChanged(this, aName, aValue, oldValue);
+        }
+        return aValue;
+    },
+    deleteProperty: function calICSCalendar_deleteProperty(aName) {
+        this.mObserver.onPropertyDeleting(this, aName);
+        getCalendarManager().deleteCalendarPref_(this, aName);
     },
 
     get canRefresh() {
@@ -682,10 +711,10 @@ calICSCalendar.prototype = {
         }
 
         try {
-            var pseudoID = getCalendarManager().getCalendarPref(this, "UNIQUENUM");
+            var pseudoID = this.getProperty("uniquenum");
             if (!pseudoID) {
                 pseudoID = new Date().getTime();
-                getCalendarManager().setCalendarPref(this, "UNIQUENUM", pseudoID);
+                this.setProperty("uniquenum", pseudoID);
             }
         } catch(e) {
             // calendarmgr not found. Likely because we are running in
@@ -702,14 +731,12 @@ calICSCalendar.prototype = {
             doInitialBackup = true;
 
         var doDailyBackup = false;
-        var backupTime = new Number(getCalendarManager().
-                                       getCalendarPref(this, 'backup-time'));
+        var backupTime = new Number(this.getProperty('backup-time'));
         if (!backupTime ||
             (new Date().getTime() > backupTime + backupDays*24*60*60*1000)) {
             // It's time do to a daily backup
             doDailyBackup = true;
-            getCalendarManager().setCalendarPref(this, 'backup-time', 
-                                                 new Date().getTime());
+            this.setProperty('backup-time', new Date().getTime());
         }
 
         var dailyBackupFileName;
@@ -790,6 +817,12 @@ calICSObserver.prototype = {
     },
     onDeleteItem: function(aDeletedItem) {
         this.mObservers.notify("onDeleteItem", [aDeletedItem]);
+    },
+    onPropertyChanged: function(aCalendar, aName, aValue, aOldValue) {
+        this.mObservers.notify("onPropertyChanged", [aCalendar, aName, aValue, aOldValue]);
+    },
+    onPropertyDeleting: function(aCalendar, aName) {
+        this.mObservers.notify("onPropertyDeleting", [aCalendar, aName]);
     },
 
     // Unless an error number is in this array, we consider it very bad, set
@@ -971,6 +1004,15 @@ WebDavResource.prototype = {
     }
 };
 
+// nsIFactory
+const calICSCalendarFactory = {
+    createInstance: function (outer, iid) {
+        if (outer != null)
+            throw Components.results.NS_ERROR_NO_AGGREGATION;
+        return (new calICSCalendar()).QueryInterface(iid);
+    }
+};
+
 /****
  **** module registration
  ****/
@@ -1033,15 +1075,7 @@ var calICSCalendarModule = {
 
         this.loadUtils();
 
-        return this.mFactory;
-    },
-
-    mFactory: {
-        createInstance: function (outer, iid) {
-            if (outer != null)
-                throw Components.results.NS_ERROR_NO_AGGREGATION;
-            return (new calICSCalendar()).QueryInterface(iid);
-        }
+        return calICSCalendarFactory;
     },
 
     canUnload: function(compMgr) {

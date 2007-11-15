@@ -62,6 +62,7 @@ REQUIRES	= xpcom \
 		  embed_base \
 		  pref \
 		  windowwatcher \
+		  view \
 		  webbrowserpersist \
 		  find \
 		  exthandler \

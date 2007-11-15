@@ -175,7 +175,7 @@ enum StatusPriority {
     mStatusStrings = [[NSMutableArray alloc] initWithObjects:[NSNull null], [NSNull null],
                                                              [NSNull null], [NSNull null], nil];
 
-    mDisplayTitle = [[NSString alloc] init];
+    mDisplayTitle = [NSLocalizedString(@"UntitledPageTitle", nil) retain];
     
     mLoadingResources = [[NSMutableSet alloc] init];
     
@@ -274,7 +274,7 @@ enum StatusPriority {
 
 -(NSString*)currentURI
 {
-  return [mBrowserView getCurrentURI];
+  return [mBrowserView currentURI];
 }
 
 - (void)setFrame:(NSRect)frameRect
@@ -396,7 +396,7 @@ enum StatusPriority {
   // position isn't messed up when we finally display the tab.
   if (mDelegate == nil)
   {
-    NSRect tabContentRect = [[[mWindow delegate] getTabBrowser] contentRect];
+    NSRect tabContentRect = [[[mWindow delegate] tabBrowser] contentRect];
     [self setFrame:tabContentRect resizingBrowserViewIfHidden:YES];
   }
 
@@ -418,7 +418,7 @@ enum StatusPriority {
     if (!clickListener)
       return;
     
-    nsCOMPtr<nsIDOMWindow> contentWindow = [[self getBrowserView] getContentWindow];
+    nsCOMPtr<nsIDOMWindow> contentWindow = [[self browserView] contentWindow];
     nsCOMPtr<nsPIDOMWindow> piWindow(do_QueryInterface(contentWindow));
     nsIChromeEventHandler *chromeHandler = piWindow->GetChromeEventHandler();
     nsCOMPtr<nsIDOMEventReceiver> rec(do_QueryInterface(chromeHandler));
@@ -943,8 +943,8 @@ enum StatusPriority {
   
   [controller window];		// force window load. The window gets made visible by CHBrowserListener::SetVisibility
   
-  [[controller getBrowserWrapper] setPendingActive: YES];
-  return [[controller getBrowserWrapper] getBrowserView];
+  [[controller browserWrapper] setPendingActive: YES];
+  return [[controller browserWrapper] browserView];
 }
 
 
@@ -997,7 +997,7 @@ enum StatusPriority {
   return ([[PreferenceManager sharedInstance] getIntPref:"browser.link.open_newwindow.restriction" withSuccess:NULL] == 2);
 }
 
-- (CHBrowserView*)getBrowserView
+- (CHBrowserView*)browserView
 {
   return mBrowserView;
 }
@@ -1031,7 +1031,7 @@ enum StatusPriority {
     if (!siteIcon)
     {
       if (inLoadError)
-        siteIcon = [NSImage imageNamed:@"brokenbookmark_icon"];   // it should have its own image
+        siteIcon = [NSImage imageNamed:@"error_page_site_icon"];
       else
         siteIcon = [NSImage imageNamed:@"globe_ico"];
     }
@@ -1123,7 +1123,7 @@ enum StatusPriority {
 
   // Check for any potential security implications as determined by nsIScriptSecurityManager's
   // DISALLOW_SCRIPT_OR_DATA. (e.g. |javascript:| or |data:| URIs)
-  nsCOMPtr<nsIDOMWindow> domWindow = [mBrowserView getContentWindow];
+  nsCOMPtr<nsIDOMWindow> domWindow = [mBrowserView contentWindow];
   if (!domWindow) 
     return NO;
   nsCOMPtr<nsIDOMDocument> domDocument;
@@ -1163,12 +1163,12 @@ enum StatusPriority {
 
 - (IBAction)reloadWithNewCharset:(NSString*)charset
 {
-  [[self getBrowserView] reloadWithNewCharset:charset];
+  [[self browserView] reloadWithNewCharset:charset];
 }
 
 - (NSString*)currentCharset
 {
-  return [[self getBrowserView] currentCharset];
+  return [[self browserView] currentCharset];
 }
 
 //

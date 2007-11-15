@@ -61,7 +61,7 @@
       <menuitem id="list-calendars-context-publish"
                 label="&calendar.context.publish.label;"
                 accesskey="&calendar.context.publish.accesskey;"
-                observes="calendar_publish_calendar"/>
+                observes="calendar_publish_selected_calendar_command"/>
       <menuseparator/>
       <menuitem id="list-calendars-context-reload"
                 label="&calendar.context.reloadserver.label;"
@@ -87,7 +87,9 @@
                cycler="true"
                type="checkbox"
                width="17"/>
-      <treecol id="calendar-list-tree-color" width="16"/>
+      <treecol id="calendar-list-tree-color"
+               cycler="true"
+               width="16"/>
       <treecol id="calendar-list-tree-calendar"
                label="&calendar.unifinder.tree.calendarname.label;"
                flex="1"/>

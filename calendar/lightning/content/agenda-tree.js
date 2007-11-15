@@ -94,7 +94,7 @@ var agendaTreeView = {
     mListener: null,
     initialized: false,
     refreshQueue: [],
-    refreshPending: false
+    pendingRefresh: null
 };
 
 agendaTreeView.init =
@@ -175,7 +175,7 @@ function setTree(tree)
 agendaTreeView.showsToday =
 function showsToday()
 {
-  return (sameDay(today(), this.today.start));
+  return (sameDay(now(), this.today.start));
 };
 
 agendaTreeView.getCellText =
@@ -468,7 +468,7 @@ function listener_onOperationComplete(calendar, status, optype, id,
     this.agendaTreeView.calendarUpdateComplete();
 
     // signal that the current operation finished.
-    this.agendaTreeView.refreshPending = false;
+    this.agendaTreeView.pendingRefresh = null;
 
     // immediately start the next job on the queue.
     this.agendaTreeView.popRefreshQueue();
@@ -486,8 +486,14 @@ function listener_onGetResult(calendar, status, itemtype, detail, count, items)
 agendaTreeView.popRefreshQueue =
 function popRefreshQueue()
 {
-    if (this.refreshPending) {
-        return;
+    var pendingRefresh = this.pendingRefresh;
+    if (pendingRefresh) {
+        if (pendingRefresh instanceof Components.interfaces.calIOperation) {
+            this.pendingRefresh = null;
+            pendingRefresh.cancel(null);
+        } else {
+            return;
+        }
     }
 
     var refreshJob = this.refreshQueue.pop();
@@ -517,10 +523,13 @@ function popRefreshQueue()
             break;
     }
 
-    this.refreshPending = true;
+    this.pendingRefresh = true;
     this.periods.forEach(function (p) { p.events = []; });
-    this.calendar.getItems(filter, 0, this.today.start, this.soon.end,
-                           this.calendarOpListener);
+    pendingRefresh = this.calendar.getItems(filter, 0, this.today.start, this.soon.end,
+                                            this.calendarOpListener);
+    if (pendingRefresh && pendingRefresh.isPending) { // support for calIOperation
+        this.pendingRefresh = pendingRefresh;
+    }
 };
 
 agendaTreeView.refreshCalendarQuery =
@@ -643,6 +652,10 @@ function observer_onModifyItem(newItem, oldItem)
 };
 
 agendaTreeView.calendarObserver.onError = function(errno, msg) {};
+
+agendaTreeView.calendarObserver.onPropertyChanged = function(aCalendar, aName, aValue, aOldValue) {};
+
+agendaTreeView.calendarObserver.onPropertyDeleting = function(aCalendar, aName) {};
 
 agendaTreeView.calendarObserver.onCalendarAdded = 
 function agenda_calAdd(aCalendar) {

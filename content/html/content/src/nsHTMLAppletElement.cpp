@@ -81,6 +81,7 @@ public:
   // Have to override tabindex for <embed> to act right
   NS_IMETHOD GetTabIndex(PRInt32* aTabIndex);
   NS_IMETHOD SetTabIndex(PRInt32 aTabIndex);
+  virtual void SetFocus(nsPresContext* aPresContext);
   // Let applet decide whether it wants focus from mouse clicks
   virtual PRBool IsFocusable(PRInt32 *aTabIndex = nsnull)
     { if (aTabIndex) GetTabIndex(aTabIndex); return PR_TRUE; }
@@ -94,6 +95,7 @@ public:
 protected:
   PRPackedBool mReflectedApplet;
   PRPackedBool mIsDoneAddingChildren;
+  PRPackedBool mInSetFocus; // Used in SetFocus(nsPresContext*)
 };
 
 
@@ -102,7 +104,8 @@ NS_IMPL_NS_NEW_HTML_ELEMENT_CHECK_PARSER(Applet)
 
 nsHTMLAppletElement::nsHTMLAppletElement(nsINodeInfo *aNodeInfo, PRBool aFromParser)
   : nsGenericHTMLElement(aNodeInfo), mReflectedApplet(PR_FALSE),
-    mIsDoneAddingChildren(!aFromParser)
+    mIsDoneAddingChildren(!aFromParser),
+    mInSetFocus(PR_FALSE)
 {
 }
 
@@ -149,7 +152,19 @@ NS_IMPL_STRING_ATTR(nsHTMLAppletElement, Object, object)
 NS_IMPL_INT_ATTR(nsHTMLAppletElement, Vspace, vspace)
 NS_IMPL_STRING_ATTR(nsHTMLAppletElement, Width, width)
 NS_IMPL_INT_ATTR(nsHTMLAppletElement, TabIndex, tabindex)
-  
+
+void
+nsHTMLAppletElement::SetFocus(nsPresContext* aPresContext)
+{
+  if (mInSetFocus) {
+    NS_WARNING("nsHTMLAppletElement::SetFocus() called recursively on same element");
+    return;
+  }
+  mInSetFocus = PR_TRUE;
+  nsGenericHTMLElement::SetFocus(aPresContext);
+  mInSetFocus = PR_FALSE;
+}
+
 PRBool
 nsHTMLAppletElement::ParseAttribute(nsIAtom* aAttribute,
                                     const nsAString& aValue,

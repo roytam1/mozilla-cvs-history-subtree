@@ -231,24 +231,25 @@ function onCommandCancel() {
                                    isEvent(window.calendarItem) ?
                                       "askSaveTitleEvent" :
                                       "askSaveTitleTask");
-    var promptMessage = calGetString("calendar", "askSaveMessage");
-    var buttonLabel1 = calGetString("calendar", "askSaveLabel1");
-    var buttonLabel2 = calGetString("calendar", "askSaveLabel2");
+    var promptMessage = calGetString("calendar",
+                                     isEvent(window.calendarItem) ?
+                                        "askSaveMessageEvent" :
+                                        "askSaveMessageTask");
 
-    var flags = promptService.BUTTON_TITLE_IS_STRING *
+    var flags = promptService.BUTTON_TITLE_SAVE *
                 promptService.BUTTON_POS_0 +
                 promptService.BUTTON_TITLE_CANCEL *
                 promptService.BUTTON_POS_1 +
-                promptService.BUTTON_TITLE_IS_STRING *
+                promptService.BUTTON_TITLE_DONT_SAVE *
                 promptService.BUTTON_POS_2;
 
     var choice = promptService.confirmEx(null,
                                          promptTitle,
                                          promptMessage,
                                          flags,
-                                         buttonLabel1,
                                          null,
-                                         buttonLabel2,
+                                         null,
+                                         null,
                                          null,
                                          {});
     switch (choice) {
@@ -290,14 +291,14 @@ function loadDialog(item) {
     var calendars = getCalendarManager().getCalendars({});
     var calendarToUse = item.calendar || window.arguments[0].calendar
     var selectIndex = 0;
-    for (var i in calendars) {
+    for (var i = 0; i < calendars.length; ++i) {
         var calendar = calendars[i];
         if (calendar == item.calendar ||
             calendar == window.arguments[0].calendar) {
             var menuitem = calendarList.appendItem(calendar.name, i);
             menuitem.calendar = calendar;
             if (calendarToUse) {
-                if (calendarToUse.uri.equals(calendar.uri)) {
+                if (calendarToUse.id == calendar.id) {
                     calendarList.selectedIndex = selectIndex;
                 }
             }
@@ -306,7 +307,7 @@ function loadDialog(item) {
             var menuitem = calendarList.appendItem(calendar.name, i);
             menuitem.calendar = calendar;
             if (calendarToUse) {
-                if (calendarToUse.uri.equals(calendar.uri)) {
+                if (calendarToUse.id == calendar.id) {
                     calendarList.selectedIndex = selectIndex;
                 }
             }
@@ -531,41 +532,33 @@ function dateTimeControls2State(aKeepDuration) {
     var kDefaultTimezone = calendarDefaultTimezone();
 
     if (gStartTime) {
-
         // jsDate is always in OS timezone, thus we create a calIDateTime
         // object from the jsDate representation and simply set the new
         // timezone instead of converting.
-        var start = jsDateToDateTime(getElementValue(startWidgetId));
-        start = start.getInTimezone(kDefaultTimezone);
         var menuItem = document.getElementById('menu-options-timezone');
-        if (menuItem.getAttribute('checked') == 'true') {
-            start.timezone = gStartTimezone;
-        }
-        gStartTime = start.clone();
-    }
-    
-    if (gItemDuration) {
-        start.addDuration(gItemDuration);
-        start = start.getInTimezone(gEndTimezone);
+        gStartTime = jsDateToDateTime(
+            getElementValue(startWidgetId),
+            (menuItem.getAttribute('checked') == 'true') ? gStartTimezone : kDefaultTimezone);
     }
     
     if (gEndTime) {
-        var end = start;
-        if (!aKeepDuration) {
-          end = jsDateToDateTime(getElementValue(endWidgetId));
-          end = end.getInTimezone(kDefaultTimezone);
-          var timezone = gEndTimezone;
-          if (timezone == "UTC") {
-              if (gStartTime && gStartTimezone != gEndTimezone) {
-                  timezone = gStartTimezone;
-              }
-          }
-          var menuItem = document.getElementById('menu-options-timezone');
-          if (menuItem.getAttribute('checked') == 'true') {
-              end.timezone = timezone;
-          }
+        if (aKeepDuration) {
+            gEndTime = gStartTime.clone();
+            if (gItemDuration) {
+                gEndTime.addDuration(gItemDuration);
+                gEndTime = gEndTime.getInTimezone(gEndTimezone);
+            }
+        } else {
+            var timezone = gEndTimezone;
+            if (timezone == "UTC") {
+                if (gStartTime && gStartTimezone != gEndTimezone) {
+                    timezone = gStartTimezone;
+                }
+            }
+            gEndTime = jsDateToDateTime(
+                getElementValue(endWidgetId),
+                (menuItem.getAttribute('checked') == 'true') ? timezone : kDefaultTimezone);
         }
-        gEndTime = end;
     }
 
     if (getElementValue("event-all-day", "checked")) {
@@ -647,9 +640,7 @@ function updateDateCheckboxes(aDatePickerId, aCheckboxId, aDateTime) {
 
     // create a new datetime object if date is now checked for the first time
     if (hasDate && !aDateTime.isValid()) {
-        var kDefaultTimezone = calendarDefaultTimezone();
-        var date = jsDateToDateTime(getElementValue(aDatePickerId));
-        date = date.getInTimezone(kDefaultTimezone);
+        var date = jsDateToDateTime(getElementValue(aDatePickerId), calendarDefaultTimezone());
         aDateTime.setDateTime(date);
     } else if (!hasDate && aDateTime.isValid()) {
         aDateTime.setDateTime(null);
@@ -1581,8 +1572,7 @@ function updateRepeat() {
                 recurrenceInfo.deleteRecurrenceItem(rrules[0][0]);
             }
         } else {
-            recurrenceInfo = createRecurrenceInfo();
-            recurrenceInfo.item = item;
+            recurrenceInfo = createRecurrenceInfo(item);
         }
 
         switch (repeatValue) {
@@ -2189,11 +2179,9 @@ function updateRepeatDetails() {
     var recurrenceInfo = window.recurrenceInfo;
     var itemRepeat = document.getElementById("item-repeat");
     if (itemRepeat.value == "custom" && recurrenceInfo) {
-        var startDate = jsDateToDateTime(getElementValue("event-starttime"));
-        var endDate = jsDateToDateTime(getElementValue("event-endtime"));
         var kDefaultTimezone = calendarDefaultTimezone();
-        startDate = startDate.getInTimezone(kDefaultTimezone);
-        endDate = endDate.getInTimezone(kDefaultTimezone);
+        var startDate = jsDateToDateTime(getElementValue("event-starttime"), kDefaultTimezone);
+        var endDate = jsDateToDateTime(getElementValue("event-endtime"), kDefaultTimezone);
         var allDay = getElementValue("event-all-day", "checked");
         commonUpdateRepeatDetails(recurrenceInfo,startDate,endDate,allDay);
     } else {

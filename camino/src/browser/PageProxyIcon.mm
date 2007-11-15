@@ -37,12 +37,12 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+#import "PageProxyIcon.h"
+
+#import "ImageAdditions.h"
 #import "NSString+Utils.h"
 #import "NSPasteboard+Utils.h"
 #import "BrowserWindowController.h"
-#import "PageProxyIcon.h"
-
-#import "MainController.h"
 
 #include "nsCRT.h"
 #include "nsNetUtil.h"
@@ -98,13 +98,13 @@
 
   id parentWindowController = [[self window] windowController];
   if ([parentWindowController isKindOfClass:[BrowserWindowController class]]) {
-    BrowserWrapper* browserWrapper = [(BrowserWindowController*)parentWindowController getBrowserWrapper];
+    BrowserWrapper* browserWrapper = [(BrowserWindowController*)parentWindowController browserWrapper];
     urlString = [browserWrapper currentURI];
     titleString = [browserWrapper pageTitle];
   }
 
   // don't allow dragging of proxy icon for empty pages
-  if ((!urlString) || [MainController isBlankURL:urlString])
+  if ((!urlString) || [urlString isBlankURL])
     return;
 
   NSString     *cleanedTitle = [titleString stringByReplacingCharactersInSet:[NSCharacterSet controlCharacterSet] withString:@" "];
@@ -114,9 +114,13 @@
   [pboard declareURLPasteboardWithAdditionalTypes:[NSArray array] owner:self];
   [pboard setDataForURL:urlString title:cleanedTitle];
 
-  [self dragImage: [MainController createImageForDragging:[self image] title:titleString]
-                    at: NSMakePoint(0,0) offset: NSMakeSize(0,0)
-                    event: event pasteboard: pboard source: self slideBack: YES];
+  [self dragImage:[NSImage dragImageWithIcon:[self image] title:titleString]
+               at:NSMakePoint(0,0)
+           offset:NSMakeSize(0,0)
+            event:event
+       pasteboard:pboard
+           source:self
+        slideBack:YES];
 }
 
 @end
