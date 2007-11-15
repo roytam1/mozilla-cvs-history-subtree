@@ -3097,6 +3097,11 @@ nsDocShell::DisplayLoadError(nsresult aError, nsIURI *aURI,
             // Proxy connection was refused.
             error.AssignLiteral("proxyConnectFailure");
             break;
+        case NS_ERROR_UNSAFE_CONTENT_TYPE:
+            // XXX: We can't add new strings on the branch, abuse
+            // malformedURI
+            error.AssignLiteral("malformedURI");
+            break;
         }
     }
 
