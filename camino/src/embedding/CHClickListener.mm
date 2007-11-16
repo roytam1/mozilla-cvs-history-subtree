@@ -59,6 +59,7 @@
 #include "nsIDocument.h"
 #include "nsIPresShell.h"
 #include "nsIFrame.h"
+#include "nsISupportsArray.h"
 
 
 @interface CHOptionSelector : NSObject
@@ -158,6 +159,13 @@ CHClickListener::MouseDown(nsIDOMEvent* aEvent)
   options->GetLength(&count);
   PRInt32 selIndex = 0;   // currently unused
 
+  // We need to addref all of the option elements that we set on the menu,
+  // then auto release them when we leave this function. see bug: 373482
+  nsCOMPtr<nsISupportsArray> option_pool;
+  nsresult rv = NS_NewISupportsArray(getter_AddRefs(option_pool));
+  if (NS_FAILED(rv))
+	return rv;
+
   nsCOMPtr<nsIDOMHTMLOptGroupElement> curOptGroup;
 
   for (PRUint32 i = 0; i < count; i++) {
@@ -195,6 +203,7 @@ CHClickListener::MouseDown(nsIDOMEvent* aEvent)
 
     NSMenuItem* menuItem = [[[NSMenuItem alloc] initWithTitle: title action: NULL keyEquivalent: @""] autorelease];
     [menu addItem: menuItem];
+    option_pool->AppendElement(option);  // refcount the option.
     [menuItem setRepresentedObject:[NSValue valueWithPointer:option.get()]];
 
     PRBool selected;
@@ -225,7 +234,7 @@ CHClickListener::MouseDown(nsIDOMEvent* aEvent)
     return NS_ERROR_FAILURE;
 
   nsIFrame* selectFrame;
-  nsresult rv = presShell->GetPrimaryFrameFor(selContent, &selectFrame);
+  rv = presShell->GetPrimaryFrameFor(selContent, &selectFrame);
   if (NS_FAILED(rv) || !selectFrame)
     return NS_ERROR_FAILURE;
   
