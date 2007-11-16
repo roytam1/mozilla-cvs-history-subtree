@@ -394,7 +394,7 @@ static const unsigned int kMaxTitleLength = 50;
     }
     
     // if we're not the Go menu, stop after kMaxNumHistoryItems items
-    if (![self isKindOfClass:[GoMenu class]] && ([self numberOfItems] == kMaxNumHistoryItems))
+    if (![self isKindOfClass:[GoMenu class]] && ([self numberOfItems] >= kMaxNumHistoryItems))
       break;
   }
   
