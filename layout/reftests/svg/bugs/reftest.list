@@ -1,4 +1,0 @@
-
-load bug327709.svg # assertion test
-load bug367368.xhtml # crash test
-
