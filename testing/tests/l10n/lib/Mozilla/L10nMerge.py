@@ -50,37 +50,6 @@ import Paths
 
 options = {}
 
-def __regify(tpl):
-  return tuple(map(re.compile, tpl))
-
-exceptions = [
-  # ignore langpack contributor section for mail and brownser
-  __regify(('mail|browser', 'defines.inc', 'MOZ_LANGPACK_CONTRIBUTORS')),
-  # ignore search engine order for browser
-  __regify(('browser', 'chrome\\/browser-region\\/region\\.properties',
-   'browser\\.search\\.order\.[1-9]')),
-  # ignore feed engine order for browser
-  __regify(('browser', 'chrome\\/browser-region\\/region\\.properties',
-   'browser\\.contentHandlers\\.types\.[0-5]'))]
-
-def __dont_ignore(tpl):
-  for mod, path, key in exceptions:
-    if mod.match(tpl[0]) and path.match(tpl[1]) and key.match(tpl[2]):
-      return False
-  return True
-
-fl_exceptions = [
-  # ignore search plugins
-  __regify(('browser', 'searchplugins\\/.+\\.xml')),
-  # ignore help images
-  __regify(('browser', 'chrome\\/help\\/images\\/[A-Za-z-_]+\\.png'))]
-
-def do_ignore_fl(tpl):
-  for mod, path in fl_exceptions:
-    if mod.match(tpl[0]) and path.match(tpl[1]):
-      return True
-  return False
-
 class FileCollector:
   class Iter:
     def __init__(self, path):
@@ -123,16 +92,63 @@ class FileCollector:
   def iterateFiles(self, mod, locale):
     return FileCollector.Iter(Paths.get_base_path(mod, locale))
 
-def collectFiles(aComparer):
-  'returns new files, files to merge, files to remove'
+def collectFiles(aComparer, apps = None, locales = None):
+  '''
+  returns new files, files to compare, files to remove
+  apps or locales need to be given, apps is a list, locales is a
+  hash mapping applications to languages.
+  If apps is given, it will look up all-locales for all apps for the
+  languages to test.
+  'toolkit' is added to the list of modules, too.
+  '''
+  if not apps and not locales:
+    raise RuntimeError, "collectFiles needs either apps or locales"
+  if apps and locales:
+    raise RuntimeError, "You don't want to give both apps or locales"
+  if locales:
+    apps = locales.keys()
+    # add toolkit, with all of the languages of all apps
+    all = set()
+    for locs in locales.values():
+      all.update(locs)
+    locales['toolkit'] = list(all)
+  else:
+    locales = Paths.allLocales(apps)
+  modules = Paths.Modules(apps)
   en = FileCollector()
   l10n = FileCollector()
-  for cat in Paths.locales.keys():
-    logging.debug(" testing " + cat+ " on " + str(Paths.modules))
-    aComparer.notifyLocales(cat, Paths.locales[cat])
-    for mod in Paths.modules[cat]:
+  # load filter functions for each app
+  fltrs = []
+  for app in apps:
+    filterpath = 'mozilla/%s/locales/filter.py' % app
+    if not os.path.exists(filterpath):
+      continue
+    l = {}
+    execfile(filterpath, {}, l)
+    if 'test' not in l or not callable(l['test']):
+      logging.debug('%s does not define function "test"' % filterpath)
+      continue
+    fltrs.append(l['test'])
+  
+  # define fltr function to be used, calling into the app specific ones
+  # if one of our apps wants us to know about a triple, make it so
+  def fltr(mod, lpath, entity = None):
+    for f in fltrs:
+      keep  = True
+      try:
+        keep = f(mod, lpath, entity)
+      except Exception, e:
+        logging.error(str(e))
+      if not keep:
+        return False
+    return True
+  
+  for cat in modules.keys():
+    logging.debug(" testing " + cat+ " on " + str(modules))
+    aComparer.notifyLocales(cat, locales[cat])
+    for mod in modules[cat]:
       en_fls = en.getFiles(mod, 'en-US')
-      for loc in Paths.locales[cat]:
+      for loc in locales[cat]:
         fls = dict(en_fls) # create copy for modification
         for l_fl, l_path in l10n.iterateFiles(mod, loc):
           if fls.has_key(l_fl):
@@ -140,11 +156,21 @@ def collectFiles(aComparer):
             aComparer.compareFile(mod, loc, l_fl)
             del fls[l_fl]
           else:
-            # file in locale, but not in en-US, remove?
-            aComparer.removeFile(mod, loc, l_fl)
+            if fltr(mod, l_fl):
+              # file in locale, but not in en-US, remove
+              aComparer.removeFile(mod, loc, l_fl)
+            else:
+              logging.debug(" ignoring %s from %s in %s" %
+                            (l_fl, loc, mod))
         # all locale files dealt with, remaining fls need to be added?
         for lf in fls.keys():
-          aComparer.addFile(mod,loc,lf)
+          if fltr(mod, lf):
+            aComparer.addFile(mod,loc,lf)
+          else:
+            logging.debug(" ignoring %s from %s in %s" %
+                          (lf, loc, mod))
+
+  return fltr
 
 class CompareCollector:
   'collects files to be compared, added, removed'
@@ -159,9 +185,6 @@ class CompareCollector:
       else:
         self.modules[loc] = [aModule]
   def addFile(self, aModule, aLocale, aLeaf):
-    if do_ignore_fl((aModule, aLeaf)):
-      logging.debug(" ignoring %s from %s in %s" % (aLeaf, aLocale, aModule))
-      return
     logging.debug(" copying %s for %s in %s" % (aLeaf, aLocale, aModule))
     if not self.files.has_key(aLocale):
       self.files[aLocale] = {'missingFiles': [(aModule, aLeaf)],
@@ -180,9 +203,6 @@ class CompareCollector:
       self.cl[(aModule, aLeaf)].append(aLocale)
     pass
   def removeFile(self, aModule, aLocale, aLeaf):
-    if do_ignore_fl((aModule, aLeaf)):
-      logging.debug(" ignoring %s from %s in %s" % (aLeaf, aLocale, aModule))
-      return
     logging.debug(" remove %s from %s in %s" % (aLeaf, aLocale, aModule))
     if not self.files.has_key(aLocale):
       self.files[aLocale] = {'obsoleteFiles': [(aModule, aLeaf)],
@@ -195,10 +215,11 @@ class CompareCollector:
       os.remove(Paths.get_path(aModule, aLocale, aLeaf))
     pass
 
-def merge(testLocales=[]):
+def merge(apps=None, testLocales=[]):
   result = {}
   c = CompareCollector()
-  collectFiles(c)
+  fltr = collectFiles(c, apps=apps, locales=testLocales)
+  
   key = re.compile('[kK]ey')
   for fl, locales in c.cl.iteritems():
     (mod,path) = fl
@@ -222,7 +243,7 @@ def merge(testLocales=[]):
       l10nTmp = dict(l10nMap)
       logging.debug(" Checking existing entities of " + path + " in " + mod)
       for k,i in l10nMap.items():
-        if not __dont_ignore((mod, path, k)):
+        if not fltr(mod, path, k):
           if enTmp.has_key(k):
             del enTmp[k]
             del l10nTmp[k]
@@ -242,7 +263,8 @@ def merge(testLocales=[]):
                          (k, Paths.get_path(mod, loc, path)))
           else:
             result[loc]['changed'] +=1
-      result[loc]['missing'].extend(filter(__dont_ignore, [(mod,path,k) for k in enTmp.keys()]))
+      result[loc]['missing'].extend(filter(lambda t: fltr(*t),
+                                           [(mod,path,k) for k in enTmp.keys()]))
       filename = Paths.get_path(mod, loc, path)
       # comment out obsolete entities
       if l10nTmp != {}:
