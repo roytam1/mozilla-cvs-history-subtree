@@ -212,7 +212,7 @@ class MergeCollector(CompareCollector):
     super(MergeCollector, self).addFile(aModule, aLocale, aLeaf)
     l_fl = Paths.get_path(aModule, aLocale, aLeaf)
     if not os.path.isdir(os.path.dirname(l_fl)):
-      os.mkdir(os.path.dirname(l_fl))
+      os.makedirs(os.path.dirname(l_fl))
     shutil.copy2(Paths.get_path(aModule, 'en-US', aLeaf), l_fl)
     pass
   def removeFile(self, aModule, aLocale, aLeaf):
@@ -274,6 +274,10 @@ def merge(apps=None, testLocales=[]):
       result[loc]['missing'].extend(filter(lambda t: fltr(*t),
                                            [(mod,path,k) for k in enTmp.keys()]))
       filename = Paths.get_path(mod, loc, path)
+      if not parser.canMerge:
+        if l10nTmp or enTmp:
+          logging.error('not merging ' + path)
+        continue
       # comment out obsolete entities
       if l10nTmp != {}:
         logging.info(" Commenting out obsolete entities...")

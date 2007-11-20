@@ -166,7 +166,7 @@ def collectFiles(aComparer, apps = None, locales = None):
 
   return fltr
 
-class CompareCollector:
+class CompareCollector(object):
   'collects files to be compared, added, removed'
   def __init__(self):
     self.cl = {}
@@ -214,28 +214,35 @@ def compare(apps=None, testLocales=None):
     except UserWarning:
       logging.warning(" Can't compare " + path + " in " + mod)
       continue
-    parser.read(Paths.get_path(mod, 'en-US', path))
-    enMap = parser.mapping()
+    parser.readFile(Paths.get_path(mod, 'en-US', path))
+    logging.debug(" Parsing en-US " + path + " in " + mod)
+    (enList, enMap) = parser.parse()
     for loc in locales:
       if not result.has_key(loc):
         result[loc] = {'missing':[],'obsolete':[],
                        'changed':0,'unchanged':0,'keys':0}
       enTmp = dict(enMap)
-      parser.read(Paths.get_path(mod, loc, path))
-      for k,v in parser:
+      parser.readFile(Paths.get_path(mod, loc, path))
+      logging.debug(" Parsing " + loc + " " + path + " in " + mod)
+      (l10nList, l10nMap) = parser.parse()
+      l10nTmp = dict(l10nMap)
+      logging.debug(" Checking existing entities of " + path + " in " + mod)
+      for k,i in l10nMap.items():
         if not fltr(mod, path, k):
           if enTmp.has_key(k):
             del enTmp[k]
+            del l10nTmp[k]
           continue
         if not enTmp.has_key(k):
           result[loc]['obsolete'].append((mod,path,k))
           continue
-        enVal = enTmp[k]
+        enVal = enList[enTmp[k]]['val']
         del enTmp[k]
+        del l10nTmp[k]
         if key.search(k):
           result[loc]['keys'] += 1
         else:
-          if enVal == v:
+          if enVal == l10nList[i]['val']:
             result[loc]['unchanged'] +=1
             logging.info('%s in %s unchanged' %
                          (k, Paths.get_path(mod, loc, path)))
