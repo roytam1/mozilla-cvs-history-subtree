@@ -259,3 +259,45 @@ def compare(apps=None, testLocales=None):
   for loc, mods in c.modules.iteritems():
     result[loc]['tested'] = mods
   return result
+
+# helper class to merge all the lists into more consice
+# dicts
+class Separator:
+  def __init__(self, apps):
+    self.components = Paths.Components(apps)
+    pass
+  def getDetails(self, res, locale):
+    dic = {}
+    res[locale]['tested'].sort()
+    self.collectList('missing', res[locale], dic)
+    self.collectList('obsolete', res[locale], dic)
+    return dic
+  def collectList(self, name, res, dic):
+    dic[name] = {}
+    if name not in res:
+      res[name] = []
+    counts = dict([(mod,0) for mod in res['tested']])
+    counts['total'] = len(res[name])
+    for mod, path, key in res[name]:
+      counts[self.components[mod]] +=1
+      if mod not in  dic[name]:
+        dic[name][mod] = {path:[key]}
+        continue
+      if path not in dic[name][mod]:
+        dic[name][mod][path] = [key]
+      else:
+        dic[name][mod][path].append(key)
+    res[name] = counts
+    name += 'Files'
+    dic[name] = {}
+    if name not in res:
+      res[name] = []
+    counts = dict([(mod,0) for mod in res['tested']])
+    counts['total'] = len(res[name])
+    for mod, path in res[name]:
+      counts[self.components[mod]] +=1
+      if mod not in dic[name]:
+        dic[name][mod] = [path]
+      else:
+        dic[name][mod].append(path)
+    res[name] = counts
