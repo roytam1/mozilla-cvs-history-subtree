@@ -42,8 +42,8 @@
 #   support dtd, properties, inc
 #   keep white space and comments
 #   add new entities (and their comment)
-#   comment out or remove obsolate entities
-#   backup (rename) or remove obsolate file
+#   comment out or remove obsolete entities
+#   backup (rename) or remove obsolete file
 # not implemented:
 #   check syntax error (assuming valid file only so far)
 #   fix the order of entities
@@ -73,9 +73,9 @@ parser.add_option('-v', '--verbose', action='count', dest='v', default=0,
 parser.add_option('-q', '--quiet', action='count', dest='q', default=0,
                   help='Make less noise')
 parser.add_option('-b', '--backup', action='store_true', dest='backup',
-                  help='Backup obsolate files')
-parser.add_option('-c', '--cleanobsolate', action='store_true', dest='cleanobsolate',
-                  help='Don\'t keep obsolate entities as comments')
+                  help='Backup obsolete files')
+parser.add_option('-c', '--cleanobsolete', action='store_true', dest='cleanobsolete',
+                  help='Don\'t keep obsolete entities as comments')
 # not implemented yet...
 #parser.add_option('-i', '--insertnew', action='store_true', dest='i',
 #                  help='Insert new entities instead of adding')
@@ -93,7 +93,7 @@ Paths.locales = {options.application: args, 'toolkit': args}
 
 # mode setting optargs
 L10nMerge.options['backup'] = options.backup
-L10nMerge.options['cleanobsolate'] = options.cleanobsolate
+L10nMerge.options['cleanobsolete'] = options.cleanobsolete
 
 
 # actually merge the localizations

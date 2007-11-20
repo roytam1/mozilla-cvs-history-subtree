@@ -244,9 +244,9 @@ def merge(testLocales=[]):
             result[loc]['changed'] +=1
       result[loc]['missing'].extend(filter(__dont_ignore, [(mod,path,k) for k in enTmp.keys()]))
       filename = Paths.get_path(mod, loc, path)
-      # comment out obsolate entities
+      # comment out obsolete entities
       if l10nTmp != {}:
-        logging.info(" Commenting out obsolate entities...")
+        logging.info(" Commenting out obsolete entities...")
         f = codecs.open(filename, 'w', parser.encoding)
         daytime = time.asctime()
         try:
@@ -254,14 +254,14 @@ def merge(testLocales=[]):
           if re.search('\\.dtd', filename):
             for entity in l10nList:
               if l10nTmp.has_key(entity['key']):
-                if not options['cleanobsolate']:
+                if not options['cleanobsolete']:
                   f.write(entity['prespace'] + '<!-- XXX l10n merge: obsolete entity (' + daytime + ') -->\n' + entity['precomment'] + '<!-- ' + entity['def'] + ' -->' + entity['post'])
               else:
                 f.write(entity['all'])
           elif re.search('\\.(properties|inc)', filename):
             for entity in l10nList:
               if l10nTmp.has_key(entity['key']):
-                if not options['cleanobsolate']:
+                if not options['cleanobsolete']:
                   f.write(entity['prespace'] + '# XXX l10n merge: obsolete entity (' + daytime + ')\n' + entity['precomment'] + '#' + entity['def'] + entity['post'])
               else:
                 f.write(entity['all'])
