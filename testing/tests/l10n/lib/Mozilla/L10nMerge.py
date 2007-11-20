@@ -172,7 +172,7 @@ def collectFiles(aComparer, apps = None, locales = None):
 
   return fltr
 
-class CompareCollector:
+class CompareCollector(object):
   'collects files to be compared, added, removed'
   def __init__(self):
     self.cl = {}
@@ -185,16 +185,12 @@ class CompareCollector:
       else:
         self.modules[loc] = [aModule]
   def addFile(self, aModule, aLocale, aLeaf):
-    logging.debug(" copying %s for %s in %s" % (aLeaf, aLocale, aModule))
+    logging.debug(" add %s for %s in %s" % (aLeaf, aLocale, aModule))
     if not self.files.has_key(aLocale):
       self.files[aLocale] = {'missingFiles': [(aModule, aLeaf)],
                              'obsoleteFiles': []}
     else:
       self.files[aLocale]['missingFiles'].append((aModule, aLeaf))
-    l_fl = Paths.get_path(aModule, aLocale, aLeaf)
-    if not os.path.isdir(os.path.dirname(l_fl)):
-      os.mkdir(os.path.dirname(l_fl))
-    shutil.copy2(Paths.get_path(aModule, 'en-US', aLeaf), l_fl)
     pass
   def compareFile(self, aModule, aLocale, aLeaf):
     if not self.cl.has_key((aModule, aLeaf)):
@@ -209,6 +205,18 @@ class CompareCollector:
                              'missingFiles':[]}
     else:
       self.files[aLocale]['obsoleteFiles'].append((aModule, aLeaf))
+    pass
+
+class MergeCollector(CompareCollector):
+  def addFile(self, aModule, aLocale, aLeaf):
+    super(MergeCollector, self).addFile(aModule, aLocale, aLeaf)
+    l_fl = Paths.get_path(aModule, aLocale, aLeaf)
+    if not os.path.isdir(os.path.dirname(l_fl)):
+      os.mkdir(os.path.dirname(l_fl))
+    shutil.copy2(Paths.get_path(aModule, 'en-US', aLeaf), l_fl)
+    pass
+  def removeFile(self, aModule, aLocale, aLeaf):
+    super(MergeCollector, self).removeFile(aModule, aLocale, aLeaf)
     if options['backup']:
       os.rename(Paths.get_path(aModule, aLocale, aLeaf), Paths.get_path(aModule, aLocale, aLeaf + '~'))
     else:
@@ -217,7 +225,7 @@ class CompareCollector:
 
 def merge(apps=None, testLocales=[]):
   result = {}
-  c = CompareCollector()
+  c = MergeCollector()
   fltr = collectFiles(c, apps=apps, locales=testLocales)
   
   key = re.compile('[kK]ey')
