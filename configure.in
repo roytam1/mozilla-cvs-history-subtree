@@ -2856,6 +2856,12 @@ case $target in
         AC_DEFINE(HAVE_LIBDL)))
     ;;
 esac
+
+_SAVE_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS -D_GNU_SOURCE"
+AC_CHECK_FUNCS(dladdr)
+CFLAGS="$_SAVE_CFLAGS"
+
 if test ! "$GNU_CXX"; then
 
     case $target in
@@ -5003,26 +5009,16 @@ dnl ========================================================
 
 if test "$MOZ_ENABLE_GTK2"
 then
-    MOZ_ARG_ENABLE_BOOL(dbus,
-    [  --enable-dbus       Enable dbus support (default: disabled) ],
-        MOZ_ENABLE_DBUS=force,
-        MOZ_ENABLE_DBUS=)
+    MOZ_ENABLE_DBUS=1
+
+    MOZ_ARG_DISABLE_BOOL(dbus,
+    [  --disable-dbus       Disable dbus support ],
+        MOZ_ENABLE_DBUS=,
+        MOZ_ENABLE_DBUS=1)
 
     if test "$MOZ_ENABLE_DBUS"
     then
-        PKG_CHECK_MODULES(MOZ_DBUS_GLIB, dbus-glib-1 >= $DBUS_VERSION,
-        [
-            MOZ_ENABLE_DBUS=1
-        ],[
-            if test "$MOZ_ENABLE_DBUS" = "force"
-            then
-                AC_MSG_ERROR([* * * Could not find dbus-glib-1 >= $DBUS_VERSION])
-            fi
-            MOZ_ENABLE_DBUS=
-        ])
-    fi
-
-    if test "$MOZ_ENABLE_DBUS"; then
+        PKG_CHECK_MODULES(MOZ_DBUS_GLIB, dbus-glib-1 >= $DBUS_VERSION)
         AC_DEFINE(MOZ_ENABLE_DBUS)
     fi
 fi
@@ -5558,19 +5554,6 @@ MOZ_ARG_ENABLE_STRING(image-decoders,
 done],
     MOZ_IMG_DECODERS="$MOZ_IMG_DECODERS_DEFAULT")
 
-if test `echo "$MOZ_IMG_DECODERS" | grep -c png` -ne 0; then
-    MOZ_PNG_CFLAGS="$MOZ_PNG_CFLAGS -DMOZ_PNG_READ"
-    AC_MSG_CHECKING([if pnggccrd.c can be compiled without PNG_NO_MMX_CODE])
-    AC_TRY_COMPILE([#define MOZ_PNG_READ 1
-                    #include "$_topsrcdir/modules/libimg/png/pnggccrd.c"],,
-                    _results=yes,
-                    _results=no)
-    AC_MSG_RESULT([$_results])
-    if test "$_results" = "no"; then
-        MOZ_PNG_CFLAGS="$MOZ_PNG_CFLAGS -DPNG_NO_MMX_CODE"
-    fi
-fi
-
 dnl Dupes are removed in the encoder section because it will also add decoders
 
 dnl ========================================================
@@ -5596,10 +5579,6 @@ MOZ_ARG_ENABLE_STRING(image-encoders,
     MOZ_IMG_ENCODERS="$MOZ_IMG_ENCODERS $addencoder"
 done],
     MOZ_IMG_ENCODERS="$MOZ_IMG_ENCODERS_DEFAULT")
-
-if test `echo "$MOZ_IMG_ENCODERS" | grep -c png` -ne 0; then
-    MOZ_PNG_CFLAGS="$MOZ_PNG_CFLAGS -DMOZ_PNG_WRITE"
-fi
 
 dnl Remove dupes
 MOZ_IMG_DECODERS=`${PERL} ${srcdir}/build/unix/uniq.pl ${MOZ_IMG_DECODERS}`
@@ -6371,6 +6350,12 @@ if test "$HAVE_DEMANGLE" -a "$HAVE_GCC3_ABI" && test "$MOZ_DEBUG" -o "$NS_TRACE_
 fi
 AC_SUBST(MOZ_DEMANGLE_SYMBOLS)
 
+dnl ========================================================
+dnl = Support for gcc stack unwinding (from gcc 3.3)
+dnl ========================================================
+if test "$HAVE_GCC3_ABI" && test -z "$SKIP_LIBRARY_CHECKS"; then
+    AC_CHECK_FUNCS(_Unwind_Backtrace)
+fi
 
 dnl ========================================================
 dnl =
@@ -7002,10 +6987,10 @@ if test "$MOZ_SVG" -o "$MOZ_ENABLE_CANVAS" -o "$MOZ_ENABLE_CAIRO_GFX" ; then
    MOZ_TREE_CAIRO=,
    MOZ_TREE_CAIRO=1 )
 
-   if test "$MOZ_TREE_CAIRO"; then
-       # Check for headers defining standard int types.
-       AC_CHECK_HEADERS(stdint.h inttypes.h sys/int_types.h)
+   # Check for headers defining standard int types.
+   AC_CHECK_HEADERS(stdint.h inttypes.h sys/int_types.h)
 
+   if test "$MOZ_TREE_CAIRO"; then
        # For now we assume that we will have a uint64_t available through
        # one of the above headers or mozstdint.h.
        AC_DEFINE(HAVE_UINT64_T)
