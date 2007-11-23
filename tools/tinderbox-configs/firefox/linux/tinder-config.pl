@@ -168,13 +168,13 @@ $ConfigureOnly = 1;             # Configure only, don't build.
 $LocaleProduct = "browser";
 $LocalizationVersionFile = 'browser/config/version.txt';
 %WGetFiles = (
-# CONFIG:             "http://%stagingServer%/pub/mozilla.org/firefox/nightly/%version%-candidates/rc%rc%/firefox-%version%.en-US.linux-i686.tar.gz" => 
+# CONFIG:             "http://%stagingServer%/pub/mozilla.org/firefox/nightly/%version%-candidates/rc%rc%/firefox-%version%.en-US.linux-i686.tar.bz2" => 
 	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/1.9b1-candidates/rc3/firefox-%version%.en-US.linux-i686.tar.bz2" =>
-# CONFIG:             "/%l10n_buildDir%/%l10n_buildPlatform%/firefox.tar.gz"
+# CONFIG:             "/%l10n_buildDir%/%l10n_buildPlatform%/firefox.tar.bz2"
 	      "/builds/tinderbox/Fx-Trunk-l10n-Release/Linux_2.6.18-8.el5_Depend/firefox.tar.bz2"
 	      );
 
-# CONFIG: $BuildLocalesArgs = "ZIP_IN=%l10n_buildDir%/%l10n_buildPlatform%/firefox.tar.gz";
+# CONFIG: $BuildLocalesArgs = "ZIP_IN=%l10n_buildDir%/%l10n_buildPlatform%/firefox.tar.bz2";
 $BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Fx-Trunk-l10n-Release/Linux_2.6.18-8.el5_Depend/firefox.tar.bz2";
 #@CompareLocaleDirs        = (); # Run compare-locales test on these directories
 @CompareLocaleDirs = (
