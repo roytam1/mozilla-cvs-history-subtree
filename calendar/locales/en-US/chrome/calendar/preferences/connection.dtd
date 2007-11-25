@@ -51,9 +51,7 @@
 <!ENTITY  manualTypeRadio.label         "Manual proxy configuration:">
 <!ENTITY  manualTypeRadio.accesskey     "m">
 <!ENTITY  autoTypeRadio.label           "Automatic proxy configuration URL:">
-<!ENTITY  autoTypeRadio.accesskey       "a">
-<!ENTITY  configAutoconfigText.label    "Configuration location (URL):">
-<!ENTITY  configAutoconfigText.accesskey "u">
+<!ENTITY  autoTypeRadio.accesskey       "A">
 <!ENTITY  reload.label                  "Reload">
 <!ENTITY  reload.accesskey              "e">
 <!ENTITY  ftp.label                     "FTP Proxy:">
