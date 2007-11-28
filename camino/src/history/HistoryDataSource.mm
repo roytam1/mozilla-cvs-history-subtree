@@ -38,8 +38,8 @@
  * ***** END LICENSE BLOCK ***** */
 
 #import "NSString+Utils.h"
-#import "NSString+Gecko.h"
 #import "NSPasteboard+Utils.h"
+#import "NSDate+Utils.h"
 
 #import "BrowserWindowController.h"
 #import "HistoryDataSource.h"
@@ -161,6 +161,7 @@ static int HistoryItemSort(id firstItem, id secondItem, void* context)
 
 - (NSArray*)historyItems;
 - (HistorySiteItem*)itemWithIdentifier:(NSString*)identifier;
+- (NSString*)relativeDataStringForDate:(NSDate*)date;
 
 - (void)siteIconLoaded:(NSNotification*)inNotification;
 - (void)checkForNewDay;
@@ -573,7 +574,7 @@ public:
     if (!inHistoryItem || NS_FAILED(inHistoryItem->GetHidden(&hidden)) || hidden)
       return NS_OK;
 
-    @try { // make sure we don't throw out into gecko
+    NS_DURING // make sure we don't throw out into gecko
 
       // The logic here is slightly odd, because even when inFirstVisit is false,
       // we can still get an item that we haven't seen before. This can happen
@@ -594,24 +595,22 @@ public:
         [mDataSource itemAdded:item];
         [item release];
       }
-    }
-    @catch (id exception) {
-      NSLog(@"Exception caught in ItemLoaded: %@", exception);
-    }
+    NS_HANDLER
+      NSLog(@"Exception caught in ItemLoaded: %@", localException);
+    NS_ENDHANDLER
     
     return NS_OK;
   }
 
   NS_IMETHOD ItemRemoved(nsIHistoryItem* inHistoryItem)
   {
-    @try { // make sure we don't throw out into gecko
+    NS_DURING // make sure we don't throw out into gecko
       HistorySiteItem* item = HistoryItemFromItem(inHistoryItem);
       if (item)
         [mDataSource itemRemoved:item];
-    }
-    @catch (id exception) {
-      NSLog(@"Exception caught in ItemRemoved: %@", exception);
-    }
+    NS_HANDLER
+      NSLog(@"Exception caught in ItemRemoved: %@", localException);
+    NS_ENDHANDLER
     return NS_OK;
   }
 
@@ -620,13 +619,12 @@ public:
     HistorySiteItem* item = HistoryItemFromItem(inHistoryItem);
     if (!item) return NS_OK;
 
-    @try { // make sure we don't throw out into gecko
+    NS_DURING // make sure we don't throw out into gecko
       if ([item updateWith_nsIHistoryItem:inHistoryItem])
         [mDataSource itemChanged:item];
-    }
-    @catch (id exception) {
-      NSLog(@"Exception caught in ItemTitleChanged: %@", exception);
-    }
+    NS_HANDLER
+      NSLog(@"Exception caught in ItemTitleChanged: %@", localException);
+    NS_ENDHANDLER
     return NS_OK;
   }
 
@@ -975,6 +973,12 @@ NS_IMPL_ISUPPORTS1(nsHistoryObserver, nsIHistoryObserver);
   return [mHistoryItemsDictionary objectForKey:identifier];
 }
 
+- (NSString*)relativeDataStringForDate:(NSDate*)date
+{
+  NSCalendarDate* calendarDate = [date dateWithCalendarFormat:nil timeZone:nil];
+  return [calendarDate relativeDateDescription];
+}
+
 - (void)siteIconLoaded:(NSNotification*)inNotification
 {
   HistoryItem* theItem = [inNotification object];
@@ -1100,7 +1104,7 @@ NS_IMPL_ISUPPORTS1(nsHistoryObserver, nsIHistoryObserver);
   return [item isKindOfClass:[HistoryCategoryItem class]];
 }
 
-// identifiers: title url last_visit first_visit
+// identifiers: title url description keyword
 - (id)outlineView:(NSOutlineView*)outlineView objectValueForTableColumn:(NSTableColumn*)aTableColumn byItem:(id)item
 {
   if ([[aTableColumn identifier] isEqualToString:@"title"])
@@ -1112,10 +1116,10 @@ NS_IMPL_ISUPPORTS1(nsHistoryObserver, nsIHistoryObserver);
       return [item url];
 
     if ([[aTableColumn identifier] isEqualToString:@"last_visit"])
-      return [item lastVisit];
+      return [self relativeDataStringForDate:[item lastVisit]];
 
     if ([[aTableColumn identifier] isEqualToString:@"first_visit"])
-      return [item firstVisit];
+      return [self relativeDataStringForDate:[item firstVisit]];
   }
 
   if ([item isKindOfClass:[HistoryCategoryItem class]])
@@ -1124,7 +1128,7 @@ NS_IMPL_ISUPPORTS1(nsHistoryObserver, nsIHistoryObserver);
       return [BookmarkViewController greyStringWithItemCount:[item numberOfChildren]];
   }
   
-  return nil;
+  return @"";
 
 // TODO truncate string
 //  - (void)truncateToWidth:(float)maxWidth at:kTruncateAtMiddle withAttributes:(NSDictionary *)attributes

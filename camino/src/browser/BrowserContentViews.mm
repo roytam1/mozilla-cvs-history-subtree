@@ -119,11 +119,11 @@
       [mBookmarksToolbar setFrame:newFrame];
     }
     
-    if (![mBookmarksToolbar isHidden])
-      bmToolbarHeight = NSHeight([mBookmarksToolbar frame]);
+    bmToolbarHeight = NSHeight([mBookmarksToolbar frame]);
   }
   
-  if (mStatusBar && ![mStatusBar isHidden]) {
+  if (mStatusBar)
+  {
     statusBarHeight = NSHeight([mStatusBar frame]);
     NSRect statusRect = [self bounds];
     statusRect.size.height = statusBarHeight;

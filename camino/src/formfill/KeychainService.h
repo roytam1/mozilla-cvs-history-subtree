@@ -58,14 +58,13 @@ enum KeychainPromptResult { kSave, kDontRemember, kNeverRemember } ;
 
 @interface KeychainService : NSObject
 {
+  IBOutlet id mConfirmStorePasswordPanel;
+  IBOutlet id mConfirmChangePasswordPanel;
   IBOutlet id mConfirmFillPasswordPanel;
 
   BOOL mFormPasswordFillIsEnabled;
 
-  NSMutableDictionary* mAllowedActionHosts;  // strong
-
-  NSMutableDictionary* mCachedKeychainItems; // strong
-  NSMutableDictionary* mKeychainCacheTimers; // strong
+  NSMutableDictionary* mAllowedActionHosts; // strong;
 
   nsIObserver* mFormSubmitObserver;
 }
@@ -77,11 +76,8 @@ enum KeychainPromptResult { kSave, kDontRemember, kNeverRemember } ;
 - (IBAction)hitButtonCancel:(id)sender;
 - (IBAction)hitButtonOther:(id)sender;
 
-- (void)promptToStoreLogin:(NSDictionary*)loginInfo inWindow:(NSWindow*)window;
-- (void)promptToUpdateKeychainItem:(KeychainItem*)keychainItem
-                      withUsername:(NSString*)username
-                          password:(NSString*)password
-                          inWindow:(NSWindow*)window;
+- (KeychainPromptResult)confirmStorePassword:(NSWindow*)parent;
+- (BOOL)confirmChangePassword:(NSWindow*)parent;
 - (BOOL)confirmFillPassword:(NSWindow*)parent;
 
 - (KeychainItem*)findKeychainEntryForHost:(NSString*)host
@@ -98,7 +94,9 @@ enum KeychainPromptResult { kSave, kDontRemember, kNeverRemember } ;
                isForm:(BOOL)isForm;
 - (KeychainItem*)updateKeychainEntry:(KeychainItem*)keychainItem
                         withUsername:(NSString*)username
-                            password:(NSString*)password;
+                            password:(NSString*)password
+                              scheme:(NSString*)scheme
+                              isForm:(BOOL)isForm;
 - (void)removeAllUsernamesAndPasswords;
 
 - (void)addListenerToView:(CHBrowserView*)view;
@@ -112,11 +110,6 @@ enum KeychainPromptResult { kSave, kDontRemember, kNeverRemember } ;
 // Methods to interact with the list of approved form action hosts.
 - (void)setAllowedActionHosts:(NSArray*)actionHosts forHost:(NSString*)host;
 - (NSArray*)allowedActionHostsForHost:(NSString*)host;
-
-// Methods to interact with the temporary keychain item cache.
-- (KeychainItem*)cachedKeychainEntryForKey:(NSString*)key;
-- (void)cacheKeychainEntry:(KeychainItem*)keychainItem forKey:(NSString*)key;
-- (void)expirationTimerFired:(NSTimer*)theTimer;
 
 @end
 
@@ -158,7 +151,7 @@ protected:
   
   void PreFill(const PRUnichar *, PRUnichar **, PRUnichar **);
   void ProcessPrompt(const PRUnichar *, bool, PRUnichar *, PRUnichar *);
-  static void ExtractRealmComponents(NSString* inRealmBlob, NSString** outHost, NSString** outRealm, PRInt32* outPort);
+  static void ExtractRealmComponents(const PRUnichar* inRealmBlob, NSString** outHost, NSString** outRealm, PRInt32* outPort);
 
   nsCOMPtr<nsIPrompt>   mPrompt;
 };

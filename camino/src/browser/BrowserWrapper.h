@@ -185,7 +185,7 @@ class nsIArray;
 
 
 // accessors
-- (CHBrowserView*)browserView;
+- (CHBrowserView*)getBrowserView;
 - (BOOL)isBusy;
 - (BOOL)isEmpty;                      // is about:blank loaded?
 - (BOOL)isInternalURI;
@@ -194,6 +194,7 @@ class nsIArray;
 
 - (NSString*)pendingURI;
 - (NSString*)currentURI;
+- (NSString*)displayTitle;
 - (NSString*)pageTitle;
 - (NSImage*)siteIcon;
 - (NSString*)statusString;

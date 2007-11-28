@@ -35,6 +35,8 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+#import "NSString+Utils.h"
+
 #include "nsXPIDLString.h"
 
 #include "nsIDOMWindow.h"
@@ -166,12 +168,12 @@ static PageInfoWindowController* gSingletonPageInfoController;
 
 - (void)updateGeneralInfoFromBrowserView:(CHBrowserView*)inBrowserView
 {
-  nsCOMPtr<nsIDOMWindow> contentWindow = [inBrowserView contentWindow];
+  nsCOMPtr<nsIDOMWindow> contentWindow = [inBrowserView getContentWindow];
   if (!contentWindow) return;
 
   // general info
   [mPageTitleField setStringValue:[inBrowserView pageTitle]];
-  [mPageLocationField setStringValue:[inBrowserView currentURI]];
+  [mPageLocationField setStringValue:[inBrowserView getCurrentURI]];
   NSDate* lastModDate = [inBrowserView pageLastModifiedDate];
 
   if (lastModDate)

@@ -38,6 +38,7 @@
 
 #import <AppKit/AppKit.h>
 
+
 @interface ExtendedTableView : NSTableView
 {
   SEL mDeleteAction;
@@ -45,12 +46,5 @@
 
 -(void)setDeleteAction: (SEL)deleteAction;
 -(SEL)deleteAction;
-
-@end
-
-// Informal protocol for delegates to handle context menus.
-@interface NSObject (TableViewContextMenuDelegate)
-
-- (NSMenu *)tableView:(NSTableView *)aTableView contextMenuForRow:(int)rowIndex;
 
 @end

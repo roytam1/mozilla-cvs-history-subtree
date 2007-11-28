@@ -37,11 +37,11 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+#import "NSString+Utils.h"
 #import "NSPasteboard+Utils.h"
 #import "PreferenceManager.h"
 
 #import "BrowserTabView.h"
-#import "BrowserTabViewItem.h"
 #import "BrowserWrapper.h"
 #import "BookmarkFolder.h"
 #import "Bookmark.h"
@@ -340,6 +340,9 @@ NSString* const kTabBarBackgroundDoubleClickedNotification = @"kTabBarBackground
     NSTabViewItem* item = [self tabViewItemAtIndex: i];
     [[item view] browserClosed];
   }
+  
+  // Tell the tab bar the window is closed so it will perform any needed cleanup
+  [mTabBar windowClosed];
 }
 
 - (BOOL)tabsVisible
@@ -542,13 +545,6 @@ NSString* const kTabBarBackgroundDoubleClickedNotification = @"kTabBarBackground
   id object = [inNotify object];
   if (!object || object != [self selectedTabViewItem])
     [self setJumpbackTab:nil];
-}
-
-// Tabs should be scrolled into view when selected.
--(void)selectTabViewItem:(NSTabViewItem*)item
-{
-  [super selectTabViewItem:item];
-  [mTabBar scrollTabIndexToVisible:[self indexOfTabViewItem:item]];
 }
 
 @end

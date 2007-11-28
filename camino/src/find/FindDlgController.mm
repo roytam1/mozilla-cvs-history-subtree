@@ -43,7 +43,7 @@
 - (void)loadNewFindStringFromPasteboard;
 - (void)putFindStringOnPasteboard;
 
-- (NSString*)searchText;
+- (NSString*)getSearchText:(BOOL*)outIsNew;
 - (BOOL)find:(BOOL)searchBack;
 
 @end
@@ -57,7 +57,7 @@
 
 - (void)loadNewFindStringFromPasteboard
 {
-  [mSearchField setStringValue:[self searchText]];
+  [mSearchField setStringValue:[self getSearchText]];
   [mSearchField selectText:nil];
 
   if ([[mSearchField stringValue] length] > 0)
@@ -86,7 +86,7 @@
 {
   NSWindowController* controller = [[NSApp mainWindow] windowController];
   if ( [controller conformsToProtocol:@protocol(Find)] ) {
-    id<Find> browserController = (id<Find>)controller;
+    id<Find> browserController = controller;
     BOOL ignoreCase = [mIgnoreCaseBox state];
     BOOL wrapSearch = [mWrapAroundBox state];
     return [browserController findInPageWithPattern:[mSearchField stringValue] caseSensitive:!ignoreCase wrap:wrapSearch backwards:searchBack];
@@ -139,11 +139,11 @@
 }
 
 //
-// -searchText
+// -getSearchText
 //
 // Retrieve the most recent search string
 //
-- (NSString*)searchText
+- (NSString*)getSearchText
 {
   NSString* searchText;
 

@@ -40,7 +40,6 @@
 #import "NSBezierPath+Utils.h"
 
 #import "TabButtonCell.h"
-#import "BrowserTabViewItem.h"
 #import "RolloverImageButton.h"
 #import "TruncatingTextAndImageCell.h"
 
@@ -138,7 +137,7 @@ static NSImage* gTabButtonDividerImage = nil;
     [gTabButtonDividerImage compositeToPoint:NSMakePoint(NSMaxX(rect), rect.origin.y) operation:NSCompositeSourceOver];
   }
   
-  NSPoint patternOrigin = [controlView convertPoint:NSMakePoint(0.0f, 0.0f) toView:[[controlView window] contentView]];
+  NSPoint patternOrigin = [controlView convertPoint:NSMakePoint(0.0f, 0.0f) toView:nil];
   NSWindow *window = [[mTabViewItem tabView] window];
   if ([mTabViewItem tabState] == NSSelectedTab) {
     // move things down a little, to give the impression of being pulled forward

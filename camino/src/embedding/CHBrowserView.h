@@ -52,7 +52,6 @@ class nsIDOMWindow;
 class nsIWebBrowser;
 class nsIDocShell;
 class nsIDOMNode;
-class nsIDOMElement;
 class nsIDOMPopupBlockedEvent;
 class nsIDOMEvent;
 class nsIEventSink;
@@ -61,7 +60,6 @@ class nsIPrintSettings;
 class nsIURI;
 class nsISupports;
 class nsISecureBrowserUI;
-class nsIFocusController;
 
 // Protocol implemented by anyone interested in progress
 // related to a BrowserView. A listener should explicitly
@@ -199,7 +197,7 @@ typedef enum {
 - (void)addListener:(id <CHBrowserListener>)listener;
 - (void)removeListener:(id <CHBrowserListener>)listener;
 - (void)setContainer:(NSView<CHBrowserListener, CHBrowserContainer>*)container;
-- (already_AddRefed<nsIDOMWindow>)contentWindow;	// addrefs
+- (already_AddRefed<nsIDOMWindow>)getContentWindow;	// addrefs
 
 // nsIWebNavigation methods
 - (void)loadURI:(NSString *)urlSpec referrer:(NSString*)referrer flags:(unsigned int)flags allowPopups:(BOOL)inAllowPopups;
@@ -211,9 +209,9 @@ typedef enum {
 - (void)stop:(unsigned int)flags;   // NSStop flags
 - (void)goToSessionHistoryIndex:(int)index;
 
-- (NSString*)currentURI;
+- (NSString*)getCurrentURI;
 
-- (NSString*)pageLocation;  // from window.location. can differ from the document's URI, and possibly from currentURI
+- (NSString*)pageLocation;  // from window.location. can differ from the document's URI, and possibly from getCurrentURI
 - (NSString*)pageLocationHost;
 - (NSString*)pageTitle;
 - (NSDate*)pageLastModifiedDate;
@@ -247,7 +245,7 @@ typedef enum {
 -(IBAction)selectAll:(id)aSender;
 
 // Returns the currently selected text as a NSString. 
-- (NSString*)selectedText;
+- (NSString*)getSelection;
 
 -(IBAction)undo:(id)aSender;
 -(IBAction)redo:(id)aSender;
@@ -280,19 +278,11 @@ typedef enum {
 - (NSWindow*)getNativeWindow;
 
 - (void)destroyWebBrowser;
-// Returns the underlying nsIWebBrowser, addref'd
-- (nsIWebBrowser*)webBrowser;
+- (nsIWebBrowser*)getWebBrowser;
+- (CHBrowserListener*)getCocoaBrowserListener;
 - (void)setWebBrowser:(nsIWebBrowser*)browser;
-- (CHBrowserListener*)cocoaBrowserListener;
 
-- (BOOL)isTextFieldFocused;
-- (BOOL)isPluginFocused;
-// Returns the currently focused DOM element, addref'd
-- (nsIDOMElement*)focusedDOMElement;
-// Returns the focus controller, addref'd
-- (nsIFocusController*)focusController;
-
-- (NSString*)focusedURLString;
+- (NSString*)getFocusedURLString;
 
 // charset
 - (IBAction)reloadWithNewCharset:(NSString*)charset;

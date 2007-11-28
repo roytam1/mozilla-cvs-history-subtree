@@ -49,7 +49,7 @@
 - (void)tryAddImportFromBrowser:(NSString *)aBrowserName withBookmarkPath:(NSString *)aPath;
 - (void)tryOmniWeb5Import;
 - (void)buildButtonForBrowser:(NSString *)aBrowserName withPathArray:(NSArray *)anArray;
-- (NSString *)saltedBookmarkPathForProfile:(NSString *)aPath;
+- (NSString *)getSaltedBookmarkPathForProfile:(NSString *)aPath;
 - (void)beginImportFrom:(NSArray *)aPath withTitles:(NSArray *)anArray;
 - (void)beginOmniWeb5ImportFrom:(NSArray *)anArray;
 - (void)finishImport:(BOOL)success fromFiles:(NSArray *)anArray;
@@ -89,16 +89,16 @@
   [self tryAddImportFromBrowser:@"Internet Explorer" withBookmarkPath:@"~/Library/Preferences/Explorer/Favorites.html"];
   [self tryAddImportFromBrowser:@"Safari" withBookmarkPath:@"~/Library/Safari/Bookmarks.plist"];
 
-  mozPath = [self saltedBookmarkPathForProfile:@"~/Library/Mozilla/Profiles/default/"];
+  mozPath = [self getSaltedBookmarkPathForProfile:@"~/Library/Mozilla/Profiles/default/"];
   if (mozPath)
     [self tryAddImportFromBrowser:@"Netscape/Mozilla" withBookmarkPath:mozPath];
 
   // Try Firefox from different locations in the reverse order of their introduction
-  mozPath = [self saltedBookmarkPathForProfile:@"~/Library/Application Support/Firefox/Profiles/"];
+  mozPath = [self getSaltedBookmarkPathForProfile:@"~/Library/Application Support/Firefox/Profiles/"];
   if (!mozPath)
-    mozPath = [self saltedBookmarkPathForProfile:@"~/Library/Firefox/Profiles/default/"];
+    mozPath = [self getSaltedBookmarkPathForProfile:@"~/Library/Firefox/Profiles/default/"];
   if (!mozPath)
-    mozPath = [self saltedBookmarkPathForProfile:@"~/Library/Phoenix/Profiles/default/"];
+    mozPath = [self getSaltedBookmarkPathForProfile:@"~/Library/Phoenix/Profiles/default/"];
   if (mozPath)
     [self tryAddImportFromBrowser:@"Mozilla Firefox" withBookmarkPath:mozPath];
 
@@ -141,7 +141,7 @@
 
 // Given a Mozilla-like profile, returns the bookmarks.html file in the salt directory
 // for the last modified profile, or nil on error
-- (NSString *)saltedBookmarkPathForProfile:(NSString *)aPath
+- (NSString *)getSaltedBookmarkPathForProfile:(NSString *)aPath
 {
   // find the last modified profile
   NSString *lastModifiedSubDir = [[NSFileManager defaultManager] lastModifiedSubdirectoryAtPath:aPath];
@@ -194,7 +194,7 @@
   [openPanel setCanChooseDirectories:NO];
   [openPanel setAllowsMultipleSelection:NO];
   [openPanel setPrompt:@"Import"];
-  NSArray* array = [NSArray arrayWithObjects:@"htm", @"html", @"plist", nil];
+  NSArray* array = [NSArray arrayWithObjects:@"htm", @"html", @"xml", @"plist", nil];
   int result = [openPanel runModalForDirectory:nil
                                           file:nil
                                          types:array];
@@ -211,7 +211,7 @@
   NSMutableArray *titleArray= [NSMutableArray array];
   NSString* curFilename = nil;
   NSString *curPath = nil;
-  while ((curPath = [enumerator nextObject])) {
+  while (curPath = [enumerator nextObject]) {
     curFilename = [curPath lastPathComponent];
     // What folder we import into depends on what OmniWeb file we're importing.
     if ([curFilename isEqualToString:@"Bookmarks.html"])

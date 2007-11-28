@@ -37,9 +37,8 @@
  * ***** END LICENSE BLOCK ***** */
 
 #import <Cocoa/Cocoa.h>
-#import <ApplicationServices/ApplicationServices.h>
 
-#import "NSString+Gecko.h"
+#import "NSString+Utils.h"
 
 #import "mozView.h"
 
@@ -136,7 +135,7 @@ NS_IMETHODIMP
 CHBrowserListener::GetInterface(const nsIID &aIID, void** aInstancePtr)
 {
   if (aIID.Equals(NS_GET_IID(nsIDOMWindow))) {
-    nsCOMPtr<nsIWebBrowser> browser = dont_AddRef([mView webBrowser]);
+    nsCOMPtr<nsIWebBrowser> browser = dont_AddRef([mView getWebBrowser]);
     if (browser)
       return browser->GetContentDOMWindow((nsIDOMWindow **) aInstancePtr);
   }
@@ -167,7 +166,7 @@ CHBrowserListener::CreateChromeWindow(nsIWebBrowserChrome *parent,
     return NS_ERROR_FAILURE;
   }
   
-  CHBrowserListener* listener = [childView cocoaBrowserListener];
+  CHBrowserListener* listener = [childView getCocoaBrowserListener];
   if (!listener) {
 #if DEBUG
     NSLog(@"Uh-oh! No listener yet for a newly created window (nsCocoaBrowserlistener)");
@@ -187,7 +186,7 @@ CHBrowserListener::CreateChromeWindow(nsIWebBrowserChrome *parent,
   // apply scrollbar chrome flags
   if (!(chromeFlags & nsIWebBrowserChrome::CHROME_SCROLLBARS))
   {
-    nsCOMPtr<nsIDOMWindow> contentWindow = [childView contentWindow];
+    nsCOMPtr<nsIDOMWindow> contentWindow = [childView getContentWindow];
     if (contentWindow)
     {
       nsCOMPtr<nsIDOMBarProp> scrollbars;
@@ -233,10 +232,10 @@ CHBrowserListener::ProvideWindow(nsIDOMWindow *inParent, PRUint32 inChromeFlags,
   BOOL prefersTabs = [mContainer shouldReuseExistingWindow];
   if (prefersTabs) {
     CHBrowserView* newContainer = [mContainer reuseExistingBrowserWindow:inChromeFlags];
-    nsCOMPtr<nsIDOMWindow> contentWindow = [newContainer contentWindow];
+    nsCOMPtr<nsIDOMWindow> contentWindow = [newContainer getContentWindow];
     
     // make sure gecko knows whether we're creating a new browser window (new tabs don't count)
-    nsCOMPtr<nsIDOMWindow> currentWindow = [mView contentWindow];
+    nsCOMPtr<nsIDOMWindow> currentWindow = [mView getContentWindow];
     *outWindowIsNew = (contentWindow != currentWindow);
     
     NS_IF_ADDREF(*outDOMWindow = contentWindow.get());
@@ -297,7 +296,7 @@ CHBrowserListener::GetWebBrowser(nsIWebBrowser * *aWebBrowser)
   if (!mView) {
     return NS_ERROR_FAILURE;
   }
-  *aWebBrowser = [mView webBrowser];
+  *aWebBrowser = [mView getWebBrowser];
 
   return NS_OK;
 }
@@ -419,10 +418,16 @@ CHBrowserListener::SetDimensions(PRUint32 flags, PRInt32 x, PRInt32 y, PRInt32 c
 
   if (flags & nsIEmbeddingSiteWindow::DIM_FLAGS_POSITION)
   {
+    NSPoint origin;
+    origin.x = (float)x;
+    origin.y = (float)y;
+    
     // websites assume the origin is the topleft of the window and that the screen origin
     // is "topleft" (quickdraw coordinates). As a result, we have to convert it.
-    CGRect screenRect = CGDisplayBounds(CGMainDisplayID());
-    NSPoint origin = NSMakePoint(x, screenRect.size.height - y);
+    GDHandle screenDevice = ::GetMainDevice();
+    Rect screenRect = (**screenDevice).gdRect;
+    short screenHeight = screenRect.bottom - screenRect.top;
+    origin.y = screenHeight - origin.y;
     
     [window setFrameTopLeftPoint:origin];
   }
@@ -470,8 +475,10 @@ CHBrowserListener::GetDimensions(PRUint32 flags,  PRInt32 *x,  PRInt32 *y, PRInt
       // websites (and gecko) expect the |y| value to be in "quickdraw" coordinates 
       // (topleft of window, origin is topleft of main device). Convert from cocoa -> 
       // quickdraw coord system.
-      CGRect screenRect = CGDisplayBounds(CGMainDisplayID());
-      *y = (PRInt32)(screenRect.size.height - NSMaxY(frame));
+      GDHandle screenDevice = ::GetMainDevice();
+      Rect screenRect = (**screenDevice).gdRect;
+      short screenHeight = screenRect.bottom - screenRect.top;
+      *y = screenHeight - (PRInt32)(frame.origin.y + frame.size.height);
     }
   }
   if (flags & nsIEmbeddingSiteWindow::DIM_FLAGS_SIZE_OUTER) {

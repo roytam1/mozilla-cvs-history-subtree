@@ -36,7 +36,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#import "ImageAdditions.h"
 #import "NSString+Utils.h"
 #import "NSBezierPath+Utils.h"
 #import "NSPasteboard+Utils.h"
@@ -45,6 +44,7 @@
 #import "BrowserTabView.h"
 
 #import "BrowserWrapper.h"
+#import "MainController.h"
 #import "BrowserWindowController.h"
 #import "TruncatingTextAndImageCell.h"
 #import "TabButtonCell.h"
@@ -276,13 +276,9 @@ const int kMenuTruncationChars = 60;
     NSPoint dragOrigin = [self frame].origin;
     dragOrigin.y += [self frame].size.height;
     
-    [self dragImage:[NSImage dragImageWithIcon:[mLabelCell image] title:title]
-                 at:iconRect.origin
-             offset:NSMakeSize(0.0, 0.0)
-              event:theEvent
-         pasteboard:pboard
-             source:self
-          slideBack:YES];
+    [self dragImage: [MainController createImageForDragging:[mLabelCell image] title:title]
+                 at:iconRect.origin offset:NSMakeSize(0.0, 0.0)
+              event:theEvent pasteboard:pboard source:self slideBack:YES];
   }
 }
 

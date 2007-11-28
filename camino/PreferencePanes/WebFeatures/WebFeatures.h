@@ -41,8 +41,7 @@
 #import <Cocoa/Cocoa.h>
 #import <PreferencePanes/NSPreferencePane.h>
 #import "PreferencePaneBase.h"
-
-@class ExtendedTableView;
+#import "ExtendedTableView.h"
 
 class nsIPref;
 class nsIPermissionManager;
@@ -56,6 +55,7 @@ class nsISupportsArray;
 
   IBOutlet NSButton *mEnablePopupBlocking;
   IBOutlet NSButton *mEnableAdBlocking;
+  IBOutlet NSButton *mImageResize;
   IBOutlet NSButton *mPreventAnimation;
   IBOutlet NSButton *mEditWhitelist;
   IBOutlet NSButton *mEnableFlashBlock;  
@@ -81,6 +81,7 @@ class nsISupportsArray;
 
 -(IBAction) clickEnablePopupBlocking:(id)sender;
 -(IBAction) clickEnableAdBlocking:(id)sender;
+-(IBAction) clickEnableImageResizing:(id)sender;
 -(IBAction) clickPreventAnimation:(id)sender;
 -(IBAction) editWhitelist:(id)sender;
 -(IBAction) clickEnableFlashBlock:(id)sender;

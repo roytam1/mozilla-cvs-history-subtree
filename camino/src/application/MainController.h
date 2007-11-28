@@ -181,9 +181,10 @@ typedef enum EBookmarkOpenBehavior
 - (IBAction)showCertificates:(id)aSender;
 
 // if the main/key window is a browser window, return its controller, otherwise nil
-- (BrowserWindowController*)mainWindowBrowserController;
-- (BrowserWindowController*)keyWindowBrowserController;
-- (NSWindow*)frontmostBrowserWindow;
+- (BrowserWindowController*)getMainWindowBrowserController;
+- (BrowserWindowController*)getKeyWindowBrowserController;
+- (NSWindow*)getFrontmostBrowserWindow;
+- (BOOL)isMainWindowABrowserWindow;
 
 - (BrowserWindowController*)openBrowserWindowWithURL:(NSString*)aURL andReferrer:(NSString*)aReferrer behind:(NSWindow*)window allowPopups:(BOOL)inAllowPopups;
 - (BrowserWindowController*)openBrowserWindowWithURLs:(NSArray*)urlArray behind:(NSWindow*)window allowPopups:(BOOL)inAllowPopups;
@@ -196,8 +197,11 @@ typedef enum EBookmarkOpenBehavior
 - (void)delayedAdjustBookmarksMenuItemsEnabling;
 - (void)delayedUpdatePageInfo;
 
-- (NSView*)savePanelView;
+- (NSView*)getSavePanelView;
 
++ (NSImage*)createImageForDragging:(NSImage*)aIcon title:(NSString*)aTitle;
+// utility routine to test if a url is "blank" (either empty or about:blank)
++ (BOOL)isBlankURL:(NSString*)inURL;
 - (void)closeFindDialog;
 
 @end

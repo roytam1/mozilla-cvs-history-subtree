@@ -101,8 +101,8 @@ static BookmarkInfoController* gSharedBookmarkInfoController = nil;
 {
   [self setShouldCascadeWindows:NO];
   [[self window] setFrameAutosaveName:@"BookmarkInfoWindow"];
-  [mBookmarkShortcutField setFormatter:[[[BookmarkShortcutFormatter alloc] init] autorelease]];
-  [mFolderShortcutField setFormatter:[[[BookmarkShortcutFormatter alloc] init] autorelease]];
+  [mBookmarkKeywordField setFormatter:[[[BookmarkKeywordFormatter alloc] init] autorelease]];
+  [mFolderKeywordField setFormatter:[[[BookmarkKeywordFormatter alloc] init] autorelease]];
 }
 
 - (void)windowDidLoad
@@ -217,20 +217,20 @@ static BookmarkInfoController* gSharedBookmarkInfoController = nil;
     if ((tabViewItem == mBookmarkInfoTabView) && isBookmark) {
       [mBookmarkItem setTitle:[mBookmarkNameField stringValue]];
       [mBookmarkItem setItemDescription:[NSString stringWithString:[mBookmarkDescField stringValue]]];
-      [mBookmarkItem setShortcut:[mBookmarkShortcutField stringValue]];
+      [mBookmarkItem setKeyword:[mBookmarkKeywordField stringValue]];
       [(Bookmark *)mBookmarkItem setUrl:[mBookmarkLocationField stringValue]];
     }
     else if ([[self window] contentView] == mFolderView && !isBookmark) {
       [mBookmarkItem setTitle:[mFolderNameField stringValue]];
       [mBookmarkItem setItemDescription:[NSString stringWithString:[mFolderDescField stringValue]]];
       if ([(BookmarkFolder *)mBookmarkItem isGroup])
-        [mBookmarkItem setShortcut:[mFolderShortcutField stringValue]];
+        [mBookmarkItem setKeyword:[mFolderKeywordField stringValue]];
     }
   }
   else if ((changedField == mBookmarkNameField) || (changedField == mFolderNameField))
     [mBookmarkItem setTitle:[changedField stringValue]];
-  else if ((changedField == mBookmarkShortcutField) || (changedField == mFolderShortcutField))
-    [mBookmarkItem setShortcut:[changedField stringValue]];
+  else if ((changedField == mBookmarkKeywordField) || (changedField == mFolderKeywordField))
+    [mBookmarkItem setKeyword:[changedField stringValue]];
   else if ((changedField == mBookmarkDescField) || (changedField == mFolderDescField))
     [mBookmarkItem setItemDescription:[NSString stringWithString:[changedField stringValue]]];
   else if ((changedField == mBookmarkLocationField) && isBookmark)
@@ -301,7 +301,7 @@ static BookmarkInfoController* gSharedBookmarkInfoController = nil;
     [self configureWindowForView:eBookmarkInfoView];
     [mBookmarkNameField setStringValue:[mBookmarkItem title]];
     [mBookmarkDescField setStringValue:[mBookmarkItem itemDescription]];
-    [mBookmarkShortcutField setStringValue:[mBookmarkItem shortcut]];
+    [mBookmarkKeywordField setStringValue:[mBookmarkItem keyword]];
     [mBookmarkLocationField setStringValue:[(Bookmark *)mBookmarkItem url]];
     [mNumberVisitsField setIntValue:[(Bookmark *)mBookmarkItem numberOfVisits]];
     [mLastVisitField setStringValue:[[(Bookmark *)mBookmarkItem lastVisit] descriptionWithCalendarFormat:[[mLastVisitField formatter] dateFormat]
@@ -316,7 +316,7 @@ static BookmarkInfoController* gSharedBookmarkInfoController = nil;
                    (![(Bookmark *)mBookmarkItem isSeparator]);
     [mBookmarkNameField setEditable:canEdit];
     [mBookmarkDescField setEditable:canEdit];
-    [mBookmarkShortcutField setEditable:canEdit];
+    [mBookmarkKeywordField setEditable:canEdit];
     [mBookmarkLocationField setEditable:canEdit];
   }
   // Folders
@@ -326,7 +326,7 @@ static BookmarkInfoController* gSharedBookmarkInfoController = nil;
     [mTabgroupCheckbox setState:[(BookmarkFolder *)mBookmarkItem isGroup] ? NSOnState : NSOffState];
 
     [mFolderNameField setStringValue:[mBookmarkItem title]];
-    [mFolderShortcutField setStringValue:[mBookmarkItem shortcut]];
+    [mFolderKeywordField setStringValue:[mBookmarkItem keyword]];
     [mFolderDescField setStringValue:[mBookmarkItem itemDescription]];
 
     // we can unselect dock menu - we have a fallback default
@@ -340,12 +340,12 @@ static BookmarkInfoController* gSharedBookmarkInfoController = nil;
     // clear stuff
     [mBookmarkNameField setStringValue:@""];
     [mBookmarkDescField setStringValue:@""];
-    [mBookmarkShortcutField setStringValue:@""];
+    [mBookmarkKeywordField setStringValue:@""];
     [mBookmarkLocationField setStringValue:@""];
 
     [mBookmarkNameField setEditable:NO];
     [mBookmarkDescField setEditable:NO];
-    [mBookmarkShortcutField setEditable:NO];
+    [mBookmarkKeywordField setEditable:NO];
     [mBookmarkLocationField setEditable:NO];
 
     [mNumberVisitsField setIntValue:0];

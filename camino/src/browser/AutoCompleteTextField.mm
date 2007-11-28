@@ -40,10 +40,8 @@
  * ***** END LICENSE BLOCK ***** */
 
 #import "NSString+Utils.h"
-#import "NSString+Gecko.h"
 
 #import "AutoCompleteTextField.h"
-#import "AutoCompleteDataSource.h"
 #import "BrowserWindowController.h"
 #import "PageProxyIcon.h"
 #import "CHBrowserService.h"
@@ -842,7 +840,7 @@ NS_IMPL_ISUPPORTS1(AutoCompleteListener, nsIAutoCompleteListener)
   id parentWindowController = [[self window] windowController];
   NSString* url = nil;
   if ([parentWindowController isKindOfClass:[BrowserWindowController class]]) {
-    BrowserWrapper* wrapper = [(BrowserWindowController*)parentWindowController browserWrapper];
+    BrowserWrapper* wrapper = [(BrowserWindowController*)parentWindowController getBrowserWrapper];
 
     if (![wrapper isEmpty])
       url = [wrapper currentURI];

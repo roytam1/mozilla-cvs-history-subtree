@@ -42,6 +42,9 @@
 
 #import "nsCOMArray.h"
 
+#import "ExtendedTableView.h"
+#import "SearchTextField.h"
+
 class nsIPref;
 class nsIPermissionManager;
 class nsIPermission;
@@ -81,14 +84,14 @@ typedef enum ECookiePolicyPopupIndex
   IBOutlet id                 mPermissionsPanel;
   IBOutlet ExtendedTableView* mPermissionsTable;
   IBOutlet NSTableColumn*     mPermissionColumn;
-  IBOutlet NSSearchField*     mPermissionFilterField;
+  IBOutlet SearchTextField*   mPermissionFilterField;
   nsIPermissionManager*       mPermissionManager;   // STRONG (should be nsCOMPtr)
   nsCOMArray<nsIPermission>*  mCachedPermissions;   // parallel list for speed, STRONG
       
   // cookie sheet
   IBOutlet id                 mCookiesPanel;
   IBOutlet ExtendedTableView* mCookiesTable;
-  IBOutlet NSSearchField*     mCookiesFilterField;
+  IBOutlet SearchTextField*   mCookiesFilterField;
   nsICookieManager*           mCookieManager;
   nsCOMArray<nsICookie>*      mCachedCookies;
 }
@@ -105,7 +108,6 @@ typedef enum ECookiePolicyPopupIndex
 -(IBAction) editCookiesDone:(id)aSender;
 -(IBAction) removeCookies:(id)aSender;
 -(IBAction) removeAllCookies:(id)aSender;
--(IBAction) allowCookiesFromSites:(id)aSender;
 -(IBAction) blockCookiesFromSites:(id)aSender;
 -(IBAction) removeCookiesAndBlockSites:(id)aSender;
 
@@ -115,7 +117,7 @@ typedef enum ECookiePolicyPopupIndex
 -(IBAction) editPermissionsDone:(id)aSender;
 -(IBAction) removeCookiePermissions:(id)aSender;
 -(IBAction) removeAllCookiePermissions:(id)aSender;
--(int) rowForPermissionWithHost:(NSString *)aHost;
+-(int) getRowForPermissionWithHost:(NSString *)aHost;
 
 -(void) mapCookiePrefToGUI:(int)pref;
 
@@ -131,9 +133,7 @@ typedef enum ECookiePolicyPopupIndex
 - (void)sortCookiesByColumn:(NSTableColumn *)aTableColumn inAscendingOrder:(BOOL)ascending;
 - (void)sortPermissionsByColumn:(NSTableColumn *)aTableColumn inAscendingOrder:(BOOL)ascending;
 
-// filtering methods
-- (IBAction)cookieFilterChanged:(id)sender;
-- (IBAction)permissionFilterChanged:(id)sender;
+  //filtering methods
 - (void) filterCookiesPermissionsWithString: (NSString*) inFilterString;
 - (void) filterCookiesWithString: (NSString*) inFilterString;
 @end

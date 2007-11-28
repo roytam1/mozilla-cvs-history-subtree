@@ -36,7 +36,7 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#import "NSString+Gecko.h"
+#import "NSString+Utils.h"
 
 #import "nsAlertController.h"
 #import "CHBrowserService.h"
@@ -132,7 +132,7 @@ NS_IMETHODIMP SecurityDialogs::ConfirmDownloadCACert(nsIInterfaceRequestor *ctx,
   [downloadCertDialogController setCertificateItem:[CertificateItem certificateItemWithCert:cert]];
 
   // XXX fix window parenting
-  NSWindow* parentWindow = [(MainController*)[NSApp delegate] frontmostBrowserWindow];
+  NSWindow* parentWindow = [(MainController*)[NSApp delegate] getFrontmostBrowserWindow];
   int result = [nsAlertController safeRunModalForWindow:[downloadCertDialogController window] relativeToWindow:parentWindow];
   if (result == NSAlertDefaultReturn)
   {
@@ -200,7 +200,7 @@ NS_IMETHODIMP SecurityDialogs::SetPKCS12FilePassword(nsIInterfaceRequestor *ctx,
   NSWindow* parentWindow = nil;
   // XXX fix window parenting
 #if 0
-  parentWindow = [(MainController*)[NSApp delegate] frontmostBrowserWindow];
+  parentWindow = [(MainController*)[NSApp delegate] getFrontmostBrowserWindow];
 #endif
 
   int result = [nsAlertController safeRunModalForWindow:[pwDialogController window] relativeToWindow:parentWindow];
@@ -243,7 +243,7 @@ NS_IMETHODIMP SecurityDialogs::GetPKCS12FilePassword(nsIInterfaceRequestor *ctx,
   BOOL confirmed = NO;
   
   nsresult rv = NS_OK;
-  @try {
+  NS_DURING
     confirmed = [controller promptPassword:nil /* no parent, sucky APIs */
                                      title:NSLocalizedStringFromTable(@"PKCS12BackupRestoreTitle", @"CertificateDialogs", @"")
                                       text:NSLocalizedStringFromTable(@"PKCS12BackupRestoreMsg", @"CertificateDialogs", @"")
@@ -251,10 +251,9 @@ NS_IMETHODIMP SecurityDialogs::GetPKCS12FilePassword(nsIInterfaceRequestor *ctx,
                                   checkMsg:nil
                                 checkValue:NULL
                                    doCheck:NO];
-  }
-  @catch (id exception) {
+  NS_HANDLER
     rv = NS_ERROR_FAILURE;
-  }
+  NS_ENDHANDLER
 
   if (NS_SUCCEEDED(rv))
   {
@@ -368,7 +367,7 @@ SecurityDialogs::ConfirmUnknownIssuer(nsIInterfaceRequestor *socketInfo,
   // HACK: there is no way to get which window this is for from the API. The
   // security team in mozilla just cheats and assumes the frontmost window so
   // that's what we'll do. Yes, it's wrong. Yes, it's skanky. Oh well.
-  NSWindow* parentWindow = [(MainController*)[NSApp delegate] frontmostBrowserWindow];
+  NSWindow* parentWindow = [(MainController*)[NSApp delegate] getFrontmostBrowserWindow];
   int result = [nsAlertController safeRunModalForWindow:[dialogController window] relativeToWindow:parentWindow];
 
   switch (result)
@@ -423,7 +422,7 @@ SecurityDialogs::ConfirmMismatchDomain(nsIInterfaceRequestor *socketInfo,
   [certDialogController setCertificateItem:[CertificateItem certificateItemWithCert:cert]];
 
   // XXX fix window parenting
-  NSWindow* parentWindow = [(MainController*)[NSApp delegate] frontmostBrowserWindow];
+  NSWindow* parentWindow = [(MainController*)[NSApp delegate] getFrontmostBrowserWindow];
   int result = [nsAlertController safeRunModalForWindow:[certDialogController window] relativeToWindow:parentWindow];
   
   *_retval = (result == NSAlertDefaultReturn);
@@ -457,7 +456,7 @@ SecurityDialogs::ConfirmCertExpired(nsIInterfaceRequestor *socketInfo,
 
   [expiredCertController setCertificateItem:[CertificateItem certificateItemWithCert:cert]];
   // XXX fix window parenting
-  NSWindow* parentWindow = [(MainController*)[NSApp delegate] frontmostBrowserWindow];
+  NSWindow* parentWindow = [(MainController*)[NSApp delegate] getFrontmostBrowserWindow];
   int result = [nsAlertController safeRunModalForWindow:[expiredCertController window] relativeToWindow:parentWindow];
   
   *_retval = (result == NSAlertDefaultReturn);
@@ -635,7 +634,7 @@ SecurityDialogs::SetPassword(nsIInterfaceRequestor *ctx, const PRUnichar *tokenN
   NSWindow* parentWindow = nil;
   // XXX fix window parenting
 #if 0
-  parentWindow = [(MainController*)[NSApp delegate] frontmostBrowserWindow];
+  parentWindow = [(MainController*)[NSApp delegate] getFrontmostBrowserWindow];
 #endif
   int result = [nsAlertController safeRunModalForWindow:[pwDialogController window] relativeToWindow:parentWindow];
 
@@ -683,7 +682,7 @@ SecurityDialogs::GetPassword(nsIInterfaceRequestor *ctx, const PRUnichar *tokenN
 
   BOOL confirmed = NO;
   nsresult rv = NS_OK;
-  @try {
+  NS_DURING
     confirmed = [controller promptPassword:nil /* no parent, sucky APIs */
                                      title:messageStr
                                       text:NSLocalizedStringFromTable(@"GetTokenPasswordMsg", @"CertificateDialogs", @"")
@@ -691,10 +690,9 @@ SecurityDialogs::GetPassword(nsIInterfaceRequestor *ctx, const PRUnichar *tokenN
                                   checkMsg:nil
                                 checkValue:NULL
                                    doCheck:NO];
-  }
-  @catch (id exception) {
+  NS_HANDLER
     rv = NS_ERROR_FAILURE;
-  }
+  NS_ENDHANDLER
 
   if (NS_SUCCEEDED(rv))
   {
@@ -770,7 +768,7 @@ SecurityDialogs::ChooseCertificate(nsIInterfaceRequestor *ctx, const PRUnichar *
   [dialogController setCertificates:certArray];
 
   // XXX fix window parenting
-  NSWindow* parentWindow = [(MainController*)[NSApp delegate] frontmostBrowserWindow];
+  NSWindow* parentWindow = [(MainController*)[NSApp delegate] getFrontmostBrowserWindow];
   int result = [nsAlertController safeRunModalForWindow:[dialogController window] relativeToWindow:parentWindow];
 
   if (result == NSAlertDefaultReturn)
@@ -975,7 +973,7 @@ SecurityDialogs::ConfirmPostToInsecureFromSecure(nsIInterfaceRequestor *ctx,
 
   // Yes there is:
   // nsCOMPtr<nsIDOMWindowInternal> parent = do_GetInterface(ctx);
-  *_result = (PRBool)[controller postToInsecureFromSecure:[(MainController*)[NSApp delegate] frontmostBrowserWindow]];
+  *_result = (PRBool)[controller postToInsecureFromSecure:[(MainController*)[NSApp delegate] getFrontmostBrowserWindow]];
 
   return NS_OK;
 }

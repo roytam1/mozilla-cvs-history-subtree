@@ -19,6 +19,7 @@
                 clickEnableAdBlocking = id; 
                 clickEnableAnnoyanceBlocker = id; 
                 clickEnableFlashBlock = id; 
+                clickEnableImageResizing = id; 
                 clickEnableJS = id; 
                 clickEnableJava = id; 
                 clickEnablePlugins = id; 
@@ -42,6 +43,7 @@
                 mEnableJava = NSButton; 
                 mEnablePlugins = NSButton; 
                 mEnablePopupBlocking = NSButton; 
+                mImageResize = NSButton; 
                 mPolicyColumn = NSTableColumn; 
                 mPreventAnimation = NSButton; 
                 mTabToFormElements = NSButton; 

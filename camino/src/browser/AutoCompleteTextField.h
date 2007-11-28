@@ -40,11 +40,12 @@
 
 #import <AppKit/AppKit.h>
 
+#import "AutoCompleteDataSource.h"
+
 class nsIAutoCompleteSession;
 class nsIAutoCompleteResults;
 class nsIAutoCompleteListener;
 
-@class AutoCompleteDataSource;
 @class ClickMenuImageView;
 @class PageProxyIcon;
 

@@ -284,17 +284,15 @@ NSString* const kAddBookmarkItemPrimaryTabKey = @"primary";
         NSString* itemURL   = [AddBookmarkDialogController bookmarkUrlForItem:curItem];
         NSString* itemTitle = [AddBookmarkDialogController bookmarkTitleForItem:curItem];
 
-        newItem = [Bookmark bookmarkWithTitle:itemTitle url:itemURL];
-        [newGroup insertChild:newItem atIndex:i isMove:NO];
+        newItem = [newGroup addBookmark:itemTitle url:itemURL inPosition:i isSeparator:NO];
       }
     }
     else {
       id curItem = [AddBookmarkDialogController primaryBookmarkItem:mBookmarkItems];
 
-      NSString* itemURL = [AddBookmarkDialogController bookmarkUrlForItem:curItem];
+      NSString* itemURL   = [AddBookmarkDialogController bookmarkUrlForItem:curItem];
 
-      newItem = [Bookmark bookmarkWithTitle:titleString url:itemURL];
-      [parentFolder insertChild:newItem atIndex:insertPosition isMove:NO];
+      newItem = [parentFolder addBookmark:titleString url:itemURL inPosition:insertPosition isSeparator:NO];
     }
   }
 

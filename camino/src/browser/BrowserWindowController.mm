@@ -41,7 +41,6 @@
 #import "ABAddressBook+Utils.h"
 
 #import "NSString+Utils.h"
-#import "NSString+Gecko.h"
 #import "NSSplitView+Utils.h"
 #import "NSMenu+Utils.h"
 #import "NSPasteboard+Utils.h"
@@ -69,22 +68,21 @@
 #import "UserDefaults.h"
 #import "PageProxyIcon.h"
 #import "AutoCompleteTextField.h"
+#import "SearchTextField.h"
+#import "SearchTextFieldCell.h"
+#import "STFPopUpButtonCell.h"
 #import "DraggableImageAndTextCell.h"
 #import "MVPreferencesController.h"
 #import "ViewCertificateDialogController.h"
 #import "ExtendedSplitView.h"
-#import "WebSearchField.h"
 #import "wallet.h"
-#import "ToolbarScriptItem.h"
-
-#import "CHPermissionManager.h"
-#import "CHBrowserService.h"
-
-#include "GeckoUtils.h"
 
 #include "nsString.h"
 #include "nsCRT.h"
 #include "nsServiceManagerUtils.h"
+
+#include "CHBrowserService.h"
+#include "GeckoUtils.h"
 
 #include "nsIWebNavigation.h"
 #include "nsISHistory.h"
@@ -115,8 +113,14 @@
 #include "nsIURI.h"
 #include "nsIURIFixup.h"
 #include "nsIBrowserHistory.h"
+#include "nsIPermissionManager.h"
 #include "nsIWebPageDescriptor.h"
 #include "nsPIDOMWindow.h"
+#include "nsIDOMHTMLInputElement.h"
+#include "nsIDOMHTMLTextAreaElement.h"
+#include "nsIDOMHTMLEmbedElement.h"
+#include "nsIDOMHTMLObjectElement.h"
+#include "nsIDOMHTMLAppletElement.h"
 #include "nsIDOMHTMLImageElement.h"
 #include "nsIFocusController.h"
 #include "nsIX509Cert.h"
@@ -183,7 +187,6 @@ const int kSelectionRelatedItemsTag = 102;
 const int kSpellingRelatedItemsTag = 103;
 const int kItemsNeedingOpenBehaviorAlternatesTag = 104;
 const int kItemsNeedingForceAlternateTag = 105;
-const int kLinkOpeningItemsTag = 106;
 
 // Cached toolbar defaults read in from a plist. If null, we'll use
 // hardcoded defaults.
@@ -539,12 +542,13 @@ enum BWCOpenDest {
 - (void)setupToolbar;
 - (void)setGeckoActive:(BOOL)inActive;
 - (BOOL)isResponderGeckoView:(NSResponder*) responder;
-- (NSString*)contextMenuNodeDocumentURL;
+- (NSString*)getContextMenuNodeDocumentURL;
 - (void)loadSourceForFrame:(BOOL)forFrame inBackground:(BOOL)loadInBackground;
 - (void)transformFormatString:(NSMutableString*)inFormat domain:(NSString*)inDomain search:(NSString*)inSearch;
 - (void)openNewWindowWithDescriptor:(nsISupports*)aDesc displayType:(PRUint32)aDisplayType loadInBackground:(BOOL)aLoadInBG;
 - (void)openNewTabWithDescriptor:(nsISupports*)aDesc displayType:(PRUint32)aDisplayType loadInBackground:(BOOL)aLoadInBG;
-- (void)performSearch:(WebSearchField*)inSearchField inView:(BWCOpenDest)inDest inBackground:(BOOL)inLoadInBG;
+- (BOOL)isPageTextFieldFocused;
+- (void)performSearch:(SearchTextField *)inSearchField inView:(BWCOpenDest)inDest inBackground:(BOOL)inLoadInBG;
 - (int)historyIndexOfPageBeforeBookmarkManager;
 - (void)goToLocationFromToolbarURLField:(AutoCompleteTextField *)inURLField inView:(BWCOpenDest)inDest inBackground:(BOOL)inLoadInBG;
 
@@ -555,6 +559,7 @@ enum BWCOpenDest {
 - (void)sessionHistoryItemAtRelativeOffset:(int)indexOffset forWrapper:(BrowserWrapper*)inWrapper title:(NSString**)outTitle URL:(NSString**)outURLString;
 - (NSString *)locationToolTipWithFormat:(NSString *)format title:(NSString *)backTitle URL:(NSString *)backURL;
 
+- (void)whitelistPopupsFromURL:(NSString*)inURL;
 - (void)showPopup:(nsIDOMPopupBlockedEvent*)aBlockedPopup;
 
 - (void)clearContextMenuTarget;
@@ -578,8 +583,8 @@ enum BWCOpenDest {
 
 - (void)currentEditor:(nsIEditor**)outEditor;
 - (void)getMisspelledWordRange:(nsIDOMRange**)outRange inlineSpellChecker:(nsIInlineSpellChecker**)outInlineChecker;
-
-- (void)setUpSearchFields;
+- (void)focusedElement:(nsIDOMElement**)outElement;
+- (void)focusController:(nsIFocusController**)outController;
 
 @end
 
@@ -603,6 +608,7 @@ enum BWCOpenDest {
     mThrobberImages = nil;
     mThrobberHandler = nil;
     mURLFieldEditor = nil;
+    mProgressSuperview = nil;
   
     // register for services
     NSArray* sendTypes = [NSArray arrayWithObjects:NSStringPboardType, nil];
@@ -655,7 +661,7 @@ enum BWCOpenDest {
 - (BOOL)isResponderGeckoView:(NSResponder*) responder
 {
   return ([responder isKindOfClass:[NSView class]] &&
-          [(NSView*)responder isDescendantOf:[mBrowserView browserView]]);
+          [(NSView*)responder isDescendantOf:[mBrowserView getBrowserView]]);
 }
 
 - (void)windowDidChangeMain
@@ -735,7 +741,7 @@ enum BWCOpenDest {
       BOOL dontShowAgain = NO;
       int result = NSAlertErrorReturn;
 
-      @try {
+      NS_DURING
         // note that this is a pseudo-sheet (and causes Cocoa to complain about runModalForWindow:relativeToWindow).
         // Ideally, we'd be able to get a panel from nsAlertController and run it as a sheet ourselves.
         result = [controller confirmCheckEx:[self window]
@@ -746,9 +752,8 @@ enum BWCOpenDest {
                                     button3:nil
                                    checkMsg:NSLocalizedString(@"DontShowWarningAgainCheckboxLabel", @"")
                                  checkValue:&dontShowAgain];
-      }
-      @catch (id exception) {
-      }
+      NS_HANDLER
+      NS_ENDHANDLER
       
       if (dontShowAgain)
         [[PreferenceManager sharedInstance] setPref:"camino.warn_when_closing" toBoolean:NO];
@@ -808,7 +813,7 @@ enum BWCOpenDest {
   int numTabs = [mTabBrowser numberOfTabViewItems];
   for (int i = 0; i < numTabs; i++) {
     NSTabViewItem* item = [mTabBrowser tabViewItemAtIndex: i];
-    [[[item view] browserView] stop:NSStopLoadAll];
+    [[[item view] getBrowserView] stop:NSStopLoadAll];
   }
 }
 
@@ -830,6 +835,7 @@ enum BWCOpenDest {
   // superclass dealloc takes care of our child NSView's, which include the 
   // BrowserWrappers and their child CHBrowserViews.
   
+  [mProgress release];
   [self stopThrobber];
   [mThrobberImages release];
   [mURLFieldEditor release];
@@ -865,25 +871,57 @@ enum BWCOpenDest {
     if ( mChromeMask && !(mChromeMask & nsIWebBrowserChrome::CHROME_WINDOW_RESIZE) )
       [[self window] setShowsResizeIndicator:NO];
     
-    if ((mChromeMask && !(mChromeMask & nsIWebBrowserChrome::CHROME_STATUSBAR)) ||
-        [[NSUserDefaults standardUserDefaults] boolForKey:USER_DEFAULTS_HIDE_STATUS_BAR_KEY]) {
+    if ( mChromeMask && !(mChromeMask & nsIWebBrowserChrome::CHROME_STATUSBAR) ) {
       // remove the status bar at the bottom
-      [mStatusBar setHidden:YES];
+      // XXX we should just hide it and allow the user to show it again
+      [mStatusBar removeFromSuperview];
       mustResizeChrome = YES;
-    }
-    if ([NSWorkspace isLeopardOrHigher]) {
-      [[self window] setContentBorderThickness:NSHeight([mStatusBar bounds]) forEdge:NSMinYEdge];
+      
+      // clear out everything in the status bar we were holding on to. This will cause us to
+      // pass nil for these status items into the CHBrowserwWrapper which is what we want. We'll
+      // crash if we give them things that have gone away.
+      mProgress = nil;
+      mStatus = nil;
     }
     else {
-      // due to a cocoa issue with it updating the bounding box of two rects
-      // that both needing updating instead of just the two individual rects
-      // (radar 2194819), we need to make the text area opaque.
-      [mStatus setBackgroundColor:[NSColor windowBackgroundColor]];
-      [mStatus setDrawsBackground:YES];
+      // Retain with a single extra refcount. This allows us to remove
+      // the progress meter from its superview without having to worry
+      // about retaining and releasing it. Cache the superview of the
+      // progress. Dynamically fetch the superview so as not to burden
+      // someone rearranging the nib with this detail. Note that this
+      // needs to be in a subview from the status bar because if the
+      // window resizes while it is hidden, its position wouldn't get updated.
+      // Having it in a separate view that stays visible (and is thus
+      // involved in the layout process) solves this.
+      [mProgress retain];
+      mProgressSuperview = [mProgress superview];
+      
+      if ([NSWorkspace isLeopardOrHigher]) {
+        [[self window] setContentBorderThickness:NSHeight([mStatusBar bounds]) forEdge:NSMinYEdge];
+      }
+      else {
+        // due to a cocoa issue with it updating the bounding box of two rects
+        // that both needing updating instead of just the two individual rects
+        // (radar 2194819), we need to make the text area opaque.
+        [mStatus setBackgroundColor:[NSColor windowBackgroundColor]];
+        [mStatus setDrawsBackground:YES];
+      }
     }
 
-    // Set up the menus in the search fields
-    [self setUpSearchFields];
+    // Set up the toolbar's search text field
+    NSMutableArray *searchTitles =
+      [NSMutableArray arrayWithArray:[[[BrowserWindowController searchURLDictionary] allKeys] sortedArrayUsingSelector:@selector(compare:)]];
+
+    [searchTitles removeObject:@"PreferredSearchEngine"];
+
+    [mSearchBar addPopUpMenuItemsWithTitles:searchTitles];
+    [[[mSearchBar cell] popUpButtonCell] selectItemWithTitle:
+      [[BrowserWindowController searchURLDictionary] objectForKey:@"PreferredSearchEngine"]];
+
+    // Set the sheet's search text field
+    [mSearchSheetTextField addPopUpMenuItemsWithTitles:searchTitles];
+    [[[mSearchSheetTextField cell] popUpButtonCell] selectItemWithTitle:
+      [[BrowserWindowController searchURLDictionary] objectForKey:@"PreferredSearchEngine"]];    
     
     // Get our saved dimensions.
     NSRect oldFrame = [[self window] frame];
@@ -980,11 +1018,11 @@ enum BWCOpenDest {
       [mContentView resizeSubviewsWithOldSize:[mContentView frame].size];
       
     // stagger window from last browser, if there is one. we can't just use autoposition
-    // because it doesn't work on multiple monitors (radar bug 2972893). |frontmostBrowserWindow|
+    // because it doesn't work on multiple monitors (radar bug 2972893). |getFrontmostBrowserWindow|
     // only gets fully chromed windows, so this will do the right thing for popups (yay!).
     const int kWindowStaggerOffset = 22;
     
-    NSWindow* lastBrowser = [[NSApp delegate] frontmostBrowserWindow];
+    NSWindow* lastBrowser = [[NSApp delegate] getFrontmostBrowserWindow];
     if ( lastBrowser && lastBrowser != [self window] ) {
       NSRect screenRect = [[lastBrowser screen] visibleFrame];
       NSRect testBrowserFrame = [lastBrowser frame];
@@ -1033,7 +1071,7 @@ enum BWCOpenDest {
 {
   // Maximize to screen
   if (([[NSApp currentEvent] modifierFlags] & NSShiftKeyMask) ||
-      [[self browserWrapper] isEmpty] ||
+      [[self getBrowserWrapper] isEmpty] ||
       [self bookmarkManagerIsVisible])
   {
     [self setZoomState:defaultFrame defaultFrame:defaultFrame];
@@ -1041,7 +1079,7 @@ enum BWCOpenDest {
   }
 
   // Get the needed content size
-  nsCOMPtr<nsIDOMWindow> contentWindow = [[mBrowserView browserView] contentWindow];
+  nsCOMPtr<nsIDOMWindow> contentWindow = [[mBrowserView getBrowserView] getContentWindow];
   if (!contentWindow) {
     [self setZoomState:defaultFrame defaultFrame:defaultFrame];
     return defaultFrame;
@@ -1057,7 +1095,7 @@ enum BWCOpenDest {
   }
 
   // Get the current content size and calculate the changes.
-  NSSize curFrameSize = [[mBrowserView browserView] frame].size;
+  NSSize curFrameSize = [[mBrowserView getBrowserView] frame].size;
   float widthChange   = contentWidth  - curFrameSize.width;
   float heightChange  = contentHeight - curFrameSize.height;
 
@@ -1115,7 +1153,7 @@ enum BWCOpenDest {
 
 - (void)windowDidResize:(NSNotification *)aNotification
 {
-  [self updateWindowTitle:[mBrowserView pageTitle]];
+  [self updateWindowTitle:[mBrowserView displayTitle]];
 
   // Update the cached windowframe unless we are zooming the window
   if (!mShouldZoom)
@@ -1192,32 +1230,30 @@ enum BWCOpenDest {
 
 - (NSArray *)toolbarAllowedItemIdentifiers:(NSToolbar *)toolbar
 {
-  NSArray *predefinedItems = [NSArray arrayWithObjects: BackToolbarItemIdentifier,
-                                                        ForwardToolbarItemIdentifier,
-                                                        ReloadToolbarItemIdentifier,
-                                                        StopToolbarItemIdentifier,
-                                                        HomeToolbarItemIdentifier,
-                                                        CombinedLocationToolbarItemIdentifier,
-                                                        BookmarksToolbarItemIdentifier,
-                                                        ThrobberToolbarItemIdentifier,
-                                                        PrintToolbarItemIdentifier,
-                                                        ViewSourceToolbarItemIdentifier,
-                                                        BookmarkToolbarItemIdentifier,
-                                                        NewTabToolbarItemIdentifier,
-                                                        CloseTabToolbarItemIdentifier,
-                                                        TextBiggerToolbarItemIdentifier,
-                                                        TextSmallerToolbarItemIdentifier,
-                                                        SendURLToolbarItemIdentifier,
-                                                        NSToolbarCustomizeToolbarItemIdentifier,
-                                                        NSToolbarFlexibleSpaceItemIdentifier,
-                                                        NSToolbarSpaceItemIdentifier,
-                                                        NSToolbarSeparatorItemIdentifier,
-                                                        DLManagerToolbarItemIdentifier,
-                                                        FormFillToolbarItemIdentifier,
-                                                        HistoryToolbarItemIdentifier,
-                                                        nil];
-  // Add script items and return.
-  return [predefinedItems arrayByAddingObjectsFromArray:[ToolbarScriptItem scriptItemIdentifiers]];
+    return [NSArray arrayWithObjects:   BackToolbarItemIdentifier,
+                                        ForwardToolbarItemIdentifier,
+                                        ReloadToolbarItemIdentifier,
+                                        StopToolbarItemIdentifier,
+                                        HomeToolbarItemIdentifier,
+                                        CombinedLocationToolbarItemIdentifier,
+                                        BookmarksToolbarItemIdentifier,
+                                        ThrobberToolbarItemIdentifier,
+                                        PrintToolbarItemIdentifier,
+                                        ViewSourceToolbarItemIdentifier,
+                                        BookmarkToolbarItemIdentifier,
+                                        NewTabToolbarItemIdentifier,
+                                        CloseTabToolbarItemIdentifier,
+                                        TextBiggerToolbarItemIdentifier,
+                                        TextSmallerToolbarItemIdentifier,
+                                        SendURLToolbarItemIdentifier,
+                                        NSToolbarCustomizeToolbarItemIdentifier,
+                                        NSToolbarFlexibleSpaceItemIdentifier,
+                                        NSToolbarSpaceItemIdentifier,
+                                        NSToolbarSeparatorItemIdentifier,
+                                        DLManagerToolbarItemIdentifier,
+                                        FormFillToolbarItemIdentifier,
+                                        HistoryToolbarItemIdentifier,
+                                        nil];
 }
 
 // + toolbarDefaults
@@ -1401,6 +1437,9 @@ enum BWCOpenDest {
     [toolbarItem setMinSize:NSMakeSize(kMinimumLocationBarWidth, NSHeight([mLocationToolbarView frame]))];
     [toolbarItem setMaxSize:NSMakeSize(FLT_MAX, NSHeight([mLocationToolbarView frame]))];
 
+    [mSearchBar setTarget:self];
+    [mSearchBar setAction:@selector(performSearch:)];
+
     [menuFormRep setTarget:self];
     [menuFormRep setAction:@selector(performAppropriateLocationAction)];
     [menuFormRep setTitle:[toolbarItem label]];
@@ -1495,9 +1534,6 @@ enum BWCOpenDest {
     [toolbarItem setTarget:self];
     [toolbarItem setAction:@selector(manageHistory:)];
   }
-  else if ([itemIdent hasPrefix:kScriptItemIdentifierPrefix]) {
-    toolbarItem = [[[ToolbarScriptItem alloc] initWithItemIdentifier:itemIdent] autorelease];
-  }
   else {
     toolbarItem = nil;
   }
@@ -1514,7 +1550,7 @@ enum BWCOpenDest {
   if (action == @selector(back:)) {
     // if the bookmark manager is showing, we enable the back button so that
     // they can click back to return to the webpage they were viewing.
-    BOOL enable = [[mBrowserView browserView] canGoBack];
+    BOOL enable = [[mBrowserView getBrowserView] canGoBack];
 
     // we have to handle all the enabling/disabling ourselves because this
     // toolbar button is a view item. Note the return value is ignored.
@@ -1525,7 +1561,7 @@ enum BWCOpenDest {
     if ([theItem isEnabled]) { // if there is a previous URL
       NSString* backTitle = nil;
       NSString* backURL   = nil;
-      [self sessionHistoryItemAtRelativeOffset:-1 forWrapper:[self browserWrapper] title:&backTitle URL:&backURL];
+      [self sessionHistoryItemAtRelativeOffset:-1 forWrapper:[self getBrowserWrapper] title:&backTitle URL:&backURL];
       toolTipString = [self locationToolTipWithFormat:@"BackToolTipFormat" title:backTitle URL:backURL];
     }
 
@@ -1539,7 +1575,7 @@ enum BWCOpenDest {
   else if (action == @selector(forward:)) {
     // we have to handle all the enabling/disabling ourselves because this
     // toolbar button is a view item. Note the return value is ignored.
-    BOOL enable = [[mBrowserView browserView] canGoForward];
+    BOOL enable = [[mBrowserView getBrowserView] canGoForward];
     [theItem setEnabled:enable];
 
     // set the tooltip to the next URL and title
@@ -1547,7 +1583,7 @@ enum BWCOpenDest {
     if ([theItem isEnabled]) { // if there is a previous URL
       NSString* forwardTitle = nil;
       NSString* forwardURL   = nil;
-      [self sessionHistoryItemAtRelativeOffset:1 forWrapper:[self browserWrapper] title:&forwardTitle URL:&forwardURL];
+      [self sessionHistoryItemAtRelativeOffset:1 forWrapper:[self getBrowserWrapper] title:&forwardTitle URL:&forwardURL];
       toolTipString = [self locationToolTipWithFormat:@"ForwardToolTipFormat" title:forwardTitle URL:forwardURL];
     }
 
@@ -1678,10 +1714,6 @@ enum BWCOpenDest {
 {
   SEL action = [aMenuItem action];
 
-  // Always allow the search engine menu to work
-  if (action == @selector(searchEngineChanged:))
-    return YES;
-
   // Disable all window-specific menu items while a sheet is showing.
   // We don't do this in validateActionBySelector: because toolbar items shouldn't
   // suddenly get a disabled look when a sheet appears (they aren't clickable anyway).
@@ -1689,7 +1721,7 @@ enum BWCOpenDest {
     return NO;
 
   if (action == @selector(reloadSendersTab:)) {
-    BrowserTabViewItem* sendersTab = [[self tabBrowser] itemWithTag:[aMenuItem tag]];
+    BrowserTabViewItem* sendersTab = [[self getTabBrowser] itemWithTag:[aMenuItem tag]];
     return [[sendersTab view] canReload];
   }
 
@@ -1709,13 +1741,13 @@ enum BWCOpenDest {
 - (BOOL)validateActionBySelector:(SEL)action
 {
   if (action == @selector(back:))
-    return [[mBrowserView browserView] canGoBack];
+    return [[mBrowserView getBrowserView] canGoBack];
   if (action == @selector(forward:))
-    return [[mBrowserView browserView] canGoForward];
+    return [[mBrowserView getBrowserView] canGoForward];
   if (action == @selector(stop:))
     return [mBrowserView isBusy];
   if (action == @selector(reload:))
-    return [[self browserWrapper] canReload];
+    return [[self getBrowserWrapper] canReload];
   if (action == @selector(moveTabToNewWindow:) ||
       action == @selector(closeSendersTab:) ||
       action == @selector(closeOtherTabs:) ||
@@ -1743,13 +1775,13 @@ enum BWCOpenDest {
   if (action == @selector(makeTextDefaultSize:))
     return [self canMakeTextDefaultSize];
   if (action == @selector(sendURL:))
-    return ![[self browserWrapper] isInternalURI];
+    return ![[self getBrowserWrapper] isInternalURI];
   if (action == @selector(viewSource:) ||
       action == @selector(viewPageSource:) ||
       action == @selector(fillForm:))
   {
-    BrowserWrapper* browser = [self browserWrapper];
-    return (![browser isInternalURI] && [[browser browserView] isTextBasedContent]);
+    BrowserWrapper* browser = [self getBrowserWrapper];
+    return (![browser isInternalURI] && [[browser getBrowserView] isTextBasedContent]);
   }
   if (action == @selector(printDocument:) ||
       action == @selector(pageSetup:))
@@ -1781,7 +1813,7 @@ enum BWCOpenDest {
         [mBrowserView setBrowserActive:YES];
     }
     else
-      [[self window] makeFirstResponder:[mBrowserView browserView]];
+      [[self window] makeFirstResponder:[mBrowserView getBrowserView]];
   }
 
   if ([[self window] isMainWindow])
@@ -1793,30 +1825,21 @@ enum BWCOpenDest {
 
 - (void)setLoadingActive:(BOOL)active
 {
-  NSSize statusFieldSize = [mStatus frame].size;
-
-  if (active) {
+  if (active)
+  {
     [self startThrobber];
     [mProgress setIndeterminate:YES];
-    [mProgress setHidden:NO];
+    [self showProgressIndicator];
     [mProgress startAnimation:self];
-    
-    const int statusBarPadding = 9;
-    statusFieldSize.width = NSMinX([mProgress frame]) - statusBarPadding -
-                            NSMinX([mStatus frame]);
   }
-  else {
+  else
+  {
     [self stopThrobber];
     [mProgress stopAnimation:self];
-    [mProgress setHidden:YES];
+    [self hideProgressIndicator];
     [mProgress setIndeterminate:YES];
     [[[self window] toolbar] validateVisibleItems];
-
-    statusFieldSize.width = NSMaxX([mProgress frame]) - NSMinX([mStatus frame]);
   }
-
-  [mStatus setFrameSize:statusFieldSize];
-  [mStatusBar setNeedsDisplay:YES];
 }
 
 - (void)setLoadingProgress:(float)progress
@@ -1929,11 +1952,8 @@ enum BWCOpenDest {
 {
   // Because of the way our UI is set up, we white/blacklist based on the top-level window URI,
   // rather than the requesting URI (which can be different on framed sites).
-  if (shouldWhitelist) {
-    [[CHPermissionManager permissionManager] setPolicy:CHPermissionAllow
-                                                forURI:[mBrowserView currentURI]
-                                                  type:CHPermissionTypePopup];
-  }
+  if (shouldWhitelist)
+    [self whitelistPopupsFromURL:[mBrowserView currentURI]];
 
   nsCOMPtr<nsISimpleEnumerator> enumerator;
   blockedSites->Enumerate(getter_AddRefs(enumerator));
@@ -1999,11 +2019,22 @@ enum BWCOpenDest {
     NSLog(@"Couldn't show the blocked popup window for %@", [NSString stringWith_nsACString:uriStr]);
 }
 
+- (void)whitelistPopupsFromURL:(NSString*)inURL
+{
+  nsCOMPtr<nsIURI> uri;
+  NS_NewURI(getter_AddRefs(uri), [inURL UTF8String]);
+  nsCOMPtr<nsIPermissionManager> pm(do_GetService(NS_PERMISSIONMANAGER_CONTRACTID));
+  if (pm && uri)
+    pm->Add(uri, "popup", nsIPermissionManager::ALLOW_ACTION);
+}
+
 - (void)blacklistPopupsFromURL:(NSString*)inURL
 {
-  [[CHPermissionManager permissionManager] setPolicy:CHPermissionDeny
-                                              forURI:inURL
-                                                type:CHPermissionTypePopup];
+  nsCOMPtr<nsIURI> uri;
+  NS_NewURI(getter_AddRefs(uri), [inURL UTF8String]);
+  nsCOMPtr<nsIPermissionManager> pm(do_GetService(NS_PERMISSIONMANAGER_CONTRACTID));
+  if (pm && uri)
+    pm->Add(uri, "popup", nsIPermissionManager::DENY_ACTION);
 }
 
 //
@@ -2026,7 +2057,7 @@ enum BWCOpenDest {
 - (void)buildFeedsDetectedListMenu:(NSNotification*)notifier
 {
   NSMenu* menu = [[[NSMenu alloc] initWithTitle:@"FeedListMenu"] autorelease];  // retained by the popup button
-  NSEnumerator* feedsEnum = [[[self browserWrapper] feedList] objectEnumerator];
+  NSEnumerator* feedsEnum = [[[self getBrowserWrapper] feedList] objectEnumerator];
   NSString* titleFormat = NSLocalizedString(@"SubscribeTo", nil); // "Subscribe to feedTitle or feedURI"
   NSDictionary* curFeedDict;
   while ((curFeedDict = [feedsEnum nextObject])) {
@@ -2111,7 +2142,7 @@ enum BWCOpenDest {
 
 - (void)updateFromFrontmostTab
 {
-  [self updateWindowTitle:[mBrowserView pageTitle]];
+  [self updateWindowTitle:[mBrowserView displayTitle]];
   [self setLoadingActive:[mBrowserView isBusy]];
   [self setLoadingProgress:[mBrowserView loadingProgress]];
   [self showSecurityState:[mBrowserView securityState]];
@@ -2149,7 +2180,7 @@ enum BWCOpenDest {
   NSString* curTitle = nil;
   NSString* curURL = nil;
 
-  nsCOMPtr<nsIWebBrowser> webBrowser = dont_AddRef([[inWrapper browserView] webBrowser]);
+  nsCOMPtr<nsIWebBrowser> webBrowser = getter_AddRefs([[inWrapper getBrowserView] getWebBrowser]);
   if (webBrowser) {
     nsCOMPtr<nsIWebNavigation> webNav(do_QueryInterface(webBrowser));
 
@@ -2280,7 +2311,7 @@ enum BWCOpenDest {
 {
   [mSearchSheetWindow orderOut:self];
   [NSApp endSheet:mSearchSheetWindow returnCode:1];
-  [self performSearch:mSearchSheetTextField inView:kDestinationCurrentView inBackground:NO];
+  [self performSearch:mSearchSheetTextField];
 }
 
 - (IBAction)cancelSearchSheet:(id)sender
@@ -2299,7 +2330,7 @@ enum BWCOpenDest {
   if ([self bookmarkManagerIsVisible]) {
     int previousPage = [self historyIndexOfPageBeforeBookmarkManager];
     if (previousPage != -1)
-      [[[self browserWrapper] browserView] goToSessionHistoryIndex:previousPage];
+      [[[self getBrowserWrapper] getBrowserView] goToSessionHistoryIndex:previousPage];
   }
   else
     [self loadURL:@"about:bookmarks"];
@@ -2392,13 +2423,13 @@ enum BWCOpenDest {
     return;
   }
 
-  // look for bookmarks shortcut match
-  NSArray *resolvedURLs = [[BookmarkManager sharedBookmarkManager] resolveBookmarksShortcut:theURL];
+  // look for bookmarks keywords match
+  NSArray *resolvedURLs = [[BookmarkManager sharedBookmarkManager] resolveBookmarksKeyword:theURL];
 
   NSString* targetURL = nil;
   if (!resolvedURLs || [resolvedURLs count] == 1) {
     targetURL = resolvedURLs ? [resolvedURLs lastObject] : theURL;
-    BOOL allowPopups = resolvedURLs ? YES : NO; //Allow popups if it's a bookmark shortcut
+    BOOL allowPopups = resolvedURLs ? YES : NO; //Allow popups if it's a bookmark keyword
     if (inDest == kDestinationNewTab)
       [self openNewTabWithURL:targetURL referrer:nil loadInBackground:inLoadInBG allowPopups:allowPopups setJumpback:NO];
     else if (inDest == kDestinationNewWindow)
@@ -2415,7 +2446,7 @@ enum BWCOpenDest {
 
   // global history needs to know the user typed this url so it can present it
   // in autocomplete. We use the URI fixup service to strip whitespace and remove
-  // invalid protocols, etc. Don't save shortcut-expanded urls.
+  // invalid protocols, etc. Don't save keyword-expanded urls.
   if (!resolvedURLs &&
       mDataOwner &&
       mDataOwner->mGlobalHistory &&
@@ -2433,22 +2464,22 @@ enum BWCOpenDest {
 }
 - (void)saveDocument:(BOOL)focusedFrame filterView:(NSView*)aFilterView
 {
-  [[mBrowserView browserView] saveDocument:focusedFrame filterView:aFilterView];
+  [[mBrowserView getBrowserView] saveDocument:focusedFrame filterView:aFilterView];
 }
 
 - (void)saveURL:(NSView*)aFilterView url:(NSString*)aURLSpec suggestedFilename:(NSString*)aFilename
 {
-  [[mBrowserView browserView] saveURL:aFilterView url:aURLSpec suggestedFilename:aFilename];
+  [[mBrowserView getBrowserView] saveURL:aFilterView url:aURLSpec suggestedFilename:aFilename];
 }
 
 - (void)loadSourceForFrame:(BOOL)forFrame inBackground:(BOOL)loadInBackground
 {
   // First, to get a descriptor so we can load the source from cache
-  nsCOMPtr<nsISupports> desc = [[mBrowserView browserView] pageDescriptorByFocus:forFrame];
+  nsCOMPtr<nsISupports> desc = [[mBrowserView getBrowserView] pageDescriptorByFocus:forFrame];
   // If that somehow fails, we'll do it by URL
   NSString* viewSource = nil;
   if (!desc) {
-    NSString* urlStr = forFrame ? [[mBrowserView browserView] focusedURLString]
+    NSString* urlStr = forFrame ? [[mBrowserView getBrowserView] getFocusedURLString]
                                 : [mBrowserView currentURI];
     viewSource = [kViewSourceProtocolString stringByAppendingString:urlStr];
   }
@@ -2471,40 +2502,10 @@ enum BWCOpenDest {
       [controller showWindow:nil];
 
     if (desc)
-      [[[controller browserWrapper] browserView] setPageDescriptor:desc displayType:nsIWebPageDescriptor::DISPLAY_AS_SOURCE];
+      [[[controller getBrowserWrapper] getBrowserView] setPageDescriptor:desc displayType:nsIWebPageDescriptor::DISPLAY_AS_SOURCE];
     else
       [controller loadURL:viewSource];
   }
-}
-
-// This method is currently unused due to bug 56488, but is completely functional.
-- (IBAction)toggleStatusBar:(id)aSender
-{
-  BOOL shouldHide = ![mStatusBar isHidden];
-  [[NSUserDefaults standardUserDefaults] setBool:shouldHide forKey:USER_DEFAULTS_HIDE_STATUS_BAR_KEY];
-
-  [mStatusBar setHidden:shouldHide];
-
-  NSSize oldContentSize = [mContentView frame].size;
-  NSRect windowRect = [[self window] frame];
-  float statusBarHeight = [mStatusBar frame].size.height;
-  if (shouldHide) {
-    windowRect.origin.y += statusBarHeight;
-    windowRect.size.height -= statusBarHeight;
-  }
-  else {
-    // shift and/or shrink the window as necessary to keep it within the screen area
-    NSRect screenRect = [[[self window] screen] visibleFrame];
-    windowRect.origin.y = MAX(windowRect.origin.y - statusBarHeight,
-                              screenRect.origin.y);
-    windowRect.size.height = MIN(windowRect.size.height + statusBarHeight,
-                                 screenRect.size.height);
-  }
-  [[self window] setFrame:windowRect display:YES];
-  // if the window height didn't change, then the content view may not have been resized,
-  // so we need to ensure that it's updated to account for the status bar changing.
-  if ([mContentView frame].size.height == oldContentSize.height)
-    [mContentView resizeSubviewsWithOldSize:oldContentSize];
 }
 
 - (IBAction)viewSource:(id)aSender
@@ -2522,44 +2523,19 @@ enum BWCOpenDest {
 
 - (IBAction)printDocument:(id)aSender
 {
-  [[mBrowserView browserView] printDocument];
+  [[mBrowserView getBrowserView] printDocument];
 }
 
 - (IBAction)pageSetup:(id)aSender
 {
-  [[mBrowserView browserView] pageSetup];
+  [[mBrowserView getBrowserView] pageSetup];
 }
 
-// -searchFieldTriggered:
-//
-// This should be used *only* as an action method for a WebSearchField, and
-// never invoked programatically.
-- (IBAction)searchFieldTriggered:(id)aSender
+- (IBAction)performSearch:(id)aSender
 {
-  // WebSearchField sends an action on clearing the search field, which isn't
-  // distinguishable from submitting an empty search, so we make sure the
-  // trigger was someone hitting return/enter if it's empty.
-  BOOL performSearch = NO;
-  if ([[aSender stringValue] length] > 0) {
-    performSearch = YES;
-  }
-  else {
-    NSEvent* currentEvent = [NSApp currentEvent];
-    if (([currentEvent type] == NSKeyDown) && [[currentEvent characters] length] > 0) {
-      unichar character = [[currentEvent characters] characterAtIndex:0];
-      if ((character == NSCarriageReturnCharacter) || (character == NSEnterCharacter))
-        performSearch = YES;
-    }
-  }
-
-  if (performSearch) {
-    // If it came from the search sheet, dismiss the sheet now
-    if (aSender == mSearchSheetTextField) {
-      [mSearchSheetWindow orderOut:self];
-      [NSApp endSheet:mSearchSheetWindow returnCode:1];
-    }
-    [self performSearch:aSender inView:kDestinationCurrentView inBackground:NO];
-  }
+  // If we have a valid SearchTextField, perform a search using its contents
+  if ([aSender isKindOfClass:[SearchTextField class]]) 
+    [self performSearch:(SearchTextField *)aSender inView:kDestinationCurrentView inBackground:NO];
 }
 
 //
@@ -2572,7 +2548,7 @@ enum BWCOpenDest {
 //
 - (IBAction)searchForSelection:(id)aSender
 {
-  NSString* selection = [[mBrowserView browserView] selectedText];
+  NSString* selection = [[mBrowserView getBrowserView] getSelection];
   [mSearchBar becomeFirstResponder];
   [mSearchBar setStringValue:selection];
   
@@ -2585,7 +2561,7 @@ enum BWCOpenDest {
     [self performSearch:mSearchBar inView:destination inBackground:[BrowserWindowController shouldLoadInBackground:nil]];
   }
   else
-    [self performSearch:mSearchBar inView:kDestinationCurrentView inBackground:NO];
+    [self performSearch:mSearchBar];
 }
 
 //
@@ -2594,16 +2570,25 @@ enum BWCOpenDest {
 // performs a search using searchField and opens either in the current view, a new tab, or a new
 // window. If it's a new tab or window, loadInBG determines whether the window/tab is opened in the background
 //
--(void)performSearch:(WebSearchField*)inSearchField inView:(BWCOpenDest)inDest inBackground:(BOOL)inLoadInBG
+-(void)performSearch:(SearchTextField *)inSearchField inView:(BWCOpenDest)inDest inBackground:(BOOL)inLoadInBG
 {
+  // Get the search URL from our dictionary of sites and search urls
+  NSMutableString *searchURL = [NSMutableString stringWithString:
+    [[BrowserWindowController searchURLDictionary] objectForKey:
+      [inSearchField titleOfSelectedPopUpItem]]];
+  NSString *currentURL = [[self getBrowserWrapper] currentURI];
   NSString *searchString = [inSearchField stringValue];
-  NSMutableString *searchURL = [[[inSearchField currentSearchURL] mutableCopy] autorelease];
+  
+  const char *aURLSpec = [currentURL lossyCString];
+  NSString *aDomain = @"";
+  nsCOMPtr<nsIURI> aURI;
   
   // If we have an about: type URL, remove " site:%d" from the search string
   // This is a fix to deal with Google's Search this Site feature
   // If other sites use %d to search the site, we'll have to have specific rules
   // for those sites.
-  if ([[[self browserWrapper] currentURI] hasPrefix:@"about:"]) {
+  
+  if ([currentURL hasPrefix:@"about:"]) {
     NSRange domainStringRange = [searchURL rangeOfString:@" site:%d"
                                                  options:NSBackwardsSearch];
     
@@ -2614,34 +2599,31 @@ enum BWCOpenDest {
   
   // If they didn't type anything in the search field, visit the domain of
   // the search site, i.e. www.google.com for the Google site
-  if ([searchString isEqualToString:@""]) {
-    const char *urlSpec = [searchURL lossyCString];
+  if ([[inSearchField stringValue] isEqualToString:@""]) {
+    aURLSpec = [searchURL lossyCString];
     
-    nsCOMPtr<nsIURI> searchURI;
-    if (NS_NewURI(getter_AddRefs(searchURI), urlSpec) == NS_OK) {
+    if (NS_NewURI(getter_AddRefs(aURI), aURLSpec) == NS_OK) {
       nsCAutoString spec;
-      searchURI->GetHost(spec);
+      aURI->GetHost(spec);
       
-      NSString *searchDomain = [NSString stringWithUTF8String:spec.get()];
+      aDomain = [NSString stringWithUTF8String:spec.get()];
       
       if (inDest == kDestinationNewTab)
-        [self openNewTabWithURL:searchDomain referrer:nil loadInBackground:inLoadInBG allowPopups:NO setJumpback:NO];
+        [self openNewTabWithURL:aDomain referrer:nil loadInBackground:inLoadInBG allowPopups:NO setJumpback:NO];
       else if (inDest == kDestinationNewWindow)
-        [self openNewWindowWithURL:searchDomain referrer:nil loadInBackground:inLoadInBG allowPopups:NO];
+        [self openNewWindowWithURL:aDomain referrer:nil loadInBackground:inLoadInBG allowPopups:NO];
       else // if it's not a new window or a new tab, load into the current view
-        [self loadURL:searchDomain];
+        [self loadURL:aDomain];
     } 
   } else {
-    const char *urlSpec = [[[self browserWrapper] currentURI] UTF8String];
+    aURLSpec = [[[self getBrowserWrapper] currentURI] UTF8String];
     
     // Get the domain so that we can replace %d in our searchURL
-    NSString *currentDomain = @"";
-    nsCOMPtr<nsIURI> currentURI;
-    if (NS_NewURI(getter_AddRefs(currentURI), urlSpec) == NS_OK) {
+    if (NS_NewURI(getter_AddRefs(aURI), aURLSpec) == NS_OK) {
       nsCAutoString spec;
-      currentURI->GetHost(spec);
+      aURI->GetHost(spec);
       
-      currentDomain = [NSString stringWithUTF8String:spec.get()];
+      aDomain = [NSString stringWithUTF8String:spec.get()];
     }
     
     // Escape the search string so the user can search for strings with
@@ -2649,7 +2631,7 @@ enum BWCOpenDest {
     NSString *escapedSearchString = (NSString *) CFURLCreateStringByAddingPercentEscapes(NULL, (CFStringRef)searchString, NULL, CFSTR(";?:@&=+$,"), kCFStringEncodingUTF8);
     
     // replace the conversion specifiers (%d, %s) in the search string
-    [self transformFormatString:searchURL domain:currentDomain search:escapedSearchString];
+    [self transformFormatString:searchURL domain:aDomain search:escapedSearchString];
     [escapedSearchString release];
     
     if (inDest == kDestinationNewTab)
@@ -2678,7 +2660,7 @@ enum BWCOpenDest {
 
 - (IBAction)sendURL:(id)aSender
 {
-  BrowserWrapper* browserWrapper = [self browserWrapper];
+  BrowserWrapper* browserWrapper = [self getBrowserWrapper];
   NSString* urlString = [browserWrapper currentURI];
   if (!urlString)
     return;
@@ -2813,29 +2795,29 @@ enum BWCOpenDest {
   mThrobberHandler = nil;
   NSToolbarItem* throbberItem = [self throbberItem];
   if (throbberItem)
-    [throbberItem setImage: [NSImage imageNamed:@"throbber-00"]];
+    [throbberItem setImage: [[self throbberImages] objectAtIndex: 0]];
 }
 
 - (BOOL)findInPageWithPattern:(NSString*)text caseSensitive:(BOOL)inCaseSensitive
     wrap:(BOOL)inWrap backwards:(BOOL)inBackwards
 {
-  return [[mBrowserView browserView] findInPageWithPattern:text caseSensitive:inCaseSensitive
+  return [[mBrowserView getBrowserView] findInPageWithPattern:text caseSensitive:inCaseSensitive
     wrap:inWrap backwards:inBackwards];
 }
 
 - (BOOL)findInPage:(BOOL)inBackwards
 {
-  return [[mBrowserView browserView] findInPage:inBackwards];
+  return [[mBrowserView getBrowserView] findInPage:inBackwards];
 }
 
 - (NSString*)lastFindText
 {
-  return [[mBrowserView browserView] lastFindText];
+  return [[mBrowserView getBrowserView] lastFindText];
 }
 
 - (BOOL)bookmarkManagerIsVisible
 {
-  NSString* currentURL = [[[self browserWrapper] currentURI] lowercaseString];
+  NSString* currentURL = [[[self getBrowserWrapper] currentURI] lowercaseString];
   return [currentURL isEqualToString:@"about:bookmarks"] || [currentURL isEqualToString:@"about:history"];
 }
 
@@ -2901,12 +2883,12 @@ enum BWCOpenDest {
   BookmarkManager* bookmarkManager = [BookmarkManager sharedBookmarkManager];
   BookmarkFolder*  parentFolder = [bookmarkManager lastUsedBookmarkFolder];
 
-  BrowserWrapper* browserWrapper = [self browserWrapper];
+  BrowserWrapper* browserWrapper = [self getBrowserWrapper];
   NSString* itemTitle = [browserWrapper pageTitle];
   NSString* itemURL = [browserWrapper currentURI];
 
   NS_ASSERTION([browserWrapper isBookmarkable], "Bookmarking an innappropriate URI");
-  [parentFolder appendChild:[Bookmark bookmarkWithTitle:itemTitle url:itemURL]];
+  [parentFolder addBookmark:itemTitle url:itemURL inPosition:[parentFolder count] isSeparator:NO];
   [bookmarkManager setLastUsedBookmarkFolder:parentFolder];
 }
 
@@ -2915,7 +2897,7 @@ enum BWCOpenDest {
   BookmarkFolder* newTabGroup = [[[BookmarkFolder alloc] init] autorelease];
   [newTabGroup setIsGroup:YES];
 
-  BrowserWrapper* currentBrowserWrapper = [self browserWrapper];
+  BrowserWrapper* currentBrowserWrapper = [self getBrowserWrapper];
   int numberOfTabs = [mTabBrowser numberOfTabViewItems];
   NSString *primaryTabTitle = nil;
 
@@ -2924,8 +2906,9 @@ enum BWCOpenDest {
     if (![browserWrapper isBookmarkable])
       continue;
 
-    [newTabGroup appendChild:[Bookmark bookmarkWithTitle:[browserWrapper pageTitle]
-                                                     url:[browserWrapper currentURI]]];
+    Bookmark *bookmark = [newTabGroup addBookmark];
+    [bookmark setTitle:[browserWrapper pageTitle]];
+    [bookmark setUrl:[browserWrapper currentURI]];
 
     if (browserWrapper == currentBrowserWrapper)
       primaryTabTitle = [browserWrapper pageTitle];
@@ -2993,11 +2976,11 @@ enum BWCOpenDest {
 //
 - (nsIWebNavigation*) currentWebNavigation
 {
-  BrowserWrapper* wrapper = [self browserWrapper];
+  BrowserWrapper* wrapper = [self getBrowserWrapper];
   if (!wrapper) return nsnull;
-  CHBrowserView* view = [wrapper browserView];
+  CHBrowserView* view = [wrapper getBrowserView];
   if (!view) return nsnull;
-  nsCOMPtr<nsIWebBrowser> webBrowser = dont_AddRef([view webBrowser]);
+  nsCOMPtr<nsIWebBrowser> webBrowser = getter_AddRefs([view getWebBrowser]);
   if (!webBrowser) return nsnull;
   nsCOMPtr<nsIWebNavigation> webNav(do_QueryInterface(webBrowser));
   return webNav.get();
@@ -3121,12 +3104,12 @@ enum BWCOpenDest {
 
 - (IBAction)back:(id)aSender
 {
-  [[mBrowserView browserView] goBack];
+  [[mBrowserView getBrowserView] goBack];
 }
 
 - (IBAction)forward:(id)aSender
 {
-  [[mBrowserView browserView] goForward];
+  [[mBrowserView getBrowserView] goForward];
 }
 
 - (IBAction)reload:(id)aSender
@@ -3178,7 +3161,7 @@ enum BWCOpenDest {
 
 - (IBAction)stop:(id)aSender
 {
-  [[mBrowserView browserView] stop:NSStopLoadAll];
+  [[mBrowserView getBrowserView] stop:NSStopLoadAll];
 }
 
 - (IBAction)home:(id)aSender
@@ -3190,7 +3173,7 @@ enum BWCOpenDest {
             allowPopups:NO];
 }
 
-- (NSString*)contextMenuNodeDocumentURL
+- (NSString*)getContextMenuNodeDocumentURL
 {
   if (!mDataOwner->mContextMenuNode) return @"";
 
@@ -3212,7 +3195,7 @@ enum BWCOpenDest {
 - (IBAction)frameToNewWindow:(id)sender
 {
   // assumes mContextMenuNode has been set
-  NSString* frameURL = [self contextMenuNodeDocumentURL];
+  NSString* frameURL = [self getContextMenuNodeDocumentURL];
   if ([frameURL length] > 0)
     [self openNewWindowWithURL:frameURL referrer:nil loadInBackground:NO allowPopups:NO];     // follow the pref?
 }
@@ -3220,7 +3203,7 @@ enum BWCOpenDest {
 - (IBAction)frameToNewTab:(id)sender
 {
   // assumes mContextMenuNode has been set
-  NSString* frameURL = [self contextMenuNodeDocumentURL];
+  NSString* frameURL = [self getContextMenuNodeDocumentURL];
   if ([frameURL length] > 0)
     [self openNewTabWithURL:frameURL referrer:nil loadInBackground:NO allowPopups:NO setJumpback:NO];  // follow the pref?
 }
@@ -3228,7 +3211,7 @@ enum BWCOpenDest {
 - (IBAction)frameToThisWindow:(id)sender
 {
   // assumes mContextMenuNode has been set
-  NSString* frameURL = [self contextMenuNodeDocumentURL];
+  NSString* frameURL = [self getContextMenuNodeDocumentURL];
   if ([frameURL length] > 0)
     [self loadURL:frameURL];
 }
@@ -3245,6 +3228,45 @@ enum BWCOpenDest {
   [self forward:sender];
 }
 
+- (void)focusController:(nsIFocusController**)outController
+{
+  #define ENSURE_TRUE(x) if (!x) return;
+  if (!outController)
+    return;
+  *outController = nsnull;
+
+  nsCOMPtr<nsIWebBrowser> webBrizzle = dont_AddRef([[[self getBrowserWrapper] getBrowserView] getWebBrowser]);
+  ENSURE_TRUE(webBrizzle);
+  nsCOMPtr<nsIDOMWindow> domWindow;
+  webBrizzle->GetContentDOMWindow(getter_AddRefs(domWindow));
+  nsCOMPtr<nsPIDOMWindow> privateWindow = do_QueryInterface(domWindow);
+  ENSURE_TRUE(privateWindow);
+  *outController = privateWindow->GetRootFocusController();
+  NS_IF_ADDREF(*outController);
+  #undef ENSURE_TRUE
+}
+
+//
+// -focusedElement
+//
+// Returns the currently focused DOM element in the currently visible tab
+//
+- (void)focusedElement:(nsIDOMElement**)outElement
+{
+  if (!outElement)
+    return;
+  *outElement = nsnull;
+
+  nsCOMPtr<nsIFocusController> controller;
+  [self focusController:getter_AddRefs(controller)];
+  if (!controller)
+    return;
+  nsCOMPtr<nsIDOMElement> focusedItem;
+  controller->GetFocusedElement(getter_AddRefs(focusedItem));
+  *outElement = focusedItem.get();
+  NS_IF_ADDREF(*outElement);
+}
+
 //
 // -currentEditor:
 //
@@ -3256,8 +3278,8 @@ enum BWCOpenDest {
     return;
   *outEditor = nsnull;
 
-  nsCOMPtr<nsIDOMElement> focusedElement =
-    dont_AddRef([[[self browserWrapper] browserView] focusedDOMElement]);
+  nsCOMPtr<nsIDOMElement> focusedElement;
+  [self focusedElement:getter_AddRefs(focusedElement)];
   nsCOMPtr<nsIDOMNSEditableElement> editElement = do_QueryInterface(focusedElement);
   if (editElement) {
     editElement->GetEditor(outEditor);
@@ -3265,8 +3287,8 @@ enum BWCOpenDest {
   // if there's no element focused, we're probably in a Midas editor
   else {
     #define ENSURE_TRUE(x) if (!x) return;
-    nsCOMPtr<nsIFocusController> controller =
-      dont_AddRef([[[self browserWrapper] browserView] focusController]);
+    nsCOMPtr<nsIFocusController> controller;
+    [self focusController:getter_AddRefs(controller)];
     ENSURE_TRUE(controller);
     nsCOMPtr<nsIDOMWindowInternal> winInternal;
     controller->GetFocusedWindow(getter_AddRefs(winInternal));
@@ -3289,6 +3311,78 @@ enum BWCOpenDest {
     }
     #undef ENSURE_TRUE
   }
+}
+
+//
+// -isPageTextFieldFocused
+//
+// Determine if a text field in the content area has focus. Returns YES if the
+// focus is in a <input type="text"> or <textarea>
+//
+- (BOOL)isPageTextFieldFocused
+{
+  BOOL isFocused = NO;
+  
+  nsCOMPtr<nsIDOMElement> focusedItem;
+  [self focusedElement:getter_AddRefs(focusedItem)];
+  
+  // we got it, now check if it's what we care about
+  nsCOMPtr<nsIDOMHTMLInputElement> input = do_QueryInterface(focusedItem);
+  nsCOMPtr<nsIDOMHTMLTextAreaElement> textArea = do_QueryInterface(focusedItem);
+  if (input) {
+    nsAutoString type;
+    input->GetType(type);
+    if (type == NS_LITERAL_STRING("text"))
+      isFocused = YES;
+  }
+  else if (textArea)
+    isFocused = YES;
+  
+  return isFocused;
+}
+
+//
+// -isPagePluginFocused
+//
+// Determine if a plugin/applet in the content area has focus. Returns YES if the
+// focus is in a <embed>, <object>, or <applet>
+//
+- (BOOL)isPagePluginFocused
+{
+  BOOL isFocused = NO;
+  
+  nsCOMPtr<nsIDOMElement> focusedItem;
+  [self focusedElement:getter_AddRefs(focusedItem)];
+  
+  // we got it, now check if it's what we care about
+  nsCOMPtr<nsIDOMHTMLEmbedElement> embed = do_QueryInterface(focusedItem);
+  nsCOMPtr<nsIDOMHTMLObjectElement> object = do_QueryInterface(focusedItem);
+  nsCOMPtr<nsIDOMHTMLAppletElement> applet = do_QueryInterface(focusedItem);
+  if (embed || object || applet)
+    isFocused = YES;
+  
+  return isFocused;
+}
+
+// map delete key to Back according to browser.backspace_action pref
+- (void)deleteBackward:(id)sender
+{
+  // there are times when backspaces can seep through from IME gone wrong. As a 
+  // workaround until we can get them all fixed, ignore backspace when the
+  // focused widget is a text field (<input type="text"> or <textarea>)
+  if ([self isPageTextFieldFocused] || [self isPagePluginFocused])
+    return;
+
+  int deleteKeyAction = [[PreferenceManager sharedInstance] getIntPref:"browser.backspace_action" withSuccess:NULL];  
+
+  if (deleteKeyAction == 0) { // map to back/forward
+    if ([[NSApp currentEvent] modifierFlags] & NSShiftKeyMask)
+      [self forward:sender];
+    else
+      [self back:sender];
+  }
+  // all other values for browser.backspace_action should give no mapping at all,
+  // including 1 (PgUp/PgDn mapping has no precedent on Mac OS, and we're not supporting it)
 }
 
 -(void)loadURL:(NSString*)aURLSpec referrer:(NSString*)aReferrer focusContent:(BOOL)focusContent allowPopups:(BOOL)inAllowPopups
@@ -3339,8 +3433,6 @@ enum BWCOpenDest {
 
 - (void)willShowPromptForBrowser:(BrowserWrapper*)inBrowser
 {
-  // Remember where the user was, so we can come back.
-  mLastBrowserView = mBrowserView;
   // bring the tab to the front (for security reasons)
   BrowserTabViewItem* tabItem = [self tabForBrowser:inBrowser];
   [mTabBrowser selectTabViewItem:tabItem];
@@ -3350,12 +3442,6 @@ enum BWCOpenDest {
 
 - (void)didDismissPromptForBrowser:(BrowserWrapper*)inBrowser
 {
-  // Return the user to the tab they were looking at.
-  if (mLastBrowserView) {
-    BrowserTabViewItem* lastTab = [self tabForBrowser:mLastBrowserView];
-    [mTabBrowser selectTabViewItem:lastTab];
-  }
-  mLastBrowserView = nil;
 }
 
 - (void)createNewTab:(ENewTabContents)contents
@@ -3387,7 +3473,7 @@ enum BWCOpenDest {
       if (loadHomepage)
         urlToLoad = [[PreferenceManager sharedInstance] homePageUsingStartPage:NO];
 
-      focusURLBar = locationBarVisible && (!urlToLoad || [urlToLoad isBlankURL]);
+      focusURLBar = locationBarVisible && [MainController isBlankURL:urlToLoad];      
 
       [newView loadURI:urlToLoad referrer:nil flags:NSLoadFlagsNone focusContent:!focusURLBar allowPopups:NO];
     }
@@ -3532,12 +3618,12 @@ enum BWCOpenDest {
     mBrowserView = nil;
 }
 
--(BrowserTabView*)tabBrowser
+-(BrowserTabView*)getTabBrowser
 {
   return mTabBrowser;
 }
 
--(BrowserWrapper*)browserWrapper
+-(BrowserWrapper*)getBrowserWrapper
 {
   return mBrowserView;
 }
@@ -3545,7 +3631,7 @@ enum BWCOpenDest {
 // this should really be a class method
 -(BrowserWindowController*)openNewWindowWithURL:(NSString*)aURLSpec referrer:(NSString*)aReferrer loadInBackground:(BOOL)aLoadInBG allowPopups:(BOOL)inAllowPopups
 {
-  BOOL focusURLBar = !aURLSpec || [aURLSpec isBlankURL];
+  BOOL focusURLBar = [MainController isBlankURL:aURLSpec];
   BrowserWindowController* browser = [self openNewWindow:aLoadInBG];
   [browser loadURL:aURLSpec referrer:aReferrer focusContent:!focusURLBar allowPopups:inAllowPopups];
   return browser;
@@ -3583,7 +3669,7 @@ enum BWCOpenDest {
 {
   BrowserTabViewItem* previouslySelected = (BrowserTabViewItem*)[mTabBrowser selectedTabViewItem];
   BrowserTabViewItem* newTab             = [self openNewTab:aLoadInBG];
-  BOOL focusURLBar                       = !aURLSpec || [aURLSpec isBlankURL];
+  BOOL focusURLBar                       = [MainController isBlankURL:aURLSpec];
 
   // if instructed, tell the tab browser to remember the currently selected tab to
   // jump back to if this new one is closed w/out switching to any other tabs.
@@ -3614,7 +3700,7 @@ enum BWCOpenDest {
   if (!inLoadInBG)
     [mTabBrowser setJumpbackTab:previouslySelected];
 
-  return [[newTab view] browserView];
+  return [[newTab view] getBrowserView];
 }
 
 //
@@ -3654,13 +3740,13 @@ enum BWCOpenDest {
 -(void)openNewWindowWithDescriptor:(nsISupports*)aDesc displayType:(PRUint32)aDisplayType loadInBackground:(BOOL)aLoadInBG
 {
   BrowserWindowController* browser = [self openNewWindow:aLoadInBG];
-  [[[browser browserWrapper] browserView] setPageDescriptor:aDesc displayType:aDisplayType];
+  [[[browser getBrowserWrapper] getBrowserView] setPageDescriptor:aDesc displayType:aDisplayType];
 }
 
 -(void)openNewTabWithDescriptor:(nsISupports*)aDesc displayType:(PRUint32)aDisplayType loadInBackground:(BOOL)aLoadInBG
 {
   BrowserTabViewItem* newTab = [self openNewTab:aLoadInBG];
-  [[[newTab view] browserView] setPageDescriptor:aDesc displayType:aDisplayType];
+  [[[newTab view] getBrowserView] setPageDescriptor:aDesc displayType:aDisplayType];
 }
 
 - (void)openURLArray:(NSArray*)urlArray tabOpenPolicy:(ETabOpenPolicy)tabPolicy allowPopups:(BOOL)inAllowPopups
@@ -3765,44 +3851,44 @@ enum BWCOpenDest {
 
 - (BOOL)canMakeTextBigger
 {
-  BrowserWrapper* wrapper = [self browserWrapper];
+  BrowserWrapper* wrapper = [self getBrowserWrapper];
   return (![wrapper isEmpty] &&
           ![self bookmarkManagerIsVisible] &&
-          [[wrapper browserView] isTextBasedContent] &&
-          [[wrapper browserView] canMakeTextBigger]);
+          [[wrapper getBrowserView] isTextBasedContent] &&
+          [[wrapper getBrowserView] canMakeTextBigger]);
 }
 
 - (BOOL)canMakeTextSmaller
 {
-  BrowserWrapper* wrapper = [self browserWrapper];
+  BrowserWrapper* wrapper = [self getBrowserWrapper];
   return (![wrapper isEmpty] &&
           ![self bookmarkManagerIsVisible] &&
-          [[wrapper browserView] isTextBasedContent] &&
-          [[wrapper browserView] canMakeTextSmaller]);
+          [[wrapper getBrowserView] isTextBasedContent] &&
+          [[wrapper getBrowserView] canMakeTextSmaller]);
 }
 
 - (BOOL)canMakeTextDefaultSize
 {
-  BrowserWrapper* wrapper = [self browserWrapper];
+  BrowserWrapper* wrapper = [self getBrowserWrapper];
   return (![wrapper isEmpty] &&
           ![self bookmarkManagerIsVisible] &&
-          [[wrapper browserView] isTextBasedContent] &&
-          ![[wrapper browserView] isTextDefaultSize]);
+          [[wrapper getBrowserView] isTextBasedContent] &&
+          ![[wrapper getBrowserView] isTextDefaultSize]);
 }
 
 - (IBAction)makeTextBigger:(id)aSender
 {
-  [[mBrowserView browserView] makeTextBigger];
+  [[mBrowserView getBrowserView] makeTextBigger];
 }
 
 - (IBAction)makeTextSmaller:(id)aSender
 {
-  [[mBrowserView browserView] makeTextSmaller];
+  [[mBrowserView getBrowserView] makeTextSmaller];
 }
 
 - (IBAction)makeTextDefaultSize:(id)aSender
 {
-  [[mBrowserView browserView] makeTextDefaultSize];
+  [[mBrowserView getBrowserView] makeTextDefaultSize];
 }
 
 - (IBAction)getInfo:(id)sender
@@ -3860,7 +3946,7 @@ enum BWCOpenDest {
 // Returns the text of the href attribute for the link the context menu is
 // currently on. Returns an empty string if the context menu is not on a
 // link or we couldn't work out the href for some other reason.
-- (NSString*)contextMenuNodeHrefText
+- (NSString*)getContextMenuNodeHrefText
 {
   if (!mDataOwner->mContextMenuNode)
     return @"";
@@ -3884,7 +3970,7 @@ enum BWCOpenDest {
 //
 - (NSArray*)mailAddressesInContextMenuLinkNode
 {
-  NSString* hrefStr = [self contextMenuNodeHrefText];
+  NSString* hrefStr = [self getContextMenuNodeHrefText];
   
   if ([hrefStr hasPrefix:@"mailto:"]) {
     NSString* linkTargetText = [hrefStr substringFromIndex:7];
@@ -3943,7 +4029,7 @@ enum BWCOpenDest {
     addToAddressBookItem = [[NSMenuItem alloc] init];
 
     if ([[ABAddressBook sharedAddressBook] emailAddressExistsInAddressBook:emailAddress]) {
-      NSString* realName = [[ABAddressBook sharedAddressBook] realNameForEmailAddress:emailAddress];
+      NSString* realName = [[ABAddressBook sharedAddressBook] getRealNameForEmailAddress:emailAddress];
       [addToAddressBookItem setTitle:[NSString stringWithFormat:NSLocalizedString(@"Open %@ in Address Book", @""), realName != nil ? realName : @""]];
     } else {
       [addToAddressBookItem setTitle:[NSString stringWithFormat:NSLocalizedString(@"Add %@ to Address Book", @""), emailAddress]];
@@ -3971,7 +4057,7 @@ enum BWCOpenDest {
   NSArray* emailAddresses = nil;
   unsigned numEmailAddresses = 0;
 
-  BOOL hasSelection = [[mBrowserView browserView] canCopy];
+  BOOL hasSelection = [[mBrowserView getBrowserView] canCopy];
   BOOL isMidas = NO;
 
   if (mDataOwner->mContextMenuNode) {
@@ -3988,7 +4074,7 @@ enum BWCOpenDest {
 
     // If it's not a Midas frame, check to see if it's a subframe
     if (!isMidas) {
-      nsCOMPtr<nsIDOMWindow> contentWindow = [[mBrowserView browserView] contentWindow];
+      nsCOMPtr<nsIDOMWindow> contentWindow = [[mBrowserView getBrowserView] getContentWindow];
 
       nsCOMPtr<nsIDOMDocument> contentDoc;
       if (contentWindow)
@@ -4007,7 +4093,7 @@ enum BWCOpenDest {
       numEmailAddresses = [emailAddresses count];
 
     // Verify that it is safe to open this link.
-    NSString* referrerURL = [[mBrowserView browserView] focusedURLString];
+    NSString* referrerURL = [[mBrowserView getBrowserView] getFocusedURLString];
     nsCOMPtr<nsIDOMElement> linkElement;
     nsAutoString hrefURL;
     GeckoUtils::GetEnclosingLinkElementAndHref(mDataOwner->mContextMenuNode,
@@ -4077,8 +4163,8 @@ enum BWCOpenDest {
     // show the document menu. This prevents us from failing to find a case
     // and not showing the context menu.
     menuPrototype = mPageMenu;
-    [mBackItem    setEnabled: [[mBrowserView browserView] canGoBack]];
-    [mForwardItem setEnabled: [[mBrowserView browserView] canGoForward]];
+    [mBackItem    setEnabled: [[mBrowserView getBrowserView] canGoBack]];
+    [mForwardItem setEnabled: [[mBrowserView getBrowserView] canGoForward]];
     [mCopyItem    setEnabled:hasSelection];
   }
 
@@ -4087,20 +4173,24 @@ enum BWCOpenDest {
   NSMenu* result = [[menuPrototype copy] autorelease];
 
   if (isUnsafeLink) {
-    NSMenuItem* frameItem;
-    while ((frameItem = [result itemWithTag:kLinkOpeningItemsTag]) != nil)
-      [result removeItem:frameItem];
+    // To avoid updating the BrowserWindow.nib close to release time, the
+    // menu items to remove will be removed from index 0 three times. After
+    // the 1.1 release, this needs to be changed (see bug 378081). The first
+    // two remove calls will pull out the "Open Link in *" menu items.
+    [result removeItemAtIndex:0];
+    [result removeItemAtIndex:0];
+    [result removeItemAtIndex:0];  // remove separator 
   }
 
   // validate View Page/Frame Source
-  BrowserWrapper* browser = [self browserWrapper];
-  if ([browser isInternalURI] || ![[browser browserView] isTextBasedContent]) {
+  BrowserWrapper* browser = [self getBrowserWrapper];
+  if ([browser isInternalURI] || ![[browser getBrowserView] isTextBasedContent]) {
     [[result itemWithTarget:self andAction:@selector(viewPageSource:)] setEnabled:NO];
     [[result itemWithTarget:self andAction:@selector(viewSource:)] setEnabled:NO];
   }
 
   // validate 'Bookmark This Page'
-  [[result itemWithTarget:self andAction:@selector(addBookmark:)] setEnabled:[[self browserWrapper] isBookmarkable]];
+  [[result itemWithTarget:self andAction:@selector(addBookmark:)] setEnabled:[[self getBrowserWrapper] isBookmarkable]];
 
   if (showSpellingItems)
     showSpellingItems = [self prepareSpellingSuggestionMenu:result tag:kSpellingRelatedItemsTag];
@@ -4410,14 +4500,14 @@ enum BWCOpenDest {
 
 -(void)openLinkInNewWindowOrTab:(BOOL)aUseWindow
 {
-  NSString* hrefStr = [self contextMenuNodeHrefText];
+  NSString* hrefStr = [self getContextMenuNodeHrefText];
 
   if ([hrefStr length] == 0)
     return;
 
   BOOL loadInBackground = [BrowserWindowController shouldLoadInBackground:nil];
 
-  NSString* referrer = [[mBrowserView browserView] focusedURLString];
+  NSString* referrer = [[mBrowserView getBrowserView] getFocusedURLString];
 
   if (aUseWindow)
     [self openNewWindowWithURL: hrefStr referrer:referrer loadInBackground: loadInBackground allowPopups:NO];
@@ -4427,19 +4517,19 @@ enum BWCOpenDest {
 
 - (IBAction)savePageAs:(id)aSender
 {
-  NSView* accessoryView = [[NSApp delegate] savePanelView];
+  NSView* accessoryView = [[NSApp delegate] getSavePanelView];
   [self saveDocument:NO filterView:accessoryView];
 }
 
 - (IBAction)saveFrameAs:(id)aSender
 {
-  NSView* accessoryView = [[NSApp delegate] savePanelView];
+  NSView* accessoryView = [[NSApp delegate] getSavePanelView];
   [self saveDocument:YES filterView:accessoryView];
 }
 
 - (IBAction)saveLinkAs:(id)aSender
 {
-  NSString* hrefStr = [self contextMenuNodeHrefText];
+  NSString* hrefStr = [self getContextMenuNodeHrefText];
   if ([hrefStr length] == 0)
     return;
 
@@ -4467,7 +4557,7 @@ enum BWCOpenDest {
 
 - (IBAction)copyImage:(id)sender
 {
-  nsCOMPtr<nsIWebBrowser> webBrowser = dont_AddRef([[[self browserWrapper] browserView] webBrowser]);
+  nsCOMPtr<nsIWebBrowser> webBrowser = getter_AddRefs([[[self getBrowserWrapper] getBrowserView] getWebBrowser]);
   nsCOMPtr<nsICommandManager> commandMgr(do_GetInterface(webBrowser));
   if (!commandMgr)
     return;
@@ -4477,7 +4567,7 @@ enum BWCOpenDest {
 
 - (IBAction)copyImageLocation:(id)sender
 {
-  nsCOMPtr<nsIWebBrowser> webBrowser = dont_AddRef([[[self browserWrapper] browserView] webBrowser]);
+  nsCOMPtr<nsIWebBrowser> webBrowser = getter_AddRefs([[[self getBrowserWrapper] getBrowserView] getWebBrowser]);
   nsCOMPtr<nsIClipboardCommands> clipboard(do_GetInterface(webBrowser));
   if (clipboard)
     clipboard->CopyImageLocation();
@@ -4485,7 +4575,7 @@ enum BWCOpenDest {
 
 - (IBAction)copyLinkLocation:(id)aSender
 {
-  nsCOMPtr<nsIWebBrowser> webBrowser = dont_AddRef([[[self browserWrapper] browserView] webBrowser]);
+  nsCOMPtr<nsIWebBrowser> webBrowser = getter_AddRefs([[[self getBrowserWrapper] getBrowserView] getWebBrowser]);
   nsCOMPtr<nsIClipboardCommands> clipboard(do_GetInterface(webBrowser));
   if (clipboard)
     clipboard->CopyLinkLocation();
@@ -4499,7 +4589,7 @@ enum BWCOpenDest {
     imgElement->GetSrc(url);
 
     NSString* urlStr = [NSString stringWith_nsAString: url];
-    NSString* referrer = [[mBrowserView browserView] focusedURLString];
+    NSString* referrer = [[mBrowserView getBrowserView] getFocusedURLString];
 
     unsigned int modifiers = [aSender keyEquivalentModifierMask];
 
@@ -4520,7 +4610,7 @@ enum BWCOpenDest {
 {
   PageInfoWindowController* pageInfoController = [PageInfoWindowController sharedPageInfoWindowController];
 
-  [pageInfoController updateFromBrowserView:[[self browserWrapper] browserView]];
+  [pageInfoController updateFromBrowserView:[[self getBrowserWrapper] getBrowserView]];
   [[pageInfoController window] makeKeyAndOrderFront:nil];
 }
 
@@ -4544,6 +4634,22 @@ enum BWCOpenDest {
 - (BookmarkToolbar*) bookmarkToolbar
 {
   return mPersonalToolbar;
+}
+
+- (NSProgressIndicator*)progressIndicator
+{
+  return mProgress;
+}
+
+- (void)showProgressIndicator
+{
+  // note we do nothing to check if the progress indicator is already there.
+  [mProgressSuperview addSubview:mProgress];
+}
+
+- (void)hideProgressIndicator
+{
+  [mProgress removeFromSuperview];
 }
 
 - (BOOL)windowClosesQuietly
@@ -4589,31 +4695,6 @@ enum BWCOpenDest {
   return sBrokenIcon;
 }
 
-- (void)setUpSearchFields
-{
-  NSDictionary* searchEngines = [BrowserWindowController searchURLDictionary];
-  NSArray* engineNames = [[searchEngines allKeys] sortedArrayUsingSelector:@selector(caseInsensitiveCompare:)];
-
-  NSMutableArray* engineList = [NSMutableArray arrayWithCapacity:([engineNames count] - 1)];
-  NSEnumerator* engineEnumerator = [engineNames objectEnumerator];
-  NSString* engineName;
-  while ((engineName = [engineEnumerator nextObject])) {
-    if ([engineName isEqualToString:@"PreferredSearchEngine"])
-      continue;
-    [engineList addObject:[NSDictionary dictionaryWithObjectsAndKeys:engineName,
-                                                                     kWebSearchEngineNameKey,
-                                                                     [searchEngines objectForKey:engineName],
-                                                                     kWebSearchEngineURLKey,
-                                                                     nil]];
-  }
-
-  [mSearchBar setSearchEngines:engineList];
-  [mSearchSheetTextField setSearchEngines:engineList];
-  NSString* defaultEngine = [searchEngines objectForKey:@"PreferredSearchEngine"];
-  [mSearchBar setCurrentSearchEngine:defaultEngine];
-  [mSearchSheetTextField setCurrentSearchEngine:defaultEngine];
-}
-
 + (NSDictionary *)searchURLDictionary
 {
   static NSDictionary *searchURLDictionary = nil;
@@ -4622,27 +4703,42 @@ enum BWCOpenDest {
 
   NSString *defaultSearchEngineList = [[NSBundle mainBundle] pathForResource:@"SearchURLList" ofType:@"plist"];
 
-  // We haven't read the search engine list yet; attempt to read from user's profile directory
-  NSString *profileDir = [[PreferenceManager sharedInstance] profilePath];
-  if (profileDir) {
-    // If the file exists we read it from the profile directory
-    // If it doesn't we attempt to copy it there from our app bundle first
-    // (so that the user has something to edit in future)
-    NSString *searchEngineListPath = [profileDir stringByAppendingPathComponent:@"SearchURLList.plist"];
+  //
+  // We haven't read the search engine list yet attempt to read from user's profile directory
+  //
+  nsCOMPtr<nsIFile> aDir;
+  NS_GetSpecialDirectory(NS_APP_USER_PROFILE_50_DIR, getter_AddRefs(aDir));
+  if (aDir) {
+    nsCAutoString aDirPath;
+    nsresult rv = aDir->GetNativePath(aDirPath);
+    if (NS_SUCCEEDED(rv)) {
+      NSString *profileDir = [NSString stringWithUTF8String:aDirPath.get()];  
 
-    NSFileManager *fileManager = [NSFileManager defaultManager];
-    if ([fileManager isReadableFileAtPath:searchEngineListPath] ||
-        [fileManager copyPath:defaultSearchEngineList toPath:searchEngineListPath handler:nil])
-      searchURLDictionary = [[NSDictionary alloc] initWithContentsOfFile:searchEngineListPath];
+      //
+      // If the file exists we read it from the profile directory
+      // If it doesn't we attempt to copy it there from our app bundle first
+      // (so that the user has something to edit in future)
+      //
+      NSString *searchEngineListPath    = [profileDir stringByAppendingPathComponent:@"SearchURLList.plist"];
+      NSFileManager *fileManager = [NSFileManager defaultManager];
+      if ( [fileManager isReadableFileAtPath:searchEngineListPath] ||
+           [fileManager copyPath:defaultSearchEngineList toPath:searchEngineListPath handler:nil] )
+        searchURLDictionary = [[NSDictionary alloc] initWithContentsOfFile:searchEngineListPath];
+      else {
+#if DEBUG
+        NSLog(@"Unable to copy search engine list to user profile directory");
+#endif
+      }
+    }
     else {
 #if DEBUG
-      NSLog(@"Unable to copy search engine list to user profile directory");
+      NSLog(@"Unable to get profile directory");
 #endif
     }
   }
   else {
 #if DEBUG
-    NSLog(@"Unable to get profile directory");
+    NSLog(@"Unable to determine profile directory");
 #endif
   }
   
@@ -4680,7 +4776,7 @@ enum BWCOpenDest {
 
 - (CHBrowserView*)activeBrowserView
 {
-  return [mBrowserView browserView];
+  return [mBrowserView getBrowserView];
 }
 
 - (id)windowWillReturnFieldEditor:(NSWindow *)aWindow toObject:(id)anObject
@@ -4732,7 +4828,7 @@ enum BWCOpenDest {
   unsigned int bookmarkBarCount = [bookmarkBarChildren count];
   unsigned int i;
   int loadableItemIndex = -1;
-  BookmarkItem* item = nil;
+  BookmarkItem* item;
 
   // We cycle through all the toolbar items.  When we've skipped enough loadable items
   // (i.e., loadableItemIndex == inIndex), we've gotten there and |item| is the bookmark we want to load.
@@ -4802,8 +4898,7 @@ enum BWCOpenDest {
     [self updateLocationFields:[mBrowserView currentURI] ignoreTyping:YES];
     
   // see if command-return came in the search field
-  } else if ([[[self window] firstResponder] isKindOfClass:[NSView class]] &&
-           [(NSView*)[[self window] firstResponder] isDescendantOf:mSearchBar]) {
+  } else if ([mSearchBar isFirstResponder]) {
     handled = YES;
     [self performSearch:mSearchBar inView:destination inBackground:loadInBG]; 
   }
@@ -4817,8 +4912,8 @@ enum BWCOpenDest {
 //
 - (IBAction)fillForm:(id)sender
 {
-  CHBrowserView* browser = [[self browserWrapper] browserView];
-  nsCOMPtr<nsIDOMWindow> domWindow = [browser contentWindow];
+  CHBrowserView* browser = [[self getBrowserWrapper] getBrowserView];
+  nsCOMPtr<nsIDOMWindow> domWindow = [browser getContentWindow];
   nsCOMPtr<nsIDOMWindowInternal> internalDomWindow (do_QueryInterface(domWindow));
   
   Wallet_Prefill(internalDomWindow);
@@ -4957,7 +5052,7 @@ int TabBarVisiblePrefChangedCallback(const char* inPref, void* inBWC)
   if (strcmp(inPref, gTabBarVisiblePref) == 0) {
     BOOL newValue = [[PreferenceManager sharedInstance] getBooleanPref:gTabBarVisiblePref withSuccess:nil];
     BrowserWindowController* bwc = (BrowserWindowController*)inBWC;
-    [[bwc tabBrowser] setBarAlwaysVisible:newValue];
+    [[bwc getTabBrowser] setBarAlwaysVisible:newValue];
   }
   return NS_OK;
 }

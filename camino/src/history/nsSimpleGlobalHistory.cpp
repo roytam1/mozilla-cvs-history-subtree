@@ -2152,7 +2152,7 @@ nsSimpleGlobalHistory::CloseDB()
   NotifyObserversHistoryClosing();
 
   ExpireEntries(PR_FALSE /* don't notify */);
-  Commit(kSessionCommit);
+  mdb_err err = Commit(kSessionCommit);
 
   // order is important here - logically smallest objects first
   mMetaRow = nsnull;

@@ -47,7 +47,6 @@
 #import "ProgressDlgController.h"
 
 #import "PreferenceManager.h"
-#import "ProgressViewController.h"
 #import "ProgressView.h"
 
 static NSString* const kProgressWindowFrameSaveName = @"ProgressWindow";
@@ -318,7 +317,7 @@ static id gSharedProgressController = nil;
   if (![selectedView isKindOfClass:[ProgressView class]])
     return;
 
-  ProgressViewController* selectedViewController = [selectedView controller];
+  ProgressViewController* selectedViewController = [selectedView getController];
   
   NSArray* selectedArray = [self selectedProgressViewControllers];
 

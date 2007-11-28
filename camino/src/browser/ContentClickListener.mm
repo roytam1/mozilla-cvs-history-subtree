@@ -50,12 +50,11 @@
 // Common helper routines (also used by the context menu code)
 #include "GeckoUtils.h"
 
-#import "NSString+Gecko.h"
-
-#import "ContentClickListener.h"
+#import "NSString+Utils.h"
 #import "PreferenceManager.h"
 #import "CHBrowserView.h"
-#import "BrowserWindowController.h"
+
+#import "ContentClickListener.h"
 
 NS_IMPL_ISUPPORTS2(ContentClickListener, nsIDOMMouseListener, nsIDOMEventListener)
 
@@ -99,7 +98,7 @@ ContentClickListener::MouseClick(nsIDOMEvent* aEvent)
   NSString* hrefStr = [NSString stringWith_nsAString:href];
 
   if ((metaKey && button == 0) || button == 1) {
-    NSString* referrer = [[[mBrowserController browserWrapper] browserView] focusedURLString];
+    NSString* referrer = [[[mBrowserController getBrowserWrapper] getBrowserView] getFocusedURLString];
 
     NSRange firstColon = [hrefStr rangeOfString:@":"];
     NSString* hrefScheme;
