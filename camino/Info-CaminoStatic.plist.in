@@ -159,6 +159,12 @@
 	</array>
 	<key>CFBundleVersion</key>
 	<string>%CM_APP_VERSION%</string>
+	<key>LSFileQuarantineEnabled</key>
+	<true/>
+	<key>LSFileQuarantineExcludedPathPatterns</key>
+	<array>
+		<string>~/Library/*</string>
+	</array>
 	<key>LSMinimumSystemVersion</key>
 	<string>10.3</string>
 	<key>NSAppleScriptEnabled</key>
