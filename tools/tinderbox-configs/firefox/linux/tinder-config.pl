@@ -9,7 +9,7 @@
 
 $BuildXForms = "1";
 $ENV{'MOZILLA_OFFICIAL'} = 1;
-$ENV{'CVS_RSH'} = 'ssh';
+$ENV{'CVS_RSH'} = "$ENV{'HOME'}/ssh_cltbld.sh";
 
 #$ENV{'MOZ_CO_DATE'} = '01/11/2006 20:50 +0000';
 
@@ -206,8 +206,9 @@ $build_hour    = "4";
 $package_creation_path = "/browser/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
 $ssh_version   = "2";
-$ssh_user      = "cltbld";
+$ssh_user      = "ffxbld";
 $ssh_server    = "stage.mozilla.org";
+$ReleaseGroup  = "firefox";
 $ftp_path      = "/home/ftp/pub/firefox/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
