@@ -14,7 +14,7 @@
 # environment, according to bryner.
 $ENV{LANG} = "en_US.iso885915";
 $ENV{MOZ_SYMBOLS_TRANSFER_TYPE} = "rsync";
-$ENV{CVS_RSH} = "$ENV{'HOME'}/ssh_cltbld.sh";
+$ENV{CVS_RSH} = "ssh";
 
 #- PLEASE FILL THIS IN WITH YOUR PROPER EMAIL ADDRESS
 #$BuildAdministrator = "$ENV{USER}\@$ENV{HOST}";
@@ -197,9 +197,8 @@ $build_hour    = "9";
 $package_creation_path = "/browser/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
 $ssh_version   = "2";
-$ssh_user      = "ffxbld";
+$ssh_user      = "cltbld";
 $ssh_server    = "stage.mozilla.org";
-$ReleaseGroup  = "firefox";
 $ftp_path      = "/home/ftp/pub/firefox/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
