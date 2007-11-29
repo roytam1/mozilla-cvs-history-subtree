@@ -230,9 +230,13 @@ $update_filehost = 'ftp.mozilla.org';
 $update_ver_file = 'browser/config/version.txt';
 $crashreporter_buildsymbols = 1;
 $crashreporter_pushsymbols = 1;
+# CONFIG: $ENV{'SYMBOL_SERVER_HOST'}    = '%symbolServer%';
 $ENV{'SYMBOL_SERVER_HOST'} = 'stage.mozilla.org';
+# CONFIG: $ENV{'SYMBOL_SERVER_USER'}    = '%symbolServerUser%';
 $ENV{'SYMBOL_SERVER_USER'}   = 'ffxbld';
+# CONFIG: $ENV{'SYMBOL_SERVER_PATH'}    = '%symbolServerPath%';
 $ENV{'SYMBOL_SERVER_PATH'}   = '/mnt/netapp/breakpad/symbols_ffx/';
+# CONFIG: $ENV{'SYMBOL_SERVER_SSH_KEY'} = '%symbolServerKey%';
 $ENV{'SYMBOL_SERVER_SSH_KEY'}   = "$ENV{'HOME'}/.ssh/ffxbld_dsa";
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
