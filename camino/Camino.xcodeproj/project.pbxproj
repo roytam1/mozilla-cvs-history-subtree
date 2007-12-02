@@ -1311,6 +1311,22 @@
 		DEE9EC4F0AF5C613002BC511 /* SessionManager.h in Headers */ = {isa = PBXBuildFile; fileRef = DEE9EC4D0AF5C613002BC511 /* SessionManager.h */; };
 		DEE9EC510AF5C654002BC511 /* SessionManager.mm in Sources */ = {isa = PBXBuildFile; fileRef = DEE9EC500AF5C654002BC511 /* SessionManager.mm */; };
 		DEE9EC520AF5C654002BC511 /* SessionManager.mm in Sources */ = {isa = PBXBuildFile; fileRef = DEE9EC500AF5C654002BC511 /* SessionManager.mm */; };
+		DEFD23D90D0224CE006899B9 /* content_xmldoc.xpt in CopyFiles */ = {isa = PBXBuildFile; fileRef = DEFD23D60D0224CE006899B9 /* content_xmldoc.xpt */; };
+		DEFD23DA0D0224CE006899B9 /* content_html.xpt in CopyFiles */ = {isa = PBXBuildFile; fileRef = DEFD23D70D0224CE006899B9 /* content_html.xpt */; };
+		DEFD23DB0D0224CE006899B9 /* content_htmldoc.xpt in CopyFiles */ = {isa = PBXBuildFile; fileRef = DEFD23D80D0224CE006899B9 /* content_htmldoc.xpt */; };
+		DEFD23DC0D0224CE006899B9 /* content_xmldoc.xpt in CopyFiles */ = {isa = PBXBuildFile; fileRef = DEFD23D60D0224CE006899B9 /* content_xmldoc.xpt */; };
+		DEFD23DD0D0224CE006899B9 /* content_html.xpt in CopyFiles */ = {isa = PBXBuildFile; fileRef = DEFD23D70D0224CE006899B9 /* content_html.xpt */; };
+		DEFD23DE0D0224CE006899B9 /* content_htmldoc.xpt in CopyFiles */ = {isa = PBXBuildFile; fileRef = DEFD23D80D0224CE006899B9 /* content_htmldoc.xpt */; };
+		DEFD23E00D0224D5006899B9 /* content_xtf.xpt in CopyFiles */ = {isa = PBXBuildFile; fileRef = DEFD23DF0D0224D5006899B9 /* content_xtf.xpt */; };
+		DEFD23E10D0224D5006899B9 /* content_xtf.xpt in CopyFiles */ = {isa = PBXBuildFile; fileRef = DEFD23DF0D0224D5006899B9 /* content_xtf.xpt */; };
+		DEFD23E30D0224E1006899B9 /* dom_loadsave.xpt in CopyFiles */ = {isa = PBXBuildFile; fileRef = DEFD23E20D0224E1006899B9 /* dom_loadsave.xpt */; };
+		DEFD23E40D0224E1006899B9 /* dom_loadsave.xpt in CopyFiles */ = {isa = PBXBuildFile; fileRef = DEFD23E20D0224E1006899B9 /* dom_loadsave.xpt */; };
+		DEFD23E60D0224E9006899B9 /* dom_storage.xpt in CopyFiles */ = {isa = PBXBuildFile; fileRef = DEFD23E50D0224E9006899B9 /* dom_storage.xpt */; };
+		DEFD23E70D0224E9006899B9 /* dom_storage.xpt in CopyFiles */ = {isa = PBXBuildFile; fileRef = DEFD23E50D0224E9006899B9 /* dom_storage.xpt */; };
+		DEFD23E90D022502006899B9 /* storage.xpt in CopyFiles */ = {isa = PBXBuildFile; fileRef = DEFD23E80D022502006899B9 /* storage.xpt */; };
+		DEFD23EA0D022502006899B9 /* storage.xpt in CopyFiles */ = {isa = PBXBuildFile; fileRef = DEFD23E80D022502006899B9 /* storage.xpt */; };
+		DEFD23F50D02252D006899B9 /* libstoragecomps.dylib in CopyFiles */ = {isa = PBXBuildFile; fileRef = DEFD23F40D02252D006899B9 /* libstoragecomps.dylib */; };
+		DEFD23F70D022572006899B9 /* libstoragecomps.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DEFD23F60D022571006899B9 /* libstoragecomps.a */; };
 		E010866906BCA2E500BD5DE0 /* colResize.tiff in Resources */ = {isa = PBXBuildFile; fileRef = E010866206BCA2E500BD5DE0 /* colResize.tiff */; };
 		E010866C06BCA2E500BD5DE0 /* rowResize.tiff in Resources */ = {isa = PBXBuildFile; fileRef = E010866506BCA2E500BD5DE0 /* rowResize.tiff */; };
 		E010866D06BCA2E500BD5DE0 /* sizeNESW.tiff in Resources */ = {isa = PBXBuildFile; fileRef = E010866606BCA2E500BD5DE0 /* sizeNESW.tiff */; };
@@ -1561,6 +1577,7 @@
 				3F44AD0B05BDFB9F00CB4B08 /* libimglib2.dylib in CopyFiles */,
 				3F44AD0C05BDFB9F00CB4B08 /* libpref.dylib in CopyFiles */,
 				3F44AD0E05BDFB9F00CB4B08 /* librdf.dylib in CopyFiles */,
+				DEFD23F50D02252D006899B9 /* libstoragecomps.dylib in CopyFiles */,
 				3F44AD0F05BDFB9F00CB4B08 /* libuconv.dylib in CopyFiles */,
 				3F44AD1005BDFB9F00CB4B08 /* libuniversalchardet.dylib in CopyFiles */,
 				3F44AD1105BDFB9F00CB4B08 /* libwidget_mac.dylib in CopyFiles */,
@@ -1585,7 +1602,11 @@
 				82180AC607368B03002EFA6D /* txmgr.xpt in CopyFiles */,
 				82180AC707368B03002EFA6D /* composer.xpt in CopyFiles */,
 				82AC0D65065A602200776B02 /* dom_xpath.xpt in CopyFiles */,
+				DEFD23DD0D0224CE006899B9 /* content_html.xpt in CopyFiles */,
+				DEFD23DE0D0224CE006899B9 /* content_htmldoc.xpt in CopyFiles */,
+				DEFD23DC0D0224CE006899B9 /* content_xmldoc.xpt in CopyFiles */,
 				82AC0D66065A602200776B02 /* content_xslt.xpt in CopyFiles */,
+				DEFD23E10D0224D5006899B9 /* content_xtf.xpt in CopyFiles */,
 				3F44ACD105BDFB9F00CB4B08 /* xpcom_obsolete.xpt in CopyFiles */,
 				3F44ACD705BDFB9F00CB4B08 /* caps.xpt in CopyFiles */,
 				3F44ACD905BDFB9F00CB4B08 /* docshell.xpt in CopyFiles */,
@@ -1595,7 +1616,9 @@
 				3F44ACDC05BDFB9F00CB4B08 /* dom_css.xpt in CopyFiles */,
 				3F44ACDD05BDFB9F00CB4B08 /* dom_events.xpt in CopyFiles */,
 				3F44ACDE05BDFB9F00CB4B08 /* dom_html.xpt in CopyFiles */,
+				DEFD23E40D0224E1006899B9 /* dom_loadsave.xpt in CopyFiles */,
 				3F44ACDF05BDFB9F00CB4B08 /* dom_range.xpt in CopyFiles */,
+				DEFD23E70D0224E9006899B9 /* dom_storage.xpt in CopyFiles */,
 				3F44ACE005BDFB9F00CB4B08 /* dom_stylesheets.xpt in CopyFiles */,
 				3F44ACE005BDFB9F00CB4C08 /* dom_svg.xpt in CopyFiles */,
 				3F44ACE105BDFB9F00CB4B08 /* dom_traversal.xpt in CopyFiles */,
@@ -1628,6 +1651,7 @@
 				3F44AD0A05BDFB9F00CB4B08 /* necko.xpt in CopyFiles */,
 				3F44AD1305BDFB9F00CB4B08 /* pref.xpt in CopyFiles */,
 				3F44AD1505BDFB9F00CB4B08 /* rdf.xpt in CopyFiles */,
+				DEFD23EA0D022502006899B9 /* storage.xpt in CopyFiles */,
 				3F44AD1605BDFB9F00CB4B08 /* shistory.xpt in CopyFiles */,
 				3F44AD1705BDFB9F00CB4B08 /* uconv.xpt in CopyFiles */,
 				3F44AD1805BDFB9F00CB4B08 /* unicharutil.xpt in CopyFiles */,
@@ -1876,7 +1900,11 @@
 				82CE28CB0736634A00B4DE07 /* txmgr.xpt in CopyFiles */,
 				82CE28C7073662B400B4DE07 /* composer.xpt in CopyFiles */,
 				828FBD97065A986900B3D52A /* dom_xpath.xpt in CopyFiles */,
+				DEFD23DA0D0224CE006899B9 /* content_html.xpt in CopyFiles */,
+				DEFD23DB0D0224CE006899B9 /* content_htmldoc.xpt in CopyFiles */,
+				DEFD23D90D0224CE006899B9 /* content_xmldoc.xpt in CopyFiles */,
 				828FBD98065A986900B3D52A /* content_xslt.xpt in CopyFiles */,
+				DEFD23E00D0224D5006899B9 /* content_xtf.xpt in CopyFiles */,
 				3F44AF0E05BDFBA000CB4B08 /* caps.xpt in CopyFiles */,
 				3F44AF0F05BDFBA000CB4B08 /* docshell.xpt in CopyFiles */,
 				3F44AF1005BDFBA000CB4B08 /* dom_base.xpt in CopyFiles */,
@@ -1885,7 +1913,9 @@
 				3F44AF1205BDFBA000CB4B08 /* dom_css.xpt in CopyFiles */,
 				3F44AF1305BDFBA000CB4B08 /* dom_events.xpt in CopyFiles */,
 				3F44AF1405BDFBA000CB4B08 /* dom_html.xpt in CopyFiles */,
+				DEFD23E30D0224E1006899B9 /* dom_loadsave.xpt in CopyFiles */,
 				3F44AF1505BDFBA000CB4B08 /* dom_range.xpt in CopyFiles */,
+				DEFD23E60D0224E9006899B9 /* dom_storage.xpt in CopyFiles */,
 				3F44AF1605BDFBA000CB4B08 /* dom_stylesheets.xpt in CopyFiles */,
 				3F44AF1605BDFBA000CB4C08 /* dom_svg.xpt in CopyFiles */,
 				3F44AF1705BDFBA000CB4B08 /* dom_traversal.xpt in CopyFiles */,
@@ -1919,6 +1949,7 @@
 				3F44AF3305BDFBA000CB4B08 /* pref.xpt in CopyFiles */,
 				3F44AF3505BDFBA000CB4B08 /* rdf.xpt in CopyFiles */,
 				3F44AF3605BDFBA000CB4B08 /* shistory.xpt in CopyFiles */,
+				DEFD23E90D022502006899B9 /* storage.xpt in CopyFiles */,
 				3F44AF3705BDFBA000CB4B08 /* uconv.xpt in CopyFiles */,
 				3F44AF3805BDFBA000CB4B08 /* unicharutil.xpt in CopyFiles */,
 				3F44AF3905BDFBA000CB4B08 /* uriloader.xpt in CopyFiles */,
@@ -2407,7 +2438,7 @@
 		3F44ADF105BDFBA000CB4B08 /* Security.prefPane */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Security.prefPane; sourceTree = BUILT_PRODUCTS_DIR; };
 		3F44AE0705BDFBA000CB4B08 /* Info-WebFeaturesPrefPane.plist */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = "Info-WebFeaturesPrefPane.plist"; sourceTree = "<group>"; };
 		3F44AE0805BDFBA000CB4B08 /* WebFeatures.prefPane */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WebFeatures.prefPane; sourceTree = BUILT_PRODUCTS_DIR; };
-		3F44AFC605BDFBA100CB4B08 /* Camino.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Camino.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3F44AFC605BDFBA100CB4B08 /* Camino.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Camino.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3F558E950552122E006156FD /* IOKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOKit.framework; path = /System/Library/Frameworks/IOKit.framework; sourceTree = "<absolute>"; };
 		3F63719B057CE0DE00B62EE2 /* manager.tif */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; name = manager.tif; path = resources/images/toolbar/manager.tif; sourceTree = SOURCE_ROOT; };
 		3F7C6CB905B4819E002FFFD3 /* HistoryItem.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = HistoryItem.h; path = src/history/HistoryItem.h; sourceTree = "<group>"; };
@@ -2575,6 +2606,15 @@
 		DEE349A90B84F47400BCD687 /* FileChangeWatcher.m */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.objc; name = FileChangeWatcher.m; path = src/download/FileChangeWatcher.m; sourceTree = "<group>"; };
 		DEE9EC4D0AF5C613002BC511 /* SessionManager.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = SessionManager.h; path = src/application/SessionManager.h; sourceTree = "<group>"; };
 		DEE9EC500AF5C654002BC511 /* SessionManager.mm */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.objcpp; name = SessionManager.mm; path = src/application/SessionManager.mm; sourceTree = SOURCE_ROOT; };
+		DEFD23D60D0224CE006899B9 /* content_xmldoc.xpt */ = {isa = PBXFileReference; lastKnownFileType = file; name = content_xmldoc.xpt; path = ../dist/bin/components/content_xmldoc.xpt; sourceTree = SOURCE_ROOT; };
+		DEFD23D70D0224CE006899B9 /* content_html.xpt */ = {isa = PBXFileReference; lastKnownFileType = file; name = content_html.xpt; path = ../dist/bin/components/content_html.xpt; sourceTree = SOURCE_ROOT; };
+		DEFD23D80D0224CE006899B9 /* content_htmldoc.xpt */ = {isa = PBXFileReference; lastKnownFileType = file; name = content_htmldoc.xpt; path = ../dist/bin/components/content_htmldoc.xpt; sourceTree = SOURCE_ROOT; };
+		DEFD23DF0D0224D5006899B9 /* content_xtf.xpt */ = {isa = PBXFileReference; lastKnownFileType = file; name = content_xtf.xpt; path = ../dist/bin/components/content_xtf.xpt; sourceTree = SOURCE_ROOT; };
+		DEFD23E20D0224E1006899B9 /* dom_loadsave.xpt */ = {isa = PBXFileReference; lastKnownFileType = file; name = dom_loadsave.xpt; path = ../dist/bin/components/dom_loadsave.xpt; sourceTree = SOURCE_ROOT; };
+		DEFD23E50D0224E9006899B9 /* dom_storage.xpt */ = {isa = PBXFileReference; lastKnownFileType = file; name = dom_storage.xpt; path = ../dist/bin/components/dom_storage.xpt; sourceTree = SOURCE_ROOT; };
+		DEFD23E80D022502006899B9 /* storage.xpt */ = {isa = PBXFileReference; lastKnownFileType = file; name = storage.xpt; path = ../dist/bin/components/storage.xpt; sourceTree = SOURCE_ROOT; };
+		DEFD23F40D02252D006899B9 /* libstoragecomps.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.bundle"; name = libstoragecomps.dylib; path = ../dist/bin/components/libstoragecomps.dylib; sourceTree = SOURCE_ROOT; };
+		DEFD23F60D022571006899B9 /* libstoragecomps.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libstoragecomps.a; path = ../dist/lib/components/libstoragecomps.a; sourceTree = SOURCE_ROOT; };
 		E010866206BCA2E500BD5DE0 /* colResize.tiff */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; path = colResize.tiff; sourceTree = "<group>"; };
 		E010866506BCA2E500BD5DE0 /* rowResize.tiff */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; path = rowResize.tiff; sourceTree = "<group>"; };
 		E010866606BCA2E500BD5DE0 /* sizeNESW.tiff */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; path = sizeNESW.tiff; sourceTree = "<group>"; };
@@ -3175,6 +3215,7 @@
 				008116E70B272204001CB3F0 /* Security.framework in Frameworks */,
 				DE56E9250B73E7EE00D27D57 /* libauth.a in Frameworks */,
 				7B64B7E30CCFDA860098406C /* Sparkle.framework in Frameworks */,
+				DEFD23F70D022572006899B9 /* libstoragecomps.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -3305,6 +3346,7 @@
 				F5D3F1CE0209235A014E447F /* libmork.dylib */,
 				F6BD641201B3156701A962F7 /* libpref.dylib */,
 				F6BD641401B3156701A962F7 /* librdf.dylib */,
+				DEFD23F40D02252D006899B9 /* libstoragecomps.dylib */,
 				F5F59320020F4CD201ACA690 /* libtxmgr.dylib */,
 				F6BD641701B3156701A962F7 /* libuconv.dylib */,
 				F6BD641B01B3156701A962F7 /* libwidget_mac.dylib */,
@@ -3327,7 +3369,11 @@
 				F6BD639401B3131201A962F7 /* caps.xpt */,
 				82CE28C40736625800B4DE07 /* composer.xpt */,
 				F6BD63D901B313EE01A962F7 /* content_base.xpt */,
+				DEFD23D70D0224CE006899B9 /* content_html.xpt */,
+				DEFD23D80D0224CE006899B9 /* content_htmldoc.xpt */,
+				DEFD23D60D0224CE006899B9 /* content_xmldoc.xpt */,
 				82AC0D5D065A5F2300776B02 /* content_xslt.xpt */,
+				DEFD23DF0D0224D5006899B9 /* content_xtf.xpt */,
 				F6BD639601B3131201A962F7 /* docshell.xpt */,
 				F6BD63A201B3131201A962F7 /* dom.xpt */,
 				F6BD639701B3131201A962F7 /* dom_base.xpt */,
@@ -3336,7 +3382,9 @@
 				F6BD639901B3131201A962F7 /* dom_css.xpt */,
 				F6BD639A01B3131201A962F7 /* dom_events.xpt */,
 				F6BD639B01B3131201A962F7 /* dom_html.xpt */,
+				DEFD23E20D0224E1006899B9 /* dom_loadsave.xpt */,
 				F6BD639C01B3131201A962F7 /* dom_range.xpt */,
+				DEFD23E50D0224E9006899B9 /* dom_storage.xpt */,
 				F6BD639D01B3131201A962F7 /* dom_stylesheets.xpt */,
 				F6BD639D01B3131201A963F7 /* dom_svg.xpt */,
 				F6BD639E01B3131201A962F7 /* dom_traversal.xpt */,
@@ -3369,6 +3417,7 @@
 				F6BD641D01B3156701A962F7 /* pref.xpt */,
 				F6BD641F01B3156701A962F7 /* rdf.xpt */,
 				F6BD642001B3156701A962F7 /* shistory.xpt */,
+				DEFD23E80D022502006899B9 /* storage.xpt */,
 				82CE28C80736633900B4DE07 /* txmgr.xpt */,
 				F6BD63B301B3131201A962F7 /* txtsvc.xpt */,
 				A7D88E6A0465D9F800A80196 /* typeaheadfind.xpt */,
@@ -4298,6 +4347,7 @@
 				F56F246402AC723001A967F3 /* libgklayout.a */,
 				F56F246502AC723001A967F3 /* libgkplugin.a */,
 				F56F246B02AC723001A967F3 /* libmork.a */,
+				DEFD23F60D022571006899B9 /* libstoragecomps.a */,
 				F56F247002AC723001A967F3 /* libtxmgr.a */,
 				F56F247302AC723001A967F3 /* libwebbrwsr.a */,
 				F56F247402AC723001A967F3 /* libwidget_mac.a */,

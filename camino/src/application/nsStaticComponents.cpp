@@ -72,6 +72,7 @@
     MODULE(nsWidgetMacModule) \
     MODULE(nsLayoutModule) \
     MODULE(nsMorkModule) \
+    MODULE(mozStorageModule) \
     MODULE(docshell_provider) \
     MODULE(embedcomponents) \
     MODULE(Browser_Embedding_Module) \
