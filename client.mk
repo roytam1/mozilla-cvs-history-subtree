@@ -79,7 +79,8 @@
 #    clean (realclean is now the same as clean)
 #    distclean
 #
-# See http://www.mozilla.org/build/ for more information.
+# See http://developer.mozilla.org/en/docs/Build_Documentation for 
+# more information.
 #
 # Options:
 #   MOZ_BUILD_PROJECTS   - Build multiple projects in subdirectories
@@ -432,7 +433,7 @@ MODULES_all :=                                  \
 # the head revision if a file is not tagged
 MOZ_CO_TAG           = ZAP_20050610_BRANCH
 NSPR_CO_TAG          = NSPR_HEAD_20071016
-NSS_CO_TAG           = NSS_3_12_ALPHA_2
+NSS_CO_TAG           = NSS_3_12_ALPHA_2B
 LDAPCSDK_CO_TAG      = LDAPCSDK_6_0_3_CLIENT_BRANCH
 LOCALES_CO_TAG       =
 

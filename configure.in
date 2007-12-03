@@ -114,7 +114,7 @@ GLIB_VERSION=1.2.0
 LIBIDL_VERSION=0.6.3
 PERL_VERSION=5.006
 LIBART_VERSION=2.3.4
-CAIRO_VERSION=1.4.2
+CAIRO_VERSION=1.5.2
 GLITZ_VERSION=0.4.0
 PANGO_VERSION=1.10.0
 GTK2_VERSION=1.8.0
@@ -715,6 +715,31 @@ AC_SUBST(HAS_XCODE_2_1)
 dnl The universal machinery sets UNIVERSAL_BINARY to inform packager.mk
 dnl that a universal binary is being produced.
 AC_SUBST(UNIVERSAL_BINARY)
+
+dnl ========================================================
+dnl Check for MacOS deployment target version
+dnl ========================================================
+
+MOZ_ARG_ENABLE_STRING(macos-target,
+                      [  --enable-macos-target=VER (default=10.4)
+                          Set the minimum MacOS version needed at runtime],
+                      [_MACOSX_DEPLOYMENT_TARGET=$enableval])
+
+case "$target" in
+*-darwin*)
+    if test -n "$_MACOSX_DEPLOYMENT_TARGET" ; then
+        dnl Use the specified value
+        export MACOSX_DEPLOYMENT_TARGET=$_MACOSX_DEPLOYMENT_TARGET
+    elif test -z "$MACOSX_DEPLOYMENT_TARGET" ; then
+        dnl No value specified on the command line or in the environment,
+        dnl use the lesser of the application's minimum or the architecture's
+        dnl minimum.
+        export MACOSX_DEPLOYMENT_TARGET=10.4
+    fi
+    ;;
+esac
+
+AC_SUBST(MACOSX_DEPLOYMENT_TARGET)
 
 dnl ========================================================
 dnl = Mac OS X SDK support
@@ -2423,21 +2448,7 @@ case "$target" in
         MOZ_COMPONENTS_VERSION_SCRIPT_LDFLAGS='-Wl,--version-script,$(BUILD_TOOLS)/gnu-ld-scripts/components-version-script'
         ;;
     *-darwin*)
-        AC_MSG_CHECKING(for -exported_symbols_list option to ld)
-        AC_CACHE_VAL(ac_cv_exported_symbols_list,
-         [
-           if $LD -exported_symbols_list 2>&1 | grep "argument missing" >/dev/null; then
-             ac_cv_exported_symbols_list=true
-           else
-             ac_cv_exported_symbols_list=false
-           fi
-         ])
-        if test "$ac_cv_exported_symbols_list" = true; then
-          MOZ_COMPONENTS_VERSION_SCRIPT_LDFLAGS='-Wl,-exported_symbols_list -Wl,$(BUILD_TOOLS)/gnu-ld-scripts/components-export-list'
-          AC_MSG_RESULT(yes)
-        else
-          AC_MSG_RESULT(no)
-        fi
+        MOZ_COMPONENTS_VERSION_SCRIPT_LDFLAGS='-Wl,-exported_symbols_list -Wl,$(BUILD_TOOLS)/gnu-ld-scripts/components-export-list'
         ;;
     *-cygwin*|*-mingw*|*-mks*|*-msvc|*-wince)
         if test -n "$GNU_CC"; then
@@ -3123,31 +3134,6 @@ then
 	esac
     LDFLAGS="${_PTHREAD_LDFLAGS} ${LDFLAGS}"
 fi
-
-dnl ========================================================
-dnl Check for MacOS deployment target version
-dnl ========================================================
-
-MOZ_ARG_ENABLE_STRING(macos-target,
-                      [  --enable-macos-target=VER (default=10.4)
-                          Set the minimum MacOS version needed at runtime],
-                      [_MACOSX_DEPLOYMENT_TARGET=$enableval])
-
-case "$target" in
-*-darwin*)
-    if test -n "$_MACOSX_DEPLOYMENT_TARGET" ; then
-        dnl Use the specified value
-        export MACOSX_DEPLOYMENT_TARGET=$_MACOSX_DEPLOYMENT_TARGET
-    elif test -z "$MACOSX_DEPLOYMENT_TARGET" ; then
-        dnl No value specified on the command line or in the environment,
-        dnl use the lesser of the application's minimum or the architecture's
-        dnl minimum.
-        export MACOSX_DEPLOYMENT_TARGET=10.4
-    fi
-    ;;
-esac
-
-AC_SUBST(MACOSX_DEPLOYMENT_TARGET)
 
 dnl ========================================================
 dnl See if mmap sees writes
@@ -3882,7 +3868,7 @@ MOZ_ARG_WITH_BOOL(system-nspr,
     _USE_SYSTEM_NSPR=1 )
 
 if test -n "$_USE_SYSTEM_NSPR"; then
-    AM_PATH_NSPR(4.0.0, [MOZ_NATIVE_NSPR=1], [MOZ_NATIVE_NSPR=])
+    AM_PATH_NSPR(4.7.0, [MOZ_NATIVE_NSPR=1], [MOZ_NATIVE_NSPR=])
 fi
 
 if test -n "$MOZ_NATIVE_NSPR"; then
@@ -3925,7 +3911,7 @@ MOZ_ARG_WITH_BOOL(system-nss,
     _USE_SYSTEM_NSS=1 )
 
 if test -n "$_USE_SYSTEM_NSS"; then
-    AM_PATH_NSS(3.0.0, [MOZ_NATIVE_NSS=1], [MOZ_NATIVE_NSS=])
+    AM_PATH_NSS(3.12.0, [MOZ_NATIVE_NSS=1], [MOZ_NATIVE_NSS=])
 fi
 
 if test -n "$MOZ_NATIVE_NSS"; then
@@ -6354,7 +6340,7 @@ dnl ========================================================
 dnl = Support for gcc stack unwinding (from gcc 3.3)
 dnl ========================================================
 if test "$HAVE_GCC3_ABI" && test -z "$SKIP_LIBRARY_CHECKS"; then
-    AC_CHECK_FUNCS(_Unwind_Backtrace)
+    AC_CHECK_HEADER(unwind.h, AC_CHECK_FUNCS(_Unwind_Backtrace))
 fi
 
 dnl ========================================================

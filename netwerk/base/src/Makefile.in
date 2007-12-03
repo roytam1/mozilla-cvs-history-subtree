@@ -91,6 +91,8 @@ CPPSRCS		= \
 		nsURLHelper.cpp \
 		nsURLParsers.cpp \
 		nsNetStrings.cpp \
+		nsBase64Encoder.cpp \
+		nsSerializationHelper.cpp \
 		$(NULL)
 
 ifdef MOZ_ZAP
