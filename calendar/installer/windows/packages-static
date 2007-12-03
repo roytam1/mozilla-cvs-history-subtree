@@ -199,7 +199,6 @@ bin\components\xultmpl.xpt
 bin\components\wcap.xpt
 ; JavaScript components
 bin\components\nsDefaultCLH.js
-bin\components\nsSetDefaultBrowser.js
 #ifdef MOZILLA_1_8_BRANCH
 bin\components\nsCloseAllWindows.js
 #else
@@ -208,8 +207,6 @@ bin\components\nsTryToClose.js
 bin\components\nsInterfaceInfoToIDL.js
 bin\components\nsPostUpdateWin.js
 bin\components\nsProgressDialog.js
-bin\components\nsSetDefaultMail.js
-bin\components\nsUnsetDefaultMail.js
 bin\components\nsUpdateService.js
 bin\components\nsURLFormatter.js
 bin\components\nsHelperAppDlg.js
