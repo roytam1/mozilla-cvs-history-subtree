@@ -225,11 +225,12 @@ private:
     PRLock                 *mLock;
     nsCOMPtr<nsIInputStream> mWriteStream; // This stream is written to the server.
     PRUint32                 mWriteCount;
-    PRPackedBool           mIPv6Checked;
+    PRPackedBool            mAddressChecked;
+    PRPackedBool            mServerIsIPv6;
     
     static PRUint32         mSessionStartTime;
 
-    char                   *mIPv6ServerAddress; // Server IPv6 address; null if server not IPv6
+    char                    mServerAddress[64];
 
     // ***** control read gvars
     nsresult                mControlStatus;

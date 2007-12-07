@@ -371,6 +371,7 @@ NS_IMPL_RELEASE_INHERITED(nsDocShell, nsDocLoader)
 
 NS_INTERFACE_MAP_BEGIN(nsDocShell)
     NS_INTERFACE_MAP_ENTRY(nsIDocShell)
+    NS_INTERFACE_MAP_ENTRY(nsIDocShell_MOZILLA_1_8_BRANCH2)
     NS_INTERFACE_MAP_ENTRY(nsIDocShellTreeItem)
     NS_INTERFACE_MAP_ENTRY(nsIDocShellTreeNode)
     NS_INTERFACE_MAP_ENTRY(nsIDocShellHistory)
@@ -616,6 +617,9 @@ nsDocShell::LoadURI(nsIURI * aURI,
                     PRUint32 aLoadFlags,
                     PRBool aFirstParty)
 {
+    if (mFiredUnloadEvent) {
+      return NS_OK; // JS may not handle returning of an error code
+    }
     nsresult rv;
     nsCOMPtr<nsIURI> referrer;
     nsCOMPtr<nsIInputStream> postStream;
@@ -2364,6 +2368,13 @@ nsDocShell::GetChildOffset(PRInt32 * aChildOffset)
     return NS_OK;
 }
 
+NS_IMETHODIMP
+nsDocShell::GetIsInUnload(PRBool* aIsInUnload)
+{
+    *aIsInUnload = mFiredUnloadEvent;
+    return NS_OK;
+}
+
 //*****************************************************************************
 // nsDocShell::nsIDocShellTreeNode
 //*****************************************************************************   
@@ -2788,6 +2799,12 @@ nsDocShell::IsPrintingOrPP(PRBool aDisplayErrorDialog)
   return mIsPrintingOrPP;
 }
 
+PRBool
+nsDocShell::IsNavigationAllowed(PRBool aDisplayPrintErrorDialog)
+{
+    return !IsPrintingOrPP(aDisplayPrintErrorDialog) && !mFiredUnloadEvent;
+}
+
 //*****************************************************************************
 // nsDocShell::nsIWebNavigation
 //*****************************************************************************   
@@ -2795,7 +2812,7 @@ nsDocShell::IsPrintingOrPP(PRBool aDisplayErrorDialog)
 NS_IMETHODIMP
 nsDocShell::GetCanGoBack(PRBool * aCanGoBack)
 {
-    if (IsPrintingOrPP(PR_FALSE)) {
+    if (!IsNavigationAllowed(PR_FALSE)) {
       *aCanGoBack = PR_FALSE;
       return NS_OK; // JS may not handle returning of an error code
     }
@@ -2812,7 +2829,7 @@ nsDocShell::GetCanGoBack(PRBool * aCanGoBack)
 NS_IMETHODIMP
 nsDocShell::GetCanGoForward(PRBool * aCanGoForward)
 {
-    if (IsPrintingOrPP(PR_FALSE)) {
+    if (!IsNavigationAllowed(PR_FALSE)) {
       *aCanGoForward = PR_FALSE;
       return NS_OK; // JS may not handle returning of an error code
     }
@@ -2829,7 +2846,7 @@ nsDocShell::GetCanGoForward(PRBool * aCanGoForward)
 NS_IMETHODIMP
 nsDocShell::GoBack()
 {
-    if (IsPrintingOrPP()) {
+    if (!IsNavigationAllowed()) {
       return NS_OK; // JS may not handle returning of an error code
     }
     nsresult rv;
@@ -2845,7 +2862,7 @@ nsDocShell::GoBack()
 NS_IMETHODIMP
 nsDocShell::GoForward()
 {
-    if (IsPrintingOrPP()) {
+    if (!IsNavigationAllowed()) {
       return NS_OK; // JS may not handle returning of an error code
     }
     nsresult rv;
@@ -2860,7 +2877,7 @@ nsDocShell::GoForward()
 
 NS_IMETHODIMP nsDocShell::GotoIndex(PRInt32 aIndex)
 {
-    if (IsPrintingOrPP()) {
+    if (!IsNavigationAllowed()) {
       return NS_OK; // JS may not handle returning of an error code
     }
     nsresult rv;
@@ -2881,7 +2898,7 @@ nsDocShell::LoadURI(const PRUnichar * aURI,
                     nsIInputStream * aPostStream,
                     nsIInputStream * aHeaderStream)
 {
-    if (IsPrintingOrPP()) {
+    if (!IsNavigationAllowed()) {
       return NS_OK; // JS may not handle returning of an error code
     }
     nsCOMPtr<nsIURI> uri;
@@ -3188,7 +3205,7 @@ nsDocShell::LoadErrorPage(nsIURI *aURI, const PRUnichar *aURL,
 NS_IMETHODIMP
 nsDocShell::Reload(PRUint32 aReloadFlags)
 {
-    if (IsPrintingOrPP()) {
+    if (!IsNavigationAllowed()) {
       return NS_OK; // JS may not handle returning of an error code
     }
     nsresult rv;
@@ -4930,6 +4947,12 @@ nsDocShell::CreateAboutBlankContentViewer()
     (void) FirePageHideNotification(!mSavingOldViewer);
   }
 
+  // Now make sure we don't think we're in the middle of firing unload after
+  // this point.  This will make us fire unload when the about:blank document
+  // unloads... but that's ok, more or less.  Would be nice if it fired load
+  // too, of course.
+  mFiredUnloadEvent = PR_FALSE;
+
   // one helper factory, please
   nsCOMPtr<nsICategoryManager> catMan(do_GetService(NS_CATEGORYMANAGER_CONTRACTID));
   if (!catMan)
@@ -6220,6 +6243,10 @@ nsDocShell::InternalLoad(nsIURI * aURI,
                          nsIDocShell** aDocShell,
                          nsIRequest** aRequest)
 {
+    if (mFiredUnloadEvent) {
+      return NS_OK; // JS may not handle returning of an error code
+    }
+
     nsresult rv = NS_OK;
 
 #ifdef PR_LOGGING

@@ -61,6 +61,26 @@ nsMapiRegistry::nsMapiRegistry() {
     // m_ShowDialog should be initialized to false 
     // if we are the default mail client.
     m_ShowDialog = !m_registryUtils.HasRestrictedRegistryAccess() && !m_DefaultMailClient;
+
+    // Brute force hack to help fix Bug #389613 - when we start up the client,
+    // for every protocol we are the default for, re-register and re-write the default handler
+    // keys. This ensures that we'll always write out -osint into the registry when we are already the
+    // the default client. 
+    if (!m_registryUtils.HasRestrictedRegistryAccess())
+    {
+      if (m_DefaultMailClient)
+      {
+        m_registryUtils.registerMailApp(PR_TRUE);
+        m_registryUtils.setDefaultMailClient();
+      }
+      if (m_DefaultNewsClient)
+      {
+        m_registryUtils.registerNewsApp(PR_TRUE);
+        m_registryUtils.setDefaultNewsClient();
+      }
+      if (m_registryUtils.IsDefaultFeedClient())
+          m_registryUtils.setDefaultFeedClient();
+    }
 }
 
 nsMapiRegistry::~nsMapiRegistry() {

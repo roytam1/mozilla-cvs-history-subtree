@@ -238,6 +238,9 @@ class nsCParserNode :  public nsIParserNode {
      */
     virtual CToken* PopAttributeToken();
 
+    /** Like PopAttributeToken, but pops off the front of the attribute list */
+    virtual CToken* PopAttributeTokenFront();
+
     /** Retrieve a string containing the tag and its attributes in "source" form
      * @update	rickg 06June2000
      * @return  void
@@ -312,6 +315,7 @@ public:
     virtual const    nsAString& GetKeyAt(PRUint32 anIndex) const;
     virtual const    nsAString& GetValueAt(PRUint32 anIndex) const;
     virtual CToken*  PopAttributeToken();
+    virtual CToken*  PopAttributeTokenFront();
     virtual void     GetSource(nsString& aString);
     virtual nsresult ReleaseAll();
 protected:

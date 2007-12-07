@@ -217,7 +217,7 @@ nsDOMDocumentType::GetNodeType(PRUint16* aNodeType)
 NS_IMETHODIMP
 nsDOMDocumentType::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
 {
-  nsDOMDocumentType* it = new nsDOMDocumentType(mNodeInfoManager, mName,
+  nsDOMDocumentType* it = new nsDOMDocumentType(GetNodeInfoManager(), mName,
                                                 mEntities,
                                                 mNotations,
                                                 mPublicId,

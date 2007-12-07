@@ -207,7 +207,7 @@ NS_IMETHODIMP
 nsTextNode::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
 {
   nsCOMPtr<nsITextContent> textContent = CloneContent(PR_TRUE,
-                                                      mNodeInfoManager);
+                                                      GetNodeInfoManager());
   NS_ENSURE_TRUE(textContent, NS_ERROR_OUT_OF_MEMORY);
 
   return CallQueryInterface(textContent, aReturn);

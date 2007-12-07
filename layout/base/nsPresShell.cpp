@@ -8593,3 +8593,22 @@ void ColorToString(nscolor aColor, nsAutoString &aString)
               NS_GET_R(aColor), NS_GET_G(aColor), NS_GET_B(aColor));
   CopyASCIItoUTF16(buf, aString);
 }
+
+PRBool
+nsPresContext::IsChrome()
+{
+  PRBool isChrome = PR_FALSE;
+  nsCOMPtr<nsISupports> container = GetContainer();
+  if (container) {
+    nsresult result;
+    nsCOMPtr<nsIDocShellTreeItem> docShell(do_QueryInterface(container, &result));
+    if (NS_SUCCEEDED(result) && docShell) {
+      PRInt32 docShellType;
+      result = docShell->GetItemType(&docShellType);
+      if (NS_SUCCEEDED(result)) {
+        isChrome = nsIDocShellTreeItem::typeChrome == docShellType;
+      }
+    }
+  }
+  return isChrome;
+}

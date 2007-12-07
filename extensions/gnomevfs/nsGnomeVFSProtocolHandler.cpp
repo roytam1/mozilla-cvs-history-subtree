@@ -836,7 +836,7 @@ nsGnomeVFSProtocolHandler::InitSupportedProtocolsPref(nsIPrefBranch *prefs)
   if (NS_SUCCEEDED(rv))
     mSupportedProtocols.StripWhitespace();
   else
-    mSupportedProtocols.AssignLiteral("smb:,sftp:"); // use defaults
+    mSupportedProtocols.Truncate();
 
   LOG(("gnomevfs: supported protocols \"%s\"\n", mSupportedProtocols.get()));
 }

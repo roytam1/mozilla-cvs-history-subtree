@@ -3889,7 +3889,7 @@ nsCSSFrameConstructor::ConstructTableColFrame(nsFrameConstructorState& aState,
       rv = aTableCreator.CreateTableColFrame(&newCol);
       if (NS_FAILED(rv)) return rv;
       InitAndRestoreFrame(aState, aContent, parentFrame, styleContext, nsnull,
-                          newCol);
+                          newCol, PR_FALSE);
       ((nsTableColFrame*)newCol)->SetColType(eColAnonymousCol);
       lastCol->SetNextSibling(newCol);
       lastCol = newCol;
@@ -9241,9 +9241,9 @@ PRBool NotifyListBoxBody(nsPresContext*    aPresContext,
     nsCOMPtr<nsIDOMXULElement> xulElement = do_QueryInterface(aContainer);
     nsCOMPtr<nsIBoxObject> boxObject;
     xulElement->GetBoxObject(getter_AddRefs(boxObject));
-    nsCOMPtr<nsPIListBoxObject> listBoxObject = do_QueryInterface(boxObject);
+    nsCOMPtr<nsPIListBoxObject_MOZILLA_1_8_BRANCH> listBoxObject = do_QueryInterface(boxObject);
     if (listBoxObject) {
-      nsIListBoxObject* listboxBody = listBoxObject->GetListBoxBody();
+      nsIListBoxObject* listboxBody = listBoxObject->GetListBoxBody(PR_FALSE);
       if (listboxBody) {
         nsListBoxBodyFrame *listBoxBodyFrame = NS_STATIC_CAST(nsListBoxBodyFrame*, listboxBody);
         if (aOperation == CONTENT_REMOVED) {
@@ -9268,11 +9268,12 @@ PRBool NotifyListBoxBody(nsPresContext*    aPresContext,
                                           getter_AddRefs(tag));
 
   // Just ignore tree tags, anyway we don't create any frames for them.
-  if (tag == nsXULAtoms::treechildren ||
-      tag == nsXULAtoms::treeitem ||
-      tag == nsXULAtoms::treerow ||
-      (namespaceID == kNameSpaceID_XUL && aUseXBLForms &&
-       ShouldIgnoreSelectChild(aContainer)))
+  if (aContainer->GetParent() &&
+      (tag == nsXULAtoms::treechildren ||
+       tag == nsXULAtoms::treeitem ||
+       tag == nsXULAtoms::treerow ||
+       (namespaceID == kNameSpaceID_XUL && aUseXBLForms &&
+        ShouldIgnoreSelectChild(aContainer))))
     return PR_TRUE;
 
   return PR_FALSE;
@@ -10083,38 +10084,39 @@ nsCSSFrameConstructor::ContentRemoved(nsIContent*     aContainer,
     if (display->mDisplay == NS_STYLE_DISPLAY_POPUP)
       // Get the placeholder frame
       placeholderFrame = frameManager->GetPlaceholderFrameFor(childFrame);
-      if (placeholderFrame) {
-        // Remove the mapping from the frame to its placeholder
-        frameManager->UnregisterPlaceholderFrame(placeholderFrame);
+    if (placeholderFrame) {
+      // Remove the mapping from the frame to its placeholder
+      frameManager->UnregisterPlaceholderFrame(placeholderFrame);
     
-        // Locate the root popup set and remove ourselves from the popup set's list
-        // of popup frames.
-        nsIFrame* rootFrame = frameManager->GetRootFrame();
-        if (rootFrame)
-          rootFrame = rootFrame->GetFirstChild(nsnull);
+      // Locate the root popup set and remove ourselves from the popup set's list
+      // of popup frames.
+      nsIFrame* rootFrame = frameManager->GetRootFrame();
+      if (rootFrame)
+        rootFrame = rootFrame->GetFirstChild(nsnull);
 #ifdef MOZ_XUL
-        nsCOMPtr<nsIRootBox> rootBox(do_QueryInterface(rootFrame));
-        if (rootBox) {
-          nsIFrame* popupSetFrame;
-          rootBox->GetPopupSetFrame(&popupSetFrame);
-          if (popupSetFrame) {
-            nsCOMPtr<nsIPopupSetFrame> popupSet(do_QueryInterface(popupSetFrame));
-            if (popupSet)
-              popupSet->RemovePopupFrame(childFrame);
-          }
-        }
-#endif
-
-        // Remove the placeholder frame first (XXX second for now) (so
-        // that it doesn't retain a dangling pointer to memory)
-        if (placeholderFrame) {
-          parentFrame = placeholderFrame->GetParent();
-          ::DeletingFrameSubtree(presContext, frameManager, placeholderFrame);
-          frameManager->RemoveFrame(parentFrame, nsnull, placeholderFrame);
-          return NS_OK;
+      nsCOMPtr<nsIRootBox> rootBox(do_QueryInterface(rootFrame));
+      if (rootBox) {
+        nsIFrame* popupSetFrame;
+        rootBox->GetPopupSetFrame(&popupSetFrame);
+        if (popupSetFrame) {
+          nsCOMPtr<nsIPopupSetFrame> popupSet(do_QueryInterface(popupSetFrame));
+          if (popupSet)
+            popupSet->RemovePopupFrame(childFrame);
         }
       }
-      else if (display->IsFloating()) {
+#endif
+
+      // Remove the placeholder frame first (XXX second for now) (so
+      // that it doesn't retain a dangling pointer to memory)
+      if (placeholderFrame) {
+        parentFrame = placeholderFrame->GetParent();
+        ::DeletingFrameSubtree(presContext, frameManager, placeholderFrame);
+        frameManager->RemoveFrame(parentFrame, nsnull, placeholderFrame);
+        return NS_OK;
+      }
+    }
+    else if (childFrame->GetStateBits() & NS_FRAME_OUT_OF_FLOW) {
+      if (display->IsFloating()) {
 #ifdef NOISY_FIRST_LETTER
         printf("  ==> child display is still floating!\n");
 #endif
@@ -10178,43 +10180,44 @@ nsCSSFrameConstructor::ContentRemoved(nsIContent*     aContainer,
                                          placeholderFrame);
         }
 
-      } else {
-        // Notify the parent frame that it should delete the frame
-        // check for a table caption which goes on an additional child list with a different parent
-        nsIFrame* outerTableFrame; 
-        if (GetCaptionAdjustedParent(parentFrame, childFrame, &outerTableFrame)) {
-          rv = frameManager->RemoveFrame(outerTableFrame,
-                                         nsLayoutAtoms::captionList,
-                                         childFrame);
-        }
-        else {
-          rv = frameManager->RemoveFrame(parentFrame, nsnull, childFrame);
-        }
       }
+    } else {
+      // Notify the parent frame that it should delete the frame
+      // check for a table caption which goes on an additional child list with a different parent
+      nsIFrame* outerTableFrame; 
+      if (GetCaptionAdjustedParent(parentFrame, childFrame, &outerTableFrame)) {
+        rv = frameManager->RemoveFrame(outerTableFrame,
+                                       nsLayoutAtoms::captionList,
+                                       childFrame);
+      }
+      else {
+        rv = frameManager->RemoveFrame(parentFrame, nsnull, childFrame);
+      }
+    }
 
-      if (mInitialContainingBlock == childFrame) {
-        mInitialContainingBlock = nsnull;
-        mInitialContainingBlockIsAbsPosContainer = PR_FALSE;
-      }
+    if (mInitialContainingBlock == childFrame) {
+      mInitialContainingBlock = nsnull;
+      mInitialContainingBlockIsAbsPosContainer = PR_FALSE;
+    }
 
-      if (haveFLS && mInitialContainingBlock) {
-        NS_ASSERTION(containingBlock == GetFloatContainingBlock(parentFrame),
-                     "What happened here?");
-        nsFrameConstructorState state(mPresShell, mFixedContainingBlock,
-                                      GetAbsoluteContainingBlock(parentFrame),
-                                      containingBlock);
-        RecoverLetterFrames(state, containingBlock);
-      }
+    if (haveFLS && mInitialContainingBlock) {
+      NS_ASSERTION(containingBlock == GetFloatContainingBlock(parentFrame),
+                   "What happened here?");
+      nsFrameConstructorState state(mPresShell, mFixedContainingBlock,
+                                    GetAbsoluteContainingBlock(parentFrame),
+                                    containingBlock);
+      RecoverLetterFrames(state, containingBlock);
+    }
 
 #ifdef DEBUG
-      if (gReallyNoisyContentUpdates && parentFrame) {
-        nsIFrameDebug* fdbg = nsnull;
-        CallQueryInterface(parentFrame, &fdbg);
-        if (fdbg) {
-          printf("nsCSSFrameConstructor::ContentRemoved: resulting frame model:\n");
-          fdbg->List(presContext, stdout, 0);
-        }
+    if (gReallyNoisyContentUpdates && parentFrame) {
+      nsIFrameDebug* fdbg = nsnull;
+      CallQueryInterface(parentFrame, &fdbg);
+      if (fdbg) {
+        printf("nsCSSFrameConstructor::ContentRemoved: resulting frame model:\n");
+        fdbg->List(presContext, stdout, 0);
       }
+    }
 #endif
   }
 
@@ -10519,6 +10522,10 @@ nsCSSFrameConstructor::ProcessRestyledFrames(nsStyleChangeList& aChangeList)
   if (!count)
     return NS_OK;
 
+  // Make sure to not rebuild quote or counter lists while we're
+  // processing restyles
+  BeginUpdate();
+
   nsPropertyTable *propTable = mPresShell->GetPresContext()->PropertyTable();
 
   // Mark frames so that we skip frames that die along the way, bug 123049.
@@ -10585,6 +10592,8 @@ nsCSSFrameConstructor::ProcessRestyledFrames(nsStyleChangeList& aChangeList)
 #endif
   }
 
+  EndUpdate();
+  
   // cleanup references
   index = count;
   while (0 <= --index) {

@@ -427,8 +427,8 @@ nsFtpState::nsFtpState()
 
     mWriteCount = 0;
 
-    mIPv6Checked = PR_FALSE;
-    mIPv6ServerAddress = nsnull;
+    mAddressChecked = PR_FALSE;
+    mServerIsIPv6 = PR_FALSE;
     
     mControlConnection = nsnull;
     mDRequestForwarder = nsnull;
@@ -442,7 +442,6 @@ nsFtpState::~nsFtpState()
 {
     LOG_ALWAYS(("(%x) nsFtpState destroyed", this));
     
-    if (mIPv6ServerAddress) nsMemory::Free(mIPv6ServerAddress);
     NS_IF_RELEASE(mDRequestForwarder);
 
     // release reference to handler
@@ -1691,10 +1690,9 @@ nsresult
 nsFtpState::S_pasv() {
     nsresult rv;
 
-    if (mIPv6Checked == PR_FALSE) {
-        // Find IPv6 socket address, if server is IPv6
-        mIPv6Checked = PR_TRUE;
-        PR_ASSERT(mIPv6ServerAddress == 0);
+    if (mAddressChecked == PR_FALSE) {
+        // Find socket address
+        mAddressChecked = PR_TRUE;
         nsITransport *controlSocket = mControlConnection->Transport();
         if (!controlSocket) return FTP_ERROR;
         nsCOMPtr<nsISocketTransport> sTrans = do_QueryInterface(controlSocket, &rv);
@@ -1703,21 +1701,16 @@ nsFtpState::S_pasv() {
             PRNetAddr addr;
             rv = sTrans->GetPeerAddr(&addr);
             if (NS_SUCCEEDED(rv)) {
-                if (addr.raw.family == PR_AF_INET6 && !PR_IsNetAddrType(&addr, PR_IpAddrV4Mapped)) {
-                    mIPv6ServerAddress = (char *) nsMemory::Alloc(100);
-                    if (mIPv6ServerAddress) {
-                        if (PR_NetAddrToString(&addr, mIPv6ServerAddress, 100) != PR_SUCCESS) {
-                            nsMemory::Free(mIPv6ServerAddress);
-                            mIPv6ServerAddress = 0;
-                        }
-                    }
-                }
+                mServerIsIPv6 = addr.raw.family == PR_AF_INET6 &&
+                                !PR_IsNetAddrType(&addr, PR_IpAddrV4Mapped);
+                PR_NetAddrToString(&addr, mServerAddress,
+                                   sizeof(mServerAddress));
             }
         }
     }
 
     const char * string;
-    if (mIPv6ServerAddress)
+    if (mServerIsIPv6)
         string = "EPSV" CRLF;
     else
         string = "PASV" CRLF;
@@ -1741,12 +1734,7 @@ nsFtpState::R_pasv() {
     char *ptr = response;
 
     // Make sure to ignore the address in the PASV response (bug 370559)
-    nsCAutoString host;
-    rv = mURL->GetAsciiHost(host);
-    if (NS_FAILED(rv))
-        return FTP_ERROR;
-
-    if (mIPv6ServerAddress) {
+    if (mServerIsIPv6) {
         // The returned string is of the form
         // text (|||ppp|)
         // Where '|' can be any single character
@@ -1810,8 +1798,6 @@ nsFtpState::R_pasv() {
 
     nsMemory::Free(response);
 
-    const char* hostStr = mIPv6ServerAddress ? mIPv6ServerAddress : host.get();
-
     PRBool newDataConn = PR_TRUE;
     if (mDPipeRequest) {
         // Reuse this connection only if its still alive, and the port
@@ -1843,11 +1829,11 @@ nsFtpState::R_pasv() {
         nsCOMPtr<nsISocketTransportService> sts = do_GetService(kSocketTransportServiceCID, &rv);
         
         rv =  sts->CreateTransport(nsnull, 0,
-                                   nsDependentCString(hostStr), port, mProxyInfo,
+                                   nsDependentCString(mServerAddress), port, mProxyInfo,
                                    getter_AddRefs(mDPipe)); // the data socket
         if (NS_FAILED(rv)) return FTP_ERROR;
         
-        LOG(("(%x) Created Data Transport (%s:%x)\n", this, hostStr, port));
+        LOG(("(%x) Created Data Transport (%s:%x)\n", this, mServerAddress, port));
         
         if (!mDRequestForwarder) {
             mDRequestForwarder = new DataRequestForwarder;
@@ -2342,11 +2328,9 @@ nsFtpState::KillControlConnection()
 
     NS_IF_RELEASE(mDRequestForwarder);
 
-    mIPv6Checked = PR_FALSE;
-    if (mIPv6ServerAddress) {
-        nsMemory::Free(mIPv6ServerAddress);
-        mIPv6ServerAddress = 0;
-    }
+    mAddressChecked = PR_FALSE;
+    mServerIsIPv6 = PR_FALSE;
+
     // if everything went okay, save the connection. 
     // FIX: need a better way to determine if we can cache the connections.
     //      there are some errors which do not mean that we need to kill the connection

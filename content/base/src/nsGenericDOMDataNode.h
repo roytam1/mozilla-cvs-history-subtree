@@ -57,6 +57,8 @@ class nsURI;
 
 #define PARENT_BIT_IS_IN_A_HASH ((PtrBits)0x1 << 1)
 
+#define NODEINFOMANAGER_BIT_IS_NATIVE_ANONYMOUS 0x1
+
 class nsGenericDOMDataNode : public nsITextContent
 {
 public:
@@ -183,7 +185,7 @@ public:
 
   nsIDocument *GetOwnerDoc() const
   {
-    return mNodeInfoManager->GetDocument();
+    return GetNodeInfoManager()->GetDocument();
   }
 
   virtual PRBool IsNativeAnonymous() const;
@@ -240,10 +242,18 @@ public:
   virtual const nsTextFragment *Text();
   virtual PRUint32 TextLength();
   virtual void SetText(const PRUnichar* aBuffer, PRUint32 aLength,
-                       PRBool aNotify);
-  virtual void SetText(const nsAString& aStr, PRBool aNotify);
-  virtual void SetText(const char* aBuffer, PRUint32 aLength,
-                       PRBool aNotify);
+                       PRBool aNotify)
+  {
+    DoSetText(aBuffer, aLength, PR_FALSE, aNotify);
+  }
+  virtual void SetText(const nsAString& aStr, PRBool aNotify)
+  {
+    DoSetText(aStr, PR_FALSE, aNotify);
+  }
+  virtual void SetText(const char* aBuffer, PRUint32 aLength, PRBool aNotify)
+  {
+    DoSetText(aBuffer, aLength, PR_FALSE, aNotify);
+  }
   virtual PRBool IsOnlyWhitespace();
   virtual void AppendTextTo(nsAString& aResult);
 
@@ -259,10 +269,27 @@ public:
 protected:
   nsresult SplitText(PRUint32 aOffset, nsIDOMText** aReturn);
 
+  // Like SetText but allows to specify whether this is an append for
+  // notifications.
+  void DoSetText(const PRUnichar* aBuffer, PRUint32 aLength, PRBool aIsAppend,
+               PRBool aNotify);
+  void DoSetText(const char* aBuffer, PRUint32 aLength, PRBool aIsAppend,
+               PRBool aNotify);
+  void DoSetText(const nsAString& aStr, PRBool aIsAppend, PRBool aNotify);
+
   nsTextFragment mText;
-  nsRefPtr<nsNodeInfoManager> mNodeInfoManager;
+  typedef unsigned long PtrBits;
+  nsNodeInfoManager* GetNodeInfoManager() const {
+    return NS_REINTERPRET_CAST(nsNodeInfoManager*, PtrBits(mNodeInfoManagerBits) &
+                                                   ~NODEINFOMANAGER_BIT_IS_NATIVE_ANONYMOUS);
+  }
+  void SetNodeInfoManager(nsNodeInfoManager* aNodeInfoManager);
 
 private:
+  // Note: the LSB of this pointer is used for IsNativeAnonymous().
+  // Use Set/GetNodeInfoManager(), not the raw pointer.
+  void* mNodeInfoManagerBits;
+
   void LookupListenerManager(nsIEventListenerManager **aListenerManager) const;
   nsVoidArray *LookupRangeList() const;
 

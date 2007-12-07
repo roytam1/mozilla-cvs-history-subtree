@@ -861,8 +861,10 @@ nsWindow::SetCursor(imgIContainer* aCursor,
     // spoofing.
     // XXX ideally we should rescale. Also, we could modify the API to
     // allow trusted content to set larger cursors.
-    if (width > 128 || height > 128)
+    if (width > 128 || height > 128) {
+        gdk_pixbuf_unref(pixbuf);
         return NS_ERROR_NOT_AVAILABLE;
+    }
 
     // Looks like all cursors need an alpha channel (tested on Gtk 2.4.4). This
     // is of course not documented anywhere...
@@ -3592,10 +3594,17 @@ get_gtk_cursor(nsCursor aCursor)
         cursor = gdk_bitmap_create_from_data(NULL,
                                              (char *)GtkCursors[newType].bits,
                                              32, 32);
+        if (!cursor)
+            return NULL;
+
         mask =
             gdk_bitmap_create_from_data(NULL,
                                         (char *)GtkCursors[newType].mask_bits,
                                         32, 32);
+        if (!mask) {
+            gdk_bitmap_unref(cursor);
+            return NULL;
+        }
 
         gdkcursor = gdk_cursor_new_from_pixmap(cursor, mask, &fg, &bg,
                                                GtkCursors[newType].hot_x,

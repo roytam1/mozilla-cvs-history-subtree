@@ -204,6 +204,7 @@ protected:
 
 class nsDocShell : public nsDocLoader,
                    public nsIDocShell,
+                   public nsIDocShell_MOZILLA_1_8_BRANCH2,
                    public nsIDocShellTreeItem, 
                    public nsIDocShellTreeNode,
                    public nsIDocShellHistory,
@@ -231,6 +232,7 @@ public:
     NS_DECL_ISUPPORTS_INHERITED
 
     NS_DECL_NSIDOCSHELL
+    NS_DECL_NSIDOCSHELL_MOZILLA_1_8_BRANCH2
     NS_DECL_NSIDOCSHELLTREEITEM
     NS_DECL_NSIDOCSHELLTREENODE
     NS_DECL_NSIDOCSHELLHISTORY
@@ -413,6 +415,7 @@ protected:
                              const PRUnichar *aPage,
                              const PRUnichar *aDescription,
                              nsIChannel* aFailedChannel);
+    PRBool IsNavigationAllowed(PRBool aDisplayPrintErrorDialog = PR_TRUE);
     PRBool IsPrintingOrPP(PRBool aDisplayErrorDialog = PR_TRUE);
 
     nsresult SetBaseUrlForWyciwyg(nsIContentViewer * aContentViewer);
