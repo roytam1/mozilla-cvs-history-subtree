@@ -1194,6 +1194,11 @@
 		60DE525C0C85F2F500A2CB3C /* CHSelectHandler.mm in Sources */ = {isa = PBXBuildFile; fileRef = 60DE525A0C85F2F500A2CB3C /* CHSelectHandler.mm */; };
 		60DE525D0C85F2F500A2CB3C /* CHSelectHandler.h in Headers */ = {isa = PBXBuildFile; fileRef = 60DE52590C85F2F500A2CB3C /* CHSelectHandler.h */; };
 		60DE525E0C85F2F500A2CB3C /* CHSelectHandler.mm in Sources */ = {isa = PBXBuildFile; fileRef = 60DE525A0C85F2F500A2CB3C /* CHSelectHandler.mm */; };
+		7B64B7E10CCFDA640098406C /* Sparkle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7B64B7CA0CCFD9F50098406C /* Sparkle.framework */; };
+		7B64B7E30CCFDA860098406C /* Sparkle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7B64B7CA0CCFD9F50098406C /* Sparkle.framework */; };
+		7B64B7EE0CCFDAAF0098406C /* Sparkle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7B64B7CA0CCFD9F50098406C /* Sparkle.framework */; };
+		7BAEF8120CCFDF3400384F4E /* Sparkle.framework in CopyFiles */ = {isa = PBXBuildFile; fileRef = 7BAEF7470CCFDE7D00384F4E /* Sparkle.framework */; };
+		7BAEF8150CCFDF4A00384F4E /* Sparkle.framework in CopyFiles */ = {isa = PBXBuildFile; fileRef = 7BAEF7470CCFDE7D00384F4E /* Sparkle.framework */; };
 		82180AB107368AD7002EFA6D /* grabber.gif in CopyFiles */ = {isa = PBXBuildFile; fileRef = 82CE28710736615300B4DE07 /* grabber.gif */; };
 		82180AB207368AD7002EFA6D /* table-add-column-after-active.gif in CopyFiles */ = {isa = PBXBuildFile; fileRef = 82CE28720736615300B4DE07 /* table-add-column-after-active.gif */; };
 		82180AB307368AD7002EFA6D /* table-add-column-after-hover.gif in CopyFiles */ = {isa = PBXBuildFile; fileRef = 82CE28730736615300B4DE07 /* table-add-column-after-hover.gif */; };
@@ -1306,6 +1311,22 @@
 		DEE9EC4F0AF5C613002BC511 /* SessionManager.h in Headers */ = {isa = PBXBuildFile; fileRef = DEE9EC4D0AF5C613002BC511 /* SessionManager.h */; };
 		DEE9EC510AF5C654002BC511 /* SessionManager.mm in Sources */ = {isa = PBXBuildFile; fileRef = DEE9EC500AF5C654002BC511 /* SessionManager.mm */; };
 		DEE9EC520AF5C654002BC511 /* SessionManager.mm in Sources */ = {isa = PBXBuildFile; fileRef = DEE9EC500AF5C654002BC511 /* SessionManager.mm */; };
+		DEFD23D90D0224CE006899B9 /* content_xmldoc.xpt in CopyFiles */ = {isa = PBXBuildFile; fileRef = DEFD23D60D0224CE006899B9 /* content_xmldoc.xpt */; };
+		DEFD23DA0D0224CE006899B9 /* content_html.xpt in CopyFiles */ = {isa = PBXBuildFile; fileRef = DEFD23D70D0224CE006899B9 /* content_html.xpt */; };
+		DEFD23DB0D0224CE006899B9 /* content_htmldoc.xpt in CopyFiles */ = {isa = PBXBuildFile; fileRef = DEFD23D80D0224CE006899B9 /* content_htmldoc.xpt */; };
+		DEFD23DC0D0224CE006899B9 /* content_xmldoc.xpt in CopyFiles */ = {isa = PBXBuildFile; fileRef = DEFD23D60D0224CE006899B9 /* content_xmldoc.xpt */; };
+		DEFD23DD0D0224CE006899B9 /* content_html.xpt in CopyFiles */ = {isa = PBXBuildFile; fileRef = DEFD23D70D0224CE006899B9 /* content_html.xpt */; };
+		DEFD23DE0D0224CE006899B9 /* content_htmldoc.xpt in CopyFiles */ = {isa = PBXBuildFile; fileRef = DEFD23D80D0224CE006899B9 /* content_htmldoc.xpt */; };
+		DEFD23E00D0224D5006899B9 /* content_xtf.xpt in CopyFiles */ = {isa = PBXBuildFile; fileRef = DEFD23DF0D0224D5006899B9 /* content_xtf.xpt */; };
+		DEFD23E10D0224D5006899B9 /* content_xtf.xpt in CopyFiles */ = {isa = PBXBuildFile; fileRef = DEFD23DF0D0224D5006899B9 /* content_xtf.xpt */; };
+		DEFD23E30D0224E1006899B9 /* dom_loadsave.xpt in CopyFiles */ = {isa = PBXBuildFile; fileRef = DEFD23E20D0224E1006899B9 /* dom_loadsave.xpt */; };
+		DEFD23E40D0224E1006899B9 /* dom_loadsave.xpt in CopyFiles */ = {isa = PBXBuildFile; fileRef = DEFD23E20D0224E1006899B9 /* dom_loadsave.xpt */; };
+		DEFD23E60D0224E9006899B9 /* dom_storage.xpt in CopyFiles */ = {isa = PBXBuildFile; fileRef = DEFD23E50D0224E9006899B9 /* dom_storage.xpt */; };
+		DEFD23E70D0224E9006899B9 /* dom_storage.xpt in CopyFiles */ = {isa = PBXBuildFile; fileRef = DEFD23E50D0224E9006899B9 /* dom_storage.xpt */; };
+		DEFD23E90D022502006899B9 /* storage.xpt in CopyFiles */ = {isa = PBXBuildFile; fileRef = DEFD23E80D022502006899B9 /* storage.xpt */; };
+		DEFD23EA0D022502006899B9 /* storage.xpt in CopyFiles */ = {isa = PBXBuildFile; fileRef = DEFD23E80D022502006899B9 /* storage.xpt */; };
+		DEFD23F50D02252D006899B9 /* libstoragecomps.dylib in CopyFiles */ = {isa = PBXBuildFile; fileRef = DEFD23F40D02252D006899B9 /* libstoragecomps.dylib */; };
+		DEFD23F70D022572006899B9 /* libstoragecomps.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DEFD23F60D022571006899B9 /* libstoragecomps.a */; };
 		E010866906BCA2E500BD5DE0 /* colResize.tiff in Resources */ = {isa = PBXBuildFile; fileRef = E010866206BCA2E500BD5DE0 /* colResize.tiff */; };
 		E010866C06BCA2E500BD5DE0 /* rowResize.tiff in Resources */ = {isa = PBXBuildFile; fileRef = E010866506BCA2E500BD5DE0 /* rowResize.tiff */; };
 		E010866D06BCA2E500BD5DE0 /* sizeNESW.tiff in Resources */ = {isa = PBXBuildFile; fileRef = E010866606BCA2E500BD5DE0 /* sizeNESW.tiff */; };
@@ -1467,6 +1488,41 @@
 			remoteGlobalIDString = 3F44ADF205BDFBA000CB4B08;
 			remoteInfo = "WebFeaturesPrefPane (Upgraded)";
 		};
+		7B64B7C90CCFD9F50098406C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 7B64B7BA0CCFD9F50098406C /* Sparkle.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 8DC2EF5B0486A6940098B216;
+			remoteInfo = Sparkle;
+		};
+		7B64B7CB0CCFD9F50098406C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 7B64B7BA0CCFD9F50098406C /* Sparkle.xcodeproj */;
+			proxyType = 2;
+			remoteGlobalIDString = 61B5F90209C4CEE200B25A18;
+			remoteInfo = "Sparkle Test App";
+		};
+		7B64B7D10CCFDA1A0098406C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 7B64B7BA0CCFD9F50098406C /* Sparkle.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = 8DC2EF4F0486A6940098B216;
+			remoteInfo = Sparkle;
+		};
+		7B64B7D50CCFDA210098406C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 7B64B7BA0CCFD9F50098406C /* Sparkle.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = 8DC2EF4F0486A6940098B216;
+			remoteInfo = Sparkle;
+		};
+		7B64B7D90CCFDA280098406C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 7B64B7BA0CCFD9F50098406C /* Sparkle.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = 8DC2EF4F0486A6940098B216;
+			remoteInfo = Sparkle;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -1521,6 +1577,7 @@
 				3F44AD0B05BDFB9F00CB4B08 /* libimglib2.dylib in CopyFiles */,
 				3F44AD0C05BDFB9F00CB4B08 /* libpref.dylib in CopyFiles */,
 				3F44AD0E05BDFB9F00CB4B08 /* librdf.dylib in CopyFiles */,
+				DEFD23F50D02252D006899B9 /* libstoragecomps.dylib in CopyFiles */,
 				3F44AD0F05BDFB9F00CB4B08 /* libuconv.dylib in CopyFiles */,
 				3F44AD1005BDFB9F00CB4B08 /* libuniversalchardet.dylib in CopyFiles */,
 				3F44AD1105BDFB9F00CB4B08 /* libwidget_mac.dylib in CopyFiles */,
@@ -1545,7 +1602,11 @@
 				82180AC607368B03002EFA6D /* txmgr.xpt in CopyFiles */,
 				82180AC707368B03002EFA6D /* composer.xpt in CopyFiles */,
 				82AC0D65065A602200776B02 /* dom_xpath.xpt in CopyFiles */,
+				DEFD23DD0D0224CE006899B9 /* content_html.xpt in CopyFiles */,
+				DEFD23DE0D0224CE006899B9 /* content_htmldoc.xpt in CopyFiles */,
+				DEFD23DC0D0224CE006899B9 /* content_xmldoc.xpt in CopyFiles */,
 				82AC0D66065A602200776B02 /* content_xslt.xpt in CopyFiles */,
+				DEFD23E10D0224D5006899B9 /* content_xtf.xpt in CopyFiles */,
 				3F44ACD105BDFB9F00CB4B08 /* xpcom_obsolete.xpt in CopyFiles */,
 				3F44ACD705BDFB9F00CB4B08 /* caps.xpt in CopyFiles */,
 				3F44ACD905BDFB9F00CB4B08 /* docshell.xpt in CopyFiles */,
@@ -1555,7 +1616,9 @@
 				3F44ACDC05BDFB9F00CB4B08 /* dom_css.xpt in CopyFiles */,
 				3F44ACDD05BDFB9F00CB4B08 /* dom_events.xpt in CopyFiles */,
 				3F44ACDE05BDFB9F00CB4B08 /* dom_html.xpt in CopyFiles */,
+				DEFD23E40D0224E1006899B9 /* dom_loadsave.xpt in CopyFiles */,
 				3F44ACDF05BDFB9F00CB4B08 /* dom_range.xpt in CopyFiles */,
+				DEFD23E70D0224E9006899B9 /* dom_storage.xpt in CopyFiles */,
 				3F44ACE005BDFB9F00CB4B08 /* dom_stylesheets.xpt in CopyFiles */,
 				3F44ACE005BDFB9F00CB4C08 /* dom_svg.xpt in CopyFiles */,
 				3F44ACE105BDFB9F00CB4B08 /* dom_traversal.xpt in CopyFiles */,
@@ -1588,6 +1651,7 @@
 				3F44AD0A05BDFB9F00CB4B08 /* necko.xpt in CopyFiles */,
 				3F44AD1305BDFB9F00CB4B08 /* pref.xpt in CopyFiles */,
 				3F44AD1505BDFB9F00CB4B08 /* rdf.xpt in CopyFiles */,
+				DEFD23EA0D022502006899B9 /* storage.xpt in CopyFiles */,
 				3F44AD1605BDFB9F00CB4B08 /* shistory.xpt in CopyFiles */,
 				3F44AD1705BDFB9F00CB4B08 /* uconv.xpt in CopyFiles */,
 				3F44AD1805BDFB9F00CB4B08 /* unicharutil.xpt in CopyFiles */,
@@ -1810,6 +1874,7 @@
 			dstSubfolderSpec = 10;
 			files = (
 				3F44AD7805BDFB9F00CB4B08 /* SharedMenusCocoa.framework in CopyFiles */,
+				7BAEF8120CCFDF3400384F4E /* Sparkle.framework in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1835,7 +1900,11 @@
 				82CE28CB0736634A00B4DE07 /* txmgr.xpt in CopyFiles */,
 				82CE28C7073662B400B4DE07 /* composer.xpt in CopyFiles */,
 				828FBD97065A986900B3D52A /* dom_xpath.xpt in CopyFiles */,
+				DEFD23DA0D0224CE006899B9 /* content_html.xpt in CopyFiles */,
+				DEFD23DB0D0224CE006899B9 /* content_htmldoc.xpt in CopyFiles */,
+				DEFD23D90D0224CE006899B9 /* content_xmldoc.xpt in CopyFiles */,
 				828FBD98065A986900B3D52A /* content_xslt.xpt in CopyFiles */,
+				DEFD23E00D0224D5006899B9 /* content_xtf.xpt in CopyFiles */,
 				3F44AF0E05BDFBA000CB4B08 /* caps.xpt in CopyFiles */,
 				3F44AF0F05BDFBA000CB4B08 /* docshell.xpt in CopyFiles */,
 				3F44AF1005BDFBA000CB4B08 /* dom_base.xpt in CopyFiles */,
@@ -1844,7 +1913,9 @@
 				3F44AF1205BDFBA000CB4B08 /* dom_css.xpt in CopyFiles */,
 				3F44AF1305BDFBA000CB4B08 /* dom_events.xpt in CopyFiles */,
 				3F44AF1405BDFBA000CB4B08 /* dom_html.xpt in CopyFiles */,
+				DEFD23E30D0224E1006899B9 /* dom_loadsave.xpt in CopyFiles */,
 				3F44AF1505BDFBA000CB4B08 /* dom_range.xpt in CopyFiles */,
+				DEFD23E60D0224E9006899B9 /* dom_storage.xpt in CopyFiles */,
 				3F44AF1605BDFBA000CB4B08 /* dom_stylesheets.xpt in CopyFiles */,
 				3F44AF1605BDFBA000CB4C08 /* dom_svg.xpt in CopyFiles */,
 				3F44AF1705BDFBA000CB4B08 /* dom_traversal.xpt in CopyFiles */,
@@ -1878,6 +1949,7 @@
 				3F44AF3305BDFBA000CB4B08 /* pref.xpt in CopyFiles */,
 				3F44AF3505BDFBA000CB4B08 /* rdf.xpt in CopyFiles */,
 				3F44AF3605BDFBA000CB4B08 /* shistory.xpt in CopyFiles */,
+				DEFD23E90D022502006899B9 /* storage.xpt in CopyFiles */,
 				3F44AF3705BDFBA000CB4B08 /* uconv.xpt in CopyFiles */,
 				3F44AF3805BDFBA000CB4B08 /* unicharutil.xpt in CopyFiles */,
 				3F44AF3905BDFBA000CB4B08 /* uriloader.xpt in CopyFiles */,
@@ -2096,6 +2168,7 @@
 			dstSubfolderSpec = 10;
 			files = (
 				3F44AF9105BDFBA000CB4B08 /* SharedMenusCocoa.framework in CopyFiles */,
+				7BAEF8150CCFDF4A00384F4E /* Sparkle.framework in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2465,6 +2538,8 @@
 		60DE52590C85F2F500A2CB3C /* CHSelectHandler.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = CHSelectHandler.h; path = src/embedding/CHSelectHandler.h; sourceTree = "<group>"; };
 		60DE525A0C85F2F500A2CB3C /* CHSelectHandler.mm */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.objcpp; name = CHSelectHandler.mm; path = src/embedding/CHSelectHandler.mm; sourceTree = "<group>"; };
 		7919FCF0044631350000010E /* PrintPDE.plugin */ = {isa = PBXFileReference; lastKnownFileType = wrapper.cfbundle; name = PrintPDE.plugin; path = ../dist/package/PrintPDE.plugin; sourceTree = SOURCE_ROOT; };
+		7B64B7BA0CCFD9F50098406C /* Sparkle.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = Sparkle.xcodeproj; path = sparkle/Sparkle.xcodeproj; sourceTree = "<group>"; };
+		7BAEF7470CCFDE7D00384F4E /* Sparkle.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Sparkle.framework; path = sparkle/build/Release/Sparkle.framework; sourceTree = "<group>"; };
 		82180AC907368BDF002EFA6D /* libcomposer.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.bundle"; name = libcomposer.dylib; path = ../dist/bin/components/libcomposer.dylib; sourceTree = SOURCE_ROOT; };
 		82AC0D5D065A5F2300776B02 /* content_xslt.xpt */ = {isa = PBXFileReference; lastKnownFileType = file; name = content_xslt.xpt; path = ../dist/bin/components/content_xslt.xpt; sourceTree = SOURCE_ROOT; };
 		82AC0D5E065A5F5100776B02 /* dom_xpath.xpt */ = {isa = PBXFileReference; lastKnownFileType = file; name = dom_xpath.xpt; path = ../dist/bin/components/dom_xpath.xpt; sourceTree = SOURCE_ROOT; };
@@ -2531,6 +2606,15 @@
 		DEE349A90B84F47400BCD687 /* FileChangeWatcher.m */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.objc; name = FileChangeWatcher.m; path = src/download/FileChangeWatcher.m; sourceTree = "<group>"; };
 		DEE9EC4D0AF5C613002BC511 /* SessionManager.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = SessionManager.h; path = src/application/SessionManager.h; sourceTree = "<group>"; };
 		DEE9EC500AF5C654002BC511 /* SessionManager.mm */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.objcpp; name = SessionManager.mm; path = src/application/SessionManager.mm; sourceTree = SOURCE_ROOT; };
+		DEFD23D60D0224CE006899B9 /* content_xmldoc.xpt */ = {isa = PBXFileReference; lastKnownFileType = file; name = content_xmldoc.xpt; path = ../dist/bin/components/content_xmldoc.xpt; sourceTree = SOURCE_ROOT; };
+		DEFD23D70D0224CE006899B9 /* content_html.xpt */ = {isa = PBXFileReference; lastKnownFileType = file; name = content_html.xpt; path = ../dist/bin/components/content_html.xpt; sourceTree = SOURCE_ROOT; };
+		DEFD23D80D0224CE006899B9 /* content_htmldoc.xpt */ = {isa = PBXFileReference; lastKnownFileType = file; name = content_htmldoc.xpt; path = ../dist/bin/components/content_htmldoc.xpt; sourceTree = SOURCE_ROOT; };
+		DEFD23DF0D0224D5006899B9 /* content_xtf.xpt */ = {isa = PBXFileReference; lastKnownFileType = file; name = content_xtf.xpt; path = ../dist/bin/components/content_xtf.xpt; sourceTree = SOURCE_ROOT; };
+		DEFD23E20D0224E1006899B9 /* dom_loadsave.xpt */ = {isa = PBXFileReference; lastKnownFileType = file; name = dom_loadsave.xpt; path = ../dist/bin/components/dom_loadsave.xpt; sourceTree = SOURCE_ROOT; };
+		DEFD23E50D0224E9006899B9 /* dom_storage.xpt */ = {isa = PBXFileReference; lastKnownFileType = file; name = dom_storage.xpt; path = ../dist/bin/components/dom_storage.xpt; sourceTree = SOURCE_ROOT; };
+		DEFD23E80D022502006899B9 /* storage.xpt */ = {isa = PBXFileReference; lastKnownFileType = file; name = storage.xpt; path = ../dist/bin/components/storage.xpt; sourceTree = SOURCE_ROOT; };
+		DEFD23F40D02252D006899B9 /* libstoragecomps.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.bundle"; name = libstoragecomps.dylib; path = ../dist/bin/components/libstoragecomps.dylib; sourceTree = SOURCE_ROOT; };
+		DEFD23F60D022571006899B9 /* libstoragecomps.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libstoragecomps.a; path = ../dist/lib/components/libstoragecomps.a; sourceTree = SOURCE_ROOT; };
 		E010866206BCA2E500BD5DE0 /* colResize.tiff */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; path = colResize.tiff; sourceTree = "<group>"; };
 		E010866506BCA2E500BD5DE0 /* rowResize.tiff */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; path = rowResize.tiff; sourceTree = "<group>"; };
 		E010866606BCA2E500BD5DE0 /* sizeNESW.tiff */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; path = sizeNESW.tiff; sourceTree = "<group>"; };
@@ -2967,6 +3051,7 @@
 				34884A36074F7C5D000EA76B /* AddressBook.framework in Frameworks */,
 				0FF288560961EDDD007527B4 /* libfreebl3.dylib in Frameworks */,
 				008116E60B272204001CB3F0 /* Security.framework in Frameworks */,
+				7B64B7E10CCFDA640098406C /* Sparkle.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2999,6 +3084,7 @@
 				3F44ADAD05BDFB9F00CB4B08 /* Foundation.framework in Frameworks */,
 				3F44ADAE05BDFB9F00CB4B08 /* Cocoa.framework in Frameworks */,
 				3F44ADAF05BDFB9F00CB4B08 /* Carbon.framework in Frameworks */,
+				7B64B7EE0CCFDAAF0098406C /* Sparkle.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -3128,6 +3214,8 @@
 				0FF288550961EDDD007527B4 /* libfreebl3.dylib in Frameworks */,
 				008116E70B272204001CB3F0 /* Security.framework in Frameworks */,
 				DE56E9250B73E7EE00D27D57 /* libauth.a in Frameworks */,
+				7B64B7E30CCFDA860098406C /* Sparkle.framework in Frameworks */,
+				DEFD23F70D022572006899B9 /* libstoragecomps.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -3258,6 +3346,7 @@
 				F5D3F1CE0209235A014E447F /* libmork.dylib */,
 				F6BD641201B3156701A962F7 /* libpref.dylib */,
 				F6BD641401B3156701A962F7 /* librdf.dylib */,
+				DEFD23F40D02252D006899B9 /* libstoragecomps.dylib */,
 				F5F59320020F4CD201ACA690 /* libtxmgr.dylib */,
 				F6BD641701B3156701A962F7 /* libuconv.dylib */,
 				F6BD641B01B3156701A962F7 /* libwidget_mac.dylib */,
@@ -3280,7 +3369,11 @@
 				F6BD639401B3131201A962F7 /* caps.xpt */,
 				82CE28C40736625800B4DE07 /* composer.xpt */,
 				F6BD63D901B313EE01A962F7 /* content_base.xpt */,
+				DEFD23D70D0224CE006899B9 /* content_html.xpt */,
+				DEFD23D80D0224CE006899B9 /* content_htmldoc.xpt */,
+				DEFD23D60D0224CE006899B9 /* content_xmldoc.xpt */,
 				82AC0D5D065A5F2300776B02 /* content_xslt.xpt */,
+				DEFD23DF0D0224D5006899B9 /* content_xtf.xpt */,
 				F6BD639601B3131201A962F7 /* docshell.xpt */,
 				F6BD63A201B3131201A962F7 /* dom.xpt */,
 				F6BD639701B3131201A962F7 /* dom_base.xpt */,
@@ -3289,7 +3382,9 @@
 				F6BD639901B3131201A962F7 /* dom_css.xpt */,
 				F6BD639A01B3131201A962F7 /* dom_events.xpt */,
 				F6BD639B01B3131201A962F7 /* dom_html.xpt */,
+				DEFD23E20D0224E1006899B9 /* dom_loadsave.xpt */,
 				F6BD639C01B3131201A962F7 /* dom_range.xpt */,
+				DEFD23E50D0224E9006899B9 /* dom_storage.xpt */,
 				F6BD639D01B3131201A962F7 /* dom_stylesheets.xpt */,
 				F6BD639D01B3131201A963F7 /* dom_svg.xpt */,
 				F6BD639E01B3131201A962F7 /* dom_traversal.xpt */,
@@ -3322,6 +3417,7 @@
 				F6BD641D01B3156701A962F7 /* pref.xpt */,
 				F6BD641F01B3156701A962F7 /* rdf.xpt */,
 				F6BD642001B3156701A962F7 /* shistory.xpt */,
+				DEFD23E80D022502006899B9 /* storage.xpt */,
 				82CE28C80736633900B4DE07 /* txmgr.xpt */,
 				F6BD63B301B3131201A962F7 /* txtsvc.xpt */,
 				A7D88E6A0465D9F800A80196 /* typeaheadfind.xpt */,
@@ -3376,6 +3472,8 @@
 				F52D5CDD027D412A01A80166 /* SystemConfiguration.framework */,
 				F5FEDBCB02AD8DD101A967F3 /* QuickTime.framework */,
 				3F558E950552122E006156FD /* IOKit.framework */,
+				7B64B7BA0CCFD9F50098406C /* Sparkle.xcodeproj */,
+				7BAEF7470CCFDE7D00384F4E /* Sparkle.framework */,
 			);
 			name = "Linked Frameworks";
 			sourceTree = "<group>";
@@ -3724,6 +3822,15 @@
 				035A4976079DC83E0084B05F /* Info-HistoryPrefPane.plist */,
 			);
 			name = "Target Plists";
+			sourceTree = "<group>";
+		};
+		7B64B7BB0CCFD9F50098406C /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				7B64B7CA0CCFD9F50098406C /* Sparkle.framework */,
+				7B64B7CC0CCFD9F50098406C /* Sparkle Test App.app */,
+			);
+			name = Products;
 			sourceTree = "<group>";
 		};
 		82CE2870073660EE00B4DE07 /* Midas */ = {
@@ -4240,6 +4347,7 @@
 				F56F246402AC723001A967F3 /* libgklayout.a */,
 				F56F246502AC723001A967F3 /* libgkplugin.a */,
 				F56F246B02AC723001A967F3 /* libmork.a */,
+				DEFD23F60D022571006899B9 /* libstoragecomps.a */,
 				F56F247002AC723001A967F3 /* libtxmgr.a */,
 				F56F247302AC723001A967F3 /* libwebbrwsr.a */,
 				F56F247402AC723001A967F3 /* libwidget_mac.a */,
@@ -4897,6 +5005,7 @@
 				3F44AD6F05BDFB9F00CB4B08 /* CopyFiles */,
 				3F44AD7105BDFB9F00CB4B08 /* CopyFiles */,
 				3F44AD7705BDFB9F00CB4B08 /* CopyFiles */,
+				3365CA1F0D073ECA00ACBF18 /* Scrub Sparkle Languages */,
 				3F44AD7A05BDFB9F00CB4B08 /* CopyFiles */,
 				4D5881750864B276001305B3 /* CopyFiles */,
 				3F44AD7C05BDFB9F00CB4B08 /* Frameworks */,
@@ -4912,6 +5021,7 @@
 				03E2D9900771FB9300BD2443 /* PBXTargetDependency */,
 				03C5AB1307722EFC00EAF77D /* PBXTargetDependency */,
 				0380F471079DCCD90065A7AB /* PBXTargetDependency */,
+				7B64B7D20CCFDA1A0098406C /* PBXTargetDependency */,
 			);
 			name = Camino;
 			productInstallPath = "$(HOME)/Applications";
@@ -4952,6 +5062,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				7B64B7DA0CCFDA280098406C /* PBXTargetDependency */,
 			);
 			name = NavigationPrefPane;
 			productInstallPath = "$(USER_LIBRARY_DIR)/Bundles";
@@ -5043,6 +5154,7 @@
 				3F44AF8005BDFBA000CB4B08 /* CopyFiles */,
 				3F44AF8605BDFBA000CB4B08 /* CopyFiles */,
 				3F44AF9005BDFBA000CB4B08 /* CopyFiles */,
+				3365CA0F0D07197E00ACBF18 /* Scrub Sparkle Languages */,
 				3F44AF9205BDFBA000CB4B08 /* CopyFiles */,
 				4D5881790864B297001305B3 /* CopyFiles */,
 				3F44AF9405BDFBA000CB4B08 /* Frameworks */,
@@ -5058,6 +5170,7 @@
 				03C5AB1507722F1100EAF77D /* PBXTargetDependency */,
 				03C5AB1707722F1100EAF77D /* PBXTargetDependency */,
 				0380F473079DCCEC0065A7AB /* PBXTargetDependency */,
+				7B64B7D60CCFDA210098406C /* PBXTargetDependency */,
 			);
 			name = CaminoStatic;
 			productInstallPath = "$(HOME)/Applications";
@@ -5083,6 +5196,12 @@
 			);
 			mainGroup = 29B97314FDCFA39411CA2CEA /* Camino */;
 			projectDirPath = "";
+			projectReferences = (
+				{
+					ProductGroup = 7B64B7BB0CCFD9F50098406C /* Products */;
+					ProjectRef = 7B64B7BA0CCFD9F50098406C /* Sparkle.xcodeproj */;
+				},
+			);
 			targets = (
 				3F44ABD005BDFB9E00CB4B08 /* Camino */,
 				3F44AE0905BDFBA000CB4B08 /* CaminoStatic */,
@@ -5097,6 +5216,23 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXReferenceProxy section */
+		7B64B7CA0CCFD9F50098406C /* Sparkle.framework */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.framework;
+			path = Sparkle.framework;
+			remoteRef = 7B64B7C90CCFD9F50098406C /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+		7B64B7CC0CCFD9F50098406C /* Sparkle Test App.app */ = {
+			isa = PBXReferenceProxy;
+			fileType = wrapper.application;
+			path = "Sparkle Test App.app";
+			remoteRef = 7B64B7CB0CCFD9F50098406C /* PBXContainerItemProxy */;
+			sourceTree = BUILT_PRODUCTS_DIR;
+		};
+/* End PBXReferenceProxy section */
 
 /* Begin PBXResourcesBuildPhase section */
 		035A4971079DC83D0084B05F /* Resources */ = {
@@ -5525,6 +5661,37 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXRezBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		3365CA0F0D07197E00ACBF18 /* Scrub Sparkle Languages */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Scrub Sparkle Languages";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /usr/bin/perl;
+			shellScript = "#!/usr/bin/perl\n# Removes all the Sparkle languages that aren't also part of the app bundle, since those\n# languages can't be loaded anyway.\nuse warnings;\nuse strict;\n\n# Map of language names to cannonical forms for comparison.\nmy %language_code = ( \"English\" => \"en\" );\n\nmy $app_resources = \"$ENV{BUILT_PRODUCTS_DIR}/$ENV{PRODUCT_NAME}.app/Contents/Resources\";\nmy $sparkle_resources = \"$ENV{BUILT_PRODUCTS_DIR}/$ENV{PRODUCT_NAME}.app/Contents/Frameworks/Sparkle.framework/Resources\";\ndie \"Can't find $ENV{PRODUCT_NAME} resource directory\" unless -d $app_resources;\ndie \"Can't find Sparkle resource directory\" unless -d $sparkle_resources;\n\nmy %standardized_app_languages;\nfor (&languages_for_bundle($app_resources)) {\n  $standardized_app_languages{&standardized_language($_)} = 1;\n}\nmy @sparkle_languages = &languages_for_bundle($sparkle_resources);\n\nprint \"Scrubbing Sparkle lprojs...\\n\";\nforeach my $language (@sparkle_languages) {\n  unless ($standardized_app_languages{$language}) {\n    my $lproj = \"$sparkle_resources/$language.lproj\";\n    print \"  Removing unnecessary Sparkle lproj: $lproj\\n\";\n    system(\"/bin/rm\", \"-rf\", $lproj);\n  }\n}\n\n\nsub languages_for_bundle {\n  my ($resources_dir) = @_;\n  opendir(RESDIR, $resources_dir) or die \"Can't open resource directory '$resources_dir\";\n  my @languages = map { $_ =~ s/.lproj//; $_ } grep { /\\.lproj/ } readdir(RESDIR);\n  closedir(RESDIR);\n  return @languages;\n}\n\nsub standardized_language {\n  my ($language) = @_;\n  return $language_code{$_} || $_;\n}";
+		};
+		3365CA1F0D073ECA00ACBF18 /* Scrub Sparkle Languages */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Scrub Sparkle Languages";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /usr/bin/perl;
+			shellScript = "#!/usr/bin/perl\n# Removes all the Sparkle languages that aren't also part of the app bundle, since those\n# languages can't be loaded anyway.\nuse warnings;\nuse strict;\n\n# Map of language names to cannonical forms for comparison.\nmy %language_code = ( \"English\" => \"en\" );\n\nmy $app_resources = \"$ENV{BUILT_PRODUCTS_DIR}/$ENV{PRODUCT_NAME}.app/Contents/Resources\";\nmy $sparkle_resources = \"$ENV{BUILT_PRODUCTS_DIR}/$ENV{PRODUCT_NAME}.app/Contents/Frameworks/Sparkle.framework/Resources\";\ndie \"Can't find $ENV{PRODUCT_NAME} resource directory\" unless -d $app_resources;\ndie \"Can't find Sparkle resource directory\" unless -d $sparkle_resources;\n\nmy %standardized_app_languages;\nfor (&languages_for_bundle($app_resources)) {\n  $standardized_app_languages{&standardized_language($_)} = 1;\n}\nmy @sparkle_languages = &languages_for_bundle($sparkle_resources);\n\nprint \"Scrubbing Sparkle lprojs...\\n\";\nforeach my $language (@sparkle_languages) {\n  unless ($standardized_app_languages{$language}) {\n    my $lproj = \"$sparkle_resources/$language.lproj\";\n    print \"  Removing unnecessary Sparkle lproj: $lproj\\n\";\n    system(\"/bin/rm\", \"-rf\", $lproj);\n  }\n}\n\n\nsub languages_for_bundle {\n  my ($resources_dir) = @_;\n  opendir(RESDIR, $resources_dir) or die \"Can't open resource directory '$resources_dir\";\n  my @languages = map { $_ =~ s/.lproj//; $_ } grep { /\\.lproj/ } readdir(RESDIR);\n  closedir(RESDIR);\n  return @languages;\n}\n\nsub standardized_language {\n  my ($language) = @_;\n  return $language_code{$_} || $_;\n}";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
 		1B825EB50C5E449600CB4343 /* Compile Scripting Resource */ = {
@@ -5956,6 +6123,21 @@
 			isa = PBXTargetDependency;
 			target = 3F44ADF205BDFBA000CB4B08 /* WebFeaturesPrefPane */;
 			targetProxy = 3F44AFE905BDFBA100CB4B08 /* PBXContainerItemProxy */;
+		};
+		7B64B7D20CCFDA1A0098406C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = Sparkle;
+			targetProxy = 7B64B7D10CCFDA1A0098406C /* PBXContainerItemProxy */;
+		};
+		7B64B7D60CCFDA210098406C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = Sparkle;
+			targetProxy = 7B64B7D50CCFDA210098406C /* PBXContainerItemProxy */;
+		};
+		7B64B7DA0CCFDA280098406C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = Sparkle;
+			targetProxy = 7B64B7D90CCFDA280098406C /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -6495,6 +6677,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 00F3BE2A0C4F280700E19B0C /* PrefPane.xcconfig */;
 			buildSettings = {
+				FRAMEWORK_SEARCH_PATHS = sparkle/build/Release;
 				HEADER_SEARCH_PATHS = (
 					../dist/include/nkcache,
 					../dist/include/webbrwsr,
@@ -6550,6 +6733,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 00F3BE2A0C4F280700E19B0C /* PrefPane.xcconfig */;
 			buildSettings = {
+				FRAMEWORK_SEARCH_PATHS = sparkle/build/Release;
 				HEADER_SEARCH_PATHS = (
 					../dist/include/nkcache,
 					../dist/include/webbrwsr,
@@ -6599,6 +6783,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 00F3BE2A0C4F280700E19B0C /* PrefPane.xcconfig */;
 			buildSettings = {
+				FRAMEWORK_SEARCH_PATHS = sparkle/build/Release;
 				HEADER_SEARCH_PATHS = (
 					../dist/include/nkcache,
 					../dist/include/webbrwsr,

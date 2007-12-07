@@ -187,3 +187,6 @@ pref("camino.enable_flashblock", false);
 
 // do not override autocomplete=off
 pref("wallet.crypto.autocompleteoverride", false);
+
+// auto-update URL base
+pref("app.update.url", "https://caminobrowser.org/update-check");
