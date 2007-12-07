@@ -44,6 +44,7 @@
 #include "nsIPropertyBag2.h"
 #include "nsThreadUtils.h"
 #include "nsISupportsPriority.h"
+#include "prlog.h"
 
 // ConstructMediaGraph will create a media graph on a new thread and
 // return a (nearly) threadsafe proxy.
@@ -51,6 +52,12 @@
 // on the calling thread. This might be useful for debugging
 // #define SAME_THREAD_MEDIA_GRAPH 1
 
+#ifdef PR_LOGGING
+  PRLogModuleInfo *gZapMGLog = PR_NewLogModule("zapmg");
+  #define LOG(x)  PR_LOG(gZapMGLog, PR_LOG_DEBUG, x)
+#else
+  #define LOG(x)
+#endif
 
 ////////////////////////////////////////////////////////////////////////
 // zapMediaGraph
@@ -60,12 +67,16 @@ zapMediaGraph::zapMediaGraph()
       mConnectionIdCounter(0),
       mLockCount(0)
 {
+  LOG(("zapMediaGraph()"));
+
   mNodes = new Descriptor();
   mConnections = new Descriptor();
 }
 
 zapMediaGraph::~zapMediaGraph()
 {
+  LOG(("~zapMediaGraph()"));
+
   Shutdown();
 
   NS_ASSERTION(mNodes && mNodes->prev == mNodes && mNodes->next == mNodes,
@@ -163,6 +174,8 @@ zapMediaGraph::AdjustPriority(PRInt32 delta)
 NS_IMETHODIMP
 zapMediaGraph::Run()
 {
+  LOG(("zapMediaGraph::Run()"));
+
   // Init the media graph
   mMediaThread = do_GetCurrentThread();
   if (!mMediaThread) return NS_ERROR_FAILURE;
@@ -278,6 +291,8 @@ zapMediaGraph::AddExternalNode(zapIMediaNode *node,
   nsCString id = NS_LITERAL_CSTRING("#");
   id.AppendInt(mNodeIdCounter++);
   
+  LOG(("zapMediaGraph::AddExternalNode(id: %s)", id.get()));
+
   // insert into node list:
   NodeDescriptor *descriptor = new NodeDescriptor(id, node, mNodes, mNodes->next);
   mNodes->next = descriptor;
@@ -299,6 +314,9 @@ zapMediaGraph::AddExternalNode(zapIMediaNode *node,
 NS_IMETHODIMP
 zapMediaGraph::RemoveNode(const nsACString & id_or_alias)
 {
+  LOG(("zapMediaGraph::RemoveNode(%s)",
+       nsPromiseFlatCString(id_or_alias).get()));
+
   if (mLockCount) {
     NS_ERROR("Can't modify locked mediagraph");
     return NS_ERROR_FAILURE;
@@ -306,7 +324,10 @@ zapMediaGraph::RemoveNode(const nsACString & id_or_alias)
   
   NodeDescriptor* d = ResolveNodeDescriptor(id_or_alias);
   if (!d) {
-    NS_WARNING("Target node not found");
+    nsCString tmp;
+    tmp = NS_LITERAL_CSTRING("Target node not found: ");
+    tmp += id_or_alias;
+    NS_WARNING(tmp.get());
     return NS_ERROR_FAILURE;
   }
   RemoveDescriptor(d);
@@ -320,9 +341,14 @@ zapMediaGraph::GetNode(const nsACString & id_or_alias,
                        const nsIID & uuid, PRBool synchronous, 
                        void * *result)
 {
+  LOG(("zapMediaGraph::GetNode(%s)", nsPromiseFlatCString(id_or_alias).get()));
+
   NodeDescriptor* nd = ResolveNodeDescriptor(id_or_alias);
   if (!nd) {
-    NS_ERROR("Target node not found");
+    nsCString tmp;
+    tmp = NS_LITERAL_CSTRING("Target node not found: ");
+    tmp += id_or_alias;
+    NS_ERROR(tmp.get());
     *result = nsnull;
     return NS_ERROR_FAILURE;
   }
@@ -343,6 +369,10 @@ zapMediaGraph::GetNode(const nsACString & id_or_alias,
 NS_IMETHODIMP
 zapMediaGraph::SetAlias(const nsACString & alias, const nsACString & id_or_alias)
 {
+  LOG(("zapMediaGraph::SetAlias(%s -> %s)",
+       nsPromiseFlatCString(alias).get(),
+       nsPromiseFlatCString(id_or_alias).get()));
+
   // check if alias name is allowed:
   if (!alias.IsEmpty()) {
     nsACString::const_iterator p;
@@ -397,21 +427,34 @@ zapMediaGraph::Connect(const nsACString & source_node_id, nsIPropertyBag2 *sourc
                        const nsACString & sink_node_id, nsIPropertyBag2 *sink_pars,
                        nsACString & _retval)
 {
+  LOG(("zapMediaGraph::Connect(%s -> %s)",
+       nsPromiseFlatCString(source_node_id).get(),
+       nsPromiseFlatCString(sink_node_id).get()));
+
   if (mLockCount) {
-    NS_ERROR("Can't modify locked mediagraph");
+    nsCString tmp;
+    tmp = NS_LITERAL_CSTRING("Source node not found: ");
+    tmp += source_node_id;
+    NS_ERROR(tmp.get());
     return NS_ERROR_FAILURE;
   }
   
   NodeDescriptor* src_nd = ResolveNodeDescriptor(source_node_id);
   if (!src_nd) {
-    NS_ERROR("Source node not found");
+    nsCString tmp;
+    tmp = NS_LITERAL_CSTRING("Sink node not found: ");
+    tmp += sink_node_id;
+    NS_ERROR(tmp.get());
     return NS_ERROR_FAILURE;
   }
   nsCOMPtr<zapIMediaNode> sourcenode = src_nd->node;
 
   NodeDescriptor* sink_nd = ResolveNodeDescriptor(sink_node_id);
   if (!sink_nd) {
-    NS_ERROR("Sink node not found");
+    nsCString tmp;
+    tmp = NS_LITERAL_CSTRING("Sink node not found: ");
+    tmp += sink_node_id;
+    NS_ERROR(tmp.get());
     return NS_ERROR_FAILURE;
   }
   nsCOMPtr<zapIMediaNode> sinknode = sink_nd->node;
@@ -429,6 +472,8 @@ zapMediaGraph::Connect(const nsACString & source_node_id, nsIPropertyBag2 *sourc
   // generate new connection id:
   nsCString id = NS_LITERAL_CSTRING("~");
   id.AppendInt(mConnectionIdCounter++);
+
+  LOG(("New connection ID: %s", id.get()));
 
   // try to form connection:
   rv = source->ConnectSink(sink);
@@ -455,6 +500,9 @@ zapMediaGraph::Connect(const nsACString & source_node_id, nsIPropertyBag2 *sourc
 NS_IMETHODIMP
 zapMediaGraph::Disconnect(const nsACString & connection_id)
 {
+  LOG(("zapMediaGraph::Disconnect(%s)",
+       nsPromiseFlatCString(connection_id).get()));
+
   if (mLockCount) {
     NS_ERROR("Can't modify locked mediagraph");
     return NS_ERROR_FAILURE;

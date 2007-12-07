@@ -23,6 +23,7 @@ REQUIRES     	= \
 
 CPPSRCS		= \
 		zapCryptoUtils.cpp \
+		zapLogUtils.cpp \
 		zapBaseModule.cpp \
 		$(NULL)
 

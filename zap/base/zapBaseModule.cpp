@@ -36,8 +36,10 @@
 
 #include "nsIGenericFactory.h"
 #include "zapCryptoUtils.h"
+#include "zapLogUtils.h"
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(zapCryptoUtils)
+NS_GENERIC_FACTORY_CONSTRUCTOR(zapLogUtils)
   
 static const nsModuleComponentInfo gComponents[] =
 {
@@ -45,6 +47,11 @@ static const nsModuleComponentInfo gComponents[] =
     ZAP_CRYPTOUTILS_CID,
     ZAP_CRYPTOUTILS_CONTRACTID,
     zapCryptoUtilsConstructor
+  },
+  { "Mozilla ZAP LogUtils Service",
+    ZAP_LOGUTILS_CID,
+    ZAP_LOGUTILS_CONTRACTID,
+    zapLogUtilsConstructor
   }
 };
 

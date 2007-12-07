@@ -45,6 +45,7 @@ EXPORTED_SYMBOLS = [ "StdClass",
                      "ErrorReporter",
                      "ErrorReporterSink",
                      "ConsoleErrorReporterFunction",
+                     "getNSPRErrorReportFunction",
                      "SupportsImpl",
                      "AttributeParser",
                      "Unwrappable",
@@ -468,6 +469,10 @@ NamedObject.fun(
 // Class ErrorReporter
 
 var ErrorReporter = makeClass("ErrorReporter", NamedObject);
+ErrorReporter.appendCtor(
+  function() {
+    this._logName_ = this._class_.toString().replace(/[\[\]]+/g,"");
+  });
 
 var gVerboseErrorService;
 function getVerboseErrorService() {
@@ -483,7 +488,7 @@ function getVerboseErrorService() {
 
 // The standard error reporter sink, directing messages to the
 // console:
-var ConsoleErrorReporterFunction = dump;
+var ConsoleErrorReporterFunction = function (msg, logName) { dump(msg); };
 
 // ErrorReporterSink: The function referenced by this global exported
 // variable will be used to sink messages from the
@@ -492,11 +497,33 @@ var ConsoleErrorReporterFunction = dump;
 var ErrorReporterSink = { reporterFunction : ConsoleErrorReporterFunction };
 
 
+// NSPR Logging facility
+var gLogUtils;
+
+var NSPRErrorReporterFunction = function(msg, logName) {
+  gLogUtils.logMessage(logName || "class-none", msg);
+}
+
+function getNSPRErrorReportFunction() {
+  try {
+    gLogUtils = Components.classes["@mozilla.org/zap/logutils;1"].getService(Components.interfaces.zapILogUtils);
+    if (!gLogUtils) {
+      dump("ERROR: Could not get logutils service!\n");
+    } else  if (gLogUtils.loggingEnabled) {
+      return NSPRErrorReporterFunction;
+    }
+  } catch (e) {
+    dump("ERROR: An error occured while enabling NSPR logging: " + e + "\n");
+  }
+  return function() {};
+}
+
 ErrorReporter.fun(
   {mergeover:false},
   function _verboseError(message) {
     ErrorReporterSink.reporterFunction(this+"::"+Components.stack.caller.name+
-                                       ": Verbose Error: "+message+"\n");
+                                       ": Verbose Error: "+message+"\n",
+                                       this._logName_);
     throw(getVerboseErrorService().setVerboseErrorMessage(message));
   });
 
@@ -504,7 +531,8 @@ ErrorReporter.fun(
   {mergeover:false},
   function _error(message) {
     ErrorReporterSink.reporterFunction(this+"::"+Components.stack.caller.name+
-                                       ": ERROR: "+message+"\n");
+                                       ": ERROR: "+message+"\n",
+                                       this._logName_);
     throw(this+"::"+Components.stack.caller.name+": ERROR: "+message);
   });
 
@@ -513,7 +541,8 @@ ErrorReporter.fun(
   function _assert(cond, message) {
     if (!cond) {
       ErrorReporterSink.reporterFunction(this+"::"+Components.stack.caller.name+
-                                         ": ASSERTION FAILED: "+message+"\n");
+                                         ": ASSERTION FAILED: "+message+"\n",
+                                         this._logName_);
       throw(this+"::"+Components.stack.caller.name+": ASSERTION FAILED: "+message);
     }
   });
@@ -522,14 +551,15 @@ ErrorReporter.fun(
   {mergeover:false},
   function _warning(message) {
     ErrorReporterSink.reporterFunction(this+"::"+Components.stack.caller.name+
-                                       ": WARNING: "+message+"\n");
+                                       ": WARNING: "+message+"\n",
+                                       this._logName_);
   });
 
 ErrorReporter.fun(
   {mergeover:false},
   function _dump(message) {
     ErrorReporterSink.reporterFunction(this+"::"+Components.stack.caller.name+
-                                       ": "+message+"\n");
+                                       ": "+message+"\n", this._logName_);
   });
 
 ErrorReporter.fun(
@@ -553,9 +583,24 @@ ErrorReporter.metafun(
  'message' when called.                                                ",
   function stub(name, message) {
     this.prototype[name] = function() {
-      ErrorReporterSink.reporterFunction(this+"::stub '"+name+"': "+message+"\n");
+      ErrorReporterSink.reporterFunction(this+"::stub '"+name+"': "+message+"\n",
+                                         this._logName_);
       throw(this+"::stub '"+name+"': "+message);
     };
+  });
+
+ErrorReporter.metafun(
+  "\
+ Create a prototype stub getter for property 'name' that will throw an \n\
+ error 'message' when the property is being accessed.                   ",
+  function stub_getter(name, message) {
+    this.prototype.__defineGetter__(name,
+                                    function() {
+                                      ErrorReporterSink.reporterFunction(
+                                        this+"::stub_getter '"+name+"': "+message+"\n",
+                                        this._logName_);
+                                      throw(this+"::stub_getter '"+name+"': "+message);
+                                    });
   });
 
 // merge into StdClass:
