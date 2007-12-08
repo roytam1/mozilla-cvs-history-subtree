@@ -33,7 +33,7 @@ $BuildDebug        = 1;      # Debug or Opt (Darwin)
 #$SkipMozilla       = 0;      # Use to debug post-mozilla.pl scripts.
 
 # Tests
-$CleanProfile             = 0;
+$CleanProfile             = 1;
 #$ResetHomeDirForTests     = 1;
 $ProductName               = "Minefield";
 $VendorName                = "";
