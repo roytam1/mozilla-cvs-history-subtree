@@ -38,7 +38,7 @@
 
 /*** @brief Allowed request status values
  */
-static const struct {
+static struct {
 	 enum icalrequeststatus kind;
 	int major;
 	int minor;
@@ -112,7 +112,7 @@ char* icalenum_reqstat_code(icalrequeststatus stat)
 	if ( request_status_map[i].kind ==  stat) {
 	    major = request_status_map[i].major;
 	    minor = request_status_map[i].minor;
-	    snprintf(tmpbuf, sizeof(tmpbuf), "%i.%i", major, minor);
+	    sprintf(tmpbuf, "%i.%i", major, minor);
 	    return icalmemory_tmp_copy(tmpbuf);
 	}
     }

@@ -121,17 +121,19 @@ enum file_type test_file(char *path)
 char* lowercase(const char* str)
 {
     char* p = 0;
-    char* new = strdup(str);
+    char* ret;
 
     if(str ==0){
 	return 0;
     }
 
-    for(p = new; *p!=0; p++){
+    ret = strdup(str);
+
+    for(p = ret; *p!=0; p++){
 	*p = tolower(*p);
     }
 
-    return new;
+    return ret;
 }
 
 #if 0

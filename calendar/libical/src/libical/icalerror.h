@@ -90,8 +90,8 @@ typedef enum icalerrorstate {
     ICAL_ERROR_UNKNOWN    /* Asked state for an unknown error type */
 } icalerrorstate ;
 
-const char* icalerror_strerror(icalerrorenum e);
-const char* icalerror_perror();
+char* icalerror_strerror(icalerrorenum e);
+char* icalerror_perror();
 void icalerror_set_error_state( icalerrorenum error, icalerrorstate);
 icalerrorstate icalerror_get_error_state( icalerrorenum error);
 
