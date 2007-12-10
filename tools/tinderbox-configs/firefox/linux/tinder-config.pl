@@ -145,7 +145,7 @@ $pageload_server      = "pageload.build.mozilla.org";
 
 #$moz_cvsroot   = $ENV{CVSROOT};
 # CONFIG: $moz_cvsroot   = '%mozillaCvsroot%';
-$moz_cvsroot   = ":ext:cltbld\@cvs.mozilla.org:/cvsroot";
+$moz_cvsroot   = 'cltbld@cvs.mozilla.org:/cvsroot';
 
 #- Set these proper values for your tinderbox server
 #$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
@@ -177,7 +177,7 @@ $BuildTree  = 'MozillaRelease';
 
 #$BuildName = '';
 # CONFIG: $BuildTag = '%productTag%_RELEASE';
-$BuildTag = 'FIREFOX_3_0b1_RELEASE';
+$BuildTag = 'FIREFOX_3_0b2_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -208,13 +208,13 @@ $ssh_version   = "2";
 # CONFIG: $ssh_user      = "%sshUser%";
 $ssh_user      = "cltbld";
 # CONFIG: $ssh_server    = "%sshServer%";
-$ssh_server    = "stage.mozilla.org";
+$ssh_server    = "production-trunk-automation.build.mozilla.org";
 $ftp_path      = "/home/ftp/pub/firefox/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
 # CONFIG: $milestone     = "firefox%version%";
-$milestone     = "firefox3.0b1";
+$milestone     = "firefox3.0b2";
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 0;
@@ -231,13 +231,13 @@ $update_ver_file = 'browser/config/version.txt';
 $crashreporter_buildsymbols = 1;
 $crashreporter_pushsymbols = 1;
 # CONFIG: $ENV{'SYMBOL_SERVER_HOST'}    = '%symbolServer%';
-$ENV{'SYMBOL_SERVER_HOST'} = 'stage.mozilla.org';
+$ENV{'SYMBOL_SERVER_HOST'}    = 'stage.mozilla.org';
 # CONFIG: $ENV{'SYMBOL_SERVER_USER'}    = '%symbolServerUser%';
-$ENV{'SYMBOL_SERVER_USER'}   = 'ffxbld';
+$ENV{'SYMBOL_SERVER_USER'}    = 'ffxbld';
 # CONFIG: $ENV{'SYMBOL_SERVER_PATH'}    = '%symbolServerPath%';
-$ENV{'SYMBOL_SERVER_PATH'}   = '/mnt/netapp/breakpad/symbols_ffx/';
+$ENV{'SYMBOL_SERVER_PATH'}    = '/mnt/netapp/breakpad/symbols_ffx';
 # CONFIG: $ENV{'SYMBOL_SERVER_SSH_KEY'} = '%symbolServerKey%';
-$ENV{'SYMBOL_SERVER_SSH_KEY'}   = "$ENV{'HOME'}/.ssh/ffxbld_dsa";
+$ENV{'SYMBOL_SERVER_SSH_KEY'} = '/home/cltbld/.ssh/ffxbld_dsa';
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
