@@ -115,7 +115,7 @@ icalcomponent *icalmessage_new_reply_base(icalcomponent* c,
 					    const char* msg)
 {
     icalproperty *attendee;
-    char tmp[1024];
+    char tmp[45];
 
     icalcomponent *reply = icalcomponent_vanew(
 	ICAL_VCALENDAR_COMPONENT,

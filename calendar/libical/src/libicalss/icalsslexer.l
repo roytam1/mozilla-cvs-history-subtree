@@ -57,7 +57,9 @@ digit		[0-9]
 %array /* Make yytext an array. Slow, but handy. HACK */
 
 %option caseless
-%option reentrant-bison
+/* See http://lists.ximian.com/archives/public/evolution-hackers/2003-September/001304.html
+   if you run into problems with this option. */
+%option bison-bridge
 
 %s sql string_value
 
@@ -90,10 +92,11 @@ NULL			{ return SQLNULL; }
 ;			{ return EOL; }
 
 \'[\@\*A-Za-z0-9\-\.\:\ ]+\' {
-	int c = input(yy_globals);
+	/* int c = input(yy_globals);    removed this variable, does it work? */
+	int c = input();
 	unput(c);
 	if(c!='\''){
-		yylvalp->v_string= icalmemory_tmp_copy(yytext);
+		yylval_param->v_string= icalmemory_tmp_copy(yytext);
 		return STRING;
 	} else {
 		/*ssmore();*/
@@ -110,7 +113,8 @@ NULL			{ return SQLNULL; }
 
 %% 
 
-int yywrap(yyscan_t yy_globals)
+/* int yywrap(yyscan_t yy_globals) */
+int yywrap()
 {
      return 1;
 }
