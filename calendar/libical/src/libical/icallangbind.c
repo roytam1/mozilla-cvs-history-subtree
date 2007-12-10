@@ -40,8 +40,8 @@ void icallangbind_free_array(int* array){
     free(array);
 }
 
-int icallangbind_access_array(int* array, int index) {
-    return array[index];
+int icallangbind_access_array(int* array, int indx) {
+    return array[indx];
 }                    
 
 /** Iterators to fetch parameters given property */

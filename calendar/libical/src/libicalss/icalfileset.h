@@ -41,6 +41,8 @@
 #define mode_t int
 #endif
 
+extern int icalfileset_safe_saves;
+
 typedef struct icalfileset_impl icalfileset;
 
 icalset* icalfileset_new(const char* path);
@@ -120,6 +122,7 @@ icalcomponent* icalfileset_get_component(icalset* cluster);
 typedef struct icalfileset_options {
   int          flags;		/**< flags for open() O_RDONLY, etc  */
   mode_t       mode;		/**< file mode */
+  int          safe_saves;	/**< to lock or not */
   icalcluster  *cluster;	/**< use this cluster to initialize data */
 } icalfileset_options;
 
