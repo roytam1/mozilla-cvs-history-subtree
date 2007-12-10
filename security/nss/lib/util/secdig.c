@@ -41,6 +41,36 @@
 #include "secerr.h"
 
 /*
+ * XXX OLD Template.  Once all uses have been switched over to new one,
+ * remove this.
+ */
+DERTemplate SGNDigestInfoTemplate[] = {
+    { DER_SEQUENCE,
+	  0, NULL, sizeof(SGNDigestInfo) },
+    { DER_INLINE,
+	  offsetof(SGNDigestInfo,digestAlgorithm),
+	  SECAlgorithmIDTemplate, },
+    { DER_OCTET_STRING,
+	  offsetof(SGNDigestInfo,digest), },
+    { 0, }
+};
+
+/* XXX See comment below about SGN_DecodeDigestInfo -- keep this static! */
+/* XXX Changed from static -- need to change name? */
+const SEC_ASN1Template sgn_DigestInfoTemplate[] = {
+    { SEC_ASN1_SEQUENCE,
+	  0, NULL, sizeof(SGNDigestInfo) },
+    { SEC_ASN1_INLINE,
+	  offsetof(SGNDigestInfo,digestAlgorithm),
+	  SECOID_AlgorithmIDTemplate },
+    { SEC_ASN1_OCTET_STRING,
+	  offsetof(SGNDigestInfo,digest) },
+    { 0 }
+};
+
+SEC_ASN1_CHOOSER_IMPLEMENT(sgn_DigestInfoTemplate)
+
+/*
  * XXX Want to have a SGN_DecodeDigestInfo, like:
  *	SGNDigestInfo *SGN_DecodeDigestInfo(SECItem *didata);
  * that creates a pool and allocates from it and decodes didata into

@@ -65,14 +65,11 @@
 #include "pk11func.h"
 #include "xconst.h"   /* for  CERT_DecodeAltNameExtension */
 
+#ifndef NSS_3_4_CODE
+#define NSS_3_4_CODE
+#endif /* NSS_3_4_CODE */
 #include "pki.h"
 #include "pki3hack.h"
-
-SEC_ASN1_MKSUB(CERT_TimeChoiceTemplate)
-SEC_ASN1_MKSUB(SECOID_AlgorithmIDTemplate)
-SEC_ASN1_MKSUB(SEC_BitStringTemplate)
-SEC_ASN1_MKSUB(SEC_IntegerTemplate)
-SEC_ASN1_MKSUB(SEC_SkipTemplate)
 
 /*
  * Certificate database handling code
@@ -95,37 +92,18 @@ const SEC_ASN1Template CERT_SequenceOfCertExtensionTemplate[] = {
     { SEC_ASN1_SEQUENCE_OF, 0, CERT_CertExtensionTemplate }
 };
 
-const SEC_ASN1Template CERT_TimeChoiceTemplate[] = {
-  { SEC_ASN1_CHOICE, offsetof(SECItem, type), 0, sizeof(SECItem) },
-  { SEC_ASN1_UTC_TIME, 0, 0, siUTCTime },
-  { SEC_ASN1_GENERALIZED_TIME, 0, 0, siGeneralizedTime },
-  { 0 }
-};
-
-const SEC_ASN1Template CERT_ValidityTemplate[] = {
-    { SEC_ASN1_SEQUENCE,
-	  0, NULL, sizeof(CERTValidity) },
-    { SEC_ASN1_INLINE | SEC_ASN1_XTRN,
-          offsetof(CERTValidity,notBefore),
-          SEC_ASN1_SUB(CERT_TimeChoiceTemplate), 0 },
-    { SEC_ASN1_INLINE | SEC_ASN1_XTRN,
-          offsetof(CERTValidity,notAfter),
-          SEC_ASN1_SUB(CERT_TimeChoiceTemplate), 0 },
-    { 0 }
-};
-
 const SEC_ASN1Template CERT_CertificateTemplate[] = {
     { SEC_ASN1_SEQUENCE,
       0, NULL, sizeof(CERTCertificate) },
     { SEC_ASN1_EXPLICIT | SEC_ASN1_OPTIONAL | SEC_ASN1_CONSTRUCTED | 
-	  SEC_ASN1_CONTEXT_SPECIFIC | SEC_ASN1_XTRN | 0, /* XXX DER_DEFAULT */ 
+	  SEC_ASN1_CONTEXT_SPECIFIC | 0, 		/* XXX DER_DEFAULT */ 
 	  offsetof(CERTCertificate,version),
-	  SEC_ASN1_SUB(SEC_IntegerTemplate) },
+	  SEC_IntegerTemplate },
     { SEC_ASN1_INTEGER,
 	  offsetof(CERTCertificate,serialNumber) },
-    { SEC_ASN1_INLINE | SEC_ASN1_XTRN,
+    { SEC_ASN1_INLINE,
 	  offsetof(CERTCertificate,signature),
-	  SEC_ASN1_SUB(SECOID_AlgorithmIDTemplate) },
+	  SECOID_AlgorithmIDTemplate },
     { SEC_ASN1_SAVE, 
 	  offsetof(CERTCertificate,derIssuer) },
     { SEC_ASN1_INLINE,
@@ -144,12 +122,12 @@ const SEC_ASN1Template CERT_CertificateTemplate[] = {
     { SEC_ASN1_INLINE,
 	  offsetof(CERTCertificate,subjectPublicKeyInfo),
 	  CERT_SubjectPublicKeyInfoTemplate },
-    { SEC_ASN1_OPTIONAL |  SEC_ASN1_CONTEXT_SPECIFIC | SEC_ASN1_XTRN | 1,
+    { SEC_ASN1_OPTIONAL |  SEC_ASN1_CONTEXT_SPECIFIC | 1,
 	  offsetof(CERTCertificate,issuerID),
-	  SEC_ASN1_SUB(SEC_BitStringTemplate) },
-    { SEC_ASN1_OPTIONAL |  SEC_ASN1_CONTEXT_SPECIFIC | SEC_ASN1_XTRN | 2,
+	  SEC_BitStringTemplate },
+    { SEC_ASN1_OPTIONAL |  SEC_ASN1_CONTEXT_SPECIFIC | 2,
 	  offsetof(CERTCertificate,subjectID),
-	  SEC_ASN1_SUB(SEC_BitStringTemplate) },
+	  SEC_BitStringTemplate },
     { SEC_ASN1_EXPLICIT | SEC_ASN1_OPTIONAL | SEC_ASN1_CONSTRUCTED | 
 	  SEC_ASN1_CONTEXT_SPECIFIC | 3,
 	  offsetof(CERTCertificate,extensions),
@@ -165,9 +143,9 @@ const SEC_ASN1Template SEC_SignedCertificateTemplate[] =
 	  offsetof(CERTCertificate,signatureWrap.data) },
     { SEC_ASN1_INLINE, 
 	  0, CERT_CertificateTemplate },
-    { SEC_ASN1_INLINE | SEC_ASN1_XTRN,
+    { SEC_ASN1_INLINE,
 	  offsetof(CERTCertificate,signatureWrap.signatureAlgorithm),
-	  SEC_ASN1_SUB(SECOID_AlgorithmIDTemplate) },
+	  SECOID_AlgorithmIDTemplate },
     { SEC_ASN1_BIT_STRING,
 	  offsetof(CERTCertificate,signatureWrap.signature) },
     { 0 }
@@ -180,8 +158,8 @@ const SEC_ASN1Template SEC_CertSubjectTemplate[] = {
     { SEC_ASN1_SEQUENCE,
 	  0, NULL, sizeof(SECItem) },
     { SEC_ASN1_EXPLICIT | SEC_ASN1_OPTIONAL | SEC_ASN1_CONSTRUCTED | 
-	  SEC_ASN1_CONTEXT_SPECIFIC | SEC_ASN1_XTRN | 0,
-	  0, SEC_ASN1_SUB(SEC_SkipTemplate) },	/* version */
+	  SEC_ASN1_CONTEXT_SPECIFIC | 0,
+	  0, SEC_SkipTemplate },	/* version */
     { SEC_ASN1_SKIP },		/* serial number */
     { SEC_ASN1_SKIP },		/* signature algorithm */
     { SEC_ASN1_SKIP },		/* issuer */
@@ -198,8 +176,8 @@ const SEC_ASN1Template SEC_CertIssuerTemplate[] = {
     { SEC_ASN1_SEQUENCE,
 	  0, NULL, sizeof(SECItem) },
     { SEC_ASN1_EXPLICIT | SEC_ASN1_OPTIONAL | SEC_ASN1_CONSTRUCTED | 
-	  SEC_ASN1_CONTEXT_SPECIFIC | SEC_ASN1_XTRN | 0,
-	  0, SEC_ASN1_SUB(SEC_SkipTemplate) },	/* version */
+	  SEC_ASN1_CONTEXT_SPECIFIC | 0,
+	  0, SEC_SkipTemplate },	/* version */
     { SEC_ASN1_SKIP },		/* serial number */
     { SEC_ASN1_SKIP },		/* signature algorithm */
     { SEC_ASN1_ANY, 0, NULL },		/* issuer */
@@ -213,8 +191,8 @@ const SEC_ASN1Template SEC_CertSerialNumberTemplate[] = {
     { SEC_ASN1_SEQUENCE,
 	  0, NULL, sizeof(SECItem) },
     { SEC_ASN1_EXPLICIT | SEC_ASN1_OPTIONAL | SEC_ASN1_CONSTRUCTED | 
-	  SEC_ASN1_CONTEXT_SPECIFIC | SEC_ASN1_XTRN | 0,
-	  0, SEC_ASN1_SUB(SEC_SkipTemplate) },	/* version */
+	  SEC_ASN1_CONTEXT_SPECIFIC | 0,
+	  0, SEC_SkipTemplate },	/* version */
     { SEC_ASN1_ANY, 0, NULL }, /* serial number */
     { SEC_ASN1_SKIP_REST },
     { 0 }
@@ -229,8 +207,8 @@ const SEC_ASN1Template CERT_CertKeyTemplate[] = {
     { SEC_ASN1_SEQUENCE,
 	  0, NULL, sizeof(CERTCertKey) },
     { SEC_ASN1_EXPLICIT | SEC_ASN1_OPTIONAL | SEC_ASN1_CONSTRUCTED | 
-	  SEC_ASN1_CONTEXT_SPECIFIC | SEC_ASN1_XTRN | 0,
-	  0, SEC_ASN1_SUB(SEC_SkipTemplate) },	/* version */ 
+	  SEC_ASN1_CONTEXT_SPECIFIC | 0,
+	  0, SEC_SkipTemplate },	/* version */ 
     { SEC_ASN1_INTEGER,
 	  offsetof(CERTCertKey,serialNumber) },
     { SEC_ASN1_SKIP },		/* signature algorithm */
@@ -240,7 +218,6 @@ const SEC_ASN1Template CERT_CertKeyTemplate[] = {
     { 0 }
 };
 
-SEC_ASN1_CHOOSER_IMPLEMENT(CERT_TimeChoiceTemplate)
 SEC_ASN1_CHOOSER_IMPLEMENT(CERT_CertificateTemplate)
 SEC_ASN1_CHOOSER_IMPLEMENT(SEC_SignedCertificateTemplate)
 SEC_ASN1_CHOOSER_IMPLEMENT(CERT_SequenceOfCertExtensionTemplate)
@@ -978,61 +955,6 @@ __CERT_DecodeDERCertificate(SECItem *derSignedCert, PRBool copyDER,
 }
 
 
-CERTValidity *
-CERT_CreateValidity(int64 notBefore, int64 notAfter)
-{
-    CERTValidity *v;
-    int rv;
-    PRArenaPool *arena;
-
-    if (notBefore > notAfter) {
-       PORT_SetError(SEC_ERROR_INVALID_ARGS);
-       return NULL;
-    }
-    arena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
-    
-    if ( !arena ) {
-	return(0);
-    }
-    
-    v = (CERTValidity*) PORT_ArenaZAlloc(arena, sizeof(CERTValidity));
-    if (v) {
-	v->arena = arena;
-	rv = DER_EncodeTimeChoice(arena, &v->notBefore, notBefore);
-	if (rv) goto loser;
-	rv = DER_EncodeTimeChoice(arena, &v->notAfter, notAfter);
-	if (rv) goto loser;
-    }
-    return v;
-
-  loser:
-    CERT_DestroyValidity(v);
-    return 0;
-}
-
-SECStatus
-CERT_CopyValidity(PRArenaPool *arena, CERTValidity *to, CERTValidity *from)
-{
-    SECStatus rv;
-
-    CERT_DestroyValidity(to);
-    to->arena = arena;
-    
-    rv = SECITEM_CopyItem(arena, &to->notBefore, &from->notBefore);
-    if (rv) return rv;
-    rv = SECITEM_CopyItem(arena, &to->notAfter, &from->notAfter);
-    return rv;
-}
-
-void
-CERT_DestroyValidity(CERTValidity *v)
-{
-    if (v && v->arena) {
-	PORT_FreeArena(v->arena, PR_FALSE);
-    }
-    return;
-}
-
 /*
 ** Amount of time that a certifiate is allowed good before it is actually
 ** good. This is used for pending certificates, ones that are about to be
@@ -1367,8 +1289,14 @@ CERTCertificate *
 CERT_DupCertificate(CERTCertificate *c)
 {
     if (c) {
+#ifdef NSS_CLASSIC
+	CERT_LockCertRefCount(c);
+	++c->referenceCount;
+	CERT_UnlockCertRefCount(c);
+#else
 	NSSCertificate *tmp = STAN_GetNSSCertificate(c);
 	nssCertificate_AddRef(tmp);
+#endif
     }
     return c;
 }
@@ -2695,7 +2623,11 @@ static PZLock *certRefCountLock = NULL;
 void
 CERT_LockCertRefCount(CERTCertificate *cert)
 {
-    PORT_Assert(certRefCountLock != NULL);
+    if ( certRefCountLock == NULL ) {
+	nss_InitLock(&certRefCountLock, nssILockRefLock);
+	PORT_Assert(certRefCountLock != NULL);
+    }
+    
     PZ_Lock(certRefCountLock);
     return;
 }
@@ -2728,55 +2660,13 @@ static PZLock *certTrustLock = NULL;
 void
 CERT_LockCertTrust(CERTCertificate *cert)
 {
-    PORT_Assert(certTrustLock != NULL);
+    if ( certTrustLock == NULL ) {
+	nss_InitLock(&certTrustLock, nssILockCertDB);
+	PORT_Assert(certTrustLock != NULL);
+    }
+    
     PZ_Lock(certTrustLock);
     return;
-}
-
-SECStatus
-cert_InitLocks(void)
-{
-    if ( certRefCountLock == NULL ) {
-        certRefCountLock = PZ_NewLock(nssILockRefLock);
-        PORT_Assert(certRefCountLock != NULL);
-        if (!certRefCountLock) {
-            return SECFailure;
-        }
-    }
-
-    if ( certTrustLock == NULL ) {
-        certTrustLock = PZ_NewLock(nssILockCertDB);
-        PORT_Assert(certTrustLock != NULL);
-        if (!certTrustLock) {
-            PZ_DestroyLock(certRefCountLock);
-            return SECFailure;
-        }
-    }    
-
-    return SECSuccess;
-}
-
-SECStatus
-cert_DestroyLocks(void)
-{
-    SECStatus rv = SECSuccess;
-
-    PORT_Assert(certRefCountLock != NULL);
-    if (certRefCountLock) {
-        PZ_DestroyLock(certRefCountLock);
-        certRefCountLock = NULL;
-    } else {
-        rv = SECFailure;
-    }
-
-    PORT_Assert(certTrustLock != NULL);
-    if (certTrustLock) {
-        PZ_DestroyLock(certTrustLock);
-        certTrustLock = NULL;
-    } else {
-        rv = SECFailure;
-    }
-    return rv;
 }
 
 /*

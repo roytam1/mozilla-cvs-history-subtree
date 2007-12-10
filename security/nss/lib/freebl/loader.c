@@ -834,22 +834,6 @@ PQG_VerifyParams(const PQGParams *params, const PQGVerify *vfy,
   return (vector->p_PQG_VerifyParams)(params, vfy, result);
 }
 
-void   
-PQG_DestroyParams(PQGParams *params)
-{
-  if (!vector && PR_SUCCESS != freebl_RunLoaderOnce())
-      return;
-  (vector->p_PQG_DestroyParams)(params);
-}
-
-void   
-PQG_DestroyVerify(PQGVerify *vfy)
-{
-  if (!vector && PR_SUCCESS != freebl_RunLoaderOnce())
-      return;
-  (vector->p_PQG_DestroyVerify)(vfy);
-}
-
 void 
 BL_Cleanup(void)
 {
@@ -871,7 +855,9 @@ BL_Unload(void)
    * never does a handshake on it, BL_Unload will be called even though freebl
    * was never loaded. So, don't assert blLib. */
   if (blLib) {
+#ifdef DEBUG
       disableUnload = PR_GetEnv("NSS_DISABLE_UNLOAD");
+#endif
       if (!disableUnload) {
           PRStatus status = PR_UnloadLibrary(blLib);
           PORT_Assert(PR_SUCCESS == status);

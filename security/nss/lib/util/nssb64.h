@@ -42,7 +42,6 @@
 #ifndef _NSSB64_H_
 #define _NSSB64_H_
 
-#include "utilrename.h"
 #include "seccomon.h"
 #include "nssb64t.h"
 

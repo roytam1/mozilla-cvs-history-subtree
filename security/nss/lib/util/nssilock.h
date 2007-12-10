@@ -133,7 +133,6 @@
 #ifndef _NSSILOCK_H_
 #define _NSSILOCK_H_
 
-#include "utilrename.h"
 #include "prtypes.h"
 #include "prmon.h"
 #include "prlock.h"

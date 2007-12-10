@@ -91,8 +91,6 @@ pkix_pl_RWLock_RegisterSelf(
         PKIX_ENTER(RWLOCK, "pkix_pl_RWLock_RegisterSelf");
 
         entry.description = "RWLock";
-        entry.objCounter = 0;
-        entry.typeObjectSize = sizeof(PKIX_PL_RWLock);
         entry.destructor = pkix_pl_RWLock_Destroy;
         entry.equalsFunction = NULL;
         entry.hashcodeFunction = NULL;

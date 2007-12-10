@@ -40,8 +40,6 @@ CORE_DEPTH = ../../..
 
 PRIVATE_EXPORTS = \
 	ckhelper.h \
-	devm.h     \
-	devtm.h    \
 	devt.h     \
 	dev.h      \
 	nssdevt.h  \
@@ -54,11 +52,18 @@ EXPORTS =	   \
 MODULE = nss
 
 CSRCS =		        \
+	devmod.c        \
 	devslot.c       \
 	devtoken.c      \
 	devutil.c       \
 	ckhelper.c      \
 	$(NULL)
+
+# here is where the 3.4 glue code is added
+ifndef PURE_STAN_BUILD
+DEFINES = -DNSS_3_4_CODE
+PRIVATE_EXPORTS += devm.h devtm.h
+endif
 
 REQUIRES = nspr
 

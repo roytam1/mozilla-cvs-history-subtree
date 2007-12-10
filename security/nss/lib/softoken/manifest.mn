@@ -58,6 +58,8 @@ EXPORTS = \
 	pkcs11t.h \
 	pkcs11n.h \
 	pkcs11u.h \
+	sdb.h \
+	sftkdbt.h \
 	$(NULL)
 
 PRIVATE_EXPORTS = \
@@ -69,8 +71,6 @@ PRIVATE_EXPORTS = \
 	softoken.h \
 	softoknt.h \
 	softkver.h \
-	sdb.h \
-	sftkdbt.h \
 	$(NULL)
 
 CSRCS = \

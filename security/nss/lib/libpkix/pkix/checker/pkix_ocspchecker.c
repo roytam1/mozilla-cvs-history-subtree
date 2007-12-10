@@ -102,8 +102,6 @@ pkix_OcspChecker_RegisterSelf(void *plContext)
         PKIX_ENTER(OCSPCHECKER, "pkix_OcspChecker_RegisterSelf");
 
         entry.description = "OcspChecker";
-        entry.objCounter = 0;
-        entry.typeObjectSize = sizeof(PKIX_OcspChecker);
         entry.destructor = pkix_OcspChecker_Destroy;
         entry.equalsFunction = NULL;
         entry.hashcodeFunction = NULL;
@@ -295,11 +293,8 @@ pkix_OcspChecker_Create(
         checkerObject->nbioContext = NULL;
 
         *pChecker = checkerObject;
-        checkerObject = NULL;
 
 cleanup:
-
-        PKIX_DECREF(checkerObject);
 
         PKIX_RETURN(OCSPCHECKER);
 

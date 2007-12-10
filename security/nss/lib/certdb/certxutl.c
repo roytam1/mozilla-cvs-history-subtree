@@ -305,8 +305,7 @@ CERT_EncodeAndAddBitStrExtension (void *exthandle, int idtag,
   
   PrepareBitStringForEncoding (&bitsmap, value);
   return (CERT_EncodeAndAddExtension
-	  (exthandle, idtag, &bitsmap, critical,
-          SEC_ASN1_GET(SEC_BitStringTemplate)));
+	  (exthandle, idtag, &bitsmap, critical, SEC_BitStringTemplate));
 }
 
 SECStatus
@@ -445,9 +444,8 @@ CERT_FindBitStringExtension (CERTCertExtension **extensions, int tag,
 	goto loser;
     }
 
-    rv = SEC_QuickDERDecodeItem(arena, &tmpItem,
-                                SEC_ASN1_GET(SEC_BitStringTemplate),
-                                &wrapperItem);
+    rv = SEC_QuickDERDecodeItem(arena, &tmpItem, SEC_BitStringTemplate, 
+			    &wrapperItem);
 
     if ( rv != SECSuccess ) {
 	goto loser;

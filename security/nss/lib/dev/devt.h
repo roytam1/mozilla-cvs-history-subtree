@@ -67,7 +67,9 @@ static const char DEVT_CVS_ID[] = "@(#) $RCSfile$ $Revision$ $Date$";
 #include "baset.h"
 #endif /* BASET_H */
 
+#ifdef NSS_3_4_CODE
 #include "secmodt.h"
+#endif /* NSS_3_4_CODE */
 
 PR_BEGIN_EXTERN_C
 
@@ -97,7 +99,9 @@ struct NSSTokenStr
     NSSTrustDomain *trustDomain;
     PRIntervalTime lastTime;
     nssTokenObjectCache *cache;
+#ifdef NSS_3_4_CODE
     PK11SlotInfo *pk11slot;
+#endif
 };
 
 typedef enum {
@@ -124,8 +128,10 @@ struct NSSSlotStr
   struct nssSlotAuthInfoStr authInfo;
   PRIntervalTime lastTokenPing;
   PZLock *lock;
+#ifdef NSS_3_4_CODE
   void *epv;
   PK11SlotInfo *pk11slot;
+#endif
 };
 
 struct nssSessionStr

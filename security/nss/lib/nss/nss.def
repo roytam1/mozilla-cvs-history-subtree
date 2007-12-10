@@ -375,7 +375,6 @@ VFY_VerifyDigest;
 ;+# Data objects
 ;+#
 ;+# Don't export these DATA symbols on Windows because they don't work right.
-;+# Use the SEC_ASN1_GET / SEC_ASN1_SUB / SEC_ASN1_XTRN macros to access them.
 ;;CERT_CrlTemplate DATA ;
 ;;CERT_SignedDataTemplate DATA ;
 ;;CERT_CertificateTemplate DATA ;
@@ -844,7 +843,6 @@ SECOID_AddEntry;
 ;+# Data objects
 ;+#
 ;+# Don't export these DATA symbols on Windows because they don't work right.
-;+# Use the SEC_ASN1_GET / SEC_ASN1_SUB / SEC_ASN1_XTRN macros to access them.
 ;;CERT_SequenceOfCertExtensionTemplate DATA ;
 ;;CERT_SignedCrlTemplate DATA ;
 NSS_Get_CERT_SequenceOfCertExtensionTemplate;
@@ -901,12 +899,6 @@ DER_TimeToGeneralizedTimeArena;
 ;+    local:
 ;+       *;
 ;+};
-;+NSS_3.11.9 {
-;+    global:
-PK11_UnconfigurePKCS11;
-;+    local:
-;+       *;
-;+};
 ;+NSS_3.12 { 	# NSS 3.12 release
 ;+    global:
 CERT_CheckNameSpace;
@@ -920,16 +912,14 @@ CERT_EncodeUserNotice;
 CERT_FindCRLEntryReasonExten;
 CERT_FindCRLNumberExten;
 CERT_FindNameConstraintsExten;
-CERT_SetOCSPTimeout;
 CERT_PKIXVerifyCert;
-PK11_CreateGenericObject;
 PK11_GenerateKeyPairWithOpFlags;
 PK11_GetAllSlotsForCert;
-PK11_WriteRawAttribute;
 SECKEY_ECParamsToBasePointOrderLen;
 SECKEY_ECParamsToKeySize;
 SECMOD_DeleteModuleEx;
 SEC_GetRegisteredHttpClient;
+SEC_StringToOID;
 VFY_CreateContextDirect;
 VFY_CreateContextWithAlgorithmID;
 VFY_VerifyDataDirect;

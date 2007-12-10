@@ -356,8 +356,6 @@ pkix_pl_CertPolicyMap_RegisterSelf(void *plContext)
         PKIX_ENTER(CERTPOLICYMAP, "pkix_pl_CertPolicyMap_RegisterSelf");
 
         entry.description = "CertPolicyMap";
-        entry.objCounter = 0;
-        entry.typeObjectSize = sizeof(PKIX_PL_CertPolicyMap);
         entry.destructor = pkix_pl_CertPolicyMap_Destroy;
         entry.equalsFunction = pkix_pl_CertPolicyMap_Equals;
         entry.hashcodeFunction = pkix_pl_CertPolicyMap_Hashcode;
@@ -390,7 +388,6 @@ PKIX_PL_CertPolicyMap_GetIssuerDomainPolicy(
         PKIX_INCREF(policyMapping->issuerDomainPolicy);
         *pIssuerDomainPolicy = policyMapping->issuerDomainPolicy;
 
-cleanup:
         PKIX_RETURN(CERTPOLICYMAP);
 }
 
@@ -412,6 +409,5 @@ PKIX_PL_CertPolicyMap_GetSubjectDomainPolicy(
         PKIX_INCREF(policyMapping->subjectDomainPolicy);
         *pSubjectDomainPolicy = policyMapping->subjectDomainPolicy;
 
-cleanup:
         PKIX_RETURN(CERTPOLICYMAP);
 }

@@ -55,6 +55,9 @@
 #include "secerr.h"
 #include "sslerr.h"
 
+#ifndef NSS_3_4_CODE
+#define NSS_3_4_CODE
+#endif /* NSS_3_4_CODE */
 #include "pki3hack.h"
 #include "dev3hack.h" 
 

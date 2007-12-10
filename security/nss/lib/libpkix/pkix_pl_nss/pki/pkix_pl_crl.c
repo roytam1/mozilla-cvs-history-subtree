@@ -249,6 +249,7 @@ pkix_pl_CRL_GetSignatureAlgId(
         }
 
         PKIX_INCREF(crl->signatureAlgId);
+
         *pSignatureAlgId = crl->signatureAlgId;
 
 cleanup:
@@ -684,8 +685,6 @@ pkix_pl_CRL_RegisterSelf(void *plContext)
         PKIX_ENTER(CRL, "pkix_pl_CRL_RegisterSelf");
 
         entry.description = "CRL";
-        entry.objCounter = 0;
-        entry.typeObjectSize = sizeof(PKIX_PL_CRL);
         entry.destructor = pkix_pl_CRL_Destroy;
         entry.equalsFunction = pkix_pl_CRL_Equals;
         entry.hashcodeFunction = pkix_pl_CRL_Hashcode;
@@ -864,25 +863,25 @@ pkix_pl_CRL_CreateToList(
         PKIX_ENTER(CRL, "pkix_pl_CRL_CreateToList");
         PKIX_NULLCHECK_TWO(derCrlItem, crlList);
 
-        nssCrl = CERT_DecodeDERCrl(NULL, derCrlItem, SEC_CRL_TYPE);
-        if (nssCrl == NULL) {
-            goto cleanup;
-        }
+        PKIX_PL_NSSCALLRV(CRL, nssCrl, CERT_DecodeDERCrl,
+                (NULL, derCrlItem, SEC_CRL_TYPE));
 
-        PKIX_CHECK(pkix_pl_CRL_CreateWithSignedCRL
-                   (nssCrl, &crl, plContext),
-                   PKIX_CRLCREATEWITHSIGNEDCRLFAILED);
-        
-        nssCrl = NULL;
-
-        PKIX_CHECK(PKIX_List_AppendItem
-                   (crlList, (PKIX_PL_Object *) crl, plContext),
-                   PKIX_LISTAPPENDITEMFAILED);
-
-cleanup:
         if (nssCrl) {
-            SEC_DestroyCrl(nssCrl);
+                PKIX_CHECK_ONLY_FATAL(pkix_pl_CRL_CreateWithSignedCRL
+                        (nssCrl, &crl, plContext),
+                        PKIX_CRLCREATEWITHSIGNEDCRLFAILED);
+
+                /* skip bad crls and append good ones */
+                if (!PKIX_ERROR_RECEIVED) {
+                        PKIX_CHECK(PKIX_List_AppendItem
+                                (crlList, (PKIX_PL_Object *) crl, plContext),
+                                PKIX_LISTAPPENDITEMFAILED);
+                }
+
+                PKIX_DECREF(crl);
+
         }
+cleanup:
 
         PKIX_DECREF(crl);
 

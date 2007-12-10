@@ -276,8 +276,6 @@ pkix_pl_String_RegisterSelf(
         PKIX_ENTER(STRING, "pkix_pl_String_RegisterSelf");
 
         entry.description = "String";
-        entry.objCounter = 0;
-        entry.typeObjectSize = sizeof(PKIX_PL_String);
         entry.destructor = pkix_pl_String_Destroy;
         entry.equalsFunction = pkix_pl_String_Equals;
         entry.hashcodeFunction = pkix_pl_String_Hashcode;
@@ -452,9 +450,7 @@ PKIX_PL_Sprintf(
 
         PKIX_STRING_DEBUG("\tCalling PR_Malloc).\n");
         convertedAsciiFormat = PR_Malloc(length + 1);
-        if (convertedAsciiFormat == NULL)
-                PKIX_ERROR_ALLOC_ERROR();
-
+        if (convertedAsciiFormat == NULL) return PKIX_ALLOC_ERROR();
         convertedAsciiFormatBase = convertedAsciiFormat;
 
         PKIX_STRING_DEBUG("\tCalling va_start).\n");

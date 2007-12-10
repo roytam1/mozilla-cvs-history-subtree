@@ -388,11 +388,9 @@ pkix_pl_helperBytes2Ascii(
         outputString[outputLen-1] = '\0';
 
         *pAscii = outputString;
-        outputString = NULL;
 
 cleanup:
-        
-        PKIX_FREE(outputString);
+
         PKIX_FREE(tempString);
 
         PKIX_RETURN(OBJECT);

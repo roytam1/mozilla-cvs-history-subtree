@@ -37,10 +37,30 @@
 #include "prlong.h"
 #include "prtime.h"
 #include "secder.h"
+#include "cert.h"
 #include "secitem.h"
 #include "secerr.h"
 
 static const PRTime January1st2050  = LL_INIT(0x0008f81e, 0x1b098000);
+
+const SEC_ASN1Template CERT_TimeChoiceTemplate[] = {
+  { SEC_ASN1_CHOICE, offsetof(SECItem, type), 0, sizeof(SECItem) },
+  { SEC_ASN1_UTC_TIME, 0, 0, siUTCTime },
+  { SEC_ASN1_GENERALIZED_TIME, 0, 0, siGeneralizedTime },
+  { 0 }
+};
+
+SEC_ASN1_CHOOSER_IMPLEMENT(CERT_TimeChoiceTemplate)
+
+const SEC_ASN1Template CERT_ValidityTemplate[] = {
+    { SEC_ASN1_SEQUENCE,
+	  0, NULL, sizeof(CERTValidity) },
+    { SEC_ASN1_INLINE,
+	  offsetof(CERTValidity,notBefore), CERT_TimeChoiceTemplate, 0 },
+    { SEC_ASN1_INLINE,
+	  offsetof(CERTValidity,notAfter), CERT_TimeChoiceTemplate, 0 },
+    { 0 }
+};
 
 static char *DecodeUTCTime2FormattedAscii (SECItem *utcTimeDER, char *format);
 static char *DecodeGeneralizedTime2FormattedAscii (SECItem *generalizedTimeDER, char *format);
@@ -85,6 +105,63 @@ DER_TimeChoiceDayToAscii(SECItem *timechoice)
         PORT_SetError(SEC_ERROR_INVALID_ARGS);
         return NULL;
     }
+}
+
+
+
+CERTValidity *
+CERT_CreateValidity(int64 notBefore, int64 notAfter)
+{
+    CERTValidity *v;
+    int rv;
+    PRArenaPool *arena;
+
+    if (notBefore > notAfter) {
+       PORT_SetError(SEC_ERROR_INVALID_ARGS);
+       return NULL;
+    }
+    arena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
+    
+    if ( !arena ) {
+	return(0);
+    }
+    
+    v = (CERTValidity*) PORT_ArenaZAlloc(arena, sizeof(CERTValidity));
+    if (v) {
+	v->arena = arena;
+	rv = DER_EncodeTimeChoice(arena, &v->notBefore, notBefore);
+	if (rv) goto loser;
+	rv = DER_EncodeTimeChoice(arena, &v->notAfter, notAfter);
+	if (rv) goto loser;
+    }
+    return v;
+
+  loser:
+    CERT_DestroyValidity(v);
+    return 0;
+}
+
+SECStatus
+CERT_CopyValidity(PRArenaPool *arena, CERTValidity *to, CERTValidity *from)
+{
+    SECStatus rv;
+
+    CERT_DestroyValidity(to);
+    to->arena = arena;
+    
+    rv = SECITEM_CopyItem(arena, &to->notBefore, &from->notBefore);
+    if (rv) return rv;
+    rv = SECITEM_CopyItem(arena, &to->notAfter, &from->notAfter);
+    return rv;
+}
+
+void
+CERT_DestroyValidity(CERTValidity *v)
+{
+    if (v && v->arena) {
+	PORT_FreeArena(v->arena, PR_FALSE);
+    }
+    return;
 }
 
 char *

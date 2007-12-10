@@ -100,8 +100,6 @@ pkix_SignatureCheckerState_RegisterSelf(void *plContext)
                     "pkix_SignatureCheckerState_RegisterSelf");
 
         entry.description = "SignatureCheckerState";
-        entry.objCounter = 0;
-        entry.typeObjectSize = sizeof(pkix_SignatureCheckerState);
         entry.destructor = pkix_SignatureCheckerState_Destroy;
         entry.equalsFunction = NULL;
         entry.hashcodeFunction = NULL;
@@ -153,6 +151,12 @@ pkix_SignatureCheckerState_Create(
         PKIX_ENTER(SIGNATURECHECKERSTATE, "pkix_SignatureCheckerState_Create");
         PKIX_NULLCHECK_TWO(trustedPubKey, pCheckerState);
 
+        PKIX_CHECK(PKIX_PL_OID_Create
+                    (PKIX_CERTKEYUSAGE_OID,
+                    &keyUsageOID,
+                    plContext),
+                    PKIX_OIDCREATEFAILED);
+
         PKIX_CHECK(PKIX_PL_Object_Alloc
                     (PKIX_SIGNATURECHECKERSTATE_TYPE,
                     sizeof (pkix_SignatureCheckerState),
@@ -164,27 +168,20 @@ pkix_SignatureCheckerState_Create(
 
         state->prevCertCertSign = PKIX_TRUE;
         state->prevPublicKeyList = NULL;
-        state->certsRemaining = certsRemaining;
 
         PKIX_INCREF(trustedPubKey);
+
+        state->certsRemaining = certsRemaining;
         state->prevPublicKey = trustedPubKey;
-
-        PKIX_CHECK(PKIX_PL_OID_Create
-                    (PKIX_CERTKEYUSAGE_OID,
-                    &keyUsageOID,
-                    plContext),
-                    PKIX_OIDCREATEFAILED);
-
         state->keyUsageOID = keyUsageOID;
-        keyUsageOID = NULL;
 
         *pCheckerState = state;
-        state = NULL;
 
 cleanup:
 
-        PKIX_DECREF(keyUsageOID);
-        PKIX_DECREF(state); 
+        if (PKIX_ERROR_RECEIVED){
+                PKIX_DECREF(keyUsageOID);
+        }
 
         PKIX_RETURN(SIGNATURECHECKERSTATE);
 }

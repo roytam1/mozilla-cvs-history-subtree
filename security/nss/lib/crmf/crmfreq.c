@@ -329,28 +329,29 @@ crmf_template_add_public_key(PRArenaPool *poolp,
 }
 
 static SECStatus
-crmf_copy_bitstring (PRArenaPool *poolp, SECItem *dest, const SECItem *src)
+crmf_copy_bitstring (PRArenaPool *poolp, SECItem *dest, SECItem *src)
 {
     SECStatus rv;
-    SECItem  byteSrc;
+    int origLenBits, numBytesToCopy;
     
-    byteSrc = *src;
-    byteSrc.len = CRMF_BITS_TO_BYTES(byteSrc.len);
-    rv = crmf_copy_secitem(poolp, dest, &byteSrc);
-    dest->len = src->len;
+    origLenBits = src->len;
+    numBytesToCopy = CRMF_BITS_TO_BYTES(origLenBits);
+    rv = crmf_copy_secitem(poolp, dest, src);
+    src->len = origLenBits;
+    dest->len = origLenBits;
     return rv;
 }
 
 static SECStatus
 crmf_template_add_issuer_uid(PRArenaPool *poolp, SECItem *dest,
-			     const SECItem *issuerUID)
+			     SECItem *issuerUID)
 {
     return crmf_copy_bitstring (poolp, dest, issuerUID);
 }
 
 static SECStatus
 crmf_template_add_subject_uid(PRArenaPool *poolp, SECItem *dest, 
-			      const SECItem *subjectUID)
+			      SECItem *subjectUID)
 {
     return crmf_copy_bitstring (poolp, dest, subjectUID);
 }

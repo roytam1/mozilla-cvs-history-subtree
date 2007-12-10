@@ -37,6 +37,7 @@
 
 #include "secoid.h"
 #include "pkcs11t.h"
+#include "secmodt.h"
 #include "secitem.h"
 #include "secerr.h"
 #include "plhash.h"

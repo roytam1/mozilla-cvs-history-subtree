@@ -182,13 +182,12 @@ pkix_pl_PublicKey_Destroy(
 
         pubKey = (PKIX_PL_PublicKey *)object;
 
-        if (pubKey->nssSPKI) {
+        PKIX_NULLCHECK_ONE(pubKey->nssSPKI);
 
-            PKIX_CHECK(pkix_pl_DestroySPKI(pubKey->nssSPKI, plContext),
-                       PKIX_DESTROYSPKIFAILED);
-            
-            PKIX_FREE(pubKey->nssSPKI);
-        }
+        PKIX_CHECK(pkix_pl_DestroySPKI(pubKey->nssSPKI, plContext),
+                    PKIX_DESTROYSPKIFAILED);
+
+        PKIX_FREE(pubKey->nssSPKI);
 
 cleanup:
 
@@ -372,8 +371,6 @@ pkix_pl_PublicKey_RegisterSelf(void *plContext)
         PKIX_ENTER(PUBLICKEY, "pkix_pl_PublicKey_RegisterSelf");
 
         entry.description = "PublicKey";
-        entry.objCounter = 0;
-        entry.typeObjectSize = sizeof(PKIX_PL_PublicKey);
         entry.destructor = pkix_pl_PublicKey_Destroy;
         entry.equalsFunction = pkix_pl_PublicKey_Equals;
         entry.hashcodeFunction = pkix_pl_PublicKey_Hashcode;

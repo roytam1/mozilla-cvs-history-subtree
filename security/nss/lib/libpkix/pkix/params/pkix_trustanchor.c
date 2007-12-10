@@ -354,8 +354,6 @@ pkix_TrustAnchor_RegisterSelf(void *plContext)
         PKIX_ENTER(TRUSTANCHOR, "pkix_TrustAnchor_RegisterSelf");
 
         entry.description = "TrustAnchor";
-        entry.objCounter = 0;
-        entry.typeObjectSize = sizeof(PKIX_TrustAnchor);
         entry.destructor = pkix_TrustAnchor_Destroy;
         entry.equalsFunction = pkix_TrustAnchor_Equals;
         entry.hashcodeFunction = pkix_TrustAnchor_Hashcode;
@@ -401,11 +399,8 @@ PKIX_TrustAnchor_CreateWithCert(
         anchor->nameConstraints = NULL;
 
         *pAnchor = anchor;
-        anchor = NULL;
 
 cleanup:
-
-        PKIX_DECREF(anchor);
 
         PKIX_RETURN(TRUSTANCHOR);
 
@@ -448,10 +443,8 @@ PKIX_TrustAnchor_CreateWithNameKeyPair(
         anchor->nameConstraints = nameConstraints;
 
         *pAnchor = anchor;
-        anchor = NULL;
-cleanup:
 
-        PKIX_DECREF(anchor);
+cleanup:
 
         PKIX_RETURN(TRUSTANCHOR);
 }
@@ -472,7 +465,6 @@ PKIX_TrustAnchor_GetTrustedCert(
 
         *pCert = anchor->trustedCert;
 
-cleanup:
         PKIX_RETURN(TRUSTANCHOR);
 
 }
@@ -493,7 +485,6 @@ PKIX_TrustAnchor_GetCAName(
 
         *pCAName = anchor->caName;
 
-cleanup:
         PKIX_RETURN(TRUSTANCHOR);
 
 }
@@ -514,7 +505,6 @@ PKIX_TrustAnchor_GetCAPublicKey(
 
         *pPubKey = anchor->caPubKey;
 
-cleanup:
         PKIX_RETURN(TRUSTANCHOR);
 }
 
@@ -535,6 +525,5 @@ PKIX_TrustAnchor_GetNameConstraints(
 
         *pNameConstraints = anchor->nameConstraints;
 
-cleanup:
         PKIX_RETURN(TRUSTANCHOR);
 }

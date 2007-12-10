@@ -545,8 +545,6 @@ pkix_pl_HttpDefaultClient_RegisterSelf(void *plContext)
                 "pkix_pl_HttpDefaultClient_RegisterSelf");
 
         entry.description = "HttpDefaultClient";
-        entry.objCounter = 0;
-        entry.typeObjectSize = sizeof(PKIX_PL_HttpDefaultClient);
         entry.destructor = pkix_pl_HttpDefaultClient_Destroy;
         entry.equalsFunction = NULL;
         entry.hashcodeFunction = NULL;

@@ -46,7 +46,7 @@ ifdef NS_USE_GCC
 	AS          = $(CC)
 	ASFLAGS     += -x assembler-with-cpp
 	LD          = gld
-	ODD_CFLAGS  = -pipe -Wall -Wno-format -Wno-switch
+	ODD_CFLAGS  = -pipe -Wall -Wno-format
 	ifdef BUILD_OPT
 		OPTIMIZER += -O6
 	endif

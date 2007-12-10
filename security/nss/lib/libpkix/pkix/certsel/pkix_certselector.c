@@ -1533,8 +1533,6 @@ pkix_CertSelector_RegisterSelf(void *plContext)
         PKIX_ENTER(CERTSELECTOR, "pkix_CertSelector_RegisterSelf");
 
         entry.description = "CertSelector";
-        entry.objCounter = 0;
-        entry.typeObjectSize = sizeof(PKIX_CertSelector);
         entry.destructor = pkix_CertSelector_Destroy;
         entry.equalsFunction = NULL;
         entry.hashcodeFunction = NULL;
@@ -1633,7 +1631,6 @@ PKIX_CertSelector_GetCertSelectorContext(
 
         *pCertSelectorContext = selector->context;
 
-cleanup:
         PKIX_RETURN(CERTSELECTOR);
 }
 
@@ -1655,7 +1652,6 @@ PKIX_CertSelector_GetCommonCertSelectorParams(
         PKIX_INCREF(selector->params);
         *pParams = selector->params;
 
-cleanup:
         PKIX_RETURN(CERTSELECTOR);
 
 }
@@ -1727,7 +1723,7 @@ pkix_CertSelector_Select(
 	PKIX_Boolean match = PKIX_FALSE;
 	PKIX_UInt32 numBefore = 0;
 	PKIX_UInt32 i = 0;
-	PKIX_List *filtered = NULL;
+        PKIX_List *filtered = NULL;
 	PKIX_PL_Cert *candidate = NULL;
 
         PKIX_ENTER(CERTSELECTOR, "PKIX_CertSelector_Select");
@@ -1769,11 +1765,9 @@ pkix_CertSelector_Select(
         pkixTempErrorReceived = PKIX_FALSE;
 
         *pAfter = filtered;
-        filtered = NULL;
 
 cleanup:
 
-        PKIX_DECREF(filtered);
         PKIX_DECREF(candidate);
 
         PKIX_RETURN(CERTSELECTOR);

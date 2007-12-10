@@ -43,6 +43,11 @@
 
 #include "pkix_pl_object.h"
 
+/* --Debugging---------------------------------------------------- */
+
+static PKIX_UInt32 refCountTotal = 0;
+
+                              
 /* --Class-Table-Initializers------------------------------------ */
 
 /*
@@ -132,7 +137,7 @@ pkix_pl_Object_GetHeader(
 
         if ((header == NULL)||
             (header->magicHeader != PKIX_MAGIC_HEADER)) {
-                PKIX_ERROR_ALLOC_ERROR();
+                return (PKIX_ALLOC_ERROR());
         }
 
         *pObjectHeader = header;
@@ -181,6 +186,9 @@ pkix_pl_Object_Destroy(
 
         objectHeader->magicHeader = 0;
         PKIX_DECREF(objectHeader->stringRep);
+
+        PKIX_CHECK(pkix_UnlockObject(object, plContext),
+                    PKIX_ERRORUNLOCKINGOBJECT);
 
         /* Destroy this object's lock */
         PKIX_OBJECT_DEBUG("\tCalling PR_DestroyLock).\n");
@@ -265,6 +273,7 @@ pkix_pl_Object_ToString_Default(
         PKIX_PL_String **pString,
         void *plContext)
 {
+        extern pkix_ClassTable_Entry systemClasses[PKIX_NUMTYPES];
         pkix_ClassTable_Entry *ctEntry = NULL;
         PKIX_PL_String *formatString = NULL;
         PKIX_PL_String *descString = NULL;
@@ -423,6 +432,7 @@ pkix_pl_Object_RetrieveEqualsCallback(
         PKIX_PL_EqualsCallback *pEqualsCallback,
         void *plContext)
 {
+        extern pkix_ClassTable_Entry systemClasses[PKIX_NUMTYPES];
         PKIX_PL_Object *objectHeader = NULL;
         pkix_ClassTable_Entry *ctEntry = NULL;
         PKIX_PL_EqualsCallback func = NULL;
@@ -471,44 +481,6 @@ cleanup:
         PKIX_RETURN(OBJECT);
 }
 
-/*
- * FUNCTION: pkix_pl_Object_RegisterSelf
- * DESCRIPTION:
- *  Registers PKIX_OBJECT_TYPE and its related functions with systemClasses[]
- * THREAD SAFETY:
- *  Not Thread Safe - for performance and complexity reasons
- *
- *  Since this function is only called by PKIX_PL_Initialize, which should
- *  only be called once, it is acceptable that this function is not
- *  thread-safe.
- *
- *  PKIX_PL_Object should have all function pointes to be to NULL: they
- *  work as proxy function to a real objects.
- *  
- */
-PKIX_Error *
-pkix_pl_Object_RegisterSelf(void *plContext)
-{
-        extern pkix_ClassTable_Entry systemClasses[PKIX_NUMTYPES];
-        pkix_ClassTable_Entry entry;
-
-        PKIX_ENTER(ERROR, "pkix_pl_Object_RegisterSelf");
-
-        entry.description = "Object";
-        entry.objCounter = 0;
-        entry.typeObjectSize = sizeof(PKIX_PL_Object);
-        entry.destructor = NULL;
-        entry.equalsFunction = NULL;
-        entry.hashcodeFunction = NULL;
-        entry.toStringFunction = NULL;
-        entry.comparator = NULL;
-        entry.duplicateFunction = NULL;
-
-        systemClasses[PKIX_OBJECT_TYPE] = entry;
-
-        PKIX_RETURN(ERROR);
-}
-
 /* --Public-Functions------------------------------------------------------- */
 
 /*
@@ -516,7 +488,7 @@ pkix_pl_Object_RegisterSelf(void *plContext)
  */
 PKIX_Error *
 PKIX_PL_Object_Alloc(
-        PKIX_TYPENUM type,
+        PKIX_UInt32 type,
         PKIX_UInt32 size,
         PKIX_PL_Object **pObject,
         void *plContext)
@@ -554,11 +526,7 @@ PKIX_PL_Object_Alloc(
                 if (!typeRegistered) {
                         PKIX_ERROR_FATAL(PKIX_UNKNOWNTYPEARGUMENT);
                 }
-        } else {
-                ctEntry = &systemClasses[type];
         }
-        
-        PORT_Assert(size == ctEntry->typeObjectSize);
 
         /* Allocate space for the object header and the requested size */
         PKIX_CHECK(PKIX_PL_Malloc
@@ -575,28 +543,27 @@ PKIX_PL_Object_Alloc(
         object->hashcode = 0;
         object->hashcodeCached = 0;
 
+        /* XXX Debugging - not thread safe */
+        refCountTotal++;
+
+        PKIX_REF_COUNT_DEBUG_ARG("PKIX_PL_Object_Alloc: refCountTotal == %d \n",
+                            refCountTotal);
 
         /* Cannot use PKIX_PL_Mutex because it depends on Object */
         /* Using NSPR Locks instead */
         PKIX_OBJECT_DEBUG("\tCalling PR_NewLock).\n");
         object->lock = PR_NewLock();
         if (object->lock == NULL) {
-                PKIX_ERROR_ALLOC_ERROR();
+                PKIX_FREE(pObject);
+                return (PKIX_ALLOC_ERROR());
         }
 
         PKIX_OBJECT_DEBUG("\tShifting object pointer).\n");
 
-
         /* Return a pointer to the user data. Need to offset by object size */
         *pObject = object + 1;
-        object = NULL;
-
-        /* Atomically increment object counter */
-        PR_AtomicIncrement(&ctEntry->objCounter);
 
 cleanup:
-
-        PKIX_FREE(object);
 
         PKIX_RETURN(OBJECT);
 }
@@ -753,9 +720,9 @@ PKIX_PL_Object_IncRef(
         PKIX_PL_Object *object,
         void *plContext)
 {
+        PKIX_Boolean refCountError = PKIX_FALSE;
         PKIX_PL_Object *objectHeader = NULL;
         PKIX_PL_NssContext *context = NULL;
-        PKIX_Int32 refCount = 0;
 
         PKIX_ENTER(OBJECT, "PKIX_PL_Object_IncRef");
         PKIX_NULLCHECK_ONE(object);
@@ -773,17 +740,32 @@ PKIX_PL_Object_IncRef(
         }
 
         if (object == (PKIX_PL_Object*)PKIX_ALLOC_ERROR()) {
-                goto cleanup;
+                PKIX_ERROR_FATAL(PKIX_ATTEMPTTOINCREFALLOCERROR);
         }
 
         /* Shift pointer from user data to object header */
         PKIX_CHECK(pkix_pl_Object_GetHeader(object, &objectHeader, plContext),
                     PKIX_RECEIVEDCORRUPTEDOBJECTARGUMENT);
 
-        /* This object should never have zero references */
-        refCount = PR_AtomicIncrement(&objectHeader->references);
+        /* Lock the test and increment */
+        PKIX_OBJECT_DEBUG("\tAcquiring object lock).\n");
+        PKIX_CHECK(pkix_LockObject(object, plContext),
+                    PKIX_ERRORLOCKINGOBJECT);
 
-        if (refCount <= 1) {
+        /* This object should never have zero references */
+        refCountError = (objectHeader->references == 0);
+
+        if (!refCountError) {
+                objectHeader->references++;
+                refCountTotal++;
+                PKIX_REF_COUNT_DEBUG_ARG("PKIX_PL_Object_IncRef: "
+                                    "refCountTotal == %d \n", refCountTotal);
+        }
+
+        PKIX_CHECK(pkix_UnlockObject(object, plContext),
+                    PKIX_ERRORUNLOCKINGOBJECT);
+
+        if (refCountError) {
                 PKIX_THROW(FATAL, PKIX_OBJECTWITHNONPOSITIVEREFERENCES);
         }
 
@@ -800,9 +782,14 @@ PKIX_PL_Object_DecRef(
         PKIX_PL_Object *object,
         void *plContext)
 {
-        PKIX_Int32 refCount = 0;
+        extern pkix_ClassTable_Entry systemClasses[PKIX_NUMTYPES];
+        PKIX_PL_DestructorCallback destructor = NULL;
+        pkix_ClassTable_Entry *ctEntry = NULL;
+        PKIX_PL_DestructorCallback func = NULL;
         PKIX_PL_Object *objectHeader = NULL;
+        pkix_ClassTable_Entry entry;
         PKIX_PL_NssContext *context = NULL;
+        PKIX_Boolean refCountError = PKIX_FALSE;
 
         PKIX_ENTER(OBJECT, "PKIX_PL_Object_DecRef");
         PKIX_NULLCHECK_ONE(object);
@@ -820,67 +807,81 @@ PKIX_PL_Object_DecRef(
         }
 
         if (object == (PKIX_PL_Object*)PKIX_ALLOC_ERROR()) {
-                goto cleanup;
+                PKIX_ERROR_FATAL(PKIX_ATTEMPTTODECREFALLOCERROR);
         }
 
         /* Shift pointer from user data to object header */
         PKIX_CHECK(pkix_pl_Object_GetHeader(object, &objectHeader, plContext),
                     PKIX_RECEIVEDCORRUPTEDOBJECTARGUMENT);
 
-        refCount = PR_AtomicDecrement(&objectHeader->references);
+        /* Lock the test for the reference count and the decrement */
+        PKIX_OBJECT_DEBUG("\tAcquiring object lock).\n");
+        PKIX_CHECK(pkix_LockObject(object, plContext),
+                    PKIX_ERRORLOCKINGOBJECT);
 
-        if (refCount == 0) {
-            PKIX_PL_DestructorCallback destructor = NULL;
-            pkix_ClassTable_Entry *ctEntry = NULL;
-            
-            /* first, special handling for system types */
-            if (objectHeader->type >= PKIX_NUMTYPES){
-                PKIX_OBJECT_DEBUG("\tCalling PR_Lock).\n");
-                PR_Lock(classTableLock);
-                pkixErrorResult = pkix_pl_PrimHashTable_Lookup
-                    (classTable,
-                     (void *)&objectHeader->type,
-                     objectHeader->type,
-                     NULL,
-                     (void **)&ctEntry,
-                     plContext);
-                PKIX_OBJECT_DEBUG
-                    ("\tCalling PR_Unlock).\n");
-                PR_Unlock(classTableLock);
-                if (pkixErrorResult){
-                    PKIX_ERROR_FATAL
-                        (PKIX_ERRORINGETTINGDESTRUCTOR);
+        refCountError = (objectHeader->references == 0);
+
+        if (!refCountError) {
+                objectHeader->references--;
+                refCountTotal--;
+
+                PKIX_REF_COUNT_DEBUG_ARG("PKIX_PL_Object_DecRef: "
+                                    "refCountTotal == %d \n", refCountTotal);
+
+                if (objectHeader->references == 0) {
+                        /* first, special handling for system types */
+                        if (objectHeader->type < PKIX_NUMTYPES){
+                                entry = systemClasses[objectHeader->type];
+                                func = entry.destructor;
+                                if (func != NULL){
+                                /* Call destructor on user data if necessary */
+                                    PKIX_CHECK_FATAL(func(object, plContext),
+                                             PKIX_ERRORINOBJECTDEFINEDESTROY);
+                                }
+                        } else {
+                                PKIX_OBJECT_DEBUG("\tCalling PR_Lock).\n");
+                                PR_Lock(classTableLock);
+                                pkixErrorResult = pkix_pl_PrimHashTable_Lookup
+                                        (classTable,
+                                        (void *)&objectHeader->type,
+                                        objectHeader->type,
+                                        NULL,
+                                        (void **)&ctEntry,
+                                        plContext);
+                                PKIX_OBJECT_DEBUG
+                                        ("\tCalling PR_Unlock).\n");
+                                PR_Unlock(classTableLock);
+                                if (pkixErrorResult){
+                                    PKIX_ERROR_FATAL
+                                            (PKIX_ERRORINGETTINGDESTRUCTOR);
+                                }
+
+                                if (ctEntry != NULL){
+                                        destructor = ctEntry->destructor;
+                                }
+
+                                if (destructor != NULL) {
+                                /* Call destructor on user data if necessary */
+                                        PKIX_CHECK_FATAL(destructor
+                                                (object, plContext),
+                                                PKIX_ERRORINOBJECTDEFINEDESTROY);
+                                }
+                        }
+
+                        /* pkix_pl_Object_Destroy assumes the lock is held */
+                        /* It will call unlock and destroy the object */
+                        return (pkix_pl_Object_Destroy(object, plContext));
+
                 }
-                
-                if (ctEntry != NULL){
-                    destructor = ctEntry->destructor;
-                }
-            } else {
-                ctEntry = &systemClasses[objectHeader->type];
-                destructor = ctEntry->destructor;
-            }
-            
-            if (destructor != NULL){
-                /* Call destructor on user data if necessary */
-                pkixErrorResult = destructor(object, plContext);
-                if (pkixErrorResult) {
-                    pkixErrorClass = PKIX_FATAL_ERROR;
-                    PKIX_DoAddError(stdVarsPtr, pkixErrorResult, plContext);
-                    pkixErrorResult = NULL;
-                }
-            }
-            
-            /* Atomically decrement object counter */
-            PR_AtomicDecrement(&ctEntry->objCounter);
-            
-            /* pkix_pl_Object_Destroy assumes the lock is held */
-            /* It will call unlock and destroy the object */
-            pkixErrorResult = pkix_pl_Object_Destroy(object, plContext);
-            goto cleanup;
         }
 
-        if (refCount < 0) {
-            PKIX_ERROR_ALLOC_ERROR();
+        PKIX_OBJECT_DEBUG("\tReleasing object lock).\n");
+        PKIX_CHECK(pkix_UnlockObject(object, plContext),
+                    PKIX_ERRORUNLOCKINGOBJECT);
+
+        /* if a reference count was already zero, throw an error */
+        if (refCountError) {
+                return (PKIX_ALLOC_ERROR());
         }
 
 cleanup:
@@ -900,6 +901,7 @@ PKIX_PL_Object_Equals(
         PKIX_Boolean *pResult,
         void *plContext)
 {
+        extern pkix_ClassTable_Entry systemClasses[PKIX_NUMTYPES];
         PKIX_PL_Object *firstObjectHeader = NULL;
         PKIX_PL_Object *secondObjectHeader = NULL;
         pkix_ClassTable_Entry *ctEntry = NULL;
@@ -975,6 +977,7 @@ PKIX_PL_Object_Duplicate(
         PKIX_PL_Object **pNewObject,
         void *plContext)
 {
+        extern pkix_ClassTable_Entry systemClasses[PKIX_NUMTYPES];
         PKIX_PL_Object *firstObjectHeader = NULL;
         pkix_ClassTable_Entry *ctEntry = NULL;
         PKIX_PL_DuplicateCallback func = NULL;
@@ -1035,10 +1038,12 @@ PKIX_PL_Object_Hashcode(
         PKIX_UInt32 *pValue,
         void *plContext)
 {
+        extern pkix_ClassTable_Entry systemClasses[PKIX_NUMTYPES];
         PKIX_PL_Object *objectHeader = NULL;
         pkix_ClassTable_Entry *ctEntry = NULL;
         PKIX_PL_HashcodeCallback func = NULL;
         pkix_ClassTable_Entry entry;
+        PKIX_Boolean objectLocked = PKIX_FALSE;
         PKIX_UInt32 objectHash;
 
         PKIX_ENTER(OBJECT, "PKIX_PL_Object_Hashcode");
@@ -1091,6 +1096,7 @@ PKIX_PL_Object_Hashcode(
 
                         PKIX_CHECK(pkix_LockObject(object, plContext),
                                     PKIX_ERRORLOCKINGOBJECT);
+                        objectLocked = PKIX_TRUE;
 
                         if (!objectHeader->hashcodeCached){
                                 /* save cached copy in case we need it again */
@@ -1100,12 +1106,18 @@ PKIX_PL_Object_Hashcode(
 
                         PKIX_CHECK(pkix_UnlockObject(object, plContext),
                                     PKIX_ERRORUNLOCKINGOBJECT);
+                        objectLocked = PKIX_FALSE;
                 }
         }
 
         *pValue = objectHeader->hashcode;
 
 cleanup:
+
+        if (objectLocked){
+                pkixTempResult = pkix_UnlockObject(object, plContext);
+                if (pkixTempResult) return pkixTempResult;
+        }
 
         PKIX_RETURN(OBJECT);
 }
@@ -1119,10 +1131,12 @@ PKIX_PL_Object_ToString(
         PKIX_PL_String **pString,
         void *plContext)
 {
+        extern pkix_ClassTable_Entry systemClasses[PKIX_NUMTYPES];
         PKIX_PL_Object *objectHeader = NULL;
         pkix_ClassTable_Entry *ctEntry = NULL;
         PKIX_PL_ToStringCallback func = NULL;
         pkix_ClassTable_Entry entry;
+        PKIX_Boolean objectLocked = PKIX_FALSE;
         PKIX_PL_String *objectString;
 
         PKIX_ENTER(OBJECT, "PKIX_PL_Object_ToString");
@@ -1174,6 +1188,7 @@ PKIX_PL_Object_ToString(
 
                         PKIX_CHECK(pkix_LockObject(object, plContext),
                                     PKIX_ERRORLOCKINGOBJECT);
+                        objectLocked = PKIX_TRUE;
 
                         if (!objectHeader->stringRep){
                                 /* save a cached copy */
@@ -1182,6 +1197,7 @@ PKIX_PL_Object_ToString(
 
                         PKIX_CHECK(pkix_UnlockObject(object, plContext),
                                     PKIX_ERRORUNLOCKINGOBJECT);
+                        objectLocked = PKIX_FALSE;
                 }
         }
 
@@ -1202,6 +1218,7 @@ PKIX_PL_Object_InvalidateCache(
         void *plContext)
 {
         PKIX_PL_Object *objectHeader = NULL;
+        PKIX_Boolean objectLocked = PKIX_FALSE;
 
         PKIX_ENTER(OBJECT, "PKIX_PL_Object_InvalidateCache");
         PKIX_NULLCHECK_ONE(object);
@@ -1212,6 +1229,7 @@ PKIX_PL_Object_InvalidateCache(
 
         PKIX_CHECK(pkix_LockObject(object, plContext),
                     PKIX_ERRORLOCKINGOBJECT);
+        objectLocked = PKIX_TRUE;
 
         /* invalidate hashcode */
         objectHeader->hashcode = 0;
@@ -1221,6 +1239,8 @@ PKIX_PL_Object_InvalidateCache(
 
         PKIX_CHECK(pkix_UnlockObject(object, plContext),
                     PKIX_ERRORUNLOCKINGOBJECT);
+        objectLocked = PKIX_FALSE;
+
 
 cleanup:
 
@@ -1237,6 +1257,7 @@ PKIX_PL_Object_Compare(
         PKIX_Int32 *pResult,
         void *plContext)
 {
+        extern pkix_ClassTable_Entry systemClasses[PKIX_NUMTYPES];
         PKIX_PL_Object *firstObjectHeader = NULL;
         PKIX_PL_Object *secondObjectHeader = NULL;
         pkix_ClassTable_Entry *ctEntry = NULL;

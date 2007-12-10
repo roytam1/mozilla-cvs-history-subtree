@@ -96,42 +96,18 @@ pkix_pl_Pk11CertStore_CheckTrust(
         while (0 != (certificateUsage = certificateUsage >> 1)) { certUsage++; }
 
         rv = CERT_TrustFlagsForCACertUsage(certUsage, &requiredFlags, &trustType);
-        if (rv == SECSuccess) {
-                rv = CERT_GetCertTrust(cert->nssCert, &trust);
+        if (rv != SECSuccess) {
+                requiredFlags = 0;
+                trustType = trustSSL;
         }
 
+        rv = CERT_GetCertTrust(cert->nssCert, &trust);
         if (rv == SECSuccess) {
-            unsigned int certFlags;
-
-            if (certUsage != certUsageAnyCA &&
-                certUsage != certUsageStatusResponder) {
-                CERTCertificate *nssCert = cert->nssCert;
-                
-                if (certUsage == certUsageVerifyCA) {
-                    if (nssCert->nsCertType & NS_CERT_TYPE_EMAIL_CA) {
-                        trustType = trustEmail;
-                    } else if (nssCert->nsCertType & NS_CERT_TYPE_SSL_CA) {
-                        trustType = trustSSL;
-                    } else {
-                        trustType = trustObjectSigning;
-                    }
-                }
-                
+                unsigned int certFlags;
                 certFlags = SEC_GET_TRUST_FLAGS((&trust), trustType);
                 if ((certFlags & requiredFlags) == requiredFlags) {
-                    trusted = PKIX_TRUE;
-                }
-            } else {
-                for (trustType = trustSSL; trustType < trustTypeNone;
-                     trustType++) {
-                    certFlags =
-                        SEC_GET_TRUST_FLAGS((&trust), trustType);
-                    if ((certFlags & requiredFlags) == requiredFlags) {
                         trusted = PKIX_TRUE;
-                        break;
-                    }
                 }
-            }
         }
 
         *pTrusted = trusted;
@@ -243,7 +219,6 @@ pkix_pl_Pk11CertStore_CertQuery(
                         }
                         PKIX_PL_NSSCALL
                                 (CERTSTORE, PORT_FreeArena, (arena, PR_FALSE));
-                        arena = NULL;
                 }
 
         } else {
@@ -287,8 +262,6 @@ pkix_pl_Pk11CertStore_CertQuery(
                                 PKIX_CERTCREATEWITHNSSCERTFAILED);
 
                         if (PKIX_ERROR_RECEIVED) {
-                                CERT_DestroyCertificate(nssCert);
-                                nssCert = NULL;
                                 continue; /* just skip bad certs */
                         }
 
@@ -305,21 +278,24 @@ pkix_pl_Pk11CertStore_CertQuery(
         }
 
         *pSelected = certList;
-        certList = NULL;
 
 cleanup:
-        
-        if (pk11CertList) {
-            CERT_DestroyCertList(pk11CertList);
+        if (PKIX_ERROR_RECEIVED) {
+                PKIX_DECREF(certList);
+                if (arena) {
+                        PKIX_PL_NSSCALL
+                                (CERTSTORE, PORT_FreeArena, (arena, PR_FALSE));
+                }
         }
-        if (arena) {
-            PORT_FreeArena(arena, PR_FALSE);
+
+        if (pk11CertList) {
+                PKIX_PL_NSSCALL
+                        (CERTSTORE, CERT_DestroyCertList, (pk11CertList));
         }
 
         PKIX_DECREF(subjectName);
         PKIX_DECREF(certValid);
         PKIX_DECREF(cert);
-        PKIX_DECREF(certList);
 
         PKIX_RETURN(CERTSTORE);
 }
@@ -478,16 +454,18 @@ pkix_pl_Pk11CertStore_CrlQuery(
         }
 
         *pSelected = crlList;
-        crlList = NULL;
 
 cleanup:
 
-        PKIX_DECREF(crlList);
+        if (PKIX_ERROR_RECEIVED) {
+                PKIX_DECREF(crlList);
+        }
 
-        ReleaseDPCache(dpcache, writeLocked);
+        PKIX_PL_NSSCALL(CERTSTORE, ReleaseDPCache, (dpcache, writeLocked));
 
         if (arena) {
-            PORT_FreeArena(arena, PR_FALSE);
+                PKIX_PL_NSSCALL
+                        (CERTSTORE, PORT_FreeArena, (arena, PR_FALSE));
         }
 
         PKIX_DECREF(issuerNames);
@@ -598,11 +576,11 @@ pkix_pl_Pk11CertStore_GetCert(
                 PKIX_LISTSETIMMUTABLEFAILED);
 
         *pCertList = filtered;
-        filtered = NULL;
 
 cleanup:
-
-        PKIX_DECREF(filtered);
+        if (PKIX_ERROR_RECEIVED) {
+                PKIX_DECREF(filtered);
+        }
         PKIX_DECREF(candidate);
         PKIX_DECREF(selected);
         PKIX_DECREF(params);
@@ -690,11 +668,11 @@ pkix_pl_Pk11CertStore_GetCRL(
                 PKIX_LISTSETIMMUTABLEFAILED);
 
         *pCrlList = filtered;
-        filtered = NULL;
 
 cleanup:
-
-        PKIX_DECREF(filtered);
+        if (PKIX_ERROR_RECEIVED) {
+                PKIX_DECREF(filtered);
+        }
         PKIX_DECREF(candidate);
         PKIX_DECREF(selected);
         PKIX_DECREF(params);

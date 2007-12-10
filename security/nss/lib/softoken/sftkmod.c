@@ -431,11 +431,8 @@ done:
 	/* done with the old module list */
 	sftkdbCall_ReleaseSecmodDBData(appName, filename, olddbname, 
 				  oldModuleList, rw);
-bail:
-	if (olddbname) {
-	    PR_smprintf_free(olddbname);
-	}
     }
+bail:
 	
     if (!moduleList[0]) {
 	char * newParams;

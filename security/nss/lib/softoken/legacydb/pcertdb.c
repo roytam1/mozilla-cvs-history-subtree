@@ -46,6 +46,7 @@
 #include "secitem.h"
 #include "secder.h"
 
+#include "nsslocks.h"
 #include "secerr.h"
 #include "lgdb.h"
 
@@ -86,7 +87,7 @@ void
 certdb_InitDBLock(NSSLOWCERTCertDBHandle *handle)
 {
     if (dbLock == NULL) {
-	dbLock = PZ_NewLock(nssILockCertDB);
+	nss_InitLock(&dbLock, nssILockCertDB);
 	PORT_Assert(dbLock != NULL);
     }
 }
@@ -95,19 +96,19 @@ SECStatus
 nsslowcert_InitLocks(void)
 {
     if (freeListLock == NULL) {
-	freeListLock = PZ_NewLock(nssILockRefLock);
+	nss_InitLock(&freeListLock, nssILockRefLock);
 	if (freeListLock == NULL) {
 	    return SECFailure;
 	}
     }
     if (certRefCountLock == NULL) {
-	certRefCountLock = PZ_NewLock(nssILockRefLock);
+	nss_InitLock(&certRefCountLock, nssILockRefLock);
 	if (certRefCountLock == NULL) {
 	    return SECFailure;
 	}
     }
     if (certTrustLock == NULL ) {
-	certTrustLock = PZ_NewLock(nssILockCertDB);
+	nss_InitLock(&certTrustLock, nssILockCertDB);
 	if (certTrustLock == NULL) {
 	    return SECFailure;
 	}

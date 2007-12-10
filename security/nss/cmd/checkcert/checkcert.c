@@ -154,8 +154,8 @@ OurVerifyData(unsigned char *buf, int len, SECKEYPublicKey *key,
     SECStatus rv;
     VFYContext *cx;
     SECOidData *sigAlgOid, *oiddata;
-    SECOidTag sigAlgTag;
-    SECOidTag hashAlgTag;
+    int sigAlgTag;
+    int hashAlgTag;
     int showDigestOid=0;
 
     cx = VFY_CreateContextWithAlgorithmID(key, sig, sigAlgorithm, &hashAlgTag, 

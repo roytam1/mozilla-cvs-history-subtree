@@ -36,9 +36,6 @@
 
 #ifndef _SECITEM_H_
 #define _SECITEM_H_
-
-#include "utilrename.h"
-
 /*
  * secitem.h - public data structures and prototypes for handling
  *	       SECItems

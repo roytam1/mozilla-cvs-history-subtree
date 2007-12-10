@@ -112,8 +112,7 @@ SECStatus CERT_FindCRLNumberExten (PRArenaPool *arena, CERTCrl *crl,
 
     tmpItem = SECITEM_ArenaDupItem(arena, &encodedExtenValue);
     if (tmpItem) {
-        rv = SEC_QuickDERDecodeItem (arena, value,
-                                     SEC_ASN1_GET(SEC_IntegerTemplate),
+        rv = SEC_QuickDERDecodeItem (arena, value, SEC_IntegerTemplate,
                                      tmpItem);
     } else {
         rv = SECFailure;
@@ -147,8 +146,7 @@ SECStatus CERT_FindCRLEntryReasonExten (CERTCrlEntry *crlEntry,
 	goto loser;
     }
 
-    rv = SEC_QuickDERDecodeItem(arena, &tmpItem,
-                                SEC_ASN1_GET(SEC_EnumeratedTemplate),
+    rv = SEC_QuickDERDecodeItem(arena, &tmpItem, SEC_EnumeratedTemplate,
                                 &wrapperItem);
 
     if ( rv != SECSuccess ) {
@@ -184,8 +182,7 @@ SECStatus CERT_FindInvalidDateExten (CERTCrl *crl, int64 *value)
 	return (rv);
 
     rv = SEC_ASN1DecodeItem (NULL, &decodedExtenValue,
-			     SEC_ASN1_GET(SEC_GeneralizedTimeTemplate),
-                             &encodedExtenValue);
+			     SEC_GeneralizedTimeTemplate, &encodedExtenValue);
     if (rv == SECSuccess)
 	rv = DER_GeneralizedTimeToTime(value, &encodedExtenValue);
     PORT_Free (decodedExtenValue.data);

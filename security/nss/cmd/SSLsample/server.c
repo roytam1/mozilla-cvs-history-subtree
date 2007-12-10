@@ -265,7 +265,7 @@ setupSSLSocket(PRFileDesc *tcpSocket, int requestCert)
 	}
 
 	secStatus = SSL_HandshakeCallback(sslSocket,
-	                                  myHandshakeCallback,
+	                                 (SSLHandshakeCallback)myHandshakeCallback,
 									  NULL);
 	if (secStatus != SECSuccess) {
 		errWarn("SSL_HandshakeCallback");

@@ -252,6 +252,13 @@ disableAllSSLCiphers(void)
     }
 }
 
+static SECStatus
+myGoodSSLAuthCertificate(void *arg, PRFileDesc *fd, PRBool checkSig,
+		     PRBool isServer)
+{
+    return SECSuccess;
+}
+
 /* This invokes the "default" AuthCert handler in libssl.
 ** The only reason to use this one is that it prints out info as it goes. 
 */
@@ -731,10 +738,11 @@ handle_connection( PRFileDesc *ssl_sock, int tid)
 
 PRInt32 lastFullHandshakePeerID;
 
-void
+SECStatus 
 myHandshakeCallback(PRFileDesc *socket, void *arg) 
 {
     PR_AtomicSet(&lastFullHandshakePeerID, (PRInt32) arg);
+    return SECSuccess;
 }
 
 #endif

@@ -43,10 +43,6 @@ PRIVATE_EXPORTS = \
 	pkit.h     \
 	nsspkit.h  \
 	nsspki.h   \
-	pkistore.h \
-	pki3hack.h \
-	pkitm.h    \
-	pkim.h     \
 	$(NULL)
 
 EXPORTS =	   \
@@ -64,10 +60,14 @@ CSRCS =		        \
 	certdecode.c    \
 	pkistore.c      \
 	pkibase.c       \
-	pki3hack.c      \
 	$(NULL)
 
-#DEFINES = -DDEBUG_CACHE
+ifndef PURE_STAN_BUILD
+CSRCS += pki3hack.c
+PRIVATE_EXPORTS += pkistore.h pki3hack.h pkitm.h pkim.h
+#DEFINES = -DNSS_3_4_CODE -DDEBUG_CACHE
+DEFINES = -DNSS_3_4_CODE
+endif
 
 REQUIRES = nspr
 

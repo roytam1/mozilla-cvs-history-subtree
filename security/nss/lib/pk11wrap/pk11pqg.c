@@ -43,6 +43,7 @@
 #include "secmodti.h"
 #include "pkcs11t.h"
 #include "pk11pqg.h"
+#include "pqgutil.h"
 #include "secerr.h"
 
 
@@ -299,16 +300,8 @@ PK11_PQG_VerifyParams(const PQGParams *params, const PQGVerify *vfy,
  **************************************************************************/
 extern void 
 PK11_PQG_DestroyParams(PQGParams *params) {
-    if (params == NULL) 
-    	return;
-    if (params->arena != NULL) {
-	PORT_FreeArena(params->arena, PR_FALSE);	/* don't zero it */
-    } else {
-	SECITEM_FreeItem(&params->prime,    PR_FALSE); /* don't free prime */
-	SECITEM_FreeItem(&params->subPrime, PR_FALSE); /* don't free subPrime */
-	SECITEM_FreeItem(&params->base,     PR_FALSE); /* don't free base */
-	PORT_Free(params);
-    }
+     PQG_DestroyParams(params);
+     return;
 }
 
 /**************************************************************************
@@ -316,18 +309,9 @@ PK11_PQG_DestroyParams(PQGParams *params) {
  **************************************************************************/
 extern void
 PK11_PQG_DestroyVerify(PQGVerify *vfy) {
-    if (vfy == NULL) 
-    	return;
-    if (vfy->arena != NULL) {
-	PORT_FreeArena(vfy->arena, PR_FALSE);	/* don't zero it */
-    } else {
-	SECITEM_FreeItem(&vfy->seed,   PR_FALSE); /* don't free seed */
-	SECITEM_FreeItem(&vfy->h,      PR_FALSE); /* don't free h */
-	PORT_Free(vfy);
-    }
+    PQG_DestroyVerify(vfy);
+    return;
 }
-
-#define PQG_DEFAULT_CHUNKSIZE 2048	/* bytes */
 
 /**************************************************************************
  *  Return a pointer to a new PQGParams struct that is constructed from   *
@@ -337,38 +321,7 @@ PK11_PQG_DestroyVerify(PQGVerify *vfy) {
 extern PQGParams *
 PK11_PQG_NewParams(const SECItem * prime, const SECItem * subPrime, 
                                  		const SECItem * base) {
-    PRArenaPool *arena;
-    PQGParams *dest;
-    SECStatus status;
-
-    arena = PORT_NewArena(PQG_DEFAULT_CHUNKSIZE);
-    if (arena == NULL)
-	goto loser;
-
-    dest = (PQGParams*)PORT_ArenaZAlloc(arena, sizeof(PQGParams));
-    if (dest == NULL)
-	goto loser;
-
-    dest->arena = arena;
-
-    status = SECITEM_CopyItem(arena, &dest->prime, prime);
-    if (status != SECSuccess)
-	goto loser;
-
-    status = SECITEM_CopyItem(arena, &dest->subPrime, subPrime);
-    if (status != SECSuccess)
-	goto loser;
-
-    status = SECITEM_CopyItem(arena, &dest->base, base);
-    if (status != SECSuccess)
-	goto loser;
-
-    return dest;
-
-loser:
-    if (arena != NULL)
-	PORT_FreeArena(arena, PR_FALSE);
-    return NULL;
+    return PQG_NewParams(prime, subPrime, base);
 }
 
 
@@ -378,7 +331,7 @@ loser:
  **************************************************************************/
 extern SECStatus 
 PK11_PQG_GetPrimeFromParams(const PQGParams *params, SECItem * prime) {
-    return SECITEM_CopyItem(NULL, prime, &params->prime);
+    return PQG_GetPrimeFromParams(params, prime);
 }
 
 
@@ -388,7 +341,7 @@ PK11_PQG_GetPrimeFromParams(const PQGParams *params, SECItem * prime) {
  **************************************************************************/
 extern SECStatus
 PK11_PQG_GetSubPrimeFromParams(const PQGParams *params, SECItem * subPrime) {
-    return SECITEM_CopyItem(NULL, subPrime, &params->subPrime);
+    return PQG_GetSubPrimeFromParams(params, subPrime);
 }
 
 
@@ -398,7 +351,7 @@ PK11_PQG_GetSubPrimeFromParams(const PQGParams *params, SECItem * subPrime) {
  **************************************************************************/
 extern SECStatus 
 PK11_PQG_GetBaseFromParams(const PQGParams *params, SECItem *base) {
-    return SECITEM_CopyItem(NULL, base, &params->base);
+    return PQG_GetBaseFromParams(params, base);
 }
 
 
@@ -410,35 +363,7 @@ PK11_PQG_GetBaseFromParams(const PQGParams *params, SECItem *base) {
 extern PQGVerify *
 PK11_PQG_NewVerify(unsigned int counter, const SECItem * seed, 
 							const SECItem * h) {
-    PRArenaPool *arena;
-    PQGVerify *  dest;
-    SECStatus    status;
-
-    arena = PORT_NewArena(PQG_DEFAULT_CHUNKSIZE);
-    if (arena == NULL)
-	goto loser;
-
-    dest = (PQGVerify*)PORT_ArenaZAlloc(arena, sizeof(PQGVerify));
-    if (dest == NULL)
-	goto loser;
-
-    dest->arena   = arena;
-    dest->counter = counter;
-
-    status = SECITEM_CopyItem(arena, &dest->seed, seed);
-    if (status != SECSuccess)
-	goto loser;
-
-    status = SECITEM_CopyItem(arena, &dest->h, h);
-    if (status != SECSuccess)
-	goto loser;
-
-    return dest;
-
-loser:
-    if (arena != NULL)
-	PORT_FreeArena(arena, PR_FALSE);
-    return NULL;
+    return PQG_NewVerify(counter, seed, h);
 }
 
 
@@ -447,7 +372,7 @@ loser:
  **************************************************************************/
 extern unsigned int 
 PK11_PQG_GetCounterFromVerify(const PQGVerify *verify) {
-    return verify->counter;
+    return PQG_GetCounterFromVerify(verify);
 }
 
 /**************************************************************************
@@ -456,7 +381,7 @@ PK11_PQG_GetCounterFromVerify(const PQGVerify *verify) {
  **************************************************************************/
 extern SECStatus 
 PK11_PQG_GetSeedFromVerify(const PQGVerify *verify, SECItem *seed) {
-    return SECITEM_CopyItem(NULL, seed, &verify->seed);
+    return PQG_GetSeedFromVerify(verify, seed);
 }
 
 
@@ -466,5 +391,5 @@ PK11_PQG_GetSeedFromVerify(const PQGVerify *verify, SECItem *seed) {
  **************************************************************************/
 extern SECStatus 
 PK11_PQG_GetHFromVerify(const PQGVerify *verify, SECItem * h) {
-    return SECITEM_CopyItem(NULL, h, &verify->h);
+    return PQG_GetHFromVerify(verify, h);
 }

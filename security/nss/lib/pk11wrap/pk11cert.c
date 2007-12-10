@@ -57,6 +57,9 @@
 #include "secerr.h"
 #include "sslerr.h"
 
+#ifndef NSS_3_4_CODE
+#define NSS_3_4_CODE
+#endif /* NSS_3_4_CODE */
 #include "pki3hack.h"
 #include "dev3hack.h"
 
@@ -1214,7 +1217,7 @@ PK11_FindCertByIssuerAndSNOnToken(PK11SlotInfo *slot,
      */
     derSerial = SEC_ASN1EncodeItem(NULL, NULL,
                                    &issuerSN->serialNumber,
-                                   SEC_ASN1_GET(SEC_IntegerTemplate));
+                                   SEC_IntegerTemplate);
     if (!derSerial) {
 	return NULL;
     }
@@ -1553,7 +1556,7 @@ PK11_FindCertByIssuerAndSN(PK11SlotInfo **slotPtr, CERTIssuerAndSN *issuerSN,
      */
     derSerial = SEC_ASN1EncodeItem(NULL, NULL,
                                    &issuerSN->serialNumber,
-                                   SEC_ASN1_GET(SEC_IntegerTemplate));
+                                   SEC_IntegerTemplate);
     if (!derSerial) {
 	return NULL;
     }

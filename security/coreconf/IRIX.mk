@@ -53,7 +53,7 @@ DEFAULT_COMPILER = cc
 ifdef NS_USE_GCC
 	CC		= gcc
 	AS		= $(CC) -x assembler-with-cpp
-	ODD_CFLAGS	= -Wall -Wno-format -Wno-switch
+	ODD_CFLAGS	= -Wall -Wno-format
 	ifdef BUILD_OPT
 		OPTIMIZER	= -O6
 	endif

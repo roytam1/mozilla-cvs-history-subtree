@@ -320,7 +320,6 @@ pkix_Error_ToString(
 
 cleanup:
 
-        PKIX_DECREF(desc);
         PKIX_DECREF(causeString);
         PKIX_DECREF(formatString);
         PKIX_DECREF(optCauseString);
@@ -392,8 +391,6 @@ pkix_Error_RegisterSelf(void *plContext)
         PKIX_ENTER(ERROR, "pkix_Error_RegisterSelf");
 
         entry.description = "Error";
-        entry.objCounter = 0;
-        entry.typeObjectSize = sizeof(PKIX_Error);
         entry.destructor = pkix_Error_Destroy;
         entry.equalsFunction = pkix_Error_Equals;
         entry.hashcodeFunction = pkix_Error_Hashcode;
@@ -447,7 +444,7 @@ PKIX_Error_Create(
             tempCause = tempCause->cause) {
                 /* If we detect a loop, throw a new error */
                 if (tempCause == error) {
-                        PKIX_ERROR(PKIX_LOOPOFERRORCAUSEDETECTED);
+                        PKIX_THROW(ERROR, PKIX_LOOPOFERRORCAUSEDETECTED);
                 }
         }
 
@@ -460,11 +457,6 @@ PKIX_Error_Create(
         error->errCode = errCode;
 
         *pError = error;
-        error = NULL;
-
-cleanup:
-        /* PKIX-XXX Fix for leak during error creation */
-        PKIX_DECREF(error);
 
         PKIX_RETURN(ERROR);
 }
@@ -521,7 +513,6 @@ PKIX_Error_GetCause(
 
         *pCause = error->cause;
 
-cleanup:
         PKIX_RETURN(ERROR);
 }
 
@@ -541,7 +532,6 @@ PKIX_Error_GetSupplementaryInfo(
 
         *pInfo = error->info;
 
-cleanup:
         PKIX_RETURN(ERROR);
 }
 

@@ -96,8 +96,6 @@ pkix_BasicConstraintsCheckerState_RegisterSelf(void *plContext)
                 "pkix_BasicConstraintsCheckerState_RegisterSelf");
 
         entry.description = "BasicConstraintsCheckerState";
-        entry.objCounter = 0;
-        entry.typeObjectSize = sizeof(pkix_BasicConstraintsCheckerState);
         entry.destructor = pkix_BasicConstraintsCheckerState_Destroy;
         entry.equalsFunction = NULL;
         entry.hashcodeFunction = NULL;
@@ -163,11 +161,12 @@ pkix_BasicConstraintsCheckerState_Create(
                     PKIX_OIDCREATEFAILED);
 
         *pState = state;
-        state = NULL;
 
 cleanup:
 
-        PKIX_DECREF(state);
+        if (PKIX_ERROR_RECEIVED) {
+                PKIX_DECREF(state);
+        }
 
         PKIX_RETURN(BASICCONSTRAINTSCHECKERSTATE);
 }

@@ -525,8 +525,6 @@ pkix_ProcessingParams_RegisterSelf(void *plContext)
         PKIX_ENTER(PROCESSINGPARAMS, "pkix_ProcessingParams_RegisterSelf");
 
         entry.description = "ProcessingParams";
-        entry.objCounter = 0;
-        entry.typeObjectSize = sizeof(PKIX_ProcessingParams);
         entry.destructor = pkix_ProcessingParams_Destroy;
         entry.equalsFunction = pkix_ProcessingParams_Equals;
         entry.hashcodeFunction = pkix_ProcessingParams_Hashcode;
@@ -586,11 +584,12 @@ PKIX_ProcessingParams_Create(
         params->isCrlRevocationCheckingEnabledWithNISTPolicy = PKIX_TRUE;
 
         *pParams = params;
-        params = NULL;
 
 cleanup:
 
-        PKIX_DECREF(params);
+        if (PKIX_ERROR_RECEIVED){
+                PKIX_DECREF(params);
+        }
 
         PKIX_RETURN(PROCESSINGPARAMS);
 
@@ -613,7 +612,6 @@ PKIX_ProcessingParams_GetTrustAnchors(
 
         *pAnchors = params->trustAnchors;
 
-cleanup:
         PKIX_RETURN(PROCESSINGPARAMS);
 }
 
@@ -632,7 +630,6 @@ PKIX_ProcessingParams_GetDate(
         PKIX_INCREF(params->date);
         *pDate = params->date;
 
-cleanup:
         PKIX_RETURN(PROCESSINGPARAMS);
 }
 
@@ -651,16 +648,16 @@ PKIX_ProcessingParams_SetDate(
         PKIX_DECREF(params->date);
 
         PKIX_INCREF(date);
+
         params->date = date;
 
         PKIX_CHECK(PKIX_PL_Object_InvalidateCache
                     ((PKIX_PL_Object *)params, plContext),
                     PKIX_OBJECTINVALIDATECACHEFAILED);
-
 cleanup:
 
-        if (PKIX_ERROR_RECEIVED && params) {
-            PKIX_DECREF(params->date);
+        if (PKIX_ERROR_RECEIVED){
+                PKIX_DECREF(date);
         }
 
         PKIX_RETURN(PROCESSINGPARAMS);
@@ -684,7 +681,6 @@ PKIX_ProcessingParams_GetTargetCertConstraints(
         PKIX_INCREF(params->constraints);
         *pConstraints = params->constraints;
 
-cleanup:
         PKIX_RETURN(PROCESSINGPARAMS);
 }
 
@@ -707,6 +703,7 @@ PKIX_ProcessingParams_SetTargetCertConstraints(
         PKIX_DECREF(params->constraints);
 
         PKIX_INCREF(constraints);
+
         params->constraints = constraints;
 
         PKIX_CHECK(PKIX_PL_Object_InvalidateCache
@@ -714,9 +711,6 @@ PKIX_ProcessingParams_SetTargetCertConstraints(
                     PKIX_OBJECTINVALIDATECACHEFAILED);
 
 cleanup:
-        if (PKIX_ERROR_RECEIVED && params) {
-            PKIX_DECREF(params->constraints);
-        }
 
         PKIX_RETURN(PROCESSINGPARAMS);
 }
@@ -769,6 +763,7 @@ PKIX_ProcessingParams_SetInitialPolicies(
 {
         PKIX_ENTER(PROCESSINGPARAMS,
                 "PKIX_ProcessingParams_SetInitialPolicies");
+
         PKIX_NULLCHECK_ONE(params);
 
         PKIX_DECREF(params->initialPolicies);
@@ -782,9 +777,6 @@ PKIX_ProcessingParams_SetInitialPolicies(
 
 cleanup:
 
-        if (PKIX_ERROR_RECEIVED && params) {
-            PKIX_DECREF(params->initialPolicies);
-        }
         PKIX_RETURN(PROCESSINGPARAMS);
 }
 
@@ -844,14 +836,17 @@ PKIX_ProcessingParams_GetCertChainCheckers(
         PKIX_List **pCheckers,  /* list of PKIX_CertChainChecker */
         void *plContext)
 {
-        PKIX_ENTER(PROCESSINGPARAMS,
-                   "PKIX_ProcessingParams_GetCertChainCheckers");
+
+        PKIX_ENTER
+            (PROCESSINGPARAMS, "PKIX_ProcessingParams_GetCertChainCheckers");
         PKIX_NULLCHECK_TWO(params, pCheckers);
 
-        PKIX_INCREF(params->certChainCheckers);
+        if (params->certChainCheckers) {
+                PKIX_INCREF(params->certChainCheckers);
+        }
+
         *pCheckers = params->certChainCheckers;
 
-cleanup:
         PKIX_RETURN(PROCESSINGPARAMS);
 }
 
@@ -866,24 +861,26 @@ PKIX_ProcessingParams_SetCertChainCheckers(
         void *plContext)
 {
 
-        PKIX_ENTER(PROCESSINGPARAMS,
-                   "PKIX_ProcessingParams_SetCertChainCheckers");
+        PKIX_ENTER
+            (PROCESSINGPARAMS, "PKIX_ProcessingParams_SetCertChainCheckers");
         PKIX_NULLCHECK_ONE(params);
 
-        PKIX_DECREF(params->certChainCheckers);
+        if (checkers == NULL) {
+                /* accordingly to spec, nothing done */
+                goto cleanup;
 
-        PKIX_INCREF(checkers);
-        params->certChainCheckers = checkers;
+        } else {
+
+                PKIX_INCREF(checkers);
+
+                params->certChainCheckers = checkers;
+        }
 
         PKIX_CHECK(PKIX_PL_Object_InvalidateCache
                 ((PKIX_PL_Object *)params, plContext),
                 PKIX_OBJECTINVALIDATECACHEFAILED);
 
 cleanup:
-
-        if (PKIX_ERROR_RECEIVED && params) {
-            PKIX_DECREF(params->certChainCheckers);
-        }
 
         PKIX_RETURN(PROCESSINGPARAMS);
 }
@@ -900,8 +897,8 @@ PKIX_ProcessingParams_AddCertChainChecker(
 {
         PKIX_List *list = NULL;
 
-        PKIX_ENTER(PROCESSINGPARAMS,
-                   "PKIX_ProcessingParams_AddCertChainChecker");
+        PKIX_ENTER
+            (PROCESSINGPARAMS, "PKIX_ProcessingParams_AddCertChainChecker");
         PKIX_NULLCHECK_TWO(params, checker);
 
         if (params->certChainCheckers == NULL) {
@@ -909,7 +906,10 @@ PKIX_ProcessingParams_AddCertChainChecker(
                 PKIX_CHECK(PKIX_List_Create(&list, plContext),
                     PKIX_LISTCREATEFAILED);
 
+                PKIX_INCREF(list);
+
                 params->certChainCheckers = list;
+
         }
 
         PKIX_CHECK(PKIX_List_AppendItem
@@ -920,14 +920,9 @@ PKIX_ProcessingParams_AddCertChainChecker(
             ((PKIX_PL_Object *)params, plContext),
             PKIX_OBJECTINVALIDATECACHEFAILED);
 
-        list = NULL;
-
 cleanup:
 
-        if (list && params) {
-            PKIX_DECREF(params->certChainCheckers);
-        }
-
+        PKIX_DECREF(list);
         PKIX_RETURN(PROCESSINGPARAMS);
 }
 
@@ -972,24 +967,24 @@ PKIX_ProcessingParams_SetRevocationCheckers(
         void *plContext)
 {
 
-        PKIX_ENTER(PROCESSINGPARAMS,
-                   "PKIX_ProcessingParams_SetRevocationCheckers");
+        PKIX_ENTER
+            (PROCESSINGPARAMS, "PKIX_ProcessingParams_SetRevocationCheckers");
         PKIX_NULLCHECK_ONE(params);
 
-        PKIX_DECREF(params->revCheckers);
+	PKIX_DECREF(params->revCheckers);
 
-        PKIX_INCREF(checkers);
-        params->revCheckers = checkers;
+        if (checkers != NULL) {
+
+                PKIX_INCREF(checkers);
+
+                params->revCheckers = checkers;
+        }
 
         PKIX_CHECK(PKIX_PL_Object_InvalidateCache
                 ((PKIX_PL_Object *)params, plContext),
                 PKIX_OBJECTINVALIDATECACHEFAILED);
 
 cleanup:
-
-        if (PKIX_ERROR_RECEIVED && params) {
-            PKIX_DECREF(params->revCheckers);
-        }
 
         PKIX_RETURN(PROCESSINGPARAMS);
 }
@@ -1006,33 +1001,32 @@ PKIX_ProcessingParams_AddRevocationChecker(
 {
         PKIX_List *list = NULL;
 
-        PKIX_ENTER(PROCESSINGPARAMS,
-                   "PKIX_ProcessingParams_AddRevocationChecker");
+        PKIX_ENTER
+            (PROCESSINGPARAMS, "PKIX_ProcessingParams_AddRevocationChecker");
         PKIX_NULLCHECK_TWO(params, checker);
 
-        if (params->revCheckers == NULL) {
+        if (params->certChainCheckers == NULL) {
 
                 PKIX_CHECK(PKIX_List_Create(&list, plContext),
                     PKIX_LISTCREATEFAILED);
 
-                params->revCheckers = list;
+                PKIX_INCREF(list);
+
+                params->certChainCheckers = list;
+
         }
 
         PKIX_CHECK(PKIX_List_AppendItem
-            (params->revCheckers, (PKIX_PL_Object *)checker, plContext),
+            (params->certChainCheckers, (PKIX_PL_Object *)checker, plContext),
             PKIX_LISTAPPENDITEMFAILED);
 
         PKIX_CHECK(PKIX_PL_Object_InvalidateCache
             ((PKIX_PL_Object *)params, plContext),
             PKIX_OBJECTINVALIDATECACHEFAILED);
 
-        list = NULL;
-
 cleanup:
 
-        if (list && params) {
-            PKIX_DECREF(params->revCheckers);
-        }
+        PKIX_DECREF(list);
         PKIX_RETURN(PROCESSINGPARAMS);
 }
 
@@ -1087,10 +1081,6 @@ PKIX_ProcessingParams_SetCertStores(
                 PKIX_OBJECTINVALIDATECACHEFAILED);
 
 cleanup:
-
-        if (PKIX_ERROR_RECEIVED && params) {
-            PKIX_DECREF(params->certStores);
-        }
 
         PKIX_RETURN(PROCESSINGPARAMS);
 }
@@ -1313,19 +1303,13 @@ PKIX_ProcessingParams_SetResourceLimits(
         PKIX_ResourceLimits *resourceLimits,
         void *plContext)
 {
-        PKIX_ENTER(PROCESSINGPARAMS,
-                   "PKIX_ProcessingParams_SetResourceLimits");
+        PKIX_ENTER(PROCESSINGPARAMS, "PKIX_ProcessingParams_SetResourceLimits");
 
         PKIX_NULLCHECK_TWO(params, resourceLimits);
 
         PKIX_DECREF(params->resourceLimits);
         PKIX_INCREF(resourceLimits);
         params->resourceLimits = resourceLimits;
-
-cleanup:
-        if (PKIX_ERROR_RECEIVED && params) {
-            PKIX_DECREF(params->resourceLimits);
-        }
 
         PKIX_RETURN(PROCESSINGPARAMS);
 }
@@ -1340,15 +1324,13 @@ PKIX_ProcessingParams_GetResourceLimits(
         PKIX_ResourceLimits **pResourceLimits,
         void *plContext)
 {
-        PKIX_ENTER(PROCESSINGPARAMS,
-                   "PKIX_ProcessingParams_GetResourceLimits");
+        PKIX_ENTER(PROCESSINGPARAMS, "PKIX_ProcessingParams_GetResourceLimits");
 
         PKIX_NULLCHECK_TWO(params, pResourceLimits);
 
         PKIX_INCREF(params->resourceLimits);
         *pResourceLimits = params->resourceLimits;
 
-cleanup:
         PKIX_RETURN(PROCESSINGPARAMS);
 }
 
@@ -1508,11 +1490,6 @@ PKIX_ProcessingParams_SetHintCerts(
         PKIX_INCREF(hintCerts);
         params->hintCerts = hintCerts;
 
-cleanup:
-        if (PKIX_ERROR_RECEIVED && params) {
-            PKIX_DECREF(params->hintCerts);
-        }
-
         PKIX_RETURN(PROCESSINGPARAMS);
 }
 
@@ -1533,6 +1510,5 @@ PKIX_ProcessingParams_GetHintCerts(
         PKIX_INCREF(params->hintCerts);
         *pHintCerts = params->hintCerts;
 
-cleanup:
         PKIX_RETURN(PROCESSINGPARAMS);
 }
