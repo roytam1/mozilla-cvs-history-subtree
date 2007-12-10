@@ -143,7 +143,7 @@ $DHTMLPerformanceTestTimeout      = 180;  # entire test, seconds
 # Note that win32 may not need \@, depends on ' or ".
 # :pserver:$ENV{USER}%netscape.com@cvs.mozilla.org:/cvsroot
 # CONFIG: $moz_cvsroot   = '%mozillaCvsroot%';
-$moz_cvsroot   = ":ext:ffxbld\@cvs.mozilla.org:/cvsroot";
+$moz_cvsroot   = 'cltbld@cvs.mozilla.org:/cvsroot';
 
 #- Set these proper values for your tinderbox server
 #$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
@@ -167,13 +167,13 @@ $LocaleProduct = "browser";
 $LocalizationVersionFile = 'browser/config/version.txt';
 %WGetFiles = (
 # CONFIG:             "http://%stagingServer%/pub/mozilla.org/firefox/nightly/%version%-candidates/rc%rc%/firefox-%version%.en-US.mac.dmg" => 
-	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/1.9b1-candidates/rc3/firefox-%version%.en-US.mac.dmg" =>
+"http://production-trunk-automation.build.mozilla.org/pub/mozilla.org/firefox/nightly/3.0b2-candidates/rc1/firefox-3.0b2.en-US.mac.dmg" => 
 # CONFIG:             "%l10n_buildDir%/%l10n_buildPlatform%/firefox.dmg"
-	      "/builds/tinderbox/Fx-Trunk-l10n-Release/Darwin_8.8.4_Depend/firefox.dmg"
+"/builds/tinderbox/Fx-Mozilla1.9-l10n-Release/Darwin_8.8.4_Depend/firefox.dmg"
 	      );
 
 # CONFIG: $BuildLocalesArgs = "ZIP_IN=%l10n_buildDir%/%l10n_buildPlatform%/firefox.dmg";
-$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Fx-Trunk-l10n-Release/Darwin_8.8.4_Depend/firefox.dmg";
+$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Fx-Mozilla1.9-l10n-Release/Darwin_8.8.4_Depend/firefox.dmg";
 #@CompareLocaleDirs        = (); # Run compare-locales test on these directories
 @CompareLocaleDirs = (
   "netwerk",
@@ -195,11 +195,11 @@ $BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Fx-Trunk-l10n-Release/Darwin_8.8.4
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
 # CONFIG: $BuildTree  = '%buildTree%';
-$BuildTree  = 'Mozilla-l10n';
+$BuildTree  = 'MozillaRelease';
 
 #$BuildName = '';
 # CONFIG: $BuildTag = '%productTag%_RELEASE';
-$BuildTag = 'FIREFOX_3_0b1_RELEASE';
+$BuildTag = 'FIREFOX_3_0b2_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -228,18 +228,18 @@ $package_creation_path = "/browser/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
 $mac_bundle_path = "/browser/app";
 # CONFIG: $ssh_user      = "%sshUser%";
-$ssh_user      = "ffxbld";
+$ssh_user      = "cltbld";
 # CONFIG: $ssh_key       = "'$ENV{HOME}/.ssh/%sshUser%_dsa'";
-$ssh_key       = "'$ENV{HOME}/.ssh/ffxbld_dsa'";
+$ssh_key       = "'$ENV{HOME}/.ssh/cltbld_dsa'";
 # CONFIG: $ssh_server    = "%sshServer%";
-$ssh_server    = "stage.mozilla.org";
+$ssh_server    = "production-trunk-automation.build.mozilla.org";
 $ReleaseGroup  = "firefox";
 $ftp_path      = "/home/ftp/pub/firefox/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
 # CONFIG: $milestone     = "firefox%version%-l10n";
-$milestone     = "firefox3.0b1-l10n";
+$milestone     = "firefox3.0b2-l10n";
 $notify_list   = "build-announce\@mozilla.org";
 $stub_installer = 0;
 $sea_installer = 0;

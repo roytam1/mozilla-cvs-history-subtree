@@ -139,7 +139,7 @@ $blat           = '/d/mozilla-build/blat261/full/blat';
 # :pserver:$ENV{USER}%netscape.com@cvs.mozilla.org:/cvsroot
 
 # CONFIG: $moz_cvsroot   = '%mozillaCvsroot%';
-$moz_cvsroot   = ":ext:ffxbld\@cvs.mozilla.org:/cvsroot";
+$moz_cvsroot   = 'cltbld@cvs.mozilla.org:/cvsroot';
 
 #- Set these proper values for your tinderbox server
 #$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
@@ -163,17 +163,17 @@ $LocaleProduct = "browser";
 $LocalizationVersionFile = 'browser/config/version.txt';
 %WGetFiles = (
 # CONFIG:             'http://%stagingServer%/pub/mozilla.org/firefox/nightly/%version%-candidates/rc%rc%/unsigned/firefox-%version%.en-US.win32.installer.exe' =>
-	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/1.9b1-candidates/rc3/unsigned/firefox-%version%.en-US.win32.installer.exe" =>
+'http://production-trunk-automation.build.mozilla.org/pub/mozilla.org/firefox/nightly/3.0b2-candidates/rc1/unsigned/firefox-3.0b2.en-US.win32.installer.exe' =>
 # CONFIG:             "%l10n_buildDir%/%l10n_buildPlatform%/firefox-installer.exe",
-	      "/e/builds/tinderbox/Fx-Trunk-l10n-Release/WINNT_5.2_Depend/firefox-installer.exe",
+"/e/fx19l10nrel/WINNT_5.2_Depend/firefox-installer.exe",
 # CONFIG:             'http://%stagingServer%/pub/mozilla.org/firefox/nightly/%version%-candidates/rc%rc%/unsigned/firefox-%version%.en-US.win32.zip' =>
-	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/1.9b1-candidates/rc3/unsigned/firefox-%version%.en-US.win32.zip" =>
+'http://production-trunk-automation.build.mozilla.org/pub/mozilla.org/firefox/nightly/3.0b2-candidates/rc1/unsigned/firefox-3.0b2.en-US.win32.zip' =>
 # CONFIG:             "%l10n_buildDir%/%l10n_buildPlatform%/firefox.zip"
-	      "/e/builds/tinderbox/Fx-Trunk-l10n-Release/WINNT_5.2_Depend/firefox.zip"
+"/e/fx19l10nrel/WINNT_5.2_Depend/firefox.zip"
 	      );
 
 # CONFIG: $BuildLocalesArgs = "ZIP_IN=%l10n_buildDir%/%l10n_buildPlatform%/firefox.zip WIN32_INSTALLER_IN=%l10n_buildDir%/%l10n_buildPlatform%/firefox-installer.exe";
-$BuildLocalesArgs = "ZIP_IN=/e/builds/tinderbox/Fx-Trunk-l10n-Release/WINNT_5.2_Depend/firefox.zip WIN32_INSTALLER_IN=/e/builds/tinderbox/Fx-Trunk-l10n-Release/WINNT_5.2_Depend/firefox-installer.exe";
+$BuildLocalesArgs = "ZIP_IN=/e/fx19l10nrel/WINNT_5.2_Depend/firefox.zip WIN32_INSTALLER_IN=/e/fx19l10nrel/WINNT_5.2_Depend/firefox-installer.exe";
 @CompareLocaleDirs = (
   "netwerk",
   "dom",
@@ -194,11 +194,11 @@ $BuildLocalesArgs = "ZIP_IN=/e/builds/tinderbox/Fx-Trunk-l10n-Release/WINNT_5.2_
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
 # CONFIG: $BuildTree  = '%buildTree%';
-$BuildTree  = 'Mozilla-l10n';
+$BuildTree  = 'MozillaRelease';
 
 #$BuildName = '';
 # CONFIG: $BuildTag = '%productTag%_RELEASE';
-$BuildTag = 'FIREFOX_3_0b1_RELEASE';
+$BuildTag = 'FIREFOX_3_0b2_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -227,18 +227,18 @@ $package_creation_path = "/browser/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
 $ssh_version   = "2";
 # CONFIG: $ssh_user      = "%sshUser%";
-$ssh_user      = "ffxbld";
+$ssh_user      = "cltbld";
 # CONFIG: $ssh_key       = "'$ENV{HOME}/.ssh/%sshUser%_dsa'";
-$ssh_key       = "'$ENV{HOME}/.ssh/ffxbld_dsa'";
+$ssh_key       = "'$ENV{HOME}/.ssh/cltbld_dsa'";
 # CONFIG: $ssh_server    = "%sshServer%";
-$ssh_server    = "stage.mozilla.org";
+$ssh_server    = "production-trunk-automation.build.mozilla.org";
 $ReleaseGroup  = "firefox";
 $ftp_path      = "/home/ftp/pub/firefox/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
 # CONFIG: $milestone     = 'firefox%version%-l10n';
-$milestone     = "firefox3.0b1-l10n";
+$milestone     = 'firefox3.0b2-l10n';
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 1;
