@@ -143,7 +143,7 @@ $BuildNameExtra = 'Tb-Universal-l10n-Release';
 $ConfigureOnly = 1;
 %WGetFiles = (
 # CONFIG:	      'http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/%version%-candidates/rc%rc%/thunderbird-%version%.en-US.mac.dmg' =>
-'http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/1.5.0.13-candidates/rc1/thunderbird-1.5.0.13.en-US.mac.dmg' =>
+'http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/1.5.0.14-candidates/rc1/thunderbird-1.5.0.14.en-US.mac.dmg' =>
 # CONFIG:	     "%l10n_buildDir%/%l10n_buildPlatform%/thunderbird.dmg"
 "/builds/tinderbox/Tb-Mozilla1.8.0-l10n-Release/Darwin_8.7.0_Depend/thunderbird.dmg"
 	     );
@@ -162,10 +162,10 @@ $BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Tb-Mozilla1.8.0-l10n-Release/Darwi
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
 # CONFIG: $BuildTree  = '%buildTree%';
-$BuildTree  = 'Mozilla1.8.0-l10n';
+$BuildTree  = 'MozillaRelease';
 #$BuildName = '';
 # CONFIG: $BuildTag = '%productTag%_RELEASE';
-$BuildTag = 'THUNDERBIRD_1_5_0_13_RELEASE';
+$BuildTag = 'THUNDERBIRD_1_5_0_14_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -201,13 +201,13 @@ $ssh_version   = "2";
 # CONFIG: $ssh_user      = "%sshUser%";
 $ssh_user      = "cltbld";
 # CONFIG: $ssh_server    = "%sshServer%";
-$ssh_server    = "stage.mozilla.org";
+$ssh_server    = "build-console.build.mozilla.org";
 $ftp_path      = "/home/ftp/pub/thunderbird/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly";
 $tbox_ftp_path = "/home/ftp/pub/thunderbird/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/tinderbox-builds";
 # CONFIG: $milestone     = 'thunderbird%version%-l10n';
-$milestone     = 'thunderbird1.5.0.13-l10n';
+$milestone     = 'thunderbird1.5.0.14-l10n';
 $notify_list   = "build-announce\@mozilla.org";
 $stub_installer = 0;
 $sea_installer = 0;
