@@ -153,7 +153,6 @@ void set_zone_directory(char *path);
 
 /** Free memory dedicated to the zonefile directory */
 void free_zone_directory(void);
-void icaltimezone_release_zone_tab(void);
 
 /*
  * @par Debugging Output.

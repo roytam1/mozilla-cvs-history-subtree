@@ -121,7 +121,7 @@ char* sspm_encoding_string(enum sspm_encoding type);
 
 int sspm_parse_mime(struct sspm_part *parts, 
 		    size_t max_parts,
-		    const struct sspm_action_map *actions,
+		    struct sspm_action_map *actions,
 		    char* (*get_string)(char *s, size_t size, void* data),
 		    void *get_string_data,
 		    struct sspm_header *first_header
