@@ -6,7 +6,6 @@
 mk_add_options MOZ_CO_PROJECT=browser
 mk_add_options MOZ_MAKE_FLAGS="-j1"
 mk_add_options MOZ_CO_MODULE="mozilla/tools/update-packaging"
-mk_add_options WIN32_REDIST_DIR="/d/msvs8/VC/redist/x86/Microsoft.VC80.CRT"
 
 ac_add_options --enable-application=browser
 ac_add_options --enable-update-channel=beta
@@ -15,3 +14,5 @@ ac_add_options --disable-debug
 ac_add_options --disable-tests
 ac_add_options --enable-update-packaging
 ac_add_options --enable-official-branding
+
+WIN32_REDIST_DIR="/d/msvs8/VC/redist/x86/Microsoft.VC80.CRT"
