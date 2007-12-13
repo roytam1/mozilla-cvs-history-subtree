@@ -52,7 +52,6 @@
 #define NSGETMODULE(_name) _name##_NSGetModule
 
 #define MODULES \
-    MODULE(xpcomObsoleteModule) \
     MODULE(nsI18nModule) \
     MODULE(nsUConvModule) \
     MODULE(nsUCvMathModule) \
