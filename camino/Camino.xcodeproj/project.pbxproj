@@ -1262,6 +1262,7 @@
 		DE74F8CD0AB2717F00FD1D5B /* feed.tif in Resources */ = {isa = PBXBuildFile; fileRef = DE74F8CC0AB2717F00FD1D5B /* feed.tif */; };
 		DE74F8CE0AB2717F00FD1D5B /* feed.tif in Resources */ = {isa = PBXBuildFile; fileRef = DE74F8CC0AB2717F00FD1D5B /* feed.tif */; };
 		DE74F8D20AB271AD00FD1D5B /* AppListMenuFactory.h in Headers */ = {isa = PBXBuildFile; fileRef = DE74F8B80AB2709E00FD1D5B /* AppListMenuFactory.h */; };
+		DE74F8D30AB271C700FD1D5B /* AppListMenuFactory.mm in Sources */ = {isa = PBXBuildFile; fileRef = DE74F8C20AB270D800FD1D5B /* AppListMenuFactory.mm */; };
 		DE8AD7400ADB4F67009D44F6 /* bm_horizontal_separator.tif in Resources */ = {isa = PBXBuildFile; fileRef = DE8AD73F0ADB4F67009D44F6 /* bm_horizontal_separator.tif */; };
 		DE8AD7410ADB4F67009D44F6 /* bm_horizontal_separator.tif in Resources */ = {isa = PBXBuildFile; fileRef = DE8AD73F0ADB4F67009D44F6 /* bm_horizontal_separator.tif */; };
 		DE8C629F0AB67E8A00078871 /* hidemanager.tif in Resources */ = {isa = PBXBuildFile; fileRef = DE8C629E0AB67E8A00078871 /* hidemanager.tif */; };
@@ -5796,6 +5797,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DE74F8D30AB271C700FD1D5B /* AppListMenuFactory.mm in Sources */,
 				3F44ADAA05BDFB9F00CB4B08 /* Navigation.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
