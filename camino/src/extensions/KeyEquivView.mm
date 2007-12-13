@@ -36,6 +36,12 @@
 
 #import "KeyEquivView.h"
 
+#if MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_4
+enum {
+  NSDeviceIndependentModifierFlagsMask = 0xffff0000U
+};
+#endif
+
 @implementation KeyEquivView
 
 + (KeyEquivView*)kevWithKeyEquivalent:(NSString*)keyEquivalent
