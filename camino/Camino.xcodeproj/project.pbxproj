@@ -6,6 +6,47 @@
 	objectVersion = 42;
 	objects = {
 
+/* Begin PBXAggregateTarget section */
+		7B436D0B0D11C22400377744 /* Camino */ = {
+			isa = PBXAggregateTarget;
+			buildConfigurationList = 7B436D390D11C2A200377744 /* Build configuration list for PBXAggregateTarget "Camino" */;
+			buildPhases = (
+			);
+			dependencies = (
+				7B436D240D11C23E00377744 /* PBXTargetDependency */,
+				7B436D220D11C23E00377744 /* PBXTargetDependency */,
+				7B436D200D11C23E00377744 /* PBXTargetDependency */,
+				7B436D1E0D11C23E00377744 /* PBXTargetDependency */,
+				7B436D1C0D11C23E00377744 /* PBXTargetDependency */,
+				7B436D1A0D11C23E00377744 /* PBXTargetDependency */,
+				7B436D180D11C23E00377744 /* PBXTargetDependency */,
+				7B436D160D11C23D00377744 /* PBXTargetDependency */,
+				7B436D140D11C23D00377744 /* PBXTargetDependency */,
+			);
+			name = Camino;
+			productName = Camino;
+		};
+		7B436D0F0D11C23200377744 /* CaminoStatic */ = {
+			isa = PBXAggregateTarget;
+			buildConfigurationList = 7B436D3A0D11C2A200377744 /* Build configuration list for PBXAggregateTarget "CaminoStatic" */;
+			buildPhases = (
+			);
+			dependencies = (
+				7B436D360D11C24B00377744 /* PBXTargetDependency */,
+				7B436D340D11C24B00377744 /* PBXTargetDependency */,
+				7B436D320D11C24B00377744 /* PBXTargetDependency */,
+				7B436D300D11C24B00377744 /* PBXTargetDependency */,
+				7B436D2E0D11C24B00377744 /* PBXTargetDependency */,
+				7B436D2C0D11C24B00377744 /* PBXTargetDependency */,
+				7B436D2A0D11C24B00377744 /* PBXTargetDependency */,
+				7B436D280D11C24B00377744 /* PBXTargetDependency */,
+				7B436D260D11C24B00377744 /* PBXTargetDependency */,
+			);
+			name = CaminoStatic;
+			productName = CaminoStatic;
+		};
+/* End PBXAggregateTarget section */
+
 /* Begin PBXBuildFile section */
 		008116E60B272204001CB3F0 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 008116E50B272204001CB3F0 /* Security.framework */; };
 		008116E70B272204001CB3F0 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 008116E50B272204001CB3F0 /* Security.framework */; };
@@ -24,36 +65,21 @@
 		035A498F079DCA100084B05F /* History.mm in Sources */ = {isa = PBXBuildFile; fileRef = 035A4989079DCA100084B05F /* History.mm */; };
 		035A4990079DCA100084B05F /* History.tiff in Resources */ = {isa = PBXBuildFile; fileRef = 035A498A079DCA100084B05F /* History.tiff */; };
 		035A4992079DCA8A0084B05F /* PreferencePaneBase.h in Headers */ = {isa = PBXBuildFile; fileRef = F5A8CE4102DFEF4C013CA8EC /* PreferencePaneBase.h */; };
-		035A4999079DCACD0084B05F /* PreferencePaneBase.mm in Sources */ = {isa = PBXBuildFile; fileRef = F5A8CE4202DFEF4C013CA8EC /* PreferencePaneBase.mm */; };
 		035A4AA0079DCB0B0084B05F /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1058C7A1FEA54F0111CA2CBB /* Cocoa.framework */; };
-		035A4AA1079DCB0B0084B05F /* PreferencePanes.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F557193A022B4102010001CA /* PreferencePanes.framework */; };
-		035A4AA2079DCB0B0084B05F /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F52D5CDB027D412A01A80166 /* Carbon.framework */; };
 		035A4AA3079DCB0B0084B05F /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 29B97325FDCFA39411CA2CEA /* Foundation.framework */; };
-		035A4AA4079DCB790084B05F /* History.prefPane in Copy Preference Panes */ = {isa = PBXBuildFile; fileRef = 035A4975079DC83D0084B05F /* History.prefPane */; };
 		0382B4DA07303CCA00A0228A /* dl_manager.tif in Resources */ = {isa = PBXBuildFile; fileRef = 0382B4D907303CCA00A0228A /* dl_manager.tif */; };
 		0382B4DB07303CCA00A0228A /* dl_manager.tif in Resources */ = {isa = PBXBuildFile; fileRef = 0382B4D907303CCA00A0228A /* dl_manager.tif */; };
-		03C5AB1907722F3400EAF77D /* Downloads.prefPane in Copy Preference Panes */ = {isa = PBXBuildFile; fileRef = 03C5AB1007722DFC00EAF77D /* Downloads.prefPane */; };
-		03C5AB1A07722F3E00EAF77D /* Downloads.prefPane in Copy Preference Panes */ = {isa = PBXBuildFile; fileRef = 03C5AB1007722DFC00EAF77D /* Downloads.prefPane */; };
-		03C5AB1B07722F4B00EAF77D /* Tabs.prefPane in Copy Preference Panes */ = {isa = PBXBuildFile; fileRef = 03E2D8530771F73F00BD2443 /* Tabs.prefPane */; };
-		03C5AB2C07722F8F00EAF77D /* PreferencePaneBase.h in Headers */ = {isa = PBXBuildFile; fileRef = F5A8CE4102DFEF4C013CA8EC /* PreferencePaneBase.h */; };
 		03C5AC3507722FA200EAF77D /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F52D5CDB027D412A01A80166 /* Carbon.framework */; };
 		03C5AC3607722FA200EAF77D /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1058C7A1FEA54F0111CA2CBB /* Cocoa.framework */; };
 		03C5AC3707722FA200EAF77D /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 29B97325FDCFA39411CA2CEA /* Foundation.framework */; };
-		03C5AC3807722FA200EAF77D /* PreferencePanes.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F557193A022B4102010001CA /* PreferencePanes.framework */; };
-		03C5AC3907722FAF00EAF77D /* PreferencePaneBase.mm in Sources */ = {isa = PBXBuildFile; fileRef = F5A8CE4202DFEF4C013CA8EC /* PreferencePaneBase.mm */; };
 		03E2D86D0771F88C00BD2443 /* PreferencePaneBase.h in Headers */ = {isa = PBXBuildFile; fileRef = F5A8CE4102DFEF4C013CA8EC /* PreferencePaneBase.h */; };
 		03E2D86E0771F89900BD2443 /* Tabs.h in Headers */ = {isa = PBXBuildFile; fileRef = 03E2D85E0771F78500BD2443 /* Tabs.h */; };
 		03E2D86F0771F8D100BD2443 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 03E2D85A0771F78500BD2443 /* Localizable.strings */; };
 		03E2D8700771F8D100BD2443 /* Tabs.nib in Resources */ = {isa = PBXBuildFile; fileRef = 03E2D85C0771F78500BD2443 /* Tabs.nib */; };
 		03E2D8710771F8D100BD2443 /* Tabs.tiff in Resources */ = {isa = PBXBuildFile; fileRef = 03E2D8600771F78500BD2443 /* Tabs.tiff */; };
 		03E2D8720771F8EC00BD2443 /* Tabs.mm in Sources */ = {isa = PBXBuildFile; fileRef = 03E2D85F0771F78500BD2443 /* Tabs.mm */; };
-		03E2D8730771F8EC00BD2443 /* PreferencePaneBase.mm in Sources */ = {isa = PBXBuildFile; fileRef = F5A8CE4202DFEF4C013CA8EC /* PreferencePaneBase.mm */; };
-		03E2D8740771F90B00BD2443 /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F52D5CDB027D412A01A80166 /* Carbon.framework */; };
 		03E2D8750771F90B00BD2443 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1058C7A1FEA54F0111CA2CBB /* Cocoa.framework */; };
 		03E2D8760771F90B00BD2443 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 29B97325FDCFA39411CA2CEA /* Foundation.framework */; };
-		03E2D8770771F90B00BD2443 /* PreferencePanes.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F557193A022B4102010001CA /* PreferencePanes.framework */; };
-		03E2D9920771FBD400BD2443 /* Tabs.prefPane in Copy Preference Panes */ = {isa = PBXBuildFile; fileRef = 03E2D8530771F73F00BD2443 /* Tabs.prefPane */; };
-		03E8551607A17F35008076D5 /* History.prefPane in Copy Preference Panes */ = {isa = PBXBuildFile; fileRef = 035A4975079DC83D0084B05F /* History.prefPane */; };
 		0E6A98A1097E0091007962C1 /* libucvmath.dylib in Copy Gecko Components */ = {isa = PBXBuildFile; fileRef = 0E6A9882097DFF9A007962C1 /* libucvmath.dylib */; };
 		0E6A98A2097E00A6007962C1 /* mathml.css in Copy Gecko Resources */ = {isa = PBXBuildFile; fileRef = 0E6A9886097DFFD4007962C1 /* mathml.css */; };
 		0E6A98A3097E00BB007962C1 /* mathml.dtd in Copy Gecko DTDs */ = {isa = PBXBuildFile; fileRef = 0E6A9888097DFFF4007962C1 /* mathml.dtd */; };
@@ -623,67 +649,34 @@
 		3F44AD9105BDFB9F00CB4B08 /* RegionMapping.plist in Resources */ = {isa = PBXBuildFile; fileRef = F5F9FBD902E13767012B5DB7 /* RegionMapping.plist */; };
 		3F44AD9205BDFB9F00CB4B08 /* RegionNames.strings in Resources */ = {isa = PBXBuildFile; fileRef = F56F837402E47DB401EF35C9 /* RegionNames.strings */; };
 		3F44AD9305BDFB9F00CB4B08 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = F5384906034977A101A80166 /* Localizable.strings */; };
-		3F44AD9505BDFB9F00CB4B08 /* PreferencePaneBase.mm in Sources */ = {isa = PBXBuildFile; fileRef = F5A8CE4202DFEF4C013CA8EC /* PreferencePaneBase.mm */; };
 		3F44AD9605BDFB9F00CB4B08 /* Appearance.mm in Sources */ = {isa = PBXBuildFile; fileRef = F5A8CE4F02DFF167013CA8EC /* Appearance.mm */; };
-		3F44AD9805BDFB9F00CB4B08 /* PreferencePanes.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F557193A022B4102010001CA /* PreferencePanes.framework */; };
 		3F44AD9905BDFB9F00CB4B08 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 29B97325FDCFA39411CA2CEA /* Foundation.framework */; };
 		3F44AD9A05BDFB9F00CB4B08 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1058C7A1FEA54F0111CA2CBB /* Cocoa.framework */; };
-		3F44AD9B05BDFB9F00CB4B08 /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F52D5CDB027D412A01A80166 /* Carbon.framework */; };
 		3F44ADA205BDFB9F00CB4B08 /* PreferencePaneBase.h in Headers */ = {isa = PBXBuildFile; fileRef = F5A8CE4102DFEF4C013CA8EC /* PreferencePaneBase.h */; };
 		3F44ADA305BDFB9F00CB4B08 /* Navigation.h in Headers */ = {isa = PBXBuildFile; fileRef = F52627D4027E982201000102 /* Navigation.h */; };
 		3F44ADA505BDFB9F00CB4B08 /* Navigation.tiff in Resources */ = {isa = PBXBuildFile; fileRef = F52627D8027E984501000102 /* Navigation.tiff */; };
 		3F44ADA605BDFB9F00CB4B08 /* Navigation.nib in Resources */ = {isa = PBXBuildFile; fileRef = F507A85B0311895401026D5D /* Navigation.nib */; };
 		3F44ADA705BDFB9F00CB4B08 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = F5FCDD5F03A035E501A9666E /* Localizable.strings */; };
-		3F44ADA905BDFB9F00CB4B08 /* PreferencePaneBase.mm in Sources */ = {isa = PBXBuildFile; fileRef = F5A8CE4202DFEF4C013CA8EC /* PreferencePaneBase.mm */; };
 		3F44ADAA05BDFB9F00CB4B08 /* Navigation.mm in Sources */ = {isa = PBXBuildFile; fileRef = F52627D5027E982201000102 /* Navigation.mm */; };
-		3F44ADAC05BDFB9F00CB4B08 /* PreferencePanes.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F557193A022B4102010001CA /* PreferencePanes.framework */; };
 		3F44ADAD05BDFB9F00CB4B08 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 29B97325FDCFA39411CA2CEA /* Foundation.framework */; };
 		3F44ADAE05BDFB9F00CB4B08 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1058C7A1FEA54F0111CA2CBB /* Cocoa.framework */; };
-		3F44ADAF05BDFB9F00CB4B08 /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F52D5CDB027D412A01A80166 /* Carbon.framework */; };
 		3F44ADB105BDFB9F00CB4B08 /* layout_printing.xpt in Copy Component XPTs */ = {isa = PBXBuildFile; fileRef = F6BD63F201B313EE01A962F7 /* layout_printing.xpt */; };
 		3F44ADC505BDFBA000CB4B08 /* PrivacyPane.h in Headers */ = {isa = PBXBuildFile; fileRef = F57F2060029997E701000106 /* PrivacyPane.h */; };
 		3F44ADC705BDFBA000CB4B08 /* Privacy.nib in Resources */ = {isa = PBXBuildFile; fileRef = F507A85D0311948201026D5D /* Privacy.nib */; };
 		3F44ADC805BDFBA000CB4B08 /* Privacy.tiff in Resources */ = {isa = PBXBuildFile; fileRef = F57F205F029997E701000106 /* Privacy.tiff */; };
 		3F44ADC905BDFBA000CB4B08 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = F517052F034B5E9701026D5D /* Localizable.strings */; };
 		3F44ADCB05BDFBA000CB4B08 /* PrivacyPane.mm in Sources */ = {isa = PBXBuildFile; fileRef = F57F2061029997E701000106 /* PrivacyPane.mm */; };
-		3F44ADCC05BDFBA000CB4B08 /* PreferencePaneBase.mm in Sources */ = {isa = PBXBuildFile; fileRef = F5A8CE4202DFEF4C013CA8EC /* PreferencePaneBase.mm */; };
-		3F44ADCE05BDFBA000CB4B08 /* libxpcom.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = F57F0F470209DF5301A967DF /* libxpcom.dylib */; };
-		3F44ADCF05BDFBA000CB4B08 /* libembed_base_s.a in Frameworks */ = {isa = PBXBuildFile; fileRef = F51D9B2D0209573701A80166 /* libembed_base_s.a */; };
 		3F44ADD005BDFBA000CB4B08 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1058C7A1FEA54F0111CA2CBB /* Cocoa.framework */; };
-		3F44ADD105BDFBA000CB4B08 /* PreferencePanes.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F557193A022B4102010001CA /* PreferencePanes.framework */; };
-		3F44ADD205BDFBA000CB4B08 /* libunicharutil_s.a in Frameworks */ = {isa = PBXBuildFile; fileRef = F5C2CDA702383CE601A967DF /* libunicharutil_s.a */; };
-		3F44ADD305BDFBA000CB4B08 /* libmozjs.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = F6BD637F01B30EA301A962F7 /* libmozjs.dylib */; };
-		3F44ADD405BDFBA000CB4B08 /* libnspr4.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = F6BD638001B30EA301A962F7 /* libnspr4.dylib */; };
-		3F44ADD505BDFBA000CB4B08 /* libplc4.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = F6BD638101B30EA301A962F7 /* libplc4.dylib */; };
-		3F44ADD605BDFBA000CB4B08 /* libplds4.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = F6BD638201B30EA301A962F7 /* libplds4.dylib */; };
 		3F44ADDD05BDFBA000CB4B08 /* SecurityPane.h in Headers */ = {isa = PBXBuildFile; fileRef = F51704E9034A30DF01026D5D /* SecurityPane.h */; };
 		3F44ADDF05BDFBA000CB4B08 /* Security.tiff in Resources */ = {isa = PBXBuildFile; fileRef = F51704E8034A30DF01026D5D /* Security.tiff */; };
 		3F44ADE005BDFBA000CB4B08 /* Security.nib in Resources */ = {isa = PBXBuildFile; fileRef = F51704EE034A30F101026D5D /* Security.nib */; };
-		3F44ADE205BDFBA000CB4B08 /* PreferencePaneBase.mm in Sources */ = {isa = PBXBuildFile; fileRef = F5A8CE4202DFEF4C013CA8EC /* PreferencePaneBase.mm */; };
 		3F44ADE305BDFBA000CB4B08 /* SecurityPane.mm in Sources */ = {isa = PBXBuildFile; fileRef = F51704EA034A30DF01026D5D /* SecurityPane.mm */; };
-		3F44ADE505BDFBA000CB4B08 /* libxpcom.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = F57F0F470209DF5301A967DF /* libxpcom.dylib */; };
-		3F44ADE605BDFBA000CB4B08 /* libembed_base_s.a in Frameworks */ = {isa = PBXBuildFile; fileRef = F51D9B2D0209573701A80166 /* libembed_base_s.a */; };
 		3F44ADE705BDFBA000CB4B08 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1058C7A1FEA54F0111CA2CBB /* Cocoa.framework */; };
-		3F44ADE805BDFBA000CB4B08 /* PreferencePanes.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F557193A022B4102010001CA /* PreferencePanes.framework */; };
-		3F44ADE905BDFBA000CB4B08 /* libunicharutil_s.a in Frameworks */ = {isa = PBXBuildFile; fileRef = F5C2CDA702383CE601A967DF /* libunicharutil_s.a */; };
-		3F44ADEA05BDFBA000CB4B08 /* libmozjs.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = F6BD637F01B30EA301A962F7 /* libmozjs.dylib */; };
-		3F44ADEB05BDFBA000CB4B08 /* libnspr4.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = F6BD638001B30EA301A962F7 /* libnspr4.dylib */; };
-		3F44ADEC05BDFBA000CB4B08 /* libplc4.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = F6BD638101B30EA301A962F7 /* libplc4.dylib */; };
-		3F44ADED05BDFBA000CB4B08 /* libplds4.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = F6BD638201B30EA301A962F7 /* libplds4.dylib */; };
 		3F44ADF405BDFBA000CB4B08 /* WebFeatures.h in Headers */ = {isa = PBXBuildFile; fileRef = F5170515034A398F01026D5D /* WebFeatures.h */; };
 		3F44ADF605BDFBA000CB4B08 /* WebFeatures.tiff in Resources */ = {isa = PBXBuildFile; fileRef = F5170517034A398F01026D5D /* WebFeatures.tiff */; };
 		3F44ADF705BDFBA000CB4B08 /* WebFeatures.nib in Resources */ = {isa = PBXBuildFile; fileRef = F517051B034A399E01026D5D /* WebFeatures.nib */; };
-		3F44ADF905BDFBA000CB4B08 /* PreferencePaneBase.mm in Sources */ = {isa = PBXBuildFile; fileRef = F5A8CE4202DFEF4C013CA8EC /* PreferencePaneBase.mm */; };
 		3F44ADFA05BDFBA000CB4B08 /* WebFeatures.mm in Sources */ = {isa = PBXBuildFile; fileRef = F5170516034A398F01026D5D /* WebFeatures.mm */; };
-		3F44ADFC05BDFBA000CB4B08 /* libxpcom.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = F57F0F470209DF5301A967DF /* libxpcom.dylib */; };
-		3F44ADFD05BDFBA000CB4B08 /* libembed_base_s.a in Frameworks */ = {isa = PBXBuildFile; fileRef = F51D9B2D0209573701A80166 /* libembed_base_s.a */; };
 		3F44ADFE05BDFBA000CB4B08 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1058C7A1FEA54F0111CA2CBB /* Cocoa.framework */; };
-		3F44ADFF05BDFBA000CB4B08 /* PreferencePanes.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F557193A022B4102010001CA /* PreferencePanes.framework */; };
-		3F44AE0005BDFBA000CB4B08 /* libunicharutil_s.a in Frameworks */ = {isa = PBXBuildFile; fileRef = F5C2CDA702383CE601A967DF /* libunicharutil_s.a */; };
-		3F44AE0105BDFBA000CB4B08 /* libmozjs.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = F6BD637F01B30EA301A962F7 /* libmozjs.dylib */; };
-		3F44AE0205BDFBA000CB4B08 /* libnspr4.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = F6BD638001B30EA301A962F7 /* libnspr4.dylib */; };
-		3F44AE0305BDFBA000CB4B08 /* libplc4.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = F6BD638101B30EA301A962F7 /* libplc4.dylib */; };
-		3F44AE0405BDFBA000CB4B08 /* libplds4.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = F6BD638201B30EA301A962F7 /* libplds4.dylib */; };
 		3F44AE1105BDFBA000CB4B08 /* BrowserWrapper.h in Headers */ = {isa = PBXBuildFile; fileRef = F5125A110202064D01FAFD9F /* BrowserWrapper.h */; };
 		3F44AE1205BDFBA000CB4B08 /* BrowserWindowController.h in Headers */ = {isa = PBXBuildFile; fileRef = F5AE04B20206A34801A967DF /* BrowserWindowController.h */; };
 		3F44AE1305BDFBA000CB4B08 /* MainController.h in Headers */ = {isa = PBXBuildFile; fileRef = F5AE04B60206A37C01A967DF /* MainController.h */; };
@@ -1033,16 +1026,6 @@
 		3F44AFC105BDFBA000CB4B08 /* SharedMenusCocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F55A4DED0380705A01A80166 /* SharedMenusCocoa.framework */; };
 		3F44AFC205BDFBA000CB4B08 /* libucvutil_s.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 0FEBFCA1044F989900A96652 /* libucvutil_s.a */; };
 		3F44AFC305BDFBA000CB4B08 /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3F558E950552122E006156FD /* IOKit.framework */; };
-		3F44AFEE05BDFBA100CB4B08 /* Appearance.prefPane in Copy Preference Panes */ = {isa = PBXBuildFile; fileRef = 3F44AD9F05BDFB9F00CB4B08 /* Appearance.prefPane */; };
-		3F44AFEF05BDFBA100CB4B08 /* Navigation.prefPane in Copy Preference Panes */ = {isa = PBXBuildFile; fileRef = 3F44ADB305BDFBA000CB4B08 /* Navigation.prefPane */; };
-		3F44AFF005BDFBA100CB4B08 /* WebFeatures.prefPane in Copy Preference Panes */ = {isa = PBXBuildFile; fileRef = 3F44AE0805BDFBA000CB4B08 /* WebFeatures.prefPane */; };
-		3F44AFF105BDFBA100CB4B08 /* Privacy.prefPane in Copy Preference Panes */ = {isa = PBXBuildFile; fileRef = 3F44ADDA05BDFBA000CB4B08 /* Privacy.prefPane */; };
-		3F44AFF205BDFBA100CB4B08 /* Security.prefPane in Copy Preference Panes */ = {isa = PBXBuildFile; fileRef = 3F44ADF105BDFBA000CB4B08 /* Security.prefPane */; };
-		3F44AFF405BDFBA100CB4B08 /* Appearance.prefPane in Copy Preference Panes */ = {isa = PBXBuildFile; fileRef = 3F44AD9F05BDFB9F00CB4B08 /* Appearance.prefPane */; };
-		3F44AFF505BDFBA100CB4B08 /* Navigation.prefPane in Copy Preference Panes */ = {isa = PBXBuildFile; fileRef = 3F44ADB305BDFBA000CB4B08 /* Navigation.prefPane */; };
-		3F44AFF605BDFBA100CB4B08 /* WebFeatures.prefPane in Copy Preference Panes */ = {isa = PBXBuildFile; fileRef = 3F44AE0805BDFBA000CB4B08 /* WebFeatures.prefPane */; };
-		3F44AFF705BDFBA100CB4B08 /* Privacy.prefPane in Copy Preference Panes */ = {isa = PBXBuildFile; fileRef = 3F44ADDA05BDFBA000CB4B08 /* Privacy.prefPane */; };
-		3F44AFF805BDFBA100CB4B08 /* Security.prefPane in Copy Preference Panes */ = {isa = PBXBuildFile; fileRef = 3F44ADF105BDFBA000CB4B08 /* Security.prefPane */; };
 		3F44AFF905BDFBA000CB4B08 /* layout_printing.xpt in Copy Component XPTs */ = {isa = PBXBuildFile; fileRef = F6BD63F201B313EE01A962F7 /* layout_printing.xpt */; };
 		3F8C005106800D8D00658CBC /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 3F8C004F06800D8D00658CBC /* Localizable.strings */; };
 		3F8C005706800E1300658CBC /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 3F8C005506800E1300658CBC /* Localizable.strings */; };
@@ -1141,33 +1124,9 @@
 		4D2996690869C5FA00E84287 /* libplds4.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = F6BD638201B30EA301A962F7 /* libplds4.dylib */; };
 		4D29966A0869C5FA00E84287 /* libxpcom.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = F57F0F470209DF5301A967DF /* libxpcom.dylib */; };
 		4D29966B0869C5FA00E84287 /* libxpcom_core.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 3F12FC56072E8ECB00995ED9 /* libxpcom_core.dylib */; };
-		4D2997680869C71C00E84287 /* libxpcom.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = F57F0F470209DF5301A967DF /* libxpcom.dylib */; };
-		4D2997690869C71C00E84287 /* libxpcom_core.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 3F12FC56072E8ECB00995ED9 /* libxpcom_core.dylib */; };
-		4D29976A0869C71C00E84287 /* libplds4.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = F6BD638201B30EA301A962F7 /* libplds4.dylib */; };
-		4D29976B0869C71C00E84287 /* libplc4.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = F6BD638101B30EA301A962F7 /* libplc4.dylib */; };
-		4D29976C0869C71C00E84287 /* libnspr4.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = F6BD638001B30EA301A962F7 /* libnspr4.dylib */; };
-		4D2997700869C75E00E84287 /* libxpcom.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = F57F0F470209DF5301A967DF /* libxpcom.dylib */; };
-		4D2997710869C75E00E84287 /* libxpcom_core.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 3F12FC56072E8ECB00995ED9 /* libxpcom_core.dylib */; };
-		4D2997720869C75E00E84287 /* libplds4.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = F6BD638201B30EA301A962F7 /* libplds4.dylib */; };
-		4D2997730869C75E00E84287 /* libplc4.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = F6BD638101B30EA301A962F7 /* libplc4.dylib */; };
-		4D2997740869C75E00E84287 /* libnspr4.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = F6BD638001B30EA301A962F7 /* libnspr4.dylib */; };
-		4D29977F0869C91100E84287 /* libxpcom.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = F57F0F470209DF5301A967DF /* libxpcom.dylib */; };
-		4D2997800869C91100E84287 /* libxpcom_core.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 3F12FC56072E8ECB00995ED9 /* libxpcom_core.dylib */; };
-		4D2997810869C91100E84287 /* libplds4.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = F6BD638201B30EA301A962F7 /* libplds4.dylib */; };
-		4D2997820869C91100E84287 /* libplc4.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = F6BD638101B30EA301A962F7 /* libplc4.dylib */; };
-		4D2997830869C91100E84287 /* libnspr4.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = F6BD638001B30EA301A962F7 /* libnspr4.dylib */; };
-		4D2997860869C93800E84287 /* libxpcom.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = F57F0F470209DF5301A967DF /* libxpcom.dylib */; };
 		4D2997870869C93800E84287 /* libxpcom_core.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 3F12FC56072E8ECB00995ED9 /* libxpcom_core.dylib */; };
-		4D2997880869C93800E84287 /* libplds4.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = F6BD638201B30EA301A962F7 /* libplds4.dylib */; };
-		4D2997890869C93800E84287 /* libplc4.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = F6BD638101B30EA301A962F7 /* libplc4.dylib */; };
-		4D29978A0869C93800E84287 /* libnspr4.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = F6BD638001B30EA301A962F7 /* libnspr4.dylib */; };
-		4D29978D0869C95D00E84287 /* libxpcom.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = F57F0F470209DF5301A967DF /* libxpcom.dylib */; };
 		4D29978E0869C95D00E84287 /* libxpcom_core.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 3F12FC56072E8ECB00995ED9 /* libxpcom_core.dylib */; };
-		4D29978F0869C95D00E84287 /* libplds4.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = F6BD638201B30EA301A962F7 /* libplds4.dylib */; };
-		4D2997900869C95D00E84287 /* libplc4.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = F6BD638101B30EA301A962F7 /* libplc4.dylib */; };
-		4D2997910869C95D00E84287 /* libnspr4.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = F6BD638001B30EA301A962F7 /* libnspr4.dylib */; };
 		4D29989F0869CA5200E84287 /* libxpcom_core.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 3F12FC56072E8ECB00995ED9 /* libxpcom_core.dylib */; };
-		4D2998A20869CA5F00E84287 /* libxpcom_core.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 3F12FC56072E8ECB00995ED9 /* libxpcom_core.dylib */; };
 		4D2998A50869CA6B00E84287 /* libxpcom_core.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 3F12FC56072E8ECB00995ED9 /* libxpcom_core.dylib */; };
 		4D5881770864B28D001305B3 /* Default Plugin.plugin in Copy Gecko Plugins */ = {isa = PBXBuildFile; fileRef = F56610BC0394775201A9666E /* Default Plugin.plugin */; };
 		4D58817B0864B2AE001305B3 /* Default Plugin.plugin in Copy Gecko Plugins */ = {isa = PBXBuildFile; fileRef = F56610BC0394775201A9666E /* Default Plugin.plugin */; };
@@ -1194,6 +1153,14 @@
 		60DE525C0C85F2F500A2CB3C /* CHSelectHandler.mm in Sources */ = {isa = PBXBuildFile; fileRef = 60DE525A0C85F2F500A2CB3C /* CHSelectHandler.mm */; };
 		60DE525D0C85F2F500A2CB3C /* CHSelectHandler.h in Headers */ = {isa = PBXBuildFile; fileRef = 60DE52590C85F2F500A2CB3C /* CHSelectHandler.h */; };
 		60DE525E0C85F2F500A2CB3C /* CHSelectHandler.mm in Sources */ = {isa = PBXBuildFile; fileRef = 60DE525A0C85F2F500A2CB3C /* CHSelectHandler.mm */; };
+		7B436D3B0D11C2B400377744 /* PreferencePaneBase.h in Headers */ = {isa = PBXBuildFile; fileRef = F5A8CE4102DFEF4C013CA8EC /* PreferencePaneBase.h */; };
+		7B436D3C0D11C2C400377744 /* PreferencePaneBase.h in Headers */ = {isa = PBXBuildFile; fileRef = F5A8CE4102DFEF4C013CA8EC /* PreferencePaneBase.h */; };
+		7B436D3D0D11C2EB00377744 /* PreferencePaneBase.mm in Sources */ = {isa = PBXBuildFile; fileRef = F5A8CE4202DFEF4C013CA8EC /* PreferencePaneBase.mm */; };
+		7B436D3E0D11C30D00377744 /* PreferencePaneBase.mm in Sources */ = {isa = PBXBuildFile; fileRef = F5A8CE4202DFEF4C013CA8EC /* PreferencePaneBase.mm */; };
+		7B436D410D11C37700377744 /* PreferencePaneBase.h in Headers */ = {isa = PBXBuildFile; fileRef = F5A8CE4102DFEF4C013CA8EC /* PreferencePaneBase.h */; };
+		7B436D420D11C37D00377744 /* PreferencePaneBase.h in Headers */ = {isa = PBXBuildFile; fileRef = F5A8CE4102DFEF4C013CA8EC /* PreferencePaneBase.h */; };
+		7B436D430D11C3A100377744 /* PreferencePaneBase.h in Headers */ = {isa = PBXBuildFile; fileRef = F5A8CE4102DFEF4C013CA8EC /* PreferencePaneBase.h */; };
+		7B436D440D11C3AC00377744 /* PreferencePaneBase.h in Headers */ = {isa = PBXBuildFile; fileRef = F5A8CE4102DFEF4C013CA8EC /* PreferencePaneBase.h */; };
 		7B64B7E10CCFDA640098406C /* Sparkle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7B64B7CA0CCFD9F50098406C /* Sparkle.framework */; };
 		7B64B7E30CCFDA860098406C /* Sparkle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7B64B7CA0CCFD9F50098406C /* Sparkle.framework */; };
 		7B64B7EE0CCFDAAF0098406C /* Sparkle.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7B64B7CA0CCFD9F50098406C /* Sparkle.framework */; };
@@ -1376,117 +1343,131 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		0380F470079DCCD90065A7AB /* PBXContainerItemProxy */ = {
+		7B436D130D11C23D00377744 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 29B97313FDCFA39411CA2CEA /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 035A4974079DC83D0084B05F;
-			remoteInfo = HistoryPrefPane;
+			remoteGlobalIDString = 3F44ADF205BDFBA000CB4B08;
+			remoteInfo = WebFeaturesPrefPane;
 		};
-		0380F472079DCCEC0065A7AB /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 29B97313FDCFA39411CA2CEA /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 035A4974079DC83D0084B05F;
-			remoteInfo = HistoryPrefPane;
-		};
-		03C5AB1207722EFC00EAF77D /* PBXContainerItemProxy */ = {
+		7B436D150D11C23D00377744 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 29B97313FDCFA39411CA2CEA /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 03C5AB0F07722DFC00EAF77D;
 			remoteInfo = DownloadsPrefPane;
 		};
-		03C5AB1407722F1100EAF77D /* PBXContainerItemProxy */ = {
+		7B436D170D11C23E00377744 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 29B97313FDCFA39411CA2CEA /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 03E2D8520771F73F00BD2443;
-			remoteInfo = TabbedBrowsingPrefPane;
+			remoteInfo = TabsPrefPane;
 		};
-		03C5AB1607722F1100EAF77D /* PBXContainerItemProxy */ = {
+		7B436D190D11C23E00377744 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 29B97313FDCFA39411CA2CEA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 035A4974079DC83D0084B05F;
+			remoteInfo = HistoryPrefPane;
+		};
+		7B436D1B0D11C23E00377744 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 29B97313FDCFA39411CA2CEA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3F44ADDB05BDFBA000CB4B08;
+			remoteInfo = SecurityPrefPane;
+		};
+		7B436D1D0D11C23E00377744 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 29B97313FDCFA39411CA2CEA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3F44ADC305BDFBA000CB4B08;
+			remoteInfo = PrivacyPrefPane;
+		};
+		7B436D1F0D11C23E00377744 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 29B97313FDCFA39411CA2CEA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3F44AD8A05BDFB9F00CB4B08;
+			remoteInfo = AppearancePrefPane;
+		};
+		7B436D210D11C23E00377744 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 29B97313FDCFA39411CA2CEA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3F44ADA005BDFB9F00CB4B08;
+			remoteInfo = NavigationPrefPane;
+		};
+		7B436D230D11C23E00377744 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 29B97313FDCFA39411CA2CEA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3F44ABD005BDFB9E00CB4B08;
+			remoteInfo = CaminoApp;
+		};
+		7B436D250D11C24B00377744 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 29B97313FDCFA39411CA2CEA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3F44ADF205BDFBA000CB4B08;
+			remoteInfo = WebFeaturesPrefPane;
+		};
+		7B436D270D11C24B00377744 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 29B97313FDCFA39411CA2CEA /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 03C5AB0F07722DFC00EAF77D;
 			remoteInfo = DownloadsPrefPane;
 		};
-		03E2D98F0771FB9300BD2443 /* PBXContainerItemProxy */ = {
+		7B436D290D11C24B00377744 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 29B97313FDCFA39411CA2CEA /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 03E2D8520771F73F00BD2443;
-			remoteInfo = TabbedBrowsingPrefPane;
+			remoteInfo = TabsPrefPane;
 		};
-		3F44AFD505BDFBA100CB4B08 /* PBXContainerItemProxy */ = {
+		7B436D2B0D11C24B00377744 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 29B97313FDCFA39411CA2CEA /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 3F44AD8A05BDFB9F00CB4B08;
-			remoteInfo = "AppearancePrefPane (Upgraded)";
+			remoteGlobalIDString = 035A4974079DC83D0084B05F;
+			remoteInfo = HistoryPrefPane;
 		};
-		3F44AFD705BDFBA100CB4B08 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 29B97313FDCFA39411CA2CEA /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 3F44ADA005BDFB9F00CB4B08;
-			remoteInfo = "NavigationPrefPane (Upgraded)";
-		};
-		3F44AFD905BDFBA100CB4B08 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 29B97313FDCFA39411CA2CEA /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 3F44ADC305BDFBA000CB4B08;
-			remoteInfo = "PrivacyPrefPane (Upgraded)";
-		};
-		3F44AFDB05BDFBA100CB4B08 /* PBXContainerItemProxy */ = {
+		7B436D2D0D11C24B00377744 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 29B97313FDCFA39411CA2CEA /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 3F44ADDB05BDFBA000CB4B08;
-			remoteInfo = "SecurityPrefPane (Upgraded)";
+			remoteInfo = SecurityPrefPane;
 		};
-		3F44AFDD05BDFBA100CB4B08 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 29B97313FDCFA39411CA2CEA /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 3F44ADF205BDFBA000CB4B08;
-			remoteInfo = "WebFeaturesPrefPane (Upgraded)";
-		};
-		3F44AFE105BDFBA100CB4B08 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 29B97313FDCFA39411CA2CEA /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 3F44AD8A05BDFB9F00CB4B08;
-			remoteInfo = "AppearancePrefPane (Upgraded)";
-		};
-		3F44AFE305BDFBA100CB4B08 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 29B97313FDCFA39411CA2CEA /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 3F44ADA005BDFB9F00CB4B08;
-			remoteInfo = "NavigationPrefPane (Upgraded)";
-		};
-		3F44AFE505BDFBA100CB4B08 /* PBXContainerItemProxy */ = {
+		7B436D2F0D11C24B00377744 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 29B97313FDCFA39411CA2CEA /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 3F44ADC305BDFBA000CB4B08;
-			remoteInfo = "PrivacyPrefPane (Upgraded)";
+			remoteInfo = PrivacyPrefPane;
 		};
-		3F44AFE705BDFBA100CB4B08 /* PBXContainerItemProxy */ = {
+		7B436D310D11C24B00377744 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 29B97313FDCFA39411CA2CEA /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 3F44ADDB05BDFBA000CB4B08;
-			remoteInfo = "SecurityPrefPane (Upgraded)";
+			remoteGlobalIDString = 3F44AD8A05BDFB9F00CB4B08;
+			remoteInfo = AppearancePrefPane;
 		};
-		3F44AFE905BDFBA100CB4B08 /* PBXContainerItemProxy */ = {
+		7B436D330D11C24B00377744 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 29B97313FDCFA39411CA2CEA /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 3F44ADF205BDFBA000CB4B08;
-			remoteInfo = "WebFeaturesPrefPane (Upgraded)";
+			remoteGlobalIDString = 3F44ADA005BDFB9F00CB4B08;
+			remoteInfo = NavigationPrefPane;
+		};
+		7B436D350D11C24B00377744 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 29B97313FDCFA39411CA2CEA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3F44AE0905BDFBA000CB4B08;
+			remoteInfo = CaminoStaticApp;
 		};
 		7B64B7C90CCFD9F50098406C /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -1864,24 +1845,6 @@
 			name = "Copy Security Chrome";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		3F44AD7105BDFB9F00CB4B08 /* Copy Preference Panes */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = Contents/PreferencePanes;
-			dstSubfolderSpec = 1;
-			files = (
-				3F44AFEE05BDFBA100CB4B08 /* Appearance.prefPane in Copy Preference Panes */,
-				3F44AFEF05BDFBA100CB4B08 /* Navigation.prefPane in Copy Preference Panes */,
-				3F44AFF005BDFBA100CB4B08 /* WebFeatures.prefPane in Copy Preference Panes */,
-				3F44AFF105BDFBA100CB4B08 /* Privacy.prefPane in Copy Preference Panes */,
-				3F44AFF205BDFBA100CB4B08 /* Security.prefPane in Copy Preference Panes */,
-				03E2D9920771FBD400BD2443 /* Tabs.prefPane in Copy Preference Panes */,
-				03C5AB1907722F3400EAF77D /* Downloads.prefPane in Copy Preference Panes */,
-				035A4AA4079DCB790084B05F /* History.prefPane in Copy Preference Panes */,
-			);
-			name = "Copy Preference Panes";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		3F44AD7705BDFB9F00CB4B08 /* Copy Frameworks */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 12;
@@ -2153,24 +2116,6 @@
 				3F44AF7F05BDFBA000CB4B08 /* pipnss.jar in Copy Security Chrome */,
 			);
 			name = "Copy Security Chrome";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		3F44AF8005BDFBA000CB4B08 /* Copy Preference Panes */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = Contents/PreferencePanes;
-			dstSubfolderSpec = 1;
-			files = (
-				3F44AFF405BDFBA100CB4B08 /* Appearance.prefPane in Copy Preference Panes */,
-				3F44AFF505BDFBA100CB4B08 /* Navigation.prefPane in Copy Preference Panes */,
-				3F44AFF605BDFBA100CB4B08 /* WebFeatures.prefPane in Copy Preference Panes */,
-				3F44AFF705BDFBA100CB4B08 /* Privacy.prefPane in Copy Preference Panes */,
-				3F44AFF805BDFBA100CB4B08 /* Security.prefPane in Copy Preference Panes */,
-				03C5AB1B07722F4B00EAF77D /* Tabs.prefPane in Copy Preference Panes */,
-				03C5AB1A07722F3E00EAF77D /* Downloads.prefPane in Copy Preference Panes */,
-				03E8551607A17F35008076D5 /* History.prefPane in Copy Preference Panes */,
-			);
-			name = "Copy Preference Panes";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		3F44AF8605BDFBA000CB4B08 /* Copy Libraries */ = {
@@ -2863,8 +2808,8 @@
 		F5A7090E036DB4B201202892 /* gopher-telnet.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; name = "gopher-telnet.gif"; path = "../dist/bin/res/html/gopher-telnet.gif"; sourceTree = SOURCE_ROOT; };
 		F5A7090F036DB4B201202892 /* gopher-text.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; name = "gopher-text.gif"; path = "../dist/bin/res/html/gopher-text.gif"; sourceTree = SOURCE_ROOT; };
 		F5A70910036DB4B201202892 /* gopher-unknown.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; name = "gopher-unknown.gif"; path = "resources/images/gecko/gopher-unknown.gif"; sourceTree = SOURCE_ROOT; };
-		F5A8CE4102DFEF4C013CA8EC /* PreferencePaneBase.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = PreferencePaneBase.h; path = PreferencePanes/Shared/PreferencePaneBase.h; sourceTree = SOURCE_ROOT; };
-		F5A8CE4202DFEF4C013CA8EC /* PreferencePaneBase.mm */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.objcpp; name = PreferencePaneBase.mm; path = PreferencePanes/Shared/PreferencePaneBase.mm; sourceTree = SOURCE_ROOT; };
+		F5A8CE4102DFEF4C013CA8EC /* PreferencePaneBase.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = PreferencePaneBase.h; sourceTree = "<group>"; };
+		F5A8CE4202DFEF4C013CA8EC /* PreferencePaneBase.mm */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.objcpp; path = PreferencePaneBase.mm; sourceTree = "<group>"; };
 		F5A8CE4E02DFF167013CA8EC /* Appearance.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = Appearance.h; path = PreferencePanes/Appearance/Appearance.h; sourceTree = SOURCE_ROOT; };
 		F5A8CE4F02DFF167013CA8EC /* Appearance.mm */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.objcpp; name = Appearance.mm; path = PreferencePanes/Appearance/Appearance.mm; sourceTree = SOURCE_ROOT; };
 		F5A8CE5002DFF167013CA8EC /* English */ = {isa = PBXFileReference; lastKnownFileType = wrapper.nib; name = English; path = PreferencePanes/Appearance/English.lproj/Appearance.nib; sourceTree = SOURCE_ROOT; };
@@ -3021,15 +2966,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4D29978D0869C95D00E84287 /* libxpcom.dylib in Frameworks */,
-				4D29978E0869C95D00E84287 /* libxpcom_core.dylib in Frameworks */,
-				4D29978F0869C95D00E84287 /* libplds4.dylib in Frameworks */,
-				4D2997900869C95D00E84287 /* libplc4.dylib in Frameworks */,
-				4D2997910869C95D00E84287 /* libnspr4.dylib in Frameworks */,
 				035A4AA0079DCB0B0084B05F /* Cocoa.framework in Frameworks */,
-				035A4AA1079DCB0B0084B05F /* PreferencePanes.framework in Frameworks */,
-				035A4AA2079DCB0B0084B05F /* Carbon.framework in Frameworks */,
 				035A4AA3079DCB0B0084B05F /* Foundation.framework in Frameworks */,
+				4D29978E0869C95D00E84287 /* libxpcom_core.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -3037,15 +2976,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4D2997860869C93800E84287 /* libxpcom.dylib in Frameworks */,
-				4D2997870869C93800E84287 /* libxpcom_core.dylib in Frameworks */,
-				4D2997880869C93800E84287 /* libplds4.dylib in Frameworks */,
-				4D2997890869C93800E84287 /* libplc4.dylib in Frameworks */,
-				4D29978A0869C93800E84287 /* libnspr4.dylib in Frameworks */,
 				03C5AC3507722FA200EAF77D /* Carbon.framework in Frameworks */,
 				03C5AC3607722FA200EAF77D /* Cocoa.framework in Frameworks */,
 				03C5AC3707722FA200EAF77D /* Foundation.framework in Frameworks */,
-				03C5AC3807722FA200EAF77D /* PreferencePanes.framework in Frameworks */,
+				4D2997870869C93800E84287 /* libxpcom_core.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -3053,15 +2987,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4D29977F0869C91100E84287 /* libxpcom.dylib in Frameworks */,
-				4D2997800869C91100E84287 /* libxpcom_core.dylib in Frameworks */,
-				4D2997810869C91100E84287 /* libplds4.dylib in Frameworks */,
-				4D2997820869C91100E84287 /* libplc4.dylib in Frameworks */,
-				4D2997830869C91100E84287 /* libnspr4.dylib in Frameworks */,
-				03E2D8740771F90B00BD2443 /* Carbon.framework in Frameworks */,
 				03E2D8750771F90B00BD2443 /* Cocoa.framework in Frameworks */,
 				03E2D8760771F90B00BD2443 /* Foundation.framework in Frameworks */,
-				03E2D8770771F90B00BD2443 /* PreferencePanes.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -3096,15 +3023,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4D2997680869C71C00E84287 /* libxpcom.dylib in Frameworks */,
-				4D2997690869C71C00E84287 /* libxpcom_core.dylib in Frameworks */,
-				4D29976A0869C71C00E84287 /* libplds4.dylib in Frameworks */,
-				4D29976B0869C71C00E84287 /* libplc4.dylib in Frameworks */,
-				4D29976C0869C71C00E84287 /* libnspr4.dylib in Frameworks */,
-				3F44AD9805BDFB9F00CB4B08 /* PreferencePanes.framework in Frameworks */,
 				3F44AD9905BDFB9F00CB4B08 /* Foundation.framework in Frameworks */,
 				3F44AD9A05BDFB9F00CB4B08 /* Cocoa.framework in Frameworks */,
-				3F44AD9B05BDFB9F00CB4B08 /* Carbon.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -3112,15 +3032,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4D2997700869C75E00E84287 /* libxpcom.dylib in Frameworks */,
-				4D2997710869C75E00E84287 /* libxpcom_core.dylib in Frameworks */,
-				4D2997720869C75E00E84287 /* libplds4.dylib in Frameworks */,
-				4D2997730869C75E00E84287 /* libplc4.dylib in Frameworks */,
-				4D2997740869C75E00E84287 /* libnspr4.dylib in Frameworks */,
-				3F44ADAC05BDFB9F00CB4B08 /* PreferencePanes.framework in Frameworks */,
 				3F44ADAD05BDFB9F00CB4B08 /* Foundation.framework in Frameworks */,
 				3F44ADAE05BDFB9F00CB4B08 /* Cocoa.framework in Frameworks */,
-				3F44ADAF05BDFB9F00CB4B08 /* Carbon.framework in Frameworks */,
 				7B64B7EE0CCFDAAF0098406C /* Sparkle.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -3129,16 +3042,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				3F44ADCE05BDFBA000CB4B08 /* libxpcom.dylib in Frameworks */,
-				4D29989F0869CA5200E84287 /* libxpcom_core.dylib in Frameworks */,
-				3F44ADD305BDFBA000CB4B08 /* libmozjs.dylib in Frameworks */,
-				3F44ADD405BDFBA000CB4B08 /* libnspr4.dylib in Frameworks */,
-				3F44ADD505BDFBA000CB4B08 /* libplc4.dylib in Frameworks */,
-				3F44ADD605BDFBA000CB4B08 /* libplds4.dylib in Frameworks */,
-				3F44ADCF05BDFBA000CB4B08 /* libembed_base_s.a in Frameworks */,
 				3F44ADD005BDFBA000CB4B08 /* Cocoa.framework in Frameworks */,
-				3F44ADD105BDFBA000CB4B08 /* PreferencePanes.framework in Frameworks */,
-				3F44ADD205BDFBA000CB4B08 /* libunicharutil_s.a in Frameworks */,
+				4D29989F0869CA5200E84287 /* libxpcom_core.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -3146,16 +3051,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				3F44ADE505BDFBA000CB4B08 /* libxpcom.dylib in Frameworks */,
-				4D2998A20869CA5F00E84287 /* libxpcom_core.dylib in Frameworks */,
-				3F44ADEA05BDFBA000CB4B08 /* libmozjs.dylib in Frameworks */,
-				3F44ADEB05BDFBA000CB4B08 /* libnspr4.dylib in Frameworks */,
-				3F44ADEC05BDFBA000CB4B08 /* libplc4.dylib in Frameworks */,
-				3F44ADED05BDFBA000CB4B08 /* libplds4.dylib in Frameworks */,
-				3F44ADE605BDFBA000CB4B08 /* libembed_base_s.a in Frameworks */,
 				3F44ADE705BDFBA000CB4B08 /* Cocoa.framework in Frameworks */,
-				3F44ADE805BDFBA000CB4B08 /* PreferencePanes.framework in Frameworks */,
-				3F44ADE905BDFBA000CB4B08 /* libunicharutil_s.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -3163,16 +3059,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				3F44ADFC05BDFBA000CB4B08 /* libxpcom.dylib in Frameworks */,
-				4D2998A50869CA6B00E84287 /* libxpcom_core.dylib in Frameworks */,
-				3F44AE0105BDFBA000CB4B08 /* libmozjs.dylib in Frameworks */,
-				3F44AE0205BDFBA000CB4B08 /* libnspr4.dylib in Frameworks */,
-				3F44AE0305BDFBA000CB4B08 /* libplc4.dylib in Frameworks */,
-				3F44AE0405BDFBA000CB4B08 /* libplds4.dylib in Frameworks */,
-				3F44ADFD05BDFBA000CB4B08 /* libembed_base_s.a in Frameworks */,
 				3F44ADFE05BDFBA000CB4B08 /* Cocoa.framework in Frameworks */,
-				3F44ADFF05BDFBA000CB4B08 /* PreferencePanes.framework in Frameworks */,
-				3F44AE0005BDFBA000CB4B08 /* libunicharutil_s.a in Frameworks */,
+				4D2998A50869CA6B00E84287 /* libxpcom_core.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -4654,8 +4542,8 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				035A4992079DCA8A0084B05F /* PreferencePaneBase.h in Headers */,
 				035A498E079DCA100084B05F /* History.h in Headers */,
+				035A4992079DCA8A0084B05F /* PreferencePaneBase.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -4663,8 +4551,8 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				03C5AB2C07722F8F00EAF77D /* PreferencePaneBase.h in Headers */,
 				032FFDD4077351D700440548 /* Downloads.h in Headers */,
+				7B436D430D11C3A100377744 /* PreferencePaneBase.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -4672,8 +4560,8 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				03E2D86D0771F88C00BD2443 /* PreferencePaneBase.h in Headers */,
 				03E2D86E0771F89900BD2443 /* Tabs.h in Headers */,
+				03E2D86D0771F88C00BD2443 /* PreferencePaneBase.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -4794,6 +4682,7 @@
 				33563BB70C85260200DC4D06 /* ViewCertificateDialogController.h in Headers */,
 				60DE525B0C85F2F500A2CB3C /* CHSelectHandler.h in Headers */,
 				DE70BEAC0CBC825200C1CC63 /* ToolbarScriptItem.h in Headers */,
+				7B436D3B0D11C2B400377744 /* PreferencePaneBase.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -4821,6 +4710,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				3F44ADC505BDFBA000CB4B08 /* PrivacyPane.h in Headers */,
+				7B436D410D11C37700377744 /* PreferencePaneBase.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -4829,6 +4719,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				3F44ADDD05BDFBA000CB4B08 /* SecurityPane.h in Headers */,
+				7B436D420D11C37D00377744 /* PreferencePaneBase.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -4837,6 +4728,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				3F44ADF405BDFBA000CB4B08 /* WebFeatures.h in Headers */,
+				7B436D440D11C3AC00377744 /* PreferencePaneBase.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -4957,6 +4849,7 @@
 				33563BBC0C85260200DC4D06 /* ViewCertificateDialogController.h in Headers */,
 				60DE525D0C85F2F500A2CB3C /* CHSelectHandler.h in Headers */,
 				DE70BEAE0CBC825200C1CC63 /* ToolbarScriptItem.h in Headers */,
+				7B436D3C0D11C2C400377744 /* PreferencePaneBase.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -5017,9 +4910,9 @@
 			productReference = 03E2D8530771F73F00BD2443 /* Tabs.prefPane */;
 			productType = "com.apple.product-type.bundle";
 		};
-		3F44ABD005BDFB9E00CB4B08 /* Camino */ = {
+		3F44ABD005BDFB9E00CB4B08 /* CaminoApp */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 00F3BE170C4F27DE00E19B0C /* Build configuration list for PBXNativeTarget "Camino" */;
+			buildConfigurationList = 00F3BE170C4F27DE00E19B0C /* Build configuration list for PBXNativeTarget "CaminoApp" */;
 			buildPhases = (
 				3F44ABD705BDFB9E00CB4B08 /* Headers */,
 				3F44AC2805BDFB9E00CB4B08 /* Resources */,
@@ -5040,7 +4933,6 @@
 				3F44AD6005BDFB9F00CB4B08 /* Copy Libraries */,
 				3F44AD6A05BDFB9F00CB4B08 /* Copy Security Components */,
 				3F44AD6F05BDFB9F00CB4B08 /* Copy Security Chrome */,
-				3F44AD7105BDFB9F00CB4B08 /* Copy Preference Panes */,
 				3F44AD7705BDFB9F00CB4B08 /* Copy Frameworks */,
 				3365CA1F0D073ECA00ACBF18 /* Scrub Sparkle Languages */,
 				3F44AD7A05BDFB9F00CB4B08 /* Copy Plugins */,
@@ -5050,17 +4942,9 @@
 			buildRules = (
 			);
 			dependencies = (
-				3F44AFD605BDFBA100CB4B08 /* PBXTargetDependency */,
-				3F44AFD805BDFBA100CB4B08 /* PBXTargetDependency */,
-				3F44AFDA05BDFBA100CB4B08 /* PBXTargetDependency */,
-				3F44AFDC05BDFBA100CB4B08 /* PBXTargetDependency */,
-				3F44AFDE05BDFBA100CB4B08 /* PBXTargetDependency */,
-				03E2D9900771FB9300BD2443 /* PBXTargetDependency */,
-				03C5AB1307722EFC00EAF77D /* PBXTargetDependency */,
-				0380F471079DCCD90065A7AB /* PBXTargetDependency */,
 				7B64B7D20CCFDA1A0098406C /* PBXTargetDependency */,
 			);
-			name = Camino;
+			name = CaminoApp;
 			productInstallPath = "$(HOME)/Applications";
 			productName = Camino;
 			productReference = 3F44AD8805BDFB9F00CB4B08 /* Camino.app */;
@@ -5167,9 +5051,9 @@
 			productReference = 3F44AE0805BDFBA000CB4B08 /* WebFeatures.prefPane */;
 			productType = "com.apple.product-type.bundle";
 		};
-		3F44AE0905BDFBA000CB4B08 /* CaminoStatic */ = {
+		3F44AE0905BDFBA000CB4B08 /* CaminoStaticApp */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 00F3BE1C0C4F27DE00E19B0C /* Build configuration list for PBXNativeTarget "CaminoStatic" */;
+			buildConfigurationList = 00F3BE1C0C4F27DE00E19B0C /* Build configuration list for PBXNativeTarget "CaminoStaticApp" */;
 			buildPhases = (
 				3F44AE1005BDFBA000CB4B08 /* Headers */,
 				3F44AE6105BDFBA000CB4B08 /* Resources */,
@@ -5188,7 +5072,6 @@
 				3F44AF7505BDFBA000CB4B08 /* Copy Security Libraries */,
 				3F44AF7B05BDFBA000CB4B08 /* Copy Security Components */,
 				3F44AF7E05BDFBA000CB4B08 /* Copy Security Chrome */,
-				3F44AF8005BDFBA000CB4B08 /* Copy Preference Panes */,
 				3F44AF8605BDFBA000CB4B08 /* Copy Libraries */,
 				3F44AF9005BDFBA000CB4B08 /* Copy Frameworks */,
 				3365CA0F0D07197E00ACBF18 /* Scrub Sparkle Languages */,
@@ -5199,17 +5082,9 @@
 			buildRules = (
 			);
 			dependencies = (
-				3F44AFE205BDFBA100CB4B08 /* PBXTargetDependency */,
-				3F44AFE405BDFBA100CB4B08 /* PBXTargetDependency */,
-				3F44AFE605BDFBA100CB4B08 /* PBXTargetDependency */,
-				3F44AFE805BDFBA100CB4B08 /* PBXTargetDependency */,
-				3F44AFEA05BDFBA100CB4B08 /* PBXTargetDependency */,
-				03C5AB1507722F1100EAF77D /* PBXTargetDependency */,
-				03C5AB1707722F1100EAF77D /* PBXTargetDependency */,
-				0380F473079DCCEC0065A7AB /* PBXTargetDependency */,
 				7B64B7D60CCFDA210098406C /* PBXTargetDependency */,
 			);
-			name = CaminoStatic;
+			name = CaminoStaticApp;
 			productInstallPath = "$(HOME)/Applications";
 			productName = CaminoStatic;
 			productReference = 3F44AFC605BDFBA100CB4B08 /* Camino.app */;
@@ -5221,6 +5096,7 @@
 		29B97313FDCFA39411CA2CEA /* Project object */ = {
 			isa = PBXProject;
 			buildConfigurationList = 00F3BE210C4F27DE00E19B0C /* Build configuration list for PBXProject "Camino" */;
+			compatibilityVersion = "Xcode 2.4";
 			hasScannedForEncodings = 1;
 			knownRegions = (
 				English,
@@ -5240,16 +5116,18 @@
 				},
 			);
 			targets = (
-				3F44ABD005BDFB9E00CB4B08 /* Camino */,
-				3F44AE0905BDFBA000CB4B08 /* CaminoStatic */,
-				3F44AD8A05BDFB9F00CB4B08 /* AppearancePrefPane */,
+				7B436D0B0D11C22400377744 /* Camino */,
+				7B436D0F0D11C23200377744 /* CaminoStatic */,
+				3F44ABD005BDFB9E00CB4B08 /* CaminoApp */,
+				3F44AE0905BDFBA000CB4B08 /* CaminoStaticApp */,
 				3F44ADA005BDFB9F00CB4B08 /* NavigationPrefPane */,
+				3F44AD8A05BDFB9F00CB4B08 /* AppearancePrefPane */,
 				3F44ADC305BDFBA000CB4B08 /* PrivacyPrefPane */,
 				3F44ADDB05BDFBA000CB4B08 /* SecurityPrefPane */,
-				3F44ADF205BDFBA000CB4B08 /* WebFeaturesPrefPane */,
+				035A4974079DC83D0084B05F /* HistoryPrefPane */,
 				03E2D8520771F73F00BD2443 /* TabsPrefPane */,
 				03C5AB0F07722DFC00EAF77D /* DownloadsPrefPane */,
-				035A4974079DC83D0084B05F /* HistoryPrefPane */,
+				3F44ADF205BDFBA000CB4B08 /* WebFeaturesPrefPane */,
 			);
 		};
 /* End PBXProject section */
@@ -5767,7 +5645,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				035A4999079DCACD0084B05F /* PreferencePaneBase.mm in Sources */,
 				035A498F079DCA100084B05F /* History.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -5776,7 +5653,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				03C5AC3907722FAF00EAF77D /* PreferencePaneBase.mm in Sources */,
 				032FFDD5077351DA00440548 /* Downloads.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -5786,7 +5662,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				03E2D8720771F8EC00BD2443 /* Tabs.mm in Sources */,
-				03E2D8730771F8EC00BD2443 /* PreferencePaneBase.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -5906,6 +5781,7 @@
 				33FBAB3B0C84D27F00DD459E /* NSString+Utils.m in Sources */,
 				60DE525C0C85F2F500A2CB3C /* CHSelectHandler.mm in Sources */,
 				DE70BEAD0CBC825200C1CC63 /* ToolbarScriptItem.mm in Sources */,
+				7B436D3D0D11C2EB00377744 /* PreferencePaneBase.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -5913,7 +5789,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				3F44AD9505BDFB9F00CB4B08 /* PreferencePaneBase.mm in Sources */,
 				3F44AD9605BDFB9F00CB4B08 /* Appearance.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -5923,7 +5798,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				DE74F8D30AB271C700FD1D5B /* AppListMenuFactory.mm in Sources */,
-				3F44ADA905BDFB9F00CB4B08 /* PreferencePaneBase.mm in Sources */,
 				3F44ADAA05BDFB9F00CB4B08 /* Navigation.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -5933,7 +5807,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				3F44ADCB05BDFBA000CB4B08 /* PrivacyPane.mm in Sources */,
-				3F44ADCC05BDFBA000CB4B08 /* PreferencePaneBase.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -5941,7 +5814,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				3F44ADE205BDFBA000CB4B08 /* PreferencePaneBase.mm in Sources */,
 				3F44ADE305BDFBA000CB4B08 /* SecurityPane.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -5950,7 +5822,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				3F44ADF905BDFBA000CB4B08 /* PreferencePaneBase.mm in Sources */,
 				3F44ADFA05BDFBA000CB4B08 /* WebFeatures.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -6072,91 +5943,102 @@
 				33FBAB3D0C84D27F00DD459E /* NSString+Utils.m in Sources */,
 				60DE525E0C85F2F500A2CB3C /* CHSelectHandler.mm in Sources */,
 				DE70BEAF0CBC825200C1CC63 /* ToolbarScriptItem.mm in Sources */,
+				7B436D3E0D11C30D00377744 /* PreferencePaneBase.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		0380F471079DCCD90065A7AB /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 035A4974079DC83D0084B05F /* HistoryPrefPane */;
-			targetProxy = 0380F470079DCCD90065A7AB /* PBXContainerItemProxy */;
-		};
-		0380F473079DCCEC0065A7AB /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 035A4974079DC83D0084B05F /* HistoryPrefPane */;
-			targetProxy = 0380F472079DCCEC0065A7AB /* PBXContainerItemProxy */;
-		};
-		03C5AB1307722EFC00EAF77D /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 03C5AB0F07722DFC00EAF77D /* DownloadsPrefPane */;
-			targetProxy = 03C5AB1207722EFC00EAF77D /* PBXContainerItemProxy */;
-		};
-		03C5AB1507722F1100EAF77D /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 03E2D8520771F73F00BD2443 /* TabsPrefPane */;
-			targetProxy = 03C5AB1407722F1100EAF77D /* PBXContainerItemProxy */;
-		};
-		03C5AB1707722F1100EAF77D /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 03C5AB0F07722DFC00EAF77D /* DownloadsPrefPane */;
-			targetProxy = 03C5AB1607722F1100EAF77D /* PBXContainerItemProxy */;
-		};
-		03E2D9900771FB9300BD2443 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 03E2D8520771F73F00BD2443 /* TabsPrefPane */;
-			targetProxy = 03E2D98F0771FB9300BD2443 /* PBXContainerItemProxy */;
-		};
-		3F44AFD605BDFBA100CB4B08 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 3F44AD8A05BDFB9F00CB4B08 /* AppearancePrefPane */;
-			targetProxy = 3F44AFD505BDFBA100CB4B08 /* PBXContainerItemProxy */;
-		};
-		3F44AFD805BDFBA100CB4B08 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 3F44ADA005BDFB9F00CB4B08 /* NavigationPrefPane */;
-			targetProxy = 3F44AFD705BDFBA100CB4B08 /* PBXContainerItemProxy */;
-		};
-		3F44AFDA05BDFBA100CB4B08 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 3F44ADC305BDFBA000CB4B08 /* PrivacyPrefPane */;
-			targetProxy = 3F44AFD905BDFBA100CB4B08 /* PBXContainerItemProxy */;
-		};
-		3F44AFDC05BDFBA100CB4B08 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 3F44ADDB05BDFBA000CB4B08 /* SecurityPrefPane */;
-			targetProxy = 3F44AFDB05BDFBA100CB4B08 /* PBXContainerItemProxy */;
-		};
-		3F44AFDE05BDFBA100CB4B08 /* PBXTargetDependency */ = {
+		7B436D140D11C23D00377744 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 3F44ADF205BDFBA000CB4B08 /* WebFeaturesPrefPane */;
-			targetProxy = 3F44AFDD05BDFBA100CB4B08 /* PBXContainerItemProxy */;
+			targetProxy = 7B436D130D11C23D00377744 /* PBXContainerItemProxy */;
 		};
-		3F44AFE205BDFBA100CB4B08 /* PBXTargetDependency */ = {
+		7B436D160D11C23D00377744 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 3F44AD8A05BDFB9F00CB4B08 /* AppearancePrefPane */;
-			targetProxy = 3F44AFE105BDFBA100CB4B08 /* PBXContainerItemProxy */;
+			target = 03C5AB0F07722DFC00EAF77D /* DownloadsPrefPane */;
+			targetProxy = 7B436D150D11C23D00377744 /* PBXContainerItemProxy */;
 		};
-		3F44AFE405BDFBA100CB4B08 /* PBXTargetDependency */ = {
+		7B436D180D11C23E00377744 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 3F44ADA005BDFB9F00CB4B08 /* NavigationPrefPane */;
-			targetProxy = 3F44AFE305BDFBA100CB4B08 /* PBXContainerItemProxy */;
+			target = 03E2D8520771F73F00BD2443 /* TabsPrefPane */;
+			targetProxy = 7B436D170D11C23E00377744 /* PBXContainerItemProxy */;
 		};
-		3F44AFE605BDFBA100CB4B08 /* PBXTargetDependency */ = {
+		7B436D1A0D11C23E00377744 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 3F44ADC305BDFBA000CB4B08 /* PrivacyPrefPane */;
-			targetProxy = 3F44AFE505BDFBA100CB4B08 /* PBXContainerItemProxy */;
+			target = 035A4974079DC83D0084B05F /* HistoryPrefPane */;
+			targetProxy = 7B436D190D11C23E00377744 /* PBXContainerItemProxy */;
 		};
-		3F44AFE805BDFBA100CB4B08 /* PBXTargetDependency */ = {
+		7B436D1C0D11C23E00377744 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 3F44ADDB05BDFBA000CB4B08 /* SecurityPrefPane */;
-			targetProxy = 3F44AFE705BDFBA100CB4B08 /* PBXContainerItemProxy */;
+			targetProxy = 7B436D1B0D11C23E00377744 /* PBXContainerItemProxy */;
 		};
-		3F44AFEA05BDFBA100CB4B08 /* PBXTargetDependency */ = {
+		7B436D1E0D11C23E00377744 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3F44ADC305BDFBA000CB4B08 /* PrivacyPrefPane */;
+			targetProxy = 7B436D1D0D11C23E00377744 /* PBXContainerItemProxy */;
+		};
+		7B436D200D11C23E00377744 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3F44AD8A05BDFB9F00CB4B08 /* AppearancePrefPane */;
+			targetProxy = 7B436D1F0D11C23E00377744 /* PBXContainerItemProxy */;
+		};
+		7B436D220D11C23E00377744 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3F44ADA005BDFB9F00CB4B08 /* NavigationPrefPane */;
+			targetProxy = 7B436D210D11C23E00377744 /* PBXContainerItemProxy */;
+		};
+		7B436D240D11C23E00377744 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3F44ABD005BDFB9E00CB4B08 /* CaminoApp */;
+			targetProxy = 7B436D230D11C23E00377744 /* PBXContainerItemProxy */;
+		};
+		7B436D260D11C24B00377744 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 3F44ADF205BDFBA000CB4B08 /* WebFeaturesPrefPane */;
-			targetProxy = 3F44AFE905BDFBA100CB4B08 /* PBXContainerItemProxy */;
+			targetProxy = 7B436D250D11C24B00377744 /* PBXContainerItemProxy */;
+		};
+		7B436D280D11C24B00377744 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 03C5AB0F07722DFC00EAF77D /* DownloadsPrefPane */;
+			targetProxy = 7B436D270D11C24B00377744 /* PBXContainerItemProxy */;
+		};
+		7B436D2A0D11C24B00377744 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 03E2D8520771F73F00BD2443 /* TabsPrefPane */;
+			targetProxy = 7B436D290D11C24B00377744 /* PBXContainerItemProxy */;
+		};
+		7B436D2C0D11C24B00377744 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 035A4974079DC83D0084B05F /* HistoryPrefPane */;
+			targetProxy = 7B436D2B0D11C24B00377744 /* PBXContainerItemProxy */;
+		};
+		7B436D2E0D11C24B00377744 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3F44ADDB05BDFBA000CB4B08 /* SecurityPrefPane */;
+			targetProxy = 7B436D2D0D11C24B00377744 /* PBXContainerItemProxy */;
+		};
+		7B436D300D11C24B00377744 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3F44ADC305BDFBA000CB4B08 /* PrivacyPrefPane */;
+			targetProxy = 7B436D2F0D11C24B00377744 /* PBXContainerItemProxy */;
+		};
+		7B436D320D11C24B00377744 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3F44AD8A05BDFB9F00CB4B08 /* AppearancePrefPane */;
+			targetProxy = 7B436D310D11C24B00377744 /* PBXContainerItemProxy */;
+		};
+		7B436D340D11C24B00377744 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3F44ADA005BDFB9F00CB4B08 /* NavigationPrefPane */;
+			targetProxy = 7B436D330D11C24B00377744 /* PBXContainerItemProxy */;
+		};
+		7B436D360D11C24B00377744 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3F44AE0905BDFBA000CB4B08 /* CaminoStaticApp */;
+			targetProxy = 7B436D350D11C24B00377744 /* PBXContainerItemProxy */;
 		};
 		7B64B7D20CCFDA1A0098406C /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -6567,44 +6449,8 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 00F3BE2A0C4F280700E19B0C /* PrefPane.xcconfig */;
 			buildSettings = {
-				HEADER_SEARCH_PATHS = (
-					../dist/include/webbrwsr,
-					../dist/include/dom,
-					../dist/include/nspr,
-					../dist/include/string,
-					../dist/include/rdf,
-					../dist/include/necko,
-					../dist/include/find,
-					../dist/include/embed_base,
-					../dist/include/windowwatcher,
-					../dist/include/webshell,
-					../dist/include/widget,
-					../dist/include/uriloader,
-					../dist/include/docshell,
-					../dist/include/profile,
-					../dist/include/layout,
-					../dist/include/content,
-					../dist/include/webbrowserpersist,
-					../dist/include/pref,
-					../dist/include/mimetype,
-					../dist/include/shistory,
-					../dist/include/view,
-					../dist/include/gfx,
-					../dist/include/xultmpl,
-					../dist/include/xmlextras,
-					../dist/include/htmlparser,
-					../dist/include/locale,
-					../dist/include/unicharutil,
-					../dist/include/appcomps,
-					../dist/include/xpcom,
-					../dist/include/,
-				);
+				HEADER_SEARCH_PATHS = ../dist/include;
 				INFOPLIST_FILE = "Info-AppearancePrefPane.plist";
-				LIBRARY_SEARCH_PATHS = (
-					../dist/bin,
-					../dist/lib,
-					../intl/unicharutil/util,
-				);
 				OTHER_CFLAGS = (
 					"$(OTHER_CFLAGS)",
 					"-DDEBUG",
@@ -6619,44 +6465,8 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 00F3BE2A0C4F280700E19B0C /* PrefPane.xcconfig */;
 			buildSettings = {
-				HEADER_SEARCH_PATHS = (
-					../dist/include/webbrwsr,
-					../dist/include/dom,
-					../dist/include/nspr,
-					../dist/include/string,
-					../dist/include/rdf,
-					../dist/include/necko,
-					../dist/include/find,
-					../dist/include/embed_base,
-					../dist/include/windowwatcher,
-					../dist/include/webshell,
-					../dist/include/widget,
-					../dist/include/uriloader,
-					../dist/include/docshell,
-					../dist/include/profile,
-					../dist/include/layout,
-					../dist/include/content,
-					../dist/include/webbrowserpersist,
-					../dist/include/pref,
-					../dist/include/mimetype,
-					../dist/include/shistory,
-					../dist/include/view,
-					../dist/include/gfx,
-					../dist/include/xultmpl,
-					../dist/include/xmlextras,
-					../dist/include/htmlparser,
-					../dist/include/locale,
-					../dist/include/unicharutil,
-					../dist/include/appcomps,
-					../dist/include/xpcom,
-					../dist/include/,
-				);
+				HEADER_SEARCH_PATHS = ../dist/include;
 				INFOPLIST_FILE = "Info-AppearancePrefPane.plist";
-				LIBRARY_SEARCH_PATHS = (
-					../dist/bin,
-					../dist/lib,
-					../intl/unicharutil/util,
-				);
 				PRODUCT_NAME = Appearance;
 			};
 			name = Deployment;
@@ -6665,44 +6475,8 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 00F3BE2A0C4F280700E19B0C /* PrefPane.xcconfig */;
 			buildSettings = {
-				HEADER_SEARCH_PATHS = (
-					../dist/include/webbrwsr,
-					../dist/include/dom,
-					../dist/include/nspr,
-					../dist/include/string,
-					../dist/include/rdf,
-					../dist/include/necko,
-					../dist/include/find,
-					../dist/include/embed_base,
-					../dist/include/windowwatcher,
-					../dist/include/webshell,
-					../dist/include/widget,
-					../dist/include/uriloader,
-					../dist/include/docshell,
-					../dist/include/profile,
-					../dist/include/layout,
-					../dist/include/content,
-					../dist/include/webbrowserpersist,
-					../dist/include/pref,
-					../dist/include/mimetype,
-					../dist/include/shistory,
-					../dist/include/view,
-					../dist/include/gfx,
-					../dist/include/xultmpl,
-					../dist/include/xmlextras,
-					../dist/include/htmlparser,
-					../dist/include/locale,
-					../dist/include/unicharutil,
-					../dist/include/appcomps,
-					../dist/include/xpcom,
-					../dist/include/,
-				);
+				HEADER_SEARCH_PATHS = ../dist/include;
 				INFOPLIST_FILE = "Info-AppearancePrefPane.plist";
-				LIBRARY_SEARCH_PATHS = (
-					../dist/bin,
-					../dist/lib,
-					../intl/unicharutil/util,
-				);
 				PRODUCT_NAME = Appearance;
 			};
 			name = DeploymentSymbols;
@@ -6712,47 +6486,8 @@
 			baseConfigurationReference = 00F3BE2A0C4F280700E19B0C /* PrefPane.xcconfig */;
 			buildSettings = {
 				FRAMEWORK_SEARCH_PATHS = sparkle/build/Release;
-				HEADER_SEARCH_PATHS = (
-					../dist/include/nkcache,
-					../dist/include/webbrwsr,
-					../dist/include/dom,
-					../dist/include/nspr,
-					../dist/include/string,
-					../dist/include/rdf,
-					../dist/include/necko,
-					../dist/include/find,
-					../dist/include/embed_base,
-					../dist/include/windowwatcher,
-					../dist/include/webshell,
-					../dist/include/widget,
-					../dist/include/uriloader,
-					../dist/include/docshell,
-					../dist/include/profile,
-					../dist/include/layout,
-					../dist/include/content,
-					../dist/include/webbrowserpersist,
-					../dist/include/pref,
-					../dist/include/mimetype,
-					../dist/include/shistory,
-					../dist/include/history,
-					../dist/include/view,
-					../dist/include/gfx,
-					../dist/include/xultmpl,
-					../dist/include/xmlextras,
-					../dist/include/htmlparser,
-					../dist/include/locale,
-					../dist/include/unicharutil,
-					../dist/include/appcomps,
-					../dist/include/xpcom,
-					../dist/include/,
-					"$(SYSTEM_DEVELOPER_DIR)/Headers/FlatCarbon",
-				);
+				HEADER_SEARCH_PATHS = ../dist/include;
 				INFOPLIST_FILE = "Info-NavigationPrefPane.plist";
-				LIBRARY_SEARCH_PATHS = (
-					../dist/bin,
-					../dist/lib,
-					../intl/unicharutil/util,
-				);
 				OTHER_CFLAGS = (
 					"$(OTHER_CFLAGS)",
 					"-DDEBUG",
@@ -6768,47 +6503,8 @@
 			baseConfigurationReference = 00F3BE2A0C4F280700E19B0C /* PrefPane.xcconfig */;
 			buildSettings = {
 				FRAMEWORK_SEARCH_PATHS = sparkle/build/Release;
-				HEADER_SEARCH_PATHS = (
-					../dist/include/nkcache,
-					../dist/include/webbrwsr,
-					../dist/include/dom,
-					../dist/include/nspr,
-					../dist/include/string,
-					../dist/include/rdf,
-					../dist/include/necko,
-					../dist/include/find,
-					../dist/include/embed_base,
-					../dist/include/windowwatcher,
-					../dist/include/webshell,
-					../dist/include/widget,
-					../dist/include/uriloader,
-					../dist/include/docshell,
-					../dist/include/profile,
-					../dist/include/layout,
-					../dist/include/content,
-					../dist/include/webbrowserpersist,
-					../dist/include/pref,
-					../dist/include/mimetype,
-					../dist/include/shistory,
-					../dist/include/history,
-					../dist/include/view,
-					../dist/include/gfx,
-					../dist/include/xultmpl,
-					../dist/include/xmlextras,
-					../dist/include/htmlparser,
-					../dist/include/locale,
-					../dist/include/unicharutil,
-					../dist/include/appcomps,
-					../dist/include/xpcom,
-					../dist/include/,
-					"$(SYSTEM_DEVELOPER_DIR)/Headers/FlatCarbon",
-				);
+				HEADER_SEARCH_PATHS = ../dist/include;
 				INFOPLIST_FILE = "Info-NavigationPrefPane.plist";
-				LIBRARY_SEARCH_PATHS = (
-					../dist/bin,
-					../dist/lib,
-					../intl/unicharutil/util,
-				);
 				PRODUCT_NAME = Navigation;
 			};
 			name = Deployment;
@@ -6818,47 +6514,8 @@
 			baseConfigurationReference = 00F3BE2A0C4F280700E19B0C /* PrefPane.xcconfig */;
 			buildSettings = {
 				FRAMEWORK_SEARCH_PATHS = sparkle/build/Release;
-				HEADER_SEARCH_PATHS = (
-					../dist/include/nkcache,
-					../dist/include/webbrwsr,
-					../dist/include/dom,
-					../dist/include/nspr,
-					../dist/include/string,
-					../dist/include/rdf,
-					../dist/include/necko,
-					../dist/include/find,
-					../dist/include/embed_base,
-					../dist/include/windowwatcher,
-					../dist/include/webshell,
-					../dist/include/widget,
-					../dist/include/uriloader,
-					../dist/include/docshell,
-					../dist/include/profile,
-					../dist/include/layout,
-					../dist/include/content,
-					../dist/include/webbrowserpersist,
-					../dist/include/pref,
-					../dist/include/mimetype,
-					../dist/include/shistory,
-					../dist/include/history,
-					../dist/include/view,
-					../dist/include/gfx,
-					../dist/include/xultmpl,
-					../dist/include/xmlextras,
-					../dist/include/htmlparser,
-					../dist/include/locale,
-					../dist/include/unicharutil,
-					../dist/include/appcomps,
-					../dist/include/xpcom,
-					../dist/include/,
-					"$(SYSTEM_DEVELOPER_DIR)/Headers/FlatCarbon",
-				);
+				HEADER_SEARCH_PATHS = ../dist/include;
 				INFOPLIST_FILE = "Info-NavigationPrefPane.plist";
-				LIBRARY_SEARCH_PATHS = (
-					../dist/bin,
-					../dist/lib,
-					../intl/unicharutil/util,
-				);
 				PRODUCT_NAME = Navigation;
 			};
 			name = DeploymentSymbols;
@@ -6868,23 +6525,17 @@
 			baseConfigurationReference = 00F3BE2A0C4F280700E19B0C /* PrefPane.xcconfig */;
 			buildSettings = {
 				HEADER_SEARCH_PATHS = (
-					../dist/include/necko,
-					../dist/include/pref,
-					../dist/include/nspr,
+					../dist/include,
 					../dist/include/cookie,
-					../dist/include/nkcache,
+					../dist/include/necko,
+					../dist/include/nspr,
+					../dist/include/pref,
 					../dist/include/string,
 					../dist/include/xpcom,
-					../dist/include/,
 				);
 				INFOPLIST_FILE = "Info-PrivacyPrefPane.plist";
-				LIBRARY_SEARCH_PATHS = (
-					../dist/Embed,
-					../embedding/base,
-					../intl/unicharutil/util,
-					../js/src,
-					../dist/Embed/components,
-				);
+				LIBRARY_SEARCH_PATHS = ../dist/lib;
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/../dist/Embed\"";
 				OTHER_CFLAGS = (
 					"$(OTHER_CFLAGS)",
 					"-DDEBUG",
@@ -6900,23 +6551,17 @@
 			baseConfigurationReference = 00F3BE2A0C4F280700E19B0C /* PrefPane.xcconfig */;
 			buildSettings = {
 				HEADER_SEARCH_PATHS = (
-					../dist/include/necko,
-					../dist/include/pref,
-					../dist/include/nspr,
+					../dist/include,
 					../dist/include/cookie,
-					../dist/include/nkcache,
+					../dist/include/necko,
+					../dist/include/nspr,
+					../dist/include/pref,
 					../dist/include/string,
 					../dist/include/xpcom,
-					../dist/include/,
 				);
 				INFOPLIST_FILE = "Info-PrivacyPrefPane.plist";
-				LIBRARY_SEARCH_PATHS = (
-					../dist/Embed,
-					../embedding/base,
-					../intl/unicharutil/util,
-					../js/src,
-					../dist/Embed/components,
-				);
+				LIBRARY_SEARCH_PATHS = ../dist/lib;
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/../dist/Embed\"";
 				PRODUCT_NAME = Privacy;
 			};
 			name = Deployment;
@@ -6926,23 +6571,17 @@
 			baseConfigurationReference = 00F3BE2A0C4F280700E19B0C /* PrefPane.xcconfig */;
 			buildSettings = {
 				HEADER_SEARCH_PATHS = (
-					../dist/include/necko,
-					../dist/include/pref,
-					../dist/include/nspr,
+					../dist/include,
 					../dist/include/cookie,
-					../dist/include/nkcache,
+					../dist/include/necko,
+					../dist/include/nspr,
+					../dist/include/pref,
 					../dist/include/string,
 					../dist/include/xpcom,
-					../dist/include/,
 				);
 				INFOPLIST_FILE = "Info-PrivacyPrefPane.plist";
-				LIBRARY_SEARCH_PATHS = (
-					../dist/Embed,
-					../embedding/base,
-					../intl/unicharutil/util,
-					../js/src,
-					../dist/Embed/components,
-				);
+				LIBRARY_SEARCH_PATHS = ../dist/lib;
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/../dist/Embed\"";
 				PRODUCT_NAME = Privacy;
 			};
 			name = DeploymentSymbols;
@@ -6952,19 +6591,12 @@
 			baseConfigurationReference = 00F3BE2A0C4F280700E19B0C /* PrefPane.xcconfig */;
 			buildSettings = {
 				HEADER_SEARCH_PATHS = (
-					../dist/include/pref,
+					../dist/include,
 					../dist/include/nspr,
+					../dist/include/pref,
 					../dist/include/xpcom,
-					../dist/include/,
 				);
 				INFOPLIST_FILE = "Info-SecurityPrefPane.plist";
-				LIBRARY_SEARCH_PATHS = (
-					../dist/Embed,
-					../embedding/base,
-					../intl/unicharutil/util,
-					../js/src,
-					../dist/Embed/components,
-				);
 				OTHER_CFLAGS = (
 					"$(OTHER_CFLAGS)",
 					"-DDEBUG",
@@ -6980,19 +6612,12 @@
 			baseConfigurationReference = 00F3BE2A0C4F280700E19B0C /* PrefPane.xcconfig */;
 			buildSettings = {
 				HEADER_SEARCH_PATHS = (
-					../dist/include/pref,
+					../dist/include,
 					../dist/include/nspr,
+					../dist/include/pref,
 					../dist/include/xpcom,
-					../dist/include/,
 				);
 				INFOPLIST_FILE = "Info-SecurityPrefPane.plist";
-				LIBRARY_SEARCH_PATHS = (
-					../dist/Embed,
-					../embedding/base,
-					../intl/unicharutil/util,
-					../js/src,
-					../dist/Embed/components,
-				);
 				PRODUCT_NAME = Security;
 			};
 			name = Deployment;
@@ -7002,19 +6627,12 @@
 			baseConfigurationReference = 00F3BE2A0C4F280700E19B0C /* PrefPane.xcconfig */;
 			buildSettings = {
 				HEADER_SEARCH_PATHS = (
-					../dist/include/pref,
+					../dist/include,
 					../dist/include/nspr,
+					../dist/include/pref,
 					../dist/include/xpcom,
-					../dist/include/,
 				);
 				INFOPLIST_FILE = "Info-SecurityPrefPane.plist";
-				LIBRARY_SEARCH_PATHS = (
-					../dist/Embed,
-					../embedding/base,
-					../intl/unicharutil/util,
-					../js/src,
-					../dist/Embed/components,
-				);
 				PRODUCT_NAME = Security;
 			};
 			name = DeploymentSymbols;
@@ -7024,22 +6642,15 @@
 			baseConfigurationReference = 00F3BE2A0C4F280700E19B0C /* PrefPane.xcconfig */;
 			buildSettings = {
 				HEADER_SEARCH_PATHS = (
-					../dist/include/necko,
-					../dist/include/string,
+					../dist/include,
 					../dist/include/cookie,
-					../dist/include/pref,
+					../dist/include/necko,
 					../dist/include/nspr,
+					../dist/include/string,
 					../dist/include/xpcom,
-					../dist/include/,
 				);
 				INFOPLIST_FILE = "Info-WebFeaturesPrefPane.plist";
-				LIBRARY_SEARCH_PATHS = (
-					../dist/Embed,
-					../embedding/base,
-					../intl/unicharutil/util,
-					../js/src,
-					../dist/Embed/components,
-				);
+				LIBRARY_SEARCH_PATHS = ../dist/lib;
 				OTHER_CFLAGS = (
 					"$(OTHER_CFLAGS)",
 					"-DDEBUG",
@@ -7055,22 +6666,15 @@
 			baseConfigurationReference = 00F3BE2A0C4F280700E19B0C /* PrefPane.xcconfig */;
 			buildSettings = {
 				HEADER_SEARCH_PATHS = (
-					../dist/include/necko,
-					../dist/include/string,
+					../dist/include,
 					../dist/include/cookie,
-					../dist/include/pref,
+					../dist/include/necko,
 					../dist/include/nspr,
+					../dist/include/string,
 					../dist/include/xpcom,
-					../dist/include/,
 				);
 				INFOPLIST_FILE = "Info-WebFeaturesPrefPane.plist";
-				LIBRARY_SEARCH_PATHS = (
-					../dist/Embed,
-					../embedding/base,
-					../intl/unicharutil/util,
-					../js/src,
-					../dist/Embed/components,
-				);
+				LIBRARY_SEARCH_PATHS = ../dist/lib;
 				PRODUCT_NAME = WebFeatures;
 			};
 			name = Deployment;
@@ -7080,22 +6684,15 @@
 			baseConfigurationReference = 00F3BE2A0C4F280700E19B0C /* PrefPane.xcconfig */;
 			buildSettings = {
 				HEADER_SEARCH_PATHS = (
-					../dist/include/necko,
-					../dist/include/string,
+					../dist/include,
 					../dist/include/cookie,
-					../dist/include/pref,
+					../dist/include/necko,
 					../dist/include/nspr,
+					../dist/include/string,
 					../dist/include/xpcom,
-					../dist/include/,
 				);
 				INFOPLIST_FILE = "Info-WebFeaturesPrefPane.plist";
-				LIBRARY_SEARCH_PATHS = (
-					../dist/Embed,
-					../embedding/base,
-					../intl/unicharutil/util,
-					../js/src,
-					../dist/Embed/components,
-				);
+				LIBRARY_SEARCH_PATHS = ../dist/lib;
 				PRODUCT_NAME = WebFeatures;
 			};
 			name = DeploymentSymbols;
@@ -7106,46 +6703,12 @@
 			buildSettings = {
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				HEADER_SEARCH_PATHS = (
-					../dist/include/nkcache,
-					../dist/include/webbrwsr,
+					../dist/include,
 					../dist/include/dom,
 					../dist/include/nspr,
-					../dist/include/string,
-					../dist/include/rdf,
-					../dist/include/necko,
-					../dist/include/find,
-					../dist/include/embed_base,
-					../dist/include/windowwatcher,
-					../dist/include/webshell,
-					../dist/include/widget,
-					../dist/include/uriloader,
-					../dist/include/docshell,
-					../dist/include/profile,
-					../dist/include/layout,
-					../dist/include/content,
-					../dist/include/webbrowserpersist,
-					../dist/include/pref,
-					../dist/include/mimetype,
-					../dist/include/shistory,
-					../dist/include/history,
-					../dist/include/view,
-					../dist/include/gfx,
-					../dist/include/xultmpl,
-					../dist/include/xmlextras,
-					../dist/include/htmlparser,
-					../dist/include/locale,
-					../dist/include/unicharutil,
-					../dist/include/appcomps,
 					../dist/include/xpcom,
-					../dist/include/,
-					"$(SYSTEM_DEVELOPER_DIR)/Headers/FlatCarbon",
 				);
 				INFOPLIST_FILE = "Info-TabsPrefPane.plist";
-				LIBRARY_SEARCH_PATHS = (
-					../dist/bin,
-					../dist/lib,
-					../intl/unicharutil/util,
-				);
 				OTHER_CFLAGS = (
 					"$(OTHER_CFLAGS)",
 					"-DDEBUG",
@@ -7162,46 +6725,12 @@
 			buildSettings = {
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				HEADER_SEARCH_PATHS = (
-					../dist/include/nkcache,
-					../dist/include/webbrwsr,
+					../dist/include,
 					../dist/include/dom,
 					../dist/include/nspr,
-					../dist/include/string,
-					../dist/include/rdf,
-					../dist/include/necko,
-					../dist/include/find,
-					../dist/include/embed_base,
-					../dist/include/windowwatcher,
-					../dist/include/webshell,
-					../dist/include/widget,
-					../dist/include/uriloader,
-					../dist/include/docshell,
-					../dist/include/profile,
-					../dist/include/layout,
-					../dist/include/content,
-					../dist/include/webbrowserpersist,
-					../dist/include/pref,
-					../dist/include/mimetype,
-					../dist/include/shistory,
-					../dist/include/history,
-					../dist/include/view,
-					../dist/include/gfx,
-					../dist/include/xultmpl,
-					../dist/include/xmlextras,
-					../dist/include/htmlparser,
-					../dist/include/locale,
-					../dist/include/unicharutil,
-					../dist/include/appcomps,
 					../dist/include/xpcom,
-					../dist/include/,
-					"$(SYSTEM_DEVELOPER_DIR)/Headers/FlatCarbon",
 				);
 				INFOPLIST_FILE = "Info-TabsPrefPane.plist";
-				LIBRARY_SEARCH_PATHS = (
-					../dist/bin,
-					../dist/lib,
-					../intl/unicharutil/util,
-				);
 				PRODUCT_NAME = Tabs;
 			};
 			name = Deployment;
@@ -7212,46 +6741,12 @@
 			buildSettings = {
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				HEADER_SEARCH_PATHS = (
-					../dist/include/nkcache,
-					../dist/include/webbrwsr,
+					../dist/include,
 					../dist/include/dom,
 					../dist/include/nspr,
-					../dist/include/string,
-					../dist/include/rdf,
-					../dist/include/necko,
-					../dist/include/find,
-					../dist/include/embed_base,
-					../dist/include/windowwatcher,
-					../dist/include/webshell,
-					../dist/include/widget,
-					../dist/include/uriloader,
-					../dist/include/docshell,
-					../dist/include/profile,
-					../dist/include/layout,
-					../dist/include/content,
-					../dist/include/webbrowserpersist,
-					../dist/include/pref,
-					../dist/include/mimetype,
-					../dist/include/shistory,
-					../dist/include/history,
-					../dist/include/view,
-					../dist/include/gfx,
-					../dist/include/xultmpl,
-					../dist/include/xmlextras,
-					../dist/include/htmlparser,
-					../dist/include/locale,
-					../dist/include/unicharutil,
-					../dist/include/appcomps,
 					../dist/include/xpcom,
-					../dist/include/,
-					"$(SYSTEM_DEVELOPER_DIR)/Headers/FlatCarbon",
 				);
 				INFOPLIST_FILE = "Info-TabsPrefPane.plist";
-				LIBRARY_SEARCH_PATHS = (
-					../dist/bin,
-					../dist/lib,
-					../intl/unicharutil/util,
-				);
 				PRODUCT_NAME = Tabs;
 			};
 			name = DeploymentSymbols;
@@ -7262,46 +6757,15 @@
 			buildSettings = {
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				HEADER_SEARCH_PATHS = (
-					../dist/include/nkcache,
-					../dist/include/webbrwsr,
+					../dist/include,
 					../dist/include/dom,
 					../dist/include/nspr,
-					../dist/include/string,
-					../dist/include/rdf,
-					../dist/include/necko,
-					../dist/include/find,
-					../dist/include/embed_base,
-					../dist/include/windowwatcher,
-					../dist/include/webshell,
-					../dist/include/widget,
-					../dist/include/uriloader,
-					../dist/include/docshell,
-					../dist/include/profile,
-					../dist/include/layout,
-					../dist/include/content,
-					../dist/include/webbrowserpersist,
-					../dist/include/pref,
-					../dist/include/mimetype,
-					../dist/include/shistory,
-					../dist/include/history,
-					../dist/include/view,
-					../dist/include/gfx,
-					../dist/include/xultmpl,
-					../dist/include/xmlextras,
-					../dist/include/htmlparser,
-					../dist/include/locale,
-					../dist/include/unicharutil,
-					../dist/include/appcomps,
 					../dist/include/xpcom,
-					../dist/include/,
 					"$(SYSTEM_DEVELOPER_DIR)/Headers/FlatCarbon",
 				);
 				INFOPLIST_FILE = "Info-DownloadsPrefPane.plist";
-				LIBRARY_SEARCH_PATHS = (
-					../dist/bin,
-					../dist/lib,
-					../intl/unicharutil/util,
-				);
+				LIBRARY_SEARCH_PATHS = ../dist/lib;
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/../dist/Embed\"";
 				OTHER_CFLAGS = (
 					"$(OTHER_CFLAGS)",
 					"-DDEBUG",
@@ -7318,46 +6782,15 @@
 			buildSettings = {
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				HEADER_SEARCH_PATHS = (
-					../dist/include/nkcache,
-					../dist/include/webbrwsr,
+					../dist/include,
 					../dist/include/dom,
 					../dist/include/nspr,
-					../dist/include/string,
-					../dist/include/rdf,
-					../dist/include/necko,
-					../dist/include/find,
-					../dist/include/embed_base,
-					../dist/include/windowwatcher,
-					../dist/include/webshell,
-					../dist/include/widget,
-					../dist/include/uriloader,
-					../dist/include/docshell,
-					../dist/include/profile,
-					../dist/include/layout,
-					../dist/include/content,
-					../dist/include/webbrowserpersist,
-					../dist/include/pref,
-					../dist/include/mimetype,
-					../dist/include/shistory,
-					../dist/include/history,
-					../dist/include/view,
-					../dist/include/gfx,
-					../dist/include/xultmpl,
-					../dist/include/xmlextras,
-					../dist/include/htmlparser,
-					../dist/include/locale,
-					../dist/include/unicharutil,
-					../dist/include/appcomps,
 					../dist/include/xpcom,
-					../dist/include/,
 					"$(SYSTEM_DEVELOPER_DIR)/Headers/FlatCarbon",
 				);
 				INFOPLIST_FILE = "Info-DownloadsPrefPane.plist";
-				LIBRARY_SEARCH_PATHS = (
-					../dist/bin,
-					../dist/lib,
-					../intl/unicharutil/util,
-				);
+				LIBRARY_SEARCH_PATHS = ../dist/lib;
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/../dist/Embed\"";
 				PRODUCT_NAME = Downloads;
 			};
 			name = Deployment;
@@ -7368,46 +6801,15 @@
 			buildSettings = {
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				HEADER_SEARCH_PATHS = (
-					../dist/include/nkcache,
-					../dist/include/webbrwsr,
+					../dist/include,
 					../dist/include/dom,
 					../dist/include/nspr,
-					../dist/include/string,
-					../dist/include/rdf,
-					../dist/include/necko,
-					../dist/include/find,
-					../dist/include/embed_base,
-					../dist/include/windowwatcher,
-					../dist/include/webshell,
-					../dist/include/widget,
-					../dist/include/uriloader,
-					../dist/include/docshell,
-					../dist/include/profile,
-					../dist/include/layout,
-					../dist/include/content,
-					../dist/include/webbrowserpersist,
-					../dist/include/pref,
-					../dist/include/mimetype,
-					../dist/include/shistory,
-					../dist/include/history,
-					../dist/include/view,
-					../dist/include/gfx,
-					../dist/include/xultmpl,
-					../dist/include/xmlextras,
-					../dist/include/htmlparser,
-					../dist/include/locale,
-					../dist/include/unicharutil,
-					../dist/include/appcomps,
 					../dist/include/xpcom,
-					../dist/include/,
 					"$(SYSTEM_DEVELOPER_DIR)/Headers/FlatCarbon",
 				);
 				INFOPLIST_FILE = "Info-DownloadsPrefPane.plist";
-				LIBRARY_SEARCH_PATHS = (
-					../dist/bin,
-					../dist/lib,
-					../intl/unicharutil/util,
-				);
+				LIBRARY_SEARCH_PATHS = ../dist/lib;
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/../dist/Embed\"";
 				PRODUCT_NAME = Downloads;
 			};
 			name = DeploymentSymbols;
@@ -7418,46 +6820,17 @@
 			buildSettings = {
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				HEADER_SEARCH_PATHS = (
-					../dist/include/nkcache,
-					../dist/include/webbrwsr,
-					../dist/include/dom,
-					../dist/include/nspr,
-					../dist/include/string,
-					../dist/include/rdf,
-					../dist/include/necko,
-					../dist/include/find,
-					../dist/include/embed_base,
-					../dist/include/windowwatcher,
-					../dist/include/webshell,
-					../dist/include/widget,
-					../dist/include/uriloader,
+					../dist/include,
 					../dist/include/docshell,
-					../dist/include/profile,
-					../dist/include/layout,
-					../dist/include/content,
-					../dist/include/webbrowserpersist,
-					../dist/include/pref,
-					../dist/include/mimetype,
-					../dist/include/shistory,
 					../dist/include/history,
-					../dist/include/view,
-					../dist/include/gfx,
-					../dist/include/xultmpl,
-					../dist/include/xmlextras,
-					../dist/include/htmlparser,
-					../dist/include/locale,
-					../dist/include/unicharutil,
-					../dist/include/appcomps,
+					../dist/include/necko,
+					../dist/include/nkcache,
+					../dist/include/nspr,
 					../dist/include/xpcom,
-					../dist/include/,
-					"$(SYSTEM_DEVELOPER_DIR)/Headers/FlatCarbon",
 				);
 				INFOPLIST_FILE = "Info-HistoryPrefPane.plist";
-				LIBRARY_SEARCH_PATHS = (
-					../dist/bin,
-					../dist/lib,
-					../intl/unicharutil/util,
-				);
+				LIBRARY_SEARCH_PATHS = ../dist/lib;
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/../dist/Embed\"";
 				OTHER_CFLAGS = (
 					"$(OTHER_CFLAGS)",
 					"-DDEBUG",
@@ -7474,46 +6847,17 @@
 			buildSettings = {
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				HEADER_SEARCH_PATHS = (
-					../dist/include/nkcache,
-					../dist/include/webbrwsr,
-					../dist/include/dom,
-					../dist/include/nspr,
-					../dist/include/string,
-					../dist/include/rdf,
-					../dist/include/necko,
-					../dist/include/find,
-					../dist/include/embed_base,
-					../dist/include/windowwatcher,
-					../dist/include/webshell,
-					../dist/include/widget,
-					../dist/include/uriloader,
+					../dist/include,
 					../dist/include/docshell,
-					../dist/include/profile,
-					../dist/include/layout,
-					../dist/include/content,
-					../dist/include/webbrowserpersist,
-					../dist/include/pref,
-					../dist/include/mimetype,
-					../dist/include/shistory,
 					../dist/include/history,
-					../dist/include/view,
-					../dist/include/gfx,
-					../dist/include/xultmpl,
-					../dist/include/xmlextras,
-					../dist/include/htmlparser,
-					../dist/include/locale,
-					../dist/include/unicharutil,
-					../dist/include/appcomps,
+					../dist/include/necko,
+					../dist/include/nkcache,
+					../dist/include/nspr,
 					../dist/include/xpcom,
-					../dist/include/,
-					"$(SYSTEM_DEVELOPER_DIR)/Headers/FlatCarbon",
 				);
 				INFOPLIST_FILE = "Info-HistoryPrefPane.plist";
-				LIBRARY_SEARCH_PATHS = (
-					../dist/bin,
-					../dist/lib,
-					../intl/unicharutil/util,
-				);
+				LIBRARY_SEARCH_PATHS = ../dist/lib;
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/../dist/Embed\"";
 				PRODUCT_NAME = History;
 			};
 			name = Deployment;
@@ -7524,46 +6868,17 @@
 			buildSettings = {
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				HEADER_SEARCH_PATHS = (
-					../dist/include/nkcache,
-					../dist/include/webbrwsr,
-					../dist/include/dom,
-					../dist/include/nspr,
-					../dist/include/string,
-					../dist/include/rdf,
-					../dist/include/necko,
-					../dist/include/find,
-					../dist/include/embed_base,
-					../dist/include/windowwatcher,
-					../dist/include/webshell,
-					../dist/include/widget,
-					../dist/include/uriloader,
+					../dist/include,
 					../dist/include/docshell,
-					../dist/include/profile,
-					../dist/include/layout,
-					../dist/include/content,
-					../dist/include/webbrowserpersist,
-					../dist/include/pref,
-					../dist/include/mimetype,
-					../dist/include/shistory,
 					../dist/include/history,
-					../dist/include/view,
-					../dist/include/gfx,
-					../dist/include/xultmpl,
-					../dist/include/xmlextras,
-					../dist/include/htmlparser,
-					../dist/include/locale,
-					../dist/include/unicharutil,
-					../dist/include/appcomps,
+					../dist/include/necko,
+					../dist/include/nkcache,
+					../dist/include/nspr,
 					../dist/include/xpcom,
-					../dist/include/,
-					"$(SYSTEM_DEVELOPER_DIR)/Headers/FlatCarbon",
 				);
 				INFOPLIST_FILE = "Info-HistoryPrefPane.plist";
-				LIBRARY_SEARCH_PATHS = (
-					../dist/bin,
-					../dist/lib,
-					../intl/unicharutil/util,
-				);
+				LIBRARY_SEARCH_PATHS = ../dist/lib;
+				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/../dist/Embed\"";
 				PRODUCT_NAME = History;
 			};
 			name = DeploymentSymbols;
@@ -7703,6 +7018,62 @@
 			};
 			name = DeploymentSymbols;
 		};
+		7B436D0C0D11C22500377744 /* Development */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				PRODUCT_NAME = Camino;
+			};
+			name = Development;
+		};
+		7B436D0D0D11C22500377744 /* Deployment */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				PRODUCT_NAME = Camino;
+				ZERO_LINK = NO;
+			};
+			name = Deployment;
+		};
+		7B436D0E0D11C22500377744 /* DeploymentSymbols */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = Camino;
+			};
+			name = DeploymentSymbols;
+		};
+		7B436D100D11C23200377744 /* Development */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				PRODUCT_NAME = CaminoStatic;
+			};
+			name = Development;
+		};
+		7B436D110D11C23200377744 /* Deployment */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				PRODUCT_NAME = CaminoStatic;
+				ZERO_LINK = NO;
+			};
+			name = Deployment;
+		};
+		7B436D120D11C23200377744 /* DeploymentSymbols */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = CaminoStatic;
+			};
+			name = DeploymentSymbols;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -7786,7 +7157,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Development;
 		};
-		00F3BE170C4F27DE00E19B0C /* Build configuration list for PBXNativeTarget "Camino" */ = {
+		00F3BE170C4F27DE00E19B0C /* Build configuration list for PBXNativeTarget "CaminoApp" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				00F3BE180C4F27DE00E19B0C /* Development */,
@@ -7796,7 +7167,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Development;
 		};
-		00F3BE1C0C4F27DE00E19B0C /* Build configuration list for PBXNativeTarget "CaminoStatic" */ = {
+		00F3BE1C0C4F27DE00E19B0C /* Build configuration list for PBXNativeTarget "CaminoStaticApp" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				00F3BE1D0C4F27DE00E19B0C /* Development */,
@@ -7812,6 +7183,26 @@
 				00F3BE220C4F27DE00E19B0C /* Development */,
 				00F3BE230C4F27DE00E19B0C /* Deployment */,
 				00F3BE240C4F27DE00E19B0C /* DeploymentSymbols */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Development;
+		};
+		7B436D390D11C2A200377744 /* Build configuration list for PBXAggregateTarget "Camino" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7B436D0C0D11C22500377744 /* Development */,
+				7B436D0D0D11C22500377744 /* Deployment */,
+				7B436D0E0D11C22500377744 /* DeploymentSymbols */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Development;
+		};
+		7B436D3A0D11C2A200377744 /* Build configuration list for PBXAggregateTarget "CaminoStatic" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7B436D100D11C23200377744 /* Development */,
+				7B436D110D11C23200377744 /* Deployment */,
+				7B436D120D11C23200377744 /* DeploymentSymbols */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Development;
