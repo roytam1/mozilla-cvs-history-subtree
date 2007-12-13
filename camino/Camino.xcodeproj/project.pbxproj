@@ -6471,16 +6471,6 @@
 			};
 			name = Deployment;
 		};
-		00F3BDF20C4F27DE00E19B0C /* DeploymentSymbols */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = 00F3BE2A0C4F280700E19B0C /* PrefPane.xcconfig */;
-			buildSettings = {
-				HEADER_SEARCH_PATHS = ../dist/include;
-				INFOPLIST_FILE = "Info-AppearancePrefPane.plist";
-				PRODUCT_NAME = Appearance;
-			};
-			name = DeploymentSymbols;
-		};
 		00F3BDF50C4F27DE00E19B0C /* Development */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 00F3BE2A0C4F280700E19B0C /* PrefPane.xcconfig */;
@@ -6509,17 +6499,6 @@
 			};
 			name = Deployment;
 		};
-		00F3BDF70C4F27DE00E19B0C /* DeploymentSymbols */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = 00F3BE2A0C4F280700E19B0C /* PrefPane.xcconfig */;
-			buildSettings = {
-				FRAMEWORK_SEARCH_PATHS = sparkle/build/Release;
-				HEADER_SEARCH_PATHS = ../dist/include;
-				INFOPLIST_FILE = "Info-NavigationPrefPane.plist";
-				PRODUCT_NAME = Navigation;
-			};
-			name = DeploymentSymbols;
-		};
 		00F3BDFA0C4F27DE00E19B0C /* Development */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 00F3BE2A0C4F280700E19B0C /* PrefPane.xcconfig */;
@@ -6535,7 +6514,6 @@
 				);
 				INFOPLIST_FILE = "Info-PrivacyPrefPane.plist";
 				LIBRARY_SEARCH_PATHS = ../dist/lib;
-				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/../dist/Embed\"";
 				OTHER_CFLAGS = (
 					"$(OTHER_CFLAGS)",
 					"-DDEBUG",
@@ -6561,30 +6539,9 @@
 				);
 				INFOPLIST_FILE = "Info-PrivacyPrefPane.plist";
 				LIBRARY_SEARCH_PATHS = ../dist/lib;
-				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/../dist/Embed\"";
 				PRODUCT_NAME = Privacy;
 			};
 			name = Deployment;
-		};
-		00F3BDFC0C4F27DE00E19B0C /* DeploymentSymbols */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = 00F3BE2A0C4F280700E19B0C /* PrefPane.xcconfig */;
-			buildSettings = {
-				HEADER_SEARCH_PATHS = (
-					../dist/include,
-					../dist/include/cookie,
-					../dist/include/necko,
-					../dist/include/nspr,
-					../dist/include/pref,
-					../dist/include/string,
-					../dist/include/xpcom,
-				);
-				INFOPLIST_FILE = "Info-PrivacyPrefPane.plist";
-				LIBRARY_SEARCH_PATHS = ../dist/lib;
-				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/../dist/Embed\"";
-				PRODUCT_NAME = Privacy;
-			};
-			name = DeploymentSymbols;
 		};
 		00F3BDFF0C4F27DE00E19B0C /* Development */ = {
 			isa = XCBuildConfiguration;
@@ -6621,21 +6578,6 @@
 				PRODUCT_NAME = Security;
 			};
 			name = Deployment;
-		};
-		00F3BE010C4F27DE00E19B0C /* DeploymentSymbols */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = 00F3BE2A0C4F280700E19B0C /* PrefPane.xcconfig */;
-			buildSettings = {
-				HEADER_SEARCH_PATHS = (
-					../dist/include,
-					../dist/include/nspr,
-					../dist/include/pref,
-					../dist/include/xpcom,
-				);
-				INFOPLIST_FILE = "Info-SecurityPrefPane.plist";
-				PRODUCT_NAME = Security;
-			};
-			name = DeploymentSymbols;
 		};
 		00F3BE040C4F27DE00E19B0C /* Development */ = {
 			isa = XCBuildConfiguration;
@@ -6679,24 +6621,6 @@
 			};
 			name = Deployment;
 		};
-		00F3BE060C4F27DE00E19B0C /* DeploymentSymbols */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = 00F3BE2A0C4F280700E19B0C /* PrefPane.xcconfig */;
-			buildSettings = {
-				HEADER_SEARCH_PATHS = (
-					../dist/include,
-					../dist/include/cookie,
-					../dist/include/necko,
-					../dist/include/nspr,
-					../dist/include/string,
-					../dist/include/xpcom,
-				);
-				INFOPLIST_FILE = "Info-WebFeaturesPrefPane.plist";
-				LIBRARY_SEARCH_PATHS = ../dist/lib;
-				PRODUCT_NAME = WebFeatures;
-			};
-			name = DeploymentSymbols;
-		};
 		00F3BE090C4F27DE00E19B0C /* Development */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 00F3BE2A0C4F280700E19B0C /* PrefPane.xcconfig */;
@@ -6735,22 +6659,6 @@
 			};
 			name = Deployment;
 		};
-		00F3BE0B0C4F27DE00E19B0C /* DeploymentSymbols */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = 00F3BE2A0C4F280700E19B0C /* PrefPane.xcconfig */;
-			buildSettings = {
-				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				HEADER_SEARCH_PATHS = (
-					../dist/include,
-					../dist/include/dom,
-					../dist/include/nspr,
-					../dist/include/xpcom,
-				);
-				INFOPLIST_FILE = "Info-TabsPrefPane.plist";
-				PRODUCT_NAME = Tabs;
-			};
-			name = DeploymentSymbols;
-		};
 		00F3BE0E0C4F27DE00E19B0C /* Development */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 00F3BE2A0C4F280700E19B0C /* PrefPane.xcconfig */;
@@ -6765,7 +6673,6 @@
 				);
 				INFOPLIST_FILE = "Info-DownloadsPrefPane.plist";
 				LIBRARY_SEARCH_PATHS = ../dist/lib;
-				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/../dist/Embed\"";
 				OTHER_CFLAGS = (
 					"$(OTHER_CFLAGS)",
 					"-DDEBUG",
@@ -6790,29 +6697,9 @@
 				);
 				INFOPLIST_FILE = "Info-DownloadsPrefPane.plist";
 				LIBRARY_SEARCH_PATHS = ../dist/lib;
-				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/../dist/Embed\"";
 				PRODUCT_NAME = Downloads;
 			};
 			name = Deployment;
-		};
-		00F3BE100C4F27DE00E19B0C /* DeploymentSymbols */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = 00F3BE2A0C4F280700E19B0C /* PrefPane.xcconfig */;
-			buildSettings = {
-				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				HEADER_SEARCH_PATHS = (
-					../dist/include,
-					../dist/include/dom,
-					../dist/include/nspr,
-					../dist/include/xpcom,
-					"$(SYSTEM_DEVELOPER_DIR)/Headers/FlatCarbon",
-				);
-				INFOPLIST_FILE = "Info-DownloadsPrefPane.plist";
-				LIBRARY_SEARCH_PATHS = ../dist/lib;
-				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/../dist/Embed\"";
-				PRODUCT_NAME = Downloads;
-			};
-			name = DeploymentSymbols;
 		};
 		00F3BE130C4F27DE00E19B0C /* Development */ = {
 			isa = XCBuildConfiguration;
@@ -6830,7 +6717,6 @@
 				);
 				INFOPLIST_FILE = "Info-HistoryPrefPane.plist";
 				LIBRARY_SEARCH_PATHS = ../dist/lib;
-				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/../dist/Embed\"";
 				OTHER_CFLAGS = (
 					"$(OTHER_CFLAGS)",
 					"-DDEBUG",
@@ -6857,31 +6743,9 @@
 				);
 				INFOPLIST_FILE = "Info-HistoryPrefPane.plist";
 				LIBRARY_SEARCH_PATHS = ../dist/lib;
-				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/../dist/Embed\"";
 				PRODUCT_NAME = History;
 			};
 			name = Deployment;
-		};
-		00F3BE150C4F27DE00E19B0C /* DeploymentSymbols */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = 00F3BE2A0C4F280700E19B0C /* PrefPane.xcconfig */;
-			buildSettings = {
-				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				HEADER_SEARCH_PATHS = (
-					../dist/include,
-					../dist/include/docshell,
-					../dist/include/history,
-					../dist/include/necko,
-					../dist/include/nkcache,
-					../dist/include/nspr,
-					../dist/include/xpcom,
-				);
-				INFOPLIST_FILE = "Info-HistoryPrefPane.plist";
-				LIBRARY_SEARCH_PATHS = ../dist/lib;
-				LIBRARY_SEARCH_PATHS_QUOTED_FOR_TARGET_1 = "\"$(SRCROOT)/../dist/Embed\"";
-				PRODUCT_NAME = History;
-			};
-			name = DeploymentSymbols;
 		};
 		00F3BE180C4F27DE00E19B0C /* Development */ = {
 			isa = XCBuildConfiguration;
@@ -6914,19 +6778,6 @@
 				PREBINDING = NO;
 			};
 			name = Deployment;
-		};
-		00F3BE1A0C4F27DE00E19B0C /* DeploymentSymbols */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = 00F3BE280C4F280700E19B0C /* Camino.xcconfig */;
-			buildSettings = {
-				LIBRARY_SEARCH_PATHS = (
-					"$(LIBRARY_SEARCH_PATHS)",
-					../dist/Embed/components,
-					../intl/unicharutil/util,
-				);
-				PREBINDING = NO;
-			};
-			name = DeploymentSymbols;
 		};
 		00F3BE1D0C4F27DE00E19B0C /* Development */ = {
 			isa = XCBuildConfiguration;
@@ -6968,23 +6819,6 @@
 			};
 			name = Deployment;
 		};
-		00F3BE1F0C4F27DE00E19B0C /* DeploymentSymbols */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = 00F3BE280C4F280700E19B0C /* Camino.xcconfig */;
-			buildSettings = {
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"$(GCC_PREPROCESSOR_DEFINITIONS)",
-					_BUILD_STATIC_BIN,
-				);
-				LIBRARY_SEARCH_PATHS = (
-					"$(LIBRARY_SEARCH_PATHS)",
-					../dist/lib/components,
-					../js/src/liveconnect,
-					../js/src/xpconnect/loader,
-				);
-			};
-			name = DeploymentSymbols;
-		};
 		00F3BE220C4F27DE00E19B0C /* Development */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 00F3BE290C4F280700E19B0C /* Debug.xcconfig */;
@@ -7007,17 +6841,6 @@
 			};
 			name = Deployment;
 		};
-		00F3BE240C4F27DE00E19B0C /* DeploymentSymbols */ = {
-			isa = XCBuildConfiguration;
-			baseConfigurationReference = 00F3BE2C0C4F280700E19B0C /* ReleaseSymbols.xcconfig */;
-			buildSettings = {
-				GCC_C_LANGUAGE_STANDARD = c99;
-				MACOSX_DEPLOYMENT_TARGET = 10.4;
-				SDKROOT = /Developer/SDKs/MacOSX10.4u.sdk;
-				ZERO_LINK = NO;
-			};
-			name = DeploymentSymbols;
-		};
 		7B436D0C0D11C22500377744 /* Development */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -7038,13 +6861,6 @@
 				ZERO_LINK = NO;
 			};
 			name = Deployment;
-		};
-		7B436D0E0D11C22500377744 /* DeploymentSymbols */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				PRODUCT_NAME = Camino;
-			};
-			name = DeploymentSymbols;
 		};
 		7B436D100D11C23200377744 /* Development */ = {
 			isa = XCBuildConfiguration;
@@ -7067,13 +6883,6 @@
 			};
 			name = Deployment;
 		};
-		7B436D120D11C23200377744 /* DeploymentSymbols */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				PRODUCT_NAME = CaminoStatic;
-			};
-			name = DeploymentSymbols;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -7082,7 +6891,6 @@
 			buildConfigurations = (
 				00F3BDF00C4F27DE00E19B0C /* Development */,
 				00F3BDF10C4F27DE00E19B0C /* Deployment */,
-				00F3BDF20C4F27DE00E19B0C /* DeploymentSymbols */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Development;
@@ -7092,7 +6900,6 @@
 			buildConfigurations = (
 				00F3BDF50C4F27DE00E19B0C /* Development */,
 				00F3BDF60C4F27DE00E19B0C /* Deployment */,
-				00F3BDF70C4F27DE00E19B0C /* DeploymentSymbols */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Development;
@@ -7102,7 +6909,6 @@
 			buildConfigurations = (
 				00F3BDFA0C4F27DE00E19B0C /* Development */,
 				00F3BDFB0C4F27DE00E19B0C /* Deployment */,
-				00F3BDFC0C4F27DE00E19B0C /* DeploymentSymbols */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Development;
@@ -7112,7 +6918,6 @@
 			buildConfigurations = (
 				00F3BDFF0C4F27DE00E19B0C /* Development */,
 				00F3BE000C4F27DE00E19B0C /* Deployment */,
-				00F3BE010C4F27DE00E19B0C /* DeploymentSymbols */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Development;
@@ -7122,7 +6927,6 @@
 			buildConfigurations = (
 				00F3BE040C4F27DE00E19B0C /* Development */,
 				00F3BE050C4F27DE00E19B0C /* Deployment */,
-				00F3BE060C4F27DE00E19B0C /* DeploymentSymbols */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Development;
@@ -7132,7 +6936,6 @@
 			buildConfigurations = (
 				00F3BE090C4F27DE00E19B0C /* Development */,
 				00F3BE0A0C4F27DE00E19B0C /* Deployment */,
-				00F3BE0B0C4F27DE00E19B0C /* DeploymentSymbols */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Development;
@@ -7142,7 +6945,6 @@
 			buildConfigurations = (
 				00F3BE0E0C4F27DE00E19B0C /* Development */,
 				00F3BE0F0C4F27DE00E19B0C /* Deployment */,
-				00F3BE100C4F27DE00E19B0C /* DeploymentSymbols */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Development;
@@ -7152,7 +6954,6 @@
 			buildConfigurations = (
 				00F3BE130C4F27DE00E19B0C /* Development */,
 				00F3BE140C4F27DE00E19B0C /* Deployment */,
-				00F3BE150C4F27DE00E19B0C /* DeploymentSymbols */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Development;
@@ -7162,7 +6963,6 @@
 			buildConfigurations = (
 				00F3BE180C4F27DE00E19B0C /* Development */,
 				00F3BE190C4F27DE00E19B0C /* Deployment */,
-				00F3BE1A0C4F27DE00E19B0C /* DeploymentSymbols */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Development;
@@ -7172,7 +6972,6 @@
 			buildConfigurations = (
 				00F3BE1D0C4F27DE00E19B0C /* Development */,
 				00F3BE1E0C4F27DE00E19B0C /* Deployment */,
-				00F3BE1F0C4F27DE00E19B0C /* DeploymentSymbols */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Development;
@@ -7182,7 +6981,6 @@
 			buildConfigurations = (
 				00F3BE220C4F27DE00E19B0C /* Development */,
 				00F3BE230C4F27DE00E19B0C /* Deployment */,
-				00F3BE240C4F27DE00E19B0C /* DeploymentSymbols */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Development;
@@ -7192,7 +6990,6 @@
 			buildConfigurations = (
 				7B436D0C0D11C22500377744 /* Development */,
 				7B436D0D0D11C22500377744 /* Deployment */,
-				7B436D0E0D11C22500377744 /* DeploymentSymbols */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Development;
@@ -7202,7 +6999,6 @@
 			buildConfigurations = (
 				7B436D100D11C23200377744 /* Development */,
 				7B436D110D11C23200377744 /* Deployment */,
-				7B436D120D11C23200377744 /* DeploymentSymbols */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Development;
