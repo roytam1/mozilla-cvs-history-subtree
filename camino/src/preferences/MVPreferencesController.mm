@@ -45,6 +45,12 @@
 #include "nsIPref.h"
 #include "CHBrowserService.h"
 
+#if MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_4
+@interface NSWindow(TigerToolbarSDKDeclaration)
+- (void)setShowsToolbarButton:(BOOL)shown;
+@end
+#endif
+
 
 static MVPreferencesController *gSharedInstance = nil;
 
@@ -162,6 +168,13 @@ static NSString* const CacheInfoPaneSeenKey   = @"MVPreferencePaneSeen";    // N
   [toolbar setAlwaysCustomizableByDrag:NO];
   [toolbar setShowsContextMenu:NO];
   [mWindow setToolbar:toolbar];
+  [toolbar setVisible:YES];
+
+  // Prevent hiding the toolbar.
+  if ([mWindow respondsToSelector:@selector(setShowsToolbarButton:)])
+    [mWindow setShowsToolbarButton:NO];
+  else
+    [[mWindow standardWindowButton:NSWindowToolbarButton] setHidden:YES];
 
   // save/restore the top-left window frame (because our size changes confuse the standard frame saving)
   // (Cocoa will ensure that the window isn't placed totally offscreen)

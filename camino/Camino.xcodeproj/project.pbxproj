@@ -258,6 +258,10 @@
 		33563BBA0C85260200DC4D06 /* CertificatesWindowController.h in Headers */ = {isa = PBXBuildFile; fileRef = 33563BB00C85260200DC4D06 /* CertificatesWindowController.h */; };
 		33563BBB0C85260200DC4D06 /* CertificateView.h in Headers */ = {isa = PBXBuildFile; fileRef = 33563BB10C85260200DC4D06 /* CertificateView.h */; };
 		33563BBC0C85260200DC4D06 /* ViewCertificateDialogController.h in Headers */ = {isa = PBXBuildFile; fileRef = 33563BB20C85260200DC4D06 /* ViewCertificateDialogController.h */; };
+		33EB4D670D11E23D00027E31 /* PreferencesWindow.h in Headers */ = {isa = PBXBuildFile; fileRef = 33EB4D650D11E23D00027E31 /* PreferencesWindow.h */; };
+		33EB4D680D11E23D00027E31 /* PreferencesWindow.m in Sources */ = {isa = PBXBuildFile; fileRef = 33EB4D660D11E23D00027E31 /* PreferencesWindow.m */; };
+		33EB4D690D11E23D00027E31 /* PreferencesWindow.h in Headers */ = {isa = PBXBuildFile; fileRef = 33EB4D650D11E23D00027E31 /* PreferencesWindow.h */; };
+		33EB4D6A0D11E23D00027E31 /* PreferencesWindow.m in Sources */ = {isa = PBXBuildFile; fileRef = 33EB4D660D11E23D00027E31 /* PreferencesWindow.m */; };
 		33F3B7260C63FC25007DFBD0 /* ScriptingSupport.mm in Sources */ = {isa = PBXBuildFile; fileRef = 33F3B7250C63FC25007DFBD0 /* ScriptingSupport.mm */; };
 		33F3B7270C63FC25007DFBD0 /* ScriptingSupport.mm in Sources */ = {isa = PBXBuildFile; fileRef = 33F3B7250C63FC25007DFBD0 /* ScriptingSupport.mm */; };
 		33FBAB360C84D25C00DD459E /* NSString+Gecko.h in Headers */ = {isa = PBXBuildFile; fileRef = 33FBAB350C84D25C00DD459E /* NSString+Gecko.h */; };
@@ -2373,6 +2377,8 @@
 		33563BB00C85260200DC4D06 /* CertificatesWindowController.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = CertificatesWindowController.h; path = src/security/CertificatesWindowController.h; sourceTree = "<group>"; };
 		33563BB10C85260200DC4D06 /* CertificateView.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = CertificateView.h; path = src/security/CertificateView.h; sourceTree = "<group>"; };
 		33563BB20C85260200DC4D06 /* ViewCertificateDialogController.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = ViewCertificateDialogController.h; path = src/security/ViewCertificateDialogController.h; sourceTree = "<group>"; };
+		33EB4D650D11E23D00027E31 /* PreferencesWindow.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = PreferencesWindow.h; sourceTree = "<group>"; };
+		33EB4D660D11E23D00027E31 /* PreferencesWindow.m */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.objc; path = PreferencesWindow.m; sourceTree = "<group>"; };
 		33F3B7250C63FC25007DFBD0 /* ScriptingSupport.mm */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.objcpp; name = ScriptingSupport.mm; path = src/appleevents/ScriptingSupport.mm; sourceTree = "<group>"; };
 		33FBAB350C84D25C00DD459E /* NSString+Gecko.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = "NSString+Gecko.h"; path = "src/extensions/NSString+Gecko.h"; sourceTree = "<group>"; };
 		33FBAB380C84D27F00DD459E /* NSString+Gecko.mm */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.objcpp; name = "NSString+Gecko.mm"; path = "src/extensions/NSString+Gecko.mm"; sourceTree = "<group>"; };
@@ -2408,7 +2414,7 @@
 		3F44ADF105BDFBA000CB4B08 /* Security.prefPane */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Security.prefPane; sourceTree = BUILT_PRODUCTS_DIR; };
 		3F44AE0705BDFBA000CB4B08 /* Info-WebFeaturesPrefPane.plist */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = "Info-WebFeaturesPrefPane.plist"; sourceTree = "<group>"; };
 		3F44AE0805BDFBA000CB4B08 /* WebFeatures.prefPane */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WebFeatures.prefPane; sourceTree = BUILT_PRODUCTS_DIR; };
-		3F44AFC605BDFBA100CB4B08 /* Camino.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Camino.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3F44AFC605BDFBA100CB4B08 /* Camino.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Camino.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3F558E950552122E006156FD /* IOKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOKit.framework; path = /System/Library/Frameworks/IOKit.framework; sourceTree = "<absolute>"; };
 		3F63719B057CE0DE00B62EE2 /* manager.tif */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; name = manager.tif; path = resources/images/toolbar/manager.tif; sourceTree = SOURCE_ROOT; };
 		3F7C6CB905B4819E002FFFD3 /* HistoryItem.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = HistoryItem.h; path = src/history/HistoryItem.h; sourceTree = "<group>"; };
@@ -4422,6 +4428,8 @@
 				F53F21EC022B7C77010001CA /* MVPreferencePaneDefaults.plist */,
 				F53F21EF022B7C77010001CA /* MVPreferencesController.h */,
 				F53F21F0022B7C77010001CA /* MVPreferencesController.mm */,
+				33EB4D650D11E23D00027E31 /* PreferencesWindow.h */,
+				33EB4D660D11E23D00027E31 /* PreferencesWindow.m */,
 			);
 			name = "Prefs window";
 			sourceTree = "<group>";
@@ -4669,6 +4677,7 @@
 				60DE525B0C85F2F500A2CB3C /* CHSelectHandler.h in Headers */,
 				DE70BEAC0CBC825200C1CC63 /* ToolbarScriptItem.h in Headers */,
 				7B436D3B0D11C2B400377744 /* PreferencePaneBase.h in Headers */,
+				33EB4D670D11E23D00027E31 /* PreferencesWindow.h in Headers */,
 				7B5073360D11EABF00458384 /* KeyEquivView.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -4837,6 +4846,7 @@
 				60DE525D0C85F2F500A2CB3C /* CHSelectHandler.h in Headers */,
 				DE70BEAE0CBC825200C1CC63 /* ToolbarScriptItem.h in Headers */,
 				7B436D3C0D11C2C400377744 /* PreferencePaneBase.h in Headers */,
+				33EB4D690D11E23D00027E31 /* PreferencesWindow.h in Headers */,
 				7B5073370D11EAC800458384 /* KeyEquivView.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -5084,7 +5094,6 @@
 		29B97313FDCFA39411CA2CEA /* Project object */ = {
 			isa = PBXProject;
 			buildConfigurationList = 00F3BE210C4F27DE00E19B0C /* Build configuration list for PBXProject "Camino" */;
-			compatibilityVersion = "Xcode 2.4";
 			hasScannedForEncodings = 1;
 			knownRegions = (
 				English,
@@ -5771,6 +5780,7 @@
 				60DE525C0C85F2F500A2CB3C /* CHSelectHandler.mm in Sources */,
 				DE70BEAD0CBC825200C1CC63 /* ToolbarScriptItem.mm in Sources */,
 				7B436D3D0D11C2EB00377744 /* PreferencePaneBase.mm in Sources */,
+				33EB4D680D11E23D00027E31 /* PreferencesWindow.m in Sources */,
 				7B5073380D11EADE00458384 /* KeyEquivView.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -5934,6 +5944,7 @@
 				60DE525E0C85F2F500A2CB3C /* CHSelectHandler.mm in Sources */,
 				DE70BEAF0CBC825200C1CC63 /* ToolbarScriptItem.mm in Sources */,
 				7B436D3E0D11C30D00377744 /* PreferencePaneBase.mm in Sources */,
+				33EB4D6A0D11E23D00027E31 /* PreferencesWindow.m in Sources */,
 				7B5073390D11EAEA00458384 /* KeyEquivView.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
