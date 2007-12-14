@@ -1116,7 +1116,6 @@
 		4D2997870869C93800E84287 /* libxpcom_core.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 3F12FC56072E8ECB00995ED9 /* libxpcom_core.dylib */; };
 		4D29978E0869C95D00E84287 /* libxpcom_core.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 3F12FC56072E8ECB00995ED9 /* libxpcom_core.dylib */; };
 		4D29989F0869CA5200E84287 /* libxpcom_core.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 3F12FC56072E8ECB00995ED9 /* libxpcom_core.dylib */; };
-		4D2998A50869CA6B00E84287 /* libxpcom_core.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 3F12FC56072E8ECB00995ED9 /* libxpcom_core.dylib */; };
 		4D5881770864B28D001305B3 /* Default Plugin.plugin in Copy Gecko Plugins */ = {isa = PBXBuildFile; fileRef = F56610BC0394775201A9666E /* Default Plugin.plugin */; };
 		4D58817B0864B2AE001305B3 /* Default Plugin.plugin in Copy Gecko Plugins */ = {isa = PBXBuildFile; fileRef = F56610BC0394775201A9666E /* Default Plugin.plugin */; };
 		4DC28F5E099184B80081939B /* libucvmath.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 4DC28F5D099184B80081939B /* libucvmath.a */; };
@@ -2407,7 +2406,7 @@
 		3F44ADF105BDFBA000CB4B08 /* Security.prefPane */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Security.prefPane; sourceTree = BUILT_PRODUCTS_DIR; };
 		3F44AE0705BDFBA000CB4B08 /* Info-WebFeaturesPrefPane.plist */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = "Info-WebFeaturesPrefPane.plist"; sourceTree = "<group>"; };
 		3F44AE0805BDFBA000CB4B08 /* WebFeatures.prefPane */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WebFeatures.prefPane; sourceTree = BUILT_PRODUCTS_DIR; };
-		3F44AFC605BDFBA100CB4B08 /* Camino.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Camino.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3F44AFC605BDFBA100CB4B08 /* Camino.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Camino.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3F558E950552122E006156FD /* IOKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOKit.framework; path = /System/Library/Frameworks/IOKit.framework; sourceTree = "<absolute>"; };
 		3F63719B057CE0DE00B62EE2 /* manager.tif */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; name = manager.tif; path = resources/images/toolbar/manager.tif; sourceTree = SOURCE_ROOT; };
 		3F7C6CB905B4819E002FFFD3 /* HistoryItem.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = HistoryItem.h; path = src/history/HistoryItem.h; sourceTree = "<group>"; };
@@ -3043,7 +3042,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				3F44ADFE05BDFBA000CB4B08 /* Cocoa.framework in Frameworks */,
-				4D2998A50869CA6B00E84287 /* libxpcom_core.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -5016,7 +5014,6 @@
 				3F44ADF505BDFBA000CB4B08 /* Resources */,
 				3F44ADF805BDFBA000CB4B08 /* Sources */,
 				3F44ADFB05BDFBA000CB4B08 /* Frameworks */,
-				3F44AE0505BDFBA000CB4B08 /* Rez */,
 			);
 			buildRules = (
 			);
@@ -5539,13 +5536,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		3F44ADEE05BDFBA000CB4B08 /* Rez */ = {
-			isa = PBXRezBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		3F44AE0505BDFBA000CB4B08 /* Rez */ = {
 			isa = PBXRezBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -6559,22 +6549,8 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 00F3BE2A0C4F280700E19B0C /* PrefPane.xcconfig */;
 			buildSettings = {
-				HEADER_SEARCH_PATHS = (
-					../dist/include,
-					../dist/include/cookie,
-					../dist/include/necko,
-					../dist/include/nspr,
-					../dist/include/string,
-					../dist/include/xpcom,
-				);
+				GCC_PREFIX_HEADER = "";
 				INFOPLIST_FILE = "Info-WebFeaturesPrefPane.plist";
-				LIBRARY_SEARCH_PATHS = ../dist/lib;
-				OTHER_CFLAGS = (
-					"$(OTHER_CFLAGS)",
-					"-DDEBUG",
-					"-DMOZ_DEBUG",
-					"-DTRACING",
-				);
 				PRODUCT_NAME = WebFeatures;
 			};
 			name = Development;
@@ -6583,16 +6559,8 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 00F3BE2A0C4F280700E19B0C /* PrefPane.xcconfig */;
 			buildSettings = {
-				HEADER_SEARCH_PATHS = (
-					../dist/include,
-					../dist/include/cookie,
-					../dist/include/necko,
-					../dist/include/nspr,
-					../dist/include/string,
-					../dist/include/xpcom,
-				);
+				GCC_PREFIX_HEADER = "";
 				INFOPLIST_FILE = "Info-WebFeaturesPrefPane.plist";
-				LIBRARY_SEARCH_PATHS = ../dist/lib;
 				PRODUCT_NAME = WebFeatures;
 			};
 			name = Deployment;
