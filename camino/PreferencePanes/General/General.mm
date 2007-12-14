@@ -105,6 +105,7 @@ const int kDefaultExpireDays = 9;
   if ([[NSUserDefaults standardUserDefaults] integerForKey:SUScheduledCheckIntervalKey] > 0)
     [checkboxAutoUpdate setState:NSOnState];
 
+
   [textFieldHomePage setStringValue:[self currentHomePage]];
 
   // set up default browser menu
