@@ -866,7 +866,7 @@ enum StatusPriority {
   if ((dragSource == self) || (dragSource == mTabItem) || (dragSource  == [[mWindow delegate] proxyIconView]))
     return NO;
   
-  if ([mTabItem isMemberOfClass:[BrowserTabViewItem class]] && (dragSource == [(BrowserTabViewItem*)mTabItem tabItemContentsView]))
+  if ([mTabItem isMemberOfClass:[BrowserTabViewItem class]] && (dragSource == [(BrowserTabViewItem*)mTabItem buttonView]))
     return NO;
   
   return YES;
