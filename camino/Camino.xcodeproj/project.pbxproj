@@ -312,7 +312,6 @@
 		3F44ABDC05BDFB9E00CB4B08 /* CHBrowserView.h in Headers */ = {isa = PBXBuildFile; fileRef = F5DE10E70209DC0601A967DF /* CHBrowserView.h */; };
 		3F44ABDD05BDFB9E00CB4B08 /* CHBrowserService.h in Headers */ = {isa = PBXBuildFile; fileRef = F5DE10E80209DC0601A967DF /* CHBrowserService.h */; };
 		3F44ABDE05BDFB9E00CB4B08 /* ProgressDlgController.h in Headers */ = {isa = PBXBuildFile; fileRef = F517395A020CE3740189DA0C /* ProgressDlgController.h */; };
-		3F44ABDF05BDFB9E00CB4B08 /* FindDlgController.h in Headers */ = {isa = PBXBuildFile; fileRef = F528E218020FD8400168DE43 /* FindDlgController.h */; };
 		3F44ABE005BDFB9E00CB4B08 /* MVPreferencesController.h in Headers */ = {isa = PBXBuildFile; fileRef = F53F21EF022B7C77010001CA /* MVPreferencesController.h */; };
 		3F44ABE305BDFB9E00CB4B08 /* BrowserTabView.h in Headers */ = {isa = PBXBuildFile; fileRef = F5BF71450231B8BC010001CA /* BrowserTabView.h */; };
 		3F44ABE405BDFB9E00CB4B08 /* ContentClickListener.h in Headers */ = {isa = PBXBuildFile; fileRef = F59E9F3D0237E28401A967DF /* ContentClickListener.h */; };
@@ -384,7 +383,6 @@
 		3F44AC3005BDFB9E00CB4B08 /* BrowserWindow.nib in Resources */ = {isa = PBXBuildFile; fileRef = F507A84403116E5501026D5D /* BrowserWindow.nib */; };
 		3F44AC3105BDFB9E00CB4B08 /* ProgressDialog.nib in Resources */ = {isa = PBXBuildFile; fileRef = F507A84A03116E6E01026D5D /* ProgressDialog.nib */; };
 		3F44AC3205BDFB9E00CB4B08 /* print.tif in Resources */ = {isa = PBXBuildFile; fileRef = F55CCFD2020E98EA010001CA /* print.tif */; };
-		3F44AC3305BDFB9E00CB4B08 /* FindDialog.nib in Resources */ = {isa = PBXBuildFile; fileRef = F507A84D03116E7401026D5D /* FindDialog.nib */; };
 		3F44AC3405BDFB9E00CB4B08 /* smallDocument.tiff in Resources */ = {isa = PBXBuildFile; fileRef = F5568A8E0217C7F5010001CA /* smallDocument.tiff */; };
 		3F44AC3505BDFB9E00CB4B08 /* folder.tiff in Resources */ = {isa = PBXBuildFile; fileRef = F5568A900217CA82010001CA /* folder.tiff */; };
 		3F44AC3605BDFB9E00CB4B08 /* MVPreferencePaneDefaults.plist in Resources */ = {isa = PBXBuildFile; fileRef = F53F21EC022B7C77010001CA /* MVPreferencePaneDefaults.plist */; };
@@ -440,7 +438,6 @@
 		3F44AC8805BDFB9E00CB4B08 /* CHBrowserView.mm in Sources */ = {isa = PBXBuildFile; fileRef = F5DE10EA0209DC0601A967DF /* CHBrowserView.mm */; };
 		3F44AC8905BDFB9E00CB4B08 /* CHBrowserService.mm in Sources */ = {isa = PBXBuildFile; fileRef = F5DE10EB0209DC0601A967DF /* CHBrowserService.mm */; };
 		3F44AC8A05BDFB9E00CB4B08 /* ProgressDlgController.mm in Sources */ = {isa = PBXBuildFile; fileRef = F517395B020CE3740189DA0C /* ProgressDlgController.mm */; };
-		3F44AC8B05BDFB9E00CB4B08 /* FindDlgController.mm in Sources */ = {isa = PBXBuildFile; fileRef = F528E21A020FD9620168DE43 /* FindDlgController.mm */; };
 		3F44AC8C05BDFB9E00CB4B08 /* MVPreferencesController.mm in Sources */ = {isa = PBXBuildFile; fileRef = F53F21F0022B7C77010001CA /* MVPreferencesController.mm */; };
 		3F44AC8F05BDFB9E00CB4B08 /* BrowserTabView.mm in Sources */ = {isa = PBXBuildFile; fileRef = F5BF71460231B8BC010001CA /* BrowserTabView.mm */; };
 		3F44AC9005BDFB9E00CB4B08 /* ContentClickListener.mm in Sources */ = {isa = PBXBuildFile; fileRef = F59E9F3F0237E43401A967DF /* ContentClickListener.mm */; };
@@ -687,7 +684,6 @@
 		3F44AE1505BDFBA000CB4B08 /* CHBrowserView.h in Headers */ = {isa = PBXBuildFile; fileRef = F5DE10E70209DC0601A967DF /* CHBrowserView.h */; };
 		3F44AE1605BDFBA000CB4B08 /* CHBrowserService.h in Headers */ = {isa = PBXBuildFile; fileRef = F5DE10E80209DC0601A967DF /* CHBrowserService.h */; };
 		3F44AE1705BDFBA000CB4B08 /* ProgressDlgController.h in Headers */ = {isa = PBXBuildFile; fileRef = F517395A020CE3740189DA0C /* ProgressDlgController.h */; };
-		3F44AE1805BDFBA000CB4B08 /* FindDlgController.h in Headers */ = {isa = PBXBuildFile; fileRef = F528E218020FD8400168DE43 /* FindDlgController.h */; };
 		3F44AE1905BDFBA000CB4B08 /* MVPreferencesController.h in Headers */ = {isa = PBXBuildFile; fileRef = F53F21EF022B7C77010001CA /* MVPreferencesController.h */; };
 		3F44AE1C05BDFBA000CB4B08 /* BrowserTabView.h in Headers */ = {isa = PBXBuildFile; fileRef = F5BF71450231B8BC010001CA /* BrowserTabView.h */; };
 		3F44AE1D05BDFBA000CB4B08 /* ContentClickListener.h in Headers */ = {isa = PBXBuildFile; fileRef = F59E9F3D0237E28401A967DF /* ContentClickListener.h */; };
@@ -759,7 +755,6 @@
 		3F44AE6905BDFBA000CB4B08 /* BrowserWindow.nib in Resources */ = {isa = PBXBuildFile; fileRef = F507A84403116E5501026D5D /* BrowserWindow.nib */; };
 		3F44AE6A05BDFBA000CB4B08 /* ProgressDialog.nib in Resources */ = {isa = PBXBuildFile; fileRef = F507A84A03116E6E01026D5D /* ProgressDialog.nib */; };
 		3F44AE6B05BDFBA000CB4B08 /* print.tif in Resources */ = {isa = PBXBuildFile; fileRef = F55CCFD2020E98EA010001CA /* print.tif */; };
-		3F44AE6C05BDFBA000CB4B08 /* FindDialog.nib in Resources */ = {isa = PBXBuildFile; fileRef = F507A84D03116E7401026D5D /* FindDialog.nib */; };
 		3F44AE6D05BDFBA000CB4B08 /* smallDocument.tiff in Resources */ = {isa = PBXBuildFile; fileRef = F5568A8E0217C7F5010001CA /* smallDocument.tiff */; };
 		3F44AE6E05BDFBA000CB4B08 /* folder.tiff in Resources */ = {isa = PBXBuildFile; fileRef = F5568A900217CA82010001CA /* folder.tiff */; };
 		3F44AE6F05BDFBA000CB4B08 /* MVPreferencePaneDefaults.plist in Resources */ = {isa = PBXBuildFile; fileRef = F53F21EC022B7C77010001CA /* MVPreferencePaneDefaults.plist */; };
@@ -815,7 +810,6 @@
 		3F44AEC105BDFBA000CB4B08 /* CHBrowserView.mm in Sources */ = {isa = PBXBuildFile; fileRef = F5DE10EA0209DC0601A967DF /* CHBrowserView.mm */; };
 		3F44AEC205BDFBA000CB4B08 /* CHBrowserService.mm in Sources */ = {isa = PBXBuildFile; fileRef = F5DE10EB0209DC0601A967DF /* CHBrowserService.mm */; };
 		3F44AEC305BDFBA000CB4B08 /* ProgressDlgController.mm in Sources */ = {isa = PBXBuildFile; fileRef = F517395B020CE3740189DA0C /* ProgressDlgController.mm */; };
-		3F44AEC405BDFBA000CB4B08 /* FindDlgController.mm in Sources */ = {isa = PBXBuildFile; fileRef = F528E21A020FD9620168DE43 /* FindDlgController.mm */; };
 		3F44AEC505BDFBA000CB4B08 /* MVPreferencesController.mm in Sources */ = {isa = PBXBuildFile; fileRef = F53F21F0022B7C77010001CA /* MVPreferencesController.mm */; };
 		3F44AEC805BDFBA000CB4B08 /* BrowserTabView.mm in Sources */ = {isa = PBXBuildFile; fileRef = F5BF71460231B8BC010001CA /* BrowserTabView.mm */; };
 		3F44AEC905BDFBA000CB4B08 /* ContentClickListener.mm in Sources */ = {isa = PBXBuildFile; fileRef = F59E9F3F0237E43401A967DF /* ContentClickListener.mm */; };
@@ -1323,6 +1317,16 @@
 		E091C0FB06225EA3007D9E8F /* spin4.tiff in Resources */ = {isa = PBXBuildFile; fileRef = E091C0DD06225EA3007D9E8F /* spin4.tiff */; };
 		E091C0FC06225EA3007D9E8F /* zoomIn.tiff in Resources */ = {isa = PBXBuildFile; fileRef = E091C0DE06225EA3007D9E8F /* zoomIn.tiff */; };
 		E091C0FD06225EA3007D9E8F /* zoomOut.tiff in Resources */ = {isa = PBXBuildFile; fileRef = E091C0DF06225EA3007D9E8F /* zoomOut.tiff */; };
+		E43EF9E30D13384700DACA10 /* FindBarController.h in Headers */ = {isa = PBXBuildFile; fileRef = E43EF9DF0D13384700DACA10 /* FindBarController.h */; };
+		E43EF9E40D13384700DACA10 /* FindBarController.mm in Sources */ = {isa = PBXBuildFile; fileRef = E43EF9E00D13384700DACA10 /* FindBarController.mm */; };
+		E43EF9E50D13384700DACA10 /* FindBarView.h in Headers */ = {isa = PBXBuildFile; fileRef = E43EF9E10D13384700DACA10 /* FindBarView.h */; };
+		E43EF9E60D13384700DACA10 /* FindBarView.mm in Sources */ = {isa = PBXBuildFile; fileRef = E43EF9E20D13384700DACA10 /* FindBarView.mm */; };
+		E43EF9E70D13384700DACA10 /* FindBarController.h in Headers */ = {isa = PBXBuildFile; fileRef = E43EF9DF0D13384700DACA10 /* FindBarController.h */; };
+		E43EF9E80D13384700DACA10 /* FindBarController.mm in Sources */ = {isa = PBXBuildFile; fileRef = E43EF9E00D13384700DACA10 /* FindBarController.mm */; };
+		E43EF9E90D13384700DACA10 /* FindBarView.h in Headers */ = {isa = PBXBuildFile; fileRef = E43EF9E10D13384700DACA10 /* FindBarView.h */; };
+		E43EF9EA0D13384700DACA10 /* FindBarView.mm in Sources */ = {isa = PBXBuildFile; fileRef = E43EF9E20D13384700DACA10 /* FindBarView.mm */; };
+		E43EF9F30D13388000DACA10 /* FindBar.nib in Resources */ = {isa = PBXBuildFile; fileRef = E43EF9F10D13388000DACA10 /* FindBar.nib */; };
+		E43EF9F40D13388000DACA10 /* FindBar.nib in Resources */ = {isa = PBXBuildFile; fileRef = E43EF9F10D13388000DACA10 /* FindBar.nib */; };
 		E4575BEE09CE16930060A9E7 /* PopupBlockView.nib in Resources */ = {isa = PBXBuildFile; fileRef = E4575BEC09CE16930060A9E7 /* PopupBlockView.nib */; };
 		E4575BEF09CE16930060A9E7 /* PopupBlockView.nib in Resources */ = {isa = PBXBuildFile; fileRef = E4575BEC09CE16930060A9E7 /* PopupBlockView.nib */; };
 		E4C7DA460A4499E600B455AD /* libmyspell.dylib in Copy Gecko Components */ = {isa = PBXBuildFile; fileRef = E4C7DA450A4499E600B455AD /* libmyspell.dylib */; };
@@ -2406,7 +2410,7 @@
 		3F44ADF105BDFBA000CB4B08 /* Security.prefPane */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Security.prefPane; sourceTree = BUILT_PRODUCTS_DIR; };
 		3F44AE0705BDFBA000CB4B08 /* Info-WebFeaturesPrefPane.plist */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = "Info-WebFeaturesPrefPane.plist"; sourceTree = "<group>"; };
 		3F44AE0805BDFBA000CB4B08 /* WebFeatures.prefPane */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WebFeatures.prefPane; sourceTree = BUILT_PRODUCTS_DIR; };
-		3F44AFC605BDFBA100CB4B08 /* Camino.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Camino.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3F44AFC605BDFBA100CB4B08 /* Camino.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Camino.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3F558E950552122E006156FD /* IOKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOKit.framework; path = /System/Library/Frameworks/IOKit.framework; sourceTree = "<absolute>"; };
 		3F63719B057CE0DE00B62EE2 /* manager.tif */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; name = manager.tif; path = resources/images/toolbar/manager.tif; sourceTree = SOURCE_ROOT; };
 		3F7C6CB905B4819E002FFFD3 /* HistoryItem.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = HistoryItem.h; path = src/history/HistoryItem.h; sourceTree = "<group>"; };
@@ -2600,6 +2604,11 @@
 		E091C0DD06225EA3007D9E8F /* spin4.tiff */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; path = spin4.tiff; sourceTree = "<group>"; };
 		E091C0DE06225EA3007D9E8F /* zoomIn.tiff */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; path = zoomIn.tiff; sourceTree = "<group>"; };
 		E091C0DF06225EA3007D9E8F /* zoomOut.tiff */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; path = zoomOut.tiff; sourceTree = "<group>"; };
+		E43EF9DF0D13384700DACA10 /* FindBarController.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = FindBarController.h; path = src/find/FindBarController.h; sourceTree = SOURCE_ROOT; };
+		E43EF9E00D13384700DACA10 /* FindBarController.mm */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.objcpp; name = FindBarController.mm; path = src/find/FindBarController.mm; sourceTree = SOURCE_ROOT; };
+		E43EF9E10D13384700DACA10 /* FindBarView.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = FindBarView.h; path = src/find/FindBarView.h; sourceTree = SOURCE_ROOT; };
+		E43EF9E20D13384700DACA10 /* FindBarView.mm */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.objcpp; name = FindBarView.mm; path = src/find/FindBarView.mm; sourceTree = SOURCE_ROOT; };
+		E43EF9F20D13388000DACA10 /* English */ = {isa = PBXFileReference; lastKnownFileType = wrapper.nib; name = English; path = resources/localized/English.lproj/FindBar.nib; sourceTree = "<group>"; };
 		E4575BED09CE16930060A9E7 /* English */ = {isa = PBXFileReference; lastKnownFileType = wrapper.nib; name = English; path = resources/localized/English.lproj/PopupBlockView.nib; sourceTree = "<group>"; };
 		E4C7DA450A4499E600B455AD /* libmyspell.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.bundle"; name = libmyspell.dylib; path = ../dist/bin/components/libmyspell.dylib; sourceTree = SOURCE_ROOT; };
 		E4C7DA480A449A1100B455AD /* libspellchecker.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.bundle"; name = libspellchecker.dylib; path = ../dist/bin/components/libspellchecker.dylib; sourceTree = SOURCE_ROOT; };
@@ -2656,9 +2665,6 @@
 		F52627DA027E98A401000102 /* English */ = {isa = PBXFileReference; lastKnownFileType = wrapper.nib; name = English; path = PreferencePanes/General/English.lproj/General.nib; sourceTree = SOURCE_ROOT; };
 		F527C90203BCD43601A80166 /* NSView+Utils.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = "NSView+Utils.h"; path = "src/extensions/NSView+Utils.h"; sourceTree = "<group>"; };
 		F527C90303BCD43601A80166 /* NSView+Utils.m */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.objc; name = "NSView+Utils.m"; path = "src/extensions/NSView+Utils.m"; sourceTree = "<group>"; };
-		F528E216020FD5D80168DE43 /* English */ = {isa = PBXFileReference; lastKnownFileType = wrapper.nib; name = English; path = resources/localized/English.lproj/FindDialog.nib; sourceTree = SOURCE_ROOT; };
-		F528E218020FD8400168DE43 /* FindDlgController.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = FindDlgController.h; path = src/find/FindDlgController.h; sourceTree = "<group>"; };
-		F528E21A020FD9620168DE43 /* FindDlgController.mm */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.objcpp; name = FindDlgController.mm; path = src/find/FindDlgController.mm; sourceTree = SOURCE_ROOT; };
 		F52CE65902BFA88701026D5D /* English */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = English; path = generated/resources/localized/English.lproj/Localizable.strings; sourceTree = SOURCE_ROOT; };
 		F52D5CCF027A887001A80166 /* AutoCompleteTextField.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = AutoCompleteTextField.h; path = src/browser/AutoCompleteTextField.h; sourceTree = "<group>"; };
 		F52D5CD0027A887001A80166 /* AutoCompleteTextField.mm */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.objcpp; name = AutoCompleteTextField.mm; path = src/browser/AutoCompleteTextField.mm; sourceTree = "<group>"; };
@@ -3788,6 +3794,18 @@
 			path = ../widget/src/cocoa/cursors;
 			sourceTree = SOURCE_ROOT;
 		};
+		E43EF9D50D13378100DACA10 /* Find Bar */ = {
+			isa = PBXGroup;
+			children = (
+				F5137A1102676B9101026D05 /* Find.h */,
+				E43EF9DF0D13384700DACA10 /* FindBarController.h */,
+				E43EF9E00D13384700DACA10 /* FindBarController.mm */,
+				E43EF9E10D13384700DACA10 /* FindBarView.h */,
+				E43EF9E20D13384700DACA10 /* FindBarView.mm */,
+			);
+			name = "Find Bar";
+			sourceTree = "<group>";
+		};
 		F507BA530213C26501D93544 /* Gecko Profile Defaults */ = {
 			isa = PBXGroup;
 			children = (
@@ -3901,9 +3919,6 @@
 				F566BD1302EFA9AD01A967F3 /* CocoaPromptService.mm */,
 				DE74F8BB0AB270B800FD1D5B /* FeedServiceController.h */,
 				DE74F8C50AB270F200FD1D5B /* FeedServiceController.mm */,
-				F5137A1102676B9101026D05 /* Find.h */,
-				F528E218020FD8400168DE43 /* FindDlgController.h */,
-				F528E21A020FD9620168DE43 /* FindDlgController.mm */,
 				33563B990C8525AF00DC4D06 /* PageInfoWindowController.h */,
 				0F557E09094387F000EF68F6 /* PageInfoWindowController.mm */,
 				0FCD85C908C4D69100A1923B /* Security */,
@@ -3961,6 +3976,7 @@
 				33563B950C8524C400DC4D06 /* Tabs */,
 				33563B970C8524D300DC4D06 /* Content */,
 				33563B980C8524DB00DC4D06 /* Status Bar */,
+				E43EF9D50D13378100DACA10 /* Find Bar */,
 			);
 			name = "Browser Window";
 			sourceTree = "<group>";
@@ -4312,8 +4328,8 @@
 				0FACBFEC07DC020D00DEE23A /* AddBookmark.nib */,
 				F507A84A03116E6E01026D5D /* ProgressDialog.nib */,
 				F583E3BB03B820AC01A80166 /* ProgressView.nib */,
-				F507A84D03116E7401026D5D /* FindDialog.nib */,
 				F5F7EF0D03C1F29C01BDD337 /* Keychain.nib */,
+				E43EF9F10D13388000DACA10 /* FindBar.nib */,
 				F507A85003116E7901026D5D /* BookmarkInfoPanel.nib */,
 				3FB2BAE50545EBAB002B9691 /* BookmarkImportDlg.nib */,
 				3FC7EBFA05AA1D1C00C557AA /* AccessoryViews.nib */,
@@ -4551,7 +4567,6 @@
 				3F44ABDC05BDFB9E00CB4B08 /* CHBrowserView.h in Headers */,
 				3F44ABDD05BDFB9E00CB4B08 /* CHBrowserService.h in Headers */,
 				3F44ABDE05BDFB9E00CB4B08 /* ProgressDlgController.h in Headers */,
-				3F44ABDF05BDFB9E00CB4B08 /* FindDlgController.h in Headers */,
 				3F44ABE005BDFB9E00CB4B08 /* MVPreferencesController.h in Headers */,
 				3F44ABE305BDFB9E00CB4B08 /* BrowserTabView.h in Headers */,
 				3F44ABE405BDFB9E00CB4B08 /* ContentClickListener.h in Headers */,
@@ -4658,6 +4673,8 @@
 				33EB4D670D11E23D00027E31 /* PreferencesWindow.h in Headers */,
 				7B5073360D11EABF00458384 /* KeyEquivView.h in Headers */,
 				3316F46E0D11F2860025ED19 /* TabButtonView.h in Headers */,
+				E43EF9E30D13384700DACA10 /* FindBarController.h in Headers */,
+				E43EF9E50D13384700DACA10 /* FindBarView.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -4718,7 +4735,6 @@
 				3F44AE1505BDFBA000CB4B08 /* CHBrowserView.h in Headers */,
 				3F44AE1605BDFBA000CB4B08 /* CHBrowserService.h in Headers */,
 				3F44AE1705BDFBA000CB4B08 /* ProgressDlgController.h in Headers */,
-				3F44AE1805BDFBA000CB4B08 /* FindDlgController.h in Headers */,
 				3F44AE1905BDFBA000CB4B08 /* MVPreferencesController.h in Headers */,
 				3F44AE1C05BDFBA000CB4B08 /* BrowserTabView.h in Headers */,
 				3F44AE1D05BDFBA000CB4B08 /* ContentClickListener.h in Headers */,
@@ -4825,6 +4841,8 @@
 				33EB4D690D11E23D00027E31 /* PreferencesWindow.h in Headers */,
 				7B5073370D11EAC800458384 /* KeyEquivView.h in Headers */,
 				3316F4700D11F2860025ED19 /* TabButtonView.h in Headers */,
+				E43EF9E70D13384700DACA10 /* FindBarController.h in Headers */,
+				E43EF9E90D13384700DACA10 /* FindBarView.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -5161,7 +5179,6 @@
 				3F44AC2905BDFB9E00CB4B08 /* MainMenu.nib in Resources */,
 				3F44AC3005BDFB9E00CB4B08 /* BrowserWindow.nib in Resources */,
 				3F44AC3105BDFB9E00CB4B08 /* ProgressDialog.nib in Resources */,
-				3F44AC3305BDFB9E00CB4B08 /* FindDialog.nib in Resources */,
 				3F44AC3905BDFB9E00CB4B08 /* MVPreferences.nib in Resources */,
 				3F44AC4D05BDFB9E00CB4B08 /* BookmarkInfoPanel.nib in Resources */,
 				3F44AC6105BDFB9E00CB4B08 /* ProgressView.nib in Resources */,
@@ -5303,6 +5320,7 @@
 				DE148A4A0BF543F300F414D9 /* tab_menu_button.tif in Resources */,
 				DE148A4B0BF543F300F414D9 /* tab_scroll_button_right.tif in Resources */,
 				DEB608960CAF0861006C34F1 /* throbber-00.tif in Resources */,
+				E43EF9F30D13388000DACA10 /* FindBar.nib in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -5366,7 +5384,6 @@
 				3F44AE6205BDFBA000CB4B08 /* MainMenu.nib in Resources */,
 				3F44AE6905BDFBA000CB4B08 /* BrowserWindow.nib in Resources */,
 				3F44AE6A05BDFBA000CB4B08 /* ProgressDialog.nib in Resources */,
-				3F44AE6C05BDFBA000CB4B08 /* FindDialog.nib in Resources */,
 				3F44AE7205BDFBA000CB4B08 /* MVPreferences.nib in Resources */,
 				3F44AE8605BDFBA000CB4B08 /* BookmarkInfoPanel.nib in Resources */,
 				3F44AE9A05BDFBA000CB4B08 /* ProgressView.nib in Resources */,
@@ -5508,6 +5525,7 @@
 				DE148A470BF543F300F414D9 /* tab_menu_button.tif in Resources */,
 				DE148A480BF543F300F414D9 /* tab_scroll_button_right.tif in Resources */,
 				DEB608970CAF0861006C34F1 /* throbber-00.tif in Resources */,
+				E43EF9F40D13388000DACA10 /* FindBar.nib in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -5644,7 +5662,6 @@
 				3F44AC8805BDFB9E00CB4B08 /* CHBrowserView.mm in Sources */,
 				3F44AC8905BDFB9E00CB4B08 /* CHBrowserService.mm in Sources */,
 				3F44AC8A05BDFB9E00CB4B08 /* ProgressDlgController.mm in Sources */,
-				3F44AC8B05BDFB9E00CB4B08 /* FindDlgController.mm in Sources */,
 				3F44AC8C05BDFB9E00CB4B08 /* MVPreferencesController.mm in Sources */,
 				3F44AC8F05BDFB9E00CB4B08 /* BrowserTabView.mm in Sources */,
 				3F44AC9005BDFB9E00CB4B08 /* ContentClickListener.mm in Sources */,
@@ -5749,6 +5766,8 @@
 				33EB4D680D11E23D00027E31 /* PreferencesWindow.m in Sources */,
 				7B5073380D11EADE00458384 /* KeyEquivView.mm in Sources */,
 				3316F46F0D11F2860025ED19 /* TabButtonView.mm in Sources */,
+				E43EF9E40D13384700DACA10 /* FindBarController.mm in Sources */,
+				E43EF9E60D13384700DACA10 /* FindBarView.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -5804,7 +5823,6 @@
 				3F44AEC105BDFBA000CB4B08 /* CHBrowserView.mm in Sources */,
 				3F44AEC205BDFBA000CB4B08 /* CHBrowserService.mm in Sources */,
 				3F44AEC305BDFBA000CB4B08 /* ProgressDlgController.mm in Sources */,
-				3F44AEC405BDFBA000CB4B08 /* FindDlgController.mm in Sources */,
 				3F44AEC505BDFBA000CB4B08 /* MVPreferencesController.mm in Sources */,
 				3F44AEC805BDFBA000CB4B08 /* BrowserTabView.mm in Sources */,
 				3F44AEC905BDFBA000CB4B08 /* ContentClickListener.mm in Sources */,
@@ -5910,6 +5928,8 @@
 				33EB4D6A0D11E23D00027E31 /* PreferencesWindow.m in Sources */,
 				7B5073390D11EAEA00458384 /* KeyEquivView.mm in Sources */,
 				3316F4710D11F2860025ED19 /* TabButtonView.mm in Sources */,
+				E43EF9E80D13384700DACA10 /* FindBarController.mm in Sources */,
+				E43EF9EA0D13384700DACA10 /* FindBarView.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -6250,6 +6270,14 @@
 			name = OpenFeed.nib;
 			sourceTree = SOURCE_ROOT;
 		};
+		E43EF9F10D13388000DACA10 /* FindBar.nib */ = {
+			isa = PBXVariantGroup;
+			children = (
+				E43EF9F20D13388000DACA10 /* English */,
+			);
+			name = FindBar.nib;
+			sourceTree = SOURCE_ROOT;
+		};
 		E4575BEC09CE16930060A9E7 /* PopupBlockView.nib */ = {
 			isa = PBXVariantGroup;
 			children = (
@@ -6280,14 +6308,6 @@
 				F5173958020CE1E50189DA0C /* English */,
 			);
 			name = ProgressDialog.nib;
-			sourceTree = "<group>";
-		};
-		F507A84D03116E7401026D5D /* FindDialog.nib */ = {
-			isa = PBXVariantGroup;
-			children = (
-				F528E216020FD5D80168DE43 /* English */,
-			);
-			name = FindDialog.nib;
 			sourceTree = "<group>";
 		};
 		F507A85003116E7901026D5D /* BookmarkInfoPanel.nib */ = {

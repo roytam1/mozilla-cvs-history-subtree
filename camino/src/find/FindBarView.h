@@ -15,12 +15,12 @@
  * The Original Code is mozilla.org code.
  *
  * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 2002
+ * Mike Pinkerton.
+ * Portions created by the Initial Developer are Copyright (C) 2007
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Simon Fraser <sfraser@netscape.com>
+ *   Mike Pinkerton
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -38,28 +38,14 @@
 
 #import <Cocoa/Cocoa.h>
 
-@class BookmarkToolbar;
-@class BrowserTabView;
-@class BrowserTabBarView;
+//
+// FindBarView
+//
+// Handles custom drawing for the find bar
+//
 
-@interface BrowserContentView : NSView
+@interface FindBarView : NSView
 {
-  IBOutlet BookmarkToolbar  *mBookmarksToolbar;
-  IBOutlet NSView           *mBrowserContainerView;   // manages tabs and web content
-  IBOutlet NSView           *mFindBar;                // will be nil if hidden
-  IBOutlet NSView           *mStatusBar;
-}
-
-// displays |inBarView| as the find bar just above the status bar. Pass nil to
-// make the bar disappear. 
-- (void)showFindBar:(NSView*)inBarView;
-
-@end
-
-@interface BrowserContainerView : NSView
-{
-  IBOutlet BrowserTabView *mTabView;
-  IBOutlet BrowserTabBarView *mTabBarView;
 }
 
 @end
