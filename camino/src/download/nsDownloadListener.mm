@@ -46,7 +46,6 @@
 #include "nsIFileURL.h"
 #include "netCore.h"
 #include "nsNetError.h"
-#include "nsILocalFileMac.h"
 #include "nsIChannel.h"
 #include "nsIPropertyBag2.h"
 #include "nsIHttpChannel.h"
@@ -408,9 +407,10 @@ nsDownloadListener::CancelDownload()
 void
 nsDownloadListener::DownloadDone(nsresult aStatus)
 {
-  // Quarantine the temporary file while it still exists.  This is done in
-  // DownloadDone because we're assured to have as much information about the
-  // download at possible at this point.
+  // Set metadata such as the "where-from" attribute and quarantine the file.
+  // This is done in DownloadDone because we're assured to have as much 
+  // information about the download as possible at this point.
+  SetMetadata();
   QuarantineDownload();
 
   // break the reference cycle
@@ -469,7 +469,7 @@ static const CFStringRef GetCFStringFromBundle(CFBundleRef bundle,
 //
 //    http://developer.apple.com/releasenotes/Carbon/RN-LaunchServices/index.html#//apple_ref/doc/uid/TP40001369-DontLinkElementID_2
 //
-// Quarantined files are marked with the "com.apple.quarantine" metadata
+// Quarantined files are marked with the "com.apple.quarantine" extended
 // attribute, tracked by Launch Services.  When the user attempts to launch
 // an quarantined application, or an application in a quarantined disk image,
 // the system will warn the user that the application may have untrustworthy
@@ -579,19 +579,19 @@ void nsDownloadListener::QuarantineDownload() {
   }
 #endif  // DT
 
-  nsCOMPtr<nsILocalFileMac> tempFile = do_QueryInterface(mTempFile);
-  if (!tempFile) {
+  nsCOMPtr<nsILocalFileMac> macFile;
+  if (NS_FAILED(GetFileDownloadedTo(getter_AddRefs(macFile)))) {
     return;
   }
 
-  FSRef tempFSRef;
-  if (NS_FAILED(tempFile->GetFSRef(&tempFSRef))) {
+  FSRef fsRef;
+  if (NS_FAILED(macFile->GetFSRef(&fsRef))) {
     return;
   }
 
   NSDictionary* quarantineProperties = nil;
   CFTypeRef quarantinePropertiesBase = NULL;
-  if (lsCopyItemAttributeFunc(&tempFSRef, kLSRolesAll,
+  if (lsCopyItemAttributeFunc(&fsRef, kLSRolesAll,
                               lsItemQuarantineProperties,
                               &quarantinePropertiesBase) == noErr) {
     if (::CFGetTypeID(quarantinePropertiesBase) ==
@@ -648,8 +648,128 @@ void nsDownloadListener::QuarantineDownload() {
 
   // If you call this more than once, it will appear to succeed, but no
   // updates are actually made to the quarantine data.
-  lsSetItemAttributeFunc(&tempFSRef, kLSRolesAll, lsItemQuarantineProperties,
+  lsSetItemAttributeFunc(&fsRef, kLSRolesAll, lsItemQuarantineProperties,
                          quarantineProperties);
+}
+
+// As of Mac OS X 10.4 ("Tiger"), files can be tagged with metadata describing
+// various attributes.  Metadata is integrated with the system's Spotlight
+// feature and is searchable.  Ordinarily, metadata can only be set by
+// Spotlight importers, which requires that the importer own the target file.
+// However, there's an attribute intended to describe the origin of a
+// file, that can store the source URL and referrer of a downloaded file.
+// It's stored as a "com.apple.metadata:kMDItemWhereFroms" extended attribute,
+// structured as a binary1-format plist containing a list of sources.  This
+// attribute can only be populated by the downloader, not a Spotlight importer.
+// Safari on 10.4 and later populates this attribute.
+//
+// With this metadata set, you can locate downloads by performing a Spotlight
+// search for their source or referrer URLs, either from within the Spotlight
+// UI or from the command line:
+//     mdfind 'kMDItemWhereFroms == "http://releases.mozilla.org/*"'
+//
+// There is no documented API to set metadata on a file directly as of the
+// 10.5 SDK.  The MDSetItemAttribute function does exist to perform this task,
+// but it's undocumented.  That hasn't stopped us before, though.
+void nsDownloadListener::SetMetadata() {
+  // Metadata support is only present in 10.4 and later
+#if MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_4  // SDK
+  typedef struct __MDItem *MDItemRef;
+#endif  // SDK
+  typedef MDItemRef (*MDItemCreate_type)(CFAllocatorRef, CFStringRef);
+
+  // There's no declaration for MDItemSetAttribute in any known public SDK.
+  // It exists in the 10.4 and 10.5 runtimes.  To play it safe, do the lookup
+  // at runtime instead of declaring it ourselves and linking against what's
+  // provided.  This has two benefits:
+  //  - If Apple relents and declares the function in a future SDK (it's
+  //    happened before), our build won't break.
+  //  - If Apple removes or renames the function in a future runtime, the
+  //    loader won't refuse to let the application launch.  Instead, we'll
+  //    silently fail to set any metadata.
+  typedef OSStatus (*MDItemSetAttribute_type)(MDItemRef, CFStringRef,
+                                              CFTypeRef);
+
+  static MDItemCreate_type mdItemCreateFunc = NULL;
+  static CFStringRef mdItemWhereFroms = NULL;
+  static MDItemSetAttribute_type mdItemSetAttributeFunc = NULL;
+
+  static bool didSymbolLookup = false;
+  if (!didSymbolLookup) {
+    didSymbolLookup = true;
+    CFBundleRef metadataBundle =
+        ::CFBundleGetBundleWithIdentifier(CFSTR("com.apple.Metadata"));
+    if (!metadataBundle) {
+      return;
+    }
+
+#if MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_4  // SDK
+    mdItemCreateFunc = (MDItemCreate_type)
+        ::CFBundleGetFunctionPointerForName(metadataBundle,
+                                            CFSTR("MDItemCreate"));
+
+    mdItemWhereFroms = GetCFStringFromBundle(
+        metadataBundle, CFSTR("kMDItemWhereFroms"));
+#endif  // SDK
+
+    mdItemSetAttributeFunc = (MDItemSetAttribute_type)
+        ::CFBundleGetFunctionPointerForName(metadataBundle,
+                                            CFSTR("MDItemSetAttribute"));
+  }
+
+#if MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_4  // SDK
+  // The SDK is 10.4 or newer and has these declarations and stub libraries
+  // with these symbols.
+  mdItemCreateFunc = ::MDItemCreate;
+  mdItemWhereFroms = kMDItemWhereFroms;
+#endif  // SDK
+
+  // Make sure that any symbols we might have looked up are found.  Even if
+  // a newer SDK is used, do these checks if the deployment target indicates
+  // that we might run on an earlier release: the symbols might be marked for
+  // weak import which would let us run, but crash if we try to use them.
+  if (!mdItemSetAttributeFunc
+#if MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_4  // DT
+      || !mdItemCreateFunc || !mdItemWhereFroms
+#endif  // DT
+     ) {
+    return;
+  }
+
+  nsCOMPtr<nsILocalFileMac> macFile;
+  if (NS_FAILED(GetFileDownloadedTo(getter_AddRefs(macFile)))) {
+    return;
+  }
+
+  nsCAutoString geckoPath;
+  if (NS_FAILED(macFile->GetNativePath(geckoPath))) {
+    return;
+  }
+
+  NSString* path = [NSString stringWith_nsACString:geckoPath];
+
+  MDItemRef mdItem = mdItemCreateFunc(NULL, (CFStringRef)path);
+  if (!mdItem) {
+    return;
+  }
+
+  // We won't put any more than 2 items into the attribute.
+  NSMutableArray* list = [NSMutableArray arrayWithCapacity:2];
+
+  // Follow Safari's lead: the first item in the list is the source URL of
+  // the downloaded file.  If the referrer is known, store that, too.
+  nsCAutoString url;
+  if (NS_SUCCEEDED(mURI->GetSpec(url))) {
+    [list addObject:[NSString stringWith_nsACString:url]];
+  }
+
+  if (mReferrer && NS_SUCCEEDED(mReferrer->GetSpec(url))) {
+    [list addObject:[NSString stringWith_nsACString:url]];
+  }
+
+  mdItemSetAttributeFunc(mdItem, mdItemWhereFroms, (CFMutableArrayRef)list);
+
+  ::CFRelease(mdItem);
 }
 
 void nsDownloadListener::FigureOutReferrer() {
@@ -659,6 +779,30 @@ void nsDownloadListener::FigureOutReferrer() {
       NS_GetReferrerFromChannel(channel, getter_AddRefs(mReferrer));
     }
   }
+}
+
+// This returns the file that is being downloaded to: either the temporary
+// (*.part) file, if one is being used, or the actual target file.  If no
+// file can be found, returns NULL.  Temporary files are used for downloads
+// originating in Gecko; if we got here from SaveHeaderSniffer, no temporary
+// file is in use.
+nsresult nsDownloadListener::GetFileDownloadedTo(nsILocalFileMac** aMacFile) {
+  NS_ENSURE_ARG_POINTER(aMacFile);
+
+  nsCOMPtr<nsILocalFileMac> macFile;
+  if (mTempFile) {
+    macFile = do_QueryInterface(mTempFile);
+  }
+  else if (mDestinationFile) {
+    macFile = do_QueryInterface(mDestinationFile);
+  }
+
+  NS_IF_ADDREF(*aMacFile = macFile);
+
+  if (macFile) {
+    return NS_OK;
+  }
+  return NS_ERROR_FAILURE;
 }
 
 #pragma mark -
