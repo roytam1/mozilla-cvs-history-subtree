@@ -772,5 +772,12 @@ nsMacControl::WindowEventHandler(EventHandlerCallRef aHandlerCallRef,
   if (self->mVisible && self->ContainerHierarchyIsVisible())
     self->SetupControlHiliteState();
 
-  return ::CallNextEventHandler(aHandlerCallRef, aEvent);
+  // We can't call CallNextEventHandler() here:  There can be _many_ controls
+  // in a window, and this handler is installed on the same (window) target
+  // for each of them.  So CallNextEventHandler() recurses through this
+  // handler once for each "additional" control, and if there are too many
+  // controls a stack overflow can result (bmo bug 398499).  Since we never
+  // actually "consume" an activate or deactive event here, there should be
+  // no problem alwaye returning eventNotHandledErr.
+  return eventNotHandledErr;
 }
