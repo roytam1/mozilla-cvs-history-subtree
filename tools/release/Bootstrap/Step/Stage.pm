@@ -545,8 +545,9 @@ sub TrimCallback {
         # Don't ship xforms in the release area
         if (($dirent =~ /xforms\.xpi/) || 
          # ZIP files are not shipped; neither are en-US lang packs
-         ($dirent =~ /\.zip$/) ||
-         ($dirent =~ /en-US\.xpi$/)) {
+         ($dirent =~ /\.zip$/) || ($dirent =~ /en-US\.xpi$/) ||
+         # nor the BuildID files, nor the 2.0.0.x signing log
+         ($dirent =~ /_info.txt$/) || ($dirent =~ /win32_signing_rc\d+\.log/) ) {
             unlink($dirent) || die "Could not unlink $dirent: $!";
             $this->Log(msg => "Unlinked $dirent");
             return;
@@ -608,9 +609,11 @@ sub IsValidLocaleDeliverable {
     my $this = shift;
     my %args = @_;
 
+    my $config = new Bootstrap::Config();
+
     my $useTarGz = $config->Exists(var => 'useTarGz') ?
      $config->Get(var => 'useTarGz') : 0;
-    my $linuxExtension = ($useTarGz) ? '.gz' : '.bz2';
+    my $linuxExtension = ($useTarGz) ? 'gz' : 'bz2';
 
     my $dirent = $File::Find::name;
 
@@ -618,7 +621,7 @@ sub IsValidLocaleDeliverable {
     my @parts = split(/\./, basename($dirent));
     my $partsCount = scalar(@parts);
 
-    if ($dirent =~ /\.tar\.$linuxExtension) {
+    if ($dirent =~ /\.tar\.$linuxExtension/) {
         # e.g. firefox-2.0.0.2.sk.linux-i686.tar.gz
         $locale = $parts[$partsCount - 4];
         $platform = 'linux';
