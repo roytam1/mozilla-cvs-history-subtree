@@ -138,8 +138,8 @@ NS_IMETHODIMP nsFilePicker::Show(PRInt16 *retval)
 		Recycle(title_utf8);
 	}
 
-	// set default text
-	if (!mDefault.IsEmpty()) {
+	// set default text for save
+	if (!mDefault.IsEmpty() && panel_mode == B_SAVE_PANEL) {
 		char *defaultText = ToNewUTF8String(mDefault);
 		ppanel->SetSaveText(defaultText);
 		Recycle(defaultText);
