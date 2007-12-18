@@ -406,6 +406,21 @@ FocusElementButNotDocument(nsIDocument* aDocument, nsIContent* aContent)
   esm->SetFocusedContent(nsnull);
 }
 
+static PRBool
+IsNativeAnonymous(nsIContent* aContent)
+{
+    while (aContent) {
+        nsIContent* bindingParent = aContent->GetBindingParent();
+        if (bindingParent == aContent) {
+            return PR_TRUE;
+        }
+
+        aContent = bindingParent;
+    }
+
+    return PR_FALSE;
+}
+
 void nsWebBrowserFind::SetSelectionAndScroll(nsIDOMWindow* aWindow,
                                              nsIDOMRange*  aRange)
 {
@@ -425,7 +440,7 @@ void nsWebBrowserFind::SetSelectionAndScroll(nsIDOMWindow* aWindow,
   aRange->GetStartContainer(getter_AddRefs(node));
   nsCOMPtr<nsIContent> content(do_QueryInterface(node));
   for ( ; content; content = content->GetParent()) {
-    if (!content->IsNativeAnonymous()) {
+    if (!IsNativeAnonymous(content)) {
       presShell->GetPrimaryFrameFor(content, &frame);
       if (!frame)
         return;
