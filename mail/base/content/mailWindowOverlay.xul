@@ -1782,9 +1782,12 @@
 #endif
               />
                 <menuitem id="menu_markAsNotJunk" label="&markAsNotJunkCmd.label;"
-                          key="key_markNotJunk" 
-                      accesskey="&markAsNotJunkCmd.accesskey;" 
-                      command="cmd_markAsNotJunk"/>
+                          accesskey="&markAsNotJunkCmd.accesskey;" 
+                          command="cmd_markAsNotJunk"
+#ifndef XP_MACOSX
+                          key="key_markNotJunk"
+#endif
+              />
                 <menuitem label="&recalculateJunkScoreCmd.label;"
                           accesskey="&recalculateJunkScoreCmd.accesskey;"
                           command="cmd_recalculateJunkScore"/>
