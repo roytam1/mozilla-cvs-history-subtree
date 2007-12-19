@@ -1041,7 +1041,10 @@ SessionStoreService.prototype = {
       }
     }
     
-    this._windows[aWindow.__SSi].tabs.forEach(function(aTabData) { aTabData.entries.forEach(extractHosts); });
+    this._windows[aWindow.__SSi].tabs.forEach(function(aTabData) {
+      if (aTabData.entries instanceof Array) // cf. bug 402349
+        aTabData.entries.forEach(extractHosts);
+    });
   },
 
   /**
@@ -1974,7 +1977,11 @@ SessionStoreService.prototype = {
       else if (aObj == null) {
         parts.push("null");
       }
-      else if (aObj instanceof Array) {
+      // if it looks like an array, treat it as such -
+      // this is required for all arrays from a sandbox
+      else if (aObj instanceof Array ||
+               typeof aObj == "object" && "length" in aObj &&
+               (aObj.length === 0 || aObj[aObj.length - 1] !== undefined)) {
         parts.push("[");
         for (var i = 0; i < aObj.length; i++) {
           jsonIfy(aObj[i]);
