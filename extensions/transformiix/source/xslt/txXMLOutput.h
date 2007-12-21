@@ -40,7 +40,7 @@
 #define TRANSFRMX_XML_OUTPUT_H
 
 #include "txXMLEventHandler.h"
-#include "List.h"
+#include "txList.h"
 #include "txStack.h"
 #include "txOutputFormat.h"
 #include "XMLUtils.h"

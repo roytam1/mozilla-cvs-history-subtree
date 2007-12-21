@@ -41,7 +41,7 @@
 
 #include "txOutputFormat.h"
 #include "txExpandedNameMap.h"
-#include "List.h"
+#include "txList.h"
 #include "txXSLTPatterns.h"
 #include "XSLTFunctions.h"
 #include "nsVoidArray.h"
