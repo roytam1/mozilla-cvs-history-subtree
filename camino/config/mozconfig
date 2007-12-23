@@ -5,8 +5,11 @@ ac_add_options --disable-tests
 ac_add_options --disable-accessibility
 ac_add_options --disable-jsd
 ac_add_options --enable-single-profile
+ac_add_options --disable-profilesharing
 ac_add_options --enable-canvas
 ac_add_options --enable-svg
+ac_add_options --disable-xpcom-obsolete
+ac_add_options --disable-xpinstall
 
 # Pick the right SDK depending on the CPU.  This doesn't even pretend to be
 # cross-friendly, but neither do other parts of the Camino build, and it's
@@ -21,3 +24,16 @@ case `/usr/bin/uname -p` in
     ac_add_options --enable-macos-target=10.4
     ;;
 esac
+
+# configure.in on MOZILLA_1_8_BRANCH contains bugs in detecting toolchain
+# support for "#pragma GCC visibility".  These were fixed on the trunk in
+# bug 384513, but at this point, we've got no shot at fixing them for all
+# products on the branch.  "It would be destabilizing."  As a workaround,
+# push the outcomes of the fixed tests into configure by abusing autoconf's
+# cache feature.  This will result in configure setting VISIBILITY_FLAGS
+# properly.  Note that the only Apple compilers that support these visibility
+# settings are gcc 4.0 and later.  When using gcc 3.3, configure will
+# correctly detect a complete lack of visibility support and will not be
+# bothered by this workaround.
+ac_cv_visibility_pragma=yes
+ac_cv_have_visibility_class_bug=no
