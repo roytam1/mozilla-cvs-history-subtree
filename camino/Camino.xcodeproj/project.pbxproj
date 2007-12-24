@@ -2239,7 +2239,6 @@
 		00F3BE290C4F280700E19B0C /* Debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text.xcconfig; name = Debug.xcconfig; path = config/Debug.xcconfig; sourceTree = "<group>"; };
 		00F3BE2A0C4F280700E19B0C /* PrefPane.xcconfig */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text.xcconfig; name = PrefPane.xcconfig; path = config/PrefPane.xcconfig; sourceTree = "<group>"; };
 		00F3BE2B0C4F280700E19B0C /* Release.xcconfig */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text.xcconfig; name = Release.xcconfig; path = config/Release.xcconfig; sourceTree = "<group>"; };
-		00F3BE2C0C4F280700E19B0C /* ReleaseSymbols.xcconfig */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text.xcconfig; name = ReleaseSymbols.xcconfig; path = config/ReleaseSymbols.xcconfig; sourceTree = "<group>"; };
 		032FFDCD077351A800440548 /* Downloads.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = Downloads.h; sourceTree = "<group>"; };
 		032FFDCE077351A800440548 /* Downloads.mm */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.objcpp; path = Downloads.mm; sourceTree = "<group>"; };
 		032FFDCF077351A800440548 /* Downloads.tiff */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; path = Downloads.tiff; sourceTree = "<group>"; };
@@ -3139,7 +3138,6 @@
 				00F3BE2A0C4F280700E19B0C /* PrefPane.xcconfig */,
 				00F3BE290C4F280700E19B0C /* Debug.xcconfig */,
 				00F3BE2B0C4F280700E19B0C /* Release.xcconfig */,
-				00F3BE2C0C4F280700E19B0C /* ReleaseSymbols.xcconfig */,
 			);
 			name = "Xcode Configs";
 			sourceTree = "<group>";
@@ -5088,6 +5086,7 @@
 		29B97313FDCFA39411CA2CEA /* Project object */ = {
 			isa = PBXProject;
 			buildConfigurationList = 00F3BE210C4F27DE00E19B0C /* Build configuration list for PBXProject "Camino" */;
+			compatibilityVersion = "Xcode 2.4";
 			hasScannedForEncodings = 1;
 			knownRegions = (
 				English,
