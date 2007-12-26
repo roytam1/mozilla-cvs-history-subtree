@@ -3950,7 +3950,12 @@ PresShell::RecreateFramesFor(nsIContent* aContent)
 
   NS_ASSERTION(mViewManager, "Should have view manager");
   mViewManager->BeginUpdateViewBatch();
+
+  // Mark ourselves as not safe to flush while we're doing frame construction.
+  ++mChangeNestCount;
   nsresult rv = mFrameConstructor->ProcessRestyledFrames(changeList);
+  --mChangeNestCount;
+  
   mViewManager->EndUpdateViewBatch(NS_VMREFRESH_NO_SYNC);
 #ifdef ACCESSIBILITY
   InvalidateAccessibleSubtree(aContent);
@@ -5693,7 +5698,12 @@ nsIPresShell::ReconstructStyleDataInternal()
 
   NS_ASSERTION(mViewManager, "Should have view manager");
   mViewManager->BeginUpdateViewBatch();
+
+  // Mark ourselves as not safe to flush while we're doing frame construction.
+  NS_STATIC_CAST(PresShell*, this)->BlockFlushing();
   mFrameConstructor->ProcessRestyledFrames(changeList);
+  NS_STATIC_CAST(PresShell*, this)->UnblockFlushing();
+  
   mViewManager->EndUpdateViewBatch(NS_VMREFRESH_NO_SYNC);
 
   VERIFY_STYLE_TREE;
@@ -7416,7 +7426,11 @@ PresShell::Observe(nsISupports* aSubject,
       nsStyleChangeList changeList;
       WalkFramesThroughPlaceholders(mPresContext, rootFrame,
                                     ReframeImageBoxes, &changeList);
+      // Mark ourselves as not safe to flush while we're doing frame
+      // construction.
+      ++mChangeNestCount;
       mFrameConstructor->ProcessRestyledFrames(changeList);
+      --mChangeNestCount;
 
       mViewManager->EndUpdateViewBatch(NS_VMREFRESH_NO_SYNC);
 #ifdef ACCESSIBILITY

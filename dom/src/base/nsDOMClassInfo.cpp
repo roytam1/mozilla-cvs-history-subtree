@@ -7052,7 +7052,14 @@ nsElementSH::PostCreate(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
   }
   
   if (binding) {
-    binding->ExecuteAttachedHandler();
+    // Make sure the presshell is in a state where it's safe to execute script
+    PRBool safeToRunScript = PR_FALSE;
+    pctx->GetPresShell()->IsSafeToFlush(safeToRunScript);
+    if (safeToRunScript) {
+      binding->ExecuteAttachedHandler();
+    } else {
+      doc->BindingManager()->AddToAttachedQueue(binding);
+    }
   }
 
   return NS_OK;
