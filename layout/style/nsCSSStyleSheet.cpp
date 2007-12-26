@@ -1278,7 +1278,7 @@ nsCSSStyleSheetInner::RebuildNameSpaces()
 MOZ_DECL_CTOR_COUNTER(nsCSSStyleSheet)
 
 nsCSSStyleSheet::nsCSSStyleSheet()
-  : nsICSSStyleSheet(),
+  : nsICSSStyleSheet_MOZILLA_1_8_BRANCH(),
     mRefCnt(0),
     mTitle(), 
     mMedia(nsnull),
@@ -1303,7 +1303,7 @@ nsCSSStyleSheet::nsCSSStyleSheet(const nsCSSStyleSheet& aCopy,
                                      nsICSSImportRule* aOwnerRuleToUse,
                                      nsIDocument* aDocumentToUse,
                                      nsIDOMNode* aOwningNodeToUse)
-  : nsICSSStyleSheet(),
+  : nsICSSStyleSheet_MOZILLA_1_8_BRANCH(),
     mRefCnt(0),
     mTitle(aCopy.mTitle), 
     mMedia(nsnull),
@@ -1393,6 +1393,7 @@ nsCSSStyleSheet::~nsCSSStyleSheet()
 // QueryInterface implementation for nsCSSStyleSheet
 NS_INTERFACE_MAP_BEGIN(nsCSSStyleSheet)
   NS_INTERFACE_MAP_ENTRY(nsICSSStyleSheet)
+  NS_INTERFACE_MAP_ENTRY(nsICSSStyleSheet_MOZILLA_1_8_BRANCH)
   NS_INTERFACE_MAP_ENTRY(nsIStyleSheet)
   NS_INTERFACE_MAP_ENTRY(nsIDOMStyleSheet)
   NS_INTERFACE_MAP_ENTRY(nsIDOMCSSStyleSheet)
@@ -1434,6 +1435,13 @@ nsCSSStyleSheet::DropRuleProcessor(nsCSSRuleProcessor* aProcessor)
 NS_IMETHODIMP
 nsCSSStyleSheet::SetURIs(nsIURI* aSheetURI, nsIURI* aBaseURI)
 {
+  return SetURIs18(aSheetURI, nsnull, aBaseURI);
+}
+
+NS_IMETHODIMP
+nsCSSStyleSheet::SetURIs18(nsIURI* aSheetURI, nsIURI* aOriginalSheetURI,
+                           nsIURI* aBaseURI)
+{
   NS_PRECONDITION(aSheetURI && aBaseURI, "null ptr");
 
   if (! mInner) {
@@ -1444,6 +1452,7 @@ nsCSSStyleSheet::SetURIs(nsIURI* aSheetURI, nsIURI* aBaseURI)
                "Can't call SetURL on sheets that are complete or have rules");
 
   mInner->mSheetURI = aSheetURI;
+  mInner->mOriginalSheetURI = aOriginalSheetURI;
   mInner->mBaseURI = aBaseURI;
   return NS_OK;
 }
@@ -2091,14 +2100,13 @@ nsCSSStyleSheet::GetParentStyleSheet(nsIDOMStyleSheet** aParentStyleSheet)
 NS_IMETHODIMP
 nsCSSStyleSheet::GetHref(nsAString& aHref)
 {
-  nsCAutoString str;
-
-  // XXXldb The DOM spec says that this should be null for inline style sheets.
-  if (mInner && mInner->mSheetURI) {
-    mInner->mSheetURI->GetSpec(str);
+  if (mInner && mInner->mOriginalSheetURI) {
+    nsCAutoString str;
+    mInner->mOriginalSheetURI->GetSpec(str);
+    CopyUTF8toUTF16(str, aHref);
+  } else {
+    SetDOMStringToNull(aHref);
   }
-
-  CopyUTF8toUTF16(str, aHref);
 
   return NS_OK;
 }
