@@ -40,7 +40,6 @@
 
 #import "nsCOMPtr.h"
 #import "nsString.h"
-#import "nsArray.h"
 #import "nsIArray.h"
 
 #import "nsIX509Cert.h"

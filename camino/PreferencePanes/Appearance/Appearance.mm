@@ -841,7 +841,7 @@ const int kMissingFontPopupItemTag = 9999;
   // use Apple Type Services to supply the names of installed fonts.
   NSEnumerator* fontNameEnumerator = [[self sortedCarbonSystemFontFamilies] objectEnumerator];
   NSString* fontName;
-  while (fontName = [fontNameEnumerator nextObject]) {
+  while ((fontName = [fontNameEnumerator nextObject])) {
     NSMenuItem* newMenuItem = [[[NSMenuItem alloc] initWithTitle:fontName action:nil keyEquivalent:@""] autorelease];
     [menu addItem:newMenuItem];
   }

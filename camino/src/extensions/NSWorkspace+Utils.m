@@ -40,6 +40,16 @@
 
 #import "NSWorkspace+Utils.h"
 
+// Private and undocumented Apple API.  Generally, Launch Services uses
+// CFTypes instead of NSTypes, but they're used in this file as type-equivalent
+// NSTypes.  Declaring them this way avoids unsightly casts.
+OSStatus _LSCopyDefaultSchemeHandlerURL(NSString* scheme, NSURL** handlerURL);
+OSStatus _LSSetDefaultSchemeHandlerURL(NSString* scheme, NSURL* handlerURL);
+OSStatus _LSSetWeakBindingForType(OSType type, OSType creator,
+                                  CFStringRef extension, LSRolesMask role,
+                                  FSRef* handlerFSRef);
+OSStatus _LSSaveAndRefresh();
+
 @implementation NSWorkspace(CaminoDefaultBrowserAdditions)
 
 - (NSArray*)installedBrowserIdentifiers
