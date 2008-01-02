@@ -199,6 +199,7 @@ MODULES_core :=                                 \
   mozilla/storage                               \
   mozilla/db/sqlite3                            \
   mozilla/db/morkreader                         \
+  mozilla/testing/crashtest                     \
   mozilla/testing/mochitest                     \
   $(NULL)
 
@@ -258,6 +259,7 @@ LOCALES_suite :=                                \
   suite                                         \
   editor/ui                                     \
   extensions/reporter                           \
+  extensions/spellcheck                         \
   $(NULL)
 
 BOOTSTRAP_suite :=                              \
@@ -432,7 +434,7 @@ MODULES_all :=                                  \
 # adding '-f' everywhere that we pull with the checkout tag, we force
 # the head revision if a file is not tagged
 MOZ_CO_TAG           = ZAP_20050610_BRANCH
-NSPR_CO_TAG          = NSPR_HEAD_20071016
+NSPR_CO_TAG          = NSPR_HEAD_20071218
 NSS_CO_TAG           = NSS_3_12_ALPHA_2B
 LDAPCSDK_CO_TAG      = LDAPCSDK_6_0_3_CLIENT_BRANCH
 LOCALES_CO_TAG       =
@@ -757,9 +759,9 @@ override MOZ_CO_LOCALES := $(subst $(comma), ,$(MOZ_CO_LOCALES))
 ifeq (all,$(MOZ_CO_LOCALES))
 MOZCONFIG_MODULES += $(foreach project,$(MOZ_PROJECT_LIST),mozilla/$(project)/locales/all-locales)
 
-LOCALE_CO_DIRS := $(sort $(foreach project,$(MOZ_PROJECT_LIST),$(foreach locale,$(shell cat mozilla/$(project)/locales/all-locales),$(foreach dir,$(LOCALES_$(project)),l10n/$(locale)/$(dir)))))
+LOCALE_CO_DIRS := $(sort $(foreach project,$(MOZ_PROJECT_LIST),$(foreach locale,$(shell cat mozilla/$(project)/locales/all-locales),l10n/$(locale)/)))
 else # MOZ_CO_LOCALES != all
-LOCALE_CO_DIRS = $(sort $(foreach locale,$(MOZ_CO_LOCALES),$(foreach dir,$(LOCALE_DIRS),l10n/$(locale)/$(dir))))
+LOCALE_CO_DIRS = $(sort $(foreach locale,$(MOZ_CO_LOCALES),l10n/$(locale)/))
 endif
 
 CVSCO_LOCALES := $(CVS) $(CVS_FLAGS) -d $(LOCALES_CVSROOT) co $(LOCALES_CO_FLAGS) $(CVS_CO_LOCALES_DATE_FLAGS) $(LOCALE_CO_DIRS)

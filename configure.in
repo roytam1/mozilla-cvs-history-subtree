@@ -1592,10 +1592,10 @@ case "$target" in
 *-darwin*) 
     MKSHLIB='$(CXX) $(CXXFLAGS) $(DSO_PIC_CFLAGS) $(DSO_LDOPTS) -o $@'
     MKCSHLIB='$(CC) $(CFLAGS) $(DSO_PIC_CFLAGS) $(DSO_LDOPTS) -o $@'
-
+    MOZ_OPTIMIZE_FLAGS="-O2"
     _PEDANTIC=
-    CFLAGS="$CFLAGS -fpascal-strings -no-cpp-precomp -fno-common"
-    CXXFLAGS="$CXXFLAGS -fpascal-strings -no-cpp-precomp -fno-common"
+    CFLAGS="$CFLAGS -fpascal-strings -fno-common"
+    CXXFLAGS="$CXXFLAGS -fpascal-strings -fno-common"
     DLL_SUFFIX=".dylib"
     DSO_LDOPTS=''
     STRIP="$STRIP -x -S"
@@ -1715,6 +1715,7 @@ case "$target" in
 
 *-*linux*)
     TARGET_NSPR_MDCPUCFG='\"md/_linux.cfg\"'
+    MOZ_OPTIMIZE_FLAGS="-Os -freorder-blocks -fno-reorder-functions"
     MOZ_DEBUG_FLAGS="-g -fno-inline"  # most people on linux use gcc/gdb,
                                       # and that combo is not yet good at
                                       # debugging inlined functions (even
@@ -2825,7 +2826,7 @@ if test "x$enable_dtrace" = "xyes"; then
   if test -n "$HAVE_DTRACE"; then
       AC_DEFINE(INCLUDE_MOZILLA_DTRACE)
   else
-      AC_MSG_ERROR([dtrace enabled but sys/std.h not found]);
+      AC_MSG_ERROR([dtrace enabled but sys/sdt.h not found]);
   fi
 fi
 AC_SUBST(HAVE_DTRACE)
@@ -5515,7 +5516,7 @@ case "$MOZ_WIDGET_TOOLKIT" in
 beos|windows|os2|mac|cocoa)
     ;;
 *)
-    if test -z "$MOZ_ENABLE_GNOMEUI"; then
+    if test -z "$MOZ_ENABLE_GTK2"; then
        MOZ_IMG_DECODERS_DEFAULT=`echo $MOZ_IMG_DECODERS_DEFAULT | sed -e 's|icon||'`                
     fi
     ;;
@@ -7014,6 +7015,7 @@ if test "$MOZ_SVG" -o "$MOZ_ENABLE_CANVAS" -o "$MOZ_ENABLE_CAIRO_GFX" ; then
        if test "$MOZ_WIDGET_TOOLKIT" = "os2"; then
            OS2_SURFACE_FEATURE="#define CAIRO_HAS_OS2_SURFACE 1"
            FT_FONT_FEATURE="#define CAIRO_HAS_FT_FONT 1"
+           PDF_SURFACE_FEATURE="#define CAIRO_HAS_PDF_SURFACE 1"
            MOZ_ENABLE_CAIRO_FT=1
            CAIRO_FT_CFLAGS="-I${MZFTCFGFT2}/include"
            CAIRO_FT_LIBS="-L${MZFTCFGFT2}/lib -lmozft -lmzfntcfg"
