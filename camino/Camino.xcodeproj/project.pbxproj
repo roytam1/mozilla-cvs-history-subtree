@@ -317,7 +317,6 @@
 		3F44ABE405BDFB9E00CB4B08 /* ContentClickListener.h in Headers */ = {isa = PBXBuildFile; fileRef = F59E9F3D0237E28401A967DF /* ContentClickListener.h */; };
 		3F44ABE505BDFB9E00CB4B08 /* GeckoUtils.h in Headers */ = {isa = PBXBuildFile; fileRef = F5607CB5023944AD01A967DF /* GeckoUtils.h */; };
 		3F44ABE705BDFB9E00CB4B08 /* Find.h in Headers */ = {isa = PBXBuildFile; fileRef = F5137A1102676B9101026D05 /* Find.h */; };
-		3F44ABE805BDFB9E00CB4B08 /* LocationBar.h in Headers */ = {isa = PBXBuildFile; fileRef = F57074BD026D80DF01A80166 /* LocationBar.h */; };
 		3F44ABE905BDFB9E00CB4B08 /* GetURLCommand.h in Headers */ = {isa = PBXBuildFile; fileRef = F51B70B6026EC98B01A80166 /* GetURLCommand.h */; };
 		3F44ABEA05BDFB9E00CB4B08 /* ExtendedOutlineView.h in Headers */ = {isa = PBXBuildFile; fileRef = F5C3AB810270072A01A80166 /* ExtendedOutlineView.h */; };
 		3F44ABEB05BDFB9E00CB4B08 /* CHToolbarAdditions.h in Headers */ = {isa = PBXBuildFile; fileRef = F541495A02711A8301A80166 /* CHToolbarAdditions.h */; };
@@ -441,7 +440,6 @@
 		3F44AC8C05BDFB9E00CB4B08 /* MVPreferencesController.mm in Sources */ = {isa = PBXBuildFile; fileRef = F53F21F0022B7C77010001CA /* MVPreferencesController.mm */; };
 		3F44AC8F05BDFB9E00CB4B08 /* BrowserTabView.mm in Sources */ = {isa = PBXBuildFile; fileRef = F5BF71460231B8BC010001CA /* BrowserTabView.mm */; };
 		3F44AC9005BDFB9E00CB4B08 /* ContentClickListener.mm in Sources */ = {isa = PBXBuildFile; fileRef = F59E9F3F0237E43401A967DF /* ContentClickListener.mm */; };
-		3F44AC9205BDFB9E00CB4B08 /* LocationBar.mm in Sources */ = {isa = PBXBuildFile; fileRef = F57074BE026D80DF01A80166 /* LocationBar.mm */; };
 		3F44AC9305BDFB9E00CB4B08 /* GetURLCommand.mm in Sources */ = {isa = PBXBuildFile; fileRef = F51B70B7026EC98B01A80166 /* GetURLCommand.mm */; };
 		3F44AC9405BDFB9E00CB4B08 /* ExtendedOutlineView.mm in Sources */ = {isa = PBXBuildFile; fileRef = F5C3AB820270072A01A80166 /* ExtendedOutlineView.mm */; };
 		3F44AC9505BDFB9E00CB4B08 /* CHToolbarAdditions.m in Sources */ = {isa = PBXBuildFile; fileRef = F541495B02711A8301A80166 /* CHToolbarAdditions.m */; };
@@ -689,7 +687,6 @@
 		3F44AE1D05BDFBA000CB4B08 /* ContentClickListener.h in Headers */ = {isa = PBXBuildFile; fileRef = F59E9F3D0237E28401A967DF /* ContentClickListener.h */; };
 		3F44AE1E05BDFBA000CB4B08 /* GeckoUtils.h in Headers */ = {isa = PBXBuildFile; fileRef = F5607CB5023944AD01A967DF /* GeckoUtils.h */; };
 		3F44AE2005BDFBA000CB4B08 /* Find.h in Headers */ = {isa = PBXBuildFile; fileRef = F5137A1102676B9101026D05 /* Find.h */; };
-		3F44AE2105BDFBA000CB4B08 /* LocationBar.h in Headers */ = {isa = PBXBuildFile; fileRef = F57074BD026D80DF01A80166 /* LocationBar.h */; };
 		3F44AE2205BDFBA000CB4B08 /* GetURLCommand.h in Headers */ = {isa = PBXBuildFile; fileRef = F51B70B6026EC98B01A80166 /* GetURLCommand.h */; };
 		3F44AE2305BDFBA000CB4B08 /* ExtendedOutlineView.h in Headers */ = {isa = PBXBuildFile; fileRef = F5C3AB810270072A01A80166 /* ExtendedOutlineView.h */; };
 		3F44AE2405BDFBA000CB4B08 /* CHToolbarAdditions.h in Headers */ = {isa = PBXBuildFile; fileRef = F541495A02711A8301A80166 /* CHToolbarAdditions.h */; };
@@ -813,7 +810,6 @@
 		3F44AEC505BDFBA000CB4B08 /* MVPreferencesController.mm in Sources */ = {isa = PBXBuildFile; fileRef = F53F21F0022B7C77010001CA /* MVPreferencesController.mm */; };
 		3F44AEC805BDFBA000CB4B08 /* BrowserTabView.mm in Sources */ = {isa = PBXBuildFile; fileRef = F5BF71460231B8BC010001CA /* BrowserTabView.mm */; };
 		3F44AEC905BDFBA000CB4B08 /* ContentClickListener.mm in Sources */ = {isa = PBXBuildFile; fileRef = F59E9F3F0237E43401A967DF /* ContentClickListener.mm */; };
-		3F44AECB05BDFBA000CB4B08 /* LocationBar.mm in Sources */ = {isa = PBXBuildFile; fileRef = F57074BE026D80DF01A80166 /* LocationBar.mm */; };
 		3F44AECC05BDFBA000CB4B08 /* GetURLCommand.mm in Sources */ = {isa = PBXBuildFile; fileRef = F51B70B7026EC98B01A80166 /* GetURLCommand.mm */; };
 		3F44AECD05BDFBA000CB4B08 /* ExtendedOutlineView.mm in Sources */ = {isa = PBXBuildFile; fileRef = F5C3AB820270072A01A80166 /* ExtendedOutlineView.mm */; };
 		3F44AECE05BDFBA000CB4B08 /* CHToolbarAdditions.m in Sources */ = {isa = PBXBuildFile; fileRef = F541495B02711A8301A80166 /* CHToolbarAdditions.m */; };
@@ -2761,8 +2757,6 @@
 		F56F249002AC729901A967F3 /* libpipnss.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libpipnss.a; path = ../security/manager/ssl/src/libpipnss.a; sourceTree = SOURCE_ROOT; };
 		F56F249402AC729901A967F3 /* libxmlextras.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libxmlextras.a; path = ../extensions/xmlextras/build/src/libxmlextras.a; sourceTree = SOURCE_ROOT; };
 		F56F837202E47CCD01EF35C9 /* English */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = English; path = generated/PreferencePanes/Appearance/English.lproj/RegionNames.strings; sourceTree = SOURCE_ROOT; };
-		F57074BD026D80DF01A80166 /* LocationBar.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = LocationBar.h; path = src/browser/LocationBar.h; sourceTree = "<group>"; };
-		F57074BE026D80DF01A80166 /* LocationBar.mm */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.objcpp; name = LocationBar.mm; path = src/browser/LocationBar.mm; sourceTree = SOURCE_ROOT; };
 		F57BED9703A1824001A9666E /* NetworkServices.mm */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.objcpp; name = NetworkServices.mm; path = src/rendezvous/NetworkServices.mm; sourceTree = SOURCE_ROOT; };
 		F57BED9A03A1824801A9666E /* NetworkServices.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = NetworkServices.h; path = src/rendezvous/NetworkServices.h; sourceTree = SOURCE_ROOT; };
 		F57BED9D03A1825001A9666E /* DNSUtils.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = DNSUtils.c; path = src/rendezvous/DNSUtils.c; sourceTree = SOURCE_ROOT; };
@@ -3945,8 +3939,6 @@
 				3F2CF8CC042A88B7005FD42F /* ImageAndTextCell.m */,
 				7B5073340D11EA9B00458384 /* KeyEquivView.h */,
 				7B5073350D11EA9B00458384 /* KeyEquivView.mm */,
-				F57074BD026D80DF01A80166 /* LocationBar.h */,
-				F57074BE026D80DF01A80166 /* LocationBar.mm */,
 				0FBC0EE20798FA2700E8E0E2 /* PopupMenuButton.h */,
 				0FBC0EDF0798FA1900E8E0E2 /* PopupMenuButton.m */,
 				DE1179DD0A15F92A00006DD6 /* RolloverImageButton.h */,
@@ -4570,7 +4562,6 @@
 				3F44ABE405BDFB9E00CB4B08 /* ContentClickListener.h in Headers */,
 				3F44ABE505BDFB9E00CB4B08 /* GeckoUtils.h in Headers */,
 				3F44ABE705BDFB9E00CB4B08 /* Find.h in Headers */,
-				3F44ABE805BDFB9E00CB4B08 /* LocationBar.h in Headers */,
 				3F44ABE905BDFB9E00CB4B08 /* GetURLCommand.h in Headers */,
 				3F44ABEA05BDFB9E00CB4B08 /* ExtendedOutlineView.h in Headers */,
 				3F44ABEB05BDFB9E00CB4B08 /* CHToolbarAdditions.h in Headers */,
@@ -4738,7 +4729,6 @@
 				3F44AE1D05BDFBA000CB4B08 /* ContentClickListener.h in Headers */,
 				3F44AE1E05BDFBA000CB4B08 /* GeckoUtils.h in Headers */,
 				3F44AE2005BDFBA000CB4B08 /* Find.h in Headers */,
-				3F44AE2105BDFBA000CB4B08 /* LocationBar.h in Headers */,
 				3F44AE2205BDFBA000CB4B08 /* GetURLCommand.h in Headers */,
 				3F44AE2305BDFBA000CB4B08 /* ExtendedOutlineView.h in Headers */,
 				3F44AE2405BDFBA000CB4B08 /* CHToolbarAdditions.h in Headers */,
@@ -5664,7 +5654,6 @@
 				3F44AC8C05BDFB9E00CB4B08 /* MVPreferencesController.mm in Sources */,
 				3F44AC8F05BDFB9E00CB4B08 /* BrowserTabView.mm in Sources */,
 				3F44AC9005BDFB9E00CB4B08 /* ContentClickListener.mm in Sources */,
-				3F44AC9205BDFB9E00CB4B08 /* LocationBar.mm in Sources */,
 				3F44AC9305BDFB9E00CB4B08 /* GetURLCommand.mm in Sources */,
 				3F44AC9405BDFB9E00CB4B08 /* ExtendedOutlineView.mm in Sources */,
 				3F44AC9505BDFB9E00CB4B08 /* CHToolbarAdditions.m in Sources */,
@@ -5825,7 +5814,6 @@
 				3F44AEC505BDFBA000CB4B08 /* MVPreferencesController.mm in Sources */,
 				3F44AEC805BDFBA000CB4B08 /* BrowserTabView.mm in Sources */,
 				3F44AEC905BDFBA000CB4B08 /* ContentClickListener.mm in Sources */,
-				3F44AECB05BDFBA000CB4B08 /* LocationBar.mm in Sources */,
 				3F44AECC05BDFBA000CB4B08 /* GetURLCommand.mm in Sources */,
 				3F44AECD05BDFBA000CB4B08 /* ExtendedOutlineView.mm in Sources */,
 				3F44AECE05BDFBA000CB4B08 /* CHToolbarAdditions.m in Sources */,
