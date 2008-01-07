@@ -320,6 +320,11 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
       [restoreAfterCrashAlert setMessageText:NSLocalizedString(@"RestoreAfterCrashTitle", nil)];
       [restoreAfterCrashAlert setInformativeText:NSLocalizedString(@"RestoreAfterCrashMessage", nil)];
       [restoreAfterCrashAlert setAlertStyle:NSWarningAlertStyle];
+
+      // It should be impossible for a menu to be open so soon, but this
+      // should be called before displaying any modal dialogs.
+      [NSMenu cancelAllTracking];
+
       if ([restoreAfterCrashAlert runModal] == NSAlertFirstButtonReturn)
         shouldRestoreWindowState = YES;
     }
@@ -1109,6 +1114,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
                           contextInfo:browserController];
   }
   else {
+    [NSMenu cancelAllTracking];
     int result = [openPanel runModalForTypes:fileTypes];
     [self openPanelDidEnd:openPanel returnCode:result contextInfo:nil];
   }
@@ -1271,6 +1277,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
   [savePanel setAccessoryView:mExportPanelView];
 
   // start the save panel
+  [NSMenu cancelAllTracking];
   int saveResult = [savePanel runModalForDirectory:nil file:NSLocalizedString(@"ExportedBookmarkFile", @"Exported Bookmarks")];
   int selectedButton = [button indexOfSelectedItem];
   if (saveResult != NSFileHandlingPanelOKButton)
