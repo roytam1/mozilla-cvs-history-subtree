@@ -262,6 +262,10 @@
 		33563BBA0C85260200DC4D06 /* CertificatesWindowController.h in Headers */ = {isa = PBXBuildFile; fileRef = 33563BB00C85260200DC4D06 /* CertificatesWindowController.h */; };
 		33563BBB0C85260200DC4D06 /* CertificateView.h in Headers */ = {isa = PBXBuildFile; fileRef = 33563BB10C85260200DC4D06 /* CertificateView.h */; };
 		33563BBC0C85260200DC4D06 /* ViewCertificateDialogController.h in Headers */ = {isa = PBXBuildFile; fileRef = 33563BB20C85260200DC4D06 /* ViewCertificateDialogController.h */; };
+		3381EEFA0D32C6CC004CF402 /* CHCookieStorage.h in Headers */ = {isa = PBXBuildFile; fileRef = 3381EEF80D32C6CC004CF402 /* CHCookieStorage.h */; };
+		3381EEFB0D32C6CC004CF402 /* CHCookieStorage.mm in Sources */ = {isa = PBXBuildFile; fileRef = 3381EEF90D32C6CC004CF402 /* CHCookieStorage.mm */; };
+		3381EEFC0D32C6CC004CF402 /* CHCookieStorage.h in Headers */ = {isa = PBXBuildFile; fileRef = 3381EEF80D32C6CC004CF402 /* CHCookieStorage.h */; };
+		3381EEFD0D32C6CC004CF402 /* CHCookieStorage.mm in Sources */ = {isa = PBXBuildFile; fileRef = 3381EEF90D32C6CC004CF402 /* CHCookieStorage.mm */; };
 		33EB4D670D11E23D00027E31 /* PreferencesWindow.h in Headers */ = {isa = PBXBuildFile; fileRef = 33EB4D650D11E23D00027E31 /* PreferencesWindow.h */; };
 		33EB4D680D11E23D00027E31 /* PreferencesWindow.m in Sources */ = {isa = PBXBuildFile; fileRef = 33EB4D660D11E23D00027E31 /* PreferencesWindow.m */; };
 		33EB4D690D11E23D00027E31 /* PreferencesWindow.h in Headers */ = {isa = PBXBuildFile; fileRef = 33EB4D650D11E23D00027E31 /* PreferencesWindow.h */; };
@@ -1105,7 +1109,6 @@
 		4D29966B0869C5FA00E84287 /* libxpcom_core.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 3F12FC56072E8ECB00995ED9 /* libxpcom_core.dylib */; };
 		4D2997870869C93800E84287 /* libxpcom_core.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 3F12FC56072E8ECB00995ED9 /* libxpcom_core.dylib */; };
 		4D29978E0869C95D00E84287 /* libxpcom_core.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 3F12FC56072E8ECB00995ED9 /* libxpcom_core.dylib */; };
-		4D29989F0869CA5200E84287 /* libxpcom_core.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 3F12FC56072E8ECB00995ED9 /* libxpcom_core.dylib */; };
 		4D5881770864B28D001305B3 /* Default Plugin.plugin in Copy Gecko Plugins */ = {isa = PBXBuildFile; fileRef = F56610BC0394775201A9666E /* Default Plugin.plugin */; };
 		4D58817B0864B2AE001305B3 /* Default Plugin.plugin in Copy Gecko Plugins */ = {isa = PBXBuildFile; fileRef = F56610BC0394775201A9666E /* Default Plugin.plugin */; };
 		4DC28F5E099184B80081939B /* libucvmath.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 4DC28F5D099184B80081939B /* libucvmath.a */; };
@@ -2373,6 +2376,8 @@
 		33563BB00C85260200DC4D06 /* CertificatesWindowController.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = CertificatesWindowController.h; path = src/security/CertificatesWindowController.h; sourceTree = "<group>"; };
 		33563BB10C85260200DC4D06 /* CertificateView.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = CertificateView.h; path = src/security/CertificateView.h; sourceTree = "<group>"; };
 		33563BB20C85260200DC4D06 /* ViewCertificateDialogController.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = ViewCertificateDialogController.h; path = src/security/ViewCertificateDialogController.h; sourceTree = "<group>"; };
+		3381EEF80D32C6CC004CF402 /* CHCookieStorage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CHCookieStorage.h; path = src/embedding/CHCookieStorage.h; sourceTree = "<group>"; };
+		3381EEF90D32C6CC004CF402 /* CHCookieStorage.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = CHCookieStorage.mm; path = src/embedding/CHCookieStorage.mm; sourceTree = "<group>"; };
 		33EB4D650D11E23D00027E31 /* PreferencesWindow.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = PreferencesWindow.h; sourceTree = "<group>"; };
 		33EB4D660D11E23D00027E31 /* PreferencesWindow.m */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.objc; path = PreferencesWindow.m; sourceTree = "<group>"; };
 		33F3B7250C63FC25007DFBD0 /* ScriptingSupport.mm */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.objcpp; name = ScriptingSupport.mm; path = src/appleevents/ScriptingSupport.mm; sourceTree = "<group>"; };
@@ -3031,7 +3036,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				3F44ADD005BDFBA000CB4B08 /* Cocoa.framework in Frameworks */,
-				4D29989F0869CA5200E84287 /* libxpcom_core.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -4201,6 +4205,8 @@
 			isa = PBXGroup;
 			children = (
 				33563BBD0C85268D00DC4D06 /* Browser View */,
+				3381EEF80D32C6CC004CF402 /* CHCookieStorage.h */,
+				3381EEF90D32C6CC004CF402 /* CHCookieStorage.mm */,
 				F50D9DED02EE0AB101BB4219 /* CHDownloadProgressDisplay.h */,
 				F50D9DEE02EE0AB101BB4219 /* CHDownloadProgressDisplay.mm */,
 				0F0F5E3C08FC660300B4EBCD /* CHISupportsOwner.h */,
@@ -4674,6 +4680,7 @@
 				E43EF9E30D13384700DACA10 /* FindBarController.h in Headers */,
 				E43EF9E50D13384700DACA10 /* FindBarView.h in Headers */,
 				7BAAAFB50D19C461000EABC1 /* KeychainDenyList.h in Headers */,
+				3381EEFA0D32C6CC004CF402 /* CHCookieStorage.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -4843,6 +4850,7 @@
 				E43EF9E70D13384700DACA10 /* FindBarController.h in Headers */,
 				E43EF9E90D13384700DACA10 /* FindBarView.h in Headers */,
 				7BAAAFB60D19C473000EABC1 /* KeychainDenyList.h in Headers */,
+				3381EEFC0D32C6CC004CF402 /* CHCookieStorage.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -4992,7 +5000,6 @@
 				3F44ADC605BDFBA000CB4B08 /* Resources */,
 				3F44ADCA05BDFBA000CB4B08 /* Sources */,
 				3F44ADCD05BDFBA000CB4B08 /* Frameworks */,
-				3F44ADD705BDFBA000CB4B08 /* Rez */,
 			);
 			buildRules = (
 			);
@@ -5012,7 +5019,6 @@
 				3F44ADDE05BDFBA000CB4B08 /* Resources */,
 				3F44ADE105BDFBA000CB4B08 /* Sources */,
 				3F44ADE405BDFBA000CB4B08 /* Frameworks */,
-				3F44ADEE05BDFBA000CB4B08 /* Rez */,
 			);
 			buildRules = (
 			);
@@ -5547,20 +5553,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		3F44ADD705BDFBA000CB4B08 /* Rez */ = {
-			isa = PBXRezBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		3F44ADEE05BDFBA000CB4B08 /* Rez */ = {
-			isa = PBXRezBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXRezBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
@@ -5769,6 +5761,7 @@
 				E43EF9E40D13384700DACA10 /* FindBarController.mm in Sources */,
 				E43EF9E60D13384700DACA10 /* FindBarView.mm in Sources */,
 				7BAAAFB80D19C49D000EABC1 /* KeychainDenyList.mm in Sources */,
+				3381EEFB0D32C6CC004CF402 /* CHCookieStorage.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -5931,6 +5924,7 @@
 				E43EF9E80D13384700DACA10 /* FindBarController.mm in Sources */,
 				E43EF9EA0D13384700DACA10 /* FindBarView.mm in Sources */,
 				7BAAAFB90D19C4AE000EABC1 /* KeychainDenyList.mm in Sources */,
+				3381EEFD0D32C6CC004CF402 /* CHCookieStorage.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -6490,23 +6484,8 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 00F3BE2A0C4F280700E19B0C /* PrefPane.xcconfig */;
 			buildSettings = {
-				HEADER_SEARCH_PATHS = (
-					../dist/include,
-					../dist/include/cookie,
-					../dist/include/necko,
-					../dist/include/nspr,
-					../dist/include/pref,
-					../dist/include/string,
-					../dist/include/xpcom,
-				);
+				GCC_PREFIX_HEADER = "";
 				INFOPLIST_FILE = "Info-PrivacyPrefPane.plist";
-				LIBRARY_SEARCH_PATHS = ../dist/lib;
-				OTHER_CFLAGS = (
-					"$(OTHER_CFLAGS)",
-					"-DDEBUG",
-					"-DMOZ_DEBUG",
-					"-DTRACING",
-				);
 				PRODUCT_NAME = Privacy;
 			};
 			name = Development;
@@ -6515,17 +6494,8 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 00F3BE2A0C4F280700E19B0C /* PrefPane.xcconfig */;
 			buildSettings = {
-				HEADER_SEARCH_PATHS = (
-					../dist/include,
-					../dist/include/cookie,
-					../dist/include/necko,
-					../dist/include/nspr,
-					../dist/include/pref,
-					../dist/include/string,
-					../dist/include/xpcom,
-				);
+				GCC_PREFIX_HEADER = "";
 				INFOPLIST_FILE = "Info-PrivacyPrefPane.plist";
-				LIBRARY_SEARCH_PATHS = ../dist/lib;
 				PRODUCT_NAME = Privacy;
 			};
 			name = Deployment;
@@ -6534,19 +6504,8 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 00F3BE2A0C4F280700E19B0C /* PrefPane.xcconfig */;
 			buildSettings = {
-				HEADER_SEARCH_PATHS = (
-					../dist/include,
-					../dist/include/nspr,
-					../dist/include/pref,
-					../dist/include/xpcom,
-				);
+				GCC_PREFIX_HEADER = "";
 				INFOPLIST_FILE = "Info-SecurityPrefPane.plist";
-				OTHER_CFLAGS = (
-					"$(OTHER_CFLAGS)",
-					"-DDEBUG",
-					"-DMOZ_DEBUG",
-					"-DTRACING",
-				);
 				PRODUCT_NAME = Security;
 			};
 			name = Development;
@@ -6555,12 +6514,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 00F3BE2A0C4F280700E19B0C /* PrefPane.xcconfig */;
 			buildSettings = {
-				HEADER_SEARCH_PATHS = (
-					../dist/include,
-					../dist/include/nspr,
-					../dist/include/pref,
-					../dist/include/xpcom,
-				);
+				GCC_PREFIX_HEADER = "";
 				INFOPLIST_FILE = "Info-SecurityPrefPane.plist";
 				PRODUCT_NAME = Security;
 			};
