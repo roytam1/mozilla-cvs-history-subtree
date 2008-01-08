@@ -114,7 +114,7 @@ $MozAssertBehavior = 'stack-and-abort';
 # Note that win32 may not need \@, depends on ' or ".
 # :pserver:$ENV{USER}%netscape.com@cvs.mozilla.org:/cvsroot
 
-$moz_cvsroot   = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
+$moz_cvsroot   = ':ext:ffxbld@cvs.mozilla.org:/cvsroot';
 #$moz_cvsroot   = ":pserver:anonymous\@cvs-mirror.mozilla.org:/cvsroot";
 
 #- Set these proper values for your tinderbox server
