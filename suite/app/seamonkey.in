@@ -69,6 +69,7 @@ else
     bn=`basename "$progname"`
     cd `dirname "$progname"`
     progname=`/bin/ls -l "$bn" | sed -e 's/^.* -> //' `
+    progbase=`basename "$progname"`
     if [ ! -x "$progname" ]; then
       break
     fi
