@@ -433,8 +433,13 @@ nsSchemaValidatorUtils::ParseSchemaTime(const nsAString & aStrValue,
           // has to be a numerical character or else abort
           if ((currentChar > '9') || (currentChar < '0'))
             done = PR_TRUE;
-          else
+          else {
             second[buffLength] = currentChar;
+            if (start == end) {
+              isValid = PR_TRUE;
+              done = PR_TRUE;
+            }
+          }
           buffLength++;
         }
 
