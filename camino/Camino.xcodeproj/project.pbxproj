@@ -266,6 +266,12 @@
 		3381EEFB0D32C6CC004CF402 /* CHCookieStorage.mm in Sources */ = {isa = PBXBuildFile; fileRef = 3381EEF90D32C6CC004CF402 /* CHCookieStorage.mm */; };
 		3381EEFC0D32C6CC004CF402 /* CHCookieStorage.h in Headers */ = {isa = PBXBuildFile; fileRef = 3381EEF80D32C6CC004CF402 /* CHCookieStorage.h */; };
 		3381EEFD0D32C6CC004CF402 /* CHCookieStorage.mm in Sources */ = {isa = PBXBuildFile; fileRef = 3381EEF90D32C6CC004CF402 /* CHCookieStorage.mm */; };
+		33E1EB510D36959E00910BBD /* AddSearchProviderHandler.h in Headers */ = {isa = PBXBuildFile; fileRef = 33E1EB4F0D36959E00910BBD /* AddSearchProviderHandler.h */; };
+		33E1EB520D36959E00910BBD /* AddSearchProviderHandler.mm in Sources */ = {isa = PBXBuildFile; fileRef = 33E1EB500D36959E00910BBD /* AddSearchProviderHandler.mm */; };
+		33E1EB530D36959E00910BBD /* AddSearchProviderHandler.h in Headers */ = {isa = PBXBuildFile; fileRef = 33E1EB4F0D36959E00910BBD /* AddSearchProviderHandler.h */; };
+		33E1EB540D36959E00910BBD /* AddSearchProviderHandler.mm in Sources */ = {isa = PBXBuildFile; fileRef = 33E1EB500D36959E00910BBD /* AddSearchProviderHandler.mm */; };
+		33E1EB570D3695F400910BBD /* caminosearch.xpt in Copy Component XPTs */ = {isa = PBXBuildFile; fileRef = 33E1EB560D3695DA00910BBD /* caminosearch.xpt */; };
+		33E1EB580D36960F00910BBD /* caminosearch.xpt in Copy Component XPTs */ = {isa = PBXBuildFile; fileRef = 33E1EB560D3695DA00910BBD /* caminosearch.xpt */; };
 		33EB4D670D11E23D00027E31 /* PreferencesWindow.h in Headers */ = {isa = PBXBuildFile; fileRef = 33EB4D650D11E23D00027E31 /* PreferencesWindow.h */; };
 		33EB4D680D11E23D00027E31 /* PreferencesWindow.m in Sources */ = {isa = PBXBuildFile; fileRef = 33EB4D660D11E23D00027E31 /* PreferencesWindow.m */; };
 		33EB4D690D11E23D00027E31 /* PreferencesWindow.h in Headers */ = {isa = PBXBuildFile; fileRef = 33EB4D650D11E23D00027E31 /* PreferencesWindow.h */; };
@@ -1671,6 +1677,7 @@
 				3F44AD2C05BDFB9F00CB4B08 /* typeaheadfind.xpt in Copy Component XPTs */,
 				3F44ADB105BDFB9F00CB4B08 /* layout_printing.xpt in Copy Component XPTs */,
 				3F44AD2705BDFB9F00CB4B08 /* nsProxyAutoConfig.js in Copy Component XPTs */,
+				33E1EB570D3695F400910BBD /* caminosearch.xpt in Copy Component XPTs */,
 			);
 			name = "Copy Component XPTs";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1965,6 +1972,7 @@
 				3F44AF4705BDFBA000CB4B08 /* typeaheadfind.xpt in Copy Component XPTs */,
 				3F44AFF905BDFBA000CB4B08 /* layout_printing.xpt in Copy Component XPTs */,
 				0F66E4A907D6D90500444E2A /* intl.xpt in Copy Component XPTs */,
+				33E1EB580D36960F00910BBD /* caminosearch.xpt in Copy Component XPTs */,
 			);
 			name = "Copy Component XPTs";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -2399,6 +2407,9 @@
 		33563BB20C85260200DC4D06 /* ViewCertificateDialogController.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = ViewCertificateDialogController.h; path = src/security/ViewCertificateDialogController.h; sourceTree = "<group>"; };
 		3381EEF80D32C6CC004CF402 /* CHCookieStorage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CHCookieStorage.h; path = src/embedding/CHCookieStorage.h; sourceTree = "<group>"; };
 		3381EEF90D32C6CC004CF402 /* CHCookieStorage.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = CHCookieStorage.mm; path = src/embedding/CHCookieStorage.mm; sourceTree = "<group>"; };
+		33E1EB4F0D36959E00910BBD /* AddSearchProviderHandler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AddSearchProviderHandler.h; path = src/websearch/AddSearchProviderHandler.h; sourceTree = "<group>"; };
+		33E1EB500D36959E00910BBD /* AddSearchProviderHandler.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AddSearchProviderHandler.mm; path = src/websearch/AddSearchProviderHandler.mm; sourceTree = "<group>"; };
+		33E1EB560D3695DA00910BBD /* caminosearch.xpt */ = {isa = PBXFileReference; lastKnownFileType = file; name = caminosearch.xpt; path = ../dist/bin/components/caminosearch.xpt; sourceTree = SOURCE_ROOT; };
 		33EB4D650D11E23D00027E31 /* PreferencesWindow.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = PreferencesWindow.h; sourceTree = "<group>"; };
 		33EB4D660D11E23D00027E31 /* PreferencesWindow.m */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.objc; path = PreferencesWindow.m; sourceTree = "<group>"; };
 		33F3B7250C63FC25007DFBD0 /* ScriptingSupport.mm */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.objcpp; name = ScriptingSupport.mm; path = src/appleevents/ScriptingSupport.mm; sourceTree = "<group>"; };
@@ -3494,6 +3505,7 @@
 				3F22CC1303DF42A200026DCE /* Charset.dict */,
 				3FFE23520847CB0D00D6CAFC /* ad_blocking.css */,
 				1B825EBD0C5E454B00CB4343 /* Camino.sdef */,
+				33E1EB560D3695DA00910BBD /* caminosearch.xpt */,
 			);
 			name = Resources;
 			sourceTree = "<group>";
@@ -3828,6 +3840,8 @@
 				DE137B990D3583E200A0A9BB /* SearchEngineEditor.h */,
 				333FC63F0C760D4300B61438 /* WebSearchField.h */,
 				333FC6400C760D4300B61438 /* WebSearchField.mm */,
+				33E1EB4F0D36959E00910BBD /* AddSearchProviderHandler.h */,
+				33E1EB500D36959E00910BBD /* AddSearchProviderHandler.mm */,
 			);
 			name = UI;
 			sourceTree = "<group>";
@@ -4759,6 +4773,7 @@
 				DE137BA10D3583E200A0A9BB /* SearchEngineEditor.h in Headers */,
 				DE137C070D35975F00A0A9BB /* OpenSearchParser.h in Headers */,
 				DE137C0A0D35975F00A0A9BB /* XMLSearchPluginParser.h in Headers */,
+				33E1EB510D36959E00910BBD /* AddSearchProviderHandler.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -4933,6 +4948,7 @@
 				DE137B9D0D3583E200A0A9BB /* SearchEngineEditor.h in Headers */,
 				DE137C030D35975F00A0A9BB /* OpenSearchParser.h in Headers */,
 				DE137C060D35975F00A0A9BB /* XMLSearchPluginParser.h in Headers */,
+				33E1EB530D36959E00910BBD /* AddSearchProviderHandler.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -5854,6 +5870,7 @@
 				DE137BA00D3583E200A0A9BB /* SearchEngineManager.mm in Sources */,
 				DE137C080D35975F00A0A9BB /* OpenSearchParser.mm in Sources */,
 				DE137C090D35975F00A0A9BB /* XMLSearchPluginParser.mm in Sources */,
+				33E1EB520D36959E00910BBD /* AddSearchProviderHandler.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -6021,6 +6038,7 @@
 				DE137B9C0D3583E200A0A9BB /* SearchEngineManager.mm in Sources */,
 				DE137C040D35975F00A0A9BB /* OpenSearchParser.mm in Sources */,
 				DE137C050D35975F00A0A9BB /* XMLSearchPluginParser.mm in Sources */,
+				33E1EB540D36959E00910BBD /* AddSearchProviderHandler.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
