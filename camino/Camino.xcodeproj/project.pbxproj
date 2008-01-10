@@ -1236,6 +1236,14 @@
 		DE137BAB0D35845400A0A9BB /* search_editor_action.png in Resources */ = {isa = PBXBuildFile; fileRef = DE137BA70D35845400A0A9BB /* search_editor_action.png */; };
 		DE137BBA0D3584CB00A0A9BB /* SearchEngineEditor.nib in Resources */ = {isa = PBXBuildFile; fileRef = DE137BB80D3584CB00A0A9BB /* SearchEngineEditor.nib */; };
 		DE137BBB0D3584CB00A0A9BB /* SearchEngineEditor.nib in Resources */ = {isa = PBXBuildFile; fileRef = DE137BB80D3584CB00A0A9BB /* SearchEngineEditor.nib */; };
+		DE137C030D35975F00A0A9BB /* OpenSearchParser.h in Headers */ = {isa = PBXBuildFile; fileRef = DE137BFF0D35975F00A0A9BB /* OpenSearchParser.h */; };
+		DE137C040D35975F00A0A9BB /* OpenSearchParser.mm in Sources */ = {isa = PBXBuildFile; fileRef = DE137C000D35975F00A0A9BB /* OpenSearchParser.mm */; };
+		DE137C050D35975F00A0A9BB /* XMLSearchPluginParser.mm in Sources */ = {isa = PBXBuildFile; fileRef = DE137C010D35975F00A0A9BB /* XMLSearchPluginParser.mm */; };
+		DE137C060D35975F00A0A9BB /* XMLSearchPluginParser.h in Headers */ = {isa = PBXBuildFile; fileRef = DE137C020D35975F00A0A9BB /* XMLSearchPluginParser.h */; };
+		DE137C070D35975F00A0A9BB /* OpenSearchParser.h in Headers */ = {isa = PBXBuildFile; fileRef = DE137BFF0D35975F00A0A9BB /* OpenSearchParser.h */; };
+		DE137C080D35975F00A0A9BB /* OpenSearchParser.mm in Sources */ = {isa = PBXBuildFile; fileRef = DE137C000D35975F00A0A9BB /* OpenSearchParser.mm */; };
+		DE137C090D35975F00A0A9BB /* XMLSearchPluginParser.mm in Sources */ = {isa = PBXBuildFile; fileRef = DE137C010D35975F00A0A9BB /* XMLSearchPluginParser.mm */; };
+		DE137C0A0D35975F00A0A9BB /* XMLSearchPluginParser.h in Headers */ = {isa = PBXBuildFile; fileRef = DE137C020D35975F00A0A9BB /* XMLSearchPluginParser.h */; };
 		DE148A460BF543F300F414D9 /* tab_scroll_button_left.tif in Resources */ = {isa = PBXBuildFile; fileRef = DE148A430BF543F300F414D9 /* tab_scroll_button_left.tif */; };
 		DE148A470BF543F300F414D9 /* tab_menu_button.tif in Resources */ = {isa = PBXBuildFile; fileRef = DE148A440BF543F300F414D9 /* tab_menu_button.tif */; };
 		DE148A480BF543F300F414D9 /* tab_scroll_button_right.tif in Resources */ = {isa = PBXBuildFile; fileRef = DE148A450BF543F300F414D9 /* tab_scroll_button_right.tif */; };
@@ -2574,12 +2582,16 @@
 		DE1179E00A15F97700006DD6 /* RolloverImageButton.m */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.objc; name = RolloverImageButton.m; path = src/extensions/RolloverImageButton.m; sourceTree = "<group>"; };
 		DE137B960D3583E200A0A9BB /* SearchEngineManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SearchEngineManager.h; path = src/websearch/SearchEngineManager.h; sourceTree = SOURCE_ROOT; };
 		DE137B970D3583E200A0A9BB /* SearchEngineEditor.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = SearchEngineEditor.mm; path = src/websearch/SearchEngineEditor.mm; sourceTree = SOURCE_ROOT; };
-		DE137B980D3583E200A0A9BB /* SearchEngineManager.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = SearchEngineManager.mm; path = src/websearch/SearchEngineManager.mm; sourceTree = SOURCE_ROOT; };
-		DE137B990D3583E200A0A9BB /* SearchEngineEditor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SearchEngineEditor.h; path = src/websearch/SearchEngineEditor.h; sourceTree = SOURCE_ROOT; };
+		DE137B980D3583E200A0A9BB /* SearchEngineManager.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = SearchEngineManager.mm; path = src/websearch/SearchEngineManager.mm; sourceTree = "<group>"; };
+		DE137B990D3583E200A0A9BB /* SearchEngineEditor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SearchEngineEditor.h; path = src/websearch/SearchEngineEditor.h; sourceTree = "<group>"; };
 		DE137BA30D35842500A0A9BB /* English */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = English; path = resources/localized/English.lproj/WebSearchEngines.plist; sourceTree = "<group>"; };
 		DE137BA60D35845400A0A9BB /* search_editor_bottom_background.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = search_editor_bottom_background.png; path = resources/images/chrome/search_editor_bottom_background.png; sourceTree = SOURCE_ROOT; };
 		DE137BA70D35845400A0A9BB /* search_editor_action.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; name = search_editor_action.png; path = resources/images/chrome/search_editor_action.png; sourceTree = SOURCE_ROOT; };
 		DE137BB90D3584CB00A0A9BB /* English */ = {isa = PBXFileReference; lastKnownFileType = wrapper.nib; name = English; path = resources/localized/English.lproj/SearchEngineEditor.nib; sourceTree = "<group>"; };
+		DE137BFF0D35975F00A0A9BB /* OpenSearchParser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = OpenSearchParser.h; path = src/websearch/OpenSearchParser.h; sourceTree = SOURCE_ROOT; };
+		DE137C000D35975F00A0A9BB /* OpenSearchParser.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = OpenSearchParser.mm; path = src/websearch/OpenSearchParser.mm; sourceTree = SOURCE_ROOT; };
+		DE137C010D35975F00A0A9BB /* XMLSearchPluginParser.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = XMLSearchPluginParser.mm; path = src/websearch/XMLSearchPluginParser.mm; sourceTree = SOURCE_ROOT; };
+		DE137C020D35975F00A0A9BB /* XMLSearchPluginParser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = XMLSearchPluginParser.h; path = src/websearch/XMLSearchPluginParser.h; sourceTree = SOURCE_ROOT; };
 		DE148A430BF543F300F414D9 /* tab_scroll_button_left.tif */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; name = tab_scroll_button_left.tif; path = resources/images/chrome/tab_scroll_button_left.tif; sourceTree = SOURCE_ROOT; };
 		DE148A440BF543F300F414D9 /* tab_menu_button.tif */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; name = tab_menu_button.tif; path = resources/images/chrome/tab_menu_button.tif; sourceTree = SOURCE_ROOT; };
 		DE148A450BF543F300F414D9 /* tab_scroll_button_right.tif */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; name = tab_scroll_button_right.tif; path = resources/images/chrome/tab_scroll_button_right.tif; sourceTree = SOURCE_ROOT; };
@@ -3218,7 +3230,7 @@
 				F5A3669602CCFAF601DC3354 /* History */,
 				F512F52B02D1287F01072C9F /* Dialogs */,
 				3FBDC7D608252CD600D7F8E0 /* Form Fill */,
-				DE137B610D35831400A0A9BB /* Web Search */,
+				DE137BFC0D3596CD00A0A9BB /* Web Search */,
 				F512F52C02D1287F01072C9F /* UI Components */,
 				33563BCF0C852A7F00DC4D06 /* Backend Components */,
 				F5571935022B401B010001CA /* Categories */,
@@ -3790,17 +3802,45 @@
 			name = Midas;
 			sourceTree = "<group>";
 		};
-		DE137B610D35831400A0A9BB /* Web Search */ = {
+		DE137B610D35831400A0A9BB /* Backend */ = {
 			isa = PBXGroup;
 			children = (
 				DE137B960D3583E200A0A9BB /* SearchEngineManager.h */,
 				DE137B970D3583E200A0A9BB /* SearchEngineEditor.mm */,
+			);
+			name = Backend;
+			sourceTree = "<group>";
+		};
+		DE137BFC0D3596CD00A0A9BB /* Web Search */ = {
+			isa = PBXGroup;
+			children = (
+				DE137B610D35831400A0A9BB /* Backend */,
+				DE137BFD0D3596E200A0A9BB /* UI */,
+				DE137BFE0D3596EC00A0A9BB /* Plug-ins */,
+			);
+			name = "Web Search";
+			sourceTree = "<group>";
+		};
+		DE137BFD0D3596E200A0A9BB /* UI */ = {
+			isa = PBXGroup;
+			children = (
 				DE137B980D3583E200A0A9BB /* SearchEngineManager.mm */,
 				DE137B990D3583E200A0A9BB /* SearchEngineEditor.h */,
 				333FC63F0C760D4300B61438 /* WebSearchField.h */,
 				333FC6400C760D4300B61438 /* WebSearchField.mm */,
 			);
-			name = "Web Search";
+			name = UI;
+			sourceTree = "<group>";
+		};
+		DE137BFE0D3596EC00A0A9BB /* Plug-ins */ = {
+			isa = PBXGroup;
+			children = (
+				DE137BFF0D35975F00A0A9BB /* OpenSearchParser.h */,
+				DE137C000D35975F00A0A9BB /* OpenSearchParser.mm */,
+				DE137C010D35975F00A0A9BB /* XMLSearchPluginParser.mm */,
+				DE137C020D35975F00A0A9BB /* XMLSearchPluginParser.h */,
+			);
+			name = "Plug-ins";
 			sourceTree = "<group>";
 		};
 		E091C0D006225EA3007D9E8F /* cursors */ = {
@@ -4717,6 +4757,8 @@
 				3381EEFA0D32C6CC004CF402 /* CHCookieStorage.h in Headers */,
 				DE137B9E0D3583E200A0A9BB /* SearchEngineManager.h in Headers */,
 				DE137BA10D3583E200A0A9BB /* SearchEngineEditor.h in Headers */,
+				DE137C070D35975F00A0A9BB /* OpenSearchParser.h in Headers */,
+				DE137C0A0D35975F00A0A9BB /* XMLSearchPluginParser.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -4889,6 +4931,8 @@
 				3381EEFC0D32C6CC004CF402 /* CHCookieStorage.h in Headers */,
 				DE137B9A0D3583E200A0A9BB /* SearchEngineManager.h in Headers */,
 				DE137B9D0D3583E200A0A9BB /* SearchEngineEditor.h in Headers */,
+				DE137C030D35975F00A0A9BB /* OpenSearchParser.h in Headers */,
+				DE137C060D35975F00A0A9BB /* XMLSearchPluginParser.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -5808,6 +5852,8 @@
 				3381EEFB0D32C6CC004CF402 /* CHCookieStorage.mm in Sources */,
 				DE137B9F0D3583E200A0A9BB /* SearchEngineEditor.mm in Sources */,
 				DE137BA00D3583E200A0A9BB /* SearchEngineManager.mm in Sources */,
+				DE137C080D35975F00A0A9BB /* OpenSearchParser.mm in Sources */,
+				DE137C090D35975F00A0A9BB /* XMLSearchPluginParser.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -5973,6 +6019,8 @@
 				3381EEFD0D32C6CC004CF402 /* CHCookieStorage.mm in Sources */,
 				DE137B9B0D3583E200A0A9BB /* SearchEngineEditor.mm in Sources */,
 				DE137B9C0D3583E200A0A9BB /* SearchEngineManager.mm in Sources */,
+				DE137C040D35975F00A0A9BB /* OpenSearchParser.mm in Sources */,
+				DE137C050D35975F00A0A9BB /* XMLSearchPluginParser.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
