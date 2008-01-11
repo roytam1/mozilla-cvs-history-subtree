@@ -1022,7 +1022,8 @@ nsCanvasRenderingContext2D::Render(nsIRenderingContext *rc)
                                                  NULL);
     CGColorSpaceRef rgb = CGColorSpaceCreateDeviceRGB();
     img = CGImageCreate (mWidth, mHeight, 8, 32, mWidth * 4, rgb,
-                         kCGImageAlphaPremultipliedFirst | CG_BITMAP_BYTE_ORDER_FLAG,
+                         (CGImageAlphaInfo)(kCGImageAlphaPremultipliedFirst |
+                                            CG_BITMAP_BYTE_ORDER_FLAG),
                          dataProvider, NULL, false, kCGRenderingIntentDefault);
     CGColorSpaceRelease (rgb);
     CGDataProviderRelease (dataProvider);
