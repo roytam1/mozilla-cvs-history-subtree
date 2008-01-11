@@ -88,6 +88,10 @@ protected:
 public:
   nsCString mClassName; // The name of the class. 
 
+  PRBool CompiledMembers() const {
+    return mClassObject != nsnull;
+  }
+
 protected:
   void* mClassObject;   // The class object for the binding. We'll use this to pre-compile properties 
                         // and methods for the binding.

@@ -300,6 +300,7 @@ private:
 //-------------------------------------------------------------
 class DocumentViewerImpl : public nsIDocumentViewer,
                            public nsIContentViewer_MOZILLA_1_8_BRANCH,
+                           public nsIContentViewer_MOZILLA_1_8_BRANCH2,
                            public nsIContentViewerEdit,
                            public nsIContentViewerFile,
                            public nsIMarkupDocumentViewer,
@@ -321,6 +322,7 @@ public:
   // nsIContentViewer interface...
   NS_DECL_NSICONTENTVIEWER
   NS_DECL_NSICONTENTVIEWER_MOZILLA_1_8_BRANCH
+  NS_DECL_NSICONTENTVIEWER_MOZILLA_1_8_BRANCH2
 
   // nsIDocumentViewer interface...
   NS_IMETHOD SetUAStyleSheet(nsIStyleSheet* aUAStyleSheet);
@@ -510,9 +512,10 @@ DocumentViewerImpl::DocumentViewerImpl(nsPresContext* aPresContext)
   PrepareToStartLoad();
 }
 
-NS_IMPL_ISUPPORTS8(DocumentViewerImpl,
+NS_IMPL_ISUPPORTS9(DocumentViewerImpl,
                    nsIContentViewer,
                    nsIContentViewer_MOZILLA_1_8_BRANCH,
+                   nsIContentViewer_MOZILLA_1_8_BRANCH2,
                    nsIDocumentViewer,
                    nsIMarkupDocumentViewer,
                    nsIContentViewerFile,
@@ -1782,6 +1785,9 @@ DocumentViewerImpl::SetPreviousViewer(nsIContentViewer* aViewer)
     // link from the chain.  This ensures that at most only 2 documents are alive
     // and undestroyed at any given time (the one that is showing and the one that
     // is loading with painting suppressed).
+    // It's very important that if this ever gets changed the code
+    // before the RestorePresentation call in nsDocShell::InternalLoad
+    // be changed accordingly.
     nsCOMPtr<nsIContentViewer> prevViewer;
     aViewer->GetPreviousViewer(getter_AddRefs(prevViewer));
     if (prevViewer) {
@@ -4275,4 +4281,11 @@ DocumentViewerImpl::OnDonePrinting()
     }
   }
 #endif // NS_PRINTING && NS_PRINT_PREVIEW
+}
+
+NS_IMETHODIMP
+DocumentViewerImpl::GetHistoryEntry(nsISHEntry **aHistoryEntry)
+{
+  NS_IF_ADDREF(*aHistoryEntry = mSHEntry);
+  return NS_OK;
 }
