@@ -1621,6 +1621,7 @@ NS_IMETHODIMP nsFontMetricsGTK::Init(const nsFont& aFont, nsIAtom* aLangGroup,
   // Make sure to clamp the pixel size to something reasonable so we
   // don't make the X server blow up.
   mPixelSize = PR_MIN((gdk_screen_height() - 1) * FONT_MAX_FONT_SCALE, mPixelSize);
+  mPixelSize = PR_MIN(2000, mPixelSize);
 
   mStretchIndex = 4; // normal
   mStyleIndex = mFont.style;
