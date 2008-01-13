@@ -684,11 +684,11 @@ XPC_NW_NewResolve(JSContext *cx, JSObject *obj, jsval id, uintN flags,
   // couldn't get at those values anyway.  Also, we always deal with
   // wrappedJSObject and toString before looking at our scriptable hooks, so no
   // need to mess with our flags yet.
-  if (id == GetRTStringByIndex(cx, XPCJSRuntime::IDX_WRAPPED_JSOBJECT)) {
+  if (id == GetStringByIndex(cx, XPCJSRuntime::IDX_WRAPPED_JSOBJECT)) {
     return JS_TRUE;
   }
 
-  if (id == GetRTStringByIndex(cx, XPCJSRuntime::IDX_TO_STRING)) {
+  if (id == GetStringByIndex(cx, XPCJSRuntime::IDX_TO_STRING)) {
     *objp = obj;
     return JS_DefineFunction(cx, obj, "toString",
                              XPC_NW_toString, 0, 0) != nsnull;
