@@ -231,6 +231,7 @@ $push_raw_xpis = 0;
 #$ENV{NO_EM_RESTART} = '1';
 
 # Any extensions that are built can be uploaded to the stage server using these
-# config options. These variables are mainly used by post-mozilla-rel.pl
-$extensions_upload = ('lightning.xpi', 'lightning-wcap.xpi', 'gdata-provider.xpi');
-#$extensions_stage_subdir = "xpi" # If not specified, <os>-xpi will be used.
+# config options. Wildcards can be used. These variables are mainly used by
+# post-mozilla-rel.pl
+@ReleaseExtensions = ('lightning.xpi', 'lightning-wcap.xpi');
+#$ReleaseExtensionSubdir = "" # set to e.g. "xpi"; if not specified, <os>-xpi will be used.
