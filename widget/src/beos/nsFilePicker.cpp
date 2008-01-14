@@ -52,17 +52,20 @@
 #include "nsEscape.h"
 #include "nsEnumeratorUtils.h"
 #include "nsString.h"
+#include "nsWidgetsCID.h"
 #include <Window.h>
 #include <View.h>
 #include <Button.h>
 
 static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
+NS_DEFINE_CID(kAppShellCID, NS_APPSHELL_CID);
 
 NS_IMPL_THREADSAFE_ISUPPORTS1(nsFilePicker, nsIFilePicker)
 
 #ifdef FILEPICKER_SAVE_LAST_DIR
 char nsFilePicker::mLastUsedDirectory[B_PATH_NAME_LENGTH+1] = { 0 };
 #endif
+
 
 //-------------------------------------------------------------------------
 //
@@ -100,46 +103,57 @@ NS_IMETHODIMP nsFilePicker::Show(PRInt16 *retval)
 	bool allow_multiple_selection = false;
 	uint32 node_flavors;
 
-	if (mMode == modeGetFolder) {
+	if (mMode == modeGetFolder)
+	{
 		node_flavors = B_DIRECTORY_NODE;
 		panel_mode = B_OPEN_PANEL;
 	}
-	else if (mMode == modeOpen) {
+	else if (mMode == modeOpen)
+	{
 		node_flavors = B_FILE_NODE;
 		panel_mode = B_OPEN_PANEL;
 	}
-	else if (mMode == modeOpenMultiple) {
+	else if (mMode == modeOpenMultiple)
+	{
 		node_flavors = B_FILE_NODE;
 		panel_mode = B_OPEN_PANEL;
 		allow_multiple_selection = true;
 	}
-	else if (mMode == modeSave) {
+	else if (mMode == modeSave)
+	{
 		node_flavors = B_FILE_NODE;
 		panel_mode = B_SAVE_PANEL;
 	}
-	else {
+	else
+	{
 		printf("nsFilePicker::Show() wrong mode");
 		return PR_FALSE;
 	}
 
 	ppanel = new nsFilePanelBeOS(
-	             panel_mode, //file_panel_mode mode
-	             node_flavors,  //uint32 node_flavors
-	             allow_multiple_selection,  //bool allow_multiple_selection
-	             false, //bool modal
-	             true //bool hide_when_done
-	         );
-	if (!ppanel) return PR_FALSE;
-
+				panel_mode, //file_panel_mode mode
+		        node_flavors,  //uint32 node_flavors
+		        allow_multiple_selection,  //bool allow_multiple_selection
+		        false, //bool modal
+		        true //bool hide_when_done
+				);
+	if (!ppanel)
+		return PR_FALSE;
+	nsCOMPtr<nsIAppShell> appShell(do_CreateInstance(kAppShellCID));
+	NS_ENSURE_TRUE(appShell, NS_ERROR_FAILURE);
+	appShell->Create(0, nsnull);
+	appShell->Spinup();
 	// set title
-	if (!mTitle.IsEmpty()) {
+	if (!mTitle.IsEmpty())
+	{
 		char *title_utf8 = ToNewUTF8String(mTitle);
 		ppanel->Window()->SetTitle(title_utf8);
 		Recycle(title_utf8);
 	}
 
-	// set default text for save
-	if (!mDefault.IsEmpty() && panel_mode == B_SAVE_PANEL) {
+	// set default text
+	if (!mDefault.IsEmpty() && panel_mode == B_SAVE_PANEL)
+	{
 		char *defaultText = ToNewUTF8String(mDefault);
 		ppanel->SetSaveText(defaultText);
 		Recycle(defaultText);
@@ -149,7 +163,8 @@ NS_IMETHODIMP nsFilePicker::Show(PRInt16 *retval)
 	nsCAutoString initialDir;
 	if (mDisplayDirectory)
 		mDisplayDirectory->GetNativePath(initialDir);
-	if(initialDir.IsEmpty()) {
+	if(initialDir.IsEmpty())
+	{
 #ifdef FILEPICKER_SAVE_LAST_DIR		
 		if (strlen(mLastUsedDirectory) < 2)
 			initialDir.Assign("/boot/home");
@@ -165,59 +180,90 @@ NS_IMETHODIMP nsFilePicker::Show(PRInt16 *retval)
 #endif
 
 	// set modal feel
-	if (ppanel->LockLooper()) {
+	if (ppanel->LockLooper())
+	{
 		ppanel->Window()->SetFeel(B_MODAL_APP_WINDOW_FEEL);
 		ppanel->UnlockLooper();
 	}
 
 	// Show File Panel
 	ppanel->Show();
-	ppanel->WaitForSelection();
+	while(!ppanel->SelectionDone())
+	{
+		void* data;
+		PRBool isRealEvent;
+		nsresult rv = NS_OK;
+		if(mParentWindow)
+		{
+			// flushing pending native drawing
+			mParentWindow->UpdateIfNeeded();
+		}
+		rv = appShell->GetNativeEvent(isRealEvent, data);
+		if(NS_SUCCEEDED(rv))
+		{
+			// ModalEventFilter always returns true in our implementation
+			// window->ModalEventFilter(isRealEvent, data, &processEvent);
+			appShell->DispatchNativeEvent(isRealEvent, data);
+		}
+	};
 
-	if (ppanel->IsCancelSelected()) {
+	if (ppanel->IsCancelSelected())
 		result = PR_FALSE;
-	}
 
-	if ((mMode == modeOpen || mMode == modeOpenMultiple || mMode == modeGetFolder) && ppanel->IsOpenSelected()) {
+	if ((mMode == modeOpen || mMode == modeOpenMultiple || mMode == modeGetFolder) && ppanel->IsOpenSelected())
+	{
 		BList *list = ppanel->OpenRefs();
 		uint32 numfiles = list->CountItems();
-		if ((list) && numfiles >= 1) {
+		if ((list) && numfiles >= 1)
+		{
 			nsresult rv = NS_NewISupportsArray(getter_AddRefs(mFiles));
-			for (uint32 i = 0; i< numfiles; i++) {
+			for (uint32 i = 0; i< numfiles; i++)
+			{
 				BPath *path = (BPath *)list->ItemAt(i);
 
-				if (path->InitCheck() == B_OK) {
+				if (path->InitCheck() == B_OK)
+				{
 					mFile.Truncate();
 					// Single and Multiple are exclusive now, though, maybe there is sense
 					// to assign also first list element to mFile even in openMultiple case ?
-					if (mMode == modeOpenMultiple) {
+					if (mMode == modeOpenMultiple)
+					{
 						nsCOMPtr<nsILocalFile> file = do_CreateInstance("@mozilla.org/file/local;1", &rv);
 						NS_ENSURE_SUCCESS(rv,rv);
 						rv = file->InitWithNativePath(nsDependentCString(path->Path()));
 						NS_ENSURE_SUCCESS(rv,rv);
 						rv = mFiles->AppendElement(file);
 						NS_ENSURE_SUCCESS(rv,rv);
-					} else {
+					}
+					else
+					{
 						if (i == 0) mFile.Assign(path->Path());
 					}
-				} else {
+				}
+				else
+				{
 					printf("path.init failed \n");
 				}
 			}
-		} else {
+		}
+		else
+		{
 			printf("list not init \n");
 		}
 	}
-	else if (mMode == modeSave && ppanel->IsSaveSelected()) {
+	else if (mMode == modeSave && ppanel->IsSaveSelected())
+	{
 		BString savefilename = ppanel->SaveFileName();
 		entry_ref ref = ppanel->SaveDirRef();
 		BPath path(&ref);
-		if (path.InitCheck() == B_OK) {
+		if (path.InitCheck() == B_OK)
+		{
 			path.Append(savefilename.String(), true);
 			mFile.Assign(path.Path());
 		}
 	}
-	else {
+	else
+	{
 		result = PR_FALSE;
 	}
 
@@ -232,11 +278,11 @@ NS_IMETHODIMP nsFilePicker::Show(PRInt16 *retval)
 	if (mDisplayDirectory)
 		mDisplayDirectory->InitWithNativePath(nsDependentCString(dir_path.Path()));
 
-	if (ppanel->Lock()) {
+	if (ppanel->Lock())
 		ppanel->Quit();
-	}
 
-	if (result) {
+	if (result)
+	{
 		PRInt16 returnOKorReplace = returnOK;
 
 #ifdef FILEPICKER_SAVE_LAST_DIR
@@ -245,7 +291,8 @@ NS_IMETHODIMP nsFilePicker::Show(PRInt16 *retval)
 			mDisplayDirectory->InitWithNativePath( nsDependentCString(mLastUsedDirectory) );
 #endif
 
-		if (mMode == modeSave) {
+		if (mMode == modeSave)
+		{
 			//   we must check if file already exists
 			PRBool exists = PR_FALSE;
 			nsCOMPtr<nsILocalFile> file(do_CreateInstance("@mozilla.org/file/local;1"));
@@ -258,9 +305,11 @@ NS_IMETHODIMP nsFilePicker::Show(PRInt16 *retval)
 		}
 		*retval = returnOKorReplace;
 	}
-	else {
+	else
+	{
 		*retval = returnCancel;
 	}
+	appShell->Spindown();
 	return NS_OK;
 
 	// TODO: implement filters
@@ -271,14 +320,10 @@ NS_IMETHODIMP nsFilePicker::Show(PRInt16 *retval)
 NS_IMETHODIMP nsFilePicker::GetFile(nsILocalFile **aFile)
 {
 	NS_ENSURE_ARG_POINTER(aFile);
-
 	if (mFile.IsEmpty())
 		return NS_OK;
-
 	nsCOMPtr<nsILocalFile> file(do_CreateInstance("@mozilla.org/file/local;1"));
-
 	NS_ENSURE_TRUE(file, NS_ERROR_FAILURE);
-
 	file->InitWithNativePath(mFile);
 
 	NS_ADDREF(*aFile = file);
@@ -299,7 +344,6 @@ NS_IMETHODIMP nsFilePicker::GetFileURL(nsIFileURL **aFileURL)
 	nsCOMPtr<nsILocalFile> file(do_CreateInstance("@mozilla.org/file/local;1"));
 	NS_ENSURE_TRUE(file, NS_ERROR_FAILURE);
 	file->InitWithNativePath(mFile);
-
 	nsCOMPtr<nsIURI> uri;
 	NS_NewFileURI(getter_AddRefs(uri), file);
 	nsCOMPtr<nsIFileURL> fileURL(do_QueryInterface(uri));
@@ -349,11 +393,12 @@ void nsFilePicker::InitNative(nsIWidget *aParent,
 {
 	mParentWindow = 0;
 
-  BView *view = (BView *) aParent->GetNativeData(NS_NATIVE_WIDGET);
-  if (view && view->LockLooper()) {
-    mParentWindow = view->Window();
-    view->UnlockLooper();
-  }
+	BView *view = (BView *) aParent->GetNativeData(NS_NATIVE_WIDGET);
+	if (view && view->LockLooper())
+	{
+		mParentWindow = view->Window();
+		view->UnlockLooper();
+	}
 
 	mTitle.Assign(aTitle);
 	mMode = aMode;
@@ -380,35 +425,31 @@ nsFilePicker::AppendFilter(const nsAString& aTitle, const nsAString& aFilter)
 const uint32 MSG_DIRECTORY = 'mDIR';
 
 nsFilePanelBeOS::nsFilePanelBeOS(file_panel_mode mode,
-                                 uint32 node_flavors,
-                                 bool allow_multiple_selection,
-                                 bool modal,
-                                 bool hide_when_done)
-		: BLooper()
-		, BFilePanel(mode,
-		             NULL, NULL,
-		             node_flavors,
-		             allow_multiple_selection,
-		             NULL, NULL,
-		             modal,
-		             hide_when_done)
-		, mSelectedActivity(nsFilePanelBeOS::NOT_SELECTED)
-		, mIsSelected(false)
-		, mSaveFileName("")
-		, mSaveDirRef()
-		, mOpenRefs()
+									uint32 node_flavors,
+									bool allow_multiple_selection,
+									bool modal,
+									bool hide_when_done)
+				: BLooper("FilePickerLooper", B_DISPLAY_PRIORITY)
+				, BFilePanel(mode,
+							NULL, NULL,
+							node_flavors,
+							allow_multiple_selection,
+							NULL, NULL,
+							modal,
+							hide_when_done)
+				, mSelectedActivity(nsFilePanelBeOS::NOT_SELECTED)
+				, mIsSelected(false)
+				, mSaveFileName("")
+				, mSaveDirRef()
+				, mOpenRefs()
 {
-	if ((wait_sem = create_sem(1,"FilePanel")) < B_OK)
-		printf("nsFilePanelBeOS::nsFilePanelBeOS : create_sem error\n");
-	if (wait_sem > 0) acquire_sem(wait_sem);
-
 	SetTarget(BMessenger(this));
-	
+
 	if ( mode == B_OPEN_PANEL && node_flavors == B_DIRECTORY_NODE ) 
 	{
 		// Add a 'Select <dirname>' button to the open dialog
 		Window()->Lock();
-		
+
 		BView *background = Window()->ChildAt(0); 
 		entry_ref ref;
 		char label[10+B_FILE_NAME_LENGTH];
@@ -417,7 +458,7 @@ nsFilePanelBeOS::nsFilePanelBeOS(file_panel_mode mode,
 		mDirectoryButton = new BButton(
 			BRect(113, background->Bounds().bottom-35, 269, background->Bounds().bottom-10),
 			"directoryButton", label, new BMessage(MSG_DIRECTORY), B_FOLLOW_LEFT | B_FOLLOW_BOTTOM);
-		
+
 		if(mDirectoryButton)
 		{
 			background->AddChild(mDirectoryButton);
@@ -425,52 +466,51 @@ nsFilePanelBeOS::nsFilePanelBeOS(file_panel_mode mode,
 		}
 		else
 			NS_ASSERTION(false, "Out of memory: failed to create mDirectoryButton");
-		
+
 		SetButtonLabel(B_DEFAULT_BUTTON, "Select");
-		
+
 		Window()->Unlock();
 	}
 	else 
 		mDirectoryButton = nsnull;
-
 	this->Run();
 }
 
 nsFilePanelBeOS::~nsFilePanelBeOS()
 {
 	int count = mOpenRefs.CountItems();
-	for (int i=0 ; i<count ; i++) {
+	for (int i=0 ; i<count ; i++)
 		delete mOpenRefs.ItemAt(i);
-	}
-	
-	if (wait_sem > 0) {
-		delete_sem(wait_sem);
-	}
 }
 
 void nsFilePanelBeOS::MessageReceived(BMessage *msg)
 {
-	switch ( msg->what ) {
+	switch ( msg->what )
+	{
 	case B_REFS_RECEIVED: // open
 		int32 count;
 		type_code code;
 		msg->GetInfo("refs", &code, &count);
-		if (code == B_REF_TYPE) {
-			for (int i=0 ; i<count ; i++) {
+		if (code == B_REF_TYPE)
+		{
+			for (int i=0 ; i<count ; i++)
+			{
 				// XXX change - adding BPaths * to list instead entry_refs,
 				// entry_refs are too unsafe objects in our case.
 				entry_ref ref;
-				if (msg->FindRef("refs", i, &ref) == B_OK) {
+				if (msg->FindRef("refs", i, &ref) == B_OK)
+				{
 					BPath *path = new BPath(&ref);
 					mOpenRefs.AddItem((void *) path);
 				}
 			}
-		} else {
+		}
+		else
+		{
 			printf("nsFilePanelBeOS::MessageReceived() no ref!\n");
 		}
 		mSelectedActivity = OPEN_SELECTED;
 		mIsSelected = true;
-		release_sem(wait_sem);
 		break;
 	
 	case MSG_DIRECTORY: // Directory selected
@@ -481,7 +521,6 @@ void nsFilePanelBeOS::MessageReceived(BMessage *msg)
 		mOpenRefs.AddItem((void *) path);
 		mSelectedActivity = OPEN_SELECTED;
 		mIsSelected = true;
-		release_sem(wait_sem);
 		break;
 	}
 
@@ -490,26 +529,21 @@ void nsFilePanelBeOS::MessageReceived(BMessage *msg)
 		msg->FindRef("directory", &mSaveDirRef);
 		mSelectedActivity = SAVE_SELECTED;
 		mIsSelected = true;
-		release_sem(wait_sem);
 		break;
 
 	case B_CANCEL: // cancel
 		if (mIsSelected) break;
 		mSelectedActivity = CANCEL_SELECTED;
 		mIsSelected = true;
-		release_sem(wait_sem);
 		break;
 	default:
 		break;
 	}
 }
 
-void nsFilePanelBeOS::WaitForSelection()
+bool nsFilePanelBeOS::SelectionDone()
 {
-	if (wait_sem > 0) {
-		acquire_sem(wait_sem);
-		release_sem(wait_sem);
-	}
+	return mIsSelected;
 }
 
 uint32 nsFilePanelBeOS::SelectedActivity()
@@ -535,4 +569,3 @@ void nsFilePanelBeOS::SelectionChanged(void)
 	}
 	BFilePanel::SelectionChanged();
 }
-
