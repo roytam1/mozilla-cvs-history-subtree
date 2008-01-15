@@ -8,6 +8,8 @@
 
 #$ENV{PATH} = "/usr/local/binutils-2.13.2.1/bin:/usr/local/gcc-3.4.3/bin:" . $ENV{PATH};
 
+$ENV{MOZ_CRASHREPORTER_NO_REPORT} = '1';
+
 #- PLEASE FILL THIS IN WITH YOUR PROPER EMAIL ADDRESS
 #$BuildAdministrator = "$ENV{USER}\@$ENV{HOST}";
 #$BuildAdministrator = ($ENV{USER} || "cltbld") . "\@" . ($ENV{HOST} || "dhcp");
