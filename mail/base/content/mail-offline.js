@@ -169,7 +169,7 @@ var MailOfflineMgr = {
     var promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService(nsIPS);
     var goOnlineToSendMsgs = promptService.confirm(window, 
                                                    this.offlineBundle.getString('sendMessagesOfflineWindowTitle1'), 
-                                                   this.offlineBundle.getString('sendMessagesOfflineLabel1'));
+                                                   this.offlineBundle.getString('sendMessagesOfflineLabel'));
     if (goOnlineToSendMsgs)
       this.offlineManager.goOnline(true /* send unsent messages*/, false, aMsgWindow);
   },
