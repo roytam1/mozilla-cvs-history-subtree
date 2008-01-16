@@ -2037,13 +2037,18 @@ DocumentViewerImpl::Hide(void)
     }
   }
 
-  mPresShell->Destroy();
-  // Clear weak refs
-  mPresContext->SetContainer(nsnull);
-  mPresContext->SetLinkHandler(nsnull);                             
+  nsCOMPtr<nsIPresShell> tempShell = mPresShell;
+  nsCOMPtr<nsPresContext> tempContext = mPresContext;
 
   mPresShell     = nsnull;
   mPresContext   = nsnull;
+
+  tempShell->Destroy();
+
+  // Clear weak refs
+  tempContext->SetContainer(nsnull);
+  tempContext->SetLinkHandler(nsnull);                             
+
   mViewManager   = nsnull;
   mWindow        = nsnull;
   mDeviceContext = nsnull;
