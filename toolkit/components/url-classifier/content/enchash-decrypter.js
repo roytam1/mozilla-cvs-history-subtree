@@ -173,11 +173,14 @@ PROT_EnchashDecrypter.prototype.parseRegExps = function(data) {
  * type -url.
  *
  * @param url String to canonicalize
+ * @param opt_collapseSlashes Boolean true if we want to collapse slashes in
+ *        the path
  *
  * @returns String containing the canonicalized url (maximally url-decoded
  *          with hostname normalized, then specially url-encoded)
  */
-PROT_EnchashDecrypter.prototype.getCanonicalUrl = function(url) {
+PROT_EnchashDecrypter.prototype.getCanonicalUrl = function(url,
+                                                        opt_collapseSlashes) {
   var urlUtils = Cc["@mozilla.org/url-classifier/utils;1"]
                  .getService(Ci.nsIUrlClassifierUtils);
   var escapedUrl = urlUtils.canonicalizeURL(url);
@@ -193,6 +196,13 @@ PROT_EnchashDecrypter.prototype.getCanonicalUrl = function(url) {
                   .getService(Ci.nsIIOService);
   var urlObj = ioService.newURI(escapedUrl, null, null);
   urlObj.host = host;
+  if (opt_collapseSlashes) {
+    // Collapse multiple slashes in the path into a single slash.
+    // We end up collapsing slashes in the query string, but it's unlikely
+    // that this would lead to a false positive and it's much simpler to do
+    // this.
+    urlObj.path = urlObj.path.replace(/\/+/g, "/");
+  }
   return urlObj.asciiSpec;
 }
 
