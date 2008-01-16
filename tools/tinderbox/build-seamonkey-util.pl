@@ -539,12 +539,16 @@ sub SetupPath {
         $Settings::DistBin = "dist/";
 
         # Deal with the most common case first.
-        if ($Settings::ProductName ne 'XULRunner') {
+        if (($Settings::ProductName ne 'XULRunner') &&
+            ($Settings::BinaryName !~ /^extensions/)) {
             $Settings::DistBin .= "$Settings::ProductName";
             if ($Settings::BuildDebug) {
                 $Settings::DistBin .= "Debug";
             }
             $Settings::DistBin .= ".app/Contents/MacOS";
+        } elsif ($Settings::BinaryName =~ /^extensions/) {
+            # extensions get the normal dist/bin as on other platforms
+            $Settings::DistBin .= "bin";
         } else {
             # XULRunner needs a special output path on MacOS,
             # and the path doesn't change based on debug settings.
