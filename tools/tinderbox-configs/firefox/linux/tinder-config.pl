@@ -7,7 +7,6 @@
 #-    Uncomment the variables you need to set.
 #-    The default values are the same as the commented variables.
 
-$BuildXForms = "1";
 $ENV{MOZILLA_OFFICIAL} = 1;
 $ENV{CVS_RSH} = "ssh";
 $ENV{PATH} = "/usr/gcc-3.3.2rh/bin:$ENV{PATH}";
@@ -255,3 +254,9 @@ $update_pushinfo = 1;
 
 # Build XForms
 $BuildXForms = 1;
+
+# Any extensions that are built can be uploaded to the stage server using these
+# config options. Wildcards can be used. These variables are mainly used by
+# post-mozilla-rel.pl
+@ReleaseExtensions = ('xforms.xpi'); # set to e.g. ('lightning*.xpi', 'gdata-provider.xpi')
+#$ReleaseExtensionSubdir = "" # set to e.g. "xpi"; if not specified, <os>-xpi will be used.

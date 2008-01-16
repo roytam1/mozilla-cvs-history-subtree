@@ -34,8 +34,6 @@ $BuildAdministrator = 'build@mozilla.org';
 #$BuildAdministrator = "$ENV{USER}\@$ENV{HOST}";
 #$BuildAdministrator = ($ENV{USER} || "cltbld") . "\@" . ($ENV{HOST} || "dhcp");
 
-$BuildXForms = 1;
-
 #- You'll need to change these to suit your machine's needs
 #$DisplayServer = ':0.0';
 
@@ -249,3 +247,9 @@ $update_pushinfo = 1;
 
 # Build XForms
 $BuildXForms = 1;
+
+# Any extensions that are built can be uploaded to the stage server using these
+# config options. Wildcards can be used. These variables are mainly used by
+# post-mozilla-rel.pl
+@ReleaseExtensions = ('xforms.xpi'); # set to e.g. ('lightning*.xpi', 'gdata-provider.xpi')
+#$ReleaseExtensionSubdir = "" # set to e.g. "xpi"; if not specified, <os>-xpi will be used.

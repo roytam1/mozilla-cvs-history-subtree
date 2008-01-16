@@ -12,8 +12,6 @@ $ENV{DYLD_NO_FIX_PREBINDING} = "1";
 $ENV{LD_PREBIND_ALLOW_OVERLAP} = "1";
 $ENV{CVS_RSH} = "ssh";
 
-$BuildXForms = 1;
-
 # $ENV{MOZ_PACKAGE_MSI}
 #-----------------------------------------------------------------------------
 #  Default: 0
@@ -258,3 +256,9 @@ $MacUniversalBinary = 1;
 
 # Build XForms
 $BuildXForms = 0;
+
+# Any extensions that are built can be uploaded to the stage server using these
+# config options. Wildcards can be used. These variables are mainly used by
+# post-mozilla-rel.pl
+#@ReleaseExtensions = ('xforms.xpi'); # set to e.g. ('lightning*.xpi', 'gdata-provider.xpi')
+#$ReleaseExtensionSubdir = "" # set to e.g. "xpi"; if not specified, <os>-xpi will be used.
