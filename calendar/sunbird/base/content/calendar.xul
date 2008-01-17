@@ -195,7 +195,7 @@
                    tooltiptext="&calendar.edit.button.tooltip;"
                    observes="calendar_modify_event_command"/>
     <toolbarbutton class="cal-toolbarbutton-1"
-                   id="calendar-delete-event-button"
+                   id="calendar-delete-button"
                    label="&calendar.delete.button.label;"
                    tooltiptext="&calendar.delete.button.tooltip;"
                    observes="calendar_delete_event_command"/>
