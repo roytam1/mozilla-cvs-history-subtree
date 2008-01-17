@@ -216,7 +216,7 @@ $shiptalkback  = 1;
 $UsePrebuiltTalkback = "/builds/tinderbox/Sunbird-Mozilla1.8/talkback-sunbird-1.8-mac.tar.bz2";
 $ReleaseToLatest = 1; # Push the release to latest-<milestone>?
 $ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
-$build_hour    = "3";
+$build_hour    = "18";
 $package_creation_path = "/calendar/installer";
 # needs setting for mac + talkback:
 $mac_bundle_path = "/calendar/sunbird/app";
