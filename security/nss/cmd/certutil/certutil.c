@@ -271,14 +271,12 @@ GetCertRequest(PRFileDesc *inFile, PRBool ascii)
 	}
 	
  	rv = SECU_ReadDERFromFile(&reqDER, inFile, ascii);
-	if (rv) {
+	if (rv) 
 	    break;
-	}
         certReq = (CERTCertificateRequest*) PORT_ArenaZAlloc
 		  (arena, sizeof(CERTCertificateRequest));
-        if (!certReq) { 
-	    GEN_BREAK(SECFailure);
-	}
+        if (!certReq) 
+	    break;
 	certReq->arena = arena;
 
 	/* Since cert request is a signed data, must decode to get the inner
@@ -287,31 +285,24 @@ GetCertRequest(PRFileDesc *inFile, PRBool ascii)
 	PORT_Memset(&signedData, 0, sizeof(signedData));
 	rv = SEC_ASN1DecodeItem(arena, &signedData, 
 		SEC_ASN1_GET(CERT_SignedDataTemplate), &reqDER);
-	if (rv) {
+	if (rv)
 	    break;
-	}
-	rv = SEC_ASN1DecodeItem(arena, certReq, 
+	
+        rv = SEC_ASN1DecodeItem(arena, certReq, 
 		SEC_ASN1_GET(CERT_CertificateRequestTemplate), &signedData.data);
-	if (rv) {
-	    break;
-	}
-   	rv = CERT_VerifySignedDataWithPublicKeyInfo(&signedData, 
-		&certReq->subjectPublicKeyInfo, NULL /* wincx */);
    } while (0);
 
-   if (reqDER.data) {
-   	SECITEM_FreeItem(&reqDER, PR_FALSE);
+   if (!rv) {
+   	rv = CERT_VerifySignedDataWithPublicKeyInfo(&signedData, 
+		&certReq->subjectPublicKeyInfo, NULL /* wincx */);
    }
 
    if (rv) {
-   	SECU_PrintError(progName, "bad certificate request\n");
-   	if (arena) {
-   	    PORT_FreeArena(arena, PR_FALSE);
-   	}
-   	certReq = NULL;
+       PRErrorCode  perr = PR_GetError();
+       fprintf(stderr, "%s: unable to decode DER cert request (%s)\n", progName,
+               SECU_Strerror(perr));
    }
-
-   return certReq;
+   return (certReq);
 }
 
 static PRBool 
@@ -1055,7 +1046,6 @@ static void LongUsage(char *progName)
 
     FPS "%-15s Add a certificate to the database        (create if needed)\n",
 	"-A");
-    FPS "%-20s\n", "   All options under -E apply");
     FPS "%-15s Run a series of certutil commands from a batch file\n", "-B");
     FPS "%-20s Specify the batch file\n", "   -i batch-file");
     FPS "%-15s Add an Email certificate to the database (create if needed)\n",
@@ -1150,26 +1140,23 @@ static void LongUsage(char *progName)
 #ifdef NSS_ENABLE_ECC
     FPS "%-20s Elliptic curve name (ec only)\n",
 	"   -q curve-name");
-    FPS "%-20s One of nistp256, nistp384, nistp521\n", "");
-#ifdef NSS_ECC_MORE_THAN_SUITE_B
-    FPS "%-20s sect163k1, nistk163, sect163r1, sect163r2,\n", "");
+    FPS "%-20s One of sect163k1, nistk163, sect163r1, sect163r2,\n", "");
     FPS "%-20s nistb163, sect193r1, sect193r2, sect233k1, nistk233,\n", "");
     FPS "%-20s sect233r1, nistb233, sect239k1, sect283k1, nistk283,\n", "");
     FPS "%-20s sect283r1, nistb283, sect409k1, nistk409, sect409r1,\n", "");
     FPS "%-20s nistb409, sect571k1, nistk571, sect571r1, nistb571,\n", "");
     FPS "%-20s secp160k1, secp160r1, secp160r2, secp192k1, secp192r1,\n", "");
     FPS "%-20s nistp192, secp224k1, secp224r1, nistp224, secp256k1,\n", "");
-    FPS "%-20s secp256r1, secp384r1, secp521r1,\n", "");
-    FPS "%-20s prime192v1, prime192v2, prime192v3, \n", "");
+    FPS "%-20s secp256r1, nistp256, secp384r1, nistp384, secp521r1,\n", "");
+    FPS "%-20s nistp521, prime192v1, prime192v2, prime192v3, \n", "");
     FPS "%-20s prime239v1, prime239v2, prime239v3, c2pnb163v1, \n", "");
     FPS "%-20s c2pnb163v2, c2pnb163v3, c2pnb176v1, c2tnb191v1, \n", "");
-    FPS "%-20s c2tnb191v2, c2tnb191v3,  \n", "");
+    FPS "%-20s c2tnb191v2, c2tnb191v3, c2onb191v4, c2onb191v5, \n", "");
     FPS "%-20s c2pnb208w1, c2tnb239v1, c2tnb239v2, c2tnb239v3, \n", "");
-    FPS "%-20s c2pnb272w1, c2pnb304w1, \n", "");
+    FPS "%-20s c2onb239v4, c2onb239v5, c2pnb272w1, c2pnb304w1, \n", "");
     FPS "%-20s c2tnb359w1, c2pnb368w1, c2tnb431r1, secp112r1, \n", "");
     FPS "%-20s secp112r2, secp128r1, secp128r2, sect113r1, sect113r2\n", "");
     FPS "%-20s sect131r1, sect131r2\n", "");
-#endif /* NSS_ECC_MORE_THAN_SUITE_B */
 #endif
     FPS "%-20s Key database directory (default is ~/.netscape)\n",
 	"   -d keydir");
@@ -1312,8 +1299,6 @@ static void LongUsage(char *progName)
 	"   -p phone");
     FPS "%-20s Output the cert request in ASCII (RFC1113); default is binary\n",
 	"   -a");
-    FPS "%-20s \n",
-	"   See -S for available extension options");
     FPS "\n");
 
     FPS "%-15s Validate a certificate\n",

@@ -88,15 +88,15 @@
  * NSS is a shared library.
  */
 #define SPACE_ATTRIBUTE_HASH_SIZE 32 
-#define SPACE_SESSION_OBJECT_HASH_SIZE 32
+#define SPACE_TOKEN_OBJECT_HASH_SIZE 32
 #define SPACE_SESSION_HASH_SIZE 32
 #define TIME_ATTRIBUTE_HASH_SIZE 32
-#define TIME_SESSION_OBJECT_HASH_SIZE 1024
+#define TIME_TOKEN_OBJECT_HASH_SIZE 1024
 #define TIME_SESSION_HASH_SIZE 1024
 #define MAX_OBJECT_LIST_SIZE 800  
 				  /* how many objects to keep on the free list
 				   * before we start freeing them */
-#define MAX_KEY_LEN 256 	  /* maximum symmetric key length in bytes */
+#define MAX_KEY_LEN 256
 
 #define MULTIACCESS "multiaccess:"
 
@@ -319,9 +319,8 @@ struct SFTKSessionStr {
  *
  * The array of sessionLock's protect the session hash table (head[])
  * as well as the reference count of session objects in that bucket
- * (head[]->refCount),  objectLock protects all elements of the slot's
- * object hash tables (sessObjHashTable[] and tokObjHashTable), and
- * sessionObjectHandleCount.
+ * (head[]->refCount),  objectLock protects all elements of the token
+ * object hash table (tokObjects[], tokenIDCount, and tokenHashTable),
  * slotLock protects the remaining protected elements:
  * password, isLoggedIn, ssoLoggedIn, and sessionCount,
  * and pwCheckLock serializes the key database password checks in
@@ -367,11 +366,11 @@ struct SFTKSlotStr {
     int			sessionCount;           /* variable - reset */
     PRInt32             rwSessionCount;    	/* set by atomic operations */
                                           	/* (reset) */
-    PRUint32		sessionObjectHandleCount; /* variable - preserved */
+    int			tokenIDCount;      	/* variable - perserved */
     int			index;			/* invariant */
-    PLHashTable		*tokObjHashTable;	/* invariant */
-    SFTKObject		**sessObjHashTable;	/* variable - reset */
-    unsigned int	sessObjHashSize;	/* invariant */
+    PLHashTable		*tokenHashTable;	/* invariant */
+    SFTKObject		**tokObjects;		/* variable - reset */
+    unsigned int	tokObjHashSize;		/* invariant */
     SFTKSession		**head;			/* variable -reset */
     unsigned int	sessHashSize;		/* invariant */
     char		tokDescription[33];	/* per load */

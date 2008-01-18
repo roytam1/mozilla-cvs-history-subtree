@@ -42,8 +42,6 @@ USE_AUTOCONF	= 1
 @SHELL_OVERRIDE@
 MOZILLA_CLIENT	= @MOZILLA_CLIENT@
 
-MFLAGS	= @MFLAGS@
-
 prefix		= @prefix@
 exec_prefix	= @exec_prefix@
 bindir		= @bindir@
@@ -83,8 +81,6 @@ CLASSIC_NSPR	= @USE_NSPR_THREADS@
 
 NSPR_CFLAGS	= @NSPR_CFLAGS@
 NSPR_LIBS	= @NSPR_LIBS@
-
-BUILDCLU        = @BUILDCLU@
 
 AS		= @AS@
 ASFLAGS		= @ASFLAGS@
@@ -155,5 +151,3 @@ NEXT_ROOT	= @NEXT_ROOT@
 ifdef NEXT_ROOT
 export NEXT_ROOT
 endif
-
-RPATHFLAG   = @RPATHFLAG@

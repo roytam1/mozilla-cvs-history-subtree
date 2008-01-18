@@ -52,6 +52,8 @@ static char copyright[] = "@(#) Copyright (c) 1993 Regents of the University of 
 #include "regex.h"
 
 static int break_into_words( char *str, char *delims, char ***wordsp );
+int nsldapi_next_line_tokens( char **bufp, long *blenp, char ***toksp );
+void nsldapi_free_strarray( char **sap );
 
 #if !defined( macintosh ) && !defined( DOS )
 extern char	* LDAP_CALL re_comp();
@@ -280,11 +282,7 @@ ldap_getfirstfilter( LDAPFiltDesc *lfdp, char *tagpat, char *value )
 	NSLDAPI_FREE( lfdp->lfd_curvalwords );
     }
 
-    NSLDAPI_FREE(lfdp->lfd_curval);
-    if ((lfdp->lfd_curval = nsldapi_strdup(value)) == NULL) {
-	return( NULL );
-    }
-
+    lfdp->lfd_curval = value;
     lfdp->lfd_curfip = NULL;
 
     for ( flp = lfdp->lfd_filtlist; flp != NULL; flp = flp->lfl_next ) {

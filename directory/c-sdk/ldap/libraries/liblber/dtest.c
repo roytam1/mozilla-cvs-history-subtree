@@ -82,8 +82,8 @@ static void usage( char *name )
 main( int argc, char **argv )
 {
 	long		i, fd;
-	ber_len_t	len;
-	ber_tag_t	tag;
+	unsigned long	len;
+	int		tag;
 	BerElement	*ber;
 	Sockbuf		*sb;
 	extern int	lber_debug;

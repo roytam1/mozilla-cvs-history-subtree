@@ -167,12 +167,6 @@ ldap_ld_free( LDAP *ld, LDAPControl **serverctrls,
 	if ( ld->ld_preferred_language != NULL )
 		NSLDAPI_FREE( ld->ld_preferred_language );
 	nsldapi_iostatus_free( ld );
-#ifdef LDAP_SASLIO_HOOKS
-	NSLDAPI_FREE( ld->ld_def_sasl_mech );
-	NSLDAPI_FREE( ld->ld_def_sasl_realm );
-	NSLDAPI_FREE( ld->ld_def_sasl_authcid );
-	NSLDAPI_FREE( ld->ld_def_sasl_authzid );
-#endif
 
 	/*
 	 * XXXmcs: should use cache function pointers to hook in memcache
@@ -226,8 +220,7 @@ nsldapi_send_unbind( LDAP *ld, Sockbuf *sb, LDAPControl **serverctrls,
 	}
 
 	/* send the message */
-        err = nsldapi_send_ber_message( ld, sb, ber, 1 /* free ber */,
-        	0 /* will not handle EPIPE */ );
+        err = nsldapi_send_ber_message( ld, sb, ber, 1 /* free ber */ );
 	if ( err != 0 ) {
 		ber_free( ber, 1 );
 		if (err != -2 ) {

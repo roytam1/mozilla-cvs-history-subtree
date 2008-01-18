@@ -1239,6 +1239,68 @@ loser:
     return(SECFailure);
 }
 
+/*
+ * Create a new certDBEntryRevocation from existing data
+ */
+static certDBEntryRevocation *
+NewDBCrlEntry(SECItem *derCrl, char * url, certDBEntryType crlType, int flags)
+{
+    certDBEntryRevocation *entry;
+    PRArenaPool *arena = NULL;
+    int nnlen;
+    
+    arena = PORT_NewArena( DER_DEFAULT_CHUNKSIZE );
+
+    if ( !arena ) {
+	goto loser;
+    }
+	
+    entry = PORT_ArenaZNew(arena, certDBEntryRevocation);
+    if ( entry == NULL ) {
+	goto loser;
+    }
+    
+    /* fill in the dbRevolcation */
+    entry->common.arena = arena;
+    entry->common.type = crlType;
+    entry->common.version = CERT_DB_FILE_VERSION;
+    entry->common.flags = flags;
+    
+
+    entry->derCrl.data = (unsigned char *)PORT_ArenaAlloc(arena, derCrl->len);
+    if ( !entry->derCrl.data ) {
+	goto loser;
+    }
+
+    if (url) {
+	nnlen = PORT_Strlen(url) + 1;
+	entry->url  = (char *)PORT_ArenaAlloc(arena, nnlen);
+	if ( !entry->url ) {
+	    goto loser;
+	}
+	PORT_Memcpy(entry->url, url, nnlen);
+    } else {
+	entry->url = NULL;
+    }
+
+	
+    entry->derCrl.len = derCrl->len;
+    PORT_Memcpy(entry->derCrl.data, derCrl->data, derCrl->len);
+
+    return(entry);
+
+loser:
+    
+    /* allocation error, free arena and return */
+    if ( arena ) {
+	PORT_FreeArena(arena, PR_FALSE);
+    }
+    
+    PORT_SetError(SEC_ERROR_NO_MEMORY);
+    return(0);
+}
+
+
 static SECStatus
 WriteDBCrlEntry(NSSLOWCERTCertDBHandle *handle, certDBEntryRevocation *entry,
 				SECItem *crlKey )
@@ -2966,7 +3028,10 @@ AddPermSubjectNode(certDBEntrySubject *entry, NSSLOWCERTCertificate *cert,
     SECItem *newCertKeys, *newKeyIDs;
     unsigned int i, new_i;
     SECStatus rv;
+    NSSLOWCERTCertificate *cmpcert;
+    unsigned int nnlen;
     unsigned int ncerts;
+    PRBool added = PR_FALSE;
 
     PORT_Assert(entry);    
     ncerts = entry->ncerts;
@@ -2978,24 +3043,25 @@ AddPermSubjectNode(certDBEntrySubject *entry, NSSLOWCERTCertificate *cert,
 
     if ( ( entry->nickname == NULL ) && ( nickname != NULL ) ) {
 	/* copy nickname into the entry */
-	entry->nickname = PORT_ArenaStrdup(entry->common.arena, nickname);
+	nnlen = PORT_Strlen(nickname) + 1;
+	entry->nickname = (char *)PORT_ArenaAlloc(entry->common.arena,nnlen);
 	if ( entry->nickname == NULL ) {
 	    return(SECFailure);
 	}
+	PORT_Memcpy(entry->nickname, nickname, nnlen);
     }
 	
     /* a DB entry already exists, so add this cert */
-    newCertKeys = PORT_ArenaZNewArray(entry->common.arena, SECItem, ncerts + 1);
-    newKeyIDs   = PORT_ArenaZNewArray(entry->common.arena, SECItem, ncerts + 1);
+    newCertKeys = (SECItem *)PORT_ArenaAlloc(entry->common.arena,
+					 sizeof(SECItem) * ( ncerts + 1 ) );
+    newKeyIDs = (SECItem *)PORT_ArenaAlloc(entry->common.arena,
+					 sizeof(SECItem) * ( ncerts + 1 ) );
 
     if ( ( newCertKeys == NULL ) || ( newKeyIDs == NULL ) ) {
 	    return(SECFailure);
     }
 
-    /* Step 1: copy certs older than "cert" into new entry. */
     for ( i = 0, new_i=0; i < ncerts; i++ ) {
-	NSSLOWCERTCertificate *cmpcert;
-	PRBool isNewer;
 	cmpcert = nsslowcert_FindCertByKey(cert->dbhandle,
 						  &entry->certKeys[i]);
 	/* The entry has been corrupted, remove it from the list */
@@ -3003,42 +3069,63 @@ AddPermSubjectNode(certDBEntrySubject *entry, NSSLOWCERTCertificate *cert,
 	    continue;
 	}
 
-	isNewer = nsslowcert_IsNewer(cert, cmpcert);
-	nsslowcert_DestroyCertificate(cmpcert);
-	if ( isNewer ) 
+	if ( nsslowcert_IsNewer(cert, cmpcert) ) {
+	    nsslowcert_DestroyCertificate(cmpcert);
+	    /* insert before cmpcert */
+	    rv = SECITEM_CopyItem(entry->common.arena, &newCertKeys[new_i],
+				      &cert->certKey);
+	    if ( rv != SECSuccess ) {
+		return(SECFailure);
+	    }
+	    rv = SECITEM_CopyItem(entry->common.arena, &newKeyIDs[new_i],
+				      &cert->subjectKeyID);
+	    if ( rv != SECSuccess ) {
+		return(SECFailure);
+	    }
+	    new_i++;
+	    /* copy the rest of the entry */
+	    for ( ; i < ncerts; i++ ,new_i++) {
+		newCertKeys[new_i] = entry->certKeys[i];
+		newKeyIDs[new_i] = entry->keyIDs[i];
+	    }
+
+	    /* update certKeys and keyIDs */
+	    entry->certKeys = newCertKeys;
+	    entry->keyIDs = newKeyIDs;
+		
+	    /* set new count value */
+	    entry->ncerts = new_i;
+	    added = PR_TRUE;
 	    break;
+	}
+	nsslowcert_DestroyCertificate(cmpcert);
 	/* copy this cert entry */
 	newCertKeys[new_i] = entry->certKeys[i];
-	newKeyIDs[new_i]   = entry->keyIDs[i];
-	new_i++; 
+	newKeyIDs[new_i] = entry->keyIDs[i];
+	new_i++; /* only increment if we copied the entries */
     }
 
-    /* Step 2: Add "cert" to the entry. */
-    rv = SECITEM_CopyItem(entry->common.arena, &newCertKeys[new_i],
-			      &cert->certKey);
-    if ( rv != SECSuccess ) {
-	return(SECFailure);
+    if ( !added ) {
+	/* insert new one at end */
+	rv = SECITEM_CopyItem(entry->common.arena, &newCertKeys[new_i],
+				  &cert->certKey);
+	if ( rv != SECSuccess ) {
+	    return(SECFailure);
+	}
+	rv = SECITEM_CopyItem(entry->common.arena, &newKeyIDs[new_i],
+				  &cert->subjectKeyID);
+	if ( rv != SECSuccess ) {
+	    return(SECFailure);
+	}
+	new_i++;
+
+	/* update certKeys and keyIDs */
+	entry->certKeys = newCertKeys;
+	entry->keyIDs = newKeyIDs;
+		
+	/* increment count */
+	entry->ncerts = new_i;
     }
-    rv = SECITEM_CopyItem(entry->common.arena, &newKeyIDs[new_i],
-			      &cert->subjectKeyID);
-    if ( rv != SECSuccess ) {
-	return(SECFailure);
-    }
-    new_i++;
-
-    /* Step 3: copy remaining certs (if any) from old entry to new. */
-    for ( ; i < ncerts; i++ ,new_i++) {
-	newCertKeys[new_i] = entry->certKeys[i];
-	newKeyIDs[new_i]   = entry->keyIDs[i];
-    }
-
-    /* update certKeys and keyIDs */
-    entry->certKeys = newCertKeys;
-    entry->keyIDs   = newKeyIDs;
-
-    /* set new count value */
-    entry->ncerts = new_i;
-
     DeleteDBSubjectEntry(cert->dbhandle, &cert->derSubject);
     rv = WriteDBSubjectEntry(cert->dbhandle, entry);
     return(rv);
@@ -5109,23 +5196,22 @@ nsslowcert_UpdateCrl(NSSLOWCERTCertDBHandle *handle, SECItem *derCrl,
 			SECItem *crlKey, char *url, PRBool isKRL)
 {
     SECStatus rv = SECFailure;
-    certDBEntryRevocation entry;
+    certDBEntryRevocation *entry = NULL;
     certDBEntryType crlType = isKRL ? certDBEntryTypeKeyRevocation  
 					: certDBEntryTypeRevocation;
     DeleteDBCrlEntry(handle, crlKey, crlType);
 
     /* Write the new entry into the data base */
-    entry.common.arena = NULL;
-    entry.common.type = crlType;
-    entry.common.version = CERT_DB_FILE_VERSION;
-    entry.common.flags = 0;
+    entry = NewDBCrlEntry(derCrl, url, crlType, 0);
+    if (entry == NULL) goto done;
 
-    entry.derCrl.data = derCrl->data;
-    entry.derCrl.len = derCrl->len;
-    entry.url = url;
+    rv = WriteDBCrlEntry(handle, entry, crlKey);
+    if (rv != SECSuccess) goto done;
 
-    rv = WriteDBCrlEntry(handle, &entry, crlKey);
-
+done:
+    if (entry) {
+	DestroyDBEntry((certDBEntry *)entry);
+    }
     return rv;
 }
 

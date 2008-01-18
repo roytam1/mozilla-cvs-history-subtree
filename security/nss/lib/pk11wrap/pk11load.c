@@ -272,12 +272,7 @@ SECMOD_LoadPKCS11Module(SECMODModule *mod) {
 	 */
 	library = PR_LoadLibrary(full_name);
 	mod->library = (void *)library;
-#ifdef notdef
-	PR_FreeLibraryName(full_name);
-#else
 	PORT_Free(full_name);
-#endif
-
 	if (library == NULL) {
 	    return SECFailure;
 	}

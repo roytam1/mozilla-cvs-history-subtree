@@ -48,7 +48,6 @@
 #include "secdig.h"
 #include "pk11func.h"
 #include "secerr.h"
-#include "keyi.h"
 
 struct SGNContextStr {
     SECOidTag signalg;
@@ -64,7 +63,6 @@ SGN_NewContext(SECOidTag alg, SECKEYPrivateKey *key)
     SGNContext *cx;
     SECOidTag hashalg, signalg;
     KeyType keyType;
-    SECStatus rv;
 
     /* OK, map a PKCS #7 hash and encrypt algorithm into
      * a standard hashing algorithm. Why did we pass in the whole
@@ -73,13 +71,83 @@ SGN_NewContext(SECOidTag alg, SECKEYPrivateKey *key)
      * hashing on card. It may not support CKM_RSA_PKCS sign algorithm,
      * it may just support CKM_RSA_PKCS_WITH_SHA1 and/or CKM_RSA_PKCS_WITH_MD5.
      */
-    /* we have a private key, not a public key, so don't pass it in */
-    rv =  sec_DecodeSigAlg(NULL, alg, NULL, &signalg, &hashalg);
-    if (rv != SECSuccess) {
+    switch (alg) {
+      /* We probably shouldn't be generating MD2 signatures either */
+      case SEC_OID_PKCS1_MD2_WITH_RSA_ENCRYPTION:
+	hashalg = SEC_OID_MD2;
+	signalg = SEC_OID_PKCS1_RSA_ENCRYPTION;
+	keyType = rsaKey;
+	break;
+      case SEC_OID_PKCS1_MD5_WITH_RSA_ENCRYPTION:
+        hashalg = SEC_OID_MD5;
+	signalg = SEC_OID_PKCS1_RSA_ENCRYPTION;
+	keyType = rsaKey;
+	break;
+      case SEC_OID_PKCS1_SHA1_WITH_RSA_ENCRYPTION:
+      case SEC_OID_ISO_SHA_WITH_RSA_SIGNATURE:
+	hashalg = SEC_OID_SHA1;
+	signalg = SEC_OID_PKCS1_RSA_ENCRYPTION;
+	keyType = rsaKey;
+	break;
+
+      case SEC_OID_PKCS1_SHA256_WITH_RSA_ENCRYPTION:
+	hashalg = SEC_OID_SHA256;
+	signalg = SEC_OID_PKCS1_RSA_ENCRYPTION;
+	keyType = rsaKey;
+	break;
+      case SEC_OID_PKCS1_SHA384_WITH_RSA_ENCRYPTION:
+	hashalg = SEC_OID_SHA384;
+	signalg = SEC_OID_PKCS1_RSA_ENCRYPTION;
+	keyType = rsaKey;
+	break;
+      case SEC_OID_PKCS1_SHA512_WITH_RSA_ENCRYPTION:
+	hashalg = SEC_OID_SHA512;
+	signalg = SEC_OID_PKCS1_RSA_ENCRYPTION;
+	keyType = rsaKey;
+	break;
+
+      /* what about normal DSA? */
+      case SEC_OID_ANSIX9_DSA_SIGNATURE_WITH_SHA1_DIGEST:
+      case SEC_OID_BOGUS_DSA_SIGNATURE_WITH_SHA1_DIGEST:
+	hashalg = SEC_OID_SHA1;
+	signalg = SEC_OID_ANSIX9_DSA_SIGNATURE;
+	keyType = dsaKey;
+	break;
+      case SEC_OID_MISSI_DSS:
+      case SEC_OID_MISSI_KEA_DSS:
+      case SEC_OID_MISSI_KEA_DSS_OLD:
+      case SEC_OID_MISSI_DSS_OLD:
+	hashalg = SEC_OID_SHA1;
+	signalg = SEC_OID_MISSI_DSS; /* XXX Is there a better algid? */
+	keyType = fortezzaKey;
+	break;
+      case SEC_OID_ANSIX962_ECDSA_SHA1_SIGNATURE:
+	hashalg = SEC_OID_SHA1;
+	signalg = SEC_OID_ANSIX962_EC_PUBLIC_KEY;
+	keyType = ecKey;
+	break;
+      case SEC_OID_ANSIX962_ECDSA_SHA256_SIGNATURE:
+	hashalg = SEC_OID_SHA256;
+	signalg = SEC_OID_ANSIX962_EC_PUBLIC_KEY;
+	keyType = ecKey;
+	break;
+      case SEC_OID_ANSIX962_ECDSA_SHA384_SIGNATURE:
+	hashalg = SEC_OID_SHA384;
+	signalg = SEC_OID_ANSIX962_EC_PUBLIC_KEY;
+	keyType = ecKey;
+	break;
+      case SEC_OID_ANSIX962_ECDSA_SHA512_SIGNATURE:
+	hashalg = SEC_OID_SHA512;
+	signalg = SEC_OID_ANSIX962_EC_PUBLIC_KEY;
+	keyType = ecKey;
+	break;
+      /* we don't implement MD4 hashes. 
+       * we *CERTAINLY* don't want to sign one! */
+      case SEC_OID_PKCS1_MD4_WITH_RSA_ENCRYPTION:
+      default:
 	PORT_SetError(SEC_ERROR_INVALID_ALGORITHM);
 	return 0;
     }
-    keyType = seckey_GetKeyType(signalg);
 
     /* verify our key type */
     if (key->keyType != keyType &&
@@ -333,7 +401,7 @@ SEC_DerSignData(PRArenaPool *arena, SECItem *result,
 	    algID = SEC_OID_ANSIX9_DSA_SIGNATURE_WITH_SHA1_DIGEST;
 	    break;
 	  case ecKey:
-	    algID = SEC_OID_ANSIX962_ECDSA_SIGNATURE_WITH_SHA1_DIGEST;
+	    algID = SEC_OID_ANSIX962_ECDSA_SHA1_SIGNATURE;
 	    break;
 	  default:
 	    PORT_SetError(SEC_ERROR_INVALID_KEY);
@@ -443,9 +511,9 @@ SEC_GetSignatureAlgorithmOidTag(KeyType keyType, SECOidTag hashAlgTag)
 	switch (hashAlgTag) {
 	case SEC_OID_MD2:
 	    sigTag = SEC_OID_PKCS1_MD2_WITH_RSA_ENCRYPTION;	break;
+	case SEC_OID_UNKNOWN:	/* default for RSA if not specified */
 	case SEC_OID_MD5:
 	    sigTag = SEC_OID_PKCS1_MD5_WITH_RSA_ENCRYPTION;	break;
-	case SEC_OID_UNKNOWN:	/* default for RSA if not specified */
 	case SEC_OID_SHA1:
 	    sigTag = SEC_OID_PKCS1_SHA1_WITH_RSA_ENCRYPTION;	break;
 	case SEC_OID_SHA256:
@@ -469,18 +537,19 @@ SEC_GetSignatureAlgorithmOidTag(KeyType keyType, SECOidTag hashAlgTag)
 	break;
     case ecKey:
 	switch (hashAlgTag) {
-	case SEC_OID_UNKNOWN:	/* default for ECDSA if not specified */
-	case SEC_OID_SHA1:
-            sigTag = SEC_OID_ANSIX962_ECDSA_SHA1_SIGNATURE; break;
+	case SEC_OID_UNKNOWN:	/* default for ECDSA if hash not specified */
+	case SEC_OID_SHA1:      /*  is ECDSA_SHA1_SIGNTARURE */
+	    sigTag = SEC_OID_ANSIX962_ECDSA_SHA1_SIGNATURE; break;
 	case SEC_OID_SHA256:
-            sigTag = SEC_OID_ANSIX962_ECDSA_SHA256_SIGNATURE; break;
+	    sigTag = SEC_OID_ANSIX962_ECDSA_SHA256_SIGNATURE; break;
 	case SEC_OID_SHA384:
-            sigTag = SEC_OID_ANSIX962_ECDSA_SHA384_SIGNATURE; break;
+	    sigTag = SEC_OID_ANSIX962_ECDSA_SHA384_SIGNATURE; break;
 	case SEC_OID_SHA512:
-            sigTag = SEC_OID_ANSIX962_ECDSA_SHA512_SIGNATURE; break;
+	    sigTag = SEC_OID_ANSIX962_ECDSA_SHA512_SIGNATURE; break;
 	default:
-	break;
+	    break;
 	}
+	break;
     default:
     	break;
     }
