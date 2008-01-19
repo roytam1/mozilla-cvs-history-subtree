@@ -527,12 +527,6 @@ public:
 
 #pragma mark -
 
-enum BWCOpenDest {
-  kDestinationNewWindow = 0,
-  kDestinationNewTab,
-  kDestinationCurrentView
-};
-
 @interface BrowserWindowController(Private)
   // open a new window or tab, but doesn't load anything into them. Must be matched
   // with a call to do that.
@@ -547,9 +541,9 @@ enum BWCOpenDest {
 - (void)transformFormatString:(NSMutableString*)inFormat domain:(NSString*)inDomain search:(NSString*)inSearch;
 - (void)openNewWindowWithDescriptor:(nsISupports*)aDesc displayType:(PRUint32)aDisplayType loadInBackground:(BOOL)aLoadInBG;
 - (void)openNewTabWithDescriptor:(nsISupports*)aDesc displayType:(PRUint32)aDisplayType loadInBackground:(BOOL)aLoadInBG;
-- (void)performSearch:(WebSearchField*)inSearchField inView:(BWCOpenDest)inDest inBackground:(BOOL)inLoadInBG;
+- (void)performSearch:(WebSearchField*)inSearchField inView:(EOpenDestination)inDest inBackground:(BOOL)inLoadInBG;
 - (int)historyIndexOfPageBeforeBookmarkManager;
-- (void)goToLocationFromToolbarURLField:(AutoCompleteTextField *)inURLField inView:(BWCOpenDest)inDest inBackground:(BOOL)inLoadInBG;
+- (void)goToLocationFromToolbarURLField:(AutoCompleteTextField *)inURLField inView:(EOpenDestination)inDest inBackground:(BOOL)inLoadInBG;
 
 - (BrowserTabViewItem*)tabForBrowser:(BrowserWrapper*)inWrapper;
 - (void)closeTab:(NSTabViewItem *)tab;
@@ -1262,16 +1256,18 @@ enum BWCOpenDest {
   return sToolbarDefaults;
 }
 
-// +shouldLoadInBackground
-//
-// gets the foreground/background tab loading pref
-//
-+ (BOOL)shouldLoadInBackground:(id)aSender
++ (BOOL)shouldLoadInBackgroundForDestination:(EOpenDestination)destination
+                                      sender:(id)sender;
 {
-  BOOL loadInBackground = [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.loadInBackground" withSuccess:NULL];
+  BOOL loadInBackground = NO;
+  if (destination == eDestinationNewTab) {
+    loadInBackground =
+      [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.loadInBackground"
+                                             withSuccess:NULL];
+  }
 
-  if ([aSender respondsToSelector:@selector(keyEquivalentModifierMask)]) {
-    if ([aSender keyEquivalentModifierMask] & NSShiftKeyMask)
+  if ([sender respondsToSelector:@selector(keyEquivalentModifierMask)]) {
+    if ([sender keyEquivalentModifierMask] & NSShiftKeyMask)
       loadInBackground = !loadInBackground;
   }
   else {
@@ -2322,7 +2318,7 @@ enum BWCOpenDest {
 {
   [mSearchSheetWindow orderOut:self];
   [NSApp endSheet:mSearchSheetWindow returnCode:1];
-  [self performSearch:mSearchSheetTextField inView:kDestinationCurrentView inBackground:NO];
+  [self performSearch:mSearchSheetTextField inView:eDestinationCurrentView inBackground:NO];
 }
 
 - (IBAction)cancelSearchSheet:(id)sender
@@ -2421,11 +2417,11 @@ enum BWCOpenDest {
 {
   if ([sender isKindOfClass:[AutoCompleteTextField class]])
     [self goToLocationFromToolbarURLField:(AutoCompleteTextField *)sender
-                                    inView:kDestinationCurrentView inBackground:NO];
+                                    inView:eDestinationCurrentView inBackground:NO];
 }
 
 - (void)goToLocationFromToolbarURLField:(AutoCompleteTextField *)inURLField 
-                                 inView:(BWCOpenDest)inDest inBackground:(BOOL)inLoadInBG
+                                 inView:(EOpenDestination)inDest inBackground:(BOOL)inLoadInBG
 {
   // trim off any whitespace around url
   NSString *theURL = [[inURLField stringValue] stringByTrimmingWhitespace];
@@ -2446,15 +2442,15 @@ enum BWCOpenDest {
   if (!resolvedURLs || [resolvedURLs count] == 1) {
     targetURL = resolvedURLs ? [resolvedURLs lastObject] : theURL;
     BOOL allowPopups = resolvedURLs ? YES : NO; //Allow popups if it's a bookmark shortcut
-    if (inDest == kDestinationNewTab)
+    if (inDest == eDestinationNewTab)
       [self openNewTabWithURL:targetURL referrer:nil loadInBackground:inLoadInBG allowPopups:allowPopups setJumpback:NO];
-    else if (inDest == kDestinationNewWindow)
+    else if (inDest == eDestinationNewWindow)
       [self openNewWindowWithURL:targetURL referrer:nil loadInBackground:inLoadInBG allowPopups:allowPopups];
     else // if it's not a new window or a new tab, load into the current view
       [self loadURL:targetURL referrer:nil focusContent:YES allowPopups:allowPopups];
   }
   else {
-    if (inDest == kDestinationNewTab || inDest == kDestinationNewWindow)
+    if (inDest == eDestinationNewTab || inDest == eDestinationNewWindow)
       [self openURLArray:resolvedURLs tabOpenPolicy:eAppendTabs allowPopups:YES];
     else
       [self openURLArray:resolvedURLs tabOpenPolicy:eReplaceTabs allowPopups:YES];
@@ -2611,7 +2607,7 @@ enum BWCOpenDest {
       [mSearchSheetWindow orderOut:self];
       [NSApp endSheet:mSearchSheetWindow returnCode:1];
     }
-    [self performSearch:aSender inView:kDestinationCurrentView inBackground:NO];
+    [self performSearch:aSender inView:eDestinationCurrentView inBackground:NO];
   }
 }
 
@@ -2631,14 +2627,17 @@ enum BWCOpenDest {
   
   unsigned int modifiers = [[NSApp currentEvent] modifierFlags];
 
+  EOpenDestination destination = eDestinationCurrentView;
+  BOOL loadInBackground = NO;
   // do search in a new window/tab if Command is held down
   if (modifiers & NSCommandKeyMask) {
     BOOL loadInTab = [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.opentabfor.middleclick" withSuccess:NULL];
-    BWCOpenDest destination = loadInTab ? kDestinationNewTab : kDestinationNewWindow;
-    [self performSearch:mSearchBar inView:destination inBackground:[BrowserWindowController shouldLoadInBackground:nil]];
+    destination = loadInTab ? eDestinationNewTab : eDestinationNewWindow;
+    loadInBackground = [BrowserWindowController shouldLoadInBackgroundForDestination:destination
+                                                                              sender:nil];
   }
-  else
-    [self performSearch:mSearchBar inView:kDestinationCurrentView inBackground:NO];
+
+  [self performSearch:mSearchBar inView:destination inBackground:loadInBackground];
 }
 
 //
@@ -2647,7 +2646,7 @@ enum BWCOpenDest {
 // performs a search using searchField and opens either in the current view, a new tab, or a new
 // window. If it's a new tab or window, loadInBG determines whether the window/tab is opened in the background
 //
--(void)performSearch:(WebSearchField*)inSearchField inView:(BWCOpenDest)inDest inBackground:(BOOL)inLoadInBG
+-(void)performSearch:(WebSearchField*)inSearchField inView:(EOpenDestination)inDest inBackground:(BOOL)inLoadInBG
 {
   NSString *searchString = [inSearchField stringValue];
   NSMutableString *searchURL = [[[inSearchField currentSearchURL] mutableCopy] autorelease];
@@ -2677,9 +2676,9 @@ enum BWCOpenDest {
       
       NSString *searchDomain = [NSString stringWithUTF8String:spec.get()];
       
-      if (inDest == kDestinationNewTab)
+      if (inDest == eDestinationNewTab)
         [self openNewTabWithURL:searchDomain referrer:nil loadInBackground:inLoadInBG allowPopups:NO setJumpback:NO];
-      else if (inDest == kDestinationNewWindow)
+      else if (inDest == eDestinationNewWindow)
         [self openNewWindowWithURL:searchDomain referrer:nil loadInBackground:inLoadInBG allowPopups:NO];
       else // if it's not a new window or a new tab, load into the current view
         [self loadURL:searchDomain];
@@ -2705,9 +2704,9 @@ enum BWCOpenDest {
     [self transformFormatString:searchURL domain:currentDomain search:escapedSearchString];
     [escapedSearchString release];
     
-    if (inDest == kDestinationNewTab)
+    if (inDest == eDestinationNewTab)
       [self openNewTabWithURL:searchURL referrer:nil loadInBackground:inLoadInBG allowPopups:NO setJumpback:NO];
-    else if (inDest == kDestinationNewWindow)
+    else if (inDest == eDestinationNewWindow)
       [self openNewWindowWithURL:searchURL referrer:nil loadInBackground:inLoadInBG allowPopups:NO];
     else // if it's not a new window or a new tab, load into the current view
       [self loadURL:searchURL];
@@ -3570,7 +3569,8 @@ enum BWCOpenDest {
     BrowserTabViewItem* tabViewItem = [mTabBrowser itemWithTag:[sender tag]];
     if (tabViewItem) {
       NSString* url = [[tabViewItem view] currentURI];
-      BOOL backgroundLoad = [BrowserWindowController shouldLoadInBackground:nil];
+      BOOL backgroundLoad = [BrowserWindowController shouldLoadInBackgroundForDestination:eDestinationNewWindow
+                                                                                   sender:nil];
 
       [self openNewWindowWithURL:url referrer:nil loadInBackground:backgroundLoad allowPopups:NO];
 
@@ -3793,7 +3793,9 @@ enum BWCOpenDest {
   
   // if we replace all tabs (because we opened a tab group), or we open additional tabs
   // with the "focus new tab"-pref on, focus the first new tab.
-  if (!((tabPolicy == eAppendTabs) && [BrowserWindowController shouldLoadInBackground:nil]))
+  BOOL loadInBackground = [BrowserWindowController shouldLoadInBackgroundForDestination:eDestinationNewTab
+                                                                                 sender:nil];
+  if (!((tabPolicy == eAppendTabs) && loadInBackground))
     [mTabBrowser selectTabViewItem:tabViewToSelect];
     
 }
@@ -4513,7 +4515,9 @@ enum BWCOpenDest {
   if ([hrefStr length] == 0)
     return;
 
-  BOOL loadInBackground = [BrowserWindowController shouldLoadInBackground:nil];
+  BOOL loadInBackground = [BrowserWindowController shouldLoadInBackgroundForDestination:(aUseWindow ? eDestinationNewWindow
+                                                                                                    : eDestinationNewTab)
+                                                                                 sender:nil];
 
   NSString* referrer = [[mBrowserView browserView] focusedURLString];
 
@@ -4603,7 +4607,9 @@ enum BWCOpenDest {
 
     if (modifiers & NSCommandKeyMask) {
       BOOL loadInTab = [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.opentabfor.middleclick" withSuccess:NULL];
-      BOOL loadInBG = [BrowserWindowController shouldLoadInBackground:nil];
+      BOOL loadInBG = [BrowserWindowController shouldLoadInBackgroundForDestination:(loadInTab ? eDestinationNewTab
+                                                                                               : eDestinationNewWindow)
+                                                                             sender:nil];
       if (loadInTab)
         [self openNewTabWithURL:urlStr referrer:referrer loadInBackground:loadInBG allowPopups:NO setJumpback:NO];
       else
@@ -4932,15 +4938,17 @@ enum BWCOpenDest {
 //
 - (BOOL)handleCommandReturn:(BOOL)aShiftIsDown
 {
-  // determine whether to load in background
-  BOOL loadInBG  = [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.loadInBackground" withSuccess:NULL];
-  if (aShiftIsDown)  // if shift is being held down, do the opposite of the pref
-    loadInBG = !loadInBG;
-
   // determine whether to load in tab or window
   BOOL loadInTab = [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.opentabfor.middleclick" withSuccess:NULL];
 
-  BWCOpenDest destination = loadInTab ? kDestinationNewTab : kDestinationNewWindow;
+  // determine whether to load in background
+  BOOL loadInBG = NO;
+  if (loadInTab)
+    loadInBG = [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.loadInBackground" withSuccess:NULL];
+  if (aShiftIsDown)  // if shift is being held down, do the opposite of the pref
+    loadInBG = !loadInBG;
+
+  EOpenDestination destination = loadInTab ? eDestinationNewTab : eDestinationNewWindow;
   
   // see if command-return came in the url bar
   BOOL handled = NO;

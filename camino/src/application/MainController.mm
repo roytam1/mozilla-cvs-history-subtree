@@ -799,7 +799,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
       }
       else {
         openInNewWindow = YES;
-        if (loadNewTabsInBackgroundPref)
+        if (reverseBackgroundPref)
           behindWindow = [browserWindowController window];
       }
       break;
@@ -817,10 +817,10 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 
     case eBookmarkOpenBehavior_NewWindow:
       openInNewWindow = YES;
-      if (loadNewTabsInBackgroundPref)
+      if (reverseBackgroundPref)
         behindWindow = [browserWindowController window];
-        break;
-      
+      break;
+
     case eBookmarkOpenBehavior_Preferred:
       // default, so nothing to be done.
       break;
