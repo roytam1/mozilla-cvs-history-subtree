@@ -148,7 +148,7 @@ NS_IMETHODIMP FormFillListener::HandleEvent(nsIDOMEvent* aEvent)
   if (domWindow)
     [self removeWindowListeners:domWindow];
 
-  [self removeResizeObserver:[mBrowserView nativeWindow]];
+  [self removeResizeObserver:[mBrowserView getNativeWindow]];
 
   [mResults release];
   [mKeychainSession release];
@@ -197,7 +197,7 @@ NS_IMETHODIMP FormFillListener::HandleEvent(nsIDOMEvent* aEvent)
   if (!privateDOMWindow)
     return;
 
-  nsPIDOMEventTarget* chromeEventHandler = privateDOMWindow->GetChromeEventHandler();
+  nsIChromeEventHandler* chromeEventHandler = privateDOMWindow->GetChromeEventHandler();
 
   nsCOMPtr<nsIDOMEventTarget> target = do_QueryInterface(chromeEventHandler);
   if (!target)
@@ -236,7 +236,7 @@ NS_IMETHODIMP FormFillListener::HandleEvent(nsIDOMEvent* aEvent)
   if (!privateDOMWindow)
     return;
 
-  nsPIDOMEventTarget* chromeEventHandler = privateDOMWindow->GetChromeEventHandler();
+  nsIChromeEventHandler* chromeEventHandler = privateDOMWindow->GetChromeEventHandler();
 
   nsCOMPtr<nsIDOMEventTarget> target = do_QueryInterface(chromeEventHandler);
   if (!target)
@@ -351,16 +351,14 @@ NS_IMETHODIMP FormFillListener::HandleEvent(nsIDOMEvent* aEvent)
   // y-flip and subtract the control height to convert to cocoa coords
   origin.y = NSMaxY([mainScreen frame]) - inputElementFrame.origin.y - inputElementFrame.size.height;
 
-  // To account for the text box border, shift rectangle position to the right by 2 pixels
-  // and reduce the width by 3 pixels.
   // TODO: check shift here, still not aligned sometimes.
-  origin.x += 2.0;
-  width -= 3.0;
+  //origin.x += 2.0;
+  width -= 1.0;
 
-  [mPopupWindow openPopup:[mBrowserView nativeWindow] withOrigin:origin width:width];
+  [mPopupWindow openPopup:[mBrowserView getNativeWindow] withOrigin:origin width:width];
 
   // Listen for resize events to close the popup.
-  [self addResizeObserver:[mBrowserView nativeWindow]];
+  [self addResizeObserver:[mBrowserView getNativeWindow]];
 }
 
 - (void)closePopup
@@ -369,7 +367,7 @@ NS_IMETHODIMP FormFillListener::HandleEvent(nsIDOMEvent* aEvent)
     // Deselecting the row prevents a flash when popup is opened and default is selected.
     [mPopupWindow selectRow:-1];
     [mPopupWindow closePopup];
-    [self removeResizeObserver:[mBrowserView nativeWindow]];
+    [self removeResizeObserver:[mBrowserView getNativeWindow]];
   }
 }
 
