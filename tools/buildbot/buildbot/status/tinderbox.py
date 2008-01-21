@@ -8,6 +8,7 @@ from twisted.internet import defer
 from buildbot import interfaces
 from buildbot.status import mail
 from buildbot.status.builder import SUCCESS, WARNINGS
+from buildbot.steps.shell import WithProperties
 
 import zlib, bz2, base64
 
@@ -33,12 +34,14 @@ class TinderboxMailNotifier(mail.MailNotifier):
 
     compare_attrs = ["extraRecipients", "fromaddr", "categories", "builders",
                      "addLogs", "relayhost", "subject", "binaryURL", "tree",
-                     "logCompression", "errorparser"]
+                     "logCompression", "errorparser", "columnName",
+                     "useChangeTime"]
 
     def __init__(self, fromaddr, tree, extraRecipients,
                  categories=None, builders=None, relayhost="localhost",
                  subject="buildbot %(result)s in %(builder)s", binaryURL="",
-                 logCompression="", errorparser="unix"):
+                 logCompression="", errorparser="unix", columnName=None,
+                 useChangeTime=False):
         """
         @type  fromaddr: string
         @param fromaddr: the email address to be used in the 'From' header.
@@ -78,15 +81,27 @@ class TinderboxMailNotifier(mail.MailNotifier):
                           (ie. http://www.myproject.org/nightly/08-08-2006.tgz)
                           It will be posted to the Tinderbox.
 
-        @type  logCompression: string
-        @param logCompression: The type of compression to use on the log.
-                               Valid options are"bzip2" and "gzip". gzip is
-                               only known to work on Python 2.4 and above.
 
         @type  errorparser: string
         @param errorparser: The error parser that the Tinderbox server
                             should use when scanning the log file.
                             Default is "unix".
+        @type  logCompression: string
+        @param logCompression: The type of compression to use on the log.
+                               Valid options are"bzip2" and "gzip". gzip is
+                               only known to work on Python 2.4 and above.
+        @type  columnName: string
+        @param columnName: When columnName is None, use the buildername as
+                           the Tinderbox column name. When columnName is a
+                           string this exact string will be used for all
+                           builders that this TinderboxMailNotifier cares
+                           about (not recommended). When columnName is a
+                           WithProperties instance it will be interpolated
+                           as such. See WithProperties for more detail.
+        @type  useChangeTime: bool
+        @param useChangeTime: When True, the time of the first Change for a
+                              build is used as the builddate. When False,
+                              the current time is used as the builddate.
         """
 
         mail.MailNotifier.__init__(self, fromaddr, categories=categories,
@@ -94,10 +109,15 @@ class TinderboxMailNotifier(mail.MailNotifier):
                                    subject=subject,
                                    extraRecipients=extraRecipients,
                                    sendToInterestedUsers=False)
+        self.errorparser = errorparser
         self.tree = tree
         self.binaryURL = binaryURL
         self.logCompression = logCompression
-        self.errorparser = errorparser
+        self.useChangeTime = useChangeTime
+        assert columnName is None or type(columnName) is str \
+            or isinstance(columnName, WithProperties), \
+            "columnName must be None, a string, or a WithProperties instance"
+        self.columnName = columnName
 
     def buildStarted(self, name, build):
         builder = build.getBuilder()
@@ -117,7 +137,15 @@ class TinderboxMailNotifier(mail.MailNotifier):
         text += "%s tree: %s\n" % (t, self.tree)
         # the start time
         # getTimes() returns a fractioned time that tinderbox doesn't understand
-        text += "%s builddate: %s\n" % (t, int(build.getTimes()[0]))
+        builddate = int(build.getTimes()[0])
+        # attempt to pull a Change time from this Build's Changes.
+        # if that doesn't work, fall back on the current time
+        if self.useChangeTime:
+            try:
+                builddate = build.getChanges()[-1].when
+            except:
+                pass
+        text += "%s builddate: %s\n" % (t, builddate)
         text += "%s status: " % t
 
         if results == "building":
@@ -135,7 +163,17 @@ class TinderboxMailNotifier(mail.MailNotifier):
 
         text += "\n";
 
-        text += "%s build: %s\n" % (t, name)
+        if self.columnName is None:
+            # use the builder name
+            text += "%s build: %s\n" % (t, name)
+        elif type(self.columnName) is str:
+            # use the exact string given
+            text += "%s build: %s\n" % (t, self.columnName)
+        elif isinstance(self.columnName, WithProperties):
+            # interpolate the WithProperties instance, use that
+            text += "%s build: %s\n" % (t, self.columnName.render(build))
+        else:
+            raise Exception("columnName is an unhandled value")
         text += "%s errorparser: %s\n" % (t, self.errorparser)
 
         # if the build just started...
@@ -147,10 +185,10 @@ class TinderboxMailNotifier(mail.MailNotifier):
             text += "%s logcompression: %s\n" % (t, self.logCompression)
 
             # logs will always be appended
+            logEncoding = ""
             tinderboxLogs = ""
             for log in build.getLogs():
                 l = ""
-                logEncoding = ""
                 if self.logCompression == "bzip2":
                     compressedLog = bz2.compress(log.getText())
                     l = base64.encodestring(compressedLog)
