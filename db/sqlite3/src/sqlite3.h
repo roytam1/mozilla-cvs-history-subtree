@@ -88,7 +88,7 @@ extern "C" {
 **
 ** See also: [sqlite3_libversion()] and [sqlite3_libversion_number()].
 */
-#define SQLITE_VERSION         "3.5.4"
+#define SQLITE_VERSION         "3.5.4.1"
 #define SQLITE_VERSION_NUMBER 3005004
 
 /*
