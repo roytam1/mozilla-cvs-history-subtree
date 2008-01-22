@@ -1645,11 +1645,11 @@ nsEventListenerManager::HandleEventSubType(nsListenerStruct* aListenerStruct,
     }
   }
 
-  // nsCxPusher will automatically push and pop the current cx onto the
+  // nsCxPusher will push and pop (automatically) the current cx onto the
   // context stack
-  nsCxPusher pusher(aCurrentTarget);
+  nsCxPusher pusher;
 
-  if (NS_SUCCEEDED(result)) {
+  if (NS_SUCCEEDED(result) && pusher.Push(aCurrentTarget)) {
     nsCOMPtr<nsIPrivateDOMEvent> aPrivDOMEvent(do_QueryInterface(aDOMEvent));
     aPrivDOMEvent->SetCurrentTarget(aCurrentTarget);
     result = aListener->HandleEvent(aDOMEvent);

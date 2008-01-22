@@ -4344,9 +4344,12 @@ nsEventStateManager::SendFocusBlur(nsPresContext* aPresContext,
           nsCOMPtr<nsIContent> temp = gLastFocusedContent;
           NS_RELEASE(gLastFocusedContent); // nulls out gLastFocusedContent
 
-          nsCxPusher pusher(temp);
-          temp->HandleDOMEvent(oldPresContext, &event, nsnull, NS_EVENT_FLAG_INIT, &status);
-          pusher.Pop();
+          nsCxPusher pusher;
+          if (pusher.Push(temp)) {
+            temp->HandleDOMEvent(oldPresContext, &event, nsnull,
+                                 NS_EVENT_FLAG_INIT, &status);
+            pusher.Pop();
+          }
 
           focusAfterBlur = mCurrentFocus;
           if (!previousFocus || previousFocus == focusAfterBlur)
@@ -4402,9 +4405,12 @@ nsEventStateManager::SendFocusBlur(nsPresContext* aPresContext,
       NS_RELEASE(gLastFocusedDocument);
       gLastFocusedDocument = nsnull;
 
-      nsCxPusher pusher(temp);
-      temp->HandleDOMEvent(gLastFocusedPresContext, &event, nsnull, NS_EVENT_FLAG_INIT, &status);
-      pusher.Pop();
+      nsCxPusher pusher;
+      if (pusher.Push(temp)) {
+        temp->HandleDOMEvent(gLastFocusedPresContext, &event, nsnull,
+                             NS_EVENT_FLAG_INIT, &status);
+        pusher.Pop();
+      }
 
       if (previousFocus && mCurrentFocus != previousFocus) {
         // The document's blur handler focused something else.
@@ -4472,8 +4478,11 @@ nsEventStateManager::SendFocusBlur(nsPresContext* aPresContext,
     nsEvent event(PR_TRUE, NS_FOCUS_CONTENT);
 
     if (nsnull != mPresContext) {
-      nsCxPusher pusher(aContent);
-      aContent->HandleDOMEvent(mPresContext, &event, nsnull, NS_EVENT_FLAG_INIT, &status);
+      nsCxPusher pusher;
+      if (pusher.Push(aContent)) {
+        aContent->HandleDOMEvent(mPresContext, &event, nsnull,
+                                 NS_EVENT_FLAG_INIT, &status);
+      }
     }
 
     nsAutoString tabIndex;
@@ -4493,8 +4502,11 @@ nsEventStateManager::SendFocusBlur(nsPresContext* aPresContext,
     nsEvent event(PR_TRUE, NS_FOCUS_CONTENT);
 
     if (nsnull != mPresContext && mDocument) {
-      nsCxPusher pusher(mDocument);
-      mDocument->HandleDOMEvent(mPresContext, &event, nsnull, NS_EVENT_FLAG_INIT, &status);
+      nsCxPusher pusher;
+      if (pusher.Push(mDocument)) {
+        mDocument->HandleDOMEvent(mPresContext, &event, nsnull,
+                                  NS_EVENT_FLAG_INIT, &status);
+      }
     }
   }
 
