@@ -916,6 +916,8 @@
 		4DD988E708EB7D3700AD0788 /* dl_trash.tiff in Resources */ = {isa = PBXBuildFile; fileRef = 34D112DD08E9B17400989FD5 /* dl_trash.tiff */; };
 		60DE525C0C85F2F500A2CB3C /* CHSelectHandler.mm in Sources */ = {isa = PBXBuildFile; fileRef = 60DE525A0C85F2F500A2CB3C /* CHSelectHandler.mm */; };
 		60DE525E0C85F2F500A2CB3C /* CHSelectHandler.mm in Sources */ = {isa = PBXBuildFile; fileRef = 60DE525A0C85F2F500A2CB3C /* CHSelectHandler.mm */; };
+		7B2F39890D4674330031AB6B /* CmDateFormatter.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7B2F39880D4674330031AB6B /* CmDateFormatter.mm */; };
+		7B2F398A0D4674330031AB6B /* CmDateFormatter.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7B2F39880D4674330031AB6B /* CmDateFormatter.mm */; };
 		7B436D3D0D11C2EB00377744 /* PreferencePaneBase.mm in Sources */ = {isa = PBXBuildFile; fileRef = F5A8CE4202DFEF4C013CA8EC /* PreferencePaneBase.mm */; };
 		7B436D3E0D11C30D00377744 /* PreferencePaneBase.mm in Sources */ = {isa = PBXBuildFile; fileRef = F5A8CE4202DFEF4C013CA8EC /* PreferencePaneBase.mm */; };
 		7B5073380D11EADE00458384 /* KeyEquivView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7B5073350D11EA9B00458384 /* KeyEquivView.mm */; };
@@ -2282,6 +2284,8 @@
 		60DE52590C85F2F500A2CB3C /* CHSelectHandler.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = CHSelectHandler.h; path = src/embedding/CHSelectHandler.h; sourceTree = "<group>"; };
 		60DE525A0C85F2F500A2CB3C /* CHSelectHandler.mm */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.objcpp; name = CHSelectHandler.mm; path = src/embedding/CHSelectHandler.mm; sourceTree = "<group>"; };
 		7919FCF0044631350000010E /* PrintPDE.plugin */ = {isa = PBXFileReference; lastKnownFileType = wrapper.cfbundle; name = PrintPDE.plugin; path = ../dist/package/PrintPDE.plugin; sourceTree = SOURCE_ROOT; };
+		7B2F39870D4674330031AB6B /* CmDateFormatter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CmDateFormatter.h; path = src/extensions/CmDateFormatter.h; sourceTree = "<group>"; };
+		7B2F39880D4674330031AB6B /* CmDateFormatter.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = CmDateFormatter.mm; path = src/extensions/CmDateFormatter.mm; sourceTree = "<group>"; };
 		7B5073340D11EA9B00458384 /* KeyEquivView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = KeyEquivView.h; path = src/extensions/KeyEquivView.h; sourceTree = "<group>"; };
 		7B5073350D11EA9B00458384 /* KeyEquivView.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = KeyEquivView.mm; path = src/extensions/KeyEquivView.mm; sourceTree = "<group>"; };
 		7B64B7BA0CCFD9F50098406C /* Sparkle.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = Sparkle.xcodeproj; path = sparkle/Sparkle.xcodeproj; sourceTree = "<group>"; };
@@ -4011,6 +4015,8 @@
 				0F08FB1708D37DB30022DD45 /* NSWorkspace+Utils.m */,
 				DE70BEAA0CBC825200C1CC63 /* ToolbarScriptItem.h */,
 				DE70BEAB0CBC825200C1CC63 /* ToolbarScriptItem.mm */,
+				7B2F39870D4674330031AB6B /* CmDateFormatter.h */,
+				7B2F39880D4674330031AB6B /* CmDateFormatter.mm */,
 			);
 			name = Categories;
 			sourceTree = "<group>";
@@ -5249,6 +5255,7 @@
 				DE137C080D35975F00A0A9BB /* OpenSearchParser.mm in Sources */,
 				DE137C090D35975F00A0A9BB /* XMLSearchPluginParser.mm in Sources */,
 				33E1EB520D36959E00910BBD /* AddSearchProviderHandler.mm in Sources */,
+				7B2F39890D4674330031AB6B /* CmDateFormatter.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -5417,6 +5424,7 @@
 				DE137C040D35975F00A0A9BB /* OpenSearchParser.mm in Sources */,
 				DE137C050D35975F00A0A9BB /* XMLSearchPluginParser.mm in Sources */,
 				33E1EB540D36959E00910BBD /* AddSearchProviderHandler.mm in Sources */,
+				7B2F398A0D4674330031AB6B /* CmDateFormatter.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

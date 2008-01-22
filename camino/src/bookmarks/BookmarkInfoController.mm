@@ -43,6 +43,7 @@
 #import "BookmarkInfoController.h"
 #import "Bookmark.h"
 #import "BookmarkFolder.h"
+#import "CmDateFormatter.h"
 
 // determined through weeks of trial and error
 #define kMaxLengthOfWindowTitle 49
@@ -61,7 +62,7 @@ enum EBookmarkInfoViewType {
 - (void)updateLastVisitField;
 - (void)dockMenuChanged:(NSNotification *)aNote;
 
-@end;
+@end
 
 @implementation BookmarkInfoController
 
@@ -372,10 +373,11 @@ static BookmarkInfoController* gSharedBookmarkInfoController = nil;
     lastVisitString = NSLocalizedString(@"BookmarkVisitedNever", nil);
   }
   else {
-    lastVisitString =
-        [lastVisit descriptionWithCalendarFormat:[[mLastVisitField formatter] dateFormat]
-                                        timeZone:nil
-                                          locale:[[NSUserDefaults standardUserDefaults] dictionaryRepresentation]];
+    CmDateFormatter* dateFormatter = [[CmDateFormatter alloc] init];
+    [dateFormatter setDateStyle:NSDateFormatterLongStyle];
+    [dateFormatter setTimeStyle:NSDateFormatterLongStyle];
+    lastVisitString = [dateFormatter stringFromDate:lastVisit];
+    [dateFormatter release];
   }
 
   [mLastVisitField setStringValue:lastVisitString];

@@ -47,6 +47,7 @@
 #import "ViewCertificateDialogController.h"
 
 #import "PageInfoWindowController.h"
+#import "CmDateFormatter.h"
 
 
 static PageInfoWindowController* gSingletonPageInfoController;
@@ -174,16 +175,15 @@ static PageInfoWindowController* gSingletonPageInfoController;
   [mPageLocationField setStringValue:[inBrowserView currentURI]];
   NSDate* lastModDate = [inBrowserView pageLastModifiedDate];
 
-  if (lastModDate)
-  {
-    NSString* dateFormat = NSLocalizedString(@"PageInfoDateFormat", @"");
-    NSDictionary* curCalendarLocale = [[NSUserDefaults standardUserDefaults] dictionaryRepresentation];
-
-    NSString* dateString = [lastModDate descriptionWithCalendarFormat:dateFormat
-                                                             timeZone:nil
-                                                               locale:curCalendarLocale];
-    [mPageModDateField setStringValue:dateString];
+  NSString* dateString = @"";
+  if (lastModDate) {
+    CmDateFormatter* dateFormatter = [[CmDateFormatter alloc] init];
+    [dateFormatter setDateStyle:NSDateFormatterLongStyle];
+    [dateFormatter setTimeStyle:NSDateFormatterLongStyle];
+    dateString = [dateFormatter stringFromDate:lastModDate];
+    [dateFormatter release];
   }
+  [mPageModDateField setStringValue:dateString];
 }
 
 - (void)updateSecurityInfoFromBrowserView:(CHBrowserView*)inBrowserView
