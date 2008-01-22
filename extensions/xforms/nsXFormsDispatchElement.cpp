@@ -49,20 +49,18 @@ class nsXFormsDispatchElement : public nsXFormsActionModuleBase
 {
 public:
   nsXFormsDispatchElement();
-  NS_DECL_NSIXFORMSACTIONMODULEELEMENT
+  nsresult HandleSingleAction(nsIDOMEvent* aEvent,
+                              nsIXFormsActionElement *aParentAction);
 };
 
 nsXFormsDispatchElement::nsXFormsDispatchElement()
 {
 }
 
-NS_IMETHODIMP
-nsXFormsDispatchElement::HandleAction(nsIDOMEvent* aEvent,
-                                      nsIXFormsActionElement *aParentAction)
+nsresult
+nsXFormsDispatchElement::HandleSingleAction(nsIDOMEvent* aEvent,
+                                            nsIXFormsActionElement *aParentAction)
 {
-  if (!mElement)
-    return NS_OK;
-  
   nsAutoString name;
   mElement->GetAttribute(NS_LITERAL_STRING("name"), name);
   if (name.IsEmpty())

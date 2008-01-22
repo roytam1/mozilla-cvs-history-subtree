@@ -46,20 +46,18 @@ class nsXFormsSetFocusElement : public nsXFormsActionModuleBase
 {
 public:
   nsXFormsSetFocusElement();
-  NS_DECL_NSIXFORMSACTIONMODULEELEMENT
+  virtual nsresult HandleSingleAction(nsIDOMEvent *aEvent,
+                                      nsIXFormsActionElement *aParentAction);
 };
 
 nsXFormsSetFocusElement::nsXFormsSetFocusElement()
 {
 }
 
-NS_IMETHODIMP
-nsXFormsSetFocusElement::HandleAction(nsIDOMEvent* aEvent,
+nsresult
+nsXFormsSetFocusElement::HandleSingleAction(nsIDOMEvent *aEvent,
                                       nsIXFormsActionElement *aParentAction)
 {
-  if (!mElement)
-    return NS_OK;
-  
   nsAutoString control;
   mElement->GetAttribute(NS_LITERAL_STRING("control"), control);
   if (control.IsEmpty())

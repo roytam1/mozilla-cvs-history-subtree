@@ -60,17 +60,14 @@
 class nsXFormsSetIndexElement : public nsXFormsActionModuleBase
 {
 public:
-  NS_DECL_NSIXFORMSACTIONMODULEELEMENT
+  virtual nsresult HandleSingleAction(nsIDOMEvent* aEvent,
+                                      nsIXFormsActionElement *aParentAction);
 };
-
-NS_IMETHODIMP
-nsXFormsSetIndexElement::HandleAction(nsIDOMEvent            *aEvent,
-                                      nsIXFormsActionElement *aParentAction)
+ 
+nsresult
+nsXFormsSetIndexElement::HandleSingleAction(nsIDOMEvent            *aEvent,
+                                            nsIXFormsActionElement *aParentAction)
 {
-  if (!mElement)
-    return NS_OK;
-
-  
   // Get @repeat and @index
   nsAutoString id, index;
   NS_NAMED_LITERAL_STRING(repeatStr, "repeat");

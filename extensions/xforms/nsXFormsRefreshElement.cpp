@@ -43,15 +43,16 @@ class nsXFormsRefreshElement : public nsXFormsActionModuleBase
 {
 public:
   nsXFormsRefreshElement();
-  NS_DECL_NSIXFORMSACTIONMODULEELEMENT
+  virtual nsresult HandleSingleAction(nsIDOMEvent* aEvent,
+                                      nsIXFormsActionElement *aParentAction);
 };
 
 nsXFormsRefreshElement::nsXFormsRefreshElement()
 {
 }
 
-NS_IMETHODIMP
-nsXFormsRefreshElement::HandleAction(nsIDOMEvent* aEvent,
+nsresult
+nsXFormsRefreshElement::HandleSingleAction(nsIDOMEvent* aEvent,
                                      nsIXFormsActionElement *aParentAction)
 {
   nsCOMPtr<nsIModelElementPrivate> model = nsXFormsUtils::GetModel(mElement);

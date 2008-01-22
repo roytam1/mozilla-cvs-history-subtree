@@ -41,6 +41,7 @@
 #include "nsXFormsDelegateStub.h"
 #include "nsXFormsActionElement.h"
 #include "nsIXFormsActionModuleElement.h"
+#include "nsXFormsActionModuleBase.h"
 
 #include "nsIDOMText.h"
 #include "nsIDOM3Node.h"
@@ -107,7 +108,8 @@ class nsXFormsMessageElement : public nsXFormsDelegateStub,
                                public nsIXFormsActionModuleElement,
                                public nsIStreamListener,
                                public nsIInterfaceRequestor,
-                               public nsIChannelEventSink
+                               public nsIChannelEventSink,
+                               public nsXFormsActionModuleHelper
 {
 public:
   NS_DECL_ISUPPORTS_INHERITED
@@ -132,6 +134,9 @@ public:
   NS_DECL_NSIDOMEVENTLISTENER
   NS_DECL_NSIXFORMSACTIONMODULEELEMENT
 
+  virtual nsIDOMElement* GetElement() { return mElement; }
+  virtual nsresult HandleSingleAction(nsIDOMEvent *aEvent,
+                                      nsIXFormsActionElement *aParentAction);
   // Start the timer, which is used to set the message visible
   void StartEphemeral();
   // Set the message visible and start timer to hide it later.
@@ -440,12 +445,16 @@ nsXFormsMessageElement::DoneAddingChildren()
 }
 
 NS_IMETHODIMP
-nsXFormsMessageElement::HandleAction(nsIDOMEvent* aEvent, 
+nsXFormsMessageElement::HandleAction(nsIDOMEvent *aEvent,
                                      nsIXFormsActionElement *aParentAction)
 {
-  if (!mElement)
-    return NS_OK;
+  return nsXFormsActionModuleBase::DoHandleAction(this, aEvent, aParentAction);
+}
 
+nsresult
+nsXFormsMessageElement::HandleSingleAction(nsIDOMEvent *aEvent,
+                                           nsIXFormsActionElement *aParentAction)
+{
   // If TestExternalFile fails, then there is an external link that we need
   // to use that we can't reach right now.  If it won't load, then might as
   // well stop here.  We don't want to be popping up empty windows
