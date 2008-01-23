@@ -45,7 +45,9 @@ endif
 
 include $(OBJDIR)/config/autoconf.mk
 
-PYTHON?=python
+ifeq ($(PYTHON),)
+PYTHON=python
+endif
 
 postflight_all:
 	mkdir -p $(DIST_UNI)/xpi-stage
