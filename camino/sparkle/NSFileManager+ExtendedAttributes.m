@@ -8,6 +8,12 @@
 
 #import "NSFileManager+ExtendedAttributes.h"
 
+#if MAC_OS_X_VERSION_MAX_ALLOWED <= MAC_OS_X_VERSION_10_3  // SDK <= 10.3
+#ifndef DLOPEN_NO_WARN
+#define DLOPEN_NO_WARN
+#endif  // DLOPEN_NO_WARN
+#endif  // SDK <= 10.3
+
 #include <dlfcn.h>
 #include <errno.h>
 
