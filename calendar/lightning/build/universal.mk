@@ -45,6 +45,8 @@ endif
 
 include $(OBJDIR)/config/autoconf.mk
 
+PYTHON?=python
+
 postflight_all:
 	mkdir -p $(DIST_UNI)/xpi-stage
 	rm -rf $(DIST_UNI)/xpi-stage/*
