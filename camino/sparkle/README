@@ -9,3 +9,4 @@ with the following changes:
 - Bug 403273: allow building for 10.3.
 - Bug 405901: fix an XML attribute handling bug
 - Bug 412857: don't show CFBundleVersion
+- Bug 412837: keep updates out of the quarantine
