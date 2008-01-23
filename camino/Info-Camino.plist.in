@@ -158,7 +158,7 @@
 		<string>~/Library/*</string>
 	</array>
 	<key>LSMinimumSystemVersion</key>
-	<string>10.3</string>
+	<string>10.3.9</string>
 	<key>MozillaBuildID</key>
 	<string>%PLATFORM_BUILD_ID%</string>
 	<key>MozillaCVSTag</key>
