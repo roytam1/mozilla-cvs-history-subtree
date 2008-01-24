@@ -63,6 +63,7 @@ $DisplayServer = ':1.0';
 $ProductName              = "Firefox";
 #$VendorName               = '';
 
+# CONFIG: $RunMozillaTests          = %runMozillaTests%;
 $RunMozillaTests          = 0;  # Allow turning off of all tests if needed.
 #$RegxpcomTest             = 1;
 #$AliveTest                = 1;
@@ -144,8 +145,10 @@ $pageload_server          = "pageload.build.mozilla.org";  # localhost
 # :pserver:$ENV{USER}%netscape.com@cvs.mozilla.org:/cvsroot
 
 #$moz_cvsroot   = $ENV{CVSROOT};
+# CONFIG: $moz_cvsroot   = '%mozillaCvsroot%';
 $moz_cvsroot   = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 
+# CONFIG: $MofoRoot   = '%mofoCvsroot%';
 $MofoRoot   = ":ext:cltbld\@cvs.mozilla.org:/mofo";
 
 #- Set these proper values for your tinderbox server
@@ -173,6 +176,7 @@ $BuildNameExtra = 'Fx-Nightly';
 
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
+# CONFIG: $BuildTree  = '%buildTree%';
 $BuildTree  = 'Mozilla1.8';
 
 #$BuildName = '';
@@ -204,8 +208,10 @@ $build_hour    = "3";
 $package_creation_path = "/browser/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
 $ssh_version   = "2";
+# CONFIG: $ssh_user      = "%sshUser%";
 $ssh_user      = "cltbld";
 #$ssh_key       = "'$ENV{HOME}/.ssh/ffxbld_dsa'";
+# CONFIG: $ssh_server    = "%sshServer%";
 $ssh_server    = "stage.mozilla.org";
 #$ReleaseGroup  = "firefox";
 $ftp_path      = "/home/ftp/pub/firefox/nightly";
@@ -223,8 +229,11 @@ $update_product = "Firefox";
 $update_version = "2.0";
 $update_platform = "Linux_x86-gcc3";
 $update_hash = "sha1";
+# CONFIG: $update_filehost = "%externalStagingServer%";
 $update_filehost = "ftp.mozilla.org";
 $update_ver_file = "browser/config/version.txt";
+# CONFIG: $update_aus_host = '%ausServer%';
+$update_aus_host = 'aus2-staging.mozilla.org';
 $update_pushinfo = 1;
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily

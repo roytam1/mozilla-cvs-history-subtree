@@ -57,6 +57,7 @@ $ProductName              = 'BonEcho';
 $MacOSProductName         = 'BonEcho';
 $VendorName               = "";
 
+# CONFIG : $RunMozillaTests          = %runMozillaTests%;
 $RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
 $RegxpcomTest             = 1;
 $AliveTest                = 1;
@@ -140,9 +141,11 @@ $DHTMLPerformanceTestTimeout       = 180;  # entire test, seconds
 # :pserver:$ENV{USER}%netscape.com@cvs.mozilla.org:/cvsroot
 
 #$moz_cvsroot   = $ENV{CVSROOT};
+# CONFIG: $moz_cvsroot   = '%mozillaCvsroot%';
 $moz_cvsroot   = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 #$moz_cvsroot   = "/builds/cvs.hourly/cvsroot";
 
+# CONFIG: $MofoRoot   = '%mofoCvsroot%';
 $MofoRoot   = ":ext:cltbld\@cvs.mozilla.org:/mofo";
 
 #- Set these proper values for your tinderbox server
@@ -170,6 +173,7 @@ $BuildNameExtra = 'Fx-Nightly';
 
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
+# CONFIG: $BuildTree  = '%buildTree%';
 $BuildTree  = 'Mozilla1.8';
 #$BuildTree  = 'MozillaTest';
 
@@ -204,8 +208,10 @@ $package_creation_path = "/browser/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
 $mac_bundle_path = "/browser/app";
 $ssh_version   = 2;
+# CONFIG: $ssh_user      = "%sshUser%";
 $ssh_user      = "cltbld";
 #$ssh_key       = "'$ENV{HOME}/.ssh/ffxbld_dsa'";
+# CONFIG: $ssh_server    = "%sshServer%";
 $ssh_server    = "stage.mozilla.org";
 #$ReleaseGroup  = "firefox";
 $ftp_path      = "/home/ftp/pub/firefox/nightly";
@@ -223,9 +229,12 @@ $update_product = "Firefox";
 $update_version = "2.0";
 $update_platform = "Darwin_Universal-gcc3";
 $update_hash = "sha1";
+# CONFIG: $update_filehost = "%externalStagingServer%";
 $update_filehost = "ftp.mozilla.org";
 $update_ver_file = "browser/config/version.txt";
 $update_pushinfo = 1;
+# CONFIG: $update_aus_host = '%ausServer%';
+$update_aus_host = 'aus2-staging.mozilla.org';
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
