@@ -1,1 +1,1 @@
-Bug 376174 - manually set time on the box to the correct one.
+clobber because bug 396052 might have actually broken this for non-depend builds
