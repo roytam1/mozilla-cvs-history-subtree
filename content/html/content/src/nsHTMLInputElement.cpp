@@ -1832,6 +1832,37 @@ nsHTMLInputElement::HandleDOMEvent(nsPresContext* aPresContext,
         // not ignored) so if there is a stored submission, it needs to
         // be submitted immediately.
         mForm->FlushPendingSubmission();
+      } else if (NS_IS_TRUSTED_EVENT(aEvent) &&
+                 (oldType == NS_FORM_INPUT_FILE || mType == NS_FORM_INPUT_FILE) &&
+                 (aEvent->message == NS_KEY_UP ||
+                  aEvent->message == NS_KEY_DOWN ||
+                  aEvent->message == NS_KEY_PRESS)) {
+        PRBool isButton = PR_FALSE;
+        if (aDOMEvent) {
+          nsCOMPtr<nsIDOMNSEvent> nsEvent(do_QueryInterface(*aDOMEvent));
+          if (nsEvent) {
+            nsCOMPtr<nsIDOMEventTarget> originalTarget;
+            nsEvent->GetOriginalTarget(getter_AddRefs(originalTarget));
+            nsCOMPtr<nsIContent> maybeButton(do_QueryInterface(originalTarget));
+            if (maybeButton && maybeButton->IsNativeAnonymous() &&
+                maybeButton->GetParent() == this) {
+              nsAutoString type;
+              maybeButton->GetAttr(kNameSpaceID_None, nsHTMLAtoms::type, type);
+              isButton = type.EqualsLiteral("button");
+            }
+          }
+        }
+        nsKeyEvent* keyEvent = NS_STATIC_CAST(nsKeyEvent*, aEvent);
+        if (!isButton &&
+            keyEvent->keyCode != NS_VK_RETURN &&
+            keyEvent->keyCode != NS_VK_ENTER &&
+            keyEvent->keyCode != NS_VK_TAB) {
+          // Because of security issues related to type="file", canceling default
+          // action clears file name.
+          // Preventing submission and tabbing is allowed, otherwise this is
+          // very restrictive.
+          SetFileName(EmptyString(), PR_TRUE);
+        }
       }
     } //if
   } // if
