@@ -61,6 +61,5 @@
 - (IBAction)makeSelectedSearchEngineDefault:(id)sender;
 - (IBAction)removeSelectedSearchEngines:(id)sender;
 - (IBAction)editSelectedSearchEngine:(id)sender;
-- (IBAction)restoreDefaultSearchEngines:(id)sender;
 
 @end

@@ -216,7 +216,7 @@ nsHTMLScrollFrame::RemoveFrame(nsIAtom*  aListName,
                                nsIFrame* aOldFrame)
 {
   NS_ASSERTION(!aListName, "Only main list supported");
-  mFrames.DestroyFrame(GetPresContext(), aOldFrame);
+  mFrames.RemoveFrame(aOldFrame);
   mInner.ReloadChildFrames();
   return NS_OK;
 }

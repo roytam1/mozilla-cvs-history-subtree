@@ -629,12 +629,8 @@ const float kGapUnderCheckboxLine = 3.0f;
   // validity
   [mDetailsItemsView addSubview:[self headerWithKey:@"Validity"]];
 
-  [mDetailsItemsView addSubview:[self lineWithLabelKey:@"NotBeforeLocalTime"
-                           data:[mCertItem validFromString]
-               ignoreBlankLines:NO]];
-  [mDetailsItemsView addSubview:[self lineWithLabelKey:@"NotAfterLocalTime"
-                           data:[mCertItem expiresString]
-               ignoreBlankLines:NO]];
+  [mDetailsItemsView addSubview:[self lineWithLabelKey:@"NotBeforeLocalTime" data:[mCertItem longValidFromString]  ignoreBlankLines:NO]];
+  [mDetailsItemsView addSubview:[self lineWithLabelKey:@"NotAfterLocalTime"  data:[mCertItem longExpiresString]    ignoreBlankLines:NO]];
 
   // signature
   [mDetailsItemsView addSubview:[self lineWithLabelKey:@"SigAlgorithm"       data:[mCertItem signatureAlgorithm]   ignoreBlankLines:NO]];
@@ -763,7 +759,7 @@ const float kGapUnderCheckboxLine = 3.0f;
   // expiry info
   NSRect expiryRect = NSMakeRect(headerFieldsLeftEdge, headerFieldYOffset, headerFieldWith, 100.0f);
   formatString = NSLocalizedStringFromTable(@"ExpiresHeaderFormat", @"CertificateDialogs", @"");
-  NSString* expiryString = [NSString stringWithFormat:formatString, [mCertItem expiresString]];
+  NSString* expiryString = [NSString stringWithFormat:formatString, [mCertItem longExpiresString]];
   NSTextField* expiryField = [self textFieldWithInitialFrame:[headerContainer subviewRectFromTopRelativeRect:expiryRect] stringValue:expiryString autoSizing:NO small:YES bold:NO];
   [headerContainer addSubview:expiryField];
   headerFieldYOffset += NSHeight([expiryField frame]) + kCertHeaderFieldVerticalGap;

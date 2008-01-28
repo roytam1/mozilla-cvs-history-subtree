@@ -51,14 +51,16 @@
 class nsXFormsToggleElement : public nsXFormsActionModuleBase
 {
 public:
-  virtual nsresult HandleSingleAction(nsIDOMEvent *aEvent,
-                                      nsIXFormsActionElement *aParentAction);
+  NS_DECL_NSIXFORMSACTIONMODULEELEMENT
 };
 
-nsresult
-nsXFormsToggleElement::HandleSingleAction(nsIDOMEvent *aEvent,
-                                          nsIXFormsActionElement *aParentAction)
+NS_IMETHODIMP
+nsXFormsToggleElement::HandleAction(nsIDOMEvent* aEvent,
+                                    nsIXFormsActionElement *aParentAction)
 {
+  if (!mElement)
+    return NS_OK;
+  
   nsAutoString caseAttr;
   NS_NAMED_LITERAL_STRING(caseStr, "case");
   mElement->GetAttribute(caseStr, caseAttr);

@@ -2262,13 +2262,13 @@ nsContentUtils::GetEventArgName(PRInt32 aNameSpaceID)
   return gEventName;
 }
 
-PRBool
+void
 nsCxPusher::Push(nsISupports *aCurrentTarget)
 {
   if (mScx) {
     NS_ERROR("Whaaa! No double pushing with nsCxPusher::Push()!");
 
-    return PR_FALSE;
+    return;
   }
 
   nsCOMPtr<nsIScriptGlobalObject> sgo;
@@ -2284,15 +2284,7 @@ nsCxPusher::Push(nsISupports *aCurrentTarget)
   }
 
   if (document) {
-    nsCOMPtr<nsIDocument_MOZILLA_1_8_BRANCH3> branch3doc =
-      do_QueryInterface(document);
-    NS_ASSERTION(branch3doc,
-                 "Document must implement nsIDocument_MOZILLA_1_8_BRANCH3!!!");
-    PRBool hasHadScriptObject = PR_TRUE;
-    sgo = branch3doc->GetScriptHandlingObject(hasHadScriptObject);
-    // It is bad if the document doesn't have event handling context,
-    // but it used to have one.
-    NS_ENSURE_TRUE(sgo || !hasHadScriptObject, PR_FALSE);
+    sgo = document->GetScriptGlobalObject();
   }
 
   if (!document && !sgo) {
@@ -2306,8 +2298,6 @@ nsCxPusher::Push(nsISupports *aCurrentTarget)
 
     if (mScx) {
       cx = (JSContext *)mScx->GetNativeContext();
-      // Bad, no JSContext from script global object!
-      NS_ENSURE_TRUE(cx, PR_FALSE);
     }
   }
 
@@ -2337,7 +2327,6 @@ nsCxPusher::Push(nsISupports *aCurrentTarget)
 
     mScx = nsnull;
   }
-  return PR_TRUE;
 }
 
 void

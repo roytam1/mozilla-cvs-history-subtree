@@ -480,8 +480,7 @@ class nsDOMImplementation : public nsIDOMDOMImplementation,
                             public nsIPrivateDOMImplementation
 {
 public:
-  nsDOMImplementation(nsIScriptGlobalObject* aScriptObject,
-                      nsIURI* aBaseURI = nsnull);
+  nsDOMImplementation(nsIURI* aBaseURI = nsnull);
   virtual ~nsDOMImplementation();
 
   NS_DECL_ISUPPORTS
@@ -493,7 +492,6 @@ public:
   NS_IMETHOD Init(nsIURI* aBaseURI);
 
 protected:
-  nsWeakPtr mScriptObject;
   nsCOMPtr<nsIURI> mBaseURI;
 };
 
@@ -501,7 +499,7 @@ protected:
 nsresult
 NS_NewDOMImplementation(nsIDOMDOMImplementation** aInstancePtrResult)
 {
-  *aInstancePtrResult = new nsDOMImplementation(nsnull);
+  *aInstancePtrResult = new nsDOMImplementation();
   if (!*aInstancePtrResult) {
     return NS_ERROR_OUT_OF_MEMORY;
   }
@@ -511,10 +509,8 @@ NS_NewDOMImplementation(nsIDOMDOMImplementation** aInstancePtrResult)
   return NS_OK;
 }
 
-nsDOMImplementation::nsDOMImplementation(nsIScriptGlobalObject* aScriptObject,
-                                         nsIURI* aBaseURI)
+nsDOMImplementation::nsDOMImplementation(nsIURI* aBaseURI)
 {
-  mScriptObject = do_GetWeakReference(aScriptObject);
   mBaseURI = aBaseURI;
 }
 
@@ -607,13 +603,8 @@ nsDOMImplementation::CreateDocument(const nsAString& aNamespaceURI,
     }
   }
 
-  nsCOMPtr<nsIScriptGlobalObject> scriptHandlingObject =
-    do_QueryReferent(mScriptObject);
-
-  rv = NS_NewDOMDocument_MOZILLA_1_8_BRANCH(aReturn, aNamespaceURI,
-                                            aQualifiedName, aDoctype,
-                                            mBaseURI, scriptHandlingObject,
-                                            PR_TRUE);
+  rv = NS_NewDOMDocument(aReturn, aNamespaceURI, aQualifiedName, aDoctype,
+                         mBaseURI);
 
   nsIDocShell *docShell = nsContentUtils::GetDocShellFromCaller();
   if (docShell) {
@@ -933,7 +924,6 @@ NS_INTERFACE_MAP_BEGIN(nsDocument)
   NS_INTERFACE_MAP_ENTRY(nsIDocument)
   NS_INTERFACE_MAP_ENTRY(nsIDocument_MOZILLA_1_8_0_BRANCH)
   NS_INTERFACE_MAP_ENTRY(nsIDocument_MOZILLA_1_8_BRANCH2)
-  NS_INTERFACE_MAP_ENTRY(nsIDocument_MOZILLA_1_8_BRANCH3)
   NS_INTERFACE_MAP_ENTRY(nsIDOMDocument)
   NS_INTERFACE_MAP_ENTRY(nsIDOMNSDocument)
   NS_INTERFACE_MAP_ENTRY(nsIDOMDocumentEvent)
@@ -2198,44 +2188,9 @@ nsDocument::SetScriptGlobalObject(nsIScriptGlobalObject *aScriptGlobalObject)
   mScriptGlobalObject = aScriptGlobalObject;
 
   if (aScriptGlobalObject) {
-    mHasHadScriptHandlingObject = PR_TRUE;
     // Go back to using the docshell for the layout history state
     mLayoutHistoryState = nsnull;
     mScopeObject = do_GetWeakReference(aScriptGlobalObject);
-  }
-}
-
-nsIScriptGlobalObject*
-nsDocument::GetScriptHandlingObject(PRBool& aHasHadScriptHandlingObject) const
-{
-  aHasHadScriptHandlingObject = mHasHadScriptHandlingObject;
-  if (mScriptGlobalObject) {
-    return mScriptGlobalObject;
-  }
-
-  nsCOMPtr<nsIScriptGlobalObject> scriptHandlingObject =
-    do_QueryReferent(mScriptObject);
-  nsCOMPtr<nsPIDOMWindow> win = do_QueryInterface(scriptHandlingObject);
-  if (win) {
-    NS_ASSERTION(win->IsInnerWindow(), "Should have inner window here!");
-    nsPIDOMWindow* outer = win->GetOuterWindow();
-    if (!outer || outer->GetCurrentInnerWindow() != win) {
-      NS_WARNING("Wrong inner/outer window combination!");
-      return nsnull;
-    }
-  }
-  return scriptHandlingObject;
-}
-
-void
-nsDocument::SetScriptHandlingObject(nsIScriptGlobalObject* aScriptObject)
-{
-  NS_ASSERTION(!mScriptGlobalObject ||
-               mScriptGlobalObject == aScriptObject,
-               "Wrong script object!");
-  mScriptObject = do_GetWeakReference(aScriptObject);
-  if (aScriptObject) {
-    mHasHadScriptHandlingObject = PR_TRUE;
   }
 }
 
@@ -2616,11 +2571,7 @@ nsDocument::GetImplementation(nsIDOMDOMImplementation** aImplementation)
 {
   // For now, create a new implementation every time. This shouldn't
   // be a high bandwidth operation
-  PRBool hasHadScriptObject = PR_TRUE;
-  nsIScriptGlobalObject* scriptObject =
-    GetScriptHandlingObject(hasHadScriptObject);
-  NS_ENSURE_STATE(scriptObject || !hasHadScriptObject);
-  *aImplementation = new nsDOMImplementation(scriptObject, mDocumentURI);
+  *aImplementation = new nsDOMImplementation(mDocumentURI);
   if (!*aImplementation) {
     return NS_ERROR_OUT_OF_MEMORY;
   }

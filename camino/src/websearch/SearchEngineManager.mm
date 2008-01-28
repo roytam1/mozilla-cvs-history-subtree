@@ -57,7 +57,6 @@ static NSString *const kPreferredSearchEngineNameKey = @"PreferredSearchEngine";
 - (void)installedSearchEnginesChanged;
 - (void)filterDuplicatesFromEngines:(NSMutableArray *)searchEngines;
 - (void)setPreferredSearchEngine:(NSString *)newPreferredSearchEngine sendingChangeNotification:(BOOL)shouldNotify;
-- (NSDictionary *)defaultSearchEngineInformationFromBundle;
 
 @end
 
@@ -164,9 +163,19 @@ static NSString *const kPreferredSearchEngineNameKey = @"PreferredSearchEngine";
       [[savedSearchEngineInfoDict objectForKey:kListOfSearchEnginesKey] count] == 0)
   {
 #if DEBUG
-    NSLog(@"No search engines found in the profile directory; loading the defaults");
+    NSLog(@"No search engines found in the profile directory; copying over the defaults");
 #endif
-    savedSearchEngineInfoDict = [self defaultSearchEngineInformationFromBundle];
+    NSString *pathToDefaultEnginesInBundle = [[NSBundle mainBundle] pathForResource:@"WebSearchEngines" ofType:@"plist"];
+    [[NSFileManager defaultManager] copyPath:pathToDefaultEnginesInBundle
+                                      toPath:pathToSavedEngineInfo 
+                                     handler:nil];
+    savedSearchEngineInfoDict = [NSDictionary dictionaryWithContentsOfFile:pathToSavedEngineInfo];
+    if (!savedSearchEngineInfoDict) {
+#if DEBUG
+      NSLog(@"Unable to copy default search engines into profile directory; using defaults from bundle");
+#endif
+      savedSearchEngineInfoDict = [NSDictionary dictionaryWithContentsOfFile:pathToDefaultEnginesInBundle];
+    }
   }
 
   NSMutableArray *savedSearchEngines = [NSMutableArray arrayWithArray:[savedSearchEngineInfoDict objectForKey:kListOfSearchEnginesKey]];
@@ -222,12 +231,6 @@ static NSString *const kPreferredSearchEngineNameKey = @"PreferredSearchEngine";
     else
       [engineNamesAlreadySeen addObject:currentEngineName];
   }
-}
-
-- (NSDictionary *)defaultSearchEngineInformationFromBundle
-{
-  NSString *pathToDefaultEnginesInBundle = [[NSBundle mainBundle] pathForResource:@"WebSearchEngines" ofType:@"plist"];
-  return [NSDictionary dictionaryWithContentsOfFile:pathToDefaultEnginesInBundle];
 }
 
 #pragma mark -
@@ -381,15 +384,6 @@ static NSString *const kPreferredSearchEngineNameKey = @"PreferredSearchEngine";
   if (![[self installedSearchEngineNames] containsObject:[self preferredSearchEngine]])
     [self setPreferredSearchEngine:[[self installedSearchEngineNames] objectAtIndex:0] sendingChangeNotification:NO];
 
-  [self installedSearchEnginesChanged];
-}
-
-- (void)revertToDefaultSearchEngines
-{
-  NSDictionary *searchEngineInfoDict = [self defaultSearchEngineInformationFromBundle];
-  [self setInstalledSearchEngines:[searchEngineInfoDict objectForKey:kListOfSearchEnginesKey]];
-  [self setPreferredSearchEngine:[searchEngineInfoDict objectForKey:kPreferredSearchEngineNameKey]
-       sendingChangeNotification:NO];
   [self installedSearchEnginesChanged];
 }
 

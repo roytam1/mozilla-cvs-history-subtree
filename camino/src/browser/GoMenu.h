@@ -45,34 +45,39 @@
 
 @interface HistoryMenu : NSMenu
 {
-  HistoryItem*          mRootItem;               // root history item for this menu (retained)
-  HistoryItem*          mAdditionalItemsParent;  // may also contain children of this item (retained)
+  IBOutlet NSMenuItem*  mItemBeforeHistoryItems;    // the item after which we add history items. Not retained.
 
-  int                   mNumIgnoreItems;         // if > 0, ignore the first N items (for "earlier today")
-  BOOL                  mHistoryItemsDirty;      // whether we need to rebuild the items on next update
+  HistoryItem*          mRootItem;              // root history item for this menu (retained)
+  HistoryItem*          mAdditionalItemsParent; // may also contain children of this item (retained)
+
+  int                   mNumIgnoreItems;        // if > 0, ignore the first N items (for "earlier today")
+  BOOL                  mHistoryItemsDirty;     // whether we need to rebuild the items on next update
 }
 
-// Sets the root history item that this menu represents.
 - (void)setRootHistoryItem:(HistoryItem*)inRootItem;
-
-// Gets the root history item that this menu represents.
 - (HistoryItem*)rootItem;
 
-// Sets the menu to skip displaying the first |inIgnoreItems| history items.
 - (void)setNumLeadingItemsToIgnore:(int)inIgnoreItems;
+- (int)numLeadingItemsToIgnore;
 
-// Marks the history menu as needing to be rebuilt.
-- (void)setNeedsRebuild:(BOOL)needsRebuild;
+- (void)menuWillBeDisplayed;
+
+// specify the item after which history items will be added
+// (they are assumed to go to the end of the menu). If nil,
+// the entire menu is full of history items.
+- (void)setItemBeforeHistoryItems:(NSMenuItem*)inItem;
+- (NSMenuItem*)itemBeforeHistoryItems;
+
+- (void)addLastItems;
 
 @end
 
 
 @interface GoMenu : HistoryMenu 
 {
-  IBOutlet NSMenuItem*  mItemBeforeHistoryItems; // the item after which we add history items.
-  HistoryItem*          mTodayItem;              // the "Today" history group
-
-  BOOL                  mAppLaunchDone;          // has app launching completed?
+  BOOL                mAppLaunchDone;         // has app launching completed?
 }
+
+- (void)menuWillBeDisplayed;
 
 @end

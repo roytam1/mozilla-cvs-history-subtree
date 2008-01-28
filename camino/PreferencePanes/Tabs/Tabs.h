@@ -41,7 +41,7 @@
 #import <Cocoa/Cocoa.h>
 #import <PreferencePaneBase.h>
 
-@interface OrgMozillaCaminoPreferenceTabs : PreferencePaneBase
+@interface OrgMozillaChimeraPreferenceTabs : PreferencePaneBase
 {
   IBOutlet NSButton* mCheckboxOpenTabsForCommand;
   IBOutlet NSButton* mCheckboxOpenTabsForExternalLinks;

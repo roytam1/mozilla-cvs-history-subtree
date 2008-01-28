@@ -39,7 +39,6 @@
 
 #import <Carbon/Carbon.h>
 #import <Sparkle/Sparkle.h>
-#import <SharedMenusCocoa/SharedMenusObj.h>
 
 #import "NSArray+Utils.h"
 #import "NSString+Utils.h"
@@ -69,6 +68,7 @@
 #import "CertificatesWindowController.h"
 #import "PageInfoWindowController.h"
 #import "PreferenceManager.h"
+#import "SharedMenusObj.h"
 #import "SiteIconProvider.h"
 #import "SessionManager.h"
 #import "CHPermissionManager.h"
@@ -502,12 +502,12 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
   NSString* vendorSubString = [prefManager getStringPref:"general.useragent.vendorSub" withSuccess:NULL];
   if ([vendorSubString rangeOfString:@"pre"].location == NSNotFound) {
     // has the user seen this already?
-    NSString* newVersionPageRev = [prefManager getStringPref:"browser.startup_page_override.version" withSuccess:NULL];
-    if (![vendorSubString isEqualToString:newVersionPageRev]) {
-      NSString* newVersionPage = NSLocalizedStringFromTable(@"NewVersionPage", @"WebsiteDefaults", nil);
-      if ([newVersionPage length] && ![newVersionPage isEqualToString:@"NewVersionPage"]) {
+    NSString* startPageRev = [prefManager getStringPref:"browser.startup_page_override.version" withSuccess:NULL];
+    if (![vendorSubString isEqualToString:startPageRev]) {
+      NSString* startPage = NSLocalizedStringFromTable(@"StartPageDefault", @"WebsiteDefaults", nil);
+      if ([startPage length] && ![startPage isEqualToString:@"StartPageDefault"]) {
         [mStartURL release];
-        mStartURL = [newVersionPage retain];
+        mStartURL = [startPage retain];
       }
       // set the pref to say they've seen it
       [prefManager setPref:"browser.startup_page_override.version" toString:vendorSubString];
@@ -799,7 +799,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
       }
       else {
         openInNewWindow = YES;
-        if (reverseBackgroundPref)
+        if (loadNewTabsInBackgroundPref)
           behindWindow = [browserWindowController window];
       }
       break;
@@ -817,10 +817,10 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 
     case eBookmarkOpenBehavior_NewWindow:
       openInNewWindow = YES;
-      if (reverseBackgroundPref)
+      if (loadNewTabsInBackgroundPref)
         behindWindow = [browserWindowController window];
-      break;
-
+        break;
+      
     case eBookmarkOpenBehavior_Preferred:
       // default, so nothing to be done.
       break;
@@ -884,9 +884,10 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 
 - (BOOL)applicationShouldHandleReopen:(NSApplication*)theApp hasVisibleWindows:(BOOL)flag
 {
-  // Don't open a new browser window if we're still launching or if there's a
-  // modal alert dialog displayed.
-  if (![self isInitialized] || [NSApp modalWindow])
+  // we might be sitting there with the "there is another copy of camino running" dialog up
+  // (which means we're in a modal loop in [PreferenceManager init]). So if we haven't
+  // finished initting prefs yet, just bail.
+  if (![PreferenceManager sharedInstanceDontCreate])
     return NO;
 
   // ignore |hasVisibleWindows| because we always want to show a browser window when
@@ -952,8 +953,8 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 
 - (IBAction)feedbackLink:(id)aSender
 {
-  NSString* pageToLoad = NSLocalizedStringFromTable(@"FeedbackPage", @"WebsiteDefaults", nil);
-  if (![pageToLoad isEqualToString:@"FeedbackPage"])
+  NSString* pageToLoad = NSLocalizedStringFromTable(@"FeedbackPageDefault", @"WebsiteDefaults", nil);
+  if (![pageToLoad isEqualToString:@"FeedbackPageDefault"])
     [self loadApplicationPage:pageToLoad];
 }
 
@@ -1525,8 +1526,8 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 
 - (IBAction)aboutServers:(id)aSender
 {
-  NSString* pageToLoad = NSLocalizedStringFromTable(@"RendezvousPage", @"WebsiteDefaults", nil);
-  if (![pageToLoad isEqualToString:@"RendezvousPage"])
+  NSString* pageToLoad = NSLocalizedStringFromTable(@"RendezvousPageDefault", @"WebsiteDefaults", nil);
+  if (![pageToLoad isEqualToString:@"RendezvousPageDefault"])
     [self loadApplicationPage:pageToLoad];
 }
 
@@ -1574,22 +1575,22 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 
 - (IBAction)supportLink:(id)aSender
 {
-  NSString* pageToLoad = NSLocalizedStringFromTable(@"SupportPage", @"WebsiteDefaults", nil);
-  if (![pageToLoad isEqualToString:@"SupportPage"])
+  NSString* pageToLoad = NSLocalizedStringFromTable(@"SupportPageDefault", @"WebsiteDefaults", nil);
+  if (![pageToLoad isEqualToString:@"SupportPageDefault"])
     [self loadApplicationPage:pageToLoad];
 }
 
 - (IBAction)keyboardShortcutsLink:(id)aSender
 {
-  NSString* pageToLoad = NSLocalizedStringFromTable(@"KeyboardShortcutsPage", @"WebsiteDefaults", nil);
-  if (![pageToLoad isEqualToString:@"KeyboardShortcutsPage"])
+  NSString* pageToLoad = NSLocalizedStringFromTable(@"KeyboardShortcutsPageDefault", @"WebsiteDefaults", nil);
+  if (![pageToLoad isEqualToString:@"KeyboardShortcutsPageDefault"])
     [self loadApplicationPage:pageToLoad];
 }
 
 - (IBAction)infoLink:(id)aSender
 {
-  NSString* pageToLoad = NSLocalizedStringFromTable(@"InfoPage", @"WebsiteDefaults", nil);
-  if (![pageToLoad isEqualToString:@"InfoPage"])
+  NSString* pageToLoad = NSLocalizedStringFromTable(@"InfoPageDefault", @"WebsiteDefaults", nil);
+  if (![pageToLoad isEqualToString:@"InfoPageDefault"])
     [self loadApplicationPage:pageToLoad];
 }
 

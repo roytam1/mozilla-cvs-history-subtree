@@ -45,17 +45,17 @@
 
 @class ExtendedTableView;
 
-@interface OrgMozillaCaminoPreferenceWebFeatures : PreferencePaneBase
+@interface OrgMozillaChimeraPreferenceWebFeatures : PreferencePaneBase
 {
-  IBOutlet NSButton*      mEnableJS;
-  IBOutlet NSButton*      mEnableJava;
-  IBOutlet NSButton*      mEnablePopupBlocking;
-  IBOutlet NSButton*      mEnableAdBlocking;
-  IBOutlet NSButton*      mPreventAnimation;
-  IBOutlet NSButton*      mEditWhitelist;
-  IBOutlet NSButton*      mEnableFlashBlock;
-  IBOutlet NSButton*      mEnableAnnoyanceBlocker;
-  IBOutlet NSPopUpButton* mTabBehaviorPopup;
+  IBOutlet NSButton* mEnableJS;
+  IBOutlet NSButton* mEnableJava;
+  IBOutlet NSButton* mEnablePlugins;
+
+  IBOutlet NSButton *mEnablePopupBlocking;
+  IBOutlet NSButton *mEnableAdBlocking;
+  IBOutlet NSButton *mPreventAnimation;
+  IBOutlet NSButton *mEditWhitelist;
+  IBOutlet NSButton *mEnableFlashBlock;  
 
   IBOutlet id mWhitelistPanel;
   IBOutlet ExtendedTableView*   mWhitelistTable;
@@ -64,10 +64,16 @@
   IBOutlet NSButton*            mAddButton;
 
   NSMutableArray* mCachedPermissions;		// cached list for speed, STRONG
+
+  IBOutlet NSButton* mEnableAnnoyanceBlocker;
+
+  IBOutlet NSButton* mTabToFormElements;
+  IBOutlet NSButton* mTabToLinks;
 }
 
 -(IBAction) clickEnableJS:(id)sender;
 -(IBAction) clickEnableJava:(id)sender;
+-(IBAction) clickEnablePlugins:(id)sender;
 
 -(IBAction) clickEnablePopupBlocking:(id)sender;
 -(IBAction) clickEnableAdBlocking:(id)sender;
@@ -78,7 +84,7 @@
 -(IBAction) clickEnableAnnoyanceBlocker:(id)sender;
 -(void) setAnnoyingWindowPrefsTo:(BOOL)inValue;
 
--(IBAction) tabFocusBehaviorChanged:(id)sender;
+-(IBAction) clickTabFocusCheckboxes:(id)sender;
 
 // whitelist sheet methods
 -(IBAction) editWhitelistDone:(id)aSender;

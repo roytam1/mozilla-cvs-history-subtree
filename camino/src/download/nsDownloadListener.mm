@@ -456,7 +456,7 @@ nsDownloadListener::IsDownloadPaused()
 static const CFStringRef GetCFStringFromBundle(CFBundleRef bundle,
                                                CFStringRef symbol) {
   const CFStringRef* string = (const CFStringRef*)
-      ::CFBundleGetDataPointerForName(bundle, symbol);
+      ::CFBundleGetFunctionPointerForName(bundle, symbol);
   if (!string) {
     return NULL;
   }
@@ -471,7 +471,7 @@ static const CFStringRef GetCFStringFromBundle(CFBundleRef bundle,
 //
 // Quarantined files are marked with the "com.apple.quarantine" extended
 // attribute, tracked by Launch Services.  When the user attempts to launch
-// a quarantined application, or an application in a quarantined disk image,
+// an quarantined application, or an application in a quarantined disk image,
 // the system will warn the user that the application may have untrustworthy
 // origins.
 //
@@ -524,14 +524,14 @@ void nsDownloadListener::QuarantineDownload() {
       return;
     }
 
-#if MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_4  // SDK
+#if MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_4  // DT
     // This function was introduced in 10.4.  Everything else here is 10.5.
     lsCopyItemAttributeFunc = (LSCopyItemAttribute_type)
         ::CFBundleGetFunctionPointerForName(launchServicesBundle,
                                             CFSTR("LSCopyItemAttribute"));
-#else  // SDK
+#else  // DT
     lsCopyItemAttributeFunc = ::LSCopyItemAttribute;
-#endif  // SDK
+#endif  // DT
 
     lsSetItemAttributeFunc = (LSSetItemAttribute_type)
         ::CFBundleGetFunctionPointerForName(launchServicesBundle,

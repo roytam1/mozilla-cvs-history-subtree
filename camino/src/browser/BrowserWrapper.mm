@@ -46,7 +46,6 @@
 #import "BrowserTabView.h"
 #import "BrowserTabViewItem.h"
 #import "ToolTip.h"
-#import "FormFillController.h"
 #import "PageProxyIcon.h"
 #import "KeychainService.h"
 #import "AutoCompleteTextField.h"
@@ -84,6 +83,9 @@
 #include "nsIScriptSecurityManager.h"
 
 class nsIDOMPopupBlockedEvent;
+
+// for camino.enable_plugins; needs to match string in WebFeatures.mm
+static NSString* const kEnablePluginsChangedNotificationName = @"EnablePluginsChanged";
 
 // types of status bar messages, in order of priority for showing to the user
 enum StatusPriority {
@@ -167,9 +169,6 @@ enum StatusPriority {
 
     mToolTip = [[ToolTip alloc] init];
 
-    mFormFillController = [[FormFillController alloc] init]; 
-    [mFormFillController attachToBrowser:mBrowserView];
-
     //[self setSiteIconImage:[NSImage imageNamed:@"globe_ico"]];
     //[self setSiteIconURI: [NSString string]];
 
@@ -203,7 +202,6 @@ enum StatusPriority {
 
   [mToolTip release];
   [mDisplayTitle release];
-  [mFormFillController release];
   [mPendingURI release];
   
   NS_IF_RELEASE(mBlockedPopups);
@@ -925,6 +923,11 @@ enum StatusPriority {
   [[mWindow delegate] didDismissPromptForBrowser:self];
 }
 
+- (void)enablePluginsChanged:(NSNotification*)aNote
+{
+  [self updatePluginsEnabledState];
+}
+
 //
 // sizeBrowserTo
 //
@@ -1084,6 +1087,11 @@ enum StatusPriority {
                                            selector:@selector(imageLoadedNotification:)
                                                name:SiteIconLoadNotificationName
                                              object:self];
+
+  [[NSNotificationCenter defaultCenter] addObserver:self
+                                           selector:@selector(enablePluginsChanged:)
+                                               name:kEnablePluginsChangedNotificationName
+                                             object:nil];
 }
 
 // called when [[SiteIconProvider sharedFavoriteIconProvider] fetchFavoriteIconForPage:...] completes
