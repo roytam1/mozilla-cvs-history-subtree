@@ -21,6 +21,7 @@
  *
  * Contributor(s):
  *   Daniel Boelzle <daniel.boelzle@sun.com>
+ *   Philipp Kewisch <mozilla@kewis.ch>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -78,15 +79,6 @@ var CACHE_LAST_RESULTS_INVALIDATE = 120;
 
 // logging:
 var LOG_LEVEL = 0;
-
-var g_ioService = null;
-function getIoService() {
-    if (!g_ioService) {
-        g_ioService = Components.classes["@mozilla.org/network/io-service;1"]
-                      .getService(Components.interfaces.nsIIOService);
-    }
-    return g_ioService;
-}
 
 function initWcapProvider()
 {
@@ -183,13 +175,15 @@ var calWcapCalendarModule = { // nsIModule:
     {
         if (!this.m_scriptsLoaded) {
             // loading extra scripts from ../js:
-            const scripts = [ "calUtils.js", "calWcapUtils.js", "calWcapErrors.js",
+            const scripts = [ "calUtils.js", "calProviderBase.js",
+                              "calWcapUtils.js", "calWcapErrors.js",
                               "calWcapRequest.js", "calWcapSession.js",
                               "calWcapCalendar.js", "calWcapCalendarItems.js" ];
             var scriptLoader =
                 Components.classes["@mozilla.org/moz/jssubscript-loader;1"]
                           .createInstance(Components.interfaces.mozIJSSubScriptLoader);
-            var ioService = getIoService();
+            var ioService = Components.classes["@mozilla.org/network/io-service;1"]
+                                      .getService(Components.interfaces.nsIIOService);
             var baseDir = __LOCATION__.parent.parent;
             baseDir.append("js");
             for each (var script in scripts) {

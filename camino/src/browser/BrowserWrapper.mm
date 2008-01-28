@@ -46,11 +46,13 @@
 #import "BrowserTabView.h"
 #import "BrowserTabViewItem.h"
 #import "ToolTip.h"
+#import "FormFillController.h"
 #import "PageProxyIcon.h"
 #import "KeychainService.h"
 #import "AutoCompleteTextField.h"
 #import "RolloverImageButton.h"
 #import "CHPermissionManager.h"
+#import "XMLSearchPluginParser.h"
 
 #include "CHBrowserService.h"
 #include "ContentClickListener.h"
@@ -82,9 +84,6 @@
 #include "nsIScriptSecurityManager.h"
 
 class nsIDOMPopupBlockedEvent;
-
-// for camino.enable_plugins; needs to match string in WebFeatures.mm
-static NSString* const kEnablePluginsChangedNotificationName = @"EnablePluginsChanged";
 
 // types of status bar messages, in order of priority for showing to the user
 enum StatusPriority {
@@ -168,6 +167,9 @@ enum StatusPriority {
 
     mToolTip = [[ToolTip alloc] init];
 
+    mFormFillController = [[FormFillController alloc] init]; 
+    [mFormFillController attachToBrowser:mBrowserView];
+
     //[self setSiteIconImage:[NSImage imageNamed:@"globe_ico"]];
     //[self setSiteIconURI: [NSString string]];
 
@@ -179,6 +181,8 @@ enum StatusPriority {
     
     mLoadingResources = [[NSMutableSet alloc] init];
     
+    mDetectedSearchPlugins = [[NSMutableArray alloc] initWithCapacity:1];
+
     [self registerNotificationListener];
   }
   return self;
@@ -199,12 +203,14 @@ enum StatusPriority {
 
   [mToolTip release];
   [mDisplayTitle release];
+  [mFormFillController release];
   [mPendingURI release];
   
   NS_IF_RELEASE(mBlockedPopups);
   
   [mFeedList release];
-  
+  [mDetectedSearchPlugins release];
+
   [mBrowserView release];
   [mContentViewProviders release];
 
@@ -502,6 +508,8 @@ enum StatusPriority {
   
   [mDelegate showFeedDetected:NO];
   [mFeedList removeAllObjects];
+  [mDelegate showSearchPluginDetected:NO];
+  [mDetectedSearchPlugins removeAllObjects];
   
   [mTabItem setLabel:NSLocalizedString(@"TabLoading", @"")];
 }
@@ -540,12 +548,12 @@ enum StatusPriority {
   }
 }
 
-- (void)onResourceLoadingStarted:(NSNumber*)resourceIdentifier
+- (void)onResourceLoadingStarted:(NSValue*)resourceIdentifier
 {
   [mLoadingResources addObject:resourceIdentifier];
 }
 
-- (void)onResourceLoadingCompleted:(NSNumber*)resourceIdentifier
+- (void)onResourceLoadingCompleted:(NSValue*)resourceIdentifier
 {
   if ([mLoadingResources containsObject:resourceIdentifier])
   {
@@ -814,6 +822,18 @@ enum StatusPriority {
   [mDelegate showFeedDetected:YES];
 }
 
+- (void)onSearchPluginDetected:(NSURL*)pluginURL mimeType:(NSString*)pluginMIMEType displayName:(NSString*)pluginName
+{
+  if ([XMLSearchPluginParser canParsePluginMIMEType:pluginMIMEType]) {
+    NSDictionary* searchPluginDict = [NSDictionary dictionaryWithObjectsAndKeys:pluginURL, kWebSearchPluginURLKey,
+                                                                                pluginMIMEType, kWebSearchPluginMIMETypeKey,
+                                                                                pluginName, kWebSearchPluginNameKey, 
+                                                                                nil];
+    [mDetectedSearchPlugins addObject:searchPluginDict];
+    [mDelegate showSearchPluginDetected:YES];
+  }
+}
+
 // Called when a context menu should be shown.
 - (void)onShowContextMenu:(int)flags domEvent:(nsIDOMEvent*)aEvent domNode:(nsIDOMNode*)aNode
 {
@@ -866,7 +886,7 @@ enum StatusPriority {
   if ((dragSource == self) || (dragSource == mTabItem) || (dragSource  == [[mWindow delegate] proxyIconView]))
     return NO;
   
-  if ([mTabItem isMemberOfClass:[BrowserTabViewItem class]] && (dragSource == [(BrowserTabViewItem*)mTabItem tabItemContentsView]))
+  if ([mTabItem isMemberOfClass:[BrowserTabViewItem class]] && (dragSource == [(BrowserTabViewItem*)mTabItem buttonView]))
     return NO;
   
   return YES;
@@ -903,11 +923,6 @@ enum StatusPriority {
 - (void)didDismissPrompt
 {
   [[mWindow delegate] didDismissPromptForBrowser:self];
-}
-
-- (void)enablePluginsChanged:(NSNotification*)aNote
-{
-  [self updatePluginsEnabledState];
 }
 
 //
@@ -1069,11 +1084,6 @@ enum StatusPriority {
                                            selector:@selector(imageLoadedNotification:)
                                                name:SiteIconLoadNotificationName
                                              object:self];
-
-  [[NSNotificationCenter defaultCenter] addObserver:self
-                                           selector:@selector(enablePluginsChanged:)
-                                               name:kEnablePluginsChangedNotificationName
-                                             object:nil];
 }
 
 // called when [[SiteIconProvider sharedFavoriteIconProvider] fetchFavoriteIconForPage:...] completes
@@ -1179,6 +1189,11 @@ enum StatusPriority {
 - (NSArray*)feedList
 {
   return mFeedList;
+}
+
+- (NSArray*)detectedSearchPlugins
+{
+  return mDetectedSearchPlugins;
 }
 
 #pragma mark -

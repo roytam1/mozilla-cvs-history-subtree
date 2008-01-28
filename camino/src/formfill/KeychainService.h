@@ -48,6 +48,8 @@
 #include "nsIAuthPromptWrapper.h"
 #include "nsIObserver.h"
 #include "nsIFormSubmitObserver.h"
+#include "nsIDOMHTMLFormElement.h"
+#include "nsIDOMHTMLInputElement.h"
 
 class nsIPrefBranch;
 
@@ -55,6 +57,11 @@ enum KeychainPromptResult { kSave, kDontRemember, kNeverRemember } ;
 
 @class CHBrowserView;
 @class KeychainItem;
+
+nsresult FindUsernamePasswordFields(nsIDOMHTMLFormElement* inFormElement,
+                                    nsIDOMHTMLInputElement** outUsername,
+                                    nsIDOMHTMLInputElement** outPassword,
+                                    PRBool inStopWhenFound);
 
 @interface KeychainService : NSObject
 {
@@ -84,21 +91,35 @@ enum KeychainPromptResult { kSave, kDontRemember, kNeverRemember } ;
                           inWindow:(NSWindow*)window;
 - (BOOL)confirmFillPassword:(NSWindow*)parent;
 
-- (KeychainItem*)findKeychainEntryForHost:(NSString*)host
-                                     port:(PRInt32)port
-                                   scheme:(NSString*)scheme
-                           securityDomain:(NSString*)securityDomain
-                                   isForm:(BOOL)isForm;
-- (void)storeUsername:(NSString*)username
-             password:(NSString*)password
-              forHost:(NSString*)host
-       securityDomain:(NSString*)host
-                 port:(PRInt32)port
-               scheme:(NSString*)scheme
-               isForm:(BOOL)isForm;
-- (KeychainItem*)updateKeychainEntry:(KeychainItem*)keychainItem
-                        withUsername:(NSString*)username
-                            password:(NSString*)password;
+- (KeychainItem*)findWebFormKeychainEntryForUsername:(NSString*)username
+                                             forHost:(NSString*)host
+                                                port:(UInt16)port
+                                              scheme:(NSString*)scheme;
+- (KeychainItem*)findDefaultWebFormKeychainEntryForHost:(NSString*)host
+                                                   port:(UInt16)port
+                                                 scheme:(NSString*)scheme;
+- (void)setDefaultWebFormKeychainEntry:(KeychainItem*)keychainItem;
+
+- (NSArray*)allWebFormKeychainItemsForHost:(NSString*)host
+                                      port:(UInt16)port
+                                    scheme:(NSString*)scheme;
+- (KeychainItem*)defaultFromKeychainItems:(NSArray*)items;
+
+- (KeychainItem*)findAuthKeychainEntryForHost:(NSString*)host
+                                         port:(UInt16)port
+                                       scheme:(NSString*)scheme
+                               securityDomain:(NSString*)securityDomain;
+- (KeychainItem*)updateAuthKeychainEntry:(KeychainItem*)keychainItem
+                            withUsername:(NSString*)username
+                                password:(NSString*)password;
+- (KeychainItem*)storeUsername:(NSString*)username
+                      password:(NSString*)password
+                       forHost:(NSString*)host
+                securityDomain:(NSString*)securityDomain
+                          port:(UInt16)port
+                        scheme:(NSString*)scheme
+                        isForm:(BOOL)isForm;
+
 - (void)removeAllUsernamesAndPasswords;
 
 - (void)addListenerToView:(CHBrowserView*)view;
@@ -121,29 +142,6 @@ enum KeychainPromptResult { kSave, kDontRemember, kNeverRemember } ;
 @end
 
 
-//
-// KeychainDenyList
-//
-// A singleton object that maintains a list of sites where we should
-// not prompt the user for saving in the keychain. This object also
-// handles archiving the list in the user's profile dir.
-//
-
-@interface KeychainDenyList : NSObject
-{
-  NSMutableArray* mDenyList;     // the list
-}
-
-+ (KeychainDenyList*)instance;
-
-- (BOOL)isHostPresent:(NSString*)host;
-- (void)addHost:(NSString*)host;
-- (void)removeHost:(NSString*)host;
-- (void)removeAllHosts;
-
-@end
-
-
 class KeychainPrompt : public nsIAuthPromptWrapper
 {
 public:
@@ -158,7 +156,7 @@ protected:
   
   void PreFill(const PRUnichar *, PRUnichar **, PRUnichar **);
   void ProcessPrompt(const PRUnichar *, bool, PRUnichar *, PRUnichar *);
-  static void ExtractRealmComponents(NSString* inRealmBlob, NSString** outHost, NSString** outRealm, PRInt32* outPort);
+  static void ExtractRealmComponents(NSString* inRealmBlob, NSString** outHost, NSString** outRealm, UInt16* outPort);
 
   nsCOMPtr<nsIPrompt>   mPrompt;
 };

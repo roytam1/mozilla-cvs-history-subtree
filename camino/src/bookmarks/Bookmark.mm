@@ -60,10 +60,10 @@ NSString* const URLLoadSuccessKey     = @"url_bool";
 @interface Bookmark (Private)
 
 - (void)setIsSeparator:(BOOL)isSeparator;
+- (void)clearLastVisit;
 
 // methods used for saving to files; are guaranteed never to return nil
 - (id)savedURL;
-- (id)savedLastVisit;
 - (id)savedStatus;
 - (id)savedNumberOfVisits;
 - (id)savedFaviconURL;
@@ -81,11 +81,17 @@ NSString* const URLLoadSuccessKey     = @"url_bool";
   return separator;
 }
 
-+ (Bookmark*)bookmarkWithTitle:(NSString*)aTitle url:(NSString*)aURL
++ (Bookmark*)bookmarkWithTitle:(NSString*)aTitle
+                           url:(NSString*)aURL
+                     lastVisit:(NSDate*)aLastVisit
 {
   Bookmark* bookmark = [[[self alloc] init] autorelease];
   [bookmark setTitle:aTitle];
   [bookmark setUrl:aURL];
+  if (aLastVisit) {
+    [bookmark setLastVisit:aLastVisit];
+    [bookmark setNumberOfVisits:1];
+  }
   return bookmark;
 }
 
@@ -97,11 +103,11 @@ NSString* const URLLoadSuccessKey     = @"url_bool";
     return [self separator];
 
   Bookmark* bookmark = [self bookmarkWithTitle:[aDict objectForKey:BMTitleKey]
-                                           url:[aDict objectForKey:BMURLKey]];
+                                           url:[aDict objectForKey:BMURLKey]
+                                     lastVisit:[aDict objectForKey:BMLastVisitKey]];
   [bookmark setItemDescription:[aDict objectForKey:BMDescKey]];
   [bookmark setShortcut:[aDict objectForKey:BMShortcutKey]];
   [bookmark setUUID:[aDict objectForKey:BMUUIDKey]];
-  [bookmark setLastVisit:[aDict objectForKey:BMLastVisitKey]];
   [bookmark setNumberOfVisits:[[aDict objectForKey:BMNumberVisitsKey] unsignedIntValue]];
   [bookmark setFaviconURL:[aDict objectForKey:BMLinkedFaviconURLKey]];
 
@@ -112,18 +118,8 @@ NSString* const URLLoadSuccessKey     = @"url_bool";
 {
   NSDictionary* uriDict = [aDict objectForKey:SafariURIDictKey];
   return [self bookmarkWithTitle:[uriDict objectForKey:SafariBookmarkTitleKey]
-                             url:[aDict objectForKey:SafariURLStringKey]];
-}
-
-- (id)init
-{
-  if ((self = [super init])) {
-    mURL            = [[NSString alloc] init];
-    mIsSeparator    = NO;
-    mNumberOfVisits = 0;
-    mLastVisit      = [[NSDate date] retain];
-  }
-  return self;
+                             url:[aDict objectForKey:SafariURLStringKey]
+                       lastVisit:nil];
 }
 
 - (id)copyWithZone:(NSZone *)zone
@@ -153,7 +149,7 @@ NSString* const URLLoadSuccessKey     = @"url_bool";
 
 - (NSString *)url
 {
-  return mURL;
+  return mURL ? mURL : @"";
 }
 
 - (NSImage *)icon
@@ -198,9 +194,9 @@ NSString* const URLLoadSuccessKey     = @"url_bool";
     return;
 
   if (![mURL isEqualToString:aURL]) {
-    [aURL retain];
     [mURL release];
     mURL = aURL;
+    [mURL retain];
 
     // clear the icon, so we'll refresh it next time someone asks for it
     [mIcon release];
@@ -213,9 +209,19 @@ NSString* const URLLoadSuccessKey     = @"url_bool";
 - (void)setLastVisit:(NSDate *)aDate
 {
   if (aDate && ![mLastVisit isEqual:aDate]) {
-    [aDate retain];
     [mLastVisit release];
     mLastVisit = aDate;
+    [mLastVisit retain];
+
+    [self itemUpdatedNote:kBookmarkItemLastVisitChangedMask];
+  }
+}
+
+- (void)clearLastVisit
+{
+  if (mLastVisit) {
+    [mLastVisit release];
+    mLastVisit = nil;
 
     [self itemUpdatedNote:kBookmarkItemLastVisitChangedMask];
   }
@@ -225,7 +231,12 @@ NSString* const URLLoadSuccessKey     = @"url_bool";
 {
   if (mNumberOfVisits != aNumber) {
     mNumberOfVisits = aNumber;
+
     [self itemUpdatedNote:kBookmarkItemNumVisitsChangedMask];
+
+    if (mNumberOfVisits == 0) {
+      [self clearLastVisit];
+    }
   }
 }
 
@@ -283,11 +294,6 @@ NSString* const URLLoadSuccessKey     = @"url_bool";
 - (id)savedURL
 {
   return mURL ? mURL : @"";
-}
-
-- (id)savedLastVisit
-{
-  return mLastVisit ? mLastVisit : [NSDate distantPast];
 }
 
 - (id)savedStatus
@@ -354,10 +360,17 @@ NSString* const URLLoadSuccessKey     = @"url_bool";
   NSMutableDictionary* itemDict = [NSMutableDictionary dictionaryWithObjectsAndKeys:
                 [self savedTitle], BMTitleKey,
                   [self savedURL], BMURLKey,
-            [self savedLastVisit], BMLastVisitKey,
-       [self savedNumberOfVisits], BMNumberVisitsKey,
-               [self savedStatus], BMStatusKey,
                                    nil];
+
+  if (mLastVisit)
+    [itemDict setObject:mLastVisit forKey:BMLastVisitKey];
+
+  if (mNumberOfVisits)
+    [itemDict setObject:[self savedNumberOfVisits] forKey:BMNumberVisitsKey];
+
+  // The bookmark is guaranteed not to be a separator at this point, so
+  // [self savedStatus] will be 0, and there is no reason to write anything
+  // for BMStatusKey.
 
   if ([[self itemDescription] length])
     [itemDict setObject:[self itemDescription] forKey:BMDescKey];
@@ -457,12 +470,11 @@ NSString* const URLLoadSuccessKey     = @"url_bool";
   if ([aItem isKindOfClass:[BookmarkFolder class]])
     result = NSOrderedDescending;
   else {
-    int myVisits    = [self numberOfVisits];
-    int otherVisits = [(Bookmark*)aItem numberOfVisits];
-    if (myVisits == otherVisits)
+    unsigned int otherVisits = [(Bookmark*)aItem numberOfVisits];
+    if (mNumberOfVisits == otherVisits)
       result = NSOrderedSame;
     else
-      result = (otherVisits > myVisits) ? NSOrderedAscending : NSOrderedDescending;
+      result = (otherVisits > mNumberOfVisits) ? NSOrderedAscending : NSOrderedDescending;
   }
 
   return [inDescending boolValue] ? (NSComparisonResult)(-1 * (int)result) : result;
@@ -472,10 +484,20 @@ NSString* const URLLoadSuccessKey     = @"url_bool";
 {
   NSComparisonResult result;
   // sort categories before sites
-  if ([aItem isKindOfClass:[BookmarkFolder class]])
+  if ([aItem isKindOfClass:[BookmarkFolder class]]) {
     result = NSOrderedDescending;
-  else
-    result = [mLastVisit compare:[(Bookmark*)aItem lastVisit]];
+  }
+  else {
+    NSDate* otherLastVisit = [(Bookmark*)aItem lastVisit];
+    if (mLastVisit && otherLastVisit)
+      result = [mLastVisit compare:otherLastVisit];
+    else if (mLastVisit)
+      result = NSOrderedDescending;
+    else if (otherLastVisit)
+      result = NSOrderedAscending;
+    else
+      result = NSOrderedSame;
+  }
 
   return [inDescending boolValue] ? (NSComparisonResult)(-1 * (int)result) : result;
 }
@@ -487,12 +509,11 @@ NSString* const URLLoadSuccessKey     = @"url_bool";
   if ([aItem isKindOfClass:[BookmarkFolder class]])
     result = NSOrderedDescending;
   else {
-    int myVisits    = [self numberOfVisits];
-    int otherVisits = [(Bookmark*)aItem numberOfVisits];
-    if (myVisits == otherVisits)
-      result = [mLastVisit compare:[(Bookmark*)aItem lastVisit]];
+    unsigned int otherVisits = [(Bookmark*)aItem numberOfVisits];
+    if (mNumberOfVisits == otherVisits)
+      return [self compareLastVisitDate:aItem sortDescending:inDescending];
     else
-      result = (otherVisits > myVisits) ? NSOrderedAscending : NSOrderedDescending;
+      result = (otherVisits > mNumberOfVisits) ? NSOrderedAscending : NSOrderedDescending;
   }
 
   return [inDescending boolValue] ? (NSComparisonResult)(-1 * (int)result) : result;

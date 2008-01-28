@@ -35,23 +35,33 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-var calendarDNDObserver = {
+function calDNDBaseObserver() {
+    ASSERT(false, "Inheriting objects call calDNDBaseObserver!");
+}
+
+calDNDBaseObserver.prototype = {
+    // initialize this class's members
+    initBase: function calDNDInitBase() {
+    },
+    
     getSupportedFlavours: function calDNDGetFlavors() {
         var flavourSet = new FlavourSet();
-        flavourSet.appendFlavour("application/x-moz-file");
-        flavourSet.appendFlavour("text/x-moz-url");
         flavourSet.appendFlavour("text/calendar");
+        flavourSet.appendFlavour("text/x-moz-url");
+        flavourSet.appendFlavour("text/x-moz-message");
         flavourSet.appendFlavour("text/unicode");
+        flavourSet.appendFlavour("application/x-moz-file");
         return flavourSet;
     },
 
     onDrop: function calDNDDrop(aEvent, aTransferData, aDragSession) {
         var transferable = Components.classes["@mozilla.org/widget/transferable;1"]
                            .createInstance(Components.interfaces.nsITransferable);
-        transferable.addDataFlavor("text/x-moz-url");
-        transferable.addDataFlavor("application/x-moz-file");
         transferable.addDataFlavor("text/calendar");
+        transferable.addDataFlavor("text/x-moz-url");
+        transferable.addDataFlavor("text/x-moz-message");
         transferable.addDataFlavor("text/unicode");
+        transferable.addDataFlavor("application/x-moz-file");
 
         aDragSession.getData(transferable, 0);
 
@@ -71,16 +81,8 @@ var calendarDNDObserver = {
             case "text/calendar":
                 var parser = Components.classes["@mozilla.org/calendar/ics-parser;1"]
                              .createInstance(Components.interfaces.calIIcsParser);
-                parser.parseString(data);
-                startBatchTransaction();
-                try {
-                    for each (var item in parser.getItems({})) {
-                        doTransaction('add', item, destCal, null, null);
-                    }
-                }
-                finally {
-                    endBatchTransaction();
-                }
+                parser.parseString(data, null);
+                this.onDropItems(parser.getItems({}));
                 break;
             case "text/unicode":
                 var droppedUrl = this.retrieveURLFromData(data, bestFlavor.value);
@@ -102,15 +104,7 @@ var calendarDNDObserver = {
                     var importer = Components.classes["@mozilla.org/calendar/import;1?type=ics"]
                                    .getService(Components.interfaces.calIImporter);
                     var items = importer.importFromStream(inputStream, {});
-                    startBatchTransaction();
-                    try {
-                        for each (item in items) {
-                            doTransaction('add', item, destCal, null, null);
-                        }
-                    }
-                    finally {
-                        endBatchTransaction();
-                    }
+                    this.onDropItems(items);
                 }
                 finally {
                     inputStream.close();
@@ -124,8 +118,10 @@ var calendarDNDObserver = {
                 var uri = ioService.newURI(data.toString(), null, null);
                 var loader = Components.classes["@mozilla.org/network/unichar-stream-loader;1"]
                              .createInstance(Components.interfaces.nsIUnicharStreamLoader);
-                channel = ioService.newChannelFromURI(uri);
+                var channel = ioService.newChannelFromURI(uri);
                 channel.loadFlags |= Components.interfaces.nsIRequest.LOAD_BYPASS_CACHE;
+                
+                var self = this;
 
                 var listener = {
 
@@ -150,16 +146,8 @@ var calendarDNDObserver = {
                             }
                             var parser = Components.classes["@mozilla.org/calendar/ics-parser;1"]
                                          .createInstance(Components.interfaces.calIIcsParser);
-                            parser.parseString(str);
-                            startBatchTransaction();
-                            try {
-                                for each (var item in parser.getItems({})) {
-                                    doTransaction('add', item, destCal, null, null);
-                                }
-                            }
-                            finally {
-                                endBatchTransaction();
-                            }
+                            parser.parseString(str, null);
+                            self.onDropItems(parser.getItems({}));
                         }
                     }
                 };
@@ -170,8 +158,11 @@ var calendarDNDObserver = {
                     Component.utils.reportError(e)
                 }
                 break;
+            case "text/x-moz-message":
+                this.onDropMessage(messenger.msgHdrFromURI(data));
+                break;
             default:
-                dump("unknown data flavour:" + bestFlavor.value+'\n');
+                ASSERT(false, "unknown data flavour:" + bestFlavor.value+'\n');
                 break;
         }
     },
@@ -179,6 +170,90 @@ var calendarDNDObserver = {
     onDragStart: function calDNDStart(aEvent, aTransferData, aDragAction) {},
     onDragOver: function calDNDOver(aEvent, aFlavor, aDragSession) {},
     onDragExit: function calDNDExit(aEvent, aDragSession) {},
+
+    onDropItems: function calDNDDropItems(aItems) {},
+    onDropMessage: function calDNDDropMessage(aMessage) {},
+
+    calendarItemFromMessage: function calDNDItemFromMessage(aItem,aMessage) {
+    
+        aItem.calendar = getSelectedCalendar();
+        aItem.title = aMessage.subject;
+        if (isEvent(aItem)) {
+            aItem.startDate = now();
+            aItem.endDate = aItem.startDate.clone();
+            aItem.endDate.minute += getPrefSafe("calendar.event.defaultlength", 60);
+        } else if (isToDo(aItem)) {
+            aItem.entryDate = now();
+        }
+        setDefaultAlarmValues(aItem);
+
+        var addAttendees = function(aEmailAddresses) {
+            if (msgHeaderParser) {
+                var addresses = {};
+                var fullNames = {};
+                var names = {};
+                var numAddresses =  0;
+                numAddresses = msgHeaderParser.parseHeadersWithArray(
+                    aEmailAddresses, addresses, names, fullNames);
+                var index = 0;
+                while (index < numAddresses) {
+                    var attendee = createAttendee();
+                    attendee.id = addresses.value[index];
+                    attendee.commonName = names.value[index];
+                    attendee.role = "REQ-PARTICIPANT";
+                    attendee.participationStatus = "NEEDS-ACTION";
+                    attendee.rsvp = true;
+                    aItem.addAttendee(attendee);
+                    index++;
+                }
+            }
+        }
+        
+        addAttendees(aMessage.recipients);
+        addAttendees(aMessage.ccList);
+
+        var htmlToPlainText = function(html) {
+          var texts = html.split(/(<\/?[^>]+>)/);
+          var text = texts.map(function(string) {
+              if (string.length > 0 && string[0] == '<') {
+                  var regExpRes = string.match(/^<img.*?alt\s*=\s*['"](.*)["']/i)
+                  if (regExpRes) {
+                      return regExpRes[1];
+                  } else {
+                      return "";
+                  }
+              } else {
+                  return string.replace(/&([^;]+);/g, function(str, p1) {
+                        switch (p1) {
+                            case "nbsp": return " ";
+                            case "amp": return "&";
+                            case "lt": return "<";
+                            case "gt": return ">";
+                            case "quot": return '\"';
+                        }
+                        return " ";
+                    });
+              }
+          }).join("");
+
+          return text;
+        }
+
+        var content = document.getElementById("messagepane");
+        if (content) {
+            var messagePrefix = /^mailbox-message:|^imap-message:|^news-message:/i;
+            if (messagePrefix.test(GetLoadedMessage())) {
+                var message = content.contentDocument;
+                var body = message.body;
+                if (body) {
+                    aItem.setProperty(
+                        "DESCRIPTION",
+                        htmlToPlainText(body.innerHTML));
+                }
+            }
+        }
+    
+    },
 
     retrieveURLFromData: function calDNDRetrieveURL(aData, aFlavor) {
         var data;
@@ -196,3 +271,211 @@ var calendarDNDObserver = {
         }
     }
 };
+
+/**
+ * calViewDNDObserver::calViewDNDObserver
+ *
+ * Drag'n'drop handler for the calendar views. This handler is
+ * derived from the base handler and just implements specific actions.
+ */
+function calViewDNDObserver() {
+    this.wrappedJSObject = this;
+    this.initBase();
+}
+
+calViewDNDObserver.prototype = {
+    __proto__: calDNDBaseObserver.prototype,
+
+    /**
+     * calViewDNDObserver::onDropItems
+     *
+     * Gets called in case we're dropping an array of items
+     * on one of the calendar views. In this case we just
+     * try to add these items to the currently selected calendar.
+     */
+    onDropItems: function(aItems) {
+        var destCal = getSelectedCalendar();
+        startBatchTransaction();
+        try {
+            for each (var item in aItems) {
+                doTransaction('add', item, destCal, null, null);
+            }
+        }
+        finally {
+            endBatchTransaction();
+        }
+    }
+};
+
+/**
+ * calMailButtonDNDObserver::calMailButtonDNDObserver
+ *
+ * Drag'n'drop handler for the 'mail mode'-button. This handler is
+ * derived from the base handler and just implements specific actions.
+ */
+function calMailButtonDNDObserver() {
+    this.wrappedJSObject = this;
+    this.initBase();
+}
+
+calMailButtonDNDObserver.prototype = {
+    __proto__: calDNDBaseObserver.prototype,
+
+    /**
+     * calMailButtonDNDObserver::onDropItems
+     *
+     * Gets called in case we're dropping an array of items
+     * on the 'mail mode'-button.
+     */
+    onDropItems: function(aItems) {
+        if (aItems && aItems.length > 0) {
+            var item = aItems[0];
+            
+            var recipients = "";
+            var attendees = item.getAttendees({});
+            for each (var attendee in attendees) {
+                if (attendee.id && attendee.id.length) {
+                    var email = attendee.id;
+                    var re = new RegExp("^mailto:(.*)", "i");
+                    if (email && email.length) {
+                        if (re.test(email)) {
+                            email = RegExp.$1;
+                        } else {
+                            email = email;
+                        }
+                    }
+                    // Prevent trailing commas.
+                    if (recipients.length > 0) {
+                        recipients += ",";
+                    }
+                    // Add this recipient id to the list.
+                    recipients += email;
+                }
+            }
+
+            // Set up the subject
+            var subject = calGetString("sun-calendar-event-dialog",
+                                       "emailSubjectReply",
+                                       [item.title]);
+
+            // set up message body from item description
+            var body = item.getProperty("DESCRIPTION");
+            
+            sendMailTo(recipients, subject, body);
+        }
+    },
+
+    /**
+     * calMailButtonDNDObserver::onDropMessage
+     *
+     * Gets called in case we're dropping a message
+     * on the 'mail mode'-button.
+     */
+    onDropMessage: function(aMessage) {
+    }
+};
+
+/**
+ * calCalendarButtonDNDObserver::calCalendarButtonDNDObserver
+ *
+ * Drag'n'drop handler for the 'calendar mode'-button. This handler is
+ * derived from the base handler and just implements specific actions.
+ */
+function calCalendarButtonDNDObserver() {
+    this.wrappedJSObject = this;
+    this.initBase();
+}
+
+calCalendarButtonDNDObserver.prototype = {
+    __proto__: calDNDBaseObserver.prototype,
+
+    /**
+     * calCalendarButtonDNDObserver::onDropItems
+     *
+     * Gets called in case we're dropping an array of items
+     * on the 'calendar mode'-button.
+     */
+    onDropItems: function(aItems) {
+        if (aItems && aItems.length > 0) {
+            var item = aItems[0];
+            if (!isEvent(item)) {
+                var newItem = createEvent();
+                newItem.wrappedJSObject.setItemBaseFromICS(
+                    item.icalComponent);
+                newItem.startDate = item.entryDate || now();
+                newItem.endDate = item.dueDate || now();
+                createEventWithDialog(null, null, null, null, newItem);
+            } else {
+                modifyEventWithDialog(item);
+            }
+        }
+    },
+
+    /**
+     * calCalendarButtonDNDObserver::onDropMessage
+     *
+     * Gets called in case we're dropping a message on the
+     * 'calendar mode'-button. In this case we create a new
+     * event from the mail. We open the default event dialog
+     * and just use the subject of the message as the event title.
+     */
+    onDropMessage: function(aMessage) {
+        var event = createEvent();
+        this.calendarItemFromMessage(event,aMessage);
+        createEventWithDialog(null, null, null, null, event);
+    }
+};
+
+/**
+ * calTaskButtonDNDObserver::calTaskButtonDNDObserver
+ *
+ * Drag'n'drop handler for the 'task mode'-button. This handler is
+ * derived from the base handler and just implements specific actions.
+ */
+function calTaskButtonDNDObserver() {
+    this.wrappedJSObject = this;
+    this.initBase();
+}
+
+calTaskButtonDNDObserver.prototype = {
+    __proto__: calDNDBaseObserver.prototype,
+
+    /**
+     * calTaskButtonDNDObserver::onDropItems
+     *
+     * Gets called in case we're dropping an array of items
+     * on the 'task mode'-button.
+     */
+    onDropItems: function(aItems) {
+        if (aItems && aItems.length > 0) {
+            var item = aItems[0];
+            if (!isToDo(item)) {
+                var newItem = createTodo();
+                newItem.wrappedJSObject.setItemBaseFromICS(
+                    item.icalComponent);
+                newItem.entryDate = item.startDate || now();
+                newItem.dueDate = item.endDate || now();
+                createTodoWithDialog(null, null, null, newItem);
+            } else {
+                modifyEventWithDialog(newItem);
+            }
+        }
+    },
+
+    /**
+     * calTaskButtonDNDObserver::onDropMessage
+     *
+     * Gets called in case we're dropping a message
+     * on the 'task mode'-button.
+     */
+    onDropMessage: function(aMessage) {
+        var todo = createTodo();
+        this.calendarItemFromMessage(todo,aMessage);
+        createTodoWithDialog(null, null, null, todo);
+    }
+};
+
+var calendarViewDNDObserver = new calViewDNDObserver();
+var calendarMailButtonDNDObserver = new calMailButtonDNDObserver();
+var calendarCalendarButtonDNDObserver = new calCalendarButtonDNDObserver();
+var calendarTaskButtonDNDObserver = new calTaskButtonDNDObserver();

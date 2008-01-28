@@ -38,25 +38,26 @@
  * ***** END LICENSE BLOCK ***** */
 
 function calWcapCalendar(/*optional*/session, /*optional*/calProps) {
-    this.wrappedJSObject = this;
+    this.initProviderBase();
     this.m_session = session;
     this.m_calProps = calProps;
-    this.m_observers = new calListenerBag(Components.interfaces.calIObserver);
 }
 calWcapCalendar.prototype = {
+    __proto__: calProviderBase.prototype,
+
     m_ifaces: [ calIWcapCalendar,
                 calICalendar,
+                Components.interfaces.calIChangeLog,
                 Components.interfaces.calICalendarProvider,
                 Components.interfaces.nsIInterfaceRequestor,
                 Components.interfaces.nsIClassInfo,
                 nsISupports ],
-    
+
     // nsISupports:
     QueryInterface: function calWcapCalendar_QueryInterface(iid) {
-        ensureIID(this.m_ifaces, iid); // throws
-        return this;
+        return doQueryInterface(this, calWcapCalendar.prototype, iid, this.m_ifaces, this);
     },
-    
+
     // nsIClassInfo:
     getInterfaces: function calWcapCalendar_getInterfaces(count) {
         count.value = this.m_ifaces.length;
@@ -100,19 +101,25 @@ calWcapCalendar.prototype = {
     },
     notifyError_: function calWcapCalendar_notifyError_(err, context, suppressOnError)
     {
-        var rc = getResultCode(err);
-        if ((rc == calIErrors.OPERATION_CANCELLED) ||
-            (rc == NS_ERROR_OFFLINE)) { // no real error
-            return;
-        }
         var msg;
-        if (checkResultCode(rc, calIErrors.WCAP_ERROR_BASE, 8) ||
-            (getErrorModule(rc) == NS_ERROR_MODULE_NETWORK)) {
-            // don't bloat the js error console with these errors:
+        var rc = getResultCode(err);
+        switch (rc) {
+        case calIErrors.OPERATION_CANCELLED:
+        case calIWcapErrors.WCAP_COMPONENT_NOT_FOUND:
+        case NS_ERROR_OFFLINE:
+            return;
+        default:
+            if (!checkErrorCode(rc, calIErrors.WCAP_ERROR_BASE, 8) &&
+                (getErrorModule(rc) != NS_ERROR_MODULE_NETWORK)) {
+                msg = logError(err, context);
+                break;
+            }
+            // fallthru intended
+        case calIErrors.CAL_IS_READONLY:
+            // don't bloat the js error console with these errors, just log:
             msg = errorToString(err);
             log("error: " + msg, context);
-        } else {
-            msg = logError(err, context);
+            break;
         }
         if (!suppressOnError) {
             this.notifyObservers("onError",
@@ -138,45 +145,20 @@ calWcapCalendar.prototype = {
     getCalendar: function calWcapCalendar_getCalendar(url) {
         throw NS_ERROR_NOT_IMPLEMENTED;
     },
-    
-    // calICalendar:
-    mID: null,
-    get id() {
-        return this.mID;
-    },
-    set id(id) {
-        if (this.mID)
-            throw Components.results.NS_ERROR_ALREADY_INITIALIZED;
-        return (this.mID = id);
-    },
 
-    get name() {
+    // calICalendar:
+    get name calWcapCalendar_nameGetter() {
         var name = this.getProperty("name");
         if (!name) {
             name = this.displayName;
         }
         return name;
     },
-    set name(name) {
-        return this.setProperty("name", name);
-    },
-    
-    get type() { return "wcap"; },
-    
-    m_superCalendar: null,
-    get superCalendar() {
-        return (this.m_superCalendar || this);
-    },
-    set superCalendar(cal) {
-        return (this.m_superCalendar = cal);
+    set name calWcapCalendar_nameSetter(aValue) {
+        return this.setProperty("name", aValue);
     },
 
-    get readOnly() {
-        return this.getProperty("readOnly");
-    },
-    set readOnly(bReadOnly) {
-        return this.setProperty("readOnly", bReadOnly);
-    },
+    get type() { return "wcap"; },
 
     m_uri: null,
     get uri() {
@@ -198,12 +180,17 @@ calWcapCalendar.prototype = {
         return this.uri;
     },
 
-    m_bReadOnly: false,
     getProperty: function calWcapCalendar_getProperty(aName) {
-        var value = getCalendarManager().getCalendarPref_(this, aName);
+        var value = this.__proto__.__proto__.getProperty.apply(this, arguments);
         switch (aName) {
+        case "private.wcapCalendar":
+            value = this;
+            break;
         case "readOnly":
-            value = this.m_bReadOnly;
+            if (value === null) {
+                // tweak readOnly default to true for non-owned calendars:
+                value = (this.m_session && this.session.isLoggedIn && !this.isOwnedCalendar);
+            }
             break;
         case "calendar-main-in-composite":
             if (value === null && !this.isDefaultCalendar) {
@@ -217,51 +204,16 @@ calWcapCalendar.prototype = {
             value = true;
             break;
         }
-        // xxx future: return getPrefSafe("calendars." + this.id + "." + aName, null);
         return value;
     },
-    setProperty: function calWcapCalendar_setProperty(aName, aValue) {
-        var oldValue = this.getProperty(aName);
-        if (oldValue != aValue) {
-            switch (aName) {
-            case "readOnly":
-                this.m_bReadOnly = aValue;
-                break;
-            case "suppressAlarms":
-            case "calendar-main-in-composite":
-                if (!aValue) {
-                    getCalendarManager().deleteCalendarPref_(this, aName);
-                    break;
-                }
-                // fallthru intended
-            default:
-                // xxx future: setPrefSafe("calendars." + this.id + "." + aName, aValue);
-                getCalendarManager().setCalendarPref_(this, aName, aValue);
-                break;
-            }
-            this.m_observers.notify("onPropertyChanged",
-                                    [this, aName, aValue, oldValue]);
+
+    notifyObservers: function calWcapCalendar_notifyObservers(func, args) {
+        if (g_bShutdown) {
+            return;
         }
-        return aValue;
-    },
-    deleteProperty: function calWcapCalendar_deleteProperty(aName) {
-        this.notifyObservers("onPropertyDeleting", [this, aName]);
-        getCalendarManager().deleteCalendarPref_(this, aName);
+        this.observers.notify(func, args);
     },
 
-    m_observers: null,
-    notifyObservers: function calWcapCalendar_notifyObservers(func, args) {
-        if (g_bShutdown)
-            return;
-        this.m_observers.notify(func, args);
-    },
-    addObserver: function calWcapCalendar_addObserver(observer) {
-        this.m_observers.add(observer);
-    },
-    removeObserver: function calWcapCalendar_removeObserver(observer) {
-        this.m_observers.remove(observer);
-    },
-    
     // xxx todo: batch currently not used
     startBatch: function calWcapCalendar_startBatch() {
         this.notifyObservers("onStartBatch");
@@ -302,7 +254,7 @@ calWcapCalendar.prototype = {
                         request, respFunc, dataConvFunc, wcapCommand, params);
                 }
                 catch (exc) {
-                    respFunc(exc);
+                    request.execSubRespFunc(respFunc, exc);
                 }
             });
     },
@@ -411,15 +363,19 @@ calWcapCalendar.prototype = {
         return tzid[0];
     },
     
-    getAlignedTimezone: function calWcapCalendar_getAlignedTimezone(tzid) {
-        // check whether it is one of cs:
-        if (tzid.indexOf("/mozilla.org/") == 0) {
-            // cut mozilla prefix: assuming that the latter string portion
-            //                     semantically equals the demanded timezone
-            tzid = tzid.substring( // next slash after "/mozilla.org/"
-                tzid.indexOf("/", "/mozilla.org/".length) + 1);
+    getAlignedTzid: function calWcapCalendar_getAlignedTzid(tz) {
+        var tzid = tz.tzid;
+        // check whether it is one cs supports:
+        if (!tz.isUTC && !tz.isFloating && !compareObjects(tz.provider, this.session)) {
+            log("not a server timezone: " + tzid);
+            var prefix = getTimezoneService().tzidPrefix;
+            if (tzid.indexOf(prefix) == 0) {
+                // cut mozilla prefix: assuming that the latter string portion
+                //                     semantically equals the demanded timezone
+                tzid = tzid.substring(prefix.length);
+            }
         }
-        if (!this.session.isSupportedTimezone(tzid)) {
+        if (!this.session.getTimezone(tzid)) {
             // xxx todo: we could further on search for a matching region,
             //           e.g. CET (in TZNAME), but for now stick to
             //           user's default if not supported directly
@@ -428,8 +384,7 @@ calWcapCalendar.prototype = {
             log(tzid + " not supported, falling back to default: " + ret, this);
             return ret;
         }
-        else // is ok (supported):
-            return tzid;
+        return tzid;
     },
     
     checkAccess: function calWcapCalendar_checkAccess(accessControlBits)
@@ -437,7 +392,7 @@ calWcapCalendar.prototype = {
         // xxx todo: take real acl into account
         // for now, optimistically assuming that everybody has full access, server will check:
         var granted = calIWcapCalendar.AC_FULL;
-        if (this.m_bReadOnly) {
+        if (this.getProperty("readOnly")) {
             granted &= ~(calIWcapCalendar.AC_COMP_WRITE |
                          calIWcapCalendar.AC_PROP_WRITE);
         }

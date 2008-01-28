@@ -44,7 +44,7 @@
 const int kOpenExternalLinksInNewWindow = 0;
 const int kOpenExternalLinksInNewTab = 1;
 
-@implementation OrgMozillaChimeraPreferenceTabs
+@implementation OrgMozillaCaminoPreferenceTabs
 
 - (id)initWithBundle:(NSBundle *)bundle
 {
@@ -99,7 +99,8 @@ const int kOpenExternalLinksInNewTab = 1;
   }
   else if (sender == mSingleWindowMode) {
     [sender setAllowsMixedState:NO];
-    int newState = ([sender state] == NSOnState) ? nsIBrowserDOMWindow::OPEN_NEWTAB : nsIBrowserDOMWindow::OPEN_NEWWINDOW;
+    // Cast to avoid "enumeral mismatch" warning - thanks a lot, xpidl.
+    int newState = ([sender state] == NSOnState) ? (int)nsIBrowserDOMWindow::OPEN_NEWTAB : (int)nsIBrowserDOMWindow::OPEN_NEWWINDOW;
     [self setPref:"browser.link.open_newwindow" toInt:newState];
   }
 

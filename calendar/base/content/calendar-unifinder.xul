@@ -31,6 +31,7 @@
    -   Stefan Sitter <ssitter@googlemail.com>
    -   Philipp Kewisch <mozilla@kewis.ch>
    -   Michael Buettner <michael.buettner@sun.com>
+   -   Simon Paquet <bugzilla@babylonsounds.com>
    -
    - Alternatively, the contents of this file may be used under the terms of
    - either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -56,13 +57,11 @@
   <script type="application/x-javascript" src="chrome://global/content/globalOverlay.js"/>
 
   <vbox id="calendar-view-box">
-    <vbox id="bottom-events-box"
-          insertbefore="view-deck"
-          persist="height">
+    <vbox id="bottom-events-box" insertbefore="view-deck" persist="height">
       <hbox id="unifinder-searchBox" persist="collapsed">
         <box align="center">
-          <menulist id="event-filter-menulist" persist="value">
-            <menupopup id="event-filter-menupopup" oncommand="changeEventFilter( event );">
+          <menulist id="event-filter-menulist" value="next7Days" persist="value">
+            <menupopup id="event-filter-menupopup" oncommand="refreshEventTree()">
               <menuitem id="event-filter-all"
                         label="&calendar.events.filter.all.label;"
                         value="all"/>
@@ -94,9 +93,10 @@
           <label control="unifinder-search-field" value="&calendar.search.options.searchfor;"/>
           <textbox id="unifinder-search-field" onkeypress="searchKeyPress( this, event )" flex="1"/>
         </box>
+        <toolbarbutton id="unifinder-closer" class="unifinder-closebutton" command="calendar_show_unifinder_command"/>
       </hbox>
       <tree id="unifinder-search-results-tree" flex="1"
-            onselect="unifinderOnSelect( event ); onSelectionChanged()"
+            onselect="unifinderSelect( event ); onSelectionChanged()"
             onkeypress="unifinderKeyPress(event)"
             enableColumnDrag="true">
         <treecols id="unifinder-search-results-tree-cols">
@@ -142,7 +142,7 @@
         <treechildren tooltip="eventTreeTooltip"
                       onkeypress="if (event.keyCode == 13) unifinderEditCommand();"
                       ondragover="return( false );"
-                      ondblclick="unifinderDoubleClickEvent( event )"
+                      ondblclick="unifinderDoubleClick(event)"
                       onfocus="focusFirstItemIfNoSelection( );"/>
       </tree>
     </vbox>

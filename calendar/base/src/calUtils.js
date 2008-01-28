@@ -20,6 +20,7 @@
  *
  * Contributor(s):
  *   Philipp Kewisch <mozilla@kewis.ch>
+ *   Daniel Boelzle <daniel.boelzle@sun.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -78,10 +79,65 @@ function createAttendee() {
            createInstance(Components.interfaces.calIAttendee);
 }
 
+/* Shortcut to the io service */
+function getIOService() {
+    if (getIOService.mObject === undefined) {
+        getIOService.mObject = Components.classes["@mozilla.org/network/io-service;1"]
+                                         .getService(Components.interfaces.nsIIOService2);
+    }
+    return getIOService.mObject;
+}
+
 /* Shortcut to the calendar-manager service */
 function getCalendarManager() {
-    return Components.classes["@mozilla.org/calendar/manager;1"].
-           getService(Components.interfaces.calICalendarManager);
+    if (getCalendarManager.mObject === undefined) {
+        getCalendarManager.mObject = Components.classes["@mozilla.org/calendar/manager;1"]
+                                               .getService(Components.interfaces.calICalendarManager);
+    }
+    return getCalendarManager.mObject;
+}
+
+/* Shortcut to the ICS service */
+function getIcsService() {
+    if (getIcsService.mObject === undefined) {
+        getIcsService.mObject = Components.classes["@mozilla.org/calendar/ics-service;1"]
+                                          .getService(Components.interfaces.calIICSService);
+    }
+    return getIcsService.mObject;
+}
+
+/* Shortcut to the timezone service */
+function getTimezoneService() {
+    if (getTimezoneService.mObject === undefined) {
+        getTimezoneService.mObject = Components.classes["@mozilla.org/calendar/timezone-service;1"]
+                                               .getService(Components.interfaces.calITimezoneService);
+    }
+    return getTimezoneService.mObject;
+}
+
+/* Shortcut to calendar search service */
+function getCalendarSearchService() {
+    if (getCalendarSearchService.mObject === undefined) {
+        getCalendarSearchService.mObject = Components.classes["@mozilla.org/calendar/calendarsearch-service;1"]
+                                                     .getService(Components.interfaces.calICalendarSearchProvider);
+    }
+    return getCalendarSearchService.mObject;
+}
+
+/// @return the UTC timezone.
+function UTC() {
+    if (UTC.mObject === undefined) {
+        UTC.mObject = getTimezoneService().UTC;
+    }
+    return UTC.mObject;
+}
+
+/// @return the floating timezone.
+function floating() {
+    if (floating.mObject === undefined) {
+        floating.mObject = getTimezoneService().floating;
+    }
+    return floating.mObject;
 }
 
 /**
@@ -89,26 +145,33 @@ function getCalendarManager() {
  * use the value of the calendar.timezone.local preference, if it exists.  If
  * not, we'll do our best guess.
  *
- * @returns  a string of the Mozilla TZID for the user's default timezone.
+ * @return user's default timezone.
  */
-var gDefaultTimezone;
 function calendarDefaultTimezone() {
-    if (!gDefaultTimezone) {
-        gDefaultTimezone = getPrefSafe("calendar.timezone.local", null);
-        if (!gDefaultTimezone) {
-            gDefaultTimezone = guessSystemTimezone();
-        } else {
-            var icsSvc = Components.classes["@mozilla.org/calendar/ics-service;1"].
-                         getService(Components.interfaces.calIICSService);
-
-            // Update this tzid if necessary.
-            if (icsSvc.latestTzId(gDefaultTimezone).length) {
-                gDefaultTimezone = icsSvc.latestTzId(gDefaultTimezone);
-                setPref("calendar.timezone.local", "CHAR", gDefaultTimezone);
-            }
+    if (calendarDefaultTimezone.mTz === undefined) {
+        var prefTzid = getPrefSafe("calendar.timezone.local", null);
+        var tzid = prefTzid;
+        if (!tzid) {
+            tzid = guessSystemTimezone();
+        }
+        calendarDefaultTimezone.mTz = getTimezoneService().getTimezone(tzid);
+        ASSERT(calendarDefaultTimezone.mTz, "timezone not found: " + tzid);
+        // Update prefs if necessary:
+        if (calendarDefaultTimezone.mTz && calendarDefaultTimezone.mTz.tzid != prefTzid) {
+            setPref("calendar.timezone.local", "CHAR", calendarDefaultTimezone.mTz.tzid);
         }
     }
-    return gDefaultTimezone;
+    return calendarDefaultTimezone.mTz;
+}
+
+/**
+ * Format the given string to work inside a CSS rule selector
+ *
+ * @param aString       The string to format
+ * @return              The formatted string
+ */
+function formatStringForCSSRule(aString) {
+    return aString.replace(/ /g, "_").toLowerCase();
 }
 
 /**
@@ -118,159 +181,589 @@ function calendarDefaultTimezone() {
  * winter JSdates.  However, when available, we also use the name of the
  * timezone in the JSdate, or a string-bundle term from the locale.
  *
- * @returns  a ICS timezone string.
+ * @return a mozilla ICS timezone string.
 */
 function guessSystemTimezone() {
-    var probableTZ = null;
-    var TZname1 = null;
-    var TZname2 = null;
-    var Date1 = (new Date(2005,6,20)).toString();
-    var Date2 = (new Date(2005,12,20)).toString();
-    var nameData1 = Date1.match(/[^(]* ([^ ]*) \(([^)]+)\)/);
-    var nameData2 = Date2.match(/[^(]* ([^ ]*) \(([^)]+)\)/);
+    // Probe JSDates for basic OS timezone offsets and names.
+    const dateJun = (new Date(2005, 5,20)).toString();
+    const dateDec = (new Date(2005,11,20)).toString();
+    const tzNameRegex = /[^(]* ([^ ]*) \(([^)]+)\)/;
+    const nameDataJun = dateJun.match(tzNameRegex);
+    const nameDataDec = dateDec.match(tzNameRegex);
+    const tzNameJun = nameDataJun && nameDataJun[2];
+    const tzNameDec = nameDataDec && nameDataDec[2];
+    const offsetRegex = /[+-]\d{4}/;
+    const offsetJun = dateJun.match(offsetRegex)[0];
+    const offsetDec = dateDec.match(offsetRegex)[0];
 
-    if (nameData1 && nameData1[2]) {
-        TZname1 = nameData1[2];
-    }
-    if (nameData2 && nameData2[2]) {
-        TZname2 = nameData2[2];
-    }
+    const tzSvc = getTimezoneService();
 
-    var index = Date1.indexOf('+');
-    if (index < 0) {
-        index = Date2.indexOf('-');
-    }
-
-    // the offset is always 5 characters long
-    var TZoffset1 = Date1.substr(index, 5);
-    index = Date2.indexOf('+');
-    if (index < 0) {
-        index = Date2.indexOf('-');
-    }
-    // the offset is always 5 characters long
-    var TZoffset2 = Date2.substr(index, 5);
-
-    dump("Guessing system timezone:\n");
-    dump("TZoffset1: " + TZoffset1 + "\nTZoffset2: " + TZoffset2 + "\n");
-    if (TZname1 && TZname2) {
-        dump("TZname1: " + TZname1 + "\nTZname2: " + TZname2 + "\n");
+    function getIcalString(component, property) {
+        return (component &&
+                component.getFirstProperty(property).valueAsIcalString);
     }
 
-    var icsSvc = Components.classes["@mozilla.org/calendar/ics-service;1"].
-                 getService(Components.interfaces.calIICSService);
+    // Check if Olson ZoneInfo timezone matches OS/JSDate timezone properties:
+    // * standard offset and daylight/summer offset if present (longitude),
+    // * if has summer time, direction of change (northern/southern hemisphere)
+    // * if has summer time, dates of next transitions
+    // * timezone name (such as "Western European Standard Time").
+    // Score is 3 if matches dates and names, 2 if matches dates without names,
+    // 1 if matches dates within a week (so changes on different weekday),
+    // otherwise 0 if no match.
+    function checkTZ(tzId) {
+        var tz = tzSvc.getTimezone(tzId);
 
-    // returns 0=definitely not, 1=maybe, 2=likely
-    function checkTZ(someTZ)
-    {
-        var comp = icsSvc.getTimezone(someTZ);
-        var subComp = comp.getFirstSubcomponent("VTIMEZONE");
-        var standard = subComp.getFirstSubcomponent("STANDARD");
-        var standardTZOffset = standard.getFirstProperty("TZOFFSETTO").valueAsIcalString;
-        var standardNameProp = standard.getFirstProperty("TZNAME");
-        var standardName = standardNameProp &&
-                           standardNameProp.valueAsIcalString;
-        var daylight = subComp.getFirstSubcomponent("DAYLIGHT");
-        var daylightTZOffset = null;
-        var daylightNameProp = null;
-        var daylightName = null;
-        if (daylight) {
-            daylightTZOffset = daylight.getFirstProperty("TZOFFSETTO").valueAsIcalString;
-            daylightNameProp = daylight.getFirstProperty("TZNAME");
-            daylightName = daylightNameProp &&
-                           daylightNameProp.valueAsIcalString;
+        // Have to handle UTC separately because it has no .component.
+        if (tz.isUTC) {
+            if (offsetDec == 0 && offsetJun == 0) {
+                if (tzNameJun == "UTC" && tzNameDec == "UTC") {
+                    return 3;
+                } else {
+                    return 2;
+                }
+            } else {
+                return 0;
+            }
         }
+        
+        var subComp = tz.component;
+        // find currently applicable time period, not just first,
+        // because offsets of timezone may be changed over the years.
+        var standard = findCurrentTimePeriod(tz, subComp, "STANDARD");
+        var standardTZOffset = getIcalString(standard, "TZOFFSETTO");
+        var standardName     = getIcalString(standard, "TZNAME");
+        var daylight = findCurrentTimePeriod(tz, subComp, "DAYLIGHT");
+        var daylightTZOffset = getIcalString(daylight, "TZOFFSETTO");
+        var daylightName     = getIcalString(daylight, "TZNAME");
 
-        if (TZoffset2 == standardTZOffset && TZoffset2 == TZoffset1 &&
-           !daylight) {
-            if (!standardName || standardName == TZname1) {
+        // Try northern hemisphere cases.
+        if (offsetDec == standardTZOffset && offsetDec == offsetJun &&
+            !daylight) {
+            if (standardName && standardName == tzNameJun) {
+                return 3;
+            } else {
                 return 2;
             }
-            return 1;
         }
 
-        if (TZoffset2 == standardTZOffset && TZoffset1 == daylightTZOffset) {
-            if ((!standardName || standardName == TZname1) &&
-                (!daylightName || daylightName == TZname2)) {
-                return 2;
+        if (offsetDec == standardTZOffset && offsetJun == daylightTZOffset &&
+            daylight) {
+            var dateMatchWt = systemTZMatchesTimeShiftDates(tz, subComp);
+            if (dateMatchWt > 0) { 
+                if (standardName && standardName == tzNameJun &&
+                    daylightName && daylightName == tzNameDec) {
+                    return 3;
+                } else {
+                    return dateMatchWt;
+                }
             }
-            return 1;
         }
 
-        // Now flip them and check again, to cover the southern hemisphere case
-        if (TZoffset1 == standardTZOffset && TZoffset2 == TZoffset1 &&
-           !daylight) {
-            if (!standardName || standardName == TZname2) {
+        // Now flip them and check again, to cover southern hemisphere cases.
+        if (offsetJun == standardTZOffset && offsetDec == offsetJun &&
+            !daylight) {
+            if (standardName && standardName == tzNameDec) {
+                return 3;
+            } else {
                 return 2;
             }
-            return 1;
         }
 
-        if (TZoffset1 == standardTZOffset && TZoffset2 == daylightTZOffset) {
-            if ((!standardName || standardName == TZname2) &&
-                (!daylightName || daylightName == TZname1)) {
-                return 2;
+        if (offsetJun == standardTZOffset && offsetDec == daylightTZOffset &&
+            daylight) {
+            var dateMatchWt = systemTZMatchesTimeShiftDates(tz, subComp);
+            if (dateMatchWt > 0) { 
+                if (standardName && standardName == tzNameJun &&
+                    daylightName && daylightName == tzNameDec) {
+                    return 3;
+                } else {
+                    return dateMatchWt;
+                }
             }
-            return 1;
         }
         return 0;
     }
 
-    try {
-        var stringBundleTZ = calGetString("calendar", "likelyTimezone");
-
-        if (stringBundleTZ.indexOf("/mozilla.org/") == -1) {
-            // This happens if the l10n team didn't know how to get a time from
-            // tzdata.c.  To convert an Olson time to a ics-timezone-string we
-            // need to append this prefix.
-            // XXX Get this prefix from calIICSService.tzIdPrefix
-            stringBundleTZ = "/mozilla.org/20070129_1/" + stringBundleTZ;
+    // returns 2=match-within-hours, 1=match-within-week, 0=no-match
+    function systemTZMatchesTimeShiftDates(tz, subComp) {
+        // Verify local autumn and spring shifts also occur in system timezone
+        // (jsDate) on correct date in correct direction.
+        // (Differs for northern/southern hemisphere.
+        //  Local autumn shift is to local winter STANDARD time.
+        //  Local spring shift is to local summer DAYLIGHT time.)
+        const autumnShiftJSDate =
+            findCurrentTimePeriod(tz, subComp, "STANDARD", true);
+        const afterAutumnShiftJSDate = new Date(autumnShiftJSDate);
+        const beforeAutumnShiftJSDate = new Date(autumnShiftJSDate);
+        const springShiftJSDate =
+            findCurrentTimePeriod(tz, subComp, "DAYLIGHT", true);
+        const beforeSpringShiftJSDate = new Date(springShiftJSDate);
+        const afterSpringShiftJSDate = new Date(springShiftJSDate);
+        // Try with 6 HOURS fuzz in either direction, since OS and ZoneInfo
+        // may disagree on the exact time of shift (midnight, 2am, 4am, etc).
+        beforeAutumnShiftJSDate.setHours(autumnShiftJSDate.getHours()-6);
+        afterAutumnShiftJSDate.setHours(autumnShiftJSDate.getHours()+6);
+        afterSpringShiftJSDate.setHours(afterSpringShiftJSDate.getHours()+6);
+        beforeSpringShiftJSDate.setHours(beforeSpringShiftJSDate.getHours()-6);
+        if ((beforeAutumnShiftJSDate.getTimezoneOffset() <
+             afterAutumnShiftJSDate.getTimezoneOffset()) &&
+            (beforeSpringShiftJSDate.getTimezoneOffset() >
+             afterSpringShiftJSDate.getTimezoneOffset())) {
+            return 2;
+        }          
+        // Try with 7 DAYS fuzz in either direction, so if no other tz found,
+        // will have a nearby tz that disagrees only on the weekday of shift
+        // (sunday vs. friday vs. calendar day), or off by exactly one week,
+        // (e.g., needed to guess Africa/Cairo on w2k in 2006).
+        beforeAutumnShiftJSDate.setDate(autumnShiftJSDate.getDate()-7);
+        afterAutumnShiftJSDate.setDate(autumnShiftJSDate.getDate()+7);
+        afterSpringShiftJSDate.setDate(afterSpringShiftJSDate.getDate()+7);
+        beforeSpringShiftJSDate.setDate(beforeSpringShiftJSDate.getDate()-7);
+        if ((beforeAutumnShiftJSDate.getTimezoneOffset() <
+             afterAutumnShiftJSDate.getTimezoneOffset()) &&
+            (beforeSpringShiftJSDate.getTimezoneOffset() >
+             afterSpringShiftJSDate.getTimezoneOffset())) {
+            return 1;
         }
+        // no match
+        return 0;
+    }
 
-        switch (checkTZ(stringBundleTZ)) {
-            case 0:
-                break;
-            case 1:
-                if (!probableTZ)
-                    probableTZ = stringBundleTZ;
-                break;
-            case 2:
-                return stringBundleTZ;
-        }
-    }
-    catch (ex) { // Oh well, this didn't work, next option...
-    }
-        
-    var tzIDs = icsSvc.timezoneIds;
-    while (tzIDs.hasMore()) {
-        var theTZ = tzIDs.getNext();
-        try {
-            switch (checkTZ(theTZ)) {
-                case 0: break;
-                case 1: 
-                    if (!probableTZ) {
-                        probableTZ = theTZ;
+    const todayUTC = createDateTime(); todayUTC.jsDate = new Date();
+    const oneYrUTC = todayUTC.clone(); oneYrUTC.year += 1;
+    const periodStartCalDate = createDateTime();
+    const periodUntilCalDate = createDateTime(); // until timezone is UTC
+    const periodCalRule =
+        Components.classes["@mozilla.org/calendar/recurrence-rule;1"]
+                  .createInstance(Components.interfaces.calIRecurrenceRule);
+    const untilRegex = /UNTIL=(\d{8}T\d{6}Z)/;
+
+    function findCurrentTimePeriod(tz, subComp, standardOrDaylight,
+                                   isForNextTransitionDate) { 
+        periodStartCalDate.timezone = tz;
+        // Iterate through 'STANDARD' declarations or 'DAYLIGHT' declarations
+        // (periods in history with different settings.
+        //  e.g., US changes daylight start in 2007 (from April to March).)
+        // Each period is marked by a DTSTART.
+        // Find the currently applicable period: has most recent DTSTART
+        // not later than today and no UNTIL, or UNTIL is greater than today.
+        for (var period = subComp.getFirstSubcomponent(standardOrDaylight);
+             period;
+             period = subComp.getNextSubcomponent(standardOrDaylight)) {
+            periodStartCalDate.icalString = getIcalString(period, "DTSTART");
+            if (oneYrUTC.nativeTime < periodStartCalDate.nativeTime) {
+                continue; // period starts too far in future
+            }
+            // Must examine UNTIL date (not next daylight start) because
+            // some zones (e.g., Arizona, Hawaii) may stop using daylight
+            // time, so there might not be a next daylight start.
+            var rrule = period.getFirstProperty("RRULE");
+            if (rrule) { 
+                var match = untilRegex.exec(rrule.valueAsIcalString);
+                if (match) {
+                    periodUntilCalDate.icalString = match[1];
+                    if (todayUTC.nativeTime > periodUntilDate.nativeTime) {
+                        continue; // period ends too early
                     }
-                    break;
-                case 2:
-                    return theTZ;
+                } // else forever rule
+            } // else no daylight rule
+
+            // found period that covers today.
+            if (!isForNextTransitionDate) {
+                return period;
+            } else /*isForNextTranstionDate*/ { 
+                if (todayUTC.nativeTime < periodStartCalDate.nativeTime) {
+                    // already know periodStartCalDate < oneYr from now,
+                    // and transitions are at most once per year, so it is next.
+                    return periodStartCalDate.jsDate;
+                } else if (rrule) { 
+                    // find next occurrence after today
+                    periodCalRule.icalProperty = rrule;
+                    var nextTransitionDate =
+                        periodCalRule.getNextOccurrence(periodStartCalDate,
+                                                        todayUTC);
+                    // make sure rule doesn't end before next transition date.
+                    if (nextTransitionDate)
+                        return nextTransitionDate.jsDate;
+                }
             }
         }
-        catch (ex) {
+        // no such period found
+        return null; 
+    }
+
+
+    // Try to find a tz that matches OS/JSDate timezone.  If no name match,
+    // will use first of probable timezone(s) with highest score.
+    var probableTZId = "floating"; // default fallback tz if no tz matches.
+    var probableTZScore = 0;
+    var probableTZSource = null;
+
+    const sbSvc = 
+        Components.classes["@mozilla.org/intl/stringbundle;1"]
+        .getService(Components.interfaces.nsIStringBundleService);
+    const calProperties =
+        sbSvc.createBundle("chrome://calendar/locale/calendar.properties");
+
+    // First, try to detect operating system timezone.
+    try { 
+        var osUserTimeZone = null;
+        var zoneInfoIdFromOSUserTimeZone = null;
+
+        if (navigator.oscpu.match(/^Windows/)) {
+            var regOSName, fileOSName;
+            if (navigator.oscpu.match(/^Windows NT/)) {
+                regOSName  = "Windows NT";
+                fileOSName = "WindowsNT";
+            } else {
+                // Note: windows 98 compatibility will be deleted
+                // in releases built on Gecko 1.9 or later.
+                regOSName  = "Windows";
+                fileOSName = "Windows98";
+            }                    
+
+            // If on Windows NT (2K/XP/Vista), current timezone only lists its
+            // localized name, so to find its registry key name, match localized
+            // name to localized names of each windows timezone listed in
+            // registry.  Then use the registry key name to see if this
+            // timezone has a known ZoneInfo name.
+            var wrk = (Components
+                       .classes["@mozilla.org/windows-registry-key;1"]
+                       .createInstance(Components.interfaces.nsIWindowsRegKey));
+            wrk.open(wrk.ROOT_KEY_LOCAL_MACHINE,
+                     "SYSTEM\\CurrentControlSet\\Control\\TimeZoneInformation",
+                     wrk.ACCESS_READ);
+            var currentTZStandardName = wrk.readStringValue("StandardName");
+            wrk.close()
+
+            wrk.open(wrk.ROOT_KEY_LOCAL_MACHINE,
+                     ("SOFTWARE\\Microsoft\\"+regOSName+
+                      "\\CurrentVersion\\Time Zones"),
+                     wrk.ACCESS_READ);
+
+            // Linear search matching localized name of standard timezone
+            // to find the non-localized registry key.
+            // (Registry keys are sorted by subkeyName, not by localized name
+            //  nor offset, so cannot use binary search.)
+            for (var i = 0; i < wrk.childCount; i++) {
+              var subkeyName  = wrk.getChildName(i);
+              var subkey = wrk.openChild(subkeyName, wrk.ACCESS_READ);
+              var std = subkey.readStringValue("Std");
+              subkey.close();
+              if (std == currentTZStandardName) {
+                osUserTimeZone = subkeyName;
+                break;
+              }
+            }
+            wrk.close();
+
+            if (osUserTimeZone != null) {
+                // Lookup timezone registry key in table of known tz keys
+                // to convert to ZoneInfo timezone id.
+                const regKeyToZoneInfoBundle =
+                    sbSvc.createBundle("chrome://calendar/content/"+
+                                       fileOSName+"ToZoneInfoTZId.properties");
+                zoneInfoIdFromOSUserTimeZone =
+                    regKeyToZoneInfoBundle.GetStringFromName(osUserTimeZone);
+            }
+        } else {
+            // Else look for ZoneInfo timezone id in
+            // - TZ environment variable value
+            // - /etc/localtime symbolic link target path
+            // - /etc/TIMEZONE or /etc/timezone file content
+            // - /etc/sysconfig/clock file line content.
+            // The timezone is set per user via the TZ environment variable.
+            // TZ may contain a path that may start with a colon and ends with
+            // a ZoneInfo timezone identifier, such as ":America/New_York" or 
+            // ":/share/lib/zoneinfo/America/New_York".  The others are
+            // in the filesystem so they give one timezone for the system;
+            // the values are similar (but cannot have a leading colon).
+            // (Note: the OS ZoneInfo database may be a different version from
+            // the one we use, so still need to check that DST dates match.)
+            var continent = "Africa|America|Antarctica|Asia|Australia|Europe";
+            var ocean     = "Arctic|Atlantic|Indian|Pacific";
+            var tzRegex   = new RegExp(".*((?:"+continent+"|"+ocean+")"+
+                                       "(?:[/][-A-Z_a-z]+)+)");
+            const CC = Components.classes;
+            const CI = Components.interfaces;
+            var envSvc = (CC["@mozilla.org/process/environment;1"]
+                          .getService(Components.interfaces.nsIEnvironment));
+            function environmentVariableValue(varName) {
+                var value = envSvc.get(varName);
+                if (!value) return "";
+                if (!value.match(tzRegex)) return "";
+                return varName+"="+value;
+            }
+            function symbolicLinkTarget(filepath) {
+                try {
+                    var file = (CC["@mozilla.org/file/local;1"]
+                                .createInstance(CI.nsILocalFile));
+                    file.initWithPath(filepath);
+                    file.QueryInterface(CI.nsIFile);
+                    if (!file.exists()) return "";
+                    if (!file.isSymlink()) return "";
+                    if (!file.target.match(tzRegex)) return "";
+                    return filepath +" -> "+file.target;
+                } catch (ex) {
+                    Components.utils.reportError(filepath+": "+ex);
+                    return "";
+                }
+            }
+            function fileFirstZoneLineString(filepath) {
+                // return first line of file that matches tzRegex (ZoneInfo id),
+                // or "" if no file or no matching line.
+                try {
+                    var file = (CC["@mozilla.org/file/local;1"]
+                                .createInstance(CI.nsILocalFile));
+                    file.initWithPath(filepath);
+                    file.QueryInterface(CI.nsIFile);
+                    if (!file.exists()) return "";
+                    var fileInstream =
+                        (CC["@mozilla.org/network/file-input-stream;1"].
+                         createInstance(CI.nsIFileInputStream));
+                    const PR_RDONLY = 0x1;
+                    fileInstream.init(file, PR_RDONLY, 0, 0);
+                    fileInstream.QueryInterface(CI.nsILineInputStream);
+                    try { 
+                        var line = {}, hasMore = true, MAXLINES = 10;
+                        for (var i = 0; hasMore && i < MAXLINES; i++) { 
+                            hasMore = fileInstream.readLine(line);
+                            if (line.value && line.value.match(tzRegex)) { 
+                                return filepath+": "+line.value;
+                            }
+                        }
+                        return ""; // not found
+                    } finally {
+                        fileInstream.close();
+                    }
+                } catch (ex) {
+                    Components.utils.reportError(filepath+": "+ex);
+                    return "";
+                }
+              
+            }
+            osUserTimeZone = (environmentVariableValue("TZ") ||
+                              symbolicLinkTarget("/etc/localtime") ||
+                              fileFirstZoneLineString("/etc/TIMEZONE") ||
+                              fileFirstZoneLineString("/etc/timezone") ||
+                              fileFirstZoneLineString("/etc/sysconfig/clock"));
+            var results = osUserTimeZone.match(tzRegex);
+            if (results) {
+                zoneInfoIdFromOSUserTimeZone = results[1];
+            }
+        }
+
+        // check how well OS tz matches tz defined in our version of zoneinfo db
+        if (zoneInfoIdFromOSUserTimeZone != null) { 
+            var tzId = tzSvc.tzidPrefix + zoneInfoIdFromOSUserTimeZone;
+            var score = checkTZ(tzId);
+            switch(score) {
+            case 0:
+                // Did not match.
+                // Maybe OS or Application is old, and the timezone changed.
+                // Or maybe user turned off DST in Date/Time control panel.
+                // Will look for a better matching tz, or fallback to floating.
+                // (Match OS so alarms go off at time indicated by OS clock.)
+                const consoleSvc =
+                    (Components.classes["@mozilla.org/consoleservice;1"]
+                     .getService(Components.interfaces.nsIConsoleService));
+                var msg = (calProperties.formatStringFromName
+                           ("WarningOSTZNoMatch",
+                            [osUserTimeZone, zoneInfoIdFromOSUserTimeZone], 2));
+                consoleSvc.logStringMessage(msg);
+                break;
+            case 1: case 2:
+                // inexact match: OS TZ and our ZoneInfo TZ matched imperfectly.
+                // Will keep looking, will use tzId unless another is better.
+                // (maybe OS TZ has changed to match a nearby TZ, so maybe
+                // another ZoneInfo TZ matches it better).
+                probableTZId = tzId;
+                probableTZScore = score;
+                probableTZSource = (calProperties.formatStringFromName
+                                    ("TZFromOS", [osUserTimeZone], 1));
+                break;
+            case 3:
+                // exact match
+                return tzId;
+            }
+        }
+    } catch (ex) {
+        // zoneInfo id given was not recognized by our ZoneInfo database
+        var errMsg = (calProperties.formatStringFromName
+                      ("SkippingOSTimezone",
+                       [zoneInfoIdFromOSUserTimeZone || osUserTimeZone], 1));
+        Components.utils.reportError(errMsg+" "+ex);
+    } 
+
+    // Second, give priority to "likelyTimezone"s if provided by locale.
+    try {
+        // The likelyTimezone property is a comma-separated list of 
+        // ZoneInfo timezone ids.
+        const bundleTZString =
+            calProperties.GetStringFromName("likelyTimezone");
+        const bundleTZIds = bundleTZString.split(/\s*,\s*/);
+        for each (var bareTZId in bundleTZIds) { 
+            var tzId = bareTZId; 
+            if (tzId.indexOf("/mozilla.org/") == -1) {
+                // Convert a ZoneInfo timezone to a mozilla timezone-string
+                tzId = tzSvc.tzidPrefix + tzId;
+            }
+            try { 
+                var score = checkTZ(tzId);
+
+                switch (score) {
+                case 0:
+                    break;
+                case 1: case 2:
+                    if (score > probableTZScore) { 
+                        probableTZId = tzId;
+                        probableTZScore = score;
+                        probableTZSource = (calProperties.GetStringFromName
+                                            ("TZFromLocale"));
+                    }
+                    break;
+                case 3:
+                    return tzId;
+                }
+            } catch (ex) {
+                var errMsg = (calProperties.formatStringFromName
+                              ("SkippingLocaleTimezone", [bareTZId], 1));
+                Components.utils.reportError(errMsg+" "+ex);
+            }
+        }
+    } catch (ex) { // Oh well, this didn't work, next option...
+        Components.utils.reportError(ex);
+    }
+        
+    // Third, try all known timezones.
+    const tzIDs = tzSvc.timezoneIds;
+    while (tzIDs.hasMore()) {
+        var tzId = tzIDs.getNext();
+        try {
+            var score = checkTZ(tzId);
+            switch(score) { 
+            case 0: break;
+            case 1: case 2:
+                if (score > probableTZScore) {
+                    probableTZId = tzId;
+                    probableTZScore = score;
+                    probableTZSource = (calProperties.GetStringFromName
+                                        ("TZFromKnownTimezones"));
+                }
+                break;
+            case 3:
+                return tzId;
+            }
+        } catch (ex) { // bug if ics service doesn't recognize own tzid!
+            var msg = ("ics-service doesn't recognize own tzid: "+tzId+"\n"+
+                       ex);
+            Components.utils.reportError(msg);
         }
     }
 
-    // If we get to this point, should we alert the user?
-    if (probableTZ) {
-        return probableTZ;
+    // If reach here, there were no score=3 matches, so Warn in console.
+    try { 
+        const jsConsole = Components.classes["@mozilla.org/consoleservice;1"]
+                           .getService(Components.interfaces.nsIConsoleService);
+        switch(probableTZScore) {
+        case 0:
+            jsConsole.logStringMessage(calProperties.GetStringFromName
+                                       ("warningUsingFloatingTZNoMatch"));
+            break;
+        case 1: case 2:
+            var tzId = probableTZId;
+            var tz = tzSvc.getTimezone(tzId);
+            var subComp = tz.component;
+            var standard = findCurrentTimePeriod(tz, subComp, "STANDARD");
+            var standardTZOffset = getIcalString(standard, "TZOFFSETTO");
+            var daylight = findCurrentTimePeriod(tz, subComp, "DAYLIGHT");
+            var daylightTZOffset = getIcalString(daylight, "TZOFFSETTO");
+            var warningDetail;
+            if (probableTZScore == 1) {
+                // score 1 means has daylight time,
+                // but transitions start on different weekday from os timezone.
+                function weekday(icsDate) {
+                    var calDate = createDateTime();
+                    calDate.timezone = tz;
+                    calDate.icalString = icsDate;
+                    return calDate.jsDate.toLocaleFormat("%a");
+                }
+                var standardStart = getIcalString(standard, "DTSTART");
+                var standardStartWeekday = weekday(standardStart);
+                var standardRule  = getIcalString(standard, "RRULE");
+                var standardText = 
+                    ("  Standard: "+standardStart+" "+standardStartWeekday+"\n"+
+                     "            "+standardRule+"\n");
+                var daylightStart = getIcalString(daylight, "DTSTART");
+                var daylightStartWeekday = weekday(daylightStart);
+                var daylightRule  = getIcalString(daylight, "RRULE");
+                var daylightText =
+                    ("  Daylight: "+daylightStart+" "+daylightStartWeekday+"\n"+
+                     "            "+daylightRule+"\n");
+                warningDetail =
+                    ((standardStart < daylightStart
+                      ? standardText + daylightText
+                      : daylightText + standardText)+
+                     (calProperties.GetStringFromName
+                      ("TZAlmostMatchesOSDifferAtMostAWeek")));
+            } else {
+                warningDetail =
+                    (calProperties.GetStringFromName("TZSeemsToMatchOS"));
+            }
+            var offsetString = (standardTZOffset+
+                                 (!daylightTZOffset? "": "/"+daylightTZOffset));
+            var warningMsg = (calProperties.formatStringFromName
+                              ("WarningUsingGuessedTZ",
+                               [tzId, offsetString, warningDetail,
+                                probableTZSource], 4));
+            jsConsole.logStringMessage(warningMsg);
+            break;
+        }
+    } catch (ex) { // don't abort if error occurs warning user
+        Components.utils.reportError(ex);
     }
 
-    // Everything failed, so this is our only option.
-    return "floating";
+    // return the guessed timezone
+    return probableTZId;
 }
 
 /**
  * Shared dialog functions
+ * Gets the calendar directory, defaults to <profile-dir>/calendar
  */
+function getCalendarDirectory() {
+    if (getCalendarDirectory.mDir === undefined) {
+        var dirSvc = Components.classes["@mozilla.org/file/directory_service;1"]
+                               .getService(Components.interfaces.nsIProperties);
+        var dir = dirSvc.get("ProfD", Components.interfaces.nsILocalFile);
+        dir.append("calendar-data");
+        if (!dir.exists()) {
+            try {
+                dir.create(Components.interfaces.nsIFile.DIRECTORY_TYPE, 0700);
+            } catch (exc) {
+                ASSERT(false, exc);
+                throw exc;
+            }
+        }
+        getCalendarDirectory.mDir = dir;
+    }
+    return getCalendarDirectory.mDir.clone();
+}
+
+/**
+ * Check if the specified calendar is writable. This is the case when it is not
+ * marked readOnly, we are not offline, or we are offline and the calendar is
+ * local.
+ *
+ * @param aCalendar     The calendar to check
+ * @return              True if the calendar is writable
+ */
+function isCalendarWritable(aCalendar) {
+    return (!aCalendar.readOnly &&
+           (!getIOService().offline ||
+            aCalendar.getProperty("requiresNetwork") === false));
+}
 
 /**
  * Opens the Create Calendar wizard
@@ -495,14 +988,21 @@ function getLocalizedPref(aPrefName, aDefault) {
  * @param aParams      optional array of parameters to format the string
  */
 function calGetString(aBundleName, aStringName, aParams) {
-    var sbs = Components.classes["@mozilla.org/intl/stringbundle;1"]
-                        .getService(Components.interfaces.nsIStringBundleService);
-    var props = sbs.createBundle("chrome://calendar/locale/"+aBundleName+".properties");
+    try {
+        var sbs = Components.classes["@mozilla.org/intl/stringbundle;1"]
+                            .getService(Components.interfaces.nsIStringBundleService);
+        var props = sbs.createBundle("chrome://calendar/locale/"+aBundleName+".properties");
 
-    if (aParams && aParams.length) {
-        return props.formatStringFromName(aStringName, aParams, aParams.length);
-    } else {
-        return props.GetStringFromName(aStringName);
+        if (aParams && aParams.length) {
+            return props.formatStringFromName(aStringName, aParams, aParams.length);
+        } else {
+            return props.GetStringFromName(aStringName);
+        }
+    } catch (ex) {
+        var s = "Failed to read '" + aStringName + "' from " +
+                "'chrome://calendar/locale/" + aBundleName + ".properties'.";
+        Components.utils.reportError(s + " Error: " + ex);
+        return s;
     }
 }
 
@@ -550,9 +1050,18 @@ function compareItems(aItem, aOtherItem) {
  *
  * @param aObject        first object to be compared
  * @param aOtherObject   second object to be compared
- * @param aIID           IID to use in comparison
+ * @param aIID           IID to use in comparison, undefined/null defaults to nsISupports
  */
 function compareObjects(aObject, aOtherObject, aIID) {
+    // xxx todo: seems to work fine e.g. for WCAP, but I still mistrust this trickery...
+    //           Anybody knows an official API that could be used for this purpose?
+    //           For what reason do clients need to pass aIID since
+    //           every XPCOM object has to implement nsISupports?
+    //           XPCOM (like COM, like UNO, ...) defines that QueryInterface *only* needs to return
+    //           the very same pointer for nsISupports during its lifetime.
+    if (!aIID) {
+        aIID = Components.interfaces.nsISupports;
+    }
     var sip1 = Components.classes["@mozilla.org/supports-interface-pointer;1"].
                createInstance(Components.interfaces.nsISupportsInterfacePointer);
     sip1.data = aObject;
@@ -587,12 +1096,52 @@ function compareArrays(aOne, aTwo, compareFunc) {
  * Ensures the passed IID is in the list, else throws Components.results.NS_ERROR_NO_INTERFACE.
  */
 function ensureIID(aList, aIID) {
-    function checkIID(iid) {
-        return iid.equals(aIID);
+    for each (var iid in aList) {
+        if (aIID.equals(iid))
+            return;
     }
-    if (!aList.some(checkIID)) {
-        throw Components.results.NS_ERROR_NO_INTERFACE;
+    throw Components.results.NS_ERROR_NO_INTERFACE
+}
+
+/**
+ * Takes care of all QueryInterface business, including calling the QI of any
+ * existing parent prototypes.
+ *
+ * @param aSelf         The object the QueryInterface is being made to
+ * @param aProto        Caller's prototype object
+ * @param aIID          The IID to check for
+ * @param aList         (Optional if aClassInfo is specified) An array of
+ *                        interfaces from Components.interfaces
+ * @param aClassInfo    (Optional) an Object containing the class info for this
+ *                        prototype.
+ */
+function doQueryInterface(aSelf, aProto, aIID, aList, aClassInfo) {
+    if (aClassInfo && aIID.equals(Components.interfaces.nsIClassInfo)) {
+        return aClassInfo;
     }
+
+    var list = aList;
+    if (!list && aClassInfo) {
+        list = aClassInfo.getInterfaces({});
+    }
+
+    var list = aList;
+    if (!list && aClassInfo) {
+        list = aClassInfo.getInterfaces({});
+    }
+
+    for each (var iid in list) {
+        if (aIID.equals(iid))
+            return aSelf;
+    }
+
+    var base = aProto.__proto__;
+
+    if (base && base.QueryInterface) {
+        // Try to QI the base prototype
+        return base.QueryInterface.call(aSelf, aIID);
+    }
+    throw Components.results.NS_ERROR_NO_INTERFACE;
 }
 
 /**
@@ -603,16 +1152,10 @@ function ensureIID(aList, aIID) {
  * @param aDate  the date or datetime to check
  */
 function ensureDateTime(aDate) {
-    if (!aDate) {
-        return null;
-    }
-    if (!aDate.isDate) {
+    if (!aDate || !aDate.isDate) {
         return aDate;
     }
     var newDate = aDate.clone();
-    newDate.hour = 0;
-    newDate.minute = 0;
-    newDate.second = 0;
     newDate.isDate = false;
     return newDate;
 }
@@ -659,22 +1202,36 @@ function LOG(aArg) {
 }
 
 /**
- * Returns a string describing the current js-stack.  Note that this is
- * different than Components.stack, in that STACK just returns that js
- * functions that were called on the way to this function.
+ * Dumps a warning to both console and js console.
  *
- * @param aDepth (optional) The number of frames to include
+ * @param aMessage warning message
+ */
+function WARN(aMessage) {
+    dump("Warning: " + aMessage + '\n');
+    var scriptError = Components.classes["@mozilla.org/scripterror;1"]
+                                .createInstance(Components.interfaces.nsIScriptError);
+    scriptError.init(aMessage, null, null, 0, 0,
+                     Components.interfaces.nsIScriptError.warningFlag,
+                     "component javascript");
+    var consoleSvc = Components.classes["@mozilla.org/consoleservice;1"]
+                               .getService(Components.interfaces.nsIConsoleService);
+    consoleSvc.logMessage(scriptError);
+}
+
+/**
+ * Returns a string describing the current js-stack with filename and line
+ * numbers.
+ *
+ * @param aDepth (optional) The number of frames to include. Defaults to 5.
  */
 function STACK(aDepth) {
     var depth = aDepth || 5;
     var stack = "";
-    var frame = arguments.callee.caller;
-    for (var i = 1; i <= depth; i++) {
-        stack += i+": "+ frame.name+ "\n";
-        frame = frame.arguments.callee.caller;
-        if (!frame) {
-            break;
-        }
+    var frame = Components.stack.caller;
+    for (var i = 1; i <= depth && frame; i++) {
+        stack += i + ": [" + frame.filename + ":" +
+                 frame.lineNumber + "] " + frame.name + "\n";
+        frame = frame.caller;
     }
     return stack;
 }
@@ -852,21 +1409,46 @@ function calGetEndDate(aItem)
 }
 
 /**
- * Returns the item's start (or due) date if the item is in the specified Range;
- * null otherwise.
+ * Checks whether the passed item fits into the demanded range.
+ *
+ * @param item               the item
+ * @param rangeStart         (inclusive) range start or null (open range)
+ * @param rangeStart         (exclusive) range end or null (open range)
+ * @param returnDtstartOrDue returns item's start (or due) date in case
+ *                           the item is in the specified Range; null otherwise.
  */
-function checkIfInRange(item, rangeStart, rangeEnd)
+function checkIfInRange(item, rangeStart, rangeEnd, returnDtstartOrDue)
 {
-    var dueDate = null;
-    var startDate = (item.getProperty("DTSTART") ||
-                     (dueDate = item.getProperty("DUE")));
-    if (!startDate) {
-        // DTSTART or DUE mandatory
-        return null;
+    var startDate;
+    var endDate;
+    if (isEvent(item)) {
+        startDate = item.startDate;
+        if (!startDate) { // DTSTART mandatory
+            // xxx todo: should we assert this case?
+            return null;
+        }
+        endDate = (item.endDate || startDate);
+    } else {
+        var dueDate = item.dueDate;
+        startDate = (item.entryDate || dueDate);
+        if (!startDate) {
+            if (returnDtstartOrDue) { // DTSTART or DUE mandatory
+                return null;
+            }
+            // 3.6.2. To-do Component
+            // A "VTODO" calendar component without the "DTSTART" and "DUE" (or
+            // "DURATION") properties specifies a to-do that will be associated
+            // with each successive calendar date, until it is completed.
+            var completedDate = item.completedDate;
+            if (completedDate) {
+                var queryStart = ensureDateTime(rangeStart);
+                completedDate = ensureDateTime(completedDate);
+                return (!queryStart || completedDate.compare(queryStart) > 0);
+            }
+            return true;
+        }
+        endDate = (dueDate || startDate);
     }
-    var endDate = (item.getProperty("DTEND") ||
-                   (dueDate ? dueDate : item.getProperty("DUE")) ||
-                   startDate);
 
     var start = ensureDateTime(startDate);
     var end = ensureDateTime(endDate);
@@ -900,213 +1482,7 @@ function isSunbird()
     return appInfo.ID == kSUNBIRD_UID;
 }
 
-function showElement(elementId)
-{
-    try {
-        document.getElementById(elementId).removeAttribute("hidden");
-    } catch (e) {
-        dump("showElement: Couldn't remove hidden attribute from " + elementId + "\n");
-    }
-}
 
-
-function hideElement(elementId)
-{
-    try {
-        document.getElementById(elementId).setAttribute("hidden", "true");
-    } catch (e) {
-        dump("hideElement: Couldn't set hidden attribute on " + elementId + "\n");
-    }
-}
-
-
-function enableElement(elementId)
-{
-    try {
-        //document.getElementById(elementId).setAttribute("disabled", "false");
-
-        // call remove attribute beacuse some widget code checks for the presense of a 
-        // disabled attribute, not the value.
-        document.getElementById(elementId).removeAttribute("disabled");
-    } catch (e) {
-        dump("enableElement: Couldn't remove disabled attribute on " + elementId + "\n");
-    }
-}
-
-
-function disableElement(elementId)
-{
-    try {
-        document.getElementById(elementId).setAttribute( "disabled", "true");
-    } catch (e) {
-        dump("disableElement: Couldn't set disabled attribute to true on " +
-             elementId + "\n");
-    }
-}
-
-
-/**
-*   Helper function for filling the form,
-*   Set the value of a property of a XUL element
-*
-* PARAMETERS
-*      elementId     - ID of XUL element to set
-*      newValue      - value to set property to ( if undefined no change is made )
-*      propertyName  - OPTIONAL name of property to set, default is "value",
-*                      use "checked" for radios & checkboxes, "data" for
-*                      drop-downs
-*/
-function setElementValue(elementId, newValue, propertyName)
-{
-    var undefined;
-
-    if (newValue !== undefined) {
-        var field = document.getElementById(elementId);
-
-        if (newValue === false) {
-            try {
-                field.removeAttribute(propertyName);
-            } catch (e) {
-                dump("setFieldValue: field.removeAttribute couldn't remove " +
-                propertyName + " from " + elementId + " e: " + e + "\n");
-            }
-        } else if (propertyName) {
-            try {
-                field.setAttribute(propertyName, newValue);
-            } catch (e) {
-                dump("setFieldValue: field.setAttribute couldn't set " +
-                propertyName + " from " + elementId + " to " + newValue +
-                " e: " + e + "\n");
-            }
-        } else {
-            field.value = newValue;
-        }
-    }
-}
-
-
-/**
-*   Helper function for getting data from the form,
-*   Get the value of a property of a XUL element
-*
-* PARAMETERS
-*      elementId     - ID of XUL element to get from
-*      propertyName  - OPTIONAL name of property to set, default is "value",
-*                      use "checked" for radios & checkboxes, "data" for
-*                      drop-downs
-*   RETURN
-*      newValue      - value of property
-*/
-function getElementValue(elementId, propertyName)
-{
-    var field = document.getElementById(elementId);
-
-    if (propertyName) {
-        return field[propertyName];
-    }
-    return field.value;
-}
-
-
-function processEnableCheckbox(checkboxId, elementId)
-{
-    if (document.getElementById(checkboxId).checked) {
-        enableElement(elementId);
-    } else {
-        disableElement(elementId);
-    }
-}
-
-
-/*
- *  Enable/disable button if there are children in a listbox
- */
-function updateListboxDeleteButton(listboxId, buttonId)
-{
-    if (document.getElementById(listboxId).getRowCount() > 0) {
-        enableElement(buttonId);
-    } else {
-        disableElement(buttonId);
-    }
-}
-
-
-/*
- *  Update plural singular menu items
- */
-function updateMenuLabels(lengthFieldId, menuId )
-{
-    var field = document.getElementById(lengthFieldId);
-    var menu  = document.getElementById(menuId);
-
-    // figure out whether we should use singular or plural
-    var length = field.value;
-
-    var newLabelNumber;
-
-    // XXX This assumes that "0 days, minutes, etc." is plural in other languages.
-    if ( (Number(length) == 0) || (Number(length) > 1) ) {
-        newLabelNumber = "label2"
-    } else {
-        newLabelNumber = "label1"
-    }
-
-    // see what we currently show and change it if required
-    var oldLabelNumber = menu.getAttribute("labelnumber");
-
-    if (newLabelNumber != oldLabelNumber) {
-        // remember what we are showing now
-        menu.setAttribute("labelnumber", newLabelNumber);
-
-        // update the menu items
-        var items = menu.getElementsByTagName("menuitem");
-
-        for(var i = 0; i < items.length; ++i) {
-            var menuItem = items[i];
-            var newLabel = menuItem.getAttribute(newLabelNumber);
-            menuItem.label = newLabel;
-            menuItem.setAttribute("label", newLabel);
-        }
-
-        // force the menu selection to redraw
-        var saveSelectedIndex = menu.selectedIndex;
-        menu.selectedIndex = -1;
-        menu.selectedIndex = saveSelectedIndex;
-    }
-}
-
-
-/** Select value in menuList.  Throws string if no such value. **/
-
-function menuListSelectItem(menuListId, value)
-{
-    var menuList = document.getElementById(menuListId);
-    var index = menuListIndexOf(menuList, value);
-    if (index != -1) {
-        menuList.selectedIndex = index;
-    } else {
-        throw "menuListSelectItem: No such Element: "+value;
-    }
-}
-
-
-/** Find index of menuitem with the given value, or return -1 if not found. **/
-
-function menuListIndexOf(menuList, value)
-{
-    var items = menuList.menupopup.childNodes;
-    var index = -1;
-    for (var i = 0; i < items.length; i++) {
-        var element = items[i];
-        if (element.nodeName == "menuitem") {
-            index++;
-        }
-        if (element.getAttribute("value") == value) {
-            return index;
-        }
-    }
-    return -1; // not found
-}
 
 function hasPositiveIntegerValue(elementId)
 {
@@ -1139,6 +1515,10 @@ calInterfaceBag.prototype = {
     /// external:
     get size() {
         return this.mInterfaces.length;
+    },
+
+    get interfaceArray() {
+        return this.mInterfaces;
     },
 
     add: function calInterfaceBag_add(iface) {
@@ -1180,7 +1560,7 @@ calListenerBag.prototype = {
                 iface[func].apply(iface, args ? args : []);
             }
             catch (exc) {
-                Components.utils.reportError(exc);
+                Components.utils.reportError(exc + " STACK: " + STACK());
             }
         }
         this.mInterfaces.forEach(notifyFunc);
@@ -1188,9 +1568,6 @@ calListenerBag.prototype = {
 };
 
 function sendMailTo(aRecipient, aSubject, aBody) {
-    if (!aRecipient || aRecipient.length < 1) {
-        return;
-    }
 
     if (Components.classes["@mozilla.org/messengercompose;1"]) {
         // We are in Thunderbird, we can use the compose interface directly
@@ -1218,8 +1595,11 @@ function sendMailTo(aRecipient, aSubject, aBody) {
         var ioService = Components.classes["@mozilla.org/network/io-service;1"]
                         .getService(Components.interfaces.nsIIOService);
 
-        var uriString = "mailto:" + aRecipient;
+        var uriString = "";
         var uriParams = [];
+        if (!aRecipient || aRecipient.length < 1) {
+            uriString = "mailto:" + aRecipient;
+        }
 
         if (aSubject) {
             uriParams.push("subject=" + encodeURIComponent(aSubject));
@@ -1237,9 +1617,6 @@ function sendMailTo(aRecipient, aSubject, aBody) {
     }
 }
 
-var gOpGroupPrefix;
-var gOpGroupId = 0;
-
 /**
  * This object implements calIOperation and could group multiple sub
  * operations into one. You can pass a cancel function which is called once
@@ -1252,12 +1629,14 @@ var gOpGroupId = 0;
  */
 function calOperationGroup(cancelFunc) {
     this.wrappedJSObject = this;
-    if (!gOpGroupPrefix) {
-        gOpGroupPrefix = (getUUID() + "-");
+    if (calOperationGroup.mOpGroupId === undefined) {
+        calOperationGroup.mOpGroupId = 0;
+    }
+    if (calOperationGroup.mOpGroupPrefix === undefined) {
+        calOperationGroup.mOpGroupPrefix = (getUUID() + "-");
     }
     this.mCancelFunc = cancelFunc;
-    this.mId = (gOpGroupPrefix + gOpGroupId);
-    ++gOpGroupId;
+    this.mId = (calOperationGroup.mOpGroupPrefix + calOperationGroup.mOpGroupId++);
     this.mSubOperations = [];
 }
 calOperationGroup.prototype = {
@@ -1346,20 +1725,219 @@ function sameDay(date1, date2) {
 }
 
 /**
+ * Centralized funtions for accessing prodid and version
+ */
+function calGetProductId() {
+    return "-//Mozilla.org/NONSGML Mozilla Calendar V1.1//EN";
+}
+function calGetProductVersion() {
+    return "2.0";
+}
+
+/**
  * This is a centralized function for setting the prodid and version on an
- * ical components.  This should be used whenever you need to set the prodid
+ * ical component.  This should be used whenever you need to set the prodid
  * and version on a calIcalComponent object.
  *
  * @param
  *      aIcalComponent  The ical component to set the prodid and version on.
  */
 function calSetProdidVersion(aIcalComponent) {
-  
-  // Throw for an invalid parameter
-  if (!aIcalComponent instanceof Components.interfaces.calIIcalComponent)
-      throw Components.results.NS_ERROR_INVALID_ARG;
-  
-  // Set the prodid and version
-  aIcalComponent.prodid = "-//Mozilla.org/NONSGML Mozilla Calendar V1.1//EN";
-  aIcalComponent.version = "2.0";  
+    // Throw for an invalid parameter
+    if (!(aIcalComponent instanceof Components.interfaces.calIIcalComponent)) {
+        throw Components.results.NS_ERROR_INVALID_ARG;
+    }
+    // Set the prodid and version
+    aIcalComponent.prodid = calGetProductId();
+    aIcalComponent.version = calGetProductVersion();
 }
+
+/**
+ * This function returns a sibling of a XUL element, that is positioned behind
+ * it in the DOM hierarchy *
+ * @param
+ *      aElement  The XUL element to derive the sibling from
+ * @param
+ *      aDistance  An integer value denoting how the relative position 
+ *                  of the returned sibling within the parent container
+ */
+function getAdjacentSibling(aElement, aDistance) {
+    var retElement = aElement;
+    if (aDistance > 0) {
+        for (var i = 0; i < aDistance; i++) {
+            if (retElement) {
+                try {
+                    retElement = retElement.nextSibling;
+                } catch (e) {
+                    retElement = null;
+                    i = aDistance;
+                }
+            }
+        }
+    }
+    return retElement;
+}
+
+/**
+ * applies a value to all children of a Menu. If the respective childnodes define
+ * a command the value is applied to the attribute of thecommand of the childnode
+ *
+ * @param aElement The parentnode of the elements
+ * @param aAttributeName The name of the attribute
+ * @param aValue The value of the attribute
+ */
+function applyAttributeToMenuChildren(aElement, aAttributeName, aValue) {
+   var sibling = aElement.firstChild;
+   do {
+       if (sibling) {
+           var domObject = sibling;
+           var commandName = sibling.getAttribute("command");
+           if (commandName) {
+               var command = document.getElementById(commandName);
+               if (command) {
+                   domObject = command;
+               }
+           }
+           domObject.setAttribute(aAttributeName, aValue);
+       sibling = sibling.nextSibling;          
+       }
+    } while (sibling);
+  }
+
+
+/**
+ * compares the value of a property of an array of objects and returns 
+ * true or false if it is same or not among all array members 
+ *
+ * @param aObjects An Array of Objects to inspect
+ * @param aProperty Name the name of the Property of which the value is compared
+ */
+function isPropertyValueSame(aObjects, aPropertyName) {
+    var value = null;
+    for (var i = 0; i < aObjects.length; i++) {
+        if (!value) {
+            value = aObjects[0][aPropertyName];
+        }
+        var compValue = aObjects[i][aPropertyName];
+        if (compValue != value ) {
+            return false;
+        }
+    }
+    return true;
+}
+  
+/**
+ * sets the value of a boolean attribute by either setting the value or 
+ * removing the attribute
+ *
+ * @param aXulElement The XulElement the attribute is applied to
+ * @param aAttribute the name of the attribute
+ * @param aValue the boolean value
+ */
+function setBooleanAttribute(aXulElement, aAttribute, aValue) {
+    if (aXulElement) {
+        if (aValue) {
+            aXulElement.setAttribute(aAttribute, "true");
+        }
+        else {
+            if (aXulElement.hasAttribute(aAttribute)) {
+                aXulElement.removeAttribute(aAttribute);
+            }
+        }
+    }
+}
+
+function removeAnonymousElement(aParentNode, aId) {
+    var child = document.getAnonymousElementByAttribute(aParentNode, "anonid", aId);
+    child.parentNode.removeChild(child);
+}
+
+function getParentNode(aNode, aLocalName) {
+  var node = aNode;
+  do {
+      node = node.parentNode;
+  } while (node && (node.localName != aLocalName));
+  return node;
+}
+
+function addCalendarsToMenu(aMenuItem, aFunctionName) {
+    var calendarList = aMenuItem;
+    var calendars = getCalendarManager().getCalendars({});
+    for (i in calendars) {
+        var calendar = calendars[i];
+        var menuitem = calendarList.appendItem(calendar.name, i);
+        if (aFunctionName) {
+            menuitem.setAttribute("oncommand", aFunctionName)
+        }
+        menuitem.calendar = calendar;
+    }
+}
+/**
+ * Implements a property bag.
+ */
+function calPropertyBag() {
+    this.mData = {};
+}
+calPropertyBag.prototype = {
+    mData: null,
+
+    setProperty: function cpb_setProperty(aName, aValue) {
+        this.mData[aName] = aValue;
+    },
+    getProperty: function cpb_getProperty(aName) {
+        var aValue = this.mData[aName];
+        if (aValue === undefined) {
+            aValue = null;
+        }
+        return aValue;
+    },
+    deleteProperty: function cpb_deleteProperty(aName) {
+        delete this.mData[aName];
+    },
+    get enumerator() {
+        return new calPropertyBagEnumerator(this);
+    }
+};
+// implementation part of calPropertyBag
+function calPropertyBagEnumerator(bag) {
+    this.mIndex = 0;
+    this.mBag = bag;
+    var keys = [];
+    for (var key in bag.mData) {
+        keys.push(key);
+    }
+    this.mKeys = keys;
+}
+calPropertyBagEnumerator.prototype = {
+    mIndex: 0,
+    mBag: null,
+    mKeys: null,
+
+    // nsISimpleEnumerator:
+    getNext: function cpb_enum_getNext() {
+        if (!this.hasMoreElements()) { // hasMoreElements is called by intention to skip yet deleted properties
+            ASSERT(false, Components.results.NS_ERROR_UNEXPECTED);
+            throw Components.results.NS_ERROR_UNEXPECTED;
+        }
+        var name = this.mKeys[this.mIndex++];
+        return { // nsIProperty:
+            QueryInterface: function cpb_enum_prop_QueryInterface(aIID) {
+                ensureIID([Components.interfaces.nsIProperty, Components.interfaces.nsISupports], aIID);
+                return this;
+            },
+            name: name,
+            value: this.mCurrentValue
+        };
+    },
+    hasMoreElements: function cpb_enum_hasMoreElements() {
+        while (this.mIndex < this.mKeys.length) {
+            this.mCurrentValue = this.mBag.mData[this.mKeys[this.mIndex]];
+            if (this.mCurrentValue !== undefined) {
+                return true;
+            }
+            ++this.mIndex;
+        }
+        return false;
+    }
+};
+

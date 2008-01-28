@@ -43,14 +43,16 @@ class nsXFormsResetElement : public nsXFormsActionModuleBase
 {
 public:
   nsXFormsResetElement();
-  NS_DECL_NSIXFORMSACTIONMODULEELEMENT
+  virtual nsresult HandleSingleAction(nsIDOMEvent* aEvent,
+                                      nsIXFormsActionElement *aParentAction);
 };
 
-nsXFormsResetElement::nsXFormsResetElement() {
+nsXFormsResetElement::nsXFormsResetElement()
+{
 }
 
-NS_IMETHODIMP
-nsXFormsResetElement::HandleAction(nsIDOMEvent* aEvent,
+nsresult
+nsXFormsResetElement::HandleSingleAction(nsIDOMEvent* aEvent,
                                    nsIXFormsActionElement *aParentAction)
 {
   nsCOMPtr<nsIModelElementPrivate> modelPriv = nsXFormsUtils::GetModel(mElement);

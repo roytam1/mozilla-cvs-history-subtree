@@ -131,7 +131,8 @@
       var schemaLoader = Components.classes["@mozilla.org/xmlextras/schemas/schemaloader;1"]
                                    .getService(Components.interfaces.nsISchemaLoader);
       try { 
-        schema = schemaLoader.load("file:///home/doron/mozbuilds/trunk/mozilla/extensions/schema-validation/tests/schema.xsd");
+        // SchemaLoader.Load() wants a URI
+        schema = schemaLoader.load(document.URL + "/../schema.xsd");
         myValidator.loadSchema(schema);
       } catch(e){alert(e)}
 

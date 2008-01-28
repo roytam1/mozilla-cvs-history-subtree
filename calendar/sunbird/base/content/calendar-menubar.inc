@@ -29,6 +29,7 @@
 #                 Matthew Willis <mattwillis@gmail.com>
 #                 Stefan Sitter <ssitter@googlemail.com>
 #                 Philipp Kewisch <mozilla@kewis.ch>
+#                 Simon Paquet <bugzilla@babylonsounds.com>
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -61,12 +62,6 @@
                      label="&event.new.todo;"
                      accesskey="&event.new.todo.accesskey;"
                      observes="calendar_new_todo_command"/>
-           <!-- XXX lilmatt: Finish this!
-           <menuitem key="new_journal_key"
-                     id="calendar-new-journal-menu"
-                     label="&calendar.new.journal.label;"
-                     accesskey="&calendar.new.journal.accesskey;"
-                     disabled="true"/> -->
            <menuitem id="calendar-new-calendar-menu"
                      key="new_calendar_key"
                      label="&calendar.new.server.label;"
@@ -124,7 +119,7 @@
                      key="print_key"
                      label="&calendar.print.label;"
                      accesskey="&calendar.print.accesskey;"
-                     observes="print_command"/>
+                     observes="cmd_print"/>
 #ifdef XP_MACOSX
            <menuitem id="menu_FileQuitItem"
                      label="&calendar.quit.label.mac;"
@@ -155,28 +150,28 @@
                      key="undo_key"
                      accesskey="&calendar.undo.accesskey;"
                      label="&calendar.undo.label;"
-                     command="undo_command"/>
+                     observes="cmd_undo"/>
            <menuitem id="calendar-redo-menu"
                      key="redo_key"
                      accesskey="&calendar.redo.accesskey;"
                      label="&calendar.redo.label;"
-                     command="redo_command"/>
-           <menuseparator/>
+                     observes="cmd_redo"/>
+           <menuseparator id="before-undo-Section"/>
            <menuitem id="calendar-cut-menu"
                      key="key_cut"
                      label="&calendar.cut.label;"
                      accesskey="&calendar.cut.accesskey;"
-                     observes="cut_command" />
+                     observes="cmd_cut"/>
            <menuitem id="calendar-copy-menu"
                      key="key_copy"
                      label="&calendar.copy.label;"
                      accesskey="&calendar.copy.accesskey;"
-                     observes="copy_command" />
+                     observes="cmd_copy"/>
            <menuitem id="calendar-paste-menu"
                      key="key_paste"
                      label="&calendar.paste.label;"
                      accesskey="&calendar.paste.accesskey;"
-                     observes="paste_command"/>
+                     observes="cmd_paste"/>
            <menuitem id="unifinder-modify-menu"
                      key="modify_event_key"
                      label="&event.edit.event;"
@@ -186,7 +181,7 @@
                      key="delete_key"
                      label="&event.delete.event;"
                      accesskey="&event.delete.event.accesskey;"
-                     observes="calendar_delete_event_command" />
+                     observes="calendar_delete_event_command"/>
            <menuitem id="unifinder-remove-menu"
                      label="&event.delete.tasks;"
                      accesskey="&event.delete.tasks.accesskey;"
@@ -195,7 +190,14 @@
                      key="key_selectAll"
                      label="&calendar.selectall.label;"
                      accesskey="&calendar.selectall.accesskey;"
-                     observes="select_all_command"/>
+                     observes="cmd_selectAll"/>
+           <menuseparator id="before-Unifinder-Section"/>
+           <menuitem id="calendar-show-unifinder-menu"
+                     type="checkbox"
+                     label="&showUnifinderCmd.label;"
+                     observes="calendar_show_unifinder_command"
+                     accesskey="&showUnifinderCmd.accesskey;"
+                     checked="true"/>
 #ifdef XP_UNIX
 #ifndef XP_MACOSX
            <menuseparator/>
@@ -219,17 +221,11 @@
              <menupopup>
                <menuseparator/>
                <menuitem id="calendar-view-menu-customize"
-                         command="cmd_CustomizeToolbars"
+                         observes="cmd_CustomizeToolbars"
                          label="&calendar.menu.customize.label;"
                          accesskey="&calendar.menu.customize.accesskey;"/>
              </menupopup>
            </menu>
-           <menuitem id="menu_showSearchToolbar"
-                     type="checkbox"
-                     label="&showSearchToolbarCmd.label;"
-                     command="cmd_showSearchToolbar"
-                     accesskey="&showSearchToolbarCmd.accesskey;"
-                     checked="true"/>
            <menuitem id="menu_showStatusBar"
                      type="checkbox"
                      label="&showStatusBarCmd.label;"

@@ -64,7 +64,8 @@ static NSString* const kFileDescriptorKey = @"fdes";
 -(id)init
 {
   if ((self = [super init])) {
-    mWatchedDirectories = [[NSMutableDictionary alloc] init];
+    mWatchInfo = [[NSMutableDictionary alloc] init];
+    mWatchedDirectories = [[NSMutableArray alloc] init];
     mQueueFileDesc = kqueue();
   }
   
@@ -74,65 +75,82 @@ static NSString* const kFileDescriptorKey = @"fdes";
 -(void)dealloc
 {
   close(mQueueFileDesc);
+  [mWatchInfo release];
   [mWatchedDirectories release];
   [super dealloc];
 }
 
 -(void)addWatchedFileDelegate:(id<WatchedFileDelegate>)aWatchedFileDelegate
 {
-  NSString* parentDirectory =
-    [[aWatchedFileDelegate representedFilePath] stringByDeletingLastPathComponent];
-  NSMutableDictionary* directoryInfo = [mWatchedDirectories objectForKey:parentDirectory];
-  if (directoryInfo) {
-    NSMutableArray* directoryDelegates = [directoryInfo objectForKey:kDelegatesKey];
-    if (![directoryDelegates containsObject:aWatchedFileDelegate])
-      [directoryDelegates addObject:aWatchedFileDelegate];
-  }
-  else {
-    // We cap the number of kqueues so we don't end up sucking down all the
-    // available file descriptors.
-    if ([mWatchedDirectories count] >= kMaxWatchedDirectories)
-      return;
+  @synchronized(mWatchInfo) {
+    NSString* parentDirectory =
+      [[aWatchedFileDelegate representedFilePath] stringByDeletingLastPathComponent];
+    NSMutableDictionary* directoryInfo = [mWatchInfo objectForKey:parentDirectory];
+    if (directoryInfo) {
+      NSMutableArray* directoryDelegates = [directoryInfo objectForKey:kDelegatesKey];
+      if (![directoryDelegates containsObject:aWatchedFileDelegate])
+        [directoryDelegates addObject:aWatchedFileDelegate];
+    }
+    else {
+      // We cap the number of kqueues so we don't end up sucking down all the
+      // available file descriptors.
+      if ([mWatchInfo count] >= kMaxWatchedDirectories)
+        return;
 
-    int fileDesc = open([parentDirectory fileSystemRepresentation], O_EVTONLY, 0);
-    if (fileDesc >= 0) {
-      struct timespec nullts = { 0, 0 };
-      struct kevent ev;
-      u_int fflags = NOTE_RENAME | NOTE_WRITE | NOTE_DELETE;
+      int fileDesc = open([parentDirectory fileSystemRepresentation], O_EVTONLY, 0);
+      if (fileDesc >= 0) {
+        struct timespec nullts = { 0, 0 };
+        struct kevent ev;
+        u_int fflags = NOTE_RENAME | NOTE_WRITE | NOTE_DELETE;
 
-      EV_SET(&ev, fileDesc, EVFILT_VNODE, EV_ADD | EV_ENABLE | EV_CLEAR, fflags,
-             0, (void*)parentDirectory);
+        // mWatchedDirectories needs to own parentDirectory for the lifetime of
+        // this kqueue, so that it is safe to use as context data. We need to
+        // be sure that we are using the *same* string object when we are
+        // tracking multiple downloads in the same folder.
+        unsigned int storedIndex = [mWatchedDirectories indexOfObject:parentDirectory];
+        if (storedIndex == NSNotFound)
+          [mWatchedDirectories addObject:parentDirectory];
+        else
+          parentDirectory = [mWatchedDirectories objectAtIndex:storedIndex];
 
-      kevent(mQueueFileDesc, &ev, 1, NULL, 0, &nullts);
-      if (!mShouldRunThread)
-        [self startPolling];
+        EV_SET(&ev, fileDesc, EVFILT_VNODE, EV_ADD | EV_ENABLE | EV_CLEAR, fflags,
+               0, (void*)parentDirectory);
 
-      directoryInfo = [NSMutableDictionary dictionaryWithObjectsAndKeys:
-        [NSMutableArray arrayWithObject:aWatchedFileDelegate], kDelegatesKey,
-                            [NSNumber numberWithInt:fileDesc], kFileDescriptorKey,
-                                                               nil];
-      [mWatchedDirectories setObject:directoryInfo forKey:parentDirectory];
+        kevent(mQueueFileDesc, &ev, 1, NULL, 0, &nullts);
+        if (!mShouldRunThread)
+          [self startPolling];
+        
+        directoryInfo = [NSMutableDictionary dictionaryWithObjectsAndKeys:
+          [NSMutableArray arrayWithObject:aWatchedFileDelegate], kDelegatesKey,
+                              [NSNumber numberWithInt:fileDesc], kFileDescriptorKey,
+                                                                 nil];
+        [mWatchInfo setObject:directoryInfo forKey:parentDirectory];
+      }
     }
   }
 }
 
 -(void)removeWatchedFileDelegate:(id<WatchedFileDelegate>)aWatchedFileDelegate
 {
-  NSString* parentDirectory =
-    [[aWatchedFileDelegate representedFilePath] stringByDeletingLastPathComponent];
-  NSMutableDictionary* directoryInfo = [mWatchedDirectories objectForKey:parentDirectory];
-  NSMutableArray* directoryDelegates = [directoryInfo objectForKey:kDelegatesKey];
-  if (![directoryDelegates containsObject:aWatchedFileDelegate])
-    return;
+  @synchronized(mWatchInfo) {
+    NSString* parentDirectory =
+      [[aWatchedFileDelegate representedFilePath] stringByDeletingLastPathComponent];
+    NSMutableDictionary* directoryInfo = [mWatchInfo objectForKey:parentDirectory];
+    NSMutableArray* directoryDelegates = [directoryInfo objectForKey:kDelegatesKey];
+    if (![directoryDelegates containsObject:aWatchedFileDelegate])
+      return;
 
-  int fileDesc = [[directoryInfo objectForKey:kFileDescriptorKey] intValue];
-  [directoryDelegates removeObject:aWatchedFileDelegate];
+    int fileDesc = [[directoryInfo objectForKey:kFileDescriptorKey] intValue];
+    [directoryDelegates removeObject:aWatchedFileDelegate];
 
-  if ([directoryDelegates count] == 0) {
-    close(fileDesc);
-    [mWatchedDirectories removeObjectForKey:parentDirectory];
-    if (mShouldRunThread && [mWatchedDirectories count] == 0)
-      [self stopPolling];
+    if ([directoryDelegates count] == 0) {
+      close(fileDesc);
+      [mWatchInfo removeObjectForKey:parentDirectory];
+      // mWatchedDirectories is left unchanged; it must be cleaned up in
+      // pollWatchedDirectories rather than here.
+      if (mShouldRunThread && [mWatchInfo count] == 0)
+        [self stopPolling];
+    }
   }
 }
 
@@ -172,9 +190,23 @@ static NSString* const kFileDescriptorKey = @"fdes";
     }
 
     NSAutoreleasePool* pool = [[NSAutoreleasePool alloc] init];
+    // sync mWatchedDirectories back to the current state of the watch requests.
+    // Controlling all removal from mWatchedDirectories in this thread
+    // guarantees that the kevent data it stores will never vanish out from
+    // under a triggering kqueue.
+    @synchronized(mWatchInfo) {
+      for (int i = [mWatchedDirectories count] - 1; i >= 0; --i) {
+        NSString* directory = [mWatchedDirectories objectAtIndex:i];
+        if (![mWatchInfo objectForKey:directory]) {
+          [mWatchedDirectories removeObjectAtIndex:i];
+        }
+      }
+    }
+
     @try {
       struct kevent event;
-      int n = kevent(mQueueFileDesc, NULL, 0, &event, 1, &timeInterval);
+      int n = kevent(mQueueFileDesc, NULL, 0, &event, 1,
+                     (const struct timespec*)&timeInterval);
       if (n > 0 && event.filter == EVFILT_VNODE && event.fflags) {
         [self directoryChanged:(NSString*)event.udata];
       }
@@ -191,10 +223,15 @@ static NSString* const kFileDescriptorKey = @"fdes";
 {
   NSSet* existingFiles =
     [NSSet setWithArray:[[NSFileManager defaultManager] directoryContentsAtPath:directory]];
-
-  NSMutableDictionary* directoryInfo = [mWatchedDirectories objectForKey:directory];
-  NSMutableArray* directoryDelegates = [directoryInfo objectForKey:kDelegatesKey];
-  NSEnumerator* delegateEnumerator = [directoryDelegates objectEnumerator];
+  
+  NSEnumerator* delegateEnumerator;
+  @synchronized(mWatchInfo) {
+    NSDictionary* directoryInfo = [mWatchInfo objectForKey:directory];
+    NSArray* directoryDelegates = [directoryInfo objectForKey:kDelegatesKey];
+    // Hold a strong reference to all the delegates that we are going to call
+    // until we are done, since they may be removed at any moment.
+    delegateEnumerator = [[[directoryDelegates copy] autorelease] objectEnumerator];
+  }
   id fileDelegate;
   while ((fileDelegate = [delegateEnumerator nextObject])) {
     NSString* filename = [[fileDelegate representedFilePath] lastPathComponent];

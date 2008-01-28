@@ -689,20 +689,10 @@ private:
 class nsCxPusher
 {
 public:
-  nsCxPusher(nsISupports *aCurrentTarget)
-    : mScriptIsRunning(PR_FALSE)
-  {
-    if (aCurrentTarget) {
-      Push(aCurrentTarget);
-    }
-  }
-
-  ~nsCxPusher()
-  {
-    Pop();
-  }
-
-  void Push(nsISupports *aCurrentTarget);
+  nsCxPusher() : mScriptIsRunning(PR_FALSE) {}
+  ~nsCxPusher() { Pop(); }
+  // Returns PR_FALSE if something erroneous happened.
+  PRBool Push(nsISupports *aCurrentTarget);
   void Pop();
 
 private:

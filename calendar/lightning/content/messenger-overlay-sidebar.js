@@ -31,7 +31,7 @@
  *   Berend Cornelius <berend.cornelius@sun.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or 
+ * either the GNU General Public License Version 2 or later (the "GPL"), or
  * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
  * in which case the provisions of the GPL or the LGPL are applicable instead
  * of those above. If you wish to allow use of your version of this file only
@@ -45,140 +45,6 @@
  * ***** END LICENSE BLOCK ***** */
 
 var gLastShownCalendarView = null;
-
-var CalendarController =
-{
-  defaultController: null,
-
-  supportsCommand: function ccSC(command) {
-    switch (command) {
-      case "cmd_cut":
-      case "cmd_copy":
-      case "cmd_paste":
-      case "cmd_undo":
-      case "cmd_redo":
-      case "cmd_print":
-      case "cmd_printpreview":
-      case "button_print":
-      case "button_delete":
-      case "cmd_delete":
-        return true;
-    }
-    if (this.defaultController) {
-      return this.defaultController.supportsCommand(command);
-    }
-    return false;
-  },
-
-  isCommandEnabled: function ccICE(command) {
-    switch (command) {
-      case "cmd_cut":
-      case "cmd_copy":
-        return currentView().getSelectedItems({}).length != 0;
-      case "cmd_paste":
-        return canPaste();
-      case "cmd_undo":
-        if (this.isCalendarInForeground()) {
-          goSetMenuValue(command, 'valueDefault');
-          if (canUndo()) {
-            return true;
-          }
-        }
-        break;
-      case "cmd_redo":
-        if (this.isCalendarInForeground()) {
-          goSetMenuValue(command, 'valueDefault');
-          if(canRedo()) {
-            return true;
-          }
-        }
-        break;
-      case "button_print":
-      case "cmd_print":
-        if (this.isCalendarInForeground()) {
-          return true;
-        }
-        break;
-      case "cmd_printpreview":
-        if (this.isCalendarInForeground()) {
-          return false;
-        }
-        break;
-      case "button_delete":
-      case "cmd_delete":
-        if (this.isCalendarInForeground()) {
-          var selectedItems = currentView().getSelectedItems({});
-          return selectedItems.length != 0;
-        }
-        break;
-    }
-    if (this.defaultController) {
-      return this.defaultController.isCommandEnabled(command);
-    }
-    return false;
-  },
-
-  doCommand: function ccDC(command) {
-    // if the user invoked a key short cut then it is possible that we got
-    // here for a command which is really disabled. kick out if the
-    // command should be disabled.
-    if (!this.isCommandEnabled(command)) {
-      return;
-    }
-
-    switch ( command )
-    {
-      case "cmd_cut":
-        cutToClipboard();
-        break;
-      case "cmd_copy":
-        copyToClipboard();
-        break;
-      case "cmd_paste":
-        pasteFromClipboard();
-        break;
-      case "cmd_undo":
-        if (this.isCalendarInForeground() && canUndo()) {
-          getTransactionMgr().undo();
-        }
-        break;
-      case "cmd_redo":
-        if (this.isCalendarInForeground() && canRedo()) {
-          getTransactionMgr().redo();
-        }
-        break;
-      case "button_print":
-      case "cmd_print":
-        if (this.isCalendarInForeground()) {
-          calPrint();
-          return;
-        }
-        break;
-      case "cmd_printpreview":
-        if (this.isCalendarInForeground()) {
-          return;
-        }
-        break;
-      case "button_delete":
-      case "cmd_delete":
-        if (this.isCalendarInForeground()) {
-          return;
-        }
-        break;
-    }
-    if (this.defaultController) {
-      this.defaultController.doCommand(command);
-    }
-  },
-
-  onEvent: function ccOE(event) {
-    // do nothing here...
-  },
-  
-  isCalendarInForeground: function ccIC() {
-    return document.getElementById("displayDeck").selectedPanel.id == "calendar-view-box";
-  }
-};
 
 function yesterday()
 {
@@ -213,7 +79,7 @@ function ltnMinimonthPick(minimonth)
     document.getElementById("ltnDateTextPicker").value = jsDate;
     var cdt = jsDateToDateTime(jsDate);
 
-    if (document.getElementById("displayDeck").selectedPanel != 
+    if (document.getElementById("displayDeck").selectedPanel !=
         document.getElementById("calendar-view-box")) {
         ltnShowCalendarView(gLastShownCalendarView);
     }
@@ -279,7 +145,7 @@ function ltnOnLoad(event)
       }
       return toolbars;
     }
-    
+
     var restoreToolbarProperties = function(toolbox,toolbars)
     {
       var toolbar = toolbox.firstChild;
@@ -296,28 +162,29 @@ function ltnOnLoad(event)
         toolbar = toolbar.nextSibling;
       }
     }
-    
+
     // DOMAttrModified handler that listens on the toolbox element
-    var onModified = function(aEvent)
-    {
+    var onModified = function(aEvent) {
       if(aEvent.attrName == "location") {
-        var contentPanel = document.getElementById("contentPanel");
         var modeToolbox = document.getElementById("mode-toolbox");
-        var palette = modeToolbox.palette;
         modeToolbox.removeEventListener("DOMAttrModified", onModified, false);
-        var bag = retrieveToolbarProperties(modeToolbox);
-        if(aEvent.newValue == "top" && !aEvent.prevValue || aEvent.prevValue == "bottom") {
-          // place the mode toolbox at the top of the left pane
-          modeToolbox = contentPanel.parentNode.insertBefore(modeToolbox, contentPanel);
-          modeToolbox.palette = palette;
-          var toolbar = document.getElementById("mode-toolbar");
-        } else if(aEvent.newValue == "bottom" && aEvent.prevValue == "top") {
-          // place the mode toolbox at the bottom of the left pane
-          modeToolbox = contentPanel.parentNode.appendChild(modeToolbox);
+        var onLocationHandler = function() {
+          var contentPanel = document.getElementById("contentPanel");
+          var palette = modeToolbox.palette;
+          var bag = retrieveToolbarProperties(modeToolbox);
+          if(aEvent.newValue == "top" && !aEvent.prevValue || aEvent.prevValue == "bottom") {
+            // place the mode toolbox at the top of the left pane
+            modeToolbox = contentPanel.parentNode.insertBefore(modeToolbox, contentPanel);
+          } else if(aEvent.newValue == "bottom" && aEvent.prevValue == "top") {
+            // place the mode toolbox at the bottom of the left pane
+            modeToolbox = contentPanel.parentNode.appendChild(modeToolbox);
+          }
+          restoreToolbarProperties(modeToolbox,bag);
+          modeToolbox.addEventListener("DOMAttrModified", onModified, false);
           modeToolbox.palette = palette;
         }
-        restoreToolbarProperties(modeToolbox,bag);
-        modeToolbox.addEventListener("DOMAttrModified", onModified, false);
+
+        setTimeout(onLocationHandler,1);
       }
     }
 
@@ -391,38 +258,39 @@ function ltnOnLoad(event)
             null);
     }
 
-    // we need to put our new command controller *before* the one that
-    // gets installed by thunderbird. since we get called pretty early
-    // during startup we need to install the function below as a callback
-    // that periodically checks when the original thunderbird controller
-    // gets alive. please note that setTimeout with a value of 0 means that
-    // we leave the current thread in order to re-enter the message loop.
-    var injectCommandController = function inject() {
-      var controller = top.controllers.getControllerForCommand("cmd_undo");
-      if (!controller) {
-        setTimeout(injectCommandController, 0);
-      } else {
-        CalendarController.defaultController = controller;
-        top.controllers.insertControllerAt(0, CalendarController);
-      }
-    }
-    injectCommandController();
+    // Set up the command controller from calendar-common-sets.js
+    injectCalendarCommandController();
 
     getViewDeck().addEventListener("itemselect", onSelectionChanged, true);
+
+    var filter = document.getElementById("task-tree-filter");
+    filter.value = filter.value || "all";
 }
 
 function onSelectionChanged(aEvent) {
-  var elements = document.getElementsByAttribute("disabledwhennoeventsselected", "true");
-  var selectedItems = aEvent.detail;
-  for (var i = 0; i < elements.length; i++) {
-    if (selectedItems.length >= 1) {
-      elements[i].removeAttribute("disabled");
-    } else {
-      elements[i].setAttribute("disabled", "true");
+    var selectedItems = aEvent.detail;
+
+    calendarController.item_selected = (selectedItems.length > 0);
+    var selected_events_readonly = 0;
+    var selected_events_requires_network = 0;
+
+    for each (var item in selectedItems) {
+        if (item.calendar.readOnly) {
+            selected_events_readonly++;
+        }
+        if (item.calendar.getProperty("requiresNetwork") !== false) {
+            selected_events_requires_network++;
+        }
     }
-  }
-  document.commandDispatcher.updateCommands('mail-toolbar');
-  document.commandDispatcher.updateCommands('calendar_commands');
+
+    calendarController.selected_events_readonly =
+        (selected_events_readonly == selectedItems.length);
+
+    calendarController.selected_events_requires_network =
+        (selected_events_requires_network == selectedItems.length);
+
+    document.commandDispatcher.updateCommands('mail-toolbar');
+    document.commandDispatcher.updateCommands('calendar_commands');
 }
 
 /* Called at midnight to tell us to redraw date-specific widgets.  Do NOT call
@@ -440,6 +308,10 @@ function refreshUIBits() {
     if (TodayPane.showsYesterday()) {
       TodayPane.setDay(now());
     }
+
+    // update the unifinder
+    refreshEventTree();
+
     // schedule our next update...
     scheduleMidnightUpdate(refreshUIBits);
 }
@@ -461,6 +333,49 @@ function ltnSelectCalendarView(type) {
     previousCommand.setAttribute("label", previousCommand.getAttribute("label-"+type));
 
 }
+
+function toggleControlDisplay(aCommandId, aControlId) {
+    var control = document.getElementById(aControlId);
+    var command = document.getElementById(aCommandId);
+    if (control.getAttribute("collapsedinMode") == "false") {
+        if (control.hasAttribute("collapsed")) {
+            control.removeAttribute("collapsed");
+            command.setAttribute("checked", "true");
+            return;
+        }
+    }
+    command.setAttribute("checked", "false");
+}
+
+function toggleControlinMode(aCommandId, aControlId) {
+    var control = document.getElementById(aControlId);
+    var command = document.getElementById(aCommandId);
+    if (control.hasAttribute("collapsed")) {
+        control.removeAttribute("collapsed");
+        control.setAttribute("collapsedinMode", "false");
+        command.setAttribute("checked","true");
+    }
+    else {
+        control.setAttribute("collapsed", "true");
+        control.setAttribute("collapsedinMode", "true");
+        command.setAttribute("checked", "false");
+    }
+}
+
+function toggleToolbar(aCommandId, aToolbarId) {
+    var toolBar = document.getElementById(aToolbarId);
+    var command = document.getElementById(aCommandId);
+    if (toolBar.hasAttribute("collapsed")) {
+       toolBar.removeAttribute("collapsed");
+       command.setAttribute("checked", "true");
+    }
+    else {
+       toolBar.setAttribute("collapsed", "true");
+       command.setAttribute("checked", "false");
+    }
+ }
+
+
 
 /**
  * Show the calendar view, also switching to calendar mode if in mail mode
@@ -495,18 +410,6 @@ function toggleTodayPaneinMailMode()
   }
 }
 
-function selectedCalendarPane(event)
-{
-    var deck = document.getElementById("displayDeck");
-
-    // If we're already showing a calendar view, don't do anything
-    if (deck.selectedPanel.id == "calendar-view-box")
-        return;
-
-    deck.selectedPanel = document.getElementById("calendar-view-box");
-
-    ltnShowCalendarView('week');
-}
 
 /**
  * This function has the sole responsibility to switch back to
@@ -534,16 +437,18 @@ function LtnObserveDisplayDeckChange(event) {
     try { id = deck.selectedPanel.id } catch (e) { }
 
     // Switch back to mail mode in case we find that this
-    // notification has been fired but we're still in calendar mode.
-    if (id != "calendar-view-box" && gCurrentMode != 'mail') {
-        ltnSwitch2Mail();
+    // notification has been fired but we're still in calendar or task mode.
+    // Specifically, switch back if we're *not* in mail mode but the notification
+    // did *not* come from either the "calendar-view-box" or the "calendar-task-box".
+    if (gCurrentMode != 'mail') {
+        if (id != "calendar-view-box" && id != "calendar-task-box") {
+            ltnSwitch2Mail();
+        }
     }
 }
 
 function ltnFinish() {
     getCompositeCalendar().removeObserver(agendaTreeView.calendarObserver);
-
-    finishCalendarToDoUnifinder();
 
     unloadCalendarManager();
 }
@@ -572,6 +477,274 @@ var gSelectMessage = SelectMessage;
 SelectFolder = function(folderUri) {
     document.getElementById("switch2mail").doCommand();
     gSelectFolder(folderUri);
+}
+
+var calendarpopuplist = new Array();
+var taskpopuplist = new Array();
+var mailpopuplist = new Array();
+var menulist = new Array();
+
+function ltnInitializeMenus(){
+    copyPopupMenus();
+    ltnRemoveMailOnlyItems(calendarpopuplist, "calendar");
+    ltnRemoveMailOnlyItems(taskpopuplist, "task");
+    document.getElementById("calendar-toolbar").setAttribute("collapsed", "true")
+    var modeToolbar = document.getElementById("mode-toolbar");
+    var visible = !modeToolbar.hasAttribute("collapsed");
+    document.getElementById("modeBroadcaster").setAttribute("checked", visible);
+    }
+
+function getMenuElementById(aElementId, aMenuPopup) {
+        var element = null;
+        var elements = aMenuPopup.getElementsByAttribute("id", aElementId);
+        if (elements.length > 0) {
+            element = elements[0];
+        }
+        return element;
+    }
+
+/**  removes all succeedingmenu elements of a container up to the next
+*    menuseparator that thus denotes the end of the section. Elements with the
+*    attribute mode == 'calendar' are ignored
+*/
+function removeMenuElementsInSection(aElement, aExcludeMode) {
+    var element = aElement;
+    if (element) {
+        var bleaveloop = false;
+        while (!bleaveloop) {
+            var ignore = false;
+            bleaveloop = element.localName == "menuseparator";
+            if (bleaveloop) {
+                // we delete the menuseparator only if it's the last element
+                // within its container
+                bleaveloop = (element.nextSibling != null);
+            }
+            if (element.hasAttribute("mode")) {
+            ignore = element.getAttribute("mode") == aExcludeMode ||
+                     element.getAttribute("mode") == "calendar,task";
+            }
+            var nextMenuElement = element.nextSibling;
+            if (!ignore) {
+                try {
+                    element.parentNode.removeChild(element);
+                } catch (e) {
+                    dump("Element '" + element.getAttribute("id") + "' could not be removed\n");
+                }
+            }
+            if (!bleaveloop) {
+                element = nextMenuElement;
+                bleaveloop = (element == null);
+            }
+        }
+    }
+}
+
+function removeElements(aElementList) {
+    aElementList.forEach(function(element) {
+        try {
+            if (element) {
+                element.parentNode.removeChild(element);
+            }
+        } catch (e) {
+            dump("Element '" + element.getAttribute("id") + "' could not be removed\n");
+        }
+    });
+}
+
+function addToPopupList(aMenuElement, aNewPopupMenu, aPopupList, aExcludedModes, aClone, aRemovePopupShowing) {
+    var child = aMenuElement.firstChild;
+    if (child) {
+        if (child.localName == "menupopup") {
+            if (aNewPopupMenu) {
+                var newPopupMenu = aNewPopupMenu;
+            } else {
+                var newPopupMenu = child;
+            }
+            if (aClone) {
+                newPopupMenu = newPopupMenu.cloneNode(true);
+                if (aRemovePopupShowing) {
+                    newPopupMenu.removeAttribute("onpopupshowing");
+                }
+            }
+            removeMenuElements(newPopupMenu, aExcludedModes);
+            aPopupList.push(newPopupMenu);
+        }
+    }
+}
+
+function copyPopupMenus() {
+    // define menuList...
+    menulist.push(document.getElementById("menu_File"));
+    menulist.push(document.getElementById("menu_Edit"));
+    var menuView = document.getElementById("menu_View");
+    menulist.push(menuView);
+    menulist.push(menuView.nextSibling); // id-less menu_Go
+    menulist.push(document.getElementById("messageMenu"));
+    menulist.push(document.getElementById("tasksMenu"));
+
+    // define PopupMenus for calendar mode...
+    var excludeList = new Array("task");
+    addToPopupList(menulist[0], null, calendarpopuplist, excludeList, true, true);
+    addToPopupList(menulist[1], null, calendarpopuplist, excludeList, true, false);
+    addToPopupList(menulist[2], null, calendarpopuplist, excludeList, true, true);
+    addToPopupList(menulist[3], document.getElementById("calendar-GoPopupMenu"), calendarpopuplist, excludeList, true, false);
+    addToPopupList(menulist[4], document.getElementById("calendarCalendarPopupMenu"), calendarpopuplist, excludeList, true, false);
+    addToPopupList(menulist[5], null, calendarpopuplist, excludeList, true, false);
+
+    // define PopupMenus for task mode...
+    var excludeList = new Array("calendar");
+    addToPopupList(menulist[0], null, taskpopuplist, excludeList, true, true);
+    addToPopupList(menulist[1], null, taskpopuplist, excludeList, true, false);
+    addToPopupList(menulist[2], null, taskpopuplist, excludeList, true, true);
+    addToPopupList(menulist[3], document.getElementById("calendar-GoPopupMenu"), taskpopuplist, excludeList, true, false);
+    var tasksViewMenuPopup = document.getElementById("taskitem-context-menu").cloneNode(true);
+    tasksViewMenuPopup.setAttribute("id", "taskitem-menu");
+    var menuElements = tasksViewMenuPopup.getElementsByAttribute("id", "*");
+    for (var i = menuElements.length; i-- > 0;) {
+        var lid = menuElements[i].getAttribute("id");
+        menuElements[i].setAttribute("id", "menu-" + lid);
+    }
+    tasksViewMenuPopup.removeChild(getMenuElementById("menu-" + "task-context-menu-modify", tasksViewMenuPopup));
+    tasksViewMenuPopup.removeChild(getMenuElementById("menu-" + "task-context-menu-delete", tasksViewMenuPopup));
+    addToPopupList(menulist[4], tasksViewMenuPopup, taskpopuplist, excludeList, false, false);
+    addToPopupList(menulist[5], null, taskpopuplist, excludeList, true, true);
+
+    // define PopupMenus for mail mode...
+    var excludeList = new Array("calendar", "task", "calendar,task");
+    addToPopupList(menulist[0], null, mailpopuplist, excludeList, false, false);
+    addToPopupList(menulist[1], null, mailpopuplist, excludeList, false, false);
+    addToPopupList(menulist[2], null, mailpopuplist, excludeList, false, false);
+    // copy calendar-GoPopupMenu into Thunderbird's GoPopupMenu to switch modes
+    var tbGoPopupMenu = menulist[3].lastChild;
+    var calGoPopupMenu = document.getElementById("calendar-GoPopupMenu").cloneNode(true);
+    var calGoItem;
+    while(calGoItem = calGoPopupMenu.firstChild) {
+        tbGoPopupMenu.appendChild(calGoItem);
+    }
+    addToPopupList(menulist[3], null, mailpopuplist, excludeList, false, false);
+    addToPopupList(menulist[4], null, mailpopuplist, excludeList, false, false);
+    addToPopupList(menulist[5], null, mailpopuplist, excludeList, false, false);
+}
+
+function removeNeedlessSeparators(aMenuPopupList) {
+    aMenuPopupList.forEach(function(aMenuPopup) {
+        var child = aMenuPopup.firstChild;
+        if (child) {
+            if (child.localName == "menuseparator") {
+                try {
+                    aMenuPopup.removeChild(child)
+                } catch (e) {
+                    dump("Element '" + child.getAttribute("id") + "' could not be removed\n");
+                }
+            }
+        }
+        child = aMenuPopup.lastChild;
+        if (child) {
+            if (child.localName == "menuseparator") {
+                try {
+                    aMenuPopup.removeChild(child)
+                } catch (e) {
+                    dump("Element '" + child.getAttribute("id") + "' could not be removed\n");
+                }
+            }
+        }
+    });
+}
+
+function ltnRemoveMailOnlyItems(aMenuPopupList, aExcludeMode) {
+    removeElements(
+// "File" - menu
+    [getMenuElementById("openMessageFileMenuitem", aMenuPopupList[0]),
+     getMenuElementById("newAccountMenuItem", aMenuPopupList[0]),
+     getMenuElementById("fileAttachmentMenu", aMenuPopupList[0]),
+     getAdjacentSibling(getMenuElementById("menu_saveAs", aMenuPopupList[0]), 2),
+
+// "Edit" - menu
+     getMenuElementById("menu_find", aMenuPopupList[1]),
+     getMenuElementById("menu_favoriteFolder", aMenuPopupList[1]),
+     getMenuElementById("menu_properties", aMenuPopupList[1]),
+     getMenuElementById("menu_accountmgr", aMenuPopupList[1]),
+
+// "View"-menu
+     getMenuElementById("menu_showMessengerToolbar", aMenuPopupList[2]),
+
+// "Tools"-menu
+     getMenuElementById("tasksMenuMail", aMenuPopupList[5]),
+     getMenuElementById("menu_import", aMenuPopupList[5])]);
+
+     removeNeedlessSeparators(aMenuPopupList);
+
+// "File" - menu
+    [getMenuElementById("menu_newFolder", aMenuPopupList[0]),
+     getMenuElementById("menu_saveAs", aMenuPopupList[0]),
+     getMenuElementById("menu_getnextnmsg", aMenuPopupList[0]),
+     getMenuElementById("menu_renameFolder", aMenuPopupList[0]),
+//     getMenuElementById("offlineMenuItem", aMenuPopupList[0]),
+
+// "Edit" - menu
+     getMenuElementById("menu_delete", aMenuPopupList[1]),
+     getMenuElementById("menu_select", aMenuPopupList[1]),
+
+// "View"-menu
+     getMenuElementById("menu_MessagePaneLayout", aMenuPopupList[2]),
+     getMenuElementById("viewSortMenu", aMenuPopupList[2]),
+     getMenuElementById("viewheadersmenu", aMenuPopupList[2]),
+     getMenuElementById("viewTextSizeMenu", aMenuPopupList[2]),
+     getMenuElementById("pageSourceMenuItem", aMenuPopupList[2]),
+
+// "Tools"-menu
+     getMenuElementById("filtersCmd", aMenuPopupList[5]),
+     getMenuElementById("runJunkControls", aMenuPopupList[5])].forEach(function(element){
+        removeMenuElementsInSection(element, aExcludeMode);
+    });
+}
+
+function swapPopupMenus() {
+    var showStatusbar = document.getElementById("menu_showTaskbar").getAttribute("checked");
+    var newmenupopuplist = null;
+    if (gCurrentMode == "mail") {
+        newmenupopuplist = mailpopuplist;
+    } else if (gCurrentMode == "calendar") {
+        newmenupopuplist = calendarpopuplist;
+    } else if (gCurrentMode == "task") {
+        newmenupopuplist = taskpopuplist;
+    }
+    for (var i = 0; i < menulist.length; i++) {
+        var menu = menulist[i];
+        var oldmenupopup = menu.firstChild;
+        if (oldmenupopup) {
+            menu.replaceChild(newmenupopuplist[i], oldmenupopup);
+        }
+    }
+    document.getElementById("menu_showTaskbar").setAttribute("checked", showStatusbar);
+    var messageMenu = document.getElementById("messageMenu");
+    if (gCurrentMode == "mail") {
+        messageMenu.setAttribute("label", messagemenulabel);
+        messageMenu.setAttribute("accesskey", messagemenuaccesskey);
+    } else if (gCurrentMode == "calendar"){
+        messageMenu.setAttribute("label", calendarmenulabel);
+        messageMenu.setAttribute("accesskey", calendarmenuaccesskey);
+    } else if (gCurrentMode == "task"){
+        messageMenu.setAttribute("label", tasksmenulabel);
+        messageMenu.setAttribute("accesskey", tasksmenuaccesskey);
+    }
+}
+
+function removeMenuElements(aRoot, aModeValue) {
+    for (var n = 0; n < aModeValue.length; n++) {
+        var modeElements = aRoot.getElementsByAttribute("mode", aModeValue[n]);
+        if (modeElements.length > 0) {
+            for (var i = modeElements.length-1; i >=0; i--) {
+                var element = modeElements[i];
+                if (element) {
+                    var localName = element.localName;
+                    if (localName =="menuitem" || localName == "menuseparator" || localName == "menu"){
+                        element.parentNode.removeChild(element);
+                    }
+                }
+            }
+        }
+    }
 }
 
 SelectMessage = function(messageUri) {

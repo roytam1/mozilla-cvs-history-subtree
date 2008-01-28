@@ -271,13 +271,13 @@ function onCancel() {
     return result;
 }
 
-function timezoneString(aDate) {
-    var fragments = aDate.split('/');
-    var num = fragments.length;
-    if (num <= 1) {
-        return fragments[0];
+function timezoneString(tz) {
+    var tzid = tz.tzid;
+    var prefix = getTimezoneService().tzidPrefix;
+    if (tzid.indexOf(prefix) == 0) {
+        tzid = tzid.substring(prefix.length);
     }
-    return fragments[num-2] + '/'+fragments[num - 1];
+    return tzid;
 }
 
 function loadDialog(item) {
@@ -285,6 +285,17 @@ function loadDialog(item) {
     setElementValue("item-location", item.getProperty("LOCATION"));
 
     loadDateTime(item);
+
+    var isItemSupported;
+    if (isToDo(calendarItem)) {
+        isItemSupported = function isTodoSupported(cal) {
+            return (cal.getProperty("capabilities.tasks.supported") !== false);
+        };
+    } else if (isEvent(calendarItem)) {
+        isItemSupported = function isEventSupported(cal) {
+            return (cal.getProperty("capabilities.events.supported") !== false);
+        };
+    }
 
     // add calendars to the calendar menulist
     var calendarList = document.getElementById("item-calendar");
@@ -303,7 +314,9 @@ function loadDialog(item) {
                 }
             }
             selectIndex++;
-        } else if (calendar && !calendar.readOnly) {
+        } else if (calendar &&
+                   isCalendarWritable(calendar) &&
+                   isItemSupported(calendar)) {
             var menuitem = calendarList.appendItem(calendar.name, i);
             menuitem.calendar = calendar;
             if (calendarToUse) {
@@ -323,6 +336,13 @@ function loadDialog(item) {
 
     // Categories
     var categoriesString = getLocalizedPref("calendar.categories.names", "");
+
+    // If no categories are configured load a default set from properties file
+    if (!categoriesString || categoriesString == "") {
+        categoriesString = calGetString("categories", "categories");
+        setLocalizedPref("calendar.categories.names", categoriesString);
+    }
+
     var categoriesList = categoriesString.split(",");
     
     // When categoriesString is empty, split returns an array containing one
@@ -448,6 +468,7 @@ function loadDialog(item) {
 }
 
 function loadDateTime(item) {
+    var kDefaultTimezone = calendarDefaultTimezone();
     if (isEvent(item)) {
         var startTime = item.startDate;
         var endTime = item.endDate;
@@ -465,7 +486,6 @@ function loadDateTime(item) {
         // store the start/end-times as calIDateTime-objects
         // converted to the default timezone. store the timezones
         // separately.
-        var kDefaultTimezone = calendarDefaultTimezone();
         gStartTimezone = startTime.timezone;
         gEndTimezone = endTime.timezone;
         gStartTime = startTime.getInTimezone(kDefaultTimezone);
@@ -478,7 +498,6 @@ function loadDateTime(item) {
         var endTime = null;
         var duration = null;
 
-        var kDefaultTimezone = calendarDefaultTimezone();
         var hasEntryDate = (item.entryDate != null);
         if (hasEntryDate) {
             startTime = item.entryDate;
@@ -531,11 +550,11 @@ function dateTimeControls2State(aKeepDuration) {
     var saveEndTime = gEndTime;
     var kDefaultTimezone = calendarDefaultTimezone();
 
+    var menuItem = document.getElementById('options-timezone-menuitem');
     if (gStartTime) {
         // jsDate is always in OS timezone, thus we create a calIDateTime
         // object from the jsDate representation and simply set the new
         // timezone instead of converting.
-        var menuItem = document.getElementById('menu-options-timezone');
         gStartTime = jsDateToDateTime(
             getElementValue(startWidgetId),
             (menuItem.getAttribute('checked') == 'true') ? gStartTimezone : kDefaultTimezone);
@@ -550,8 +569,8 @@ function dateTimeControls2State(aKeepDuration) {
             }
         } else {
             var timezone = gEndTimezone;
-            if (timezone == "UTC") {
-                if (gStartTime && gStartTimezone != gEndTimezone) {
+            if (timezone.isUTC) {
+                if (gStartTime && !compareObjects(gStartTimezone, gEndTimezone)) {
                     timezone = gStartTimezone;
                 }
             }
@@ -805,10 +824,12 @@ function saveDialog(item) {
     }
 
     // URL
-    setItemProperty(item, "URL", gURL);
+    setItemProperty(item, "URL", gURL, "attachments");
 
+    // Description
     setItemProperty(item, "DESCRIPTION", getElementValue("item-description"));
 
+    // Event Status
     if (isEvent(item)) {
         if(gStatus && gStatus != "NONE") {
             item.setProperty("STATUS", gStatus);
@@ -830,19 +851,22 @@ function saveDialog(item) {
     // handling since the WCAP provider always includes the priority
     // with value *null* and we don't detect changes to this item if
     // we delete this property.
-    if (gPriority || item.hasProperty("PRIORITY")) {
+    if (capSupported("priority") &&
+        (gPriority || item.hasProperty("PRIORITY"))) {
         item.setProperty("PRIORITY", gPriority);
     } else {
         item.deleteProperty("PRIORITY");
     }
 
+    // Transparency
     if (gShowTimeAs) {
         item.setProperty("TRANSP", gShowTimeAs);
     } else {
         item.deleteProperty("TRANSP");
     }
 
-    setItemProperty(item, "CLASS", gPrivacy);
+    // Privacy
+    setItemProperty(item, "CLASS", gPrivacy, "privacy");
 
     if (item.status == "COMPLETED" && isToDo(item)) {
         var elementValue = getElementValue("completed-date-picker");
@@ -949,12 +973,12 @@ function updateAccept() {
         startDate = jsDateToDateTime(getElementValue("event-starttime"));
         endDate = jsDateToDateTime(getElementValue("event-endtime"));
 
-        var menuItem = document.getElementById('menu-options-timezone');
+        var menuItem = document.getElementById('options-timezone-menuitem');
         if (menuItem.getAttribute('checked') == 'true') {
             var startTimezone = gStartTimezone;
             var endTimezone = gEndTimezone;
-            if (endTimezone == "UTC") {
-                if (gStartTimezone != gEndTimezone) {
+            if (endTimezone.isUTC) {
+                if (!compareObjects(gStartTimezone, gEndTimezone)) {
                     endTimezone = gStartTimezone;
                 }
             }
@@ -1004,6 +1028,18 @@ function updateAccept() {
     }
 
     return enableAccept;
+}
+
+function onUpdateAllDay() {
+    if (!isEvent(window.calendarItem)) {
+        return;
+    }
+    var allDay = getElementValue("event-all-day", "checked");
+    gStartTimezone = (allDay ? floating(): calendarDefaultTimezone());
+    gEndTimezone = gStartTimezone;
+    gStartTime.timezone = gStartTimezone;
+    gEndTime.timezone = gEndTimezone;
+    updateAllDay();
 }
 
 // this function sets the enabled/disabled
@@ -1133,7 +1169,7 @@ function editAttendees() {
         endTime.isDate = false;
     }
 
-    var menuItem = document.getElementById('menu-options-timezone');
+    var menuItem = document.getElementById('options-timezone-menuitem');
     var displayTimezone = menuItem.getAttribute('checked') == 'true';
 
     var args = new Object();
@@ -1156,7 +1192,7 @@ function editAttendees() {
 }
 
 function editPrivacy(target) {
-    gPrivacy = target.getAttribute("value");
+    gPrivacy = target.getAttribute("privacy");
 
     switch (gPrivacy) {
         case "PRIVATE":
@@ -1172,38 +1208,115 @@ function editPrivacy(target) {
     updatePrivacy();
 }
 
-// this function updates the UI according to the global field 'gPrivacy'.
-// in case 'gPrivacy' is modified updatePrivacy() should be called to
-// reflect the modification in the UI.
+/**
+ * This function updates the UI according to the global field 'gPrivacy' and the
+ * selected calendar. If the selected calendar does not support privacy or only
+ * certain values, these are removed from the UI. This function should be called
+ * any time that gPrivacy is updated.
+ */
 function updatePrivacy() {
-    var privacyPublic = document.getElementById("cmd_privacy_public");
-    var privacyConfidential = document.getElementById("cmd_privacy_confidential");
-    var privacyPrivate = document.getElementById("cmd_privacy_private");
+    var calendar = document.getElementById("item-calendar")
+                           .selectedItem.calendar;
+    var hasPrivacy = capSupported("privacy");
 
-    privacyPublic.setAttribute(
-        "checked",
-        privacyPublic.getAttribute("value") == gPrivacy ?
-            "true" : "false");
-    privacyConfidential.setAttribute(
-        "checked",
-        privacyConfidential.getAttribute("value") == gPrivacy ?
-            "true" : "false");
-    privacyPrivate.setAttribute(
-        "checked",
-        privacyPrivate.getAttribute("value") == gPrivacy ?
-            "true" : "false");
+    if (hasPrivacy) {
+        var numChilds;
+        var privacyValues = capValues("privacy",
+                                      ["PUBLIC", "CONFIDENTIAL", "PRIVATE"]);
 
-    var statusbar = document.getElementById("status-bar");
-    var numChilds = statusbar.childNodes.length;
-    for (var i = 0; i < numChilds; i++) {
-        var node = statusbar.childNodes[i];
-        if (node.hasAttribute("privacy")) {
-            if (gPrivacy != node.getAttribute("privacy")) {
-                node.setAttribute("collapsed", "true");
-            } else {
-                node.removeAttribute("collapsed");
+        // Update privacy capabilities (toolbar)
+        var menupopup = document.getElementById("event-privacy-menupopup");
+        if (menupopup) {
+            // Only update the toolbar if the button is actually there
+            numChilds = menupopup.childNodes.length;
+            for (var i = 0; i < numChilds; i++) {
+                var node = menupopup.childNodes[i];
+                if (node.hasAttribute("privacy")) {
+                    var currentPrivacyValue = node.getAttribute("privacy");
+                    // Collapsed state
+
+                    // Hide the toolbar if the value is unsupported or is for a
+                    // specific provider and doesn't belong to the current provider.
+                    if (privacyValues.indexOf(currentPrivacyValue) < 0 ||
+                        (currentProvider && currentProvider != calendar.type)) {
+                        node.setAttribute("collapsed", "true");
+                    } else {
+                        node.removeAttribute("collapsed");
+                    }
+
+                    // Checked state
+                    if (gPrivacy == currentPrivacyValue) {
+                        node.setAttribute("checked", "true");
+                    } else {
+                        node.removeAttribute("checked");
+                    }
+                }
             }
         }
+
+        // Update privacy capabilities (menu)
+        menupopup = document.getElementById("options-privacy-menupopup");
+        numChilds = menupopup.childNodes.length;
+        for (var i = 0; i < numChilds; i++) {
+            var node = menupopup.childNodes[i];
+            var currentProvider = node.getAttribute("provider");
+            if (node.hasAttribute("privacy")) {
+                var currentPrivacyValue = node.getAttribute("privacy");
+                // Collapsed state
+
+                // Hide the menu if the value is unsupported or is for a
+                // specific provider and doesn't belong to the current provider.
+                if (privacyValues.indexOf(currentPrivacyValue) < 0 ||
+                    (currentProvider && currentProvider != calendar.type)) {
+                    node.setAttribute("collapsed", "true");
+                } else {
+                    node.removeAttribute("collapsed");
+                }
+
+                // Checked state
+                if (gPrivacy == currentPrivacyValue) {
+                    node.setAttribute("checked", "true");
+                } else {
+                    node.removeAttribute("checked");
+                }
+            }
+        }
+
+        // Update privacy capabilities (statusbar)
+        var privacyPanel = document.getElementById("status-privacy");
+        var hasAnyPrivacyValue = false;
+        numChilds = privacyPanel.childNodes.length;
+        for (var i = 0; i < numChilds; i++) {
+            var node = privacyPanel.childNodes[i];
+            var currentProvider = node.getAttribute("provider");
+            if (node.hasAttribute("privacy")) {
+                var currentPrivacyValue = node.getAttribute("privacy");
+
+                // Hide the panel if the value is unsupported or is for a
+                // specific provider and doesn't belong to the current provider,
+                // or is not the items privacy value
+                if (privacyValues.indexOf(currentPrivacyValue) < 0 ||
+                    (currentProvider && currentProvider != calendar.type) ||
+                    gPrivacy != currentPrivacyValue) {
+                    node.setAttribute("collapsed", "true");
+                } else {
+                    node.removeAttribute("collapsed");
+                    hasAnyPrivacyValue = true;
+                }
+            }
+        }
+
+        // Don't show the status panel if no valid privacy value is selected
+        if (!hasAnyPrivacyValue) {
+            privacyPanel.setAttribute("collapsed", "true");
+        } else {
+            privacyPanel.removeAttribute("collapsed");
+        }
+
+    } else {
+        setElementValue("button-privacy", !hasPrivacy && "true", "disabled");
+        setElementValue("options-privacy-menu", !hasPrivacy && "true", "disabled");
+        setElementValue("status-privacy", !hasPrivacy && "true", "collapsed");
     }
 }
 
@@ -1213,41 +1326,50 @@ function editPriority(target) {
 }
 
 function updatePriority() {
-    var priorityLevel = "none";
-    if (gPriority >= 1 && gPriority <= 4) {
-        priorityLevel = "high";
-    } else if (gPriority == 5) {
-        priorityLevel = "normal";
-    } else if (gPriority >= 6 && gPriority <= 9) {
-        priorityLevel = "low";
-    }
+    // Set up capabilities
+    var hasPriority = capSupported("priority");
+    setElementValue("options-priority-menu", !hasPriority && "true", "disabled");
+    setElementValue("status-priority", !hasPriority && "true", "collapsed");
 
-    var priorityNone = document.getElementById("cmd_priority_none");
-    var priorityLow = document.getElementById("cmd_priority_low");
-    var priorityNormal = document.getElementById("cmd_priority_normal");
-    var priorityHigh = document.getElementById("cmd_priority_high");
-
-    priorityNone.setAttribute("checked",
-                              priorityLevel == "none" ? "true" : "false");
-    priorityLow.setAttribute("checked",
-                             priorityLevel == "low" ? "true" : "false");
-    priorityNormal.setAttribute("checked",
-                                priorityLevel == "normal" ? "true" : "false");
-    priorityHigh.setAttribute("checked",
-                              priorityLevel == "high" ? "true" : "false");
-
-    var priority = document.getElementById("status-priority");
-    var collapse = (priorityLevel == "none" ? true : false);
-    var numChilds = priority.childNodes.length;
-    for (var i = 0; i < numChilds; i++) {
-        var node = priority.childNodes[i];
-        if (collapse) {
-            node.setAttribute("collapsed", "true");
-        } else {
-            node.removeAttribute("collapsed");
+    if (hasPriority) {
+        var priorityLevel = "none";
+        if (gPriority >= 1 && gPriority <= 4) {
+            priorityLevel = "high";
+        } else if (gPriority == 5) {
+            priorityLevel = "normal";
+        } else if (gPriority >= 6 && gPriority <= 9) {
+            priorityLevel = "low";
         }
-        if (node.getAttribute("value") == priorityLevel) {
-            collapse = true;
+
+        var priorityNone = document.getElementById("cmd_priority_none");
+        var priorityLow = document.getElementById("cmd_priority_low");
+        var priorityNormal = document.getElementById("cmd_priority_normal");
+        var priorityHigh = document.getElementById("cmd_priority_high");
+
+        priorityNone.setAttribute("checked",
+                                  priorityLevel == "none" ? "true" : "false");
+        priorityLow.setAttribute("checked",
+                                 priorityLevel == "low" ? "true" : "false");
+        priorityNormal.setAttribute("checked",
+                                    priorityLevel == "normal" ? "true" : "false");
+        priorityHigh.setAttribute("checked",
+                                  priorityLevel == "high" ? "true" : "false");
+
+        var priorityPanel = document.getElementById("status-priority");
+        if (priorityLevel == "none") {
+            // If the priority is none, don't show the status bar panel
+            priorityPanel.setAttribute("collapsed", "true");
+        } else {
+            priorityPanel.removeAttribute("collapsed");
+            var numChilds = priorityPanel.childNodes.length;
+            for (var i = 0; i < numChilds; i++) {
+                var node = priorityPanel.childNodes[i];
+                if (node.getAttribute("value") == priorityLevel) {
+                    node.removeAttribute("collapsed");
+                } else {
+                    node.setAttribute("collapsed", "true");
+                }
+            }
         }
     }
 }
@@ -1313,12 +1435,14 @@ function editURL() {
     }
 }
 
-function setItemProperty(item, propertyName, value) {
+function setItemProperty(item, propertyName, aValue, aCapability) {
+    var value = (aCapability && !capSupported(aCapability) ? null : aValue);
+
     switch (propertyName) {
         case "startDate":
             if (value.isDate && !item.startDate.isDate ||
                 !value.isDate && item.startDate.isDate ||
-                value.timezone != item.startDate.timezone ||
+                !compareObjects(value.timezone, item.startDate.timezone) ||
                 value.compare(item.startDate) != 0) {
                 item.startDate = value;
             }
@@ -1326,7 +1450,7 @@ function setItemProperty(item, propertyName, value) {
         case "endDate":
             if (value.isDate && !item.endDate.isDate ||
                 !value.isDate && item.endDate.isDate ||
-                value.timezone != item.endDate.timezone ||
+                !compareObjects(value.timezone, item.endDate.timezone) ||
                 value.compare(item.endDate) != 0) {
                 item.endDate = value;
             }
@@ -1338,7 +1462,7 @@ function setItemProperty(item, propertyName, value) {
             if (value && !item.entryDate ||
                 !value && item.entryDate ||
                 value.isDate != item.entryDate.isDate ||
-                value.timezone != item.entryDate.timezone ||
+                !compareObjects(value.timezone, item.entryDate.timezone) ||
                 value.compare(item.entryDate) != 0) {
                 item.entryDate = value;
             }
@@ -1350,7 +1474,7 @@ function setItemProperty(item, propertyName, value) {
             if (value && !item.dueDate ||
                 !value && item.dueDate ||
                 value.isDate != item.dueDate.isDate ||
-                value.timezone != item.dueDate.timezone ||
+                !compareObjects(value.timezone, item.dueDate.timezone) ||
                 value.compare(item.dueDate) != 0) {
                 item.dueDate = value;
             }
@@ -1471,6 +1595,10 @@ function updateCalendar() {
         // update datetime pickers
         updateAllDay();
     }
+
+    // Make sure capabilties are reflected correctly
+    updateCapabilities();
+
 }
 
 function editRepeat() {
@@ -1802,6 +1930,10 @@ function DialogToolboxCustomizeDone(aToolboxChanged) {
 
     // Enable the toolbar context menu items
     document.getElementById("cmd_customize").removeAttribute("disabled");
+
+    // Update privacy items to make sure the toolbarbutton's menupopup is set
+    // correctly
+    updatePrivacy();
 }
 
 function onCommandCustomize() {
@@ -1871,7 +2003,7 @@ function editEndTimezone() {
         function(datetime) {
             var equalTimezones = false;
             if (gStartTimezone && gEndTimezone) {
-                if (gStartTimezone == gEndTimezone) {
+                if (compareObjects(gStartTimezone, gEndTimezone)) {
                     equalTimezones = true;
                 }
             }
@@ -1912,7 +2044,7 @@ function editTimezone(aElementId,aDateTime,aCallback) {
 // - 'todo-duedate'
 // the date/time-objects are either displayed in their repective
 // timezone or in the default timezone. this decision is based
-// on whether or not 'menu-options-timezone' is checked.
+// on whether or not 'options-timezone-menuitem' is checked.
 // the necessary information is taken from the following variables:
 // - 'gStartTime'
 // - 'gEndTime'
@@ -1921,7 +2053,7 @@ function updateDateTime() {
     gIgnoreUpdate = true;
 
     var item = window.calendarItem;
-    var menuItem = document.getElementById('menu-options-timezone');
+    var menuItem = document.getElementById('options-timezone-menuitem');
 
     // convert to default timezone if the timezone option
     // is *not* checked, otherwise keep the specific timezone
@@ -1937,8 +2069,8 @@ function updateDateTime() {
           // the timezone of the endtime is "UTC", we convert
           // the endtime into the timezone of the starttime.
           if (startTime && endTime) {
-            if (startTime.timezone != endTime.timezone) {
-              if (endTime.timezone == "UTC") {
+            if (!compareObjects(startTime.timezone, endTime.timezone)) {
+              if (endTime.timezone.isUTC) {
                 endTime = endTime.getInTimezone(startTime.timezone);
               }
             }
@@ -1947,8 +2079,8 @@ function updateDateTime() {
           // before feeding the date/time value into the control we need
           // to set the timezone to 'floating' in order to avoid the
           // automatic conversion back into the OS timezone.
-          startTime.timezone = "floating";
-          endTime.timezone = "floating";
+          startTime.timezone = floating();
+          endTime.timezone = floating();
 
           setElementValue("event-starttime", startTime.jsDate);
           setElementValue("event-endtime", endTime.jsDate);
@@ -1962,25 +2094,25 @@ function updateDateTime() {
 
           if (hasEntryDate && hasDueDate) {
               setElementValue("todo-has-entrydate", hasEntryDate, "checked");
-              startTime.timezone = "floating";
+              startTime.timezone = floating();
               setElementValue("todo-entrydate", startTime.jsDate);
 
               setElementValue("todo-has-duedate", hasDueDate, "checked");
-              endTime.timezone = "floating";
+              endTime.timezone = floating();
               setElementValue("todo-duedate", endTime.jsDate);
           } else if (hasEntryDate) {
               setElementValue("todo-has-entrydate", hasEntryDate, "checked");
-              startTime.timezone = "floating";
+              startTime.timezone = floating();
               setElementValue("todo-entrydate", startTime.jsDate);
 
-              startTime.timezone = "floating";
+              startTime.timezone = floating();
               setElementValue("todo-duedate", startTime.jsDate);
           } else if (hasDueDate) {
-              endTime.timezone = "floating";
+              endTime.timezone = floating();
               setElementValue("todo-entrydate", endTime.jsDate);
 
               setElementValue("todo-has-duedate", hasDueDate, "checked");
-              endTime.timezone = "floating";
+              endTime.timezone = floating();
               setElementValue("todo-duedate", endTime.jsDate);
           }
         }
@@ -1995,8 +2127,8 @@ function updateDateTime() {
             // before feeding the date/time value into the control we need
             // to set the timezone to 'floating' in order to avoid the
             // automatic conversion back into the OS timezone.
-            startTime.timezone = "floating";
-            endTime.timezone = "floating";
+            startTime.timezone = floating();
+            endTime.timezone = floating();
             setElementValue("event-starttime", startTime.jsDate);
             setElementValue("event-endtime", endTime.jsDate);
         }
@@ -2010,25 +2142,25 @@ function updateDateTime() {
 
             if (hasEntryDate && hasDueDate) {
                 setElementValue("todo-has-entrydate", hasEntryDate, "checked");
-                startTime.timezone = "floating";
+                startTime.timezone = floating();
                 setElementValue("todo-entrydate", startTime.jsDate);
 
                 setElementValue("todo-has-duedate", hasDueDate, "checked");
-                endTime.timezone = "floating";
+                endTime.timezone = floating();
                 setElementValue("todo-duedate", endTime.jsDate);
             } else if (hasEntryDate) {
                 setElementValue("todo-has-entrydate", hasEntryDate, "checked");
-                startTime.timezone = "floating";
+                startTime.timezone = floating();
                 setElementValue("todo-entrydate", startTime.jsDate);
 
-                startTime.timezone = "floating";
+                startTime.timezone = floating();
                 setElementValue("todo-duedate", startTime.jsDate);
             } else if (hasDueDate) {
-                endTime.timezone = "floating";
+                endTime.timezone = floating();
                 setElementValue("todo-entrydate", endTime.jsDate);
 
                 setElementValue("todo-has-duedate", hasDueDate, "checked");
-                endTime.timezone = "floating";
+                endTime.timezone = floating();
                 setElementValue("todo-duedate", endTime.jsDate);
             }
         }
@@ -2044,10 +2176,10 @@ function updateDateTime() {
 // - 'timezone-starttime'
 // - 'timezone-endtime'
 // the timezone-links show the corrosponding names of the
-// start/end times. if 'menu-options-timezone' is not checked
+// start/end times. if 'options-timezone-menuitem' is not checked
 // the links will be collapsed.
 function updateTimezone() {
-    var menuItem = document.getElementById('menu-options-timezone');
+    var menuItem = document.getElementById('options-timezone-menuitem');
 
     // convert to default timezone if the timezone option
     // is *not* checked, otherwise keep the specific timezone
@@ -2058,7 +2190,7 @@ function updateTimezone() {
 
         var equalTimezones = false;
         if (startTimezone && endTimezone) {
-            if (startTimezone == endTimezone || endTimezone == "UTC") {
+            if (compareObjects(startTimezone, endTimezone) || endTimezone.isUTC) {
                 equalTimezones = true;
             }
         }
@@ -2069,7 +2201,7 @@ function updateTimezone() {
                 if (aTimezone != null && !aCollapse) {
                     element.removeAttribute('collapsed');
                     element.value = timezoneString(aTimezone);
-                    if (!aDateTime || !aDateTime.isValid || gIsReadOnly) {
+                    if (!aDateTime || !aDateTime.isValid || gIsReadOnly || aDateTime.isDate) {
                         if (element.hasAttribute('class')) {
                             element.setAttribute('class-on-enabled',
                                 element.getAttribute('class'));
@@ -2117,8 +2249,11 @@ function updateTimezone() {
 }
 
 function updateDocument() {
-    var documentRow = document.getElementById("document-row");
-    if (!gURL || gURL == "") {
+    var hasAttachments = capSupported("attachments");
+    setElementValue("cmd_url", !hasAttachments && "true", "disabled");
+
+    var documentRow = document.getElementById("event-grid-document-row");
+    if (!hasAttachments || !gURL || gURL == "") {
         documentRow.setAttribute('collapsed', 'true');
     } else {
         documentRow.removeAttribute('collapsed');
@@ -2136,8 +2271,8 @@ function browseDocument() {
 
 function updateAttendees() {
     var regexp = new RegExp("^mailto:(.*)", "i");
-    var attendeeRow = document.getElementById("attendee-row");
-    var attendeeRow2 = document.getElementById("attendee-row-2");
+    var attendeeRow = document.getElementById("event-grid-attendee-row");
+    var attendeeRow2 = document.getElementById("event-grid-attendee-row-2");
     if (!window.attendees || !window.attendees.length) {
         attendeeRow.setAttribute('collapsed', 'true');
         attendeeRow2.setAttribute('collapsed', 'true');
@@ -2179,11 +2314,39 @@ function updateRepeatDetails() {
     var recurrenceInfo = window.recurrenceInfo;
     var itemRepeat = document.getElementById("item-repeat");
     if (itemRepeat.value == "custom" && recurrenceInfo) {
+        
+        // First of all collapse the details text. If we fail to
+        // create a details string, we simply don't show anything.
+        // this could happen if the repeat rule is something exotic
+        // we don't have any strings prepared for.
+        var repeatDetails = document.getElementById("repeat-details");
+        repeatDetails.setAttribute("collapsed", "true");
+        
+        // Try to create a descriptive string from the rule(s).
         var kDefaultTimezone = calendarDefaultTimezone();
         var startDate = jsDateToDateTime(getElementValue("event-starttime"), kDefaultTimezone);
         var endDate = jsDateToDateTime(getElementValue("event-endtime"), kDefaultTimezone);
         var allDay = getElementValue("event-all-day", "checked");
-        commonUpdateRepeatDetails(recurrenceInfo,startDate,endDate,allDay);
+        var detailsString = recurrenceRule2String(
+            recurrenceInfo, startDate, endDate, allDay);
+            
+        // Now display the string...
+        if (detailsString) {
+            var lines = detailsString.split("\n");
+            repeatDetails.removeAttribute("collapsed");
+            while (repeatDetails.childNodes.length > lines.length) {
+                repeatDetails.removeChild(repeatDetails.lastChild);
+            }
+            var numChilds = repeatDetails.childNodes.length;
+            for (var i = 0; i < lines.length; i++) {
+                if (i >= numChilds) {
+                    var newNode = repeatDetails.childNodes[0]
+                                               .cloneNode(true);
+                    repeatDetails.appendChild(newNode);
+                }
+                repeatDetails.childNodes[i].value = lines[i];
+            }
+        }
     } else {
         var repeatDetails = document.getElementById("repeat-details");
         repeatDetails.setAttribute("collapsed", "true");
@@ -2333,4 +2496,37 @@ function sendMailToAttendees(aAttendees) {
                                     [item.title]);
 
     sendMailTo(toList, emailSubject);
+}
+
+/**
+ * Make sure all fields that may have calendar specific capabilities are updated
+ */
+function updateCapabilities() {
+    updateDocument();
+    updatePriority();
+    updatePrivacy();
+}
+
+/**
+ * Test if a specific capability is supported
+ *
+ * @param aCap      The capability from "capabilities.<aCap>.supported"
+ */
+function capSupported(aCap) {
+    var calendar = document.getElementById("item-calendar")
+                           .selectedItem.calendar;
+    return calendar.getProperty("capabilities." + aCap + ".supported") !== false;
+}
+
+/**
+ * Return the values for a certain capability.
+ *
+ * @param aCap      The capability from "capabilities.<aCap>.values"
+ * @return          The values for this capability
+ */
+function capValues(aCap, aDefault) {
+    var calendar = document.getElementById("item-calendar")
+                           .selectedItem.calendar;
+    var vals = calendar.getProperty("capabilities." + aCap + ".values");
+    return (vals === null ? aDefault : vals);
 }

@@ -47,10 +47,12 @@ include $(DEPTH)/config/autoconf.mk
 
 MODULE		= webdav
 LIBRARY_NAME    = webdav
-EXPORT_LIBRARY  = 1
 IS_COMPONENT    = 1
 MODULE_NAME     = nsWebDAVService
 GRE_MODULE      = 1
+# We don't want an EXPORT_LIBRARY
+FORCE_SHARED_LIB = 1
+MOZ_STATIC_COMPONENT_LIBS =
 # PACKAGE_FILE    = webdav.pkg
 MOZILLA_INTERNAL_API = 1
 

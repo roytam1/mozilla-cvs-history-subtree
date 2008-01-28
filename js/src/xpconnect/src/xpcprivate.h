@@ -1,5 +1,5 @@
 /* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*-
- * vim: set ts=8 sw=4 et tw=80:
+ * vim: set ts=8 sw=4 et tw=78:
  *
  * ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
@@ -422,7 +422,7 @@ private:
 const PRBool OBJ_IS_GLOBAL = PR_TRUE;
 const PRBool OBJ_IS_NOT_GLOBAL = PR_FALSE;
 
-class nsXPConnect : public nsIXPConnect_MOZILLA_1_8_BRANCH,
+class nsXPConnect : public nsIXPConnect_MOZILLA_1_8_BRANCH2,
                     public nsIEventQueueListener,
                     public nsSupportsWeakReference
 {
@@ -431,6 +431,7 @@ public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSIXPCONNECT
     NS_DECL_NSIXPCONNECT_MOZILLA_1_8_BRANCH
+    NS_DECL_NSIXPCONNECT_MOZILLA_1_8_BRANCH2
     NS_DECL_NSIEVENTQUEUELISTENER
 
     // non-interface implementation
@@ -3588,10 +3589,15 @@ xpc_CreateSandboxObject(JSContext * cx, jsval * vp, nsISupports *prinOrSop);
 // that *rval doesn't get collected during the call or usage after the
 // call. This helper will use filename and lineNo for error reporting,
 // and if no filename is provided it will use the codebase from the
-// principal and line number 1 as a fallback.
+// principal and line number 1 as a fallback. if returnStringOnly is
+// true, then the result in *rval, or the exception in cx->exception
+// will be coerced into strings. If an exception is thrown converting
+// an exception to a string, evalInSandbox will return an NS_ERROR_*
+// result, and cx->exception will be empty.
 nsresult
 xpc_EvalInSandbox(JSContext *cx, JSObject *sandbox, const nsAString& source,
-                  const char *filename, PRInt32 lineNo, jsval *rval);
+                  const char *filename, PRInt32 lineNo,
+                  PRBool returnStringOnly, jsval *rval);
 #endif /* !XPCONNECT_STANDALONE */
 
 /***************************************************************************/

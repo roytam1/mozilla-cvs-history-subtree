@@ -10,7 +10,7 @@ accompanying it.
 This Read Me file contains information about system requirements and
 installation instructions for the OS/2 builds of SeaMonkey. 
 
-For more info on SeaMonkey, see http://www.mozilla.org/projects/seamonkey/
+For more info on SeaMonkey, see http://www.seamonkey-project.org/
 For more info on the OS/2 port see http://www.mozilla.org/ports/os2. To
 submit bugs or other feedback, see the Navigator QA menu and check out
 Bugzilla at https://bugzilla.mozilla.org/ for links to known bugs,
@@ -40,7 +40,7 @@ for testing, may be buggy. If you are looking for a more polished version
 of SeaMonkey, the SeaMonkey project releases builds of SeaMonkey regularly
 that you can download from
 
-  http://www.mozilla.org/projects/seamonkey/
+  http://www.seamonkey-project.org/
  
 Be sure to read the SeaMonkey release notes for information on known
 problems and installation issues with SeaMonkey.  The release notes can be

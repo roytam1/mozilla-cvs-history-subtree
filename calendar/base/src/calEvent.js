@@ -150,10 +150,7 @@ calEvent.prototype = {
     },
 
     get icalString() {
-        const icssvc = Components.
-          classes["@mozilla.org/calendar/ics-service;1"].
-          getService(Components.interfaces.calIICSService);
-        var calcomp = icssvc.createIcalComponent("VCALENDAR");
+        var calcomp = getIcsService().createIcalComponent("VCALENDAR");
         calSetProdidVersion(calcomp);
         if (this.hasProperty("METHOD")) {
             calcomp.method = this.getProperty("METHOD");
@@ -163,9 +160,7 @@ calEvent.prototype = {
     },
 
     get icalComponent() {
-        const icssvc = Components.
-          classes["@mozilla.org/calendar/ics-service;1"].
-          getService(Components.interfaces.calIICSService);
+        var icssvc = getIcsService();
         var icalcomp = icssvc.createIcalComponent("VEVENT");
         this.fillIcalComponentFromBase(icalcomp);
         this.mapPropsToICS(icalcomp, this.icsEventPropMap);
@@ -209,29 +204,7 @@ calEvent.prototype = {
         this.mapPropsFromICS(event, this.icsEventPropMap);
 
         this.importUnpromotedProperties(event, this.eventPromotedProps);
-        
-        // If there is a duration set on the event, calculate the right
-        // end time.
-        // XXX This means that serializing later will loose the duration
-        //     information, to replace it with a dtend. bug 317786
-        if (event.duration) {
-            this.endDate = this.startDate.clone();
-            this.endDate.addDuration(event.duration);
-        }
-        
-        // If endDate is still invalid neither a end time nor a duration is set
-        // on the event. We have to set endDate ourselves.
-        // If the start time is a date-time the event ends on the same calendar
-        // date and time of day. If the start time is a date the events
-        // non-inclusive end is the end of the calendar date.
-        var endDate = this.endDate;
-        if (!endDate || !endDate.isValid) {
-            this.endDate = this.startDate.clone();
-            if (this.startDate.isDate) {
-                this.endDate.day += 1;
-            }
-        }
-        
+
         // Importing didn't really change anything
         this.mDirty = false;
     },
@@ -273,12 +246,40 @@ calEvent.prototype = {
 
     get startDate() {
         return this.getProperty("DTSTART");
+    },
+
+    mEndDate: undefined,
+    get endDate() {
+        var endDate = this.mEndDate;
+        if (endDate === undefined) {
+            endDate = this.getProperty("DTEND");
+            if (!endDate) {
+                endDate = this.startDate.clone();
+                var dur = this.getProperty("DURATION");
+                if (dur) {
+                    // If there is a duration set on the event, calculate the right end time.
+                    var icalDur = Components.classes["@mozilla.org/calendar/duration;1"]
+                                            .createInstance(Components.interfaces.calIDuration);
+                    icalDur.icalString = dur;
+                    endDate.addDuration(icalDur);
+                } else {
+                    // If the start time is a date-time the event ends on the same calendar
+                    // date and time of day. If the start time is a date the events
+                    // non-inclusive end is the end of the calendar date.
+                    if (endDate.isDate) {
+                        endDate.day += 1;
+                    }
+                }
+            }
+            this.mEndDate = endDate;
+        }
+        return endDate;
+    },
+
+    set endDate(value) {
+        this.deleteProperty("DURATION"); // setting endDate once removes DURATION
+        this.setProperty("DTEND", value);
+        return (this.mEndDate = value);
     }
 };
 
-// var to avoid spurious errors when loaded as component during autoreg
-
-var makeMemberAttr;
-if (makeMemberAttr) {
-    makeMemberAttr(calEvent, "DTEND", null, "endDate", true);
-}

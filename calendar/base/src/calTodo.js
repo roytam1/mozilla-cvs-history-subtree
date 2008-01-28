@@ -178,19 +178,14 @@ calTodo.prototype = {
     },
 
     get icalString() {
-        const icssvc = Components.
-          classes["@mozilla.org/calendar/ics-service;1"].
-          getService(Components.interfaces.calIICSService);
-        var calcomp = icssvc.createIcalComponent("VCALENDAR");
+        var calcomp = getIcsService().createIcalComponent("VCALENDAR");
         calSetProdidVersion(calcomp);
         calcomp.addSubcomponent(this.icalComponent);
         return calcomp.serializeToICS();
     },
 
     get icalComponent() {
-        const icssvc = Components.
-          classes["@mozilla.org/calendar/ics-service;1"].
-          getService(Components.interfaces.calIICSService);
+        var icssvc = getIcsService();
         var icalcomp = icssvc.createIcalComponent("VTODO");
         this.fillIcalComponentFromBase(icalcomp);
         this.mapPropsToICS(icalcomp, this.icsEventPropMap);
@@ -276,14 +271,41 @@ calTodo.prototype = {
 
     get entryDate() {
         return this.getProperty("DTSTART");
+    },
+
+    mDueDate: undefined,
+    get dueDate() {
+        var dueDate = this.mDueDate;
+        if (dueDate === undefined) {
+            dueDate = this.getProperty("DUE");
+            if (!dueDate) {
+                var entryDate = this.entryDate;
+                var dur = this.getProperty("DURATION");
+                if (entryDate && dur) {
+                    // If there is a duration set on the todo, calculate the right end time.
+                    dueDate = entryDate.clone();
+                    var icalDur = Components.classes["@mozilla.org/calendar/duration;1"]
+                                            .createInstance(Components.interfaces.calIDuration);
+                    icalDur.icalString = dur;
+                    dueDate.addDuration(icalDur);
+                }
+            }
+            this.mDueDate = dueDate;
+        }
+        return dueDate;
+    },
+
+    set dueDate(value) {
+        this.deleteProperty("DURATION"); // setting dueDate once removes DURATION
+        this.setProperty("DUE", value);
+        return (this.mDueDate = value);
     }
 };
-        
+
 // var decl to prevent spurious error messages when loaded as component
 
 var makeMemberAttr;
 if (makeMemberAttr) {
-    makeMemberAttr(calTodo, "DUE", null, "dueDate", true);
     makeMemberAttr(calTodo, "COMPLETED", null, "completedDate", true);
     makeMemberAttr(calTodo, "PERCENT-COMPLETE", 0, "percentComplete", true);
 }

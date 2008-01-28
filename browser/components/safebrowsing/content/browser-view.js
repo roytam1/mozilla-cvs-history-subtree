@@ -336,61 +336,13 @@ PROT_BrowserView.prototype.unqueueNextProblem_ = function(browser) {
   // themselves to be unqueued before this method is called. So ensure 
   // that the problem at the head of the queue is not, in fact, active.
   if (!problem.displayer_.isActive()) {
-
-    // It could be the case that the server is really slow to respond,
-    // so there might not yet be anything in the problem Document. If
-    // we show the warning when that's the case, the user will see a
-    // blank document greyed out, and if they cancel the dialog
-    // they'll see the page they're navigating away from because it
-    // hasn't been painted over yet (b/c there's no content for the
-    // problem page). So here we ensure that we have content for the
-    // problem page before showing the dialog.
-    var haveContent = false;
-    try {
-      // This will throw if there's no content yet
-      var h = problem.doc_.defaultView.getComputedStyle(problem.doc_.body, "")
-              .getPropertyValue("height");
-      G_Debug(this, "body height: " + h);
-
-      if (Number(h.substring(0, h.length - 2)))
-        haveContent = true;
-
-    } catch (e) {
-      G_Debug(this, "Masked in unqueuenextproblem: " + e);
-    }
-    
-    if (!haveContent) {
-
-      G_Debug(this, "Didn't get computed style. Re-queueing.");
-
-      // One stuck problem document in a page shouldn't prevent us
-      // warning on other problem frames that might be loading or
-      // loaded. So stick the Document that doesn't have content
-      // back at the end of the queue.
-      var p = this.removeProblemFromQueue_(problem.doc_, browser);
-      G_Assert(this, p === problem, "Unqueued wrong problem?");
-      this.queueProblem_(browser, problem);
-
-      // Try again in a bit. This opens us up to a potential
-      // vulnerability (put tons of hanging frames in a page
-      // ahead of your real phishy frame), but the risk at the
-      // moment is really low (plus it is outside our threat
-      // model).
-      new G_Alarm(BindToObject(this.unqueueNextProblem_, 
-                               this, 
-                               browser),
-                  200 /*ms*/);
-      return;
-    }
-
     problem.displayer_.start();
 
-    // OK, we have content, but there there is an additional
-    // issue. Due to a bfcache bug, if we show the warning during
-    // paint suppression, the collapsing of the content pane affects
-    // the doc we're naving from :( The symptom is a page with grey
-    // screen on navigation to or from a phishing page (the
-    // contentDocument will have width zero).
+    // Due to a bfcache bug, if we show the warning during paint
+    // suppression, the collapsing of the content pane affects the doc we're
+    // naving from :( The symptom is a page with grey screen on navigation
+    // to or from a phishing page (the contentDocument will have width
+    // zero).
     //
     // Paint supression lasts at most 250ms from when the parser sees
     // the body, and the parser sees the body well before it has a

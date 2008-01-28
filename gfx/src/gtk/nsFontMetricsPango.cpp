@@ -177,6 +177,7 @@ nsFontMetricsPango::Init(const nsFont& aFont, nsIAtom* aLangGroup,
     // don't make the X server blow up.
     nscoord screenPixels = gdk_screen_height();
     mPointSize = PR_MIN((screenPixels - 1) * FONT_MAX_FONT_SCALE, mPointSize);
+    mPointSize = PR_MIN(2000, mPointSize);
 
     // enumerate over the font names passed in
     mFont.EnumerateFamilies(nsFontMetricsPango::EnumFontCallback, this);

@@ -4093,6 +4093,7 @@ nsEventStateManager::SetContentState(nsIContent *aContent, PRInt32 aState)
         if (docShell && mCurrentFocus)
           docShell->SetCanvasHasFocus(PR_FALSE);
 
+#if !defined(XP_WIN) && !defined(XP_OS2)
         // Also make sure that gLastFocusedDocument and gLastFocusedPresContext
         // aren't NULL if we have focused content.  Not doing this can mess up
         // the NS_GOTFOCUS case in nsEventStateManager::PreHandleEvent().
@@ -4100,6 +4101,14 @@ nsEventStateManager::SetContentState(nsIContent *aContent, PRInt32 aState)
         // gLastFocusedPresContext is NULLed by the NS_DEACTIVATE case in
         // nsEventStateManager::PreHandleEvent() (which is invoked switching
         // from one browser window to another).
+        // Setting gLastFocusedDocument to mDocument here causes harm on
+        // Windows -- it sometimes causes the wrong nsIContent to be focused in
+        // the NS_LOSTFOCUS case of nsEventStateManager::PreHandleEvent() (as a
+        // result of dispatching an NS_FOCUS_BLUR event to gLastFocusedContent).
+        // Because the "bad" code in PreHandleEvent() is in an #ifdef block
+        // that's only compiled on Windows and OS/2, we now only compile this
+        // block on everything but Windows and OS/2.  This resolves bmo bug
+        // 406214.
         if (!gLastFocusedDocument) {
           gLastFocusedDocument = mDocument;
           NS_ADDREF(gLastFocusedDocument);
@@ -4107,6 +4116,7 @@ nsEventStateManager::SetContentState(nsIContent *aContent, PRInt32 aState)
         if (!gLastFocusedPresContext) {
           gLastFocusedPresContext = mPresContext;
         }
+#endif
       }
     }
   }
@@ -4334,9 +4344,12 @@ nsEventStateManager::SendFocusBlur(nsPresContext* aPresContext,
           nsCOMPtr<nsIContent> temp = gLastFocusedContent;
           NS_RELEASE(gLastFocusedContent); // nulls out gLastFocusedContent
 
-          nsCxPusher pusher(temp);
-          temp->HandleDOMEvent(oldPresContext, &event, nsnull, NS_EVENT_FLAG_INIT, &status);
-          pusher.Pop();
+          nsCxPusher pusher;
+          if (pusher.Push(temp)) {
+            temp->HandleDOMEvent(oldPresContext, &event, nsnull,
+                                 NS_EVENT_FLAG_INIT, &status);
+            pusher.Pop();
+          }
 
           focusAfterBlur = mCurrentFocus;
           if (!previousFocus || previousFocus == focusAfterBlur)
@@ -4392,9 +4405,12 @@ nsEventStateManager::SendFocusBlur(nsPresContext* aPresContext,
       NS_RELEASE(gLastFocusedDocument);
       gLastFocusedDocument = nsnull;
 
-      nsCxPusher pusher(temp);
-      temp->HandleDOMEvent(gLastFocusedPresContext, &event, nsnull, NS_EVENT_FLAG_INIT, &status);
-      pusher.Pop();
+      nsCxPusher pusher;
+      if (pusher.Push(temp)) {
+        temp->HandleDOMEvent(gLastFocusedPresContext, &event, nsnull,
+                             NS_EVENT_FLAG_INIT, &status);
+        pusher.Pop();
+      }
 
       if (previousFocus && mCurrentFocus != previousFocus) {
         // The document's blur handler focused something else.
@@ -4462,8 +4478,11 @@ nsEventStateManager::SendFocusBlur(nsPresContext* aPresContext,
     nsEvent event(PR_TRUE, NS_FOCUS_CONTENT);
 
     if (nsnull != mPresContext) {
-      nsCxPusher pusher(aContent);
-      aContent->HandleDOMEvent(mPresContext, &event, nsnull, NS_EVENT_FLAG_INIT, &status);
+      nsCxPusher pusher;
+      if (pusher.Push(aContent)) {
+        aContent->HandleDOMEvent(mPresContext, &event, nsnull,
+                                 NS_EVENT_FLAG_INIT, &status);
+      }
     }
 
     nsAutoString tabIndex;
@@ -4483,8 +4502,11 @@ nsEventStateManager::SendFocusBlur(nsPresContext* aPresContext,
     nsEvent event(PR_TRUE, NS_FOCUS_CONTENT);
 
     if (nsnull != mPresContext && mDocument) {
-      nsCxPusher pusher(mDocument);
-      mDocument->HandleDOMEvent(mPresContext, &event, nsnull, NS_EVENT_FLAG_INIT, &status);
+      nsCxPusher pusher;
+      if (pusher.Push(mDocument)) {
+        mDocument->HandleDOMEvent(mPresContext, &event, nsnull,
+                                  NS_EVENT_FLAG_INIT, &status);
+      }
     }
   }
 

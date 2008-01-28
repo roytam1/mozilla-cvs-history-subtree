@@ -22,20 +22,24 @@
                 clickAskAboutCookies = id; 
                 clickCookieBehavior = id; 
                 clickStorePasswords = id; 
-                cookieFilterChanged = id; 
                 editCookies = id; 
                 editCookiesDone = id; 
+                editKeychainExclusions = id; 
+                editKeychainExclusionsDone = id; 
                 editPermissions = id; 
                 editPermissionsDone = id; 
+                expandCookiePermission = id; 
+                filterChanged = id; 
                 launchKeychainAccess = id; 
-                permissionFilterChanged = id; 
                 removeAllCookiePermissions = id; 
                 removeAllCookies = id; 
+                removeAllKeychainExclusions = id; 
                 removeCookiePermissions = id; 
                 removeCookies = id; 
                 removeCookiesAndBlockSites = id; 
+                removeKeychainExclusions = id; 
             }; 
-            CLASS = OrgMozillaChimeraPreferencePrivacy; 
+            CLASS = OrgMozillaCaminoPreferencePrivacy; 
             LANGUAGE = ObjC; 
             OUTLETS = {
                 mAskAboutCookies = NSButton; 
@@ -43,6 +47,9 @@
                 mCookiesFilterField = NSSearchField; 
                 mCookiesPanel = id; 
                 mCookiesTable = ExtendedTableView; 
+                mKeychainExclusionsFilterField = NSSearchField; 
+                mKeychainExclusionsPanel = id; 
+                mKeychainExclusionsTable = ExtendedTableView; 
                 mPermissionColumn = NSTableColumn; 
                 mPermissionFilterField = NSSearchField; 
                 mPermissionsPanel = id; 

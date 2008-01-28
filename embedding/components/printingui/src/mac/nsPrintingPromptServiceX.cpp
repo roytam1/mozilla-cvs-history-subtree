@@ -53,6 +53,7 @@
 #include "nsIDirectoryService.h"
 #include "nsDirectoryServiceDefs.h"
 #include "nsAutoBuffer.h"
+#include "nsCRT.h"
 
 #include "nsPDECommon.h"
 
@@ -233,6 +234,24 @@ nsPrintingPromptService::ShowPrintDialog(nsIDOMWindow *parent, nsIWebBrowserPrin
     rv = ::LoadPDEPlugIn();
     NS_ASSERTION(NS_SUCCEEDED(rv), "LoadPDEPlugIn() failed");
     
+    // Set the print job title
+    PRUnichar** docTitles;
+    PRUint32 titleCount;
+    webBrowserPrint->EnumerateDocumentNames(&titleCount, &docTitles);
+    if (titleCount > 0) {
+      CFStringRef cfTitleString = CFStringCreateWithCharacters(NULL, docTitles[0], nsCRT::strlen(docTitles[0]));
+      if (cfTitleString) {
+        ::PMSetJobNameCFString(nativePrintSettings, cfTitleString);
+        CFRelease(cfTitleString);
+      }
+      for (PRInt32 i = titleCount - 1; i >= 0; i--) {
+        nsMemory::Free(docTitles[i]);
+      }
+      nsMemory::Free(docTitles);
+      docTitles = NULL;
+      titleCount = 0;
+    }
+
     // Create a dictionary and store our settings into it
     CFMutableDictionaryRef dictToPDE = CFDictionaryCreateMutable(kCFAllocatorDefault, 0,
                                     (const CFDictionaryKeyCallBacks *)&kCFTypeDictionaryKeyCallBacks,

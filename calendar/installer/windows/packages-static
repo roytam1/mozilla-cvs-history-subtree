@@ -64,6 +64,7 @@ bin\components\appshell.xpt
 bin\components\appstartup.xpt
 bin\components\autocomplete.xpt
 bin\components\autoconfig.xpt
+bin\components\calbscmp.dll
 bin\components\calbase.xpt
 bin\components\calbaseinternal.xpt
 bin\components\caps.xpt
@@ -89,6 +90,7 @@ bin\components\dom_events.xpt
 bin\components\dom_html.xpt
 bin\components\dom_loadsave.xpt
 #ifndef MOZILLA_1_8_BRANCH
+bin\components\dom_json.xpt
 bin\components\dom_offline.xpt
 #endif
 bin\components\dom_range.xpt
@@ -170,6 +172,7 @@ bin\components\uriloader.xpt
 bin\components\urlformatter.xpt
 bin\components\webBrowser_core.xpt
 bin\components\webbrowserpersist.xpt
+bin\components\webdav.dll
 bin\components\webdav.xpt
 bin\components\webshell_idls.xpt
 bin\components\websrvcs.xpt
@@ -199,7 +202,6 @@ bin\components\xultmpl.xpt
 bin\components\wcap.xpt
 ; JavaScript components
 bin\components\nsDefaultCLH.js
-bin\components\nsSetDefaultBrowser.js
 #ifdef MOZILLA_1_8_BRANCH
 bin\components\nsCloseAllWindows.js
 #else
@@ -208,8 +210,6 @@ bin\components\nsTryToClose.js
 bin\components\nsInterfaceInfoToIDL.js
 bin\components\nsPostUpdateWin.js
 bin\components\nsProgressDialog.js
-bin\components\nsSetDefaultMail.js
-bin\components\nsUnsetDefaultMail.js
 bin\components\nsUpdateService.js
 bin\components\nsURLFormatter.js
 bin\components\nsHelperAppDlg.js
@@ -220,12 +220,12 @@ bin\components\nsBlocklistService.js
 #endif
 bin\components\calendarService.js
 bin\components\calCompositeCalendar.js
-bin\components\calDavCalendar.js
-bin\components\calICSCalendar.js
+bin\components\calDavCalendarModule.js
+bin\components\calICSCalendarModule.js
 bin\components\calImportExportModule.js
 bin\components\calItemModule.js
-bin\components\calMemoryCalendar.js
-bin\components\calStorageCalendar.js
+bin\components\calMemoryCalendarModule.js
+bin\components\calStorageCalendarModule.js
 bin\components\calWcapCalendarModule.js
 bin\components\jsconsole-clhandler.js
 bin\components\pluginGlue.js
@@ -234,9 +234,12 @@ bin\js\calAlarmMonitor.js
 bin\js\calAttachment.js
 bin\js\calAttendee.js
 bin\js\calCalendarManager.js
+bin\js\calCachedCalendar.js
 bin\js\calDateTimeFormatter.js
+bin\js\calDavCalendar.js
 bin\js\calEvent.js
 bin\js\calHtmlExport.js
+bin\js\calICSCalendar.js
 bin\js\calIcsImportExport.js
 bin\js\calIcsParser.js
 bin\js\calIcsSerializer.js
@@ -245,10 +248,13 @@ bin\js\calItipEmailTransport.js
 bin\js\calItipItem.js
 bin\js\calItipProcessor.js
 bin\js\calListFormatter.js
+bin\js\calMemoryCalendar.js
 bin\js\calMonthGridPrinter.js
 bin\js\calOutlookCSVImportExport.js
 bin\js\calProtocolHandler.js
+bin\js\calProviderBase.js
 bin\js\calRecurrenceInfo.js
+bin\js\calStorageCalendar.js
 bin\js\calTodo.js
 bin\js\calTransactionManager.js
 bin\js\calFreeBusyService.js
@@ -279,6 +285,8 @@ bin\chrome\comm.jar
 bin\chrome\comm.manifest
 bin\chrome\toolkit.jar
 bin\chrome\toolkit.manifest
+; [Calendar Chrome Icons]
+bin\chrome\icons\default\calendar-alarm-dialog.ico
 
 ; [Default Preferences]
 ; All the pref files must be part of base to prevent migration bugs

@@ -38,6 +38,7 @@
 
 #import "NSString+Utils.h"
 #import "NSString+Gecko.h"
+#import "NSMenu+Utils.h"
 
 #import "ChimeraUIConstants.h"
 
@@ -343,11 +344,11 @@ nsHeaderSniffer::PerformSave(nsIURI* inOriginalURI)
           file = [file stringByDeletingPathExtension];
           file = [file stringByAppendingPathExtension:@"txt"];
         }
-        NSLog([file pathExtension]);
         [savePanel setRequiredFileType:[file pathExtension]];
         [savePanel setCanSelectHiddenExtension: YES];
     }
-        
+
+    [NSMenu cancelAllTracking];
     if ([savePanel runModalForDirectory: nil file: file] == NSFileHandlingPanelCancelButton)
         return NS_OK;
        

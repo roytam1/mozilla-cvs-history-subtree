@@ -452,7 +452,7 @@ static BookmarkManager* gBookmarkManager = nil;
   [mRootBookmarks insertChild:mAddressBookContainer atIndex:(collectionIndex++) isMove:NO];
 
   // set pretty icons
-  [[self historyFolder]       setIcon:[NSImage imageNamed:@"historyicon"]];
+  [[self historyFolder]       setIcon:[NSImage imageNamed:@"history_icon"]];
   [[self top10Folder]         setIcon:[NSImage imageNamed:@"top10_icon"]];
   [[self bookmarkMenuFolder]  setIcon:[NSImage imageNamed:@"bookmarkmenu_icon"]];
   [[self toolbarFolder]       setIcon:[NSImage imageNamed:@"bookmarktoolbar_icon"]];
@@ -1218,7 +1218,8 @@ static BookmarkManager* gBookmarkManager = nil;
 
 - (void)writeBookmarks:(NSNotification *)inNotification
 {
-  // NSLog(@"Saving bookmarks");
+  if (!mBookmarksLoaded)
+    return;
   [self writePropertyListFile:mPathToBookmarkFile];
 }
 
@@ -1708,7 +1709,9 @@ static BookmarkManager* gBookmarkManager = nil;
             title = [[tokenString substringFromIndex:([tokenScanner scanLocation] + 1)] stringByRemovingAmpEscapes];
             justSetTitle = YES;
           }
-          currentItem = [Bookmark bookmarkWithTitle:title url:url];
+          currentItem = [Bookmark bookmarkWithTitle:title
+                                                url:url
+                                          lastVisit:nil];
           [currentArray appendChild:currentItem];
           // see if we had a shortcut
           if (isNetscape) {
@@ -1862,7 +1865,7 @@ static BookmarkManager* gBookmarkManager = nil;
     }
     // Maybe it's a new URL!
     else if ([aLine hasPrefix:@"#URL"]) {
-      currentItem = [Bookmark bookmarkWithTitle:nil url:nil];
+      currentItem = [Bookmark bookmarkWithTitle:nil url:nil lastVisit:nil];
       [currentArray appendChild:currentItem];
     }
     // Perhaps a separator? This isn't how I'd spell it, but

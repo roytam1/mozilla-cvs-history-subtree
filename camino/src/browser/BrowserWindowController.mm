@@ -60,12 +60,14 @@
 #import "ProgressDlgController.h"
 #import "PageInfoWindowController.h"
 #import "FeedServiceController.h"
+#import "FindBarController.h"
 
 #import "BrowserContentViews.h"
 #import "BrowserWrapper.h"
 #import "PreferenceManager.h"
 #import "BrowserTabView.h"
 #import "BrowserTabViewItem.h"
+#import "TabButtonView.h"
 #import "UserDefaults.h"
 #import "PageProxyIcon.h"
 #import "AutoCompleteTextField.h"
@@ -76,6 +78,10 @@
 #import "WebSearchField.h"
 #import "wallet.h"
 #import "ToolbarScriptItem.h"
+#import "SearchEngineManager.h"
+#import "SearchEngineEditor.h"
+// For search plugin description keys:
+#import "XMLSearchPluginParser.h"
 
 #import "CHPermissionManager.h"
 #import "CHBrowserService.h"
@@ -269,7 +275,6 @@ public:
   if ((self = [super initWithFrame:bounds])) {
     mDefaultFont = defaultFont;
     mUndoManager = [[NSUndoManager alloc] init];
-    [self setDelegate:self];
   }
   return self;
 }
@@ -304,17 +309,15 @@ public:
   }
 }
 
-- (NSUndoManager *)undoManagerForTextView:(NSTextView *)aTextView
+- (NSUndoManager*)undoManager
 {
-  if (aTextView == self)
-    return mUndoManager;
-  return nil;
+  return mUndoManager;
 }
 
 // Opt-return and opt-enter should download the URL in the location bar
 - (void)insertNewlineIgnoringFieldEditor:(id)sender
 {
-  BrowserWindowController* bwc = (BrowserWindowController *)[[[self delegate] window] delegate];
+  BrowserWindowController* bwc = (BrowserWindowController *)[[self window] delegate];
   [bwc saveURL:nil url:[self string] suggestedFilename:nil];
 }
 
@@ -524,12 +527,6 @@ public:
 
 #pragma mark -
 
-enum BWCOpenDest {
-  kDestinationNewWindow = 0,
-  kDestinationNewTab,
-  kDestinationCurrentView
-};
-
 @interface BrowserWindowController(Private)
   // open a new window or tab, but doesn't load anything into them. Must be matched
   // with a call to do that.
@@ -544,9 +541,9 @@ enum BWCOpenDest {
 - (void)transformFormatString:(NSMutableString*)inFormat domain:(NSString*)inDomain search:(NSString*)inSearch;
 - (void)openNewWindowWithDescriptor:(nsISupports*)aDesc displayType:(PRUint32)aDisplayType loadInBackground:(BOOL)aLoadInBG;
 - (void)openNewTabWithDescriptor:(nsISupports*)aDesc displayType:(PRUint32)aDisplayType loadInBackground:(BOOL)aLoadInBG;
-- (void)performSearch:(WebSearchField*)inSearchField inView:(BWCOpenDest)inDest inBackground:(BOOL)inLoadInBG;
+- (void)performSearch:(WebSearchField*)inSearchField inView:(EOpenDestination)inDest inBackground:(BOOL)inLoadInBG;
 - (int)historyIndexOfPageBeforeBookmarkManager;
-- (void)goToLocationFromToolbarURLField:(AutoCompleteTextField *)inURLField inView:(BWCOpenDest)inDest inBackground:(BOOL)inLoadInBG;
+- (void)goToLocationFromToolbarURLField:(AutoCompleteTextField *)inURLField inView:(EOpenDestination)inDest inBackground:(BOOL)inLoadInBG;
 
 - (BrowserTabViewItem*)tabForBrowser:(BrowserWrapper*)inWrapper;
 - (void)closeTab:(NSTabViewItem *)tab;
@@ -579,7 +576,10 @@ enum BWCOpenDest {
 - (void)currentEditor:(nsIEditor**)outEditor;
 - (void)getMisspelledWordRange:(nsIDOMRange**)outRange inlineSpellChecker:(nsIInlineSpellChecker**)outInlineChecker;
 
-- (void)setUpSearchFields;
+- (void)populateEnginesIntoAllSearchFields;
+- (void)populateEnginesIntoSearchField:(WebSearchField*)searchField;
+- (NSString*)lastKnownPreferredSearchEngine;
+- (void)setLastKnownPreferredSearchEngine:(NSString*)inPreferredEngine;
 
 @end
 
@@ -765,7 +765,7 @@ enum BWCOpenDest {
 - (void)windowWillClose:(NSNotification *)notification
 {
   mClosingWindow = YES;
-    
+
   [self autosaveWindowFrame];
   
   // ensure that the URL auto-complete popup is closed before the mork
@@ -786,6 +786,11 @@ enum BWCOpenDest {
   if (pref)
     pref->UnregisterCallback(gTabBarVisiblePref, TabBarVisiblePrefChangedCallback, self);
   
+  // make sure the find bar goes away early enough since it holds
+  // weak refs to things.
+  [mFindController hideFindBar:self];
+  [mFindController release];
+      
   // Tell the BrowserTabView the window is closed
   [mTabBrowser windowClosed];
   
@@ -834,6 +839,7 @@ enum BWCOpenDest {
   [mThrobberImages release];
   [mURLFieldEditor release];
   [mLocationToolbarView release];
+  [mLastKnownPreferredSearchEngine release];
 
   delete mDataOwner;    // paranoia; should have been deleted in -windowWillClose
 
@@ -872,7 +878,8 @@ enum BWCOpenDest {
       mustResizeChrome = YES;
     }
     if ([NSWorkspace isLeopardOrHigher]) {
-      [[self window] setContentBorderThickness:NSHeight([mStatusBar bounds]) forEdge:NSMinYEdge];
+      if (![mStatusBar isHidden])
+        [[self window] setContentBorderThickness:NSHeight([mStatusBar bounds]) forEdge:NSMinYEdge];
     }
     else {
       // due to a cocoa issue with it updating the bounding box of two rects
@@ -883,7 +890,13 @@ enum BWCOpenDest {
     }
 
     // Set up the menus in the search fields
-    [self setUpSearchFields];
+    [self setLastKnownPreferredSearchEngine:[[SearchEngineManager sharedSearchEngineManager] preferredSearchEngine]];
+    [self populateEnginesIntoAllSearchFields];
+    // Listen for changes to the collection of built-in search engines.
+    [[NSNotificationCenter defaultCenter] addObserver:self 
+                                             selector:@selector(installedSearchEnginesDidChange:) 
+                                                 name:kInstalledSearchEnginesDidChangeNotification
+                                               object:nil];
     
     // Get our saved dimensions.
     NSRect oldFrame = [[self window] frame];
@@ -1013,6 +1026,14 @@ enum BWCOpenDest {
       [[self window] setFrameOrigin: testBrowserFrame.origin];
     }
     
+    // configure the find bar controller and register for notifications on when the
+    // find bar gets hidden so we can do things like reset focus.
+    mFindController = [[FindBarController alloc] initWithContent:mContentView finder:self];
+    [[NSNotificationCenter defaultCenter] addObserver:self 
+                                             selector:@selector(findBarHidden:)
+                                                 name:kFindBarDidHideNotification 
+                                               object:mFindController];
+    
     // cache the original window frame, we may need this for correct zooming
     mLastFrameSize = [[self window] frame];
 
@@ -1049,7 +1070,7 @@ enum BWCOpenDest {
 
   PRInt32 contentWidth = 0, contentHeight = 0;
   const PRInt32 kMinSaneHeight = 20; // for bug 361049
-  GeckoUtils::GetIntrisicSize(contentWindow, &contentWidth, &contentHeight);
+  GeckoUtils::GetIntrinsicSize(contentWindow, &contentWidth, &contentHeight);
   if (contentWidth <= 0 || contentHeight <= kMinSaneHeight) {
     // Something went wrong, maximize to screen
     [self setZoomState:defaultFrame defaultFrame:defaultFrame];
@@ -1061,7 +1082,7 @@ enum BWCOpenDest {
   float widthChange   = contentWidth  - curFrameSize.width;
   float heightChange  = contentHeight - curFrameSize.height;
 
-  // The values from GeckoUtils::GetIntrisicSize may be rounded down, add 1 extra pixel but
+  // The values from GeckoUtils::GetIntrinsicSize may be rounded down, add 1 extra pixel but
   // only if the window will be smaller than the screen (see bug 360878)
   NSRect stdFrame     = [[self window] frame];
   if (stdFrame.size.width + widthChange < defaultFrame.size.width)
@@ -1235,16 +1256,18 @@ enum BWCOpenDest {
   return sToolbarDefaults;
 }
 
-// +shouldLoadInBackground
-//
-// gets the foreground/background tab loading pref
-//
-+ (BOOL)shouldLoadInBackground:(id)aSender
++ (BOOL)shouldLoadInBackgroundForDestination:(EOpenDestination)destination
+                                      sender:(id)sender;
 {
-  BOOL loadInBackground = [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.loadInBackground" withSuccess:NULL];
+  BOOL loadInBackground = NO;
+  if (destination == eDestinationNewTab) {
+    loadInBackground =
+      [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.loadInBackground"
+                                             withSuccess:NULL];
+  }
 
-  if ([aSender respondsToSelector:@selector(keyEquivalentModifierMask)]) {
-    if ([aSender keyEquivalentModifierMask] & NSShiftKeyMask)
+  if ([sender respondsToSelector:@selector(keyEquivalentModifierMask)]) {
+    if ([sender keyEquivalentModifierMask] & NSShiftKeyMask)
       loadInBackground = !loadInBackground;
   }
   else {
@@ -1386,7 +1409,7 @@ enum BWCOpenDest {
   else if ([itemIdent isEqual:ThrobberToolbarItemIdentifier]) {
     [toolbarItem setLabel:@""];
     [toolbarItem setPaletteLabel:NSLocalizedString(@"Progress", nil)];
-    [toolbarItem setToolTip:NSLocalizedStringFromTable(@"ThrobberPageDefault", @"WebsiteDefaults", nil)];
+    [toolbarItem setToolTip:NSLocalizedStringFromTable(@"ThrobberPage", @"WebsiteDefaults", nil)];
     [toolbarItem setImage:[NSImage imageNamed:@"throbber-01"]];
     [toolbarItem setTarget:self];
     [toolbarItem setTag:'Thrb'];
@@ -1427,7 +1450,7 @@ enum BWCOpenDest {
     [toolbarItem setLabel:NSLocalizedString(@"Bookmark", nil)];
     [toolbarItem setPaletteLabel:NSLocalizedString(@"Bookmark Page", nil)];
     [toolbarItem setToolTip:NSLocalizedString(@"BookmarkToolTip", nil)];
-    [toolbarItem setImage:[NSImage imageNamed:@"add_to_bookmark.tif"]];
+    [toolbarItem setImage:[NSImage imageNamed:@"add_to_bookmark"]];
     [toolbarItem setTarget:self];
     [toolbarItem setAction:@selector(addBookmark:)];
   }
@@ -1435,7 +1458,7 @@ enum BWCOpenDest {
     [toolbarItem setLabel:NSLocalizedString(@"BigText", nil)];
     [toolbarItem setPaletteLabel:NSLocalizedString(@"BigText", nil)];
     [toolbarItem setToolTip:NSLocalizedString(@"BigTextToolTip", nil)];
-    [toolbarItem setImage:[NSImage imageNamed:@"textBigger.tif"]];
+    [toolbarItem setImage:[NSImage imageNamed:@"textBigger"]];
     [toolbarItem setTarget:self];
     [toolbarItem setAction:@selector(makeTextBigger:)];
   }
@@ -1443,7 +1466,7 @@ enum BWCOpenDest {
     [toolbarItem setLabel:NSLocalizedString(@"SmallText", nil)];
     [toolbarItem setPaletteLabel:NSLocalizedString(@"SmallText", nil)];
     [toolbarItem setToolTip:NSLocalizedString(@"SmallTextToolTip", nil)];
-    [toolbarItem setImage:[NSImage imageNamed:@"textSmaller.tif"]];
+    [toolbarItem setImage:[NSImage imageNamed:@"textSmaller"]];
     [toolbarItem setTarget:self];
     [toolbarItem setAction:@selector(makeTextSmaller:)];
   }
@@ -1451,7 +1474,7 @@ enum BWCOpenDest {
     [toolbarItem setLabel:NSLocalizedString(@"NewTab", nil)];
     [toolbarItem setPaletteLabel:NSLocalizedString(@"NewTab", nil)];
     [toolbarItem setToolTip:NSLocalizedString(@"NewTabToolTip", nil)];
-    [toolbarItem setImage:[NSImage imageNamed:@"newTab.tif"]];
+    [toolbarItem setImage:[NSImage imageNamed:@"newTab"]];
     [toolbarItem setTarget:self];
     [toolbarItem setAction:@selector(newTab:)];
   }
@@ -1459,7 +1482,7 @@ enum BWCOpenDest {
     [toolbarItem setLabel:NSLocalizedString(@"CloseTab", nil)];
     [toolbarItem setPaletteLabel:NSLocalizedString(@"CloseTab", nil)];
     [toolbarItem setToolTip:NSLocalizedString(@"CloseTabToolTip", nil)];
-    [toolbarItem setImage:[NSImage imageNamed:@"closeTab.tif"]];
+    [toolbarItem setImage:[NSImage imageNamed:@"closeTab"]];
     [toolbarItem setTarget:self];
     [toolbarItem setAction:@selector(closeCurrentTab:)];
   }
@@ -1467,7 +1490,7 @@ enum BWCOpenDest {
     [toolbarItem setLabel:NSLocalizedString(@"SendLink", nil)];
     [toolbarItem setPaletteLabel:NSLocalizedString(@"SendLinkPaletteLabel", nil)];
     [toolbarItem setToolTip:NSLocalizedString(@"SendLinkToolTip", nil)];
-    [toolbarItem setImage:[NSImage imageNamed:@"sendLink.tif"]];
+    [toolbarItem setImage:[NSImage imageNamed:@"sendLink"]];
     [toolbarItem setTarget:self];
     [toolbarItem setAction:@selector(sendURL:)];
   }
@@ -1475,7 +1498,7 @@ enum BWCOpenDest {
     [toolbarItem setLabel:NSLocalizedString(@"Downloads", nil)];
     [toolbarItem setPaletteLabel:NSLocalizedString(@"Downloads", nil)];
     [toolbarItem setToolTip:NSLocalizedString(@"DownloadsToolTip", nil)];
-    [toolbarItem setImage:[NSImage imageNamed:@"dl_manager.tif"]];
+    [toolbarItem setImage:[NSImage imageNamed:@"dl_manager"]];
     [toolbarItem setTarget:[ProgressDlgController sharedDownloadController]];
     [toolbarItem setAction:@selector(showWindow:)];
   }
@@ -1679,8 +1702,11 @@ enum BWCOpenDest {
   SEL action = [aMenuItem action];
 
   // Always allow the search engine menu to work
-  if (action == @selector(searchEngineChanged:))
+  if (action == @selector(searchEngineChanged:) ||
+      action == @selector(manageSearchEngines:))
+  {
     return YES;
+  }
 
   // Disable all window-specific menu items while a sheet is showing.
   // We don't do this in validateActionBySelector: because toolbar items shouldn't
@@ -1701,6 +1727,17 @@ enum BWCOpenDest {
     }
     else
       [aMenuItem setTitle:NSLocalizedString(@"Page Info", nil)];
+  }
+
+  if (action == @selector(findActions:)) {
+    // we could add more complex logic to only show this if the find bar has
+    // focus, but for now it'll just always be enabled when there's content.
+    if ([self bookmarkManagerIsVisible])
+      return NO;    
+    long tag = [aMenuItem tag];
+    if (tag == NSFindPanelActionNext || tag == NSFindPanelActionPrevious)
+      return ([[self lastFindText] length] > 0);
+    return YES;
   }
 
   return [self validateActionBySelector:action];
@@ -2119,6 +2156,7 @@ enum BWCOpenDest {
   [self updateStatus:[mBrowserView statusString]];
   [self updateLocationFields:[mBrowserView currentURI] ignoreTyping:NO];
   [self showFeedDetected:[mBrowserView feedsDetected]];
+  [self showSearchPluginDetected:[[mBrowserView detectedSearchPlugins] count]];
 }
 
 #pragma mark -
@@ -2280,7 +2318,7 @@ enum BWCOpenDest {
 {
   [mSearchSheetWindow orderOut:self];
   [NSApp endSheet:mSearchSheetWindow returnCode:1];
-  [self performSearch:mSearchSheetTextField inView:kDestinationCurrentView inBackground:NO];
+  [self performSearch:mSearchSheetTextField inView:eDestinationCurrentView inBackground:NO];
 }
 
 - (IBAction)cancelSearchSheet:(id)sender
@@ -2301,8 +2339,10 @@ enum BWCOpenDest {
     if (previousPage != -1)
       [[[self browserWrapper] browserView] goToSessionHistoryIndex:previousPage];
   }
-  else
+  else {
+    [mFindController hideFindBar:self];
     [self loadURL:@"about:bookmarks"];
+  }
 }
 
 //
@@ -2323,6 +2363,9 @@ enum BWCOpenDest {
 //
 -(IBAction)manageHistory: (id)aSender
 {
+  if ([self bookmarkManagerIsVisible])
+    [mFindController hideFindBar:self];
+  
   [self loadURL:@"about:history"];
 
   // aSender could be a history menu item with a represented object of
@@ -2374,11 +2417,11 @@ enum BWCOpenDest {
 {
   if ([sender isKindOfClass:[AutoCompleteTextField class]])
     [self goToLocationFromToolbarURLField:(AutoCompleteTextField *)sender
-                                    inView:kDestinationCurrentView inBackground:NO];
+                                    inView:eDestinationCurrentView inBackground:NO];
 }
 
 - (void)goToLocationFromToolbarURLField:(AutoCompleteTextField *)inURLField 
-                                 inView:(BWCOpenDest)inDest inBackground:(BOOL)inLoadInBG
+                                 inView:(EOpenDestination)inDest inBackground:(BOOL)inLoadInBG
 {
   // trim off any whitespace around url
   NSString *theURL = [[inURLField stringValue] stringByTrimmingWhitespace];
@@ -2399,15 +2442,15 @@ enum BWCOpenDest {
   if (!resolvedURLs || [resolvedURLs count] == 1) {
     targetURL = resolvedURLs ? [resolvedURLs lastObject] : theURL;
     BOOL allowPopups = resolvedURLs ? YES : NO; //Allow popups if it's a bookmark shortcut
-    if (inDest == kDestinationNewTab)
+    if (inDest == eDestinationNewTab)
       [self openNewTabWithURL:targetURL referrer:nil loadInBackground:inLoadInBG allowPopups:allowPopups setJumpback:NO];
-    else if (inDest == kDestinationNewWindow)
+    else if (inDest == eDestinationNewWindow)
       [self openNewWindowWithURL:targetURL referrer:nil loadInBackground:inLoadInBG allowPopups:allowPopups];
     else // if it's not a new window or a new tab, load into the current view
       [self loadURL:targetURL referrer:nil focusContent:YES allowPopups:allowPopups];
   }
   else {
-    if (inDest == kDestinationNewTab || inDest == kDestinationNewWindow)
+    if (inDest == eDestinationNewTab || inDest == eDestinationNewWindow)
       [self openURLArray:resolvedURLs tabOpenPolicy:eAppendTabs allowPopups:YES];
     else
       [self openURLArray:resolvedURLs tabOpenPolicy:eReplaceTabs allowPopups:YES];
@@ -2484,6 +2527,12 @@ enum BWCOpenDest {
   [[NSUserDefaults standardUserDefaults] setBool:shouldHide forKey:USER_DEFAULTS_HIDE_STATUS_BAR_KEY];
 
   [mStatusBar setHidden:shouldHide];
+  if ([NSWorkspace isLeopardOrHigher]) {
+    if (shouldHide)
+      [[self window] setContentBorderThickness:0 forEdge:NSMinYEdge];
+    else
+      [[self window] setContentBorderThickness:NSHeight([mStatusBar bounds]) forEdge:NSMinYEdge];
+  }
 
   NSSize oldContentSize = [mContentView frame].size;
   NSRect windowRect = [[self window] frame];
@@ -2558,7 +2607,7 @@ enum BWCOpenDest {
       [mSearchSheetWindow orderOut:self];
       [NSApp endSheet:mSearchSheetWindow returnCode:1];
     }
-    [self performSearch:aSender inView:kDestinationCurrentView inBackground:NO];
+    [self performSearch:aSender inView:eDestinationCurrentView inBackground:NO];
   }
 }
 
@@ -2578,14 +2627,17 @@ enum BWCOpenDest {
   
   unsigned int modifiers = [[NSApp currentEvent] modifierFlags];
 
+  EOpenDestination destination = eDestinationCurrentView;
+  BOOL loadInBackground = NO;
   // do search in a new window/tab if Command is held down
   if (modifiers & NSCommandKeyMask) {
     BOOL loadInTab = [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.opentabfor.middleclick" withSuccess:NULL];
-    BWCOpenDest destination = loadInTab ? kDestinationNewTab : kDestinationNewWindow;
-    [self performSearch:mSearchBar inView:destination inBackground:[BrowserWindowController shouldLoadInBackground:nil]];
+    destination = loadInTab ? eDestinationNewTab : eDestinationNewWindow;
+    loadInBackground = [BrowserWindowController shouldLoadInBackgroundForDestination:destination
+                                                                              sender:nil];
   }
-  else
-    [self performSearch:mSearchBar inView:kDestinationCurrentView inBackground:NO];
+
+  [self performSearch:mSearchBar inView:destination inBackground:loadInBackground];
 }
 
 //
@@ -2594,7 +2646,7 @@ enum BWCOpenDest {
 // performs a search using searchField and opens either in the current view, a new tab, or a new
 // window. If it's a new tab or window, loadInBG determines whether the window/tab is opened in the background
 //
--(void)performSearch:(WebSearchField*)inSearchField inView:(BWCOpenDest)inDest inBackground:(BOOL)inLoadInBG
+-(void)performSearch:(WebSearchField*)inSearchField inView:(EOpenDestination)inDest inBackground:(BOOL)inLoadInBG
 {
   NSString *searchString = [inSearchField stringValue];
   NSMutableString *searchURL = [[[inSearchField currentSearchURL] mutableCopy] autorelease];
@@ -2624,9 +2676,9 @@ enum BWCOpenDest {
       
       NSString *searchDomain = [NSString stringWithUTF8String:spec.get()];
       
-      if (inDest == kDestinationNewTab)
+      if (inDest == eDestinationNewTab)
         [self openNewTabWithURL:searchDomain referrer:nil loadInBackground:inLoadInBG allowPopups:NO setJumpback:NO];
-      else if (inDest == kDestinationNewWindow)
+      else if (inDest == eDestinationNewWindow)
         [self openNewWindowWithURL:searchDomain referrer:nil loadInBackground:inLoadInBG allowPopups:NO];
       else // if it's not a new window or a new tab, load into the current view
         [self loadURL:searchDomain];
@@ -2652,9 +2704,9 @@ enum BWCOpenDest {
     [self transformFormatString:searchURL domain:currentDomain search:escapedSearchString];
     [escapedSearchString release];
     
-    if (inDest == kDestinationNewTab)
+    if (inDest == eDestinationNewTab)
       [self openNewTabWithURL:searchURL referrer:nil loadInBackground:inLoadInBG allowPopups:NO setJumpback:NO];
-    else if (inDest == kDestinationNewWindow)
+    else if (inDest == eDestinationNewWindow)
       [self openNewWindowWithURL:searchURL referrer:nil loadInBackground:inLoadInBG allowPopups:NO];
     else // if it's not a new window or a new tab, load into the current view
       [self loadURL:searchURL];
@@ -2756,8 +2808,8 @@ enum BWCOpenDest {
 
 - (NSArray*)throbberImages
 {
-  // Simply load an array of NSImage objects from the files "throbber-NN.tif". I used "Quicktime Player" to
-  // save all of the frames of the animated gif as individual .tif files for simplicity of implementation.
+  // Simply load an array of NSImage objects from the files "throbber-NN.tiff". I used "Quicktime Player" to
+  // save all of the frames of the animated gif as individual .tiff files for simplicity of implementation.
   if (mThrobberImages == nil)
   {
     NSImage* images[64];
@@ -2776,8 +2828,8 @@ enum BWCOpenDest {
 
 - (void)clickThrobber:(id)aSender
 {
-  NSString *pageToLoad = NSLocalizedStringFromTable(@"ThrobberPageDefault", @"WebsiteDefaults", nil);
-  if (![pageToLoad isEqualToString:@"ThrobberPageDefault"])
+  NSString *pageToLoad = NSLocalizedStringFromTable(@"ThrobberPage", @"WebsiteDefaults", nil);
+  if (![pageToLoad isEqualToString:@"ThrobberPage"])
     [self loadURL:pageToLoad];
 }
 
@@ -2792,18 +2844,69 @@ enum BWCOpenDest {
   }
 }
 
-// -performFindCommand
+// -find:
 //
-// Has the opportunity to handle a Find command.  Returns whether or not it did.
+// Called when the user selects Edit > Find for this browser window. Shows the
+// find bar if a webpage is visible and focuses the search field if bookmarks
+// is visible. 
 //
-- (BOOL)performFindCommand
+- (void)find:(id)aSender
 {
   if ([self bookmarkManagerIsVisible]) {
     [[self bookmarkViewControllerForCurrentTab] focusSearchField];
-    return YES;
   }
+  else {
+    [mFindController showFindBar];
+  }
+}
 
-  return NO;
+//
+// - findBarHidden:
+//
+// Called when the find bar has been hidden in this window. Do things like
+// reset the focus to gecko.
+//
+- (void)findBarHidden:(NSNotification*)inNotify
+{
+  [[self window] makeFirstResponder:[mBrowserView browserView]];
+}
+
+//
+// -findActions:(id)inSender
+//
+// Tell the find controller to do things like next/previous. We get this if
+// the content area doesn't have focus, and we leave it up to the find controller
+// to do the right thing. We can't use |-performFindPanelAction:| because it
+// gets eaten by things like the search field. 
+//
+- (IBAction)findActions:(id)inSender
+{
+  switch ([inSender tag]) {
+    case NSFindPanelActionNext:
+      [mFindController findNext:self];
+      break;
+    
+    case NSFindPanelActionPrevious:
+      [mFindController findPrevious:self];
+      break;
+  }
+}
+
+- (BOOL)findInPageWithPattern:(NSString*)text caseSensitive:(BOOL)inCaseSensitive
+    wrap:(BOOL)inWrap backwards:(BOOL)inBackwards
+{
+  return [[mBrowserView browserView] findInPageWithPattern:text caseSensitive:inCaseSensitive
+                                                      wrap:inWrap backwards:inBackwards];
+}
+
+- (BOOL)findInPage:(BOOL)inBackwards
+{
+  return [[mBrowserView browserView] findInPage:inBackwards];
+}
+
+- (NSString*)lastFindText
+{
+  return [[mBrowserView browserView] lastFindText];
 }
 
 - (void)stopThrobber
@@ -2816,22 +2919,6 @@ enum BWCOpenDest {
     [throbberItem setImage: [NSImage imageNamed:@"throbber-00"]];
 }
 
-- (BOOL)findInPageWithPattern:(NSString*)text caseSensitive:(BOOL)inCaseSensitive
-    wrap:(BOOL)inWrap backwards:(BOOL)inBackwards
-{
-  return [[mBrowserView browserView] findInPageWithPattern:text caseSensitive:inCaseSensitive
-    wrap:inWrap backwards:inBackwards];
-}
-
-- (BOOL)findInPage:(BOOL)inBackwards
-{
-  return [[mBrowserView browserView] findInPage:inBackwards];
-}
-
-- (NSString*)lastFindText
-{
-  return [[mBrowserView browserView] lastFindText];
-}
 
 - (BOOL)bookmarkManagerIsVisible
 {
@@ -2889,7 +2976,7 @@ enum BWCOpenDest {
   }
 
   NS_ASSERTION([itemsArray count], "Displaying the Add Bookmark dialog with no URIs");
-  AddBookmarkDialogController* dlgController = [AddBookmarkDialogController sharedAddBookmarkDialogController];
+  AddBookmarkDialogController* dlgController = [AddBookmarkDialogController controller];
   [dlgController showDialogWithLocationsAndTitles:itemsArray isFolder:NO onWindow:[self window]];
 
   if (isTabGroup)
@@ -2906,7 +2993,12 @@ enum BWCOpenDest {
   NSString* itemURL = [browserWrapper currentURI];
 
   NS_ASSERTION([browserWrapper isBookmarkable], "Bookmarking an innappropriate URI");
-  [parentFolder appendChild:[Bookmark bookmarkWithTitle:itemTitle url:itemURL]];
+
+  // When creating Bookmark items, set the last-visited time to the time that
+  // the bookmark was created.  TODO: use page load time.
+  [parentFolder appendChild:[Bookmark bookmarkWithTitle:itemTitle
+                                                    url:itemURL
+                                              lastVisit:[NSDate date]]];
   [bookmarkManager setLastUsedBookmarkFolder:parentFolder];
 }
 
@@ -2919,13 +3011,18 @@ enum BWCOpenDest {
   int numberOfTabs = [mTabBrowser numberOfTabViewItems];
   NSString *primaryTabTitle = nil;
 
+  // When creating Bookmark items, set the last-visited time to the time that
+  // the bookmark was created.  TODO: use page load time.
+  NSDate* now = [NSDate date];
+
   for (int i = 0; i < numberOfTabs; i++) {
     BrowserWrapper* browserWrapper = (BrowserWrapper*)[[mTabBrowser tabViewItemAtIndex:i] view];
     if (![browserWrapper isBookmarkable])
       continue;
 
     [newTabGroup appendChild:[Bookmark bookmarkWithTitle:[browserWrapper pageTitle]
-                                                     url:[browserWrapper currentURI]]];
+                                                     url:[browserWrapper currentURI]
+                                               lastVisit:now]];
 
     if (browserWrapper == currentBrowserWrapper)
       primaryTabTitle = [browserWrapper pageTitle];
@@ -2963,7 +3060,7 @@ enum BWCOpenDest {
                                               urlStr, kAddBookmarkItemURLKey,
                                                       nil];
   NSArray* items = [NSArray arrayWithObject:itemInfo];
-  [[AddBookmarkDialogController sharedAddBookmarkDialogController] showDialogWithLocationsAndTitles:items isFolder:NO onWindow:[self window]];
+  [[AddBookmarkDialogController controller] showDialogWithLocationsAndTitles:items isFolder:NO onWindow:[self window]];
 }
 
 - (IBAction)addBookmarkFolder:(id)aSender
@@ -2976,7 +3073,7 @@ enum BWCOpenDest {
     [bookmarksController addBookmarkFolder:aSender];
   }
   else
-    [[AddBookmarkDialogController sharedAddBookmarkDialogController] showDialogWithLocationsAndTitles:nil isFolder:YES onWindow:[self window]];
+    [[AddBookmarkDialogController controller] showDialogWithLocationsAndTitles:nil isFolder:YES onWindow:[self window]];
 }
 
 - (IBAction)addBookmarkSeparator:(id)aSender
@@ -3472,7 +3569,8 @@ enum BWCOpenDest {
     BrowserTabViewItem* tabViewItem = [mTabBrowser itemWithTag:[sender tag]];
     if (tabViewItem) {
       NSString* url = [[tabViewItem view] currentURI];
-      BOOL backgroundLoad = [BrowserWindowController shouldLoadInBackground:nil];
+      BOOL backgroundLoad = [BrowserWindowController shouldLoadInBackgroundForDestination:eDestinationNewWindow
+                                                                                   sender:nil];
 
       [self openNewWindowWithURL:url referrer:nil loadInBackground:backgroundLoad allowPopups:NO];
 
@@ -3695,7 +3793,9 @@ enum BWCOpenDest {
   
   // if we replace all tabs (because we opened a tab group), or we open additional tabs
   // with the "focus new tab"-pref on, focus the first new tab.
-  if (!((tabPolicy == eAppendTabs) && [BrowserWindowController shouldLoadInBackground:nil]))
+  BOOL loadInBackground = [BrowserWindowController shouldLoadInBackgroundForDestination:eDestinationNewTab
+                                                                                 sender:nil];
+  if (!((tabPolicy == eAppendTabs) && loadInBackground))
     [mTabBrowser selectTabViewItem:tabViewToSelect];
     
 }
@@ -3739,7 +3839,7 @@ enum BWCOpenDest {
   // we have to copy the context menu for each tag, because
   // the menu gets the tab view item's tag.
   NSMenu* contextMenu = [mTabMenu copy];
-  [[newTab tabItemContentsView] setMenu:contextMenu];
+  [[newTab buttonView] setMenu:contextMenu];
   [contextMenu release];
 
   return newTab;
@@ -4415,7 +4515,9 @@ enum BWCOpenDest {
   if ([hrefStr length] == 0)
     return;
 
-  BOOL loadInBackground = [BrowserWindowController shouldLoadInBackground:nil];
+  BOOL loadInBackground = [BrowserWindowController shouldLoadInBackgroundForDestination:(aUseWindow ? eDestinationNewWindow
+                                                                                                    : eDestinationNewTab)
+                                                                                 sender:nil];
 
   NSString* referrer = [[mBrowserView browserView] focusedURLString];
 
@@ -4505,7 +4607,9 @@ enum BWCOpenDest {
 
     if (modifiers & NSCommandKeyMask) {
       BOOL loadInTab = [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.opentabfor.middleclick" withSuccess:NULL];
-      BOOL loadInBG = [BrowserWindowController shouldLoadInBackground:nil];
+      BOOL loadInBG = [BrowserWindowController shouldLoadInBackgroundForDestination:(loadInTab ? eDestinationNewTab
+                                                                                               : eDestinationNewWindow)
+                                                                             sender:nil];
       if (loadInTab)
         [self openNewTabWithURL:urlStr referrer:referrer loadInBackground:loadInBG allowPopups:NO setJumpback:NO];
       else
@@ -4589,73 +4693,126 @@ enum BWCOpenDest {
   return sBrokenIcon;
 }
 
-- (void)setUpSearchFields
+//
+// -lastKnownPreferredSearchEngine
+//
+// Caching the existing preferred search engine gives us a reference to the previous value,
+// should it be modified, and allows us to determine if a search field's selection was previously
+// set to the preferred engine and preserved accordingly.
+//
+- (NSString*)lastKnownPreferredSearchEngine
 {
-  NSDictionary* searchEngines = [BrowserWindowController searchURLDictionary];
-  NSArray* engineNames = [[searchEngines allKeys] sortedArrayUsingSelector:@selector(caseInsensitiveCompare:)];
-
-  NSMutableArray* engineList = [NSMutableArray arrayWithCapacity:([engineNames count] - 1)];
-  NSEnumerator* engineEnumerator = [engineNames objectEnumerator];
-  NSString* engineName;
-  while ((engineName = [engineEnumerator nextObject])) {
-    if ([engineName isEqualToString:@"PreferredSearchEngine"])
-      continue;
-    [engineList addObject:[NSDictionary dictionaryWithObjectsAndKeys:engineName,
-                                                                     kWebSearchEngineNameKey,
-                                                                     [searchEngines objectForKey:engineName],
-                                                                     kWebSearchEngineURLKey,
-                                                                     nil]];
-  }
-
-  [mSearchBar setSearchEngines:engineList];
-  [mSearchSheetTextField setSearchEngines:engineList];
-  NSString* defaultEngine = [searchEngines objectForKey:@"PreferredSearchEngine"];
-  [mSearchBar setCurrentSearchEngine:defaultEngine];
-  [mSearchSheetTextField setCurrentSearchEngine:defaultEngine];
+  return mLastKnownPreferredSearchEngine; 
 }
 
-+ (NSDictionary *)searchURLDictionary
+- (void)setLastKnownPreferredSearchEngine:(NSString*)inPreferredEngine
 {
-  static NSDictionary *searchURLDictionary = nil;
-  if (searchURLDictionary)
-    return searchURLDictionary;
+  [mLastKnownPreferredSearchEngine autorelease];
+  mLastKnownPreferredSearchEngine = [inPreferredEngine retain];
+}
 
-  NSString *defaultSearchEngineList = [[NSBundle mainBundle] pathForResource:@"SearchURLList" ofType:@"plist"];
+- (void)populateEnginesIntoAllSearchFields
+{
+  [self populateEnginesIntoSearchField:mSearchBar];
+  [self populateEnginesIntoSearchField:mSearchSheetTextField];
+}
 
-  // We haven't read the search engine list yet; attempt to read from user's profile directory
-  NSString *profileDir = [[PreferenceManager sharedInstance] profilePath];
-  if (profileDir) {
-    // If the file exists we read it from the profile directory
-    // If it doesn't we attempt to copy it there from our app bundle first
-    // (so that the user has something to edit in future)
-    NSString *searchEngineListPath = [profileDir stringByAppendingPathComponent:@"SearchURLList.plist"];
+- (void)populateEnginesIntoSearchField:(WebSearchField*)searchField
+{
+  if (!searchField)
+    return;
 
-    NSFileManager *fileManager = [NSFileManager defaultManager];
-    if ([fileManager isReadableFileAtPath:searchEngineListPath] ||
-        [fileManager copyPath:defaultSearchEngineList toPath:searchEngineListPath handler:nil])
-      searchURLDictionary = [[NSDictionary alloc] initWithContentsOfFile:searchEngineListPath];
-    else {
-#if DEBUG
-      NSLog(@"Unable to copy search engine list to user profile directory");
-#endif
-    }
+  SearchEngineManager* searchEngineManager = [SearchEngineManager sharedSearchEngineManager];
+
+  // Grab onto the currently selected engine so we can restore it later.
+  NSString* selectedEngine = [[[searchField currentSearchEngine] retain] autorelease];
+
+  [searchField setSearchEngines:[searchEngineManager installedSearchEngines]];
+
+  BOOL selectedEngineIsStillAvailable = [[searchEngineManager installedSearchEngineNames] containsObject:selectedEngine];
+
+  NSString* lastKnownPreferredEngine = [self lastKnownPreferredSearchEngine];
+  BOOL preferredEngineWasSelected = lastKnownPreferredEngine && [selectedEngine isEqualToString:lastKnownPreferredEngine];
+
+  // Restore the selection if it was set to something other than the preferred engine.
+  if (selectedEngineIsStillAvailable && !preferredEngineWasSelected)
+    [searchField setCurrentSearchEngine:selectedEngine];
+  else
+    [searchField setCurrentSearchEngine:[searchEngineManager preferredSearchEngine]];
+}
+
+//
+// Called whenever an engine has been added, removed, renamed, etc.
+// in the collection of built-in search engines.
+//
+- (void)installedSearchEnginesDidChange:(NSNotification*)notification
+{ 
+  [self populateEnginesIntoAllSearchFields];
+  [self showSearchPluginDetected:([[[self browserWrapper] detectedSearchPlugins] count] > 0)];
+  [self setLastKnownPreferredSearchEngine:[[SearchEngineManager sharedSearchEngineManager] preferredSearchEngine]];
+}
+
+- (void)showSearchPluginDetected:(BOOL)pluginsAreDetected
+{
+  if (pluginsAreDetected)
+    [mSearchBar setDetectedSearchPlugins:[[self browserWrapper] detectedSearchPlugins]];
+  else
+    [mSearchBar setDetectedSearchPlugins:nil];
+}
+
+- (BOOL)webSearchField:(WebSearchField*)searchField shouldListDetectedSearchPlugin:(NSDictionary *)searchPluginInfoDict
+{
+  // Exclude search plugins which are already installed. 
+  // Without actually parsing the plugin, all we can really compare is the name listed in
+  // |searchPluginInfoDict| (which is what was supplied on the page's autodiscovery link).
+  // It's tough to be perfect here though, because sometimes this name isn't identical to the
+  // actual installed engine name.
+
+  NSString* pluginName = [searchPluginInfoDict objectForKey:kWebSearchPluginNameKey];
+  if (!pluginName)
+    return NO;
+
+  NSEnumerator* installedEngineEnumerator = [[[SearchEngineManager sharedSearchEngineManager] installedSearchEngines] objectEnumerator];
+  NSDictionary* installedSearchEngine;
+  while ((installedSearchEngine = [installedEngineEnumerator nextObject])) {  
+    NSString* installedEngineName = [installedSearchEngine valueForKey:kWebSearchEngineNameKey];
+    if ([pluginName isEqualToString:installedEngineName])
+      return NO;
+  }
+
+  return YES;
+}
+
+- (IBAction)installSearchPlugin:(id)sender
+{
+  id searchPlugin = [sender representedObject];
+  BOOL addedOK = [[SearchEngineManager sharedSearchEngineManager] addSearchEngineFromPlugin:searchPlugin];
+
+  if (addedOK) {
+    // Start using the installed engine.
+    // The installed name sometimes differs from the name listed on the web page's autodiscovery link.
+    // Because of this, select the last engine.
+    NSString* installedPluginName = [[[SearchEngineManager sharedSearchEngineManager] installedSearchEngineNames] lastObject];
+    [mSearchBar setCurrentSearchEngine:installedPluginName];
   }
   else {
-#if DEBUG
-    NSLog(@"Unable to get profile directory");
-#endif
+    NSString* searchPluginName = [searchPlugin valueForKey:kWebSearchPluginNameKey];
+    NSAlert* alert = [[[NSAlert alloc] init] autorelease];
+    [alert addButtonWithTitle:NSLocalizedString(@"OKButtonText", nil)];
+    [alert setMessageText:NSLocalizedString(@"SearchPluginInstallationErrorTitle", nil)];
+    [alert setInformativeText:[NSString stringWithFormat:NSLocalizedString(@"SearchPluginInstallationErrorMessage", nil), searchPluginName]];
+    [alert setAlertStyle:NSWarningAlertStyle];
+    [alert beginSheetModalForWindow:[self window] 
+                      modalDelegate:self 
+                     didEndSelector:NULL
+                        contextInfo:NULL];
   }
-  
-  //
-  // If reading from the profile directory failed for any reason
-  // then read the default search engine list from our application bundle directly
-  //
-  if (!searchURLDictionary) 
-    searchURLDictionary = [[NSDictionary alloc] initWithContentsOfFile:defaultSearchEngineList];
-  
-  return searchURLDictionary;
 }
 
+- (IBAction)manageSearchEngines:(id)sender
+{
+  [[SearchEngineEditor sharedSearchEngineEditor] showSearchEngineEditor:self];
+}
 
 - (void) focusChangedFrom:(NSResponder*) oldResponder to:(NSResponder*) newResponder
 {
@@ -4700,7 +4857,7 @@ enum BWCOpenDest {
 - (NSUndoManager *)windowWillReturnUndoManager:(NSWindow *)sender
 {
   if ([[self window] firstResponder] == mURLFieldEditor)
-    return [mURLFieldEditor undoManagerForTextView:mURLFieldEditor];
+    return [mURLFieldEditor undoManager];
   
   return [[BookmarkManager sharedBookmarkManager] undoManager];
 }
@@ -4781,15 +4938,17 @@ enum BWCOpenDest {
 //
 - (BOOL)handleCommandReturn:(BOOL)aShiftIsDown
 {
-  // determine whether to load in background
-  BOOL loadInBG  = [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.loadInBackground" withSuccess:NULL];
-  if (aShiftIsDown)  // if shift is being held down, do the opposite of the pref
-    loadInBG = !loadInBG;
-
   // determine whether to load in tab or window
   BOOL loadInTab = [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.opentabfor.middleclick" withSuccess:NULL];
 
-  BWCOpenDest destination = loadInTab ? kDestinationNewTab : kDestinationNewWindow;
+  // determine whether to load in background
+  BOOL loadInBG = NO;
+  if (loadInTab)
+    loadInBG = [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.loadInBackground" withSuccess:NULL];
+  if (aShiftIsDown)  // if shift is being held down, do the opposite of the pref
+    loadInBG = !loadInBG;
+
+  EOpenDestination destination = loadInTab ? eDestinationNewTab : eDestinationNewWindow;
   
   // see if command-return came in the url bar
   BOOL handled = NO;

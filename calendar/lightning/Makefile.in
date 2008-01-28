@@ -20,6 +20,7 @@
 # Contributor(s):
 #   Mike Shaver <shaver@off.net>
 #   Matthew Willis <lilmatt@mozilla.com>
+#   Philipp Kewisch <mozilla@kewis.ch>
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -44,28 +45,47 @@ include $(DEPTH)/config/autoconf.mk
 
 MODULE		= lightning
 
-export XPI_NAME	= lightning
-DIST_FILES	= chrome.manifest install.rdf
-USE_EXTENSION_MANIFEST = 1
-NO_JAR_AUTO_REG        = 1
+export XPI_NAME = lightning
+export XPI_PKGNAME = lightning
+export USE_EXTENSION_MANIFEST = 1
+export NO_JAR_AUTO_REG = 1
+
+STRIP_XPI = 1
+DIST_FILES = chrome.manifest install.rdf
+PREF_JS_EXPORTS = $(srcdir)/content/lightning.js
+LIGHTNING_VERSION := $(shell cat $(srcdir)/../sunbird/config/version.txt)
+
+# don't install by default, it causes problems on tinderboxes
+# (for example, see bug 406441)
+ifdef INSTALL_LIGHTNING
 ifndef MOZ_SUNBIRD
 # install Lightning as a global extension in dist/bin/extensions/
 INSTALL_EXTENSION_ID   = {e2fda1a4-762b-4020-b5ad-a41df1933103}
 endif
-XPI_PKGNAME	= lightning
-STRIP_XPI = 1
-
-DIRS		= ../../extensions/webdav            \
-                  ../libical ../base ../providers    \
-                  ../import-export                   \
-                  components                         \
-                  ../itip                            \
-		  $(NULL)
-
-ifdef MOZILLA_1_8_BRANCH
-# package storage for Thunderbird 1.5
-DIRS += ../../db/sqlite3/src ../../storage
 endif
+
+DIRS = ../../extensions/webdav \
+       ../libical \
+       ../locales \
+       ../base \
+       ../providers \
+       ../import-export \
+       ../itip \
+       components \
+       locales \
+       $(NULL)
+
+PWD := $(shell pwd)
+core_abspath = $(if $(findstring :,$(1)),$(1),$(if $(filter /%,$(1)),$(1),$(PWD)/$(1)))
+
+DEFINES += -DTHUNDERBIRD_VERSION=$(THUNDERBIRD_VERSION) \
+           -DFIREFOX_VERSION=$(FIREFOX_VERSION) \
+           -DSEAMONKEY_VERSION=$(SEAMONKEY_VERSION) \
+           -DLIGHTNING_VERSION=$(LIGHTNING_VERSION) \
+           -DLIGHTNING_FIREFOX=$(LIGHTNING_FIREFOX) \
+           -DTARGET_PLATFORM=$(OS_TARGET)_$(TARGET_XPCOM_ABI) \
+           -DTHEME=$(THEME) \
+           $(NULL)
 
 # Select a theme from which to pull our skin goodness
 # OS X: pinstripe
@@ -77,18 +97,6 @@ else
 THEME=winstripe
 endif
 
-DEFINES += -DTHEME=$(THEME)
-
-DEFINES += -DTHUNDERBIRD_VERSION=$(THUNDERBIRD_VERSION)
-DEFINES += -DFIREFOX_VERSION=$(FIREFOX_VERSION)
-DEFINES += -DSEAMONKEY_VERSION=$(SEAMONKEY_VERSION)
-
-DEFINES += -DTARGET_PLATFORM=$(OS_TARGET)_$(TARGET_XPCOM_ABI)
-DEFINES += -DLIGHTNING_FIREFOX=$(LIGHTNING_FIREFOX)
-
-LIGHTNING_VERSION := $(shell cat $(srcdir)/../sunbird/config/version.txt)
-DEFINES += -DLIGHTNING_VERSION=$(LIGHTNING_VERSION)
-
 ifdef MOZILLA_1_8_BRANCH
 DEFINES += -DBUILD_ID=$(BUILD_ID)
 else
@@ -96,6 +104,21 @@ GRE_BUILDID = $(shell $(PYTHON) $(topsrcdir)/config/printconfigsetting.py $(LIBX
 DEFINES += -DGRE_BUILDID=$(GRE_BUILDID)
 endif
 
-PREF_JS_EXPORTS = $(srcdir)/content/lightning.js
+# Get all directories in /l10n/*, that contain a calendar subdir.
+calendar_locales := $(subst /calendar,,$(subst $(topsrcdir)/../l10n/,,$(wildcard $(topsrcdir)/../l10n/*/calendar)))
+# Now make sure those dirs are in shipped-locales
+shipped_locales :=$(shell cat $(topsrcdir)/calendar/locales/shipped-locales)
+locales_to_build :=$(foreach locale,$(calendar_locales),$(if $(filter $(locale),$(shipped_locales)),$(locale)))
+
+ifneq ($(strip $(locales_to_build)),)
+# The l10n directory is checked out and contains supported locales, start building our locales
+
+libs:: $(addprefix libs-,$(locales_to_build))
+libs-%:
+	@echo - locales to build -- $(locales_to_build)
+	$(MAKE) -C locales libs AB_CD=$*
+	$(MAKE) -C ../locales libs AB_CD=$*
+
+endif
 
 include $(topsrcdir)/config/rules.mk

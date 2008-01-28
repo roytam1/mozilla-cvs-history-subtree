@@ -404,7 +404,7 @@ const int kOutlineViewLeftMargin = 19; // determined empirically, since it doesn
 
 - (IBAction)addBookmarkFolder:(id)aSender
 {
-  AddBookmarkDialogController* addBookmarkController = [AddBookmarkDialogController sharedAddBookmarkDialogController];
+  AddBookmarkDialogController* addBookmarkController = [AddBookmarkDialogController controller];
 
   int itemIndex;
   BookmarkFolder* parentFolder = [self selectedItemFolderAndIndex:&itemIndex];
@@ -457,14 +457,27 @@ const int kOutlineViewLeftMargin = 19; // determined empirically, since it doesn
   // that's pretty uncommon, so this is good enough.
   NSMutableSet *parentsToNotify = [NSMutableSet set];
 
+  // Make a copy of the current search array
+  NSMutableArray *currentSearchArray = nil;
+  if ([[BookmarkManager sharedBookmarkManager] searchActive])
+    currentSearchArray = [[mSearchResultArray mutableCopy] autorelease];
+
   // delete all bookmarks that are in our array
   NSEnumerator *e = [[mBookmarksOutlineView selectedItems] objectEnumerator];
   BookmarkItem *doomedBookmark = nil;
 
   while ((doomedBookmark = [e nextObject])) {
+    [currentSearchArray removeObject:doomedBookmark];
+
     BookmarkFolder *currentParent = [doomedBookmark parent];
     [parentsToNotify addObject:currentParent];
     [currentParent deleteChild:doomedBookmark];
+  }
+
+  // Make sure the outline view is up to date after deleting while filtering
+  if (currentSearchArray) {
+    [self setSearchResultArray:currentSearchArray];
+    [mBookmarksOutlineView reloadData];
   }
 
   [[BookmarkManager sharedBookmarkManager] stopSuppressingChangeNotifications];
@@ -575,13 +588,7 @@ const int kOutlineViewLeftMargin = 19; // determined empirically, since it doesn
   }
 
   // make new window
-  BOOL loadNewTabsInBackgroundPref = [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.loadInBackground" withSuccess:NULL];
-
-  NSWindow* behindWindow = nil;
-  if (loadNewTabsInBackgroundPref)
-    behindWindow = [mBrowserWindowController window];
-
-  [[NSApp delegate] openBrowserWindowWithURLs:urlArray behind:behindWindow allowPopups:NO];
+  [[NSApp delegate] openBrowserWindowWithURLs:urlArray behind:nil allowPopups:NO];
 }
 
 - (IBAction)openBookmarkInNewWindow:(id)aSender
@@ -1038,7 +1045,9 @@ const int kOutlineViewLeftMargin = 19; // determined empirically, since it doesn
       NSString* title = [titles objectAtIndex:i];
       if ([title length] == 0)
         title = url;
-      Bookmark* bookmark = [Bookmark bookmarkWithTitle:title url:url];
+      Bookmark* bookmark = [Bookmark bookmarkWithTitle:title
+                                                   url:url
+                                             lastVisit:nil];
       [dropFolder insertChild:bookmark atIndex:(index + i) isMove:NO];
       [newBookmarks addObject:bookmark];
     }
@@ -2015,8 +2024,6 @@ const int kOutlineViewLeftMargin = 19; // determined empirically, since it doesn
 {
   if (inView == mBookmarksEditingView) {
     [self restoreSplitters];
-
-    [[NSApp delegate] closeFindDialog];
 
     // Set the initial focus to the Search field unless a row is already selected;
     // e.g., if setItemToRevealOnLoad: is used.

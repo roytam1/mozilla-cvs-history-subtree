@@ -58,68 +58,26 @@ var kEventStatusOrder = ["TENTATIVE", "CONFIRMED", "CANCELLED"];
 // multiple selection
 var gCalendarEventTreeClicked = false;
 
-var gEventArray = new Array();
-
 // Store the start and enddate, because the providers can't be trusted when
 // dealing with all-day events. So we need to filter later. See bug 306157
 var gStartDate;
 var gEndDate;
 
 var kDefaultTimezone;
-var doingSelection = false;
+var gUnifinderNeedsRefresh = true;
 
-function resetAllowSelection() {
-    /**
-     * Do not change anything in the following lines, they are needed as
-     * described in the selection observer above
-     */
-    doingSelection = false;
-
-    var searchTree = document.getElementById("unifinder-search-results-tree");
-    searchTree.view.selection.selectEventsSuppressed = false;
-    searchTree.addEventListener("select", unifinderOnSelect, true);
+function isUnifinderHidden() {
+    return document.getElementById("bottom-events-box").hidden;
 }
 
-function selectSelectedEventsInTree(aEventsToSelect) {
-    if (doingSelection === true) {
-        return;
-    }
-
-    doingSelection = true;
-
-    if (aEventsToSelect === false) {
-        aEventsToSelect = currentView().getSelectedItems({});
-    }
-    var searchTree = document.getElementById("unifinder-search-results-tree");
-
-    /**
-     * The following is a brutal hack, caused by
-     * http://lxr.mozilla.org/mozilla1.0/source/layout/xul/base/src/tree/src/nsTreeSelection.cpp#555
-     * and described in bug 168211
-     * http://bugzilla.mozilla.org/show_bug.cgi?id=168211
-     * Do NOT remove anything in the next 3 lines, or the selection in the tree will not work.
-     */
-    searchTree.onselect = null;
-    searchTree.removeEventListener("select", unifinderOnSelect, true);
-    searchTree.view.selection.selectEventsSuppressed = true;
-    searchTree.view.selection.clearSelection();
-
-    if (aEventsToSelect && aEventsToSelect.length == 1) {
-        var rowToScrollTo = searchTree.eventView.getRowOfCalendarEvent(aEventsToSelect[0]);
-
-        if (rowToScrollTo != "null") {
-           searchTree.treeBoxObject.ensureRowIsVisible(rowToScrollTo);
-           searchTree.view.selection.timedSelect(rowToScrollTo, 1);
-        }
-    } else if (aEventsToSelect && aEventsToSelect.length > 1) {
-        for (var i in aEventsToSelect) {
-            var row = searchTree.eventView.getRowOfCalendarEvent(aEventsToSelect[i]);
-            searchTree.view.selection.rangedSelect(row, row, true);
-        }
-    }
-
-    // This needs to be in a setTimeout
-    setTimeout("resetAllowSelection()", 1);
+// Extra check to see if the events are in the daterange. Some providers
+// are broken when looking at all-day events.
+function fixAlldayDates(aItem) {
+    // Using .compare on the views start and end, not on the events dates,
+    // because .compare uses the timezone of the datetime it is called on.
+    // The view's timezone is what is important here.
+    return ((!gEndDate || gEndDate.compare(aItem.startDate) >= 0) &&
+            (!gStartDate || gStartDate.compare(aItem.endDate) < 0));
 }
 
 /**
@@ -151,42 +109,34 @@ var unifinderObserver = {
     },
 
     onLoad: function uO_onLoad() {
+        if (isUnifinderHidden() && !gUnifinderNeedsRefresh) {
+            // If the unifinder is hidden, all further item operations might
+            // produce invalid entries in the unifinder. From now on, ignore
+            // those operations and refresh as soon as the unifinder is shown
+            // again.
+            gUnifinderNeedsRefresh = true;
+            unifinderTreeView.clearEvents();
+        }
         if (!this.mInBatch) {
             refreshEventTree();
         }
     },
 
     onAddItem: function uO_onAddItem(aItem) {
-        if (!(aItem instanceof Components.interfaces.calIEvent) ||
-            this.mInBatch) {
-            return;
+        if (isEvent(aItem) &&  !this.mInBatch && !gUnifinderNeedsRefresh) {
+            this.addItemToTree(aItem);
         }
-        this.addItemToTree(aItem);
     },
 
     onModifyItem: function uO_onModifyItem(aNewItem, aOldItem) {
-        if (this.mInBatch) {
-            return;
-        }
-        if (aOldItem instanceof Components.interfaces.calIEvent) {
-            this.removeItemFromTree(aOldItem);
-        }
-        if (aNewItem instanceof Components.interfaces.calIEvent) {
-            this.addItemToTree(aNewItem);
-        }
+        this.onDeleteItem(aOldItem);
+        this.onAddItem(aNewItem);
     },
 
     onDeleteItem: function uO_onDeleteItem(aDeletedItem) {
-        if (!(aDeletedItem instanceof Components.interfaces.calIEvent) ||
-            this.mInBatch) {
-            return;
+        if (isEvent(aDeletedItem) && !this.mInBatch && !gUnifinderNeedsRefresh) {
+            this.removeItemFromTree(aDeletedItem);
         }
-        this.removeItemFromTree(aDeletedItem);
-    },
-
-    dateFilter: function uO_dateFilter(event) {
-        return ((!gEndDate || gEndDate.compare(event.startDate) >= 0) &&
-                (!gStartDate || gStartDate.compare(event.endDate) < 0));
     },
 
     // It is safe to call these for any event.  The functions will determine
@@ -198,14 +148,7 @@ var unifinderObserver = {
         } else {
             items = [aItem];
         }
-        items = items.filter(this.dateFilter);
-        gEventArray = gEventArray.concat(items);
-        gEventArray.sort(compareEvents);
-        var tree = document.getElementById("unifinder-search-results-tree");
-        for each (var item in items) {
-            var row = tree.eventView.getRowOfCalendarEvent(item);
-            tree.treeBoxObject.rowCountChanged(row, 1);
-        }
+        unifinderTreeView.addItems(items.filter(fixAlldayDates));
     },
     removeItemFromTree: function uO_removeItemFromTree(aItem) {
         var items;
@@ -214,13 +157,7 @@ var unifinderObserver = {
         } else {
             items = [aItem];
         }
-        items = items.filter(this.dateFilter);
-        var tree = document.getElementById("unifinder-search-results-tree");
-        for each (var item in items) {
-            var row = tree.eventView.getRowOfCalendarEvent(item);
-            gEventArray.splice(row, 1);
-            tree.treeBoxObject.rowCountChanged(row, -1);
-        }
+        unifinderTreeView.removeItems(items.filter(fixAlldayDates));
     },
 
     onError: function uO_onError(aErrNo, aMessage) {},
@@ -248,9 +185,9 @@ var unifinderObserver = {
  * Called when the calendar is loaded
  */
 function prepareCalendarUnifinder() {
-    function onGridSelect(aEvent) {
-        selectSelectedEventsInTree(aEvent.detail);
-    }
+    // Only load once
+    window.removeEventListener("load", prepareCalendarUnifinder, false);
+    var unifinderTree = document.getElementById("unifinder-search-results-tree");
 
     // set up our calendar event observer
     var ccalendar = getCompositeCalendar();
@@ -258,29 +195,51 @@ function prepareCalendarUnifinder() {
 
     kDefaultTimezone = calendarDefaultTimezone();
 
+    // Set up the unifinder views.
+    unifinderTreeView.treeElement = unifinderTree;
+    unifinderTree.view = unifinderTreeView;
+
     // Listen for changes in the selected day, so we can update if need be
     var viewDeck = getViewDeck();
-    viewDeck.addEventListener("dayselect", unifinderOnDaySelect, false);
-    viewDeck.addEventListener("itemselect", onGridSelect, true);
+    if (viewDeck) {
+        viewDeck.addEventListener("dayselect", unifinderDaySelect, false);
+        viewDeck.addEventListener("itemselect", unifinderItemSelect, true);
+    }
 
     // Display something upon first load. onLoad doesn't work properly for
     // observers
-    refreshEventTree();
+    if (!isUnifinderHidden()) {
+        gUnifinderNeedsRefresh = false;
+        refreshEventTree();
+    }
 }
 
 /**
  * Called when the calendar is unloaded
  */
 function finishCalendarUnifinder() {
-   var ccalendar = getCompositeCalendar();
-   ccalendar.removeObserver(unifinderObserver);
+    var ccalendar = getCompositeCalendar();
+    ccalendar.removeObserver(unifinderObserver);
+
+    var viewDeck = getViewDeck();
+    if (viewDeck) {
+        viewDeck.removeEventListener("dayselect", unifinderDaySelect, false);
+        viewDeck.removeEventListener("itemselect", unifinderItemSelect, true);
+    }
 }
 
-function unifinderOnDaySelect() {
+/**
+ * Event listeners for dayselect and itemselect events
+ */
+function unifinderDaySelect() {
     var filterList = document.getElementById("event-filter-menulist");
     if (filterList.selectedItem.value == "current") {
         refreshEventTree();
     }
+}
+
+function unifinderItemSelect(aEvent) {
+    unifinderTreeView.setSelectedItems(aEvent.detail);
 }
 
 /**
@@ -290,83 +249,6 @@ function formatUnifinderEventDateTime(aDatetime) {
     var dateFormatter = Components.classes["@mozilla.org/calendar/datetime-formatter;1"]
                                   .getService(Components.interfaces.calIDateTimeFormatter);
     return dateFormatter.formatDateTime(aDatetime.getInTimezone(kDefaultTimezone));
-}
-
-/**
- * This is attached to the ondblclik attribute of the events shown in the
- * unifinder
- */
-function unifinderDoubleClickEvent(event) {
-    // we only care about button 0 (left click) events
-    if (event.button != 0) return;
-
-    // find event by id
-    var calendarEvent = getCalendarEventFromEvent(event);
-
-    if (calendarEvent != null) {
-        modifyEventWithDialog(calendarEvent);
-    } else {
-        createEventWithDialog();
-    }
-}
-
-/**
- * Get the calendar from the given event
- */
-function getCalendarEventFromEvent(event) {
-    var tree = document.getElementById("unifinder-search-results-tree");
-    var row = tree.treeBoxObject.getRowAt(event.clientX, event.clientY);
-
-    if (row != -1 && row < tree.view.rowCount) {
-        return tree.eventView.getCalendarEventAtRow(row);
-    } else {
-        return null;
-    }
-}
-
-/**
-*  This is attached to the onclik attribute of the events shown in the unifinder
-*/
-function unifinderOnSelect(event) {
-    if (event.target.view.selection.getRangeCount() == 0) {
-        return;
-    }
-
-    var arrayOfEvents = new Array();
-
-    gCalendarEventTreeClicked = true;
-
-    var calendarEvent;
-
-    // Get the selected events from the tree
-    var tree = document.getElementById("unifinder-search-results-tree");
-    var start = new Object();
-    var end = new Object();
-    var numRanges = tree.view.selection.getRangeCount();
-
-    for (var t = 0; t < numRanges; t++){
-        tree.view.selection.getRangeAt(t, start, end);
-
-        for (var v = start.value; v <= end.value; v++){
-            try {
-                calendarEvent = tree.eventView.getCalendarEventAtRow(v);
-            } catch (e) {
-               dump("Error getting Event from row: " + e + "\n");
-               return;
-            }
-            if (calendarEvent) {
-                arrayOfEvents.push(calendarEvent);
-            }
-        }
-    }
-
-    if (arrayOfEvents.length == 1) {
-        currentView().goToDay(arrayOfEvents[0].startDate);
-    }
-
-    // Pass in true, so we don't end up in a circular loop
-    currentView().setSelectedItems(arrayOfEvents.length, arrayOfEvents, true);
-    onSelectionChanged({detail: arrayOfEvents});
 }
 
 /**
@@ -397,78 +279,314 @@ function clearSearchTimer() {
 }
 
 /**
- * This function returns the event table.
+ * Unifinder event handlers (click,select,etc)
  */
-function changeEventFilter(event) {
-    refreshEventTree();
+function unifinderDoubleClick(event) {
+    // We only care about button 0 (left click) events
+    if (event.button != 0) {
+        return;
+    }
 
-    // The following isn't exactly right. It should actually reload after the
-    // next event happens.
+    // find event by id
+    var calendarEvent = unifinderTreeView.getItemFromEvent(event);
 
-    // get the current time
-    var now = new Date();
+    if (calendarEvent != null) {
+        modifyEventWithDialog(getOccurrenceOrParent(calendarEvent));
+    } else {
+        createEventWithDialog();
+    }
+}
 
-    var tomorrow = new Date(now.getFullYear(), now.getMonth(), (now.getDate() + 1));
+function unifinderSelect(event) {
+    var tree = unifinderTreeView.treeElement;
+    if (!tree.view.selection || tree.view.selection.getRangeCount() == 0) {
+        return;
+    }
 
-    var milliSecsTillTomorrow = tomorrow.getTime() - now.getTime();
+    var selectedItems = [];
+    gCalendarEventTreeClicked = true;
 
-    setTimeout("refreshEventTree()", milliSecsTillTomorrow);
+    // Get the selected events from the tree
+    var start = {};
+    var end = {};
+    var numRanges = tree.view.selection.getRangeCount();
+
+    for (var t = 0; t < numRanges; t++) {
+        tree.view.selection.getRangeAt(t, start, end);
+
+        for (var v = start.value; v <= end.value; v++) {
+            try {
+                selectedItems.push(unifinderTreeView.getItemAt(v));
+            } catch (e) {
+               WARN("Error getting Event from row: " + e + "\n");
+            }
+        }
+    }
+
+    if (selectedItems.length == 1) {
+        // Go to the day of the selected item in the current view.
+        currentView().goToDay(selectedItems[0].startDate);
+    }
+
+    // Set up the selected items in the view. Pass in true, so we don't end
+    // up in a circular loop
+    currentView().setSelectedItems(selectedItems.length, selectedItems, true);
+    onSelectionChanged({detail: selectedItems});
+}
+
+function unifinderKeyPress(aEvent) {
+    const kKE = Components.interfaces.nsIDOMKeyEvent;
+    switch (aEvent.keyCode) {
+        case 13:
+            // Enter, edit the event
+            editSelectedEvents();
+            break;
+        case kKE.DOM_VK_BACK_SPACE:
+        case kKE.DOM_VK_DELETE:
+            deleteSelectedEvents();
+            break;
+    }
 }
 
 /**
-*  Redraw the categories unifinder tree
-*/
+ * Tree controller for unifinder search results
+ */
 var unifinderTreeView = {
-    get rowCount() {
-        return gEventArray.length;
+
+    tree: null,
+    treeElement: null,
+    doingSelection: false,
+
+    /**
+     * Event functions
+     */
+
+    eventArray: [],
+    eventIndexMap: {},
+
+    addItems: function uTV_addItems(aItemArray, aDontSort) {
+        this.eventArray = this.eventArray.concat(aItemArray);
+        if (this.tree) {
+            var newCount = this.eventArray.length - aItemArray.length - 1;
+            this.tree.rowCountChanged(newCount, aItemArray.length);
+        }
+
+        if (aDontSort) {
+            this.calculateIndexMap();
+        } else {
+            this.sortItems();
+        }
     },
 
-    selectedColumn: null,
-    sortDirection: null,
-    sortStartedTime: new Date().getTime(), // updated just before sort
-    outParameter: new Object(), // used to obtain dates during sort
-
-    isContainer: function uTV_isContainer() { return false; },
-    getCellProperties: function uTV_getCellProperties() { return false; },
-    getColumnProperties: function uTV_getColumnProperties() { return false; },
-    getRowProperties: function uTV_getRowProperties() { return false; },
-    isSorted: function uTV_isSorted() { return false;},
-    isEditable: function uTV_isEditable() { return true; },
-    isSeparator: function uTV_isSeparator() { return false; },
-    getImageSrc: function uTV_getImageSrc() { return false; },
-    cycleHeader: function uTV_cycleHeader(col) {
-
-        var sortActive = col.element.getAttribute("sortActive");
-        this.selectedColumn = col.id;
-        this.sortDirection = col.element.getAttribute("sortDirection");
-
-        if (sortActive != "true") {
-            var unifinder = document.getElementById("unifinder-search-results-tree");
-            var treeCols = unifinder.getElementsByTagName("treecol");
-            for (var i = 0; i < treeCols.length; i++) {
-                treeCols[i].removeAttribute("sortActive");
-                treeCols[i].removeAttribute("sortDirection");
-            }
-            this.sortDirection = "ascending";
-        } else {
-            if (!this.sortDirection || this.sortDirection == "descending") {
-                this.sortDirection = "ascending";
-            } else {
-                this.sortDirection = "descending";
+    removeItems: function uTV_removeItems(aItemArray) {
+        for each (var item in aItemArray) {
+            var row = this.getItemRow(item);
+            if (row > -1) {
+                this.eventArray.splice(row, 1);
+                if (this.tree) {
+                    this.tree.rowCountChanged(row, -1);
+                }
             }
         }
-        col.element.setAttribute("sortActive", "true");
-        col.element.setAttribute("sortDirection", this.sortDirection);
-        this.sortStartedTime = new Date().getTime(); // for null/0 dates in sort
-        gEventArray.sort(compareEvents);
-
-        document.getElementById("unifinder-search-results-tree").view = this;
+        this.calculateIndexMap();
     },
 
-    setTree: function uTV_setTree(tree) { this.tree = tree; },
+    clearItems: function uTV_clearItems() {
+        var oldCount = this.eventArray.length;
+        this.eventArray = [];
+        if (this.tree) {
+            this.tree.rowCountChanged(0, -oldCount);
+        }
+        this.calculateIndexMap();
+    },
+
+    setItems: function uTV_setItems(aItemArray, aDontSort) {
+        var oldCount = this.eventArray.length;
+        this.eventArray = aItemArray.slice(0);
+        if (this.tree) {
+            this.tree.rowCountChanged(0, (this.eventArray.length - oldCount));
+        }
+       
+        if (aDontSort) {
+            this.calculateIndexMap();
+        } else {
+            this.sortItems();
+        }
+    },
+
+    calculateIndexMap: function uTV_calculateIndexMap() {
+        this.eventIndexMap = {};
+        for (var i = 0 ; i < this.eventArray.length; i++) {
+            this.eventIndexMap[this.eventArray[i].hashId] = i;
+        }
+
+        if (this.tree) {
+            this.tree.invalidate();
+        }
+    },
+
+    sortItems: function uTV_sortItems() {
+        // Get a current locale string collator for compareEvents
+        var localeService =
+            Components
+            .classes["@mozilla.org/intl/nslocaleservice;1"]
+            .getService(Components.interfaces.nsILocaleService);
+        this.localeCollator =
+            Components
+            .classes["@mozilla.org/intl/collation-factory;1"]
+            .getService(Components.interfaces.nsICollationFactory)
+            .CreateCollation(localeService.getApplicationLocale());
+
+        // cache sort keys, used by compareEvents
+        this.sortKeyByEvent_cache = new Object();
+        for (var i in this.eventArray) {
+            var sortEvent = this.eventArray[i];
+            this.sortKeyByEvent_cache_put(sortEvent, getEventSortKey(sortEvent));
+        }
+
+        this.sortStartedTime = new Date().getTime(); // for null/0 dates in sort
+        this.eventArray.sort(compareEvents);
+
+        this.sortKeyByEvent_cache = null;
+
+        this.calculateIndexMap();
+    },
+
+    getItemRow: function uTV_getItemRow(item) {
+        if (this.eventIndexMap[item.hashId] === undefined) {
+            return -1;
+        }
+        return this.eventIndexMap[item.hashId];
+    },
+
+    getItemAt: function uTV_getItemAt(aRow) {
+        return this.eventArray[aRow];
+    },
+
+    /**
+     * Get the calendar item from the given event
+     */
+    getItemFromEvent: function uTV_getItemFromEvent(event) {
+        var row = this.tree.getRowAt(event.clientX, event.clientY);
+
+        if (row > -1) {
+            return this.getItemAt(row);
+        }
+        return null;
+    },
+
+    setSelectedItems: function uTV_setSelectedItems(aItemArray) {
+        if (this.doingSelection || !this.tree) {
+            return;
+        }
+
+        this.doingSelection = true;
+
+        // If no items were passed, get the selected items from the view.
+        aItemArray = aItemArray || currentView().getSelectedItems({});
+
+        /**
+         * The following is a brutal hack, caused by
+         * http://lxr.mozilla.org/mozilla1.0/source/layout/xul/base/src/tree/src/nsTreeSelection.cpp#555
+         * and described in bug 168211
+         * http://bugzilla.mozilla.org/show_bug.cgi?id=168211
+         * Do NOT remove anything in the next 3 lines, or the selection in the tree will not work.
+         */
+        this.treeElement.onselect = null;
+        this.treeElement.removeEventListener("select", unifinderSelect, true);
+        this.tree.view.selection.selectEventsSuppressed = true;
+        this.tree.view.selection.clearSelection();
+
+        if (aItemArray && aItemArray.length == 1) {
+            // If only one item is selected, scroll to it
+            var rowToScrollTo = this.getItemRow(aItemArray[0]);
+            if (rowToScrollTo > -1) {
+               this.tree.ensureRowIsVisible(rowToScrollTo);
+               this.tree.view.selection.select(rowToScrollTo);
+            }
+        } else if (aItemArray && aItemArray.length > 1) {
+            // If there is more than one item, just select them all.
+            for (var i in aItemArray) {
+                var row = this.getItemRow(aItemArray[i]);
+                this.tree.view.selection.rangedSelect(row, row, true);
+            }
+        }
+
+        // This needs to be in a setTimeout
+        setTimeout("unifinderTreeView.resetAllowSelection()", 1);
+    },
+
+    resetAllowSelection: function uTV_resetAllowSelection() {
+        if (!this.tree) {
+            return;
+        }
+        /**
+         * Do not change anything in the following lines, they are needed as
+         * described in the selection observer above
+         */
+        this.doingSelection = false;
+
+        this.tree.view.selection.selectEventsSuppressed = false;
+        this.treeElement.addEventListener("select", unifinderSelect, true);
+    },
+
+    /**
+     * Tree View Implementation
+     */
+    get rowCount uTV_getRowCount() {
+        return this.eventArray.length;
+    },
+
+    getRowProperties: function uTV_getRowProperties() {},
+    getCellProperties: function uTV_getCellProperties() {},
+    getColumnProperties: function uTV_getColumnProperties() {},
+
+    isContainer: function uTV_isContainer() {
+        return false;
+    },
+
+    isContainerOpen: function uTV_isContainerOpen(aRow) {
+        return false;
+    },
+
+    isContainerEmpty: function uTV_isContainerEmpty(aRow) {
+        return false;
+    },
+
+    isSeparator: function uTV_isSeparator(aRow) {
+        return false;
+    },
+
+    isSorted: function uTV_isSorted(aRow) {
+        return false;
+    },
+
+    canDrop: function uTV_canDrop(aRow, aOrientation) {
+        return false;
+    },
+
+    drop: function uTV_drop(aRow, aOrientation) {},
+
+    getParentIndex: function uTV_getParentIndex(aRow) {
+        return -1;
+    },
+
+    hasNextSibling: function uTV_hasNextSibling(aRow, aAfterIndex) {},
+
+    getLevel: function uTV_getLevel(aRow) {
+        return 0;
+    },
+
+    getImageSrc: function uTV_getImageSrc(aRow, aOrientation) {},
+
+    getProgressMode: function uTV_getProgressMode(aRow, aCol) {},
+
+    getCellValue: function uTV_getCellValue(aRow, aCol) {
+        return null;
+    },
 
     getCellText: function uTV_getCellText(row, column) {
-        calendarEvent = gEventArray[row];
+        calendarEvent = this.eventArray[row];
 
         switch (column.id) {
             case "unifinder-search-results-tree-col-title":
@@ -502,56 +620,147 @@ var unifinderTreeView = {
             default:
                 return false;
         }
-    }
+    },
+
+    setTree: function uTV_setTree(tree) {
+        this.tree = tree;
+    },
+
+    toggleOpenState: function uTV_toggleOpenState(aRow) {},
+
+    cycleHeader: function uTV_cycleHeader(col) {
+
+        var sortActive = col.element.getAttribute("sortActive");
+        this.selectedColumn = col.id;
+        this.sortDirection = col.element.getAttribute("sortDirection");
+
+        if (sortActive != "true") {
+            var unifinder = document.getElementById("unifinder-search-results-tree");
+            var treeCols = unifinder.getElementsByTagName("treecol");
+            for (var i = 0; i < treeCols.length; i++) {
+                treeCols[i].removeAttribute("sortActive");
+                treeCols[i].removeAttribute("sortDirection");
+            }
+            this.sortDirection = "ascending";
+        } else {
+            if (!this.sortDirection || this.sortDirection == "descending") {
+                this.sortDirection = "ascending";
+            } else {
+                this.sortDirection = "descending";
+            }
+        }
+        col.element.setAttribute("sortActive", "true");
+        col.element.setAttribute("sortDirection", this.sortDirection);
+
+        this.sortItems();
+    },
+
+    isEditable: function uTV_isEditable(aRow, aCol) {
+        return false;
+    },
+
+    setCellValue: function uTV_setCellValue(aRow, aCol, aValue) {},
+    setCellText: function uTV_setCellText(aRow, aCol, aValue) {},
+
+    performAction: function uTV_performAction(aAction) {},
+
+    performActionOnRow: function uTV_performActionOnRow(aAction, aRow) {},
+
+    performActionOnCell: function uTV_performActionOnCell(aAction, aRow, aCol) {},
+
+    /* event is a calendar event. value is sortKey, a string or number */
+    sortKeyByEvent_cache_put : function uTV_cache_put( calEvent, value ) {
+        var earlierValues = this.sortKeyByEvent_cache[calEvent.id];
+        if (earlierValues == null && value != null) {
+          // common entry is just the value
+          this.sortKeyByEvent_cache[calEvent.id] = value;
+        } else {
+            // null key or rare dup id: link event & value to earlier value(s)
+            // id may be duplicated if event is in more than one calendar file.
+            var entry = new Object();
+            entry.isSortKeyByEventCacheEntry = true;
+            entry.event = calEvent;
+            entry.value = value;
+            entry.rest = earlierValues;
+            this.sortKeyByEvent_cache[calEvent.id] = entry;
+        }
+    },
+
+    sortKeyByEvent_cache_get : function uTV_cache_get( calEvent ) {
+        var entry = this.sortKeyByEvent_cache[calEvent.id];
+        while (typeof(entry) == "object" &&
+               "isSortKeyByEventCacheEntry" in entry) {
+            if (entry.event === calEvent) //pointer identity
+                return entry.value;
+            entry = entry.rest;
+        }
+        return entry; // only or last entry is first value put
+    },
+
+    selectedColumn: null,
+    sortDirection: null,
+    sortStartedTime: new Date().getTime(), // updated just before sort
+    outParameter: new Object() // used to obtain dates during sort
 };
 
-function compareEvents(eventA, eventB) {
+function getEventSortKey(calEvent) {
+    switch(unifinderTreeView.selectedColumn) {
+        case "unifinder-search-results-tree-col-title":
+            return calEvent.title || "";
+
+        case "unifinder-search-results-tree-col-startdate":
+            return msNextOrPreviousRecurrenceStart(calEvent);
+
+        case "unifinder-search-results-tree-col-enddate":
+            return msNextOrPreviousRecurrenceEnd(calEvent);
+
+        case "unifinder-search-results-tree-col-categories":
+            return calEvent.getProperty("CATEGORIES") || "";
+
+        case "unifinder-search-results-tree-col-location":
+            return calEvent.getProperty("LOCATION") || "";
+
+        case "unifinder-search-results-tree-col-status":
+            return calEvent.status || "";
+
+        case "unifinder-search-results-tree-col-calendarname":
+            return calEvent.calendar.name || "";
+
+        default:
+            return null;
+    }
+}
+
+function compareEvents(calEventA, calEventB) {
     var modifier = (unifinderTreeView.sortDirection == "descending" ? -1 : 1);
 
     switch (unifinderTreeView.selectedColumn) {
-        case "unifinder-search-results-tree-col-title":
-            return compareString(eventA.title,  eventB.title) * modifier;
-
         case "unifinder-search-results-tree-col-startdate":
-            var msNextStartA = msNextOrPreviousRecurrenceStart(eventA);
-            var msNextStartB = msNextOrPreviousRecurrenceStart(eventB);
-            return compareMSTime(msNextStartA, msNextStartB) * modifier;
-
         case "unifinder-search-results-tree-col-enddate":
-            var msNextEndA = msNextOrPreviousRecurrenceEnd(eventA);
-            var msNextEndB = msNextOrPreviousRecurrenceEnd(eventB);
-            return compareMSTime(msNextEndA, msNextEndB) * modifier;
+            var msA = unifinderTreeView.sortKeyByEvent_cache_get(calEventA);
+            var msB = unifinderTreeView.sortKeyByEvent_cache_get(calEventB);
+            return compareMSTime(msA, msB) * modifier;
 
+        case "unifinder-search-results-tree-col-title":
         case "unifinder-search-results-tree-col-categories":
-             return compareString(eventA.getProperty("CATEGORIES"),
-                                  eventB.getProperty("CATEGORIES")) * modifier;
-
         case "unifinder-search-results-tree-col-location":
-            return compareString(eventA.getProperty("LOCATION"),
-                                 eventB.getProperty("LOCATION")) * modifier;
-
         case "unifinder-search-results-tree-col-status":
-            return compareNumber(kEventStatusOrder.indexOf(eventA.status),
-                                 kEventStatusOrder.indexOf(eventB.status)) * modifier;
-
         case "unifinder-search-results-tree-col-calendarname":
-            return compareString(eventA.calendar.name,
-                                 eventB.calendar.name) * modifier;
+            var strA = unifinderTreeView.sortKeyByEvent_cache_get(calEventA);
+            var strB = unifinderTreeView.sortKeyByEvent_cache_get(calEventB);
+            if (strA.length == 0 || strB.length == 0) {
+                // sort empty values to end (so when users first sort by a
+                // column, they can see and find the desired values in that
+                // column without scrolling past all the empty values).
+                return -(strA.length - strB.length) * modifier;
+            }
+            var comparison =
+                unifinderTreeView.localeCollator.compareString(0, strA, strB);
+            return comparison * modifier;
 
         default:
             return 0;
-     }
-}
-
-function compareString(a, b) {
-    a = nullToEmpty(a);
-    b = nullToEmpty(b);
-    return (a < b ? -1 :
-            a > b ?  1 : 0);
-}
-
-function nullToEmpty(value) {
-    return value == null ? "" : value;
+    }
 }
 
 function compareMSTime(a, b) {
@@ -596,31 +805,12 @@ function dateToMilliseconds(date) {
     return ms;
 }
 
-function calendarEventView(eventArray) {
-   this.eventArray = eventArray;
-}
-
-calendarEventView.prototype = {
-    eventArray: null,
-
-    getCalendarEventAtRow: function(i) {
-        return gEventArray[i];
-    },
-
-    getRowOfCalendarEvent: function(event) {
-        if (!event) {
-            return null;
-        }
-        for (var i in gEventArray) {
-            if (gEventArray[i].hashId == event.hashId) {
-                return i;
-            }
-        }
-        return null;
-    }
-};
-
 function refreshEventTree() {
+    if (isUnifinderHidden()) {
+        // If the unifinder is hidden, don't refresh the events to reduce needed
+        // getItems calls.
+        return;
+    }
     var savedThis = this;
     var refreshListener = {
         mEventArray: new Array(),
@@ -662,6 +852,10 @@ function refreshEventTree() {
     filter |= ccalendar.ITEM_FILTER_TYPE_EVENT;
 
     var filterMenulist = document.getElementById("event-filter-menulist");
+    // Not all xul might be there yet...
+    if (!filterMenulist) {
+        return;
+    }
     switch (filterMenulist.selectedItem.value) {
         case "all":
             StartDate = null;
@@ -714,84 +908,68 @@ function refreshEventTree() {
     if (StartDate && EndDate) {
         filter |= ccalendar.ITEM_FILTER_CLASS_OCCURRENCES;
     }
+
     ccalendar.getItems(filter, 0, gStartDate, gEndDate, refreshListener);
 }
 
 function refreshEventTreeInternal(eventArray) {
     var searchText = document.getElementById("unifinder-search-field").value;
+    var unifinderTree = document.getElementById("unifinder-search-results-tree");
     searchText = searchText.toLowerCase();
 
-    // XXX match for strings with only whitespace. Skip those too
-    if (searchText.length) {
-        gEventArray = new Array();
-        var fieldsToSearch = ["DESCRIPTION", "LOCATION", "CATEGORIES", "URL"];
+    if (searchText.length && !searchText.match(/^\s*$/)) {
+        unifinderTreeView.clearItems();
+        const fieldsToSearch = ["SUMMARY", "DESCRIPTION", "LOCATION", "CATEGORIES", "URL"];
 
         for (var j in eventArray) {
-            var event = eventArray[j];
-            if (event.title &&
-                event.title.toLowerCase().indexOf(searchText) != -1) {
-                gEventArray.push(event);
-            } else {
-                for (var k in fieldsToSearch) {
-                    var val = event.getProperty(fieldsToSearch[k]);
-                    if (val && val.toLowerCase().indexOf(searchText) != -1) {
-                        gEventArray.push(event);
-                        break;
-                    }
+            var item = eventArray[j];
+            if (!fixAlldayDates(item)) {
+                continue;
+            }
+
+            for each (var field in fieldsToSearch) {
+                var val = event.getProperty(fieldsToSearch[field]);
+                if (val && val.toLowerCase().indexOf(searchText) != -1) {
+                    unifinderTreeView.addItems([event], true);
+                    break;
                 }
             }
         }
+
+        // Finally, sort the items since it was suppressed above
+        unifinderTreeView.sortItems();
     } else {
-        gEventArray = eventArray;
+        unifinderTreeView.setItems(eventArray.filter(fixAlldayDates));
     }
 
-    // Extra check to see if the events are in the daterange. Some providers
-    // are broken when looking at all-day events.
-    function dateFilter(event) {
-        // Using .compare on the views start and end, not on the events dates,
-        // because .compare uses the timezone of the datetime it is called on.
-        // The view's timezone is what is important here.
-        return ((!gEndDate || gEndDate.compare(event.startDate) >= 0) &&
-                (!gStartDate || gStartDate.compare(event.endDate) < 0));
-    }
-    gEventArray = gEventArray.filter(dateFilter);
-
-    var unifinderTree = document.getElementById("unifinder-search-results-tree");
-    var arrayOfTreeCols = unifinderTree.getElementsByTagName("treecol");
-
-    for (var i = 0; i < arrayOfTreeCols.length; i++) {
-        if (arrayOfTreeCols[i].getAttribute("sortActive") == "true") {
-            unifinderTreeView.selectedColumn = arrayOfTreeCols[i].getAttribute("id");
-            unifinderTreeView.sortDirection = arrayOfTreeCols[i].getAttribute("sortDirection");
-            unifinderTreeView.sortStartedTime = new Date().getTime(); // for null/0 dates
-            gEventArray.sort(compareEvents);
-            break;
-        }
-    }
-
-    unifinderTree.view = unifinderTreeView;
-    unifinderTree.eventView = new calendarEventView(gEventArray);
-
-    // Select selected events in the tree.
-    selectSelectedEventsInTree(false);
-}
-
-function unifinderKeyPress(aEvent) {
-    const kKE = Components.interfaces.nsIDOMKeyEvent;
-    switch (aEvent.keyCode) {
-        case 13:
-            // Enter, edit the event
-            modifyEventWithDialog(getSelectedItems()[0]);
-            break;
-        case kKE.DOM_VK_BACK_SPACE:
-        case kKE.DOM_VK_DELETE:
-            deleteEventCommand(true);
-            break;
-    }
+    // Select selected events in the tree. Not passing the argument gets the
+    // items from the view.
+    unifinderTreeView.setSelectedItems();
 }
 
 function focusSearch() {
     document.getElementById("unifinder-search-field").focus();
+}
+
+function toggleUnifinder() {
+    // Toggle the elements
+    goToggleToolbar('bottom-events-box', 'calendar_show_unifinder_command');
+    goToggleToolbar('calendar-view-splitter');
+
+    unifinderTreeView.treeElement.view = unifinderTreeView;
+
+    // When the unifinder is hidden, refreshEventTree is not called. Make sure
+    // the event tree is refreshed now.
+    if (!isUnifinderHidden() && gUnifinderNeedsRefresh) {
+        gUnifinderNeedsRefresh = false;
+        refreshEventTree();
+    }
+
+    // Make sure the selection is correct
+    if (unifinderTreeView.doingSelection) {
+        unifinderTreeView.resetAllowSelection();
+    }
+    unifinderTreeView.setSelectedItems();
 }
 
 window.addEventListener("load", prepareCalendarUnifinder, false);

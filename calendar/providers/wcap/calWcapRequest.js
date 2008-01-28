@@ -21,6 +21,7 @@
  *
  * Contributor(s):
  *   Daniel Boelzle <daniel.boelzle@sun.com>
+ *   Philipp Kewisch <mozilla@kewis.ch>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -194,7 +195,15 @@ calWcapRequest.prototype = {
             this.detachFromParent(this.m_status);
         }
     },
-    
+
+    execSubRespFunc: function calWcapRequest_execSubRespFunc(func, err, data) {
+        try {
+            func(err, data);
+        } catch (exc) {
+            this.execRespFunc(exc);
+        }
+    },
+
     // calIOperation:
     get id() {
         return this.m_id;
@@ -207,7 +216,6 @@ calWcapRequest.prototype = {
     },
     
     cancel: function calWcapRequest_cancel(status) {
-        log("cancel.", this);
         if (!status)
             status = calIErrors.OPERATION_CANCELLED;
         this.execRespFunc(status);
@@ -269,7 +277,6 @@ calWcapNetworkRequest.prototype = {
     },
     
     cancel: function calWcapNetworkRequest_cancel(status) {
-        log("cancel.", this);
         if (!status)
             status = calIErrors.OPERATION_CANCELLED;
         this.execRespFunc(status);
@@ -303,7 +310,15 @@ calWcapNetworkRequest.prototype = {
             this.detachFromParent(err);
         }
     },
-    
+
+    execSubRespFunc: function calWcapNetworkRequest_execSubRespFunc(func, err, data) {
+        try {
+            func(err, data);
+        } catch (exc) {
+            this.execRespFunc(exc);
+        }
+    },
+
     // nsIUnicharStreamLoaderObserver:
     onDetermineCharset: function calWcapNetworkRequest_onDetermineCharset(
         loader, context, firstSegment, length)
@@ -366,7 +381,7 @@ function issueNetworkRequest(parentRequest, respFunc, url, bLogging)
     try {
         var loader = Components.classes["@mozilla.org/network/unichar-stream-loader;1"]
                                .createInstance(Components.interfaces.nsIUnicharStreamLoader);
-        channel = getIoService().newChannel(url, "" /* charset */, null /* baseURI */);
+        channel = getIOService().newChannel(url, "" /* charset */, null /* baseURI */);
         channel.loadFlags |= Components.interfaces.nsIRequest.LOAD_BYPASS_CACHE;
     }
     catch (exc) {
@@ -395,7 +410,7 @@ function getWcapRequestStatusString(xml)
     return str;
 }
 
-function stringToIcal(data, expectedErrno)
+function stringToIcal(session, data, expectedErrno)
 {
     if (!data || data.length == 0) { // assuming time-out; WTF.
         throw new Components.Exception(
@@ -404,7 +419,7 @@ function stringToIcal(data, expectedErrno)
     }
     var icalRootComp;
     try {
-        icalRootComp = getIcsService().parseICS(data);
+        icalRootComp = getIcsService().parseICS(data, session /*implements calITimezoneProvider*/);
     }
     catch (exc) { // map into more useful error string:
         throw new Components.Exception("error parsing ical data!",
@@ -414,7 +429,7 @@ function stringToIcal(data, expectedErrno)
     return icalRootComp;
 }
 
-function stringToXml(data, expectedErrno)
+function stringToXml(session, data, expectedErrno)
 {
     if (!data || data.length == 0) { // assuming time-out
         throw new Components.Exception(

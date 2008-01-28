@@ -370,7 +370,7 @@ CHBrowserListener::ShowAsModal()
   }
 
   mIsModal = PR_TRUE;
-  //int result = [NSApp runModalForWindow:window];
+  //int result = [nsAlertController safeRunModalForWindow:window];
   mIsModal = PR_FALSE;
 
   return NS_OK;
@@ -670,7 +670,7 @@ CHBrowserListener::OnStateChange(nsIWebProgress *aWebProgress, nsIRequest *aRequ
         [obj onLoadingStarted];
     }
     while ((obj = [enumerator nextObject]))
-      [obj onResourceLoadingStarted:[NSNumber numberWithUnsignedLongLong:(unsigned long long)aRequest]];
+      [obj onResourceLoadingStarted:[NSValue valueWithPointer:aRequest]];
   }
   else if (aStateFlags & nsIWebProgressListener::STATE_STOP) {
     if (aStateFlags & nsIWebProgressListener::STATE_IS_NETWORK) {
@@ -678,7 +678,7 @@ CHBrowserListener::OnStateChange(nsIWebProgress *aWebProgress, nsIRequest *aRequ
         [obj onLoadingCompleted:(NS_SUCCEEDED(aStatus))];
     }
     while ((obj = [enumerator nextObject]))
-      [obj onResourceLoadingCompleted:[NSNumber numberWithUnsignedLongLong:(unsigned long long)aRequest]];
+      [obj onResourceLoadingCompleted:[NSValue valueWithPointer:aRequest]];
   }
 
   return NS_OK;
@@ -820,6 +820,8 @@ CHBrowserListener::HandleLinkAddedEvent(nsIDOMEvent* inEvent)
     HandleFaviconLink(linkElement);
   else if (linkAttrType == eFeedType)
     HandleFeedLink(linkElement);
+  else if (linkAttrType == eSearchPluginType)
+    HandleSearchPluginLink(linkElement);
 
   return NS_OK;
 }
@@ -827,24 +829,29 @@ CHBrowserListener::HandleLinkAddedEvent(nsIDOMEvent* inEvent)
 ELinkAttributeType
 CHBrowserListener::GetLinkAttributeType(nsIDOMElement* inElement)
 {
-  nsAutoString attribute;
-  inElement->GetAttribute(NS_LITERAL_STRING("rel"), attribute);
+  nsAutoString relAttribute;
+  inElement->GetAttribute(NS_LITERAL_STRING("rel"), relAttribute);
   
   // Favicon link type
-  if (attribute.EqualsIgnoreCase("shortcut icon") || attribute.EqualsIgnoreCase("icon"))
+  if (relAttribute.EqualsIgnoreCase("shortcut icon") || relAttribute.EqualsIgnoreCase("icon"))
     return eFavIconType;
+  
+  // Search Plugin type
+  if (relAttribute.Equals(NS_LITERAL_STRING("search")))
+    return eSearchPluginType;
 
   // Check for feed type next
-  inElement->GetAttribute(NS_LITERAL_STRING("type"), attribute);
+  nsAutoString typeAttribute;
+  inElement->GetAttribute(NS_LITERAL_STRING("type"), typeAttribute);
   
   // kinda ugly, but if we don't match any of these strings return
-  if (attribute.Equals(NS_LITERAL_STRING("application/rssxml")) ||
-      attribute.Equals(NS_LITERAL_STRING("application/rss+xml")) ||
-      attribute.Equals(NS_LITERAL_STRING("application/atomxml")) ||
-      attribute.Equals(NS_LITERAL_STRING("application/atom+xml")) ||
-      attribute.Equals(NS_LITERAL_STRING("text/xml")) ||
-      attribute.Equals(NS_LITERAL_STRING("application/xml")) ||
-      attribute.Equals(NS_LITERAL_STRING("application/rdfxml")))
+  if (typeAttribute.Equals(NS_LITERAL_STRING("application/rssxml")) ||
+      typeAttribute.Equals(NS_LITERAL_STRING("application/rss+xml")) ||
+      typeAttribute.Equals(NS_LITERAL_STRING("application/atomxml")) ||
+      typeAttribute.Equals(NS_LITERAL_STRING("application/atom+xml")) ||
+      typeAttribute.Equals(NS_LITERAL_STRING("text/xml")) ||
+      typeAttribute.Equals(NS_LITERAL_STRING("application/xml")) ||
+      typeAttribute.Equals(NS_LITERAL_STRING("application/rdfxml")))
   {
     return eFeedType;
   }
@@ -960,11 +967,23 @@ CHBrowserListener::HandleFeedLink(nsIDOMElement* inElement)
   if (NS_FAILED(rv))
     return;
   
-  // set the scheme to feed:// so sending to outside application is one only one call
-  feedURI->SetScheme(NS_LITERAL_CSTRING("feed"));
-  
+  // set the scheme to feed: so sending to an outside application is only one call
+  PRBool isHttp;
   nsCAutoString feedFullURI;
-  feedURI->GetAsciiSpec(feedFullURI);
+
+  rv = feedURI->SchemeIs("http", &isHttp);
+  if (isHttp)
+  {
+    // for http:, we want feed://example.com
+    feedURI->SetScheme(NS_LITERAL_CSTRING("feed"));
+    feedURI->GetAsciiSpec(feedFullURI);
+  }
+  else
+  {
+    // for https:, we want feed:https://example.com
+    feedURI->GetAsciiSpec(feedFullURI);
+    feedFullURI.Insert(NS_LITERAL_CSTRING("feed:"), 0);
+  }
   
   // get the two specs, the feed's uri and the feed's title
   NSString* feedSpec = [NSString stringWith_nsACString:feedFullURI];
@@ -974,4 +993,57 @@ CHBrowserListener::HandleFeedLink(nsIDOMElement* inElement)
   
   // notify that a feed has sucessfully been discovered
   [mContainer onFeedDetected:feedSpec feedTitle:titleSpec];
+}
+
+void
+CHBrowserListener::HandleSearchPluginLink(nsIDOMElement* inElement)
+{
+  nsresult rv;
+  
+  nsCOMPtr<nsIDOMDocument> domDoc;
+  inElement->GetOwnerDocument(getter_AddRefs(domDoc));
+  
+  nsAutoString titleAttribute;
+  rv = inElement->GetAttribute(NS_LITERAL_STRING("title"), titleAttribute);
+  if (NS_FAILED(rv))
+    return;
+  
+  nsAutoString hrefAttribute;
+  rv = inElement->GetAttribute(NS_LITERAL_STRING("href"), hrefAttribute);
+  if (NS_FAILED(rv))
+    return;
+
+  // get the document uri
+  nsCOMPtr<nsIDOM3Document> doc = do_QueryInterface(domDoc);
+  if (!doc)
+    return;
+  
+  nsAutoString docURISpec;
+  rv = doc->GetDocumentURI(docURISpec);
+  if (NS_FAILED(rv))
+    return;
+  
+  nsCOMPtr<nsIURI> documentURI;
+  rv = NS_NewURI(getter_AddRefs(documentURI), docURISpec);
+  if (NS_FAILED(rv))
+    return;
+  
+  nsCOMPtr<nsIURI> fullSearchPluginURI;
+  rv = NS_NewURI(getter_AddRefs(fullSearchPluginURI), NS_ConvertUTF16toUTF8(hrefAttribute), nsnull, documentURI);
+  if (NS_FAILED(rv))
+    return;
+  
+  nsCAutoString fullSearchPluginURISpec;
+  fullSearchPluginURI->GetSpec(fullSearchPluginURISpec);
+
+  nsAutoString typeAttribute;
+  rv = inElement->GetAttribute(NS_LITERAL_STRING("type"), typeAttribute);
+  if (NS_FAILED(rv))
+    return;
+  
+  NSString* title = [NSString stringWith_nsAString:titleAttribute];
+  NSURL* location = [NSURL URLWithString:[NSString stringWith_nsACString:fullSearchPluginURISpec]];
+  NSString* mimeType = [NSString stringWith_nsAString:typeAttribute];
+
+  [mContainer onSearchPluginDetected:location mimeType:mimeType displayName:title];
 }

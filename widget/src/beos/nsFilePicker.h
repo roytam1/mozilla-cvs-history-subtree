@@ -57,6 +57,9 @@
 #include "nsILocalFile.h"
 #include "nsISimpleEnumerator.h"
 #include "nsISupportsArray.h"
+#include "nsIAppShell.h"
+#include "nsIAppShellService.h"
+#include "nsIServiceManager.h"
 
 //
 // Native BeOS FileSelector wrapper
@@ -68,7 +71,7 @@
 #include <String.h>
 class BButton;
 
-class nsFilePicker : public nsBaseFilePicker
+class nsFilePicker : public nsBaseFilePicker, public BLooper
 {
 public:
   NS_DECL_ISUPPORTS
@@ -122,7 +125,7 @@ public:
   virtual ~nsFilePanelBeOS();
 
   virtual void MessageReceived(BMessage *message);
-  virtual void WaitForSelection();
+  virtual bool SelectionDone();
 
   virtual void SelectionChanged();
 
@@ -150,7 +153,6 @@ public:
 
 protected:
   BButton *mDirectoryButton;
-  sem_id wait_sem ;
   uint32 mSelectedActivity;
   bool mIsSelected;
   BString mSaveFileName;

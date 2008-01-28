@@ -430,7 +430,7 @@ function updateStyleSheetForObject(aObject, aSheet) {
     } else {
         // This is a category, where we set the border.  Also note that we 
         // use the ~= selector, since there could be multiple categories
-        name = aObject.replace(' ','_');
+        name = formatStringForCSSRule(aObject);
         selectorPrefix = "item-category~=";
         ruleUpdaterFunc = function categoryRuleFunc(aRule, aIndex) {
             var color = getPrefSafe("calendar.category.color."+aObject, null);
@@ -618,3 +618,50 @@ function deleteSelectedEvents() {
                                              false,
                                              false);
 }
+
+/**
+ *  Edit the items currently selected in the view.
+ */
+function editSelectedEvents() {
+    var selectedItems = currentView().getSelectedItems({});
+    if (selectedItems && selectedItems.length >= 1) {
+        modifyEventWithDialog(getOccurrenceOrParent(selectedItems[0]));
+    }
+}
+
+/**
+ * Select all events from all calendars
+ */
+function selectAllEvents() {
+    var items = [];
+    var listener = {
+        onOperationComplete: function selectAll_ooc(aCalendar, aStatus, 
+                                                    aOperationType, aId, 
+                                                    aDetail) {
+            currentView().setSelectedItems(items.length, items, false);
+        },
+        onGetResult: function selectAll_ogr(aCalendar, aStatus, aItemType, 
+                                            aDetail, aCount, aItems) {
+            for each (var item in aItems) {
+                items.push(item);
+            }
+        }
+    };
+
+    var composite = getCompositeCalendar();
+    var filter = composite.ITEM_FILTER_COMPLETED_ALL |
+                 composite.ITEM_FILTER_CLASS_OCCURRENCES;
+
+    if (currentView().tasksInView) {
+        filter |= composite.ITEM_FILTER_TYPE_ALL; 
+    } else {
+        filter |= composite.ITEM_FILTER_TYPE_EVENT;
+    }
+
+    // Need to move one day out to get all events
+    var end = currentView().endDay.clone();
+    end.day += 1;
+
+    composite.getItems(filter, 0, currentView().startDay, end, listener);
+}
+

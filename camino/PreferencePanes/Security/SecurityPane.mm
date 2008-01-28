@@ -37,9 +37,6 @@
  
 #import "SecurityPane.h"
 
-#include "nsServiceManagerUtils.h"
-#include "nsIPref.h"
-
 // prefs for showing security dialogs
 #define LEAVE_SITE_PREF      "security.warn_leaving_secure"
 #define MIXEDCONTENT_PREF    "security.warn_viewing_mixed"
@@ -57,16 +54,15 @@ const unsigned int kAskEveryTimeMatrixRowValue        = 1;
 - (void)updateButtons
 {
   // Set initial value on Security checkboxes
-  PRBool leaveEncrypted = PR_TRUE;
-  mPrefService->GetBoolPref(LEAVE_SITE_PREF, &leaveEncrypted);
+  BOOL leaveEncrypted = [self getBooleanPref:LEAVE_SITE_PREF withSuccess:NULL];
   [mLeaveEncrypted setState:(leaveEncrypted ? NSOnState : NSOffState)];
 
-  PRBool viewMixed = PR_TRUE;
-  mPrefService->GetBoolPref(MIXEDCONTENT_PREF, &viewMixed);
+  BOOL viewMixed = [self getBooleanPref:MIXEDCONTENT_PREF withSuccess:NULL];
   [mViewMixed setState:(viewMixed ? NSOnState : NSOffState)];
 
   BOOL gotPref;
-  NSString* certificateBehavior = [self getStringPref:"security.default_personal_cert" withSuccess:&gotPref];
+  NSString* certificateBehavior = [self getStringPref:"security.default_personal_cert"
+                                          withSuccess:&gotPref];
   if (gotPref) {
     if ([certificateBehavior isEqual:@"Select Automatically"])
       [mCertificateBehavior selectCellAtRow:kSelectAutomaticallyMatrixRowValue column:0];

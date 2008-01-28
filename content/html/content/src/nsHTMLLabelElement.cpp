@@ -242,8 +242,11 @@ nsHTMLLabelElement::HandleDOMEvent(nsPresContext* aPresContext,
       case NS_MOUSE_LEFT_CLICK:
         if (aEvent->eventStructType == NS_MOUSE_EVENT) {
           if (ShouldFocus(this)) {
+            PRBool oldFocusCalled = mFocusCalled;
+            mFocusCalled = PR_TRUE;
             // Focus the for content.
-            content->SetFocus(aPresContext);
+            SetFocus(aPresContext);
+            mFocusCalled = oldFocusCalled;
           }
 
           // Dispatch a new click event to |content|
@@ -299,10 +302,13 @@ nsHTMLLabelElement::SetFocus(nsPresContext* aContext)
       // Handle input element in a special way, so that focusing
       // <input type="file"> doesn't focus the input field but the
       // 'browse...' button.
-      nsCOMPtr<nsIDOMHTMLInputElement> input = do_QueryInterface(content);
-      if (input) {
-        input->Focus();
-        return;
+      nsCOMPtr<nsIFormControl> control = do_QueryInterface(content);
+      if (control && control->GetType() == NS_FORM_INPUT_FILE) {
+        nsCOMPtr<nsIDOMHTMLInputElement> input = do_QueryInterface(content);
+        if (input) {
+          input->Focus();
+          return;
+        }
       }
     }
     content->SetFocus(aContext);

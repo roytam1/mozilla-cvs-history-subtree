@@ -43,6 +43,7 @@
 #import "BookmarkInfoController.h"
 #import "Bookmark.h"
 #import "BookmarkFolder.h"
+#import "CmDateFormatter.h"
 
 // determined through weeks of trial and error
 #define kMaxLengthOfWindowTitle 49
@@ -58,9 +59,10 @@ enum EBookmarkInfoViewType {
 - (void)commitChanges:(id)sender;
 - (void)configureWindowForView:(EBookmarkInfoViewType)inViewType;
 - (void)updateUI;
+- (void)updateLastVisitField;
 - (void)dockMenuChanged:(NSNotification *)aNote;
 
-@end;
+@end
 
 @implementation BookmarkInfoController
 
@@ -304,9 +306,7 @@ static BookmarkInfoController* gSharedBookmarkInfoController = nil;
     [mBookmarkShortcutField setStringValue:[mBookmarkItem shortcut]];
     [mBookmarkLocationField setStringValue:[(Bookmark *)mBookmarkItem url]];
     [mNumberVisitsField setIntValue:[(Bookmark *)mBookmarkItem numberOfVisits]];
-    [mLastVisitField setStringValue:[[(Bookmark *)mBookmarkItem lastVisit] descriptionWithCalendarFormat:[[mLastVisitField formatter] dateFormat]
-                                                                                                timeZone:[NSTimeZone localTimeZone]
-                                                                                                  locale:nil]];
+    [self updateLastVisitField];
 
     // if its parent is a smart folder or it's a menu separator,
     // we turn off all the fields.  if it isn't, then we turn them all on
@@ -364,6 +364,25 @@ static BookmarkInfoController* gSharedBookmarkInfoController = nil;
   }
 }
 
+- (void)updateLastVisitField
+{
+  NSDate* lastVisit = [(Bookmark*)mBookmarkItem lastVisit];
+  NSString* lastVisitString;
+
+  if (!lastVisit) {
+    lastVisitString = NSLocalizedString(@"BookmarkVisitedNever", nil);
+  }
+  else {
+    CmDateFormatter* dateFormatter = [[CmDateFormatter alloc] init];
+    [dateFormatter setDateStyle:NSDateFormatterLongStyle];
+    [dateFormatter setTimeStyle:NSDateFormatterLongStyle];
+    lastVisitString = [dateFormatter stringFromDate:lastVisit];
+    [dateFormatter release];
+  }
+
+  [mLastVisitField setStringValue:lastVisitString];
+}
+
 - (BookmarkItem *)bookmark
 {
   return mBookmarkItem;
@@ -397,9 +416,7 @@ static BookmarkInfoController* gSharedBookmarkInfoController = nil;
   BookmarkItem *item = [aNote object];
   if ([item isKindOfClass:[Bookmark class]]) {
     [mNumberVisitsField setIntValue:[(Bookmark *)item numberOfVisits]];
-    [mLastVisitField setStringValue:[[(Bookmark *)item lastVisit] descriptionWithCalendarFormat:[[mLastVisitField formatter] dateFormat]
-                                                                                       timeZone:[NSTimeZone localTimeZone]
-                                                                                         locale:nil]];
+    [self updateLastVisitField];
   }
 }
 

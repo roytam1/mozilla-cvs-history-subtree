@@ -25,6 +25,8 @@
  *   Thomas Benisch <thomas.benisch@sun.com>
  *   Matthew Willis <lilmatt@mozilla.com>
  *   Philipp Kewisch <mozilla@kewis.ch>
+ *   Daniel Boelzle <daniel.boelzle@sun.com>
+ *   Sebastian Schwieger <sebo.moz@googlemail.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -39,10 +41,6 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-//
-// calStorageCalendar.js
-//
 
 const kStorageServiceContractID = "@mozilla.org/storage/service;1";
 const kStorageServiceIID = Components.interfaces.mozIStorageService;
@@ -77,6 +75,19 @@ if (!kMozStorageStatementWrapperIID) {
     dump("*** mozStorage not available, calendar/storage provider will not function\n");
 }
 
+function initCalStorageCalendarComponent() {
+    CalAttendee = new Components.Constructor(kCalAttendeeContractID, kCalIAttendee);
+    CalRecurrenceInfo = new Components.Constructor(kCalRecurrenceInfoContractID, kCalIRecurrenceInfo);
+    CalRecurrenceRule = new Components.Constructor(kCalRecurrenceRuleContractID, kCalIRecurrenceRule);
+    CalRecurrenceDateSet = new Components.Constructor(kCalRecurrenceDateSetContractID, kCalIRecurrenceDateSet);
+    CalRecurrenceDate = new Components.Constructor(kCalRecurrenceDateContractID, kCalIRecurrenceDate);
+    MozStorageStatementWrapper = new Components.Constructor(kMozStorageStatementWrapperContractID, kMozStorageStatementWrapperIID);
+}
+
+//
+// calStorageCalendar.js
+//
+
 const CAL_ITEM_TYPE_EVENT = 0;
 const CAL_ITEM_TYPE_TODO = 1;
 
@@ -89,15 +100,6 @@ const CAL_ITEM_FLAG_HAS_RECURRENCE = 16;
 const CAL_ITEM_FLAG_HAS_EXCEPTIONS = 32;
 
 const USECS_PER_SECOND = 1000000;
-
-function initCalStorageCalendarComponent() {
-    CalAttendee = new Components.Constructor(kCalAttendeeContractID, kCalIAttendee);
-    CalRecurrenceInfo = new Components.Constructor(kCalRecurrenceInfoContractID, kCalIRecurrenceInfo);
-    CalRecurrenceRule = new Components.Constructor(kCalRecurrenceRuleContractID, kCalIRecurrenceRule);
-    CalRecurrenceDateSet = new Components.Constructor(kCalRecurrenceDateSetContractID, kCalIRecurrenceDateSet);
-    CalRecurrenceDate = new Components.Constructor(kCalRecurrenceDateContractID, kCalIRecurrenceDate);
-    MozStorageStatementWrapper = new Components.Constructor(kMozStorageStatementWrapperContractID, kMozStorageStatementWrapperIID);
-}
 
 //
 // Storage helpers
@@ -112,10 +114,19 @@ function createStatement (dbconn, sql) {
     } catch (e) {
         Components.utils.reportError(
             "mozStorage exception: createStatement failed, statement: '" + 
-            sql + "', error: '" + dbconn.lastErrorString + "'");
+            sql + "', error: '" + dbconn.lastErrorString + "' - " + e);
     }
 
     return null;
+}
+
+function getInUtcOrKeepFloating(dt) {
+    var tz = dt.timezone;
+    if (tz.isFloating || tz.isUTC) {
+        return dt;
+    } else {
+        return dt.getInTimezone(UTC());
+    }
 }
 
 function textToDate(d) {
@@ -146,12 +157,12 @@ function textToDate(d) {
 function dateToText(d) {
     var datestr;
     var tz = null;
-    if (d.timezone != "floating") {
-        if (d.timezone == "UTC") {
+    if (!d.timezone.isFloating) {
+        if (d.timezone.isUTC) {
             datestr = "U";
         } else {
             datestr = "Z";
-            tz = d.timezone;
+            tz = d.timezone.tzid;
         }
     } else {
         datestr = "L";
@@ -178,13 +189,50 @@ function dateToText(d) {
 // other helpers
 //
 
+function calStorageTimezone(comp) {
+    this.wrappedJSObject = this;
+    this.provider = null;
+    this.component = comp;
+    this.tzid = comp.getFirstProperty("TZID").value;
+    this.isUTC = false;
+    this.isFloating = false;
+    this.latitude = "";
+    this.longitude = "";
+}
+calStorageTimezone.prototype = {
+    toString: function() {
+        return this.component.toString();
+    }
+};
+var gForeignTimezonesCache = {};
+
 function newDateTime(aNativeTime, aTimezone) {
     var t = createDateTime();
     t.nativeTime = aNativeTime;
-    if (aTimezone && aTimezone != "floating") {
-        t = t.getInTimezone(aTimezone);
+    if (aTimezone) {
+        var tz;
+        if (aTimezone.indexOf("BEGIN:VTIMEZONE") == 0) {
+            tz = gForeignTimezonesCache[aTimezone]; // using full definition as key
+            if (!tz) {
+                try {
+                    // cannot cope without parent VCALENDAR:
+                    var comp = getIcsService().parseICS("BEGIN:VCALENDAR\n" + aTimezone + "\nEND:VCALENDAR", null);
+                    tz = new calStorageTimezone(comp.getFirstSubcomponent("VTIMEZONE"));
+                    gForeignTimezonesCache[aTimezone] = tz;
+                } catch (exc) {
+                    ASSERT(false, exc);
+                }
+            }
+        } else {
+            tz = getTimezoneService().getTimezone(aTimezone);
+        }
+        if (tz) {
+            t = t.getInTimezone(tz);
+        } else {
+            ASSERT(false, "timezone not available: " + aTimezone);
+        }
     } else {
-        t.timezone = "floating";
+        t.timezone = floating();
     }
 
     return t;
@@ -195,12 +243,12 @@ function newDateTime(aNativeTime, aTimezone) {
 //
 
 function calStorageCalendar() {
-    this.wrappedJSObject = this;
-    this.mObservers = new calListenerBag(Components.interfaces.calIObserver);
+    this.initProviderBase();
     this.mItemCache = new Array();
 }
 
 calStorageCalendar.prototype = {
+    __proto__: calProviderBase.prototype,
     //
     // private members
     //
@@ -212,14 +260,9 @@ calStorageCalendar.prototype = {
     // nsISupports interface
     // 
     QueryInterface: function (aIID) {
-        if (!aIID.equals(Components.interfaces.nsISupports) &&
-            !aIID.equals(Components.interfaces.calICalendarProvider) &&
-            !aIID.equals(Components.interfaces.calICalendar))
-        {
-            throw Components.results.NS_ERROR_NO_INTERFACE;
-        }
-
-        return this;
+        return doQueryInterface(this, calStorageCalendar.prototype, aIID,
+                                [Components.interfaces.calICalendarProvider,
+                                 Components.interfaces.calISyncCalendar]);
     },
 
     //
@@ -243,18 +286,22 @@ calStorageCalendar.prototype = {
         for (var i in this.mDeleteEventExtras) {
             this.mDeleteEventExtras[i].params.cal_id = cal.mCalId;
             this.mDeleteEventExtras[i].execute();
+            this.mDeleteEventExtras[i].reset();
         }
 
         for (var i in this.mDeleteTodoExtras) {
             this.mDeleteTodoExtras[i].params.cal_id = cal.mCalId;
             this.mDeleteTodoExtras[i].execute();
+            this.mDeleteTodoExtras[i].reset();
         }
 
         this.mDeleteAllEvents.params.cal_id = cal.mCalId;
         this.mDeleteAllEvents.execute();
+        this.mDeleteAllEvents.reset();
 
         this.mDeleteAllTodos.params.cal_id = cal.mCalId;
         this.mDeleteAllTodos.execute();
+        this.mDeleteAllTodos.reset();
 
         try {
             listener.onDeleteCalendar(cal, Components.results.NS_OK, null);
@@ -262,86 +309,45 @@ calStorageCalendar.prototype = {
         }
     },
 
+    mRelaxedMode: undefined,
+    get relaxedMode() {
+        if (this.mRelaxedMode === undefined) {
+            this.mRelaxedMode = this.getProperty("relaxedMode");
+        }
+        return this.mRelaxedMode;
+    },
+
     //
     // calICalendar interface
     //
-    
-    // attribute AUTF8String id;
-    mID: null,
-    get id() {
-        return this.mID;
-    },
-    set id(id) {
-        if (this.mID)
-            throw Components.results.NS_ERROR_ALREADY_INITIALIZED;
-        return (this.mID = id);
+
+    getProperty: function stor_getProperty(aName) {
+        switch (aName) {
+            case "cache.supported":
+                return false;
+            case "requiresNetwork":
+                return false;
+        }
+        return this.__proto__.__proto__.getProperty.apply(this, arguments);
     },
 
-    // attribute AUTF8String name;
-    get name() {
-        return this.getProperty("name");
-    },
-    set name(name) {
-        return this.setProperty("name", name);
-    },
     // readonly attribute AUTF8String type;
     get type() { return "storage"; },
 
-    mReadOnly: false,
-
-    get readOnly() { 
-        return this.getProperty("readOnly");
-    },
-    set readOnly(aValue) {
-        return this.setProperty("readOnly", aValue);
-    },
-
-    get canRefresh() {
-        return false;
-    },
-
-    getProperty: function calStorageCalendar_getProperty(aName) {
-        switch (aName) {
-            case "readOnly":
-                return this.mReadOnly;
-            default:
-                // xxx future: return getPrefSafe("calendars." + this.id + "." + aName, null);
-                return getCalendarManager().getCalendarPref_(this, aName);
-        }
-    },
-    setProperty: function calStorageCalendar_setProperty(aName, aValue) {
-        var oldValue = this.getProperty(aName);
-        if (oldValue != aValue) {
-            switch (aName) {
-                case "readOnly":
-                    this.mReadOnly = aValue;
-                    break;
-                default:
-                    // xxx future: setPrefSafe("calendars." + this.id + "." + aName, aValue);
-                    getCalendarManager().setCalendarPref_(this, aName, aValue);
-            }
-            this.mObservers.notify("onPropertyChanged",
-                                   [this, aName, aValue, oldValue]);
-        }
-        return aValue;
-    },
-    deleteProperty: function(aName) {
-        this.mObservers.notify("onPropertyDeleting", [this, aName]);
-        getCalendarManager().deleteCalendarPref_(this, aName);
-    },
-
-    mURI: null,
     // attribute nsIURI uri;
-    get uri() { return this.mURI; },
-    set uri(aURI) {
+    get uri() {
+        return this.mUri;
+    },
+    set uri(aUri) {
         // we can only load once
-        if (this.mURI)
+        if (this.mUri) {
             throw Components.results.NS_ERROR_FAILURE;
+        }
 
         var id = 0;
 
         // check if there's a ?id=
-        var path = aURI.path;
+        var path = aUri.path;
         var pos = path.indexOf("?id=");
 
         if (pos != -1) {
@@ -350,8 +356,8 @@ calStorageCalendar.prototype = {
         }
 
         var dbService;
-        if (aURI.scheme == "file") {
-            var fileURL = aURI.QueryInterface(Components.interfaces.nsIFileURL);
+        if (aUri.scheme == "file") {
+            var fileURL = aUri.QueryInterface(Components.interfaces.nsIFileURL);
             if (!fileURL)
                 throw Components.results.NS_ERROR_NOT_IMPLEMENTED;
 
@@ -359,39 +365,27 @@ calStorageCalendar.prototype = {
             dbService = Components.classes[kStorageServiceContractID].getService(kStorageServiceIID);
             this.mDB = dbService.openDatabase (fileURL.file);
             this.mDBTwo = dbService.openDatabase (fileURL.file);
-        } else if (aURI.scheme == "moz-profile-calendar") {
+        } else if (aUri.scheme == "moz-profile-calendar") {
             dbService = Components.classes[kStorageServiceContractID].getService(kStorageServiceIID);
-	    if ( "getProfileStorage" in dbService ) {
-	      // 1.8 branch
-	      this.mDB = dbService.getProfileStorage("profile");
-	      this.mDBTwo = dbService.getProfileStorage("profile");
-	    } else {
-	      // trunk 
-	      this.mDB = dbService.openSpecialDatabase("profile");
-	      this.mDBTwo = dbService.openSpecialDatabase("profile");
-	    }
-	}
+            if ("getProfileStorage" in dbService) {
+              // 1.8 branch
+              this.mDB = dbService.getProfileStorage("profile");
+              this.mDBTwo = dbService.getProfileStorage("profile");
+            } else {
+              // trunk
+              this.mDB = dbService.openSpecialDatabase("profile");
+              this.mDBTwo = dbService.openSpecialDatabase("profile");
+            }
+        }
 
         this.initDB();
 
         this.mCalId = id;
-        this.mURI = aURI;
+        this.mUri = aUri;
     },
 
     refresh: function() {
         // no-op
-    },
-
-    get sendItipInvitations() { return true; },
-
-    // void addObserver( in calIObserver observer );
-    addObserver: function (aObserver) {
-        this.mObservers.add(aObserver);
-    },
-
-    // void removeObserver( in calIObserver observer );
-    removeObserver: function (aObserver) {
-        this.mObservers.remove(aObserver);
     },
 
     // void addItem( in calIItemBase aItem, in calIOperationListener aListener );
@@ -402,8 +396,16 @@ calStorageCalendar.prototype = {
 
     // void adoptItem( in calIItemBase aItem, in calIOperationListener aListener );
     adoptItem: function (aItem, aListener) {
-        if (this.readOnly) 
-            throw Components.interfaces.calIErrors.CAL_IS_READONLY;
+        if (this.readOnly) {
+            if (aListener) {
+                aListener.onOperationComplete(this.superCalenddar,
+                                              Components.interfaces.calIErrors.CAL_IS_READONLY,
+                                              aListener.ADD,
+                                              null,
+                                              "Calendar is readonly");
+            }
+            return;
+        }
         // Ensure that we're looking at the base item
         // if we were given an occurrence.  Later we can
         // optimize this.
@@ -418,25 +420,30 @@ calStorageCalendar.prototype = {
         } else {
             var olditem = this.getItemById(aItem.id);
             if (olditem) {
-                if (aListener)
-                    aListener.onOperationComplete (this,
-                                                   Components.interfaces.calIErrors.DUPLICATE_ID,
-                                                   aListener.ADD,
-                                                   aItem.id,
-                                                   "ID already exists for addItem");
-                return;
+                if (this.relaxedMode) {
+                    // we possibly want to interact with the user before deleting
+                    this.deleteItemById(aItem.id);
+                }
+                else {
+                    if (aListener)
+                        aListener.onOperationComplete(this.superCalendar,
+                                                      Components.interfaces.calIErrors.DUPLICATE_ID,
+                                                      aListener.ADD,
+                                                      aItem.id,
+                                                      "ID already exists for addItem");
+                    return;
+                }
             }
         }
 
-        aItem.calendar = this;
-        aItem.generation = 1;
+        aItem.calendar = this.superCalendar;
         aItem.makeImmutable();
 
         this.flushItem (aItem, null);
 
         // notify the listener
         if (aListener)
-            aListener.onOperationComplete (this,
+            aListener.onOperationComplete (this.superCalendar,
                                            Components.results.NS_OK,
                                            aListener.ADD,
                                            aItem.id,
@@ -448,54 +455,61 @@ calStorageCalendar.prototype = {
 
     // void modifyItem( in calIItemBase aNewItem, in calIItemBase aOldItem, in calIOperationListener aListener );
     modifyItem: function (aNewItem, aOldItem, aListener) {
-        if (this.readOnly) 
-            throw Components.interfaces.calIErrors.CAL_IS_READONLY;
-        function reportError(errId, errStr) {
-            if (aListener)
-                aListener.onOperationComplete (this,
-                                               errId ? errId : Components.results.NS_ERROR_FAILURE,
-                                               aListener.MODIFY,
-                                               aNewItem.id,
-                                               errStr);
+        if (this.readOnly) {
+            if (aListener) {
+                aListener.onOperationComplete(this.superCalenddar,
+                                              Components.interfaces.calIErrors.CAL_IS_READONLY,
+                                              aListener.MODIFY,
+                                              null,
+                                              "Calendar is readonly");
+            }
+            return null;
+        }
+        if (!aNewItem) {
+            throw Components.results.NS_ERROR_INVALID_ARG;
+        }
+
+        var this_ = this;
+        function reportError(errStr, errId) {
+            if (aListener) {
+                aListener.onOperationComplete(this_.superCalendar,
+                                              errId ? errId : Components.results.NS_ERROR_FAILURE,
+                                              aListener.MODIFY,
+                                              aNewItem.id,
+                                              errStr);
+            }
+            return null;
         }
 
         if (aNewItem.id == null) {
             // this is definitely an error
-            reportError (null, "ID for modifyItem item is null");
-            return;
+            return reportError("ID for modifyItem item is null");
         }
 
         // Ensure that we're looking at the base item
         // if we were given an occurrence.  Later we can
         // optimize this.
         if (aNewItem.parentItem != aNewItem) {
+// isn't the below a bug? we modify the passed item's recurrenceInfo; why don't we clone it before, modifiedItem...?
             aNewItem.parentItem.recurrenceInfo.modifyException(aNewItem);
+            aNewItem = aNewItem.parentItem;
         }
 
-        aNewItem = aNewItem.parentItem;
-        aOldItem = aOldItem.parentItem;
+        if (this.relaxedMode) {
+            if (!aOldItem) {
+                aOldItem = this.getItemById(aNewItem.id) || aNewItem;
+            }
+            aOldItem = aOldItem.parentItem;
+        } else {
+            if (!aOldItem || !this.getItemById(aOldItem.id)) {
+                // no old item found?  should be using addItem, then.
+                return reportError("ID does not already exist for modifyItem");
+            }
+            aOldItem = aOldItem.parentItem;
 
-        // get the old item
-        var olditem = this.getItemById(aOldItem.id);
-        if (!olditem) {
-            // no old item found?  should be using addItem, then.
-            if (aListener)
-                aListener.onOperationComplete (this,
-                                               Components.results.NS_ERROR_FAILURE,
-                                               aListener.MODIFY,
-                                               aNewItem.id,
-                                               "ID does not already exist for modifyItem");
-            return;
-        }
-
-        if (aOldItem.generation != aNewItem.generation) {
-            if (aListener)
-                aListener.onOperationComplete (this,
-                                               Components.results.NS_ERROR_FAILURE,
-                                               aListener.MODIFY,
-                                               aNewItem.id,
-                                               "generation too old for for modifyItem");
-            return;
+            if (aOldItem.generation != aNewItem.generation) {
+                return reportError("generation too old for for modifyItem");
+            }
         }
 
         var modifiedItem = aNewItem.clone();
@@ -505,7 +519,7 @@ calStorageCalendar.prototype = {
         this.flushItem (modifiedItem, aOldItem);
 
         if (aListener)
-            aListener.onOperationComplete (this,
+            aListener.onOperationComplete (this.superCalendar,
                                            Components.results.NS_OK,
                                            aListener.MODIFY,
                                            modifiedItem.id,
@@ -513,12 +527,21 @@ calStorageCalendar.prototype = {
 
         // notify observers
         this.mObservers.notify("onModifyItem", [modifiedItem, aOldItem]);
+        return null;
     },
 
     // void deleteItem( in string id, in calIOperationListener aListener );
     deleteItem: function (aItem, aListener) {
-        if (this.readOnly) 
-            throw Components.interfaces.calIErrors.CAL_IS_READONLY;
+        if (this.readOnly) {
+            if (aListener) {
+                aListener.onOperationComplete(this.superCalenddar,
+                                              Components.interfaces.calIErrors.CAL_IS_READONLY,
+                                              aListener.DELETE,
+                                              null,
+                                              "Calendar is readonly");
+            }
+            return;
+        }
         if (aItem.parentItem != aItem) {
             aItem.parentItem.recurrenceInfo.removeExceptionFor(aItem.recurrenceId);
             return;
@@ -526,7 +549,7 @@ calStorageCalendar.prototype = {
 
         if (aItem.id == null) {
             if (aListener)
-                aListener.onOperationComplete (this,
+                aListener.onOperationComplete (this.superCalendar,
                                                Components.results.NS_ERROR_FAILURE,
                                                aListener.DELETE,
                                                null,
@@ -537,7 +560,7 @@ calStorageCalendar.prototype = {
         this.deleteItemById(aItem.id);
 
         if (aListener)
-            aListener.onOperationComplete (this,
+            aListener.onOperationComplete (this.superCalendar,
                                            Components.results.NS_OK,
                                            aListener.DELETE,
                                            aItem.id,
@@ -554,7 +577,7 @@ calStorageCalendar.prototype = {
 
         var item = this.getItemById (aId);
         if (!item) {
-            aListener.onOperationComplete (this,
+            aListener.onOperationComplete (this.superCalendar,
                                            Components.results.NS_ERROR_FAILURE,
                                            aListener.GET,
                                            aId,
@@ -567,7 +590,7 @@ calStorageCalendar.prototype = {
         else if (item instanceof Components.interfaces.calITodo)
             item_iid = Components.interfaces.calITodo;
         else {
-            aListener.onOperationComplete (this,
+            aListener.onOperationComplete (this.superCalendar,
                                            Components.results.NS_ERROR_FAILURE,
                                            aListener.GET,
                                            aId,
@@ -575,12 +598,12 @@ calStorageCalendar.prototype = {
             return;
         }
 
-        aListener.onGetResult (this,
+        aListener.onGetResult (this.superCalendar,
                                Components.results.NS_OK,
                                item_iid, null,
                                1, [item]);
 
-        aListener.onOperationComplete (this,
+        aListener.onOperationComplete (this.superCalendar,
                                        Components.results.NS_OK,
                                        aListener.GET,
                                        aId,
@@ -614,7 +637,7 @@ calStorageCalendar.prototype = {
         var asOccurrences = ((aItemFilter & kCalICalendar.ITEM_FILTER_CLASS_OCCURRENCES) != 0);
         if (!wantEvents && !wantTodos) {
             // nothing to do
-            aListener.onOperationComplete (this,
+            aListener.onOperationComplete (this.superCalendar,
                                            Components.results.NS_OK,
                                            aListener.GET,
                                            null,
@@ -647,7 +670,7 @@ calStorageCalendar.prototype = {
 
             if (queuedItems.length != 0 && (!theItems || queuedItems.length > maxQueueSize)) {
                 //var listenerStart = Date.now();
-                aListener.onGetResult(self,
+                aListener.onGetResult(self.superCalendar,
                                       Components.results.NS_OK,
                                       queuedItemsIID, null,
                                       queuedItems.length, queuedItems);
@@ -684,7 +707,7 @@ calStorageCalendar.prototype = {
                 queueItems(null);
 
                 // send operation complete
-                aListener.onOperationComplete (self,
+                aListener.onOperationComplete (self.superCalendar,
                                                Components.results.NS_OK,
                                                aListener.GET,
                                                null,
@@ -836,7 +859,7 @@ calStorageCalendar.prototype = {
         queueItems(null);
 
         // and finish
-        aListener.onOperationComplete (this,
+        aListener.onOperationComplete (this.superCalendar,
                                        Components.results.NS_OK,
                                        aListener.GET,
                                        null,
@@ -844,15 +867,6 @@ calStorageCalendar.prototype = {
 
         //var profEndTime = Date.now();
         //dump ("++++ getItems took: " + (profEndTime - profStartTime) + " ms\n");
-    },
-
-    startBatch: function ()
-    {
-        this.mObservers.notify("onStartBatch");
-    },
-    endBatch: function ()
-    {
-        this.mObservers.notify("onEndBatch");
     },
 
     //
@@ -867,7 +881,6 @@ calStorageCalendar.prototype = {
     // needs to do some version checking
     initDBSchema: function () {
         for (table in sqlTables) {
-            dump (table + "\n");
             try {
                 this.mDB.executeSimpleSQL("DROP TABLE " + table);
             } catch (e) { }
@@ -1180,13 +1193,10 @@ calStorageCalendar.prototype = {
                 while (getTzIds.step()) {
                     tzId = getTzIds.row.zone;
 
-                    // Send the timezones off to the ICS service to attempt
-                    // conversion.
-                    icsSvc = Components.classes["@mozilla.org/calendar/ics-service;1"]
-                                       .getService(Components.interfaces.calIICSService);
-                    var latestTzId = icsSvc.latestTzId(tzId);
-                    if ((latestTzId) && (tzId != latestTzId)) {
-                        tzIdsToUpdate.push({oldTzId: tzId, newTzId: latestTzId});
+                    // Send the timezones off to the timezone service to attempt conversion.
+                    var tz = getTimezoneService().getTimezone(tzId);
+                    if (tz && (tzId != tz.tzid)) {
+                        tzIdsToUpdate.push({oldTzId: tzId, newTzId: tz.tzid});
                         updateTzIds = true;
                     }
                 }
@@ -1232,14 +1242,11 @@ calStorageCalendar.prototype = {
     // assumes mDB is valid
 
     initDB: function () {
+        ASSERT(this.mDB, "Database has not been opened!", true);
         if (!this.mDB.tableExists("cal_calendar_schema_version")) {
-            dump("*** cal_calendar_schema_version not found; " +
-		 "initializing storage provider tables\n");
             this.initDBSchema();
         } else {
             var version = this.getVersion();
-            dump ("*** Calendar schema version is: " + version + "\n");
-
             if (version != this.DB_SCHEMA_VERSION) {
                 this.upgradeDB(version);
             }
@@ -1266,7 +1273,11 @@ calStorageCalendar.prototype = {
             );
 
         // The more readable version of the next where-clause is:
-        //   WHERE event_end >= :range_start AND event_start < :range_end
+        //   WHERE  ((event_end > :range_start OR
+        //           (event_end = :range_start AND
+        //           event_start = :range_start))
+        //          AND event_start < :range_end)
+        //         
         // but that doesn't work with floating start or end times. The logic
         // is the same though.
         // For readability, a few helpers:
@@ -1279,28 +1290,59 @@ calStorageCalendar.prototype = {
             this.mDB,
             "SELECT * FROM cal_events " +
             "WHERE " +
-            " (("+floatingEventEnd+" >= :range_start + :start_offset) OR " +
-            "  ("+nonFloatingEventEnd+" >= :range_start)) AND " +
-            " (("+floatingEventStart+" < :range_end + :end_offset) OR " +
-            "  ("+nonFloatingEventStart+" < :range_end)) " +
-            "  AND cal_id = :cal_id AND recurrence_id IS NULL"
+            " (("+floatingEventEnd+" > :range_start + :start_offset) OR " +
+            "  ("+nonFloatingEventEnd+" > :range_start) OR " +
+            "  ((("+floatingEventEnd+" = :range_start + :start_offset) OR " +
+            "    ("+nonFloatingEventEnd+" = :range_start)) AND " +
+            "   (("+floatingEventStart+" = :range_start + :start_offset) OR " +
+            "    ("+nonFloatingEventStart+" = :range_start)))) " +
+            " AND " +
+            "  (("+floatingEventStart+" < :range_end + :end_offset) OR " +
+            "   ("+nonFloatingEventStart+" < :range_end)) " +
+            " AND cal_id = :cal_id AND recurrence_id IS NULL"
             );
+       /**
+        * WHERE (due > rangeStart AND start < rangeEnd) OR
+        *       (due = rangeStart AND start = rangeStart) OR
+        *       (due IS NULL AND ((start >= rangeStart AND start < rangeEnd) OR
+        *                         (start IS NULL AND 
+        *                          (completed > rangeStart OR completed IS NULL))) OR
+        *       (start IS NULL AND due >= rangeStart AND due < rangeEnd)
+        */
 
         var floatingTodoEntry = "todo_entry_tz = 'floating' AND todo_entry";
         var nonFloatingTodoEntry = "todo_entry_tz != 'floating' AND todo_entry";
         var floatingTodoDue = "todo_due_tz = 'floating' AND todo_due";
         var nonFloatingTodoDue = "todo_due_tz != 'floating' AND todo_due";
+        var floatingCompleted = "todo_completed_tz = 'floating' AND todo_completed";
+        var nonFloatingCompleted = "todo_completed_tz != 'floating' AND todo_completed";
 
         this.mSelectTodosByRange = createStatement(
             this.mDB,
             "SELECT * FROM cal_todos " +
             "WHERE " +
-            " ((("+floatingTodoDue+" >= :range_start + :start_offset) OR " +
-            "   ("+nonFloatingTodoDue+" >= :range_start)) OR " +
-            "  (todo_due IS NULL)) AND " +
-            " ((("+floatingTodoEntry+" < :range_end + :end_offset) OR " +
-            "   ("+nonFloatingTodoEntry+" < :range_end)) OR " +
-            "  (todo_entry IS NULL)) " +
+            "(((("+floatingTodoDue+" > :range_start + :start_offset) OR " +
+            "   ("+nonFloatingTodoDue+" > :range_start)) AND " +
+            "  (("+floatingTodoEntry+" < :range_end + :end_offset) OR " +
+            "   ("+nonFloatingTodoEntry+" < :range_end))) OR " +
+            " ((("+floatingTodoDue+" = :range_start + :start_offset) OR " +
+            "   ("+nonFloatingTodoDue+" = :range_start)) AND " +
+            "  (("+floatingTodoEntry+" = :range_start + :start_offset) OR " +
+            "   ("+nonFloatingTodoEntry+" = :range_start))) OR " +
+            " ((todo_due IS NULL) AND " +
+            "  (((("+floatingTodoEntry+" >= :range_start + :start_offset) OR " +
+            "    ("+nonFloatingTodoEntry+" >= :range_start)) AND " +
+            "    (("+floatingTodoEntry+" < :range_end + :end_offset) OR " +
+            "     ("+nonFloatingTodoEntry+" < :range_end))) OR " +
+            "   ((todo_entry IS NULL) AND " +
+            "    ((("+floatingCompleted+" > :range_start + :start_offset) OR " +
+            "      ("+nonFloatingCompleted+" > :range_start)) OR " +
+            "     (todo_completed IS NULL))))) OR " +
+            " ((todo_entry IS NULL) AND " +
+            "  (("+floatingTodoDue+" >= :range_start + :start_offset) OR " +
+            "   ("+nonFloatingTodoDue+" >= :range_start)) AND " +
+            "  (("+floatingTodoDue+" < :range_end + :end_offset) OR " +
+            "   ("+nonFloatingTodoDue+" < :range_end)))) " +
             " AND cal_id = :cal_id AND recurrence_id IS NULL"
             );
 
@@ -1475,7 +1517,7 @@ calStorageCalendar.prototype = {
     // read in the common ItemBase attributes from aDBRow, and stick
     // them on item
     getItemBaseFromRow: function (row, flags, item) {
-        item.calendar = this;
+        item.calendar = this.superCalendar;
         item.id = row.id;
         if (row.title)
             item.title = row.title;
@@ -1628,7 +1670,11 @@ calStorageCalendar.prototype = {
             
             while (selectItem.step()) {
                 row = selectItem.row;
-                item.setProperty (row.key, row.value);
+                var name = row.key;
+                if (name != "DURATION") {
+                    // for events DTEND/DUE is enforced by calEvent/calTodo, so suppress DURATION:
+                    item.setProperty(name, row.value);
+                }
             }
             selectItem.reset();
         }
@@ -1733,19 +1779,19 @@ calStorageCalendar.prototype = {
                 this.mSelectEventExceptions.params.id = item.id;
                 while (this.mSelectEventExceptions.step()) {
                     var row = this.mSelectEventExceptions.row;
-                    var flags = {};
-                    var exc = this.getEventFromRow(row, flags);
-                    exceptions.push({item: exc, flags: flags.value});
+                    var eflags = {};
+                    var exc = this.getEventFromRow(row, eflags);
+                    exceptions.push({item: exc, flags: eflags.value});
                 }
                 this.mSelectEventExceptions.reset();
             } else if (item instanceof Components.interfaces.calITodo) {
                 this.mSelectTodoExceptions.params.id = item.id;
                 while (this.mSelectTodoExceptions.step()) {
                     var row = this.mSelectTodoExceptions.row;
-                    var flags = {};
-                    var exc = this.getTodoFromRow(row, flags);
+                    var eflags = {};
+                    var exc = this.getTodoFromRow(row, eflags);
                     
-                    exceptions.push({item: exc, flags: flags.value});
+                    exceptions.push({item: exc, flags: eflags.value});
                 }
                 this.mSelectTodoExceptions.reset();
             } else {
@@ -1825,7 +1871,12 @@ calStorageCalendar.prototype = {
     setDateParamHelper: function (params, entryname, cdt) {
         if (cdt) {
             params[entryname] = cdt.nativeTime;
-            params[entryname + "_tz"] = cdt.timezone;
+            var tz = cdt.timezone;
+            if (compareObjects(tz.provider, getTimezoneService())) {
+                params[entryname + "_tz"] = tz.tzid;
+            } else { // foreign one
+                params[entryname + "_tz"] = tz.component.serializeToICS();
+            }
         } else {
             params[entryname] = null;
             params[entryname + "_tz"] = null;
@@ -1901,14 +1952,8 @@ calStorageCalendar.prototype = {
         var ip = this.mInsertEvent.params;
         this.setupItemBaseParams(item, olditem,ip);
 
-        var tmp;
-
-        tmp = item.getUnproxiedProperty("DTSTART");
-        //if (tmp instanceof Components.interfaces.calIDateTime) {}
-        this.setDateParamHelper(ip, "event_start", tmp);
-        tmp = item.getUnproxiedProperty("DTEND");
-        //if (tmp instanceof Components.interfaces.calIDateTime) {}
-        this.setDateParamHelper(ip, "event_end", tmp);
+        this.setDateParamHelper(ip, "event_start", item.startDate);
+        this.setDateParamHelper(ip, "event_end", item.endDate);
 
         if (item.startDate.isDate)
             flags |= CAL_ITEM_FLAG_EVENT_ALLDAY;
@@ -1923,8 +1968,8 @@ calStorageCalendar.prototype = {
 
         this.setupItemBaseParams(item, olditem,ip);
 
-        this.setDateParamHelper(ip, "todo_entry", item.getUnproxiedProperty("DTSTART"));
-        this.setDateParamHelper(ip, "todo_due", item.getUnproxiedProperty("DUE"));
+        this.setDateParamHelper(ip, "todo_entry", item.entryDate);
+        this.setDateParamHelper(ip, "todo_due", item.dueDate);
         this.setDateParamHelper(ip, "todo_completed", item.getUnproxiedProperty("COMPLETED"));
 
         ip.todo_complete = item.getUnproxiedProperty("PERCENT-COMPLETED");
@@ -2007,7 +2052,16 @@ calStorageCalendar.prototype = {
             if (pval instanceof Components.interfaces.calIDateTime) {
                 pp.value = pval.nativeTime;
             } else {
-                pp.value = pval;
+                try {
+                    pp.value = pval;
+                } catch (e) {
+                    // The storage service throws an NS_ERROR_ILLEGAL_VALUE in
+                    // case pval is something complex (i.e not a string or
+                    // number). Swallow this error, leaving the value empty.
+                    if (e.result != Components.results.NS_ERROR_ILLEGAL_VALUE) {
+                        throw e;
+                    }
+                }
             }
             pp.item_id = item.id;
             this.setDateParamHelper(pp, "recurrence_id", item.recurrenceId);
@@ -2034,7 +2088,7 @@ calStorageCalendar.prototype = {
                 if (ritem instanceof kCalIRecurrenceDate) {
                     ritem = ritem.QueryInterface(kCalIRecurrenceDate);
                     ap.recur_type = "x-date";
-                    ap.dates = dateToText(ritem.date);
+                    ap.dates = dateToText(getInUtcOrKeepFloating(ritem.date));
 
                 } else if (ritem instanceof kCalIRecurrenceDateSet) {
                     ritem = ritem.QueryInterface(kCalIRecurrenceDateSet);
@@ -2046,7 +2100,7 @@ calStorageCalendar.prototype = {
                         if (j != 0)
                             datestr += ",";
 
-                        datestr += dateToText(rdates[j]);
+                        datestr += dateToText(getInUtcOrKeepFloating(rdates[j]));
                     }
 
                     ap.dates = datestr;
@@ -2132,97 +2186,6 @@ calStorageCalendar.prototype = {
         delete this.mItemCache[aID];
     }
 }
-
-// nsIFactory
-const calStorageCalendarFactory = {
-    createInstance: function (outer, iid) {
-        if (outer != null)
-            throw Components.results.NS_ERROR_NO_AGGREGATION;
-        return (new calStorageCalendar()).QueryInterface(iid);
-    }
-};
-
-/****
- **** module registration
- ****/
-
-var calStorageCalendarModule = {
-    mCID: Components.ID("{b3eaa1c4-5dfe-4c0a-b62a-b3a514218461}"),
-    mContractID: "@mozilla.org/calendar/calendar;1?type=storage",
-
-    mUtilsLoaded: false,
-    loadUtils: function storageLoadUtils() {
-        if (this.mUtilsLoaded)
-            return;
-
-        const jssslContractID = "@mozilla.org/moz/jssubscript-loader;1";
-        const jssslIID = Components.interfaces.mozIJSSubScriptLoader;
-
-        const iosvcContractID = "@mozilla.org/network/io-service;1";
-        const iosvcIID = Components.interfaces.nsIIOService;
-
-        var loader = Components.classes[jssslContractID].getService(jssslIID);
-        var iosvc = Components.classes[iosvcContractID].getService(iosvcIID);
-
-        // Note that unintuitively, __LOCATION__.parent == .
-        // We expect to find utils in ./../js
-        var appdir = __LOCATION__.parent.parent;
-        appdir.append("js");
-        var scriptName = "calUtils.js";
-
-        var f = appdir.clone();
-        f.append(scriptName);
-
-        try {
-            var fileurl = iosvc.newFileURI(f);
-            loader.loadSubScript(fileurl.spec, this.__parent__.__parent__);
-        } catch (e) {
-            dump("Error while loading " + fileurl.spec + "\n");
-            throw e;
-        }
-
-        this.mUtilsLoaded = true;
-    },
-    
-    registerSelf: function (compMgr, fileSpec, location, type) {
-        compMgr = compMgr.QueryInterface(Components.interfaces.nsIComponentRegistrar);
-        compMgr.registerFactoryLocation(this.mCID,
-                                        "Calendar mozStorage/SQL back-end",
-                                        this.mContractID,
-                                        fileSpec,
-                                        location,
-                                        type);
-    },
-
-    getClassObject: function (compMgr, cid, iid) {
-        if (!cid.equals(this.mCID))
-            throw Components.results.NS_ERROR_NO_INTERFACE;
-
-        if (!iid.equals(Components.interfaces.nsIFactory))
-            throw Components.results.NS_ERROR_NOT_IMPLEMENTED;
-
-        if (!kStorageServiceIID)
-            throw Components.results.NS_ERROR_NOT_INITIALIZED;
-
-        this.loadUtils();
-
-        if (!CalAttendee) {
-            initCalStorageCalendarComponent();
-        }
-
-        return calStorageCalendarFactory;
-    },
-
-    canUnload: function(compMgr) {
-        return true;
-    }
-};
-
-function NSGetModule(compMgr, fileSpec) {
-    return calStorageCalendarModule;
-}
-
-
 
 //
 // sqlTables generated from schema.sql via makejsschema.pl
@@ -2355,6 +2318,6 @@ var sqlTables = {
     "	recurrence_id_tz	TEXT," +
     "	key		TEXT," +
     "	value		BLOB" +
-    "",
+    ""
 
 };

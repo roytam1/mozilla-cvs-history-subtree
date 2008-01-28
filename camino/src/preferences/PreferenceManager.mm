@@ -38,7 +38,10 @@
 
 #import <SystemConfiguration/SystemConfiguration.h>
 
+#import <Sparkle/Sparkle.h>
+
 #import "NSString+Gecko.h"
+#import "NSWorkspace+Utils.h"
 
 #import "PreferenceManager.h"
 #import "AppDirServiceProvider.h"
@@ -58,7 +61,6 @@
 #include "nsIPrefBranch2.h"
 #include "nsEmbedAPI.h"
 #include "nsAppDirectoryServiceDefs.h"
-#include "nsIRegistry.h"
 #include "nsIStyleSheetService.h"
 #include "nsNetUtil.h"
 #include "nsStaticComponents.h"
@@ -206,6 +208,7 @@ WriteVersion(nsIFile* aProfileDir, const nsACString& aVersion,
 @interface PreferenceManager(PreferenceManagerPrivate)
 
 - (void)registerNotificationListener;
+- (void)initUpdatePrefs;
 
 - (void)termEmbedding:(NSNotification*)aNotification;
 - (void)xpcomTerminate:(NSNotification*)aNotification;
@@ -381,6 +384,8 @@ static BOOL gMadePrefManager;
       // we should never get here
       NSLog (@"Failed to initialize mozilla prefs");
     }
+
+    [self initUpdatePrefs];
     
     mDefaults = [NSUserDefaults standardUserDefaults];
   }
@@ -656,6 +661,49 @@ static BOOL gMadePrefManager;
     return YES;
 }
 
+- (void)initUpdatePrefs
+{
+  NSUserDefaults* defaults = [NSUserDefaults standardUserDefaults];
+
+  // Get the base auto-update manifest URL
+  NSString* baseURL = [self getStringPref:"app.update.url.override"
+                              withSuccess:NULL];
+  if (![baseURL length])
+    baseURL = [self getStringPref:"app.update.url" withSuccess:NULL];
+  NSString* intlUAString = [self getStringPref:"general.useragent.extra.multilang"
+                                   withSuccess:NULL];
+  // Append the parameters we might be interested in.
+  NSString* manifestURL = !baseURL ? @"" : [NSString stringWithFormat:@"%@?os=%@&arch=%@&version=%@&intl=%d",
+    baseURL,
+    [NSWorkspace osVersionString],
+#if defined(__ppc__)
+    @"ppc",
+#elif defined(__i386__)
+    @"x86",
+#else
+#error Unknown Architecture
+#endif
+    [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"],
+    ([intlUAString length] ? 1 : 0)];
+  [defaults setObject:manifestURL forKey:SUFeedURLKey];
+
+  // Set the update interval default if none is set. We don't set this in the
+  // Info.plist because once there's a value there it's impossible to actually
+  // disable update checking.
+  if (![defaults objectForKey:SUScheduledCheckIntervalKey]) {
+    [defaults setInteger:USER_DEFAULTS_UPDATE_INTERVAL_DEFAULT
+                  forKey:SUScheduledCheckIntervalKey];
+  }
+
+  // If no check time has been stored, then store the current time to start
+  // things off; this ensures that users who never leave Camino running for
+  // the whole interval duration will still have update checks run.
+  if (![defaults objectForKey:SULastCheckTimeKey]) {
+    [[NSUserDefaults standardUserDefaults] setObject:[NSDate date]
+                                              forKey:SULastCheckTimeKey];
+  }
+}
+
 // Convert an Apple locale (or language with the dialect specified) from the form en_GB
 // to the en-gb form required for HTTP accept-language headers.
 // If the locale isn't in the expected form we return nil. (Systems upgraded
@@ -724,6 +772,18 @@ static BOOL gMadePrefManager;
   BOOL flashBlockAllowed = [self isFlashBlockAllowed];	
   if (flashBlockAllowed && [self getBooleanPref:"camino.enable_flashblock" withSuccess:NULL])
     [self refreshFlashBlockStyleSheet:YES];
+
+  // Make sure the homepage has been set up.
+  nsCOMPtr<nsIPrefBranch> prefBranch = do_QueryInterface(mPrefs);
+  if (prefBranch) {
+    PRInt32 homepagePrefExists;
+    if (NS_FAILED(prefBranch->PrefHasUserValue("browser.startup.homepage", &homepagePrefExists)) || !homepagePrefExists) {
+      NSString* defaultHomepage = NSLocalizedStringFromTable(@"HomePageDefault", @"WebsiteDefaults", nil);
+      // Check that we actually got a sane value back before storing it.
+      if (![defaultHomepage isEqualToString:@"HomePageDefault"])
+        [self setPref:"browser.startup.homepage" toString:defaultHomepage];
+    }
+  }
 }
 
 - (void)setAcceptLanguagesPref
@@ -1170,58 +1230,15 @@ typedef enum EProxyConfig {
     rv = mPrefs->GetIntPref("browser.startup.page", &mode);
 
   if (NS_FAILED(rv) || mode == 1) {
-    nsCOMPtr<nsIPrefBranch> prefBranch = do_QueryInterface(mPrefs);
-    if (!prefBranch)
-      return @"about:blank";
-    
-    NSString* homepagePref = nil;
-    PRInt32 haveUserPref;
-    if (NS_FAILED(prefBranch->PrefHasUserValue("browser.startup.homepage", &haveUserPref)) || !haveUserPref) {
-      // no home page pref is set in user prefs.
+    NSString* homepagePref = [self getStringPref:"browser.startup.homepage" withSuccess:NULL];
+    if (!homepagePref)
       homepagePref = NSLocalizedStringFromTable(@"HomePageDefault", @"WebsiteDefaults", nil);
-      // and let's copy this into the homepage pref if it's not bad
-      if (![homepagePref isEqualToString:@"HomePageDefault"])
-        mPrefs->SetCharPref("browser.startup.homepage", [homepagePref UTF8String]);
-    }
-    else {
-      homepagePref = [self getStringPref:"browser.startup.homepage" withSuccess:NULL];
-    }
 
     if (homepagePref && [homepagePref length] > 0 && ![homepagePref isEqualToString:@"HomePageDefault"])
       return homepagePref;
   }
   
   return @"about:blank";
-}
-
-- (NSString*)searchPage
-{
-  NSString* resultString = @"http://www.google.com/";
-  if (!mPrefs)
-    return resultString;
-
-  nsCOMPtr<nsIPrefBranch> prefBranch = do_QueryInterface(mPrefs);
-  if (!prefBranch)
-    return resultString;
-
-  NSString* searchPagePref = nil;
-  PRBool haveUserPref = PR_FALSE;
-  prefBranch->PrefHasUserValue("chimera.search_page", &haveUserPref);
-  if (haveUserPref)
-    searchPagePref = [self getStringPref:"chimera.search_page" withSuccess:NULL];
-  
-  if (!haveUserPref || (searchPagePref == NULL) || ([searchPagePref length] == 0)) {
-    // no home page pref is set in user prefs, or it's an empty string
-    searchPagePref = NSLocalizedStringFromTable(@"SearchPageDefault", @"WebsiteDefaults", nil);
-    // and let's copy this into the homepage pref if it's not bad
-    if (![searchPagePref isEqualToString:@"SearchPageDefault"])
-      mPrefs->SetCharPref("chimera.search_page", [searchPagePref UTF8String]);
-  }
-
-  if (searchPagePref && [searchPagePref length] > 0 && ![searchPagePref isEqualToString:@"SearchPageDefault"])
-    return searchPagePref;
-  
-  return resultString;
 }
 
 //

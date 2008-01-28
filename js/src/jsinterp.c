@@ -1372,6 +1372,10 @@ have_fun:
         /* If native, use caller varobj and scopeChain for eval. */
         frame.varobj = fp->varobj;
         frame.scopeChain = fp->scopeChain;
+
+        /* But ensure that we have a scope chain. */
+        if (!frame.scopeChain)
+            frame.scopeChain = parent;
         ok = native(cx, frame.thisp, argc, frame.argv, &frame.rval);
         JS_RUNTIME_METER(cx->runtime, nativeCalls);
 #ifdef DEBUG_NOT_THROWING
@@ -5067,16 +5071,18 @@ interrupt:
                 attrs |= JSPROP_SHARED;
                 rval = JSVAL_VOID;
             }
+            attrs |= JSPROP_ENUMERATE | JSPROP_PERMANENT;
             parent = fp->varobj;
-            ok = OBJ_DEFINE_PROPERTY(cx, parent, ATOM_TO_JSID(fun->atom), rval,
+            id = ATOM_TO_JSID(fun->atom);
+            ok = js_CheckRedeclaration(cx, parent, id, attrs, NULL, NULL) &&
+                 OBJ_DEFINE_PROPERTY(cx, parent, id, rval,
                                      (attrs & JSPROP_GETTER)
                                      ? JS_EXTENSION (JSPropertyOp) obj
                                      : NULL,
                                      (attrs & JSPROP_SETTER)
                                      ? JS_EXTENSION (JSPropertyOp) obj
                                      : NULL,
-                                     attrs | JSPROP_ENUMERATE
-                                           | JSPROP_PERMANENT,
+                                     attrs,
                                      &prop);
 
             /* Restore fp->scopeChain now that obj is defined in fp->varobj. */
@@ -5085,18 +5091,6 @@ interrupt:
                 cx->weakRoots.newborn[GCX_OBJECT] = NULL;
                 goto out;
             }
-
-#if 0
-            if (attrs == 0 && script->numGlobalVars) {
-                /*
-                 * As with JSOP_DEFVAR and JSOP_DEFCONST (above), fast globals
-                 * use fp->vars to map the global function name's atomIndex to
-                 * its permanent fp->varobj slot number, tagged as a jsval.
-                 */
-                sprop = (JSScopeProperty *) prop;
-                fp->vars[atomIndex] = INT_TO_JSVAL(sprop->slot);
-            }
-#endif
             OBJ_DROP_PROPERTY(cx, parent, prop);
           END_LITOPX_CASE(JSOP_CLOSURE)
 

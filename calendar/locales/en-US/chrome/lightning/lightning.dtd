@@ -75,13 +75,15 @@
 <!ENTITY lightning.sidebar.calendars.label   "Calendars">
 <!ENTITY lightning.calendar.label            "Calendar">
 <!ENTITY lightning.calendar.accesskey        "C">
+<!ENTITY lightning.tasks.label               "Tasks">
+<!ENTITY lightning.tasks.accesskey           "T">
 
 <!-- Mode Toolbar -->
 <!ENTITY lightning.toolbar.mail.label         "Mail">
 <!ENTITY lightning.toolbar.mail.accesskey     "M">
 <!ENTITY lightning.toolbar.calendar.label     "Calendar">
 <!ENTITY lightning.toolbar.calendar.accesskey "C">
-<!ENTITY lightning.toolbar.task.label         "Task">
+<!ENTITY lightning.toolbar.task.label         "Tasks">
 <!ENTITY lightning.toolbar.task.accesskey     "T">
 
 <!-- Customize Toolbar Dialog -->
@@ -106,6 +108,10 @@
 <!ENTITY lightning.toolbar.multiweek.accesskey       "u">
 <!ENTITY lightning.toolbar.month.label               "Month">
 <!ENTITY lightning.toolbar.month.accesskey           "M">
+
+<!-- properties dialog, calendar creation wizard -->
+<!ENTITY lightning.calendarproperties.showevents.inagenda.label "Show Events in Today Pane">
+<!ENTITY lightning.calendarproperties.showtasks.label           "Show Tasks in Today Pane and Task Mode">
 
 <!--Views' context menu-->
 <!-- This access key is in the same menu as 'Go to Next' which gets the 'N'-->

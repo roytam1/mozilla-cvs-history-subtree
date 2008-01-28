@@ -55,7 +55,7 @@
     <content>
       <xul:vbox flex="1">
         <xul:hbox>
-          <xul:image class="calendar-event-box-shadow-left"/>
+          <xul:image anonid="shadow-left-image" class="calendar-event-box-shadow-left"/>
           <xul:box anonid="event-container" flex="1">
             <xul:box class="calendar-event-selection" orient="horizontal" flex="1">
               <xul:stack anonid="eventbox"
@@ -96,16 +96,15 @@
             </xul:box>
             <xul:calendar-category-box anonid="category-box"/>
           </xul:box>
-          <xul:image class="calendar-event-box-shadow-right"/>
+          <xul:image anonid="shadow-right-image" class="calendar-event-box-shadow-right"/>
         </xul:hbox>
-        <xul:box orient="horizontal">
+        <xul:box anonid="shadow-container" orient="horizontal">
           <xul:image class="calendar-event-box-shadow-edge-left"/>
           <xul:image class="calendar-event-box-shadow-bottom" flex="1"/>
           <xul:image class="calendar-event-box-shadow-edge-right"/>
         </xul:box>
       </xul:vbox>
     </content>
-
     <implementation>
       <constructor><![CDATA[
         var gradient = document.getAnonymousElementByAttribute(this,
@@ -128,11 +127,10 @@
 
       <property name="occurrence">
         <getter><![CDATA[
-	  return this.mOccurrence;
-	]]></getter>
+            return this.mOccurrence;
+        ]]></getter>
         <setter><![CDATA[
           this.mOccurrence = val;
-
           var icon = document.getAnonymousElementByAttribute(this,"anonid","item-icon");                                                              
           if (isEvent(val)) {
             icon.setAttribute("type", "event");
@@ -142,9 +140,10 @@
               var label = document.getAnonymousElementByAttribute(this,"anonid","item-label");
               var df = Components.classes["@mozilla.org/calendar/datetime-formatter;1"].
                        getService(Components.interfaces.calIDateTimeFormatter);
+              var timezone = this.calendarView? this.calendarView.mTimezone:
+                             calendarDefaultTimezone();
               label.value = df.formatTime(
-                val.startDate.getInTimezone(
-                  this.calendarView.mTimezone));
+              val.startDate.getInTimezone(timezone));
               label.setAttribute("time", "true");
             }
           } else if (isToDo(val)) {
@@ -162,6 +161,13 @@
       <property name="parentBox"
                 onget="return this.mParentBox;"
                 onset="this.mParentBox = val;"/>
+      <method name="removeShadows">
+        <body><![CDATA[
+          removeAnonymousElement(this, "shadow-left-image");
+          removeAnonymousElement(this, "shadow-right-image");
+          removeAnonymousElement(this, "shadow-container");
+        ]]></body>
+      </method>
     </implementation>
 
     <handlers>
@@ -173,17 +179,16 @@
         transfer.addDataFlavor("text/calendar");
 
         var item = this.occurrence;
-        if (item.calendar.readOnly) {
+        if (!isCalendarWritable(item.calendar)) {
             return;
         }
 
         var flavourProvider = {
             QueryInterface: function(aIID) {
-                if (aIID.equals(Components.interfaces.nsIFlavorDataProvider) ||
-                    aIID.equals(Components.interfaces.nsISupports)) {
-                    return this;
-                }
-                throw Components.results.NS_NOINTERFACE;
+                ensureIID(
+                    [ Components.interfaces.nsIFlavorDataProvider,
+                      Components.interfaces.nsISupports], aIID);
+                return this;
             },
             item: item,
 
@@ -193,7 +198,7 @@
                     aOutData.value = this.item;
                     aOutDataLen.value = 1;
                 } else {
-                    alert("error:"+aInFlavor);
+                    ASSERT(false, "error:"+aInFlavor);
                 }
             }
         };
@@ -207,9 +212,13 @@
         }
 
         // Also set some normal data-types, in case we drag into another app
+        var serializer = Components.classes["@mozilla.org/calendar/ics-serializer;1"].
+                                    createInstance(Components.interfaces.calIIcsSerializer);
+        serializer.addItems([item], 1);
+
         var supportsString = Components.classes["@mozilla.org/supports-string;1"].
                              createInstance(Components.interfaces.nsISupportsString);
-        supportsString.data = item.icalComponent.serializeToICS();
+        supportsString.data = serializer.serializeToString();
         transfer.setTransferData("text/calendar", supportsString, supportsString.data.length*2);
         transfer.setTransferData("text/unicode", supportsString, supportsString.data.length*2);
 
@@ -376,8 +385,62 @@
             }
           }
 
-          // insert the new item block, and then relayout
-          this.mItemData.push({ item: aItem });
+          function comptor(a, b) {
+            var aIsEvent = isEvent(a.item);
+            var aIsTodo = isToDo(a.item);
+
+            var bIsEvent = isEvent(b.item);
+            var bIsTodo = isToDo(b.item);
+
+            if ((!aIsEvent && !aIsTodo) || (!bIsEvent && !bIsTodo)) {
+              // XXX ????
+              dump ("Don't know how to sort these two events: " + a.item + " " + b.item + "\n");
+              return 0;
+            }
+
+            // sort todos before events
+            if (aIsTodo && bIsEvent) return -1;
+            if (aIsEvent && bIsTodo) return 1;
+
+            // XXX how do I sort todos?
+            if (aIsTodo && bIsTodo) {
+              return 0;
+            }
+
+            if (aIsEvent && bIsEvent) {
+              // sort all day events before events with a duration
+              if (a.item.startDate.isDate && !b.item.startDate.isDate) return -1;
+              if (!a.item.startDate.isDate && b.item.startDate.isDate) return 1;
+
+              var cmp;
+
+              cmp = a.item.startDate.compare(b.item.startDate);
+              if (cmp != 0)
+                return cmp;
+
+              cmp = a.item.endDate.compare(b.item.endDate);
+              if (cmp != 0)
+                return cmp;
+
+              if (a.item.title < b.item.title)
+                return -1;
+              if (a.item.title > b.item.title)
+                return 1;
+            }
+
+            return 0;
+          }
+
+          // insert the new item block (while keeping the array sorted),
+          // and then relayout.
+          // Note: don't use Array.Sort, because that's quicksort, which
+          // is not good for an already mostly-sorted array
+          var newItem = {item: aItem};
+          for (i = 0; i<this.mItemData.length; ++i) {
+            if (comptor(this.mItemData[i], newItem) > 0)
+              break;
+          }
+          this.mItemData.splice(i, 0, newItem);
 
           this.relayout();
         ]]></body>
@@ -439,53 +502,6 @@
           }
 
 
-          this.mItemData.sort(
-            function (a, b) {
-              var aIsEvent = isEvent(a.item);
-              var aIsTodo = isToDo(a.item);
-
-              var bIsEvent = isEvent(b.item);
-              var bIsTodo = isToDo(b.item);
-
-              if ((!aIsEvent && !aIsTodo) || (!bIsEvent && !bIsTodo)) {
-                // XXX ????
-                dump ("Don't know how to sort these two events: " + a.item + " " + b.item + "\n");
-                return 0;
-              }
-
-              // sort todos before events
-              if (aIsTodo && bIsEvent) return -1;
-              if (aIsEvent && bIsTodo) return 1;
-
-              // XXX how do I sort todos?
-              if (aIsTodo && bIsTodo) {
-                return 0;
-              }
-
-              if (aIsEvent && bIsEvent) {
-                // sort all day events before events with a duration
-                if (a.item.startDate.isDate && !b.item.startDate.isDate) return -1;
-                if (!a.item.startDate.isDate && b.item.startDate.isDate) return 1;
-
-                var cmp;
-
-                cmp = a.item.startDate.compare(b.item.startDate);
-                if (cmp != 0)
-                  return cmp;
-
-                cmp = a.item.endDate.compare(b.item.endDate);
-                if (cmp != 0)
-                  return cmp;
-
-                if (a.item.title < b.item.title)
-                  return -1;
-                if (a.item.title > b.item.title)
-                  return 1;
-              }
-
-              return 0;
-            });
-
           for (var i = 0; i < this.mItemData.length; i++) {
             var itd = this.mItemData[i];
 
@@ -510,8 +526,7 @@
                 var categoriesList = itd.item.getProperty("CATEGORIES").split(",");
                 for (var i = 0; i < categoriesList.length; i++ ) {
                   // Remove illegal chars.
-                  categoriesList[i] = categoriesList[i].replace(' ','_');
-                  categoriesList[i] = categoriesList[i].toLowerCase();
+                  categoriesList[i] = formatStringForCSSRule(categoriesList[i]);
                 }
                 categoriesSelectorList = categoriesList.join(" ");
               }
@@ -836,6 +851,7 @@
             hdr.index = i;
           }
 
+          this.mTimezone = floating();
           var alarmService = Components.classes['@mozilla.org/calendar/alarm-service;1']
                              .getService(Components.interfaces.calIAlarmService);
           alarmService.addObserver(this.mObserver);
@@ -857,7 +873,7 @@
       <field name="mStartDate">null</field>
       <field name="mEndDate">null</field>
       <field name="mDateBoxes">null</field>
-      <field name="mTimezone">"floating"</field>
+      <field name="mTimezone">null</field>
 
       <field name="mSelectedItems">[]</field>
       <field name="mSelectedDayBox">null</field>
@@ -1649,8 +1665,15 @@
           },
           onError: function (aErrNo, aMessage) { },
 
-          onPropertyChanged: function(aCalendar, aName, aValue, aOldValue) {},
-          onPropertyDeleting: function(aCalendar, aName) {},
+          onPropertyChanged: function(aCalendar, aName, aValue, aOldValue) {
+            if (aName == "suppressAlarms" &&
+                getPrefSafe("calendar.alarms.indicator.show", true)) {
+              this.calView.refresh();
+            }
+          },
+          onPropertyDeleting: function(aCalendar, aName) {
+            this.onPropertyChanged(aCalendar, aName, null, null);
+          },
 
           //
           // calIAlarmServiceObserver stuff

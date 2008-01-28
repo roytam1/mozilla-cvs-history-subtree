@@ -19,6 +19,7 @@
  *
  * Contributor(s):
  *   Michael Buettner <michael.buettner@sun.com>
+ *   Philipp Kewisch <mozilla@kewis.ch>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -47,4 +48,29 @@
 
 #calendar-task-tree > .calendar-task-tree > treechildren::-moz-tree-cell {
     border-right: 1px dotted #AAA;
+}
+
+#view-task-edit-field {
+    margin: 5px;
+}
+
+.task-edit-field[instructions] {
+    color: grey;
+}
+
+.task-quickadd-box {
+    margin: 0px 4px;
+    background-color: -moz-field;
+}
+
+#calendar-task-details-grid-right {
+    margin-left: 3em;
+}
+
+#calendar-task-details-title {
+    font-weight: bold;
+}
+
+#unifinder-todo-tree > .calendar-task-tree {
+    margin-bottom: 0;
 }

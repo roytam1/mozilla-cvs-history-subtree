@@ -45,9 +45,7 @@
 //
 
 const ICAL = Components.interfaces.calIIcalComponent;
-const kHashPropertyBagContractID = "@mozilla.org/hash-property-bag;1";
-const kIWritablePropertyBag = Components.interfaces.nsIWritablePropertyBag;
-const HashPropertyBag = new Components.Constructor(kHashPropertyBagContractID, kIWritablePropertyBag);
+
 
 function calItemBase() {
     ASSERT(false, "Inheriting objects call initItemBase!");
@@ -74,7 +72,7 @@ calItemBase.prototype = {
             var cal = this.calendar;
             // some unused delim character:
             this.mHashId = [encodeURIComponent(this.id),
-                            rid ? rid.getInTimezone("UTC").icalString : "",
+                            rid ? rid.getInTimezone(UTC()).icalString : "",
                             cal ? encodeURIComponent(cal.id) : ""].join("#");
         }
         return this.mHashId;
@@ -167,7 +165,7 @@ calItemBase.prototype = {
 
         var e = this.mProperties.enumerator;
         while (e.hasMoreElements()) {
-            var prop = e.getNext().QueryInterface(Components.interfaces.nsIProperty);
+            var prop = e.getNext();
             var val = prop.value;
 
             if (prop.value instanceof Components.interfaces.calIDateTime) {
@@ -198,7 +196,7 @@ calItemBase.prototype = {
     initItemBase: function () {
         var now = jsDateToDateTime(new Date());
 
-        this.mProperties = new HashPropertyBag();
+        this.mProperties = new calPropertyBag();
         this.mPropertyParams = {};
 
         this.setProperty("CREATED", now.clone());
@@ -239,18 +237,27 @@ calItemBase.prototype = {
         else
             m.mAttendees = null;
 
-        m.mProperties = Components.classes["@mozilla.org/hash-property-bag;1"].
-                        createInstance(Components.interfaces.nsIWritablePropertyBag);
-
+        m.mProperties = new calPropertyBag();
         var e = this.mProperties.enumerator;
         while (e.hasMoreElements()) {
-            var prop = e.getNext().QueryInterface(Components.interfaces.nsIProperty);
+            var prop = e.getNext();
+            var name = prop.name;
             var val = prop.value;
 
-            if (prop.value instanceof Components.interfaces.calIDateTime)
-                val = prop.value.clone();
+            if (val instanceof Components.interfaces.calIDateTime) {
+                val = val.clone();
+            }
 
-            m.mProperties.setProperty (prop.name, val);
+            m.mProperties.setProperty(name, val);
+
+            var propBucket = this.mPropertyParams[name];
+            if (propBucket) {
+                var newBucket = {};
+                for (var param in propBucket) {
+                    newBucket[param] = propBucket[param];
+                }
+                m.mPropertyParams[name] = newBucket;
+            }
         }
 
         m.mDirty = false;
@@ -379,24 +386,15 @@ calItemBase.prototype = {
     // The has/get/getUnproxied/set/deleteProperty methods are case-insensitive.
     getProperty: function (aName) {
         aName = aName.toUpperCase();
-        try {
-            return this.mProperties.getProperty(aName);
-        } catch (e) {
-            try {
-                if (this.mIsProxy) {
-                    return this.mParentItem.getProperty(aName);
-                }
-            } catch (e) {}
-
-            return null;
+        var aValue = this.mProperties.getProperty(aName);
+        if ((aValue === null) && this.mIsProxy) {
+            aValue = this.mParentItem.getProperty(aName);
         }
+        return aValue;
     },
 
     getUnproxiedProperty: function (aName) {
-        try {
-            return this.mProperties.getProperty(aName.toUpperCase());
-        } catch (e) { }
-        return null;
+        return this.mProperties.getProperty(aName.toUpperCase());
     },
 
     hasProperty: function (aName) {
@@ -414,9 +412,7 @@ calItemBase.prototype = {
 
     deleteProperty: function (aName) {
         this.modify();
-        try {
-            this.mProperties.deleteProperty(aName.toUpperCase());
-        } catch (e) { }
+        this.mProperties.deleteProperty(aName.toUpperCase());
     },
 
     getPropertyParameter: function getPP(aPropName, aParamName) {
@@ -527,7 +523,6 @@ calItemBase.prototype = {
         "STATUS": true,
         "CLASS": true,
         "DTSTAMP": true,
-        "X-MOZILLA-GENERATION": true,
         "RRULE": true,
         "EXDATE": true,
         "RDATE": true,
@@ -586,10 +581,6 @@ calItemBase.prototype = {
             org.isOrganizer = true;
             this.mOrganizer = org;
         }
-        
-        var gen = icalcomp.getFirstProperty("X-MOZILLA-GENERATION");
-        if (gen)
-            this.mGeneration = parseInt(gen.value);
 
         // find recurrence properties
         var rec = null;
@@ -683,6 +674,20 @@ calItemBase.prototype = {
         throw Components.results.NS_ERROR_NOT_IMPLEMENTED;
     },
 
+    get generation() {
+        if (this.mGeneration === undefined) {
+            var gen = this.getProperty("X-MOZ-GENERATION");
+            this.mGeneration = (gen ? parseInt(gen) : 0);
+        }
+        return this.mGeneration;
+    },
+    set generation(aValue) {
+        this.modify();
+        this.mGeneration = aValue;
+        this.setProperty("X-MOZ-GENERATION", String(aValue));
+        return aValue;
+    },
+
     fillIcalComponentFromBase: function (icalcomp) {
         // Make sure that the LMT and ST are updated
         this.updateStampTime();
@@ -699,12 +704,6 @@ calItemBase.prototype = {
           }
         }
 
-        if (this.mGeneration) {
-            var genprop = icalProp("X-MOZILLA-GENERATION");
-            genprop.value = String(this.mGeneration);
-            icalcomp.addProperty(genprop);
-        }
-
         if (this.mRecurrenceInfo) {
             var ritems = this.mRecurrenceInfo.getRecurrenceItems({});
             for (i in ritems) {
@@ -713,8 +712,7 @@ calItemBase.prototype = {
         }
         
         if (this.alarmOffset) {
-            const icssvc = Components.classes["@mozilla.org/calendar/ics-service;1"]
-                                     .getService(Components.interfaces.calIICSService);
+            var icssvc = getIcsService();
             var alarmComp = icssvc.createIcalComponent("VALARM");
 
             var triggerProp = icssvc.createIcalProperty("TRIGGER");
@@ -757,7 +755,6 @@ calItemBase.prototype = {
     }
 };
 
-makeMemberAttr(calItemBase, "X-MOZILLA-GENERATION", 0, "generation", true);
 makeMemberAttr(calItemBase, "CREATED", null, "creationDate", true);
 makeMemberAttr(calItemBase, "SUMMARY", null, "title", true);
 makeMemberAttr(calItemBase, "PRIORITY", 0, "priority", true);
@@ -795,14 +792,10 @@ function makeMemberAttr(ctor, varname, dflt, attr, asProperty)
 
 function icalFromString(str)
 {
-    const icssvc = Components.classes["@mozilla.org/calendar/ics-service;1"].
-        getService(Components.interfaces.calIICSService);
-    return icssvc.parseICS(str);
+    return getIcsService().parseICS(str, null);
 }
 
 function icalProp(kind)
 {
-    const icssvc = Components.classes["@mozilla.org/calendar/ics-service;1"].
-        getService(Components.interfaces.calIICSService);
-    return icssvc.createIcalProperty(kind);
+    return getIcsService().createIcalProperty(kind);
 }

@@ -113,8 +113,8 @@
          container.setAttribute("class", "calendar-item");
 
          var self = this;
-         this.eventNameInput.onblur = function alldayItemBlur() { self.stopEditing(true); };
-         this.eventNameInput.onkeypress = function alldayItemKeyPress(event) {
+         this.eventNameInput.onblur = function onBlur() { self.stopEditing(true); };
+         this.eventNameInput.onkeypress = function onKeyPress(event) {
              // save on enter
              if (event.keyCode == 13)
                  self.stopEditing(true);
@@ -122,6 +122,18 @@
              else if (event.keyCode == 27)
                  self.stopEditing(false);
          };
+         function stopPropagationIfEditing(event) { 
+           if (self.mEditing) {
+             event.stopPropagation();
+           }
+         }
+         // while editing, single click positions cursor, so don't propagate.
+         this.eventNameInput.onclick = stopPropagationIfEditing;
+         // while editing, double click selects words, so don't propagate.
+         this.eventNameInput.ondblclick = stopPropagationIfEditing;
+         // while editing, don't propagate mousedown/up (selects calEvent).
+         this.eventNameInput.onmousedown = stopPropagationIfEditing;
+         this.eventNameInput.onmouseup = stopPropagationIfEditing;
       ]]></constructor>
 
       <field name="mOccurrence">null</field>
@@ -198,8 +210,7 @@
             var categoriesList = item.getProperty("CATEGORIES").split(",");
             for (var i = 0; i < categoriesList.length; i++ ) {
               // Remove illegal chars.
-              categoriesList[i] = categoriesList[i].replace(' ','_');
-              categoriesList[i] = categoriesList[i].toLowerCase();
+              categoriesList[i] = formatStringForCSSRule(categoriesList[i]);
             }
             categoriesSelectorList = categoriesList.join(" ");
           }
@@ -220,7 +231,9 @@
           }
 
           var alarmImage = document.getAnonymousElementByAttribute(this, "anonid", "alarm-image");
-          if (item.alarmOffset && getPrefSafe("calendar.alarms.indicator.show", true)) {
+          if ((item.alarmOffset || item.parentItem.alarmOffset) &&
+              getPrefSafe("calendar.alarms.indicator.show", true) &&
+              !item.calendar.getProperty("suppressAlarms")) {
               alarmImage.removeAttribute("hidden");
           }
         ]]></body>
@@ -297,8 +310,9 @@
 
         // If the left button was used and the item is already selected start
         // the 'single click edit' timeout. Otherwise select the item too.
-        // Also, check if the calendar is readOnly.
-        if (this.selected && !this.mOccurrence.calendar.readOnly) {
+        // Also, check if the calendar is readOnly or we are offline.
+
+        if (this.selected && isCalendarWritable(this.mOccurrence.calendar)) {
             var self = this;
             if (this.editingTimer) {
                 clearTimeout(this.editingTimer);
@@ -329,6 +343,67 @@
             event.stopPropagation();
             onMouseOverItem(event);
         }
+      ]]></handler>
+      <handler event="draggesture"><![CDATA[
+        var dragService = Components.classes["@mozilla.org/widget/dragservice;1"].
+                          getService(Components.interfaces.nsIDragService);
+        var transfer = Components.classes["@mozilla.org/widget/transferable;1"].
+                       createInstance(Components.interfaces.nsITransferable);
+        transfer.addDataFlavor("text/calendar");
+
+        var item = this.mOccurrence;
+        if (item.calendar.readOnly)
+            return;
+        if (!item.startDate || !item.startDate.isDate)
+            return;
+        if (!this.selected)
+            this.select(event);
+
+        var flavourProvider = {
+            QueryInterface: function(aIID) {
+                ensureIID(
+                    [ Components.interfaces.nsIFlavorDataProvider,
+                      Components.interfaces.nsISupports], aIID);
+                return this;
+            },
+            item: item,
+
+            getFlavorData: function(aInTransferable, aInFlavor, aOutData, aOutDataLen) {
+                if ((aInFlavor == "application/vnd.x-moz-cal-event") ||
+                    (aInFlavor == "application/vnd.x-moz-cal-task")) {
+                    aOutData.value = this.item;
+                    aOutDataLen.value = 1;
+                } else {
+                    ASSERT(false, "error:"+aInFlavor);
+                }
+            }
+        };
+
+        if (isEvent(item)) {
+          transfer.addDataFlavor("application/vnd.x-moz-cal-event");
+          transfer.setTransferData("application/vnd.x-moz-cal-event", flavourProvider, 0);
+        } else if (isToDo(item)) {
+          transfer.addDataFlavor("application/vnd.x-moz-cal-task");
+          transfer.setTransferData("application/vnd.x-moz-cal-task", flavourProvider, 0);
+        }
+
+        // Also set some normal data-types, in case we drag into another app
+        var serializer = Components.classes["@mozilla.org/calendar/ics-serializer;1"].
+                                    createInstance(Components.interfaces.calIIcsSerializer);
+        serializer.addItems([item], 1);
+
+        var supportsString = Components.classes["@mozilla.org/supports-string;1"].
+                             createInstance(Components.interfaces.nsISupportsString);
+        supportsString.data = serializer.serializeToString();
+        transfer.setTransferData("text/calendar", supportsString, supportsString.data.length*2);
+        transfer.setTransferData("text/unicode", supportsString, supportsString.data.length*2);
+
+        var action = dragService.DRAGDROP_ACTION_MOVE;
+        var supArray = Components.classes["@mozilla.org/supports-array;1"].
+                       createInstance(Components.interfaces.nsISupportsArray);
+        supArray.AppendElement(transfer);
+
+        dragService.invokeDragSession(this, supArray, null, action);
       ]]></handler>
     </handlers>
   </binding>

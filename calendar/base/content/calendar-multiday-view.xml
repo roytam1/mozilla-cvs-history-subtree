@@ -265,6 +265,7 @@
     <implementation>
       <constructor><![CDATA[
         this.mEvents = Array();
+        this.mTimezone = UTC();
       ]]></constructor>
 
       <!-- fields -->
@@ -277,7 +278,7 @@
       <field name="mEventMap">null</field>
       <field name="mCalendarView">null</field>
       <field name="mDate">null</field>
-      <field name="mTimezone">"UTC"</field>
+      <field name="mTimezone">null</field>
       <field name="mDragState">null</field>
       <field name="mLayoutBatchCount">0</field>
       <!-- Since we'll often be getting many events in rapid succession, this
@@ -339,7 +340,7 @@
         <setter><![CDATA[
           this.mDate = val;
 
-          if (val.timezone != this.mTimezone) {
+          if (!compareObjects(val.timezone, this.mTimezone)) {
               //dump ("++ column tz: " + val.timezone + "\n");
               this.mTimezone = val.timezone;
               if (!this.mLayoutBatchCount) {
@@ -540,11 +541,11 @@
            var stdate = aOccurrence.startDate || aOccurrence.entryDate;
            var enddate = aOccurrence.endDate || aOccurrence.dueDate;
 
-           if (stdate.timezone != this.mTimezone) {
+           if (!compareObjects(stdate.timezone, this.mTimezone)) {
                stdate = stdate.getInTimezone (this.mTimezone);
            }
 
-           if (enddate.timezone != this.mTimezone) {
+           if (!compareObjects(enddate.timezone, this.mTimezone)) {
                enddate = enddate.getInTimezone (this.mTimezone);
            }
 
@@ -792,7 +793,7 @@
                               chunkBox.setAttribute("width", durMinutes * this.mPixPerMin);
                           }
 
-                          if (chunk.event.calendar.readOnly) {
+                          if (!isCalendarWritable(chunk.event.calendar)) {
                               chunkBox.setAttribute("readOnly", "true");
                           }
 
@@ -1151,7 +1152,7 @@
                   // that's why i'm clipping the start- and end-time to the
                   // timespan of this column.
                   var start = data.item.startDate || data.item.entryDate;
-                  if (start.timezone != this.mTimezone) {
+                  if (!compareObjects(start.timezone, this.mTimezone)) {
                       start = start.getInTimezone(this.mTimezone);
                   }
                   if (start.year  != this.date.year ||
@@ -1165,7 +1166,7 @@
                                     start.timezone);
                   }
                   var end = data.item.endDate || data.item.dueDate;
-                  if (end.timezone != this.mTimezone) {
+                  if (!compareObjects(end.timezone, this.mTimezone)) {
                       end = end.getInTimezone(this.mTimezone);
                   }
                   if (end.year  != this.date.year ||
@@ -1189,7 +1190,7 @@
                       prevEnd.hour = 0;
                       prevEnd.minute = this.mStartMin;
                   }
-                  prevEnd.timezone = "floating";
+                  prevEnd.timezone = floating();
                   // the reason why we need to calculate time durations
                   // based on floating timezones is that we need avoid
                   // dst gaps in this case. converting the date/times to
@@ -1197,13 +1198,13 @@
                   // we explicitly don't use getInTimezone() as it would
                   // be slightly more expensive in terms of performance.
                   var floatstart = start.clone();
-                  floatstart.timezone = "floating";
+                  floatstart.timezone = floating();
                   var dur = floatstart.subtractDate(prevEnd);
                   if (dur.inSeconds) {
                       col.push({duration: dur});
                   }
                   var floatend = end.clone();
-                  floatend.timezone = "floating";
+                  floatend.timezone = floating();
                   col.push({event: data.item,
                             endDate: end,
                             duration: floatend.subtractDate(floatstart)});
@@ -1222,6 +1223,91 @@
         <body><![CDATA[
           var col = document.calendarEventColumnDragging;
           if (!col) return;
+
+          if (event.clientX < (event.target.boxObject.x) ||
+              event.clientX > (event.target.boxObject.x + event.target.boxObject.width) ||
+              event.clientY < (event.target.boxObject.y) ||
+              event.clientY > (event.target.boxObject.y + event.target.boxObject.height)) {
+              
+              var dragState = col.mDragState;
+              col.fgboxes.dragbox.removeAttribute("dragging");
+              col.fgboxes.box.removeAttribute("dragging");
+              window.removeEventListener("mousemove", col.onEventSweepMouseMove, true);
+              window.removeEventListener("mouseup", col.onEventSweepMouseUp, true);
+              document.calendarEventColumnDragging = null;
+              col.mDragState = null;
+              
+              var dragService = Components.classes["@mozilla.org/widget/dragservice;1"].
+                                getService(Components.interfaces.nsIDragService);
+              var transfer = Components.classes["@mozilla.org/widget/transferable;1"].
+                             createInstance(Components.interfaces.nsITransferable);
+              transfer.addDataFlavor("text/calendar");
+
+              var item = dragState.dragOccurrence;
+          
+              // the multiday view currently exhibits a less than optimal strategy
+              // in terms of item selection. items don't get automatically selected
+              // when clicked and dragged, as to differentiate inline editing from
+              // the act of selecting an event. but the application internal drop
+              // targets will ask for selected items in order to pull the data from
+              // the packets. that's why we need to make sure at least the currently
+              // dragged event is contained in the set of selected items.
+              var selectedItems = currentView().getSelectedItems({});
+              if (!selectedItems.some(
+                  function (aItem) {
+                      return (aItem.hashId == item.hashId);
+                  })) {
+                  col.calendarView.setSelectedItems(1,
+                      [event.ctrlKey ? item.parentItem : item]);
+              }
+
+              var flavourProvider = {
+                  QueryInterface: function(aIID) {
+                      ensureIID(
+                          [ Components.interfaces.nsIFlavorDataProvider,
+                            Components.interfaces.nsISupports], aIID);
+                      return this;
+                  },
+                  item: item,
+
+                  getFlavorData: function(aInTransferable, aInFlavor, aOutData, aOutDataLen) {
+                      if ((aInFlavor == "application/vnd.x-moz-cal-event") ||
+                          (aInFlavor == "application/vnd.x-moz-cal-task")) {
+                          aOutData.value = this.item;
+                          aOutDataLen.value = 1;
+                      } else {
+                          ASSERT(false, "error:"+aInFlavor);
+                      }
+                  }
+              };
+
+              if (isEvent(item)) {
+                transfer.addDataFlavor("application/vnd.x-moz-cal-event");
+                transfer.setTransferData("application/vnd.x-moz-cal-event", flavourProvider, 0);
+              } else if (isToDo(item)) {
+                transfer.addDataFlavor("application/vnd.x-moz-cal-task");
+                transfer.setTransferData("application/vnd.x-moz-cal-task", flavourProvider, 0);
+              }
+
+              var serializer = Components.classes["@mozilla.org/calendar/ics-serializer;1"].
+                                          createInstance(Components.interfaces.calIIcsSerializer);
+              serializer.addItems([item], 1);
+              
+              var supportsString = Components.classes["@mozilla.org/supports-string;1"].
+                                   createInstance(Components.interfaces.nsISupportsString);
+              supportsString.data = serializer.serializeToString();
+              transfer.setTransferData("text/calendar", supportsString, supportsString.data.length*2);
+              transfer.setTransferData("text/unicode", supportsString, supportsString.data.length*2);
+
+              var action = dragService.DRAGDROP_ACTION_MOVE;
+              var supArray = Components.classes["@mozilla.org/supports-array;1"].
+                             createInstance(Components.interfaces.nsISupportsArray);
+              supArray.AppendElement(transfer);
+
+              dragService.invokeDragSession(col, supArray, null, action);
+              
+              return;
+          }
 
           var dragState = col.mDragState;
 
@@ -1462,7 +1548,8 @@
         <parameter name="aMouseX"/>
         <parameter name="aMouseY"/>
         <body><![CDATA[
-          if (aOccurrence.calendar.readOnly) {
+          if (!isCalendarWritable(aOccurrence.calendar) ||
+              aOccurrence.calendar.getProperty("capabilities.events.supported") === false) {
               return;
           }
 
@@ -1656,7 +1743,9 @@
         this.calendarView.selectedDay = this.mDate;
 
         // If the selected calendar is readOnly, we don't want any sweeping.
-        if (getSelectedCalendar().readOnly) {
+        var cal = getSelectedCalendar();
+        if (!isCalendarWritable(cal) ||
+            cal.getProperty("capabilities.events.supported") === false) {
             return;
         }
 
@@ -1864,7 +1953,7 @@
                                style="background: transparent !important;"
                                wrap="true"/>
                 </xul:vbox>
-                <xul:image class="calendar-event-box-gradient"/>
+                <xul:image width="1px" class="calendar-event-box-gradient"/>
                 <xul:hbox pack="end">
                     <xul:vbox pack="start">
                       <xul:image anonid="alarm-image"
@@ -1929,18 +2018,6 @@
              document.getAnonymousElementByAttribute(this, "anonid", "shadow-left-if-vertical").removeAttribute("hidden");
              document.getAnonymousElementByAttribute(this, "anonid", "shadow-left-box").setAttribute("hidden","true");
          }
-
-         var self = this;
-         this.eventNameInput.onblur =
-             function onBlur() { self.stopEditing(true); };
-         this.eventNameInput.onkeypress = function onKeyPress(event) {
-             // save on enter
-             if (event.keyCode == 13)
-                 self.stopEditing(true);
-             // abort on escape
-             else if (event.keyCode == 27)
-                 self.stopEditing(false);
-         };
       ]]></constructor>
 
       <!-- fields -->
@@ -2190,6 +2267,7 @@
       <field name="mResizeHandler">null</field>
       <constructor><![CDATA[
         var self = this;
+        this.mTimezone = UTC();
         this.mResizeHandler = function resizeHandler() { self.onResize(); };
         window.addEventListener("resize", this.mResizeHandler, true);
         this.mScrollHandler = function scrollHandler() { self.onScroll(); };
@@ -2300,7 +2378,7 @@
       <field name="mShowCompleted">false</field>
       <field name="mDisplayDaysOff">true</field>
       <field name="mDaysOffArray">[0,6]</field>
-      <field name="mTimezone">"UTC"</field>
+      <field name="mTimezone">null</field>
       <field name="mFlashingEvents">new Object()</field>
 
       <field name="mObserver"><![CDATA[
@@ -2422,6 +2500,11 @@
 
             onPropertyChanged: function(aCalendar, aName, aValue, aOldValue) {
                 switch (aName) {
+                    case "suppressAlarms":
+                        if (!getPrefSafe("calendar.alarms.indicator.show", true)) {
+                            break;
+                        }
+                        // else fall through
                     case "readOnly":
                         // XXXvv we can be smarter about how we handle this stuff
                         this.calView.refresh();
@@ -2709,6 +2792,15 @@
           endDate.isDate = true;
           // make sure unnormalized version not used below
           aStartDate = aEndDate = null;
+
+          if (this.mStartDate && this.mEndDate &&
+              this.mStartDate.compare(startDate) == 0 &&
+              this.mEndDate.compare(endDate) == 0) {
+              // Do not change anything if the date range already matches.
+              // XXX In general it should be possible to return here, but
+              // lightning doesn't like it when first initializing the view.
+              // return;
+          }
 
           if (this.mDisplayDaysOff) {
             startDate.makeImmutable();
@@ -3121,6 +3213,7 @@
 
           this.mDateColumns = new Array();
 
+
           // get today's date
           var today = this.today();
           var counter = 0;
@@ -3251,6 +3344,9 @@
 
           // Note that these may be dates or datetimes
           var startDate = aItem.startDate || aItem.entryDate;
+          if (!startDate) {
+              return columns;
+          }
           var targetDate = startDate.getInTimezone(tz);
           var endDate = aItem.endDate || aItem.dueDate || startDate;
           var finishDate = endDate.getInTimezone(tz);

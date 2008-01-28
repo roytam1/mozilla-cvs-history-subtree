@@ -72,6 +72,7 @@ public:
 
   nsAutoVoidArray        mSheets;
   nsCOMPtr<nsIURI>       mSheetURI; // for error reports, etc.
+  nsCOMPtr<nsIURI>       mOriginalSheetURI;  // for GetHref.  Can be null.
   nsCOMPtr<nsIURI>       mBaseURI; // for resolving relative URIs
   nsISupportsArray*      mOrderedRules;
   nsAutoPtr<nsXMLNameSpaceMap> mNameSpaceMap;
@@ -87,7 +88,7 @@ class CSSImportsCollectionImpl;
 class CSSRuleListImpl;
 static PRBool CascadeSheetRulesInto(nsICSSStyleSheet* aSheet, void* aData);
 
-class nsCSSStyleSheet : public nsICSSStyleSheet, 
+class nsCSSStyleSheet : public nsICSSStyleSheet_MOZILLA_1_8_BRANCH, 
                         public nsIDOMCSSStyleSheet,
                         public nsICSSLoaderObserver
 {
@@ -145,6 +146,10 @@ public:
   NS_IMETHOD SetModified(PRBool aModified);
   NS_IMETHOD AddRuleProcessor(nsCSSRuleProcessor* aProcessor);
   NS_IMETHOD DropRuleProcessor(nsCSSRuleProcessor* aProcessor);
+
+  // nsICSSStyleSheet_MOZILLA_1_8_BRANCH interface
+  NS_IMETHOD SetURIs18(nsIURI* aSheetURI, nsIURI* aOriginalSheetURI,
+                       nsIURI* aBaseURI);
 
   // nsICSSLoaderObserver interface
   NS_IMETHOD StyleSheetLoaded(nsICSSStyleSheet*aSheet, PRBool aNotify);

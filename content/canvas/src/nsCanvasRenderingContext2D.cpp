@@ -1022,7 +1022,8 @@ nsCanvasRenderingContext2D::Render(nsIRenderingContext *rc)
                                                  NULL);
     CGColorSpaceRef rgb = CGColorSpaceCreateDeviceRGB();
     img = CGImageCreate (mWidth, mHeight, 8, 32, mWidth * 4, rgb,
-                         kCGImageAlphaPremultipliedFirst | CG_BITMAP_BYTE_ORDER_FLAG,
+                         (CGImageAlphaInfo)(kCGImageAlphaPremultipliedFirst |
+                                            CG_BITMAP_BYTE_ORDER_FLAG),
                          dataProvider, NULL, false, kCGRenderingIntentDefault);
     CGColorSpaceRelease (rgb);
     CGDataProviderRelease (dataProvider);
@@ -2143,7 +2144,7 @@ nsCanvasRenderingContext2D::CairoSurfaceFromElement(nsIDOMElement *imgElt,
 
         PRUint32 status;
         imgRequest->GetImageStatus(&status);
-        if (status != imgIRequest::STATUS_LOAD_COMPLETE)
+        if ((status & imgIRequest::STATUS_LOAD_COMPLETE) == 0)
             return NS_ERROR_NOT_AVAILABLE;
 
         nsCOMPtr<nsIURI> uri;
@@ -3207,9 +3208,10 @@ nsCanvasRenderingContext2D::PutImageData()
     if (mImageSurfaceData) {
         int stride = mWidth*4;
         PRUint8 *dest = mImageSurfaceData + stride*y + x*4;
+        PRUint8 *src = imageBuffer.get();
 
-        for (int32 i = 0; i < y; i++) {
-            memcpy(dest, imgPtr + (w*4)*i, w*4);
+        for (int32 i = 0; i < h; i++) {
+            memcpy(dest, src + (w*4)*i, w*4);
             dest += stride;
         }
     } else {

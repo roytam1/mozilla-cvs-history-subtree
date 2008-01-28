@@ -96,6 +96,12 @@ typedef enum
 	  
 } ETabOpenPolicy;
 
+typedef enum  {
+  eDestinationNewWindow = 0,
+  eDestinationNewTab,
+  eDestinationCurrentView
+} EOpenDestination;
+
 @class CHBrowserView;
 @class BookmarkViewController;
 @class BookmarkToolbar;
@@ -106,6 +112,7 @@ typedef enum
 @class AutoCompleteTextField;
 @class ExtendedSplitView;
 @class WebSearchField;
+@class FindBarController;
 
 
 @interface BrowserWindowController : NSWindowController<Find, BrowserUIDelegate, BrowserUICreationDelegate>
@@ -155,6 +162,8 @@ typedef enum
   // The browser view that the user was on before a prompt forced a switch (weak)
   BrowserWrapper*               mLastBrowserView;
 
+  FindBarController*            mFindController;
+  
   BOOL mMoveReentrant;
   BOOL mClosingWindow;
 
@@ -178,6 +187,8 @@ typedef enum
 
   // Funky field editor for URL bar
   NSTextView *mURLFieldEditor;
+
+  NSString *mLastKnownPreferredSearchEngine;
 }
 
 - (BrowserTabView*)tabBrowser;
@@ -206,6 +217,7 @@ typedef enum
 - (void)beginSearchSheet;
 - (IBAction)endSearchSheet:(id)sender;
 - (IBAction)cancelSearchSheet:(id)sender;
+- (IBAction)manageSearchEngines:(id)sender;
 
 - (NSSize)windowWillResize:(NSWindow *)sender toSize:(NSSize)proposedFrameSize;
 
@@ -227,8 +239,9 @@ typedef enum
 - (void)stopThrobber;
 - (void)clickThrobber:(id)aSender;
 
+- (void)find:(id)aSender;
+
 - (BOOL)validateActionBySelector:(SEL)action;
-- (BOOL)performFindCommand;
 - (BOOL)canMakeTextBigger;
 - (BOOL)canMakeTextSmaller;
 - (BOOL)canMakeTextDefaultSize;
@@ -349,16 +362,16 @@ typedef enum
 + (NSImage*) secureIcon;
 + (NSImage*) brokenIcon;
 
-// cache the search engines and their search strings we parse from a plist
-+ (NSDictionary *)searchURLDictionary;
-
 // cache the toolbar defaults we parse from a plist
 + (NSArray*) toolbarDefaults;
 
-// Get the load-in-background pref.  If possible, aSender's keyEquivalentModifierMask
-// is used to determine the shift key's state.  Otherwise (if aSender doesn't respond to
-// keyEquivalentModifierMask or aSender is nil) uses the current event's modifier flags.
-+ (BOOL)shouldLoadInBackground:(id)aSender;
+// Get the correct load-in-background behvaior for the given destination based
+// on prefs and the state of the shift key. If possible, aSender's
+// keyEquivalentModifierMask is used to determine the shift key's state.
+// Otherwise (if aSender doesn't respond to keyEquivalentModifierMask is nil)
+// it uses the current event's modifier flags.
++ (BOOL)shouldLoadInBackgroundForDestination:(EOpenDestination)destination
+                                      sender:(id)sender;
 
 // Accessor to get the proxy icon view
 - (PageProxyIcon *)proxyIconView;

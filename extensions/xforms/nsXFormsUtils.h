@@ -66,6 +66,8 @@ class nsIDOMEvent;
 #define NS_NAMESPACE_SOAP_ENVELOPE       "http://schemas.xmlsoap.org/soap/envelope/"
 #define NS_NAMESPACE_MOZ_XFORMS_LAZY     "http://www.mozilla.org/projects/xforms/2005/lazy"
 
+#define PREF_WAIT_LIMIT                  "dom.max_script_run_time"
+
 /**
  * Error codes
  */
@@ -175,6 +177,12 @@ public:
     Init();
 
   /**
+   * Shutdown nsXFormsUtils.
+   */
+  static NS_HIDDEN_(nsresult)
+    Shutdown();
+
+  /**
    * Locate the model that is a parent of |aBindElement|.  This method walks
    * up the content tree looking for the containing model.
    *
@@ -200,6 +208,7 @@ public:
    * @param aContextNode      The context node for the element
    * @param aContextPosition  The context position for the element
    * @param aContextSize      The context size for the element
+   * @param aUseBindAttr      Use @bind (if present) to determine context node?
    */
   static NS_HIDDEN_(nsresult)
     GetNodeContext(nsIDOMElement           *aElement,
@@ -210,7 +219,8 @@ public:
                    nsIXFormsControl       **aParentControl,
                    nsIDOMNode             **aContextNode,
                    PRInt32                 *aContextPosition = nsnull,
-                   PRInt32                 *aContextSize = nsnull);
+                   PRInt32                 *aContextSize = nsnull,
+                   PRBool                   aUseBindAttr = PR_TRUE);
 
   /**
    * Locate the model for an element.
@@ -627,9 +637,25 @@ public:
    * In valid XForms documents this should only be possible if aNode is an
    * xf:select/1 or an xf:choices element.  This function is used primarily
    * as a worker function for select/1's IsContentAllowed override.
-
    */
   static NS_HIDDEN_(PRBool) NodeHasItemset(nsIDOMNode *aNode);
+
+  /**
+   * Ask the user if she would like to stop the current long-running script
+   * component.  Returns PR_TRUE if yes, otherwise PR_FALSE.
+   *
+   * @param aElement           An element in the current document; used to
+   *                           find the window for the prompt
+   */
+  static NS_HIDDEN_(PRBool) AskStopWaiting(nsIDOMElement *aElement);
+
+  /**
+   * Caches the current value of the PREF_WAIT_LIMIT preference, which
+   * stores the number of seconds that a user should have to wait before she
+   * is given an opportunity to stop the busy section of the processor.  (A
+   * value of 0 indicates that the user does not want to be prompted.)
+   */
+  static NS_HIDDEN_(PRInt32) waitLimit;
 
 private:
   /**

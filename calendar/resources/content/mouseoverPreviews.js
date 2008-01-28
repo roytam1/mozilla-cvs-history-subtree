@@ -26,6 +26,7 @@
  *                 Mike Norton <xor@ivwnet.com>
  *                 ArentJan Banck <ajbanck@planet.nl>
  *                 Eric Belhaire <belhaire@ief.u-psud.fr>
+ *                 Philipp Kewisch <mozilla@kewis.ch>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -82,7 +83,7 @@ function onMouseOverItem( occurrenceBoxMouseEvent )
 /** For all instances of an event, as displayed by unifinder. **/
 function onMouseOverEventTree( toolTip, mouseEvent )
 {
-  var item = getCalendarEventFromEvent( mouseEvent );
+  var item = unifinderTreeView.getItemFromEvent(mouseEvent);
   if (isEvent(item)) {
     var holderBox = getPreviewForEvent(item);
     if (holderBox) {
@@ -465,9 +466,9 @@ function createTooltipHeaderDescription(text)
 }
 
 /**
- * If now is during an occurrence, return the ocurrence.
- * Else if now is before an ocurrence, return the next ocurrence.
- * Otherwise return the previous ocurrence.
+ * If now is during an occurrence, return the occurrence.
+ * Else if now is before an occurrence, return the next occurrence.
+ * Otherwise return the previous occurrence.
  */
 function getCurrentNextOrPreviousRecurrence(calendarEvent)
 {

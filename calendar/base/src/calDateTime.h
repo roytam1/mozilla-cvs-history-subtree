@@ -1,4 +1,3 @@
-/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -21,6 +20,7 @@
  *
  * Contributor(s):
  *   Vladimir Vukicevic <vladimir.vukicevic@oracle.com>
+ *   Daniel Boelzle <daniel.boelzle@sun.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -35,52 +35,34 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-#ifndef CALDATETIME_H_
-#define CALDATETIME_H_
+#if !defined(INCLUDED_CALDATETIME_H)
+#define INCLUDED_CALDATETIME_H
 
 #include "jsapi.h"
 #include "nsIXPCScriptable.h"
 #include "calIDateTime.h"
+#include "calITimezoneProvider.h"
 #include "calUtils.h"
 
 struct icaltimetype;
 typedef struct _icaltimezone icaltimezone;
 
-/* This class subclasses nsCString so we can check tzids for "freshness". */
-class calTzId : public nsCString
-{
-public:
-    /* Used by AssignLiteral when we set the tzid to "utc" or "floating". */
-    void Assign(char const* c);
-    /* Used by mTimezone.Assign as our hook to check the tzid's "freshness". */
-    void Assign(nsACString const& aStr);
-};
-
 class calDateTime : public calIDateTime,
-                    public nsIXPCScriptable
+                    public nsIXPCScriptable,
+                    public cal::XpcomBase
 {
 public:
-    calDateTime ();
-    explicit calDateTime (struct icaltimetype const* timeptr);
-    calDateTime (const calDateTime& cdt);
+    calDateTime();
+    calDateTime(icaltimetype const* icalt, calITimezone * tz);
 
-    // nsISupports interface
     NS_DECL_ISUPPORTS
-
-    // calIDateTime interface
     NS_DECL_CALIDATETIME
-
-    // nsIXPCScriptable interface
     NS_DECL_NSIXPCSCRIPTABLE
+
 protected:
-    calDateTime const& operator=(calDateTime const&);
-
     PRBool mImmutable;
-
     PRBool mIsValid;
-
-    PRTime mNativeTime;
+    PRBool mIsDate;
 
     PRInt16 mYear;
     PRInt16 mMonth;
@@ -88,21 +70,18 @@ protected:
     PRInt16 mHour;
     PRInt16 mMinute;
     PRInt16 mSecond;
-
-    PRBool mIsDate;
-    calTzId mTimezone;
-
     PRInt16 mWeekday;
     PRInt16 mYearday;
 
-    void normalize();
-    void FromIcalTime(icaltimetype const* icalt);
+    PRTime mNativeTime;
+    nsCOMPtr<calITimezone> mTimezone;
 
-    static nsresult GetIcalTZ(nsACString const& tzid, icaltimezone const** tzp);
+    void Normalize();
+    void FromIcalTime(icaltimetype const* icalt, calITimezone *tz);
 
     static PRTime IcaltimeToPRTime(icaltimetype const* icalt, icaltimezone const* tz);
     static void PRTimeToIcaltime(PRTime time, PRBool isdate,
                                  icaltimezone const* tz, icaltimetype *icalt);
 };
 
-#endif /* CALDATETIME_H_ */
+#endif // INCLUDED_CALDATETIME_H

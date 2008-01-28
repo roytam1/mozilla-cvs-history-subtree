@@ -38,8 +38,7 @@
 
 function calAttendee() {
     this.wrappedJSObject = this;
-    this.mProperties = Components.classes["@mozilla.org/hash-property-bag;1"].
-        createInstance(Components.interfaces.nsIWritablePropertyBag);
+    this.mProperties = new calPropertyBag();
 }
 
 var calAttendeeClassInfo = {
@@ -155,10 +154,7 @@ calAttendee.prototype = {
     },
 
     get icalProperty() {
-        const icssvc =
-            Components.classes["@mozilla.org/calendar/ics-service;1"].
-                getService(Components.interfaces.calIICSService);
-
+        var icssvc = getIcsService();
         var icalatt;
         if (!this.mIsOrganizer) {
             icalatt = icssvc.createIcalProperty("ATTENDEE");
@@ -176,8 +172,7 @@ calAttendee.prototype = {
         }
         var bagenum = this.mProperties.enumerator;
         while (bagenum.hasMoreElements()) {
-            var iprop = bagenum.getNext().
-                QueryInterface(Components.interfaces.nsIProperty);
+            var iprop = bagenum.getNext();
             icalatt.setParameter(iprop.name, iprop.value);
         }
         return icalatt;
@@ -187,11 +182,7 @@ calAttendee.prototype = {
 
     // The has/get/getUnproxied/set/deleteProperty methods are case-insensitive.
     getProperty: function (aName) {
-        try {
-            return this.mProperties.getProperty(aName.toUpperCase());
-        } catch (e) {
-            return null;
-        }
+        return this.mProperties.getProperty(aName.toUpperCase());
     },
     setProperty: function (aName, aValue) {
         this.modify();
@@ -199,10 +190,7 @@ calAttendee.prototype = {
     },
     deleteProperty: function (aName) {
         this.modify();
-        try {
-            this.mProperties.deleteProperty(aName.toUpperCase());
-        } catch (e) {
-        }
+        this.mProperties.deleteProperty(aName.toUpperCase());
     },
 
     get id() {

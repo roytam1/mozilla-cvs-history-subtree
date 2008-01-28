@@ -42,14 +42,15 @@ class nsIPermission;
 class nsIPermissionManager;
 
 // Policy constants.
-extern const int CHPermissionUnknown;
-extern const int CHPermissionAllow;
-extern const int CHPermissionDeny;
-extern const int CHPermissionAllowForSession; // meaningful for cookies only
+__attribute__((visibility("default"))) extern const int CHPermissionUnknown;
+__attribute__((visibility("default"))) extern const int CHPermissionAllow;
+__attribute__((visibility("default"))) extern const int CHPermissionDeny;
+// Cookie-only policy constant.
+__attribute__((visibility("default"))) extern const int CHPermissionAllowForSession;
 
 // Permission type constants.
-extern NSString* const CHPermissionTypeCookie;
-extern NSString* const CHPermissionTypePopup;
+__attribute__((visibility("default"))) extern NSString* const CHPermissionTypeCookie;
+__attribute__((visibility("default"))) extern NSString* const CHPermissionTypePopup;
 
 // An object encompasing a specific permission entry. Used only for enumerating
 // existing permissions; to check or set the permissions for a single host,
@@ -89,6 +90,7 @@ extern NSString* const CHPermissionTypePopup;
 
 // Gets all permissions of the given type. |type| can be an arbitrary value,
 // but common types are defined in the CHPermissionType* constants.
+// If |type| is nil, all permissions are returned.
 - (NSArray*)permissionsOfType:(NSString*)type;
 
 // Removes a specific permission for host |host|

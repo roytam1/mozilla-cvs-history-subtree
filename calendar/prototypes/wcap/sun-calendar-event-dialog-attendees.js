@@ -139,7 +139,6 @@ function onLoad() {
 }
 
 function onAccept() {
-    var kDefaultTimezone = calendarDefaultTimezone();
     var attendees = document.getElementById("attendees-list");
     window.arguments[0].onOk(
         attendees.attendees,
@@ -235,8 +234,8 @@ function updateDateTime() {
         // the timezone of the endtime is "UTC", we convert
         // the endtime into the timezone of the starttime.
         if (startTime && endTime) {
-            if (startTime.timezone != endTime.timezone) {
-                if (endTime.timezone == "UTC") {
+            if (!compareObjects(startTime.timezone, endTime.timezone)) {
+                if (endTime.timezone.isUTC) {
                     endTime = endTime.getInTimezone(startTime.timezone);
                 }
             }
@@ -245,8 +244,8 @@ function updateDateTime() {
         // Before feeding the date/time value into the control we need
         // to set the timezone to 'floating' in order to avoid the
         // automatic conversion back into the OS timezone.
-        startTime.timezone = "floating";
-        endTime.timezone = "floating";
+        startTime.timezone = floating();
+        endTime.timezone = floating();
 
         document.getElementById("event-starttime").value = startTime.jsDate;
         document.getElementById("event-endtime").value = endTime.jsDate;
@@ -264,8 +263,8 @@ function updateDateTime() {
         // Before feeding the date/time value into the control we need
         // to set the timezone to 'floating' in order to avoid the
         // automatic conversion back into the OS timezone.
-        startTime.timezone = "floating";
-        endTime.timezone = "floating";
+        startTime.timezone = floating();
+        endTime.timezone = floating();
 
         document.getElementById("event-starttime").value = startTime.jsDate;
         document.getElementById("event-endtime").value = endTime.jsDate;
@@ -275,13 +274,13 @@ function updateDateTime() {
     updateAllDay();
 }
 
-function timezoneString(date) {
-    var fragments = date.split('/');
-    var num = fragments.length;
-    if (num <= 1) {
-        return fragments[0];
+function timezoneString(tz) {
+    var tzid = tz.tzid;
+    var prefix = getTimezoneService().tzidPrefix;
+    if (tzid.indexOf(prefix) == 0) {
+        tzid = tzid.substring(prefix.length);
     }
-    return fragments[num - 2] + '/' + fragments[num - 1];
+    return tzid;
 }
 
 /**
@@ -302,7 +301,7 @@ function updateTimezone() {
         var endTimezone = gEndTimezone;
         var equalTimezones = false;
         if (startTimezone && endTimezone &&
-            (startTimezone == endTimezone || endTimezone == "UTC")) {
+            (compareObjects(startTimezone, endTimezone) || endTimezone.isUTC)) {
             equalTimezones = true;
         }
 
@@ -346,19 +345,11 @@ function updateStartTime() {
     // jsDate is always in OS timezone, thus we create a calIDateTime
     // object from the jsDate representation and simply set the new
     // timezone instead of converting.
-    var kDefaultTimezone = calendarDefaultTimezone();
-    var start = jsDateToDateTime(startWidget.value);
-    start = start.getInTimezone(kDefaultTimezone);
-    if (gDisplayTimezone) {
-        start.timezone = gStartTimezone;
-    }
+    var start = jsDateToDateTime(startWidget.value,
+                                 gDisplayTimezone ? gStartTimezone : calendarDefaultTimezone());
     gStartDate = start.clone();
     start.addDuration(gDuration);
-    start = start.getInTimezone(gEndTimezone);
-    if (gDisplayTimezone) {
-        start.timezone = gEndTimezone;
-    }
-    gEndDate = start;
+    gEndDate = start.getInTimezone(gEndTimezone);
 
     var allDayElement = document.getElementById("all-day");
     var allDay = allDayElement.getAttribute("checked") == "true";
@@ -385,25 +376,17 @@ function updateEndTime() {
     var saveEndTime = gEndDate;
     var kDefaultTimezone = calendarDefaultTimezone();
 
-    var start = jsDateToDateTime(startWidget.value);
-    start = start.getInTimezone(kDefaultTimezone);
-    if (gDisplayTimezone) {
-        start.timezone = gStartTimezone;
-    }
-    gStartDate = start;
+    gStartDate = jsDateToDateTime(startWidget.value,
+                                  gDisplayTimezone ? gStartTimezone : calendarDefaultTimezone());
 
-    var end = jsDateToDateTime(endWidget.value);
-    end = end.getInTimezone(kDefaultTimezone);
     var timezone = gEndTimezone;
-    if (timezone == "UTC" &&
+    if (timezone.isUTC &&
         gStartDate &&
-        gStartTimezone != gEndTimezone) {
+        !compareObjects(gStartTimezone, gEndTimezone)) {
         timezone = gStartTimezone;
     }
-    if (gDisplayTimezone) {
-        end.timezone = timezone;
-    }
-    gEndDate = end;
+    gEndDate = jsDateToDateTime(endWidget.value,
+                                gDisplayTimezone ? timezone : kDefaultTimezone);
 
     var allDayElement = document.getElementById("all-day");
     var allDay = allDayElement.getAttribute("checked") == "true";
@@ -416,7 +399,7 @@ function updateEndTime() {
     // don't allow for negative durations.
     var warning = false;
     if (gEndDate.compare(gStartDate) >= 0) {
-        gDuration = end.subtractDate(start);
+        gDuration = gEndDate.subtractDate(gStartDate);
     } else {
         gStartDate = saveStartTime;
         gEndDate = saveEndTime;
@@ -452,13 +435,13 @@ function editStartTimezone() {
     args.time = gStartDate.getInTimezone(gStartTimezone);
     args.onOk = function(datetime) {
         var equalTimezones = false;
-        if (self.mStartTimezone && self.mEndTimezone &&
-            self.mStartTimezone == self.mEndTimezone) {
+        if (gStartTimezone && gEndTimezone &&
+            compareObjects(gStartTimezone, gEndTimezone)) {
             equalTimezones = true;
         }
-        self.mStartTimezone = datetime.timezone;
+        gStartTimezone = datetime.timezone;
         if (equalTimezones) {
-            self.mEndTimezone = datetime.timezone;
+            gEndTimezone = datetime.timezone;
         }
         self.propagateDateTime();
     };
@@ -481,15 +464,11 @@ function editEndTimezone() {
     var args = new Object();
     args.time = gEndTime.getInTimezone(gEndTimezone);
     args.onOk = function(datetime) {
-        var equalTimezones = false;
-        if (self.mStartTimezone && self.mEndTimezone &&
-            self.mStartTimezone == self.mEndTimezone) {
-            equalTimezones = true;
+        if (gStartTimezone && gEndTimezone &&
+            compareObjects(gStartTimezone, gEndTimezone)) {
+            gStartTimezone = datetime.timezone;
         }
-        if (equalTimezones) {
-            self.mStartTimezone = datetime.timezone;
-        }
-        self.mEndTimezone = datetime.timezone;
+        gEndTimezone = datetime.timezone;
         self.propagateDateTime();
     };
 

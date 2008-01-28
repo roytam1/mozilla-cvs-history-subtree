@@ -63,6 +63,22 @@ var g_classInfo = {
     }
 };
 
+function ComponentsUtilsImport(aFile) {
+    var iosvc = Components.classes["@mozilla.org/network/io-service;1"]
+                          .getService(Components.interfaces.nsIIOService);
+
+    var loader = Components.classes["@mozilla.org/moz/jssubscript-loader;1"]
+                           .getService(Components.interfaces.mozIJSSubScriptLoader);
+
+    try {
+        var scriptUri = iosvc.newFileURI(aFile);
+        loader.loadSubScript(scriptUri.spec, null);
+    } catch (e) {
+        Components.utils.reportError("Error while loading " + aFile.path);
+        throw e;
+    }
+}
+
 var calGoogleCalendarModule = {
 
     mUtilsLoaded: false,
@@ -71,39 +87,57 @@ var calGoogleCalendarModule = {
         if (this.mUtilsLoaded)
             return;
 
+        const kSUNBIRD_UID = "{718e30fb-e89b-41dd-9da7-e25a45638b28}";
+        const kLIGHTNING_UID = "{e2fda1a4-762b-4020-b5ad-a41df1933103}"; 
         const scripts = ["calGoogleCalendar.js", "calGoogleSession.js",
                          "calGoogleRequest.js", "calGoogleUtils.js"];
+        const baseScripts = ["calUtils.js", "calProviderBase.js"];
 
-        var loader = Components.classes["@mozilla.org/moz/jssubscript-loader;1"]
-                               .getService(Components.interfaces.mozIJSSubScriptLoader);
-
-        var iosvc = Components.classes["@mozilla.org/network/io-service;1"]
-                              .getService(Components.interfaces.nsIIOService);
-
-        // Note that unintuitively, __LOCATION__.parent == .
-        // We expect to find the subscripts in ./../js
-        var appdir = __LOCATION__.parent.parent;
-        appdir.append("js");
-
-        for each (var script in scripts) {
-            var scriptName = appdir.clone();
-            scriptName.append(script);
-
+        // First, load script from the application dir
+        var appInfo = Components.classes["@mozilla.org/xre/app-info;1"].
+                      getService(Components.interfaces.nsIXULAppInfo);
+        if (appInfo.ID == kSUNBIRD_UID) {
+            // On sunbird, the application dir is the GRE Application Directory
+            var dirsvc = Components.classes["@mozilla.org/file/directory_service;1"]
+                                   .getService(Components.interfaces.nsIProperties);
             try {
-                var scriptUri = iosvc.newFileURI(scriptName);
-                loader.loadSubScript(scriptUri.spec, null);
+                var appdir = dirsvc.get("GreD", Components.interfaces.nsIFile);
+                appdir.append("js");
             } catch (e) {
-                dump("Error while loading " + scriptUri.spec + "\n");
-                throw e;
+                Components.utils.reportError("Error getting GRE Application Directory");
+                throw(e);
+            }
+        } else {
+            // Otherwise, the application directory is the lightning extension directory
+            var extman = Components.classes["@mozilla.org/extensions/manager;1"]
+                                   .getService(Components.interfaces.nsIExtensionManager);
+            try { 
+                var appdir = extman.getInstallLocation(kLIGHTNING_UID)
+                                   .getItemLocation(kLIGHTNING_UID);
+                appdir.append("js");
+            } catch (e) {
+                Components.utils.reportError("Error getting Lightning Extension Directory");
+                throw(e);
             }
         }
 
-        // Additionally, load Calendar's calUtils.js
-        try {
-            loader.loadSubScript("chrome://calendar/content/calUtils.js", null);
-        } catch (e) {
-            dump("Error while loading calUtils.js\n");
-            throw e;
+        for each (var script in baseScripts) {
+            var scriptFile = appdir.clone();
+            scriptFile.append(script);
+
+            ComponentsUtilsImport(scriptFile);
+        }
+
+        // Now load gdata extension scripts. Note that unintuitively,
+        // __LOCATION__.parent == . We expect to find the subscripts in ./../js
+        appdir = __LOCATION__.parent.parent;
+        appdir.append("js");
+
+        for each (var script in scripts) {
+            var scriptFile = appdir.clone();
+            scriptFile.append(script);
+
+            ComponentsUtilsImport(scriptFile);
         }
 
         this.mUtilsLoaded = true;
@@ -125,8 +159,6 @@ var calGoogleCalendarModule = {
                             .QueryInterface(Components.interfaces.nsIComponentRegistrar);
 
         for each (var component in g_classInfo) {
-            dump("Registering " + component.classDescription + "\n");
-
             aComponentManager.registerFactoryLocation(
                 component.classID,
                 component.classDescription,

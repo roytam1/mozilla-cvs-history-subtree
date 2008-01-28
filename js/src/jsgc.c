@@ -2939,6 +2939,9 @@ restart:
               case JSTVU_WEAK_ROOTS:
                 MarkWeakRoots(cx, tvr->u.weakRoots);
                 break;
+              case JSTVU_SCRIPT:
+                js_MarkScript(cx, tvr->u.script);
+                break;
               default:
                 JS_ASSERT(tvr->count >= 0);
                 GC_MARK_JSVALS(cx, tvr->count, tvr->u.array, "tvr->u.array");

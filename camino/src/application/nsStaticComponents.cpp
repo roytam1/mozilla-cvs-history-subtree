@@ -52,7 +52,6 @@
 #define NSGETMODULE(_name) _name##_NSGetModule
 
 #define MODULES \
-    MODULE(xpcomObsoleteModule) \
     MODULE(nsI18nModule) \
     MODULE(nsUConvModule) \
     MODULE(nsUCvMathModule) \
@@ -72,6 +71,7 @@
     MODULE(nsWidgetMacModule) \
     MODULE(nsLayoutModule) \
     MODULE(nsMorkModule) \
+    MODULE(mozStorageModule) \
     MODULE(docshell_provider) \
     MODULE(embedcomponents) \
     MODULE(Browser_Embedding_Module) \

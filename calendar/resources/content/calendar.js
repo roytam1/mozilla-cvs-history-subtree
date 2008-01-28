@@ -82,7 +82,6 @@ function calendarInit() {
     currentView().goToDay(currentView().selectedDay);
 
     // set up the unifinder
-    prepareCalendarUnifinder();
     prepareCalendarToDoUnifinder();
    
     scheduleMidnightUpdate(refreshUIBits);
@@ -109,6 +108,9 @@ function calendarInit() {
     // Setup undo/redo menu for additional main windows
     updateUndoRedoMenu();
 
+    // Setup the offline manager
+    calendarOfflineManager.init();
+
     // Handle commandline args
     for (var i = 0; i < window.arguments.length; i++) {
         try {
@@ -120,6 +122,8 @@ function calendarInit() {
         handleCommandLine(cl);
     }
 
+    // Setup the command controller
+    injectCalendarCommandController();
 }
 
 function handleCommandLine(aComLine) {
@@ -209,45 +213,10 @@ function calendarFinish()
    var tabbox = document.getElementById("tablist");
    tabbox.setAttribute("selectedIndex", tabbox.selectedIndex);
 
-   finishCalendarUnifinder();
-   
-   finishCalendarToDoUnifinder();
-
    unloadCalendarManager();
-}
 
-function selectAllEvents()
-{
-    var items = [];
-    var listener = {
-        onOperationComplete: function selectAll_ooc(aCalendar, aStatus, 
-                                                    aOperationType, aId, 
-                                                    aDetail) {
-            currentView().setSelectedItems(items.length, items, false);
-        },
-        onGetResult: function selectAll_ogr(aCalendar, aStatus, aItemType, 
-                                            aDetail, aCount, aItems) {
-            for each (var item in aItems) {
-                items.push(item);
-            }
-        }
-    };
-
-    var composite = getCompositeCalendar();
-    var filter = composite.ITEM_FILTER_COMPLETED_ALL |
-                 composite.ITEM_FILTER_CLASS_OCCURRENCES;
-
-    if (currentView().tasksInView) {
-        filter |= composite.ITEM_FILTER_TYPE_ALL; 
-    } else {
-        filter |= composite.ITEM_FILTER_TYPE_EVENT;
-    }
-
-    // Need to move one day out to get all events
-    var end = currentView().endDay.clone();
-    end.day += 1;
-
-    composite.getItems(filter, 0, currentView().startDay, end, listener);
+   // Finish the offline manager
+   calendarOfflineManager.uninit();
 }
 
 function closeCalendar()
@@ -256,19 +225,30 @@ function closeCalendar()
 }
 
 function onSelectionChanged(aEvent) {
-    var elements = 
-        document.getElementsByAttribute("disabledwhennoeventsselected", "true");
-
     var selectedItems = aEvent.detail;
     gXXXEvilHackSavedSelection = selectedItems;
 
-    for (var i = 0; i < elements.length; i++) {
-        if (selectedItems.length >= 1) {
-            elements[i].removeAttribute("disabled");
-        } else {
-            elements[i].setAttribute("disabled", "true");
+    // Tell the commands that events were selected.
+    calendarController.item_selected = (selectedItems.length > 0);
+    var selected_events_readonly = 0;
+    var selected_events_requires_network = 0;
+
+    for each (var item in selectedItems) {
+        if (item.calendar.readOnly) {
+            selected_events_readonly++;
+        }
+        if (item.calendar.getProperty("requiresNetwork")) {
+            selected_events_requires_network++;
         }
     }
+
+    calendarController.selected_events_readonly =
+        (selected_events_readonly == selectedItems.length);
+
+    calendarController.selected_events_requires_network =
+        (selected_events_requires_network == selectedItems.length);
+
+    document.commandDispatcher.updateCommands("calendar_commands");
 }
 
 function openPreferences() {
@@ -325,22 +305,10 @@ function CalendarToolboxCustomizeDone(aToolboxChanged)
   window.focus();
 }
 
+/**
+ * Update the undo and redo menu items
+ */
 function updateUndoRedoMenu() {
-    // We need to make sure the menu is updated on all main windows
-    var wm = Components.classes["@mozilla.org/appshell/window-mediator;1"]
-                       .getService(Components.interfaces.nsIWindowMediator);
-    var enumerator = wm.getEnumerator('calendarMainWindow');
-    while (enumerator.hasMoreElements()) {
-        var doc = enumerator.getNext().document;
-
-        if (getTransactionMgr().canUndo())
-            doc.getElementById('undo_command').removeAttribute('disabled');
-        else
-            doc.getElementById('undo_command').setAttribute('disabled', true);
-
-        if (getTransactionMgr().canRedo())
-            doc.getElementById('redo_command').removeAttribute('disabled');
-        else
-            doc.getElementById('redo_command').setAttribute('disabled', true);
-    }
+    goUpdateCommand("cmd_undo");
+    goUpdateCommand("cmd_redo");
 }

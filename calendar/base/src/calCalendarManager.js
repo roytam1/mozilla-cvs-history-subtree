@@ -66,6 +66,9 @@ function calCalendarManager() {
     this.mRefreshTimer = null;
     this.setUpPrefObservers();
     this.setUpRefreshTimer();
+    this.mNetworkCalendarCount = 0;
+    this.mReadonlyCalendarCount = 0;
+    this.mCalendarCount = 0;
 }
 
 var calCalendarManagerClassInfo = {
@@ -93,17 +96,23 @@ var calCalendarManagerClassInfo = {
 
 calCalendarManager.prototype = {
     QueryInterface: function (aIID) {
-        if (aIID.equals(Components.interfaces.nsIClassInfo))
-            return calCalendarManagerClassInfo;
+        return doQueryInterface(this,
+                                calCalendarManager.prototype,
+                                aIID,
+                                null,
+                                calCalendarManagerClassInfo);
+    },
 
-        if (!aIID.equals(Components.interfaces.nsISupports) &&
-            !aIID.equals(Components.interfaces.calICalendarManager) &&
-            !aIID.equals(Components.interfaces.nsIObserver))
-        {
-            throw Components.results.NS_ERROR_NO_INTERFACE;
-        }
+    get networkCalendarCount() {
+        return this.mNetworkCalendarCount;
+    },
 
-        return this;
+    get readOnlyCalendarCount() {
+        return this.mReadonlyCalendarCount;
+    },
+
+    get calendarCount() {
+        return this.mCalendarCount;
     },
 
     setUpPrefObservers: function ccm_setUpPrefObservers() {
@@ -137,27 +146,46 @@ calCalendarManager.prototype = {
         if (refreshEnabled && refreshTimeout > 0) {
             this.mRefreshTimer = Components.classes["@mozilla.org/timer;1"]
                                     .createInstance(Components.interfaces.nsITimer);
-            this.mRefreshTimer.init(this, refreshTimeout, 
+            this.mRefreshTimer.init(this, refreshTimeout,
                                    Components.interfaces.nsITimer.TYPE_REPEATING_SLACK);
         }
     },
+    setupOfflineObservers: function ccm_setupOfflineObservers() {
+        var os = Components.classes["@mozilla.org/observer-service;1"]
+                           .getService(Components.interfaces.nsIObserverService);
+        os.addObserver(this, "network:offline-status-changed", false);
+
+        // TODO removeObserver
+    },
     
     observe: function ccm_observe(aSubject, aTopic, aData) {
-        if (aTopic == 'timer-callback') {
-            // Refresh all the calendars that can be refreshed.
-            var cals = this.getCalendars({});
-            for each (var cal in cals) {
-                if (cal.canRefresh) {
-                    cal.refresh();
+        switch (aTopic) {
+            case "timer-callback":
+                // Refresh all the calendars that can be refreshed.
+                var cals = this.getCalendars({});
+                for each (var cal in cals) {
+                    if (cal.canRefresh) {
+                        cal.refresh();
+                    }
                 }
-            }
-        } else if (aTopic == 'nsPref:changed') {
-            if (aData == "calendar.autorefresh.enabled" ||
-                aData == "calendar.autorefresh.timeout") {
-                this.setUpRefreshTimer();
-            }
+                break;
+            case "nsPref:changed":
+                if (aData == "calendar.autorefresh.enabled" ||
+                    aData == "calendar.autorefresh.timeout") {
+                    this.setUpRefreshTimer();
+                }
+                break;
+            case "network:offline-status-changed":
+                for each (var calendar in this.mCache) {
+                    if (calendar instanceof calCachedCalendar) {
+                        calendar.onOfflineStatusChanged(aData == "offline");
+                    }
+                }
+                break;
         }
+
     },
+
     
     DB_SCHEMA_VERSION: 7,
 
@@ -423,9 +451,28 @@ calCalendarManager.prototype = {
      * calICalendarManager interface
      */
     createCalendar: function(type, uri) {
-        var calendar = Components.classes["@mozilla.org/calendar/calendar;1?type=" + type].createInstance(Components.interfaces.calICalendar);
-        calendar.uri = uri;
-        return calendar;
+        try {
+            var calendar = Components.classes["@mozilla.org/calendar/calendar;1?type=" + type]
+                                     .createInstance(Components.interfaces.calICalendar);
+            calendar.uri = uri;
+            return calendar;
+        } catch (ex) {
+            ASSERT(false, ex);
+            var paramBlock = Components.classes["@mozilla.org/embedcomp/dialogparam;1"]
+                                       .createInstance(Components.interfaces.nsIDialogParamBlock);
+            paramBlock.SetNumberStrings(3);
+            paramBlock.SetString(0, calGetString("calendar", "unableToCreateProvider", [uri.spec]));
+            paramBlock.SetString(1, Components.interfaces.calIErrors.PROVIDER_CREATION_FAILED);
+            paramBlock.SetString(2, ex);
+            var wWatcher = Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
+                                     .getService(Components.interfaces.nsIWindowWatcher);
+            wWatcher.openWindow(null,
+                                "chrome://calendar/content/calErrorPrompt.xul",
+                                "_blank",
+                                "chrome,dialog=yes,alwaysRaised=yes",
+                                paramBlock);
+            return null;
+        }
     },
 
     registerCalendar: function(calendar) {
@@ -438,8 +485,8 @@ calCalendarManager.prototype = {
         this.assureCache();
 
         // Add an observer to track readonly-mode triggers
-        var newObserver = new errorAnnouncer(calendar);
-        calendar.addObserver(newObserver.observer);
+        var newObserver = new calMgrCalendarObserver(calendar, this);
+        calendar.addObserver(newObserver);
 
         var pp = this.mRegisterCalendar.params;
         pp.type = calendar.type;
@@ -454,11 +501,25 @@ calCalendarManager.prototype = {
         //this.mCache[this.mDB.lastInsertRowID] = calendar;
         this.mCache[calendar.id] = calendar;
 
+        // Set up statistics
+        if (calendar.getProperty("requiresNetwork") !== false) {
+            this.mNetworkCalendarCount++;
+        }
+        if (calendar.readOnly) {
+            this.mReadonlyCalendarCount++;
+        }
+        this.mCalendarCount++;
+
         this.notifyObservers("onCalendarRegistered", [calendar]);
     },
 
     unregisterCalendar: function(calendar) {
         this.notifyObservers("onCalendarUnregistering", [calendar]);
+
+        // calendar may be a calICalendar wrapper:
+        if (calendar.wrappedJSObject instanceof calCachedCalendar) {
+            calendar.wrappedJSObject.onCalendarUnregistering();
+        }
 
         var calendarID = calendar.id;
 
@@ -476,6 +537,15 @@ calCalendarManager.prototype = {
         if (this.mCache) {
             delete this.mCache[calendarID];
         }
+
+        if (calendar.readOnly) {
+            this.mReadonlyCalendarCount--;
+        }
+
+        if (calendar.getProperty("requiresNetwork") !== false) {
+            this.mNetworkCalendarCount--;
+        }
+        this.mCalendarCount--;
     },
 
     deleteCalendar: function(calendar) {
@@ -529,9 +599,21 @@ calCalendarManager.prototype = {
                 try {
                     var cal = this.createCalendar(caldata.type, makeURL(caldata.uri));
                     cal.id = caldata.id;
-                    var newObserver = new errorAnnouncer(cal);
-                    cal.addObserver(newObserver.observer);
+                    if ((cal.getProperty("cache.supported") !== false) && cal.getProperty("cache.enabled")) {
+                        cal = new calCachedCalendar(cal);
+                    }
+                    var newObserver = new calMgrCalendarObserver(cal, this);
+                    cal.addObserver(newObserver);
                     this.mCache[caldata.id] = cal;
+
+                    // Set up statistics
+                    if (cal.getProperty("requiresNetwork") !== false) {
+                        this.mNetworkCalendarCount++;
+                    }
+                    if (cal.readOnly) {
+                        this.mReadonlyCalendarCount++;
+                    }
+                    this.mCalendarCount++;
                 } catch (exc) {
                     Components.utils.reportError(
                         "Can't create calendar for " + caldata.id +
@@ -542,6 +624,10 @@ calCalendarManager.prototype = {
     },
 
     getCalendarPref_: function(calendar, name) {
+        ASSERT(calendar, "Invalid Calendar");
+        ASSERT(calendar.id !== null, "Calendar id needs to be an integer");
+        ASSERT(name && name.length > 0, "Pref Name must be non-empty");
+
         // pref names must be lower case
         name = name.toLowerCase();
 
@@ -560,9 +646,13 @@ calCalendarManager.prototype = {
     },
 
     setCalendarPref_: function(calendar, name, value) {
+        ASSERT(calendar, "Invalid Calendar");
+        ASSERT(calendar.id !== null, "Calendar id needs to be an integer");
+        ASSERT(name && name.length > 0, "Pref Name must be non-empty");
+
         // pref names must be lower case
         name = name.toLowerCase();
-
+       
         var calendarID = calendar.id;
 
         this.mDB.beginTransaction();
@@ -584,6 +674,10 @@ calCalendarManager.prototype = {
     },
 
     deleteCalendarPref_: function(calendar, name) {
+        ASSERT(calendar, "Invalid Calendar");
+        ASSERT(calendar.id !== null, "Calendar id needs to be an integer");
+        ASSERT(name && name.length > 0, "Pref Name must be non-empty");
+
         // pref names must be lower case
         name = name.toLowerCase();
 
@@ -622,151 +716,173 @@ function equalMessage(msg1, msg2) {
     return false;
 }
 
-// This is a prototype object for announcing the fact that a calendar error has
-// happened and that the calendar has therefore been put in readOnly mode.  We
-// implement a new one of these for each calendar registered to the calmgr.
-function errorAnnouncer(calendar) {
+function calMgrCalendarObserver(calendar, calMgr) {
     this.calendar = calendar;
     // We compare this to determine if the state actually changed.
     this.storedReadOnly = calendar.readOnly;
-    var announcer = this;
     this.announcedMessages = [];
-    this.observer = {
-
-        QueryInterface: function mBL_QueryInterface(aIID) {
-            ensureIID(
-                [ Components.interfaces.nsIWindowMediatorListener,
-                  Components.interfaces.calIObserver,
-                  Components.interfaces.nsISupports], aIID);
-            return this;
-        },
-
-        // nsIWindowMediatorListener:
-        onCloseWindow: function(aXulWindow) {
-
-            try {
-                var aDOMWindow = aXulWindow.docShell
-                    .QueryInterface(
-                        Components.interfaces.nsIInterfaceRequestor)
-                    .getInterface(
-                        Components.interfaces.nsIDOMWindow); 
-                var args = aDOMWindow.arguments[0]
-                    .QueryInterface(
-                        Components.interfaces.nsIDialogParamBlock);
-
-                // remove the message that has been shown from
-                // the list of all announced messages.
-                announcer.announcedMessages = announcer.announcedMessages.filter(
-                    function(announcedMessage) {
-                        return !equalMessage(announcedMessage, args);
-                    });
-
-                // if the list is now empty we can safely remove the listener
-                if(!announcer.announcedMessages.length) {
-                    var windowMediator = Components.classes["@mozilla.org/appshell/window-mediator;1"]
-                                         .getService(Components.interfaces.nsIWindowMediator);
-                    windowMediator.removeListener(announcer.observer); 
-                }
-
-            } catch(e) {
-                Components.utils.reportError(e);
-            }
-        },
-
-        onOpenWindow: function(aXulWindow) {},
-        onWindowTitleChange: function(aXulWindow,aNewTitle) {},
-
-        // calIObserver:
-        onStartBatch: function() {},
-        onEndBatch: function() {},
-        onLoad: function(calendar) {},
-        onAddItem: function(aItem) {},
-        onModifyItem: function(aNewItem, aOldItem) {},
-        onDeleteItem: function(aDeletedItem) {},
-        onError: function(aErrNo, aMessage) {
-            announcer.announceError(aErrNo, aMessage);
-        },
-        onPropertyChanged: function(aCalendar, aName, aValue, aOldValue) {},
-        onPropertyDeleting: function(aCalendar, aName) {}
-    }
+    this.calMgr = calMgr;
 }
 
-errorAnnouncer.prototype.announceError = function(aErrNo, aMessage) {
-    var paramBlock = Components.classes["@mozilla.org/embedcomp/dialogparam;1"]
-                               .createInstance(Components.interfaces.nsIDialogParamBlock);
-    var sbs = Components.classes["@mozilla.org/intl/stringbundle;1"]
-                        .getService(Components.interfaces.nsIStringBundleService);
-    var props = sbs.createBundle("chrome://calendar/locale/calendar.properties");
-    var errMsg;
-    paramBlock.SetNumberStrings(3);
-    if (!this.storedReadOnly && this.calendar.readOnly) {
-        // Major errors change the calendar to readOnly
-        errMsg = props.formatStringFromName("readOnlyMode", [this.calendar.name], 1);
-    } else if (!this.storedReadOnly && !this.calendar.readOnly) {
-        // Minor errors don't, but still tell the user something went wrong
-        errMsg = props.formatStringFromName("minorError", [this.calendar.name], 1);
-    } else {
-        // The calendar was already in readOnly mode, but still tell the user
-        errMsg = props.formatStringFromName("stillReadOnlyError", [this.calendar.name], 1);
-    }
+calMgrCalendarObserver.prototype = {
+    calendar: null,
+    storedReadOnly: null,
+    calMgr: null,
 
-    // When possible, change the error number into its name, to
-    // make it slightly more readable.
-    var errCode = "0x"+aErrNo.toString(16);
-    const calIErrors = Components.interfaces.calIErrors;
-    // Check if it is worth enumerating all the error codes.
-    if (aErrNo & calIErrors.ERROR_BASE) {
-        for (var err in calIErrors) {
-            if (calIErrors[err] == aErrNo) {
-                errCode = err;
+    QueryInterface: function mBL_QueryInterface(aIID) {
+        ensureIID(
+            [ Components.interfaces.nsIWindowMediatorListener,
+              Components.interfaces.calIObserver,
+              Components.interfaces.nsISupports], aIID);
+        return this;
+    },
+
+    // nsIWindowMediatorListener:
+    onCloseWindow: function(aXulWindow) {
+        try {
+            var aDOMWindow = aXulWindow.docShell
+                .QueryInterface(
+                    Components.interfaces.nsIInterfaceRequestor)
+                .getInterface(
+                    Components.interfaces.nsIDOMWindow);
+            var args = aDOMWindow.arguments[0]
+                .QueryInterface(
+                    Components.interfaces.nsIDialogParamBlock);
+
+            // remove the message that has been shown from
+            // the list of all announced messages.
+            this.announcedMessages = this.announcedMessages.filter(
+                function(announcedMessage) {
+                    return !equalMessage(announcedMessage, args);
+                });
+
+            // if the list is now empty we can safely remove the listener
+            if (!this.announcedMessages.length) {
+                var windowMediator = Components.classes["@mozilla.org/appshell/window-mediator;1"]
+                                     .getService(Components.interfaces.nsIWindowMediator);
+                windowMediator.removeListener(this);
+            }
+
+        } catch (e) {
+            Components.utils.reportError(e);
+        }
+    },
+
+    onOpenWindow: function(aXulWindow) {},
+    onWindowTitleChange: function(aXulWindow,aNewTitle) {},
+
+    // calIObserver:
+    onStartBatch: function() {},
+    onEndBatch: function() {},
+    onLoad: function(calendar) {},
+    onAddItem: function(aItem) {},
+    onModifyItem: function(aNewItem, aOldItem) {},
+    onDeleteItem: function(aDeletedItem) {},
+    onError: function(aErrNo, aMessage) {
+        this.announceError(aErrNo, aMessage);
+    },
+
+    onPropertyChanged: function(aCalendar, aName, aValue, aOldValue) {
+        switch (aName) {
+            case "requiresNetwork":
+                this.calMgr.mNetworkCalendarCount += (aValue ? 1 : -1);
+                break;
+            case "readOnly":
+                this.calMgr.mReadonlyCalendarCount += (aValue ? 1 : -1);
+                break;
+            case "cache.enabled":
+                if (aCalendar.wrappedJSObject instanceof calCachedCalendar) {
+                    // any attempt to switch this flag will reset the cached calendar;
+                    // could be useful for users in case the cache may be corrupted.
+                    aCalendar.wrappedJSObject.setupCachedCalendar();
+                }
+                break;
+        }
+    },
+
+    onPropertyDeleting: function(aCalendar, aName) {
+        this.onPropertyChanged(aCalendar, aName, false, true);
+    },
+
+    // Error announcer specific functions
+
+    announceError: function(aErrNo, aMessage) {
+        var paramBlock = Components.classes["@mozilla.org/embedcomp/dialogparam;1"]
+                                   .createInstance(Components.interfaces.nsIDialogParamBlock);
+        var sbs = Components.classes["@mozilla.org/intl/stringbundle;1"]
+                            .getService(Components.interfaces.nsIStringBundleService);
+        var props = sbs.createBundle("chrome://calendar/locale/calendar.properties");
+        var errMsg;
+        paramBlock.SetNumberStrings(3);
+        if (!this.storedReadOnly && this.calendar.readOnly) {
+            // Major errors change the calendar to readOnly
+            errMsg = props.formatStringFromName("readOnlyMode", [this.calendar.name], 1);
+        } else if (!this.storedReadOnly && !this.calendar.readOnly) {
+            // Minor errors don't, but still tell the user something went wrong
+            errMsg = props.formatStringFromName("minorError", [this.calendar.name], 1);
+        } else {
+            // The calendar was already in readOnly mode, but still tell the user
+            errMsg = props.formatStringFromName("stillReadOnlyError", [this.calendar.name], 1);
+        }
+
+        // When possible, change the error number into its name, to
+        // make it slightly more readable.
+        var errCode = "0x"+aErrNo.toString(16);
+        const calIErrors = Components.interfaces.calIErrors;
+        // Check if it is worth enumerating all the error codes.
+        if (aErrNo & calIErrors.ERROR_BASE) {
+            for (var err in calIErrors) {
+                if (calIErrors[err] == aErrNo) {
+                    errCode = err;
+                }
             }
         }
+
+        var message;
+        switch (aErrNo) {
+            case calIErrors.CAL_UTF8_DECODING_FAILED:
+                message = props.GetStringFromName("utf8DecodeError");
+                break;
+            case calIErrors.ICS_MALFORMEDDATA:
+                message = props.GetStringFromName("icsMalformedError");
+                break;
+            default:
+                message = aMessage
+        }
+
+        paramBlock.SetString(0, errMsg);
+        paramBlock.SetString(1, errCode);
+        paramBlock.SetString(2, message);
+
+        // silently don't do anything if this message already has
+        // been announed without being acknowledged.
+        if (this.announcedMessages.some(
+            function(element, index, array) {
+                return equalMessage(paramBlock, element);
+            })) {
+            return;
+        }
+
+        // if no message has been announced, i.e. no window has been
+        // raised, we need to install the appropriate listener now.
+        if (!this.announcedMessages.length) {
+            Components.classes["@mozilla.org/appshell/window-mediator;1"]
+                      .getService(Components.interfaces.nsIWindowMediator)
+                      .addListener(this);
+        }
+
+        // this message hasn't been announced recently, remember the
+        // details of the message for future reference.
+        this.announcedMessages.push(paramBlock);
+
+        this.storedReadOnly = this.calendar.readOnly;
+
+        var wWatcher = Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
+                                 .getService(Components.interfaces.nsIWindowWatcher);
+        wWatcher.openWindow(null,
+                            "chrome://calendar/content/calErrorPrompt.xul",
+                            "_blank",
+                            "chrome,dialog=yes,alwaysRaised=yes",
+                            paramBlock);
     }
-
-    var message;    
-    switch (aErrNo) {
-        case calIErrors.CAL_UTF8_DECODING_FAILED:
-            message = props.GetStringFromName("utf8DecodeError");
-            break;
-        case calIErrors.ICS_MALFORMEDDATA:
-            message = props.GetStringFromName("icsMalformedError");
-            break;
-        default:
-            message = aMessage
-    }
-
-    paramBlock.SetString(0, errMsg);
-    paramBlock.SetString(1, errCode);
-    paramBlock.SetString(2, message);
-
-    // silently don't do anything if this message already has
-    // been announed without being acknowledged.    
-    if (this.announcedMessages.some(
-        function(element, index, array) {
-            return equalMessage(paramBlock, element);
-        })) {
-        return;
-    }
-
-    // if no message has been announced, i.e. no window has been
-    // raised, we need to install the appropriate listener now.
-    if(!this.announcedMessages.length) {
-        Components.classes["@mozilla.org/appshell/window-mediator;1"]
-                  .getService(Components.interfaces.nsIWindowMediator)
-                  .addListener(this.observer); 
-    }
-
-    // this message hasn't been announced recently, remember the
-    // details of the message for future reference.
-    this.announcedMessages.push(paramBlock);
-
-    this.storedReadOnly = this.calendar.readOnly;
-
-    var wWatcher = Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
-                             .getService(Components.interfaces.nsIWindowWatcher);
-    wWatcher.openWindow(null,
-                        "chrome://calendar/content/calErrorPrompt.xul",
-                        "_blank",
-                        "chrome,dialog=yes,alwaysRaised=yes",
-                        paramBlock);
 }

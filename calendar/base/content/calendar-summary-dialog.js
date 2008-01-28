@@ -19,6 +19,7 @@
  *
  * Contributor(s):
  *   Michael Buettner <michael.buettner@sun.com>
+ *   Philipp Kewisch <mozilla@kewis.ch>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -70,9 +71,10 @@ function onLoad() {
     window.readOnly = calendar.readOnly;
     if (!window.readOnly) {
         try {
-            var provider = calendar
-                .QueryInterface(
-                    Components.interfaces.calIWcapCalendar);
+            // temporary hack unless all group scheduling features are supported
+            // by the caching facade (calCachedCalendar):
+            var provider = calendar.getProperty("private.wcapCalendar")
+                                   .QueryInterface(Components.interfaces.calIWcapCalendar);
             var attendee = provider.getInvitedAttendee(item);
             if (attendee) {
                 window.attendee = attendee.clone();
@@ -252,13 +254,40 @@ function updateRepeatDetails() {
     }
 
     document.getElementById("repeat-row").removeAttribute("hidden");
-
+    
+    // First of all collapse the details text. If we fail to
+    // create a details string, we simply don't show anything.
+    // this could happen if the repeat rule is something exotic
+    // we don't have any strings prepared for.
+    var repeatDetails = document.getElementById("repeat-details");
+    repeatDetails.setAttribute("collapsed", "true");
+    
+    // Try to create a descriptive string from the rule(s).
     var kDefaultTimezone = calendarDefaultTimezone();
     var startDate =  item.startDate || item.entryDate;
     var endDate = item.endDate || item.dueDate;
     startDate = startDate ? startDate.getInTimezone(kDefaultTimezone) : null;
     endDate = endDate ? endDate.getInTimezone(kDefaultTimezone) : null;
-    commonUpdateRepeatDetails(recurrenceInfo, startDate, endDate, startDate.isDate);
+    var detailsString = recurrenceRule2String(
+        recurrenceInfo, startDate, endDate, startDate.isDate);
+        
+    // Now display the string...
+    if (detailsString) {
+        var lines = detailsString.split("\n");
+        repeatDetails.removeAttribute("collapsed");
+        while (repeatDetails.childNodes.length > lines.length) {
+            repeatDetails.removeChild(repeatDetails.lastChild);
+        }
+        var numChilds = repeatDetails.childNodes.length;
+        for (var i = 0; i < lines.length; i++) {
+            if (i >= numChilds) {
+                var newNode = repeatDetails.childNodes[0]
+                                           .cloneNode(true);
+                repeatDetails.appendChild(newNode);
+            }
+            repeatDetails.childNodes[i].value = lines[i];
+        }
+    }
 }
 
 function updateAttendees() {

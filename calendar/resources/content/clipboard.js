@@ -76,15 +76,19 @@ function canPaste()
     var clipboard = getClipboard();
     var flavourArray = new SupportsArray;
     var flavours = ["text/calendar", "text/unicode"];
-   
-    for (var i = 0; i < flavours.length; ++i)
-    {
-        var kSuppString = new SupportsCString;
-        kSuppString.data = flavours[i];
-        flavourArray.AppendElement(kSuppString);
+
+    if (kClipboardIID.number == "{8b5314ba-db01-11d2-96ce-0060b0fb9956}") { // on branch
+        for (var i = 0; i < flavours.length; ++i) {
+            var kSuppString = new SupportsCString;
+            kSuppString.data = flavours[i];
+            flavourArray.AppendElement(kSuppString);
+        }
+        return clipboard.hasDataMatchingFlavors(flavourArray,
+                                                kClipboardIID.kGlobalClipboard);
+    } else {
+        return clipboard.hasDataMatchingFlavors(flavours, flavours.length,
+                                                kClipboardIID.kGlobalClipboard);
     }
-   
-    return clipboard.hasDataMatchingFlavors(flavourArray, kClipboardIID.kGlobalClipboard);
 }
 
 /** 
@@ -98,7 +102,7 @@ function cutToClipboard( /* calendarEventArray */)
 
     if( copyToClipboard( calendarEventArray ) )
     {
-         deleteEventCommand( true ); // deletes all selected events without prompting.
+         deleteSelectedEvents();
     }
 }
 
@@ -119,9 +123,7 @@ function copyToClipboard( calendarItemArray )
         return false;
     }
 
-    var icssrv = Components.classes["@mozilla.org/calendar/ics-service;1"]
-                       .getService(Components.interfaces.calIICSService);
-    var calComp = icssrv.createIcalComponent("VCALENDAR");
+    var calComp = getIcsService().createIcalComponent("VCALENDAR");
     calSetProdidVersion(calComp);
 
     for each (item in calendarItemArray) {
@@ -210,9 +212,7 @@ function pasteFromClipboard()
     switch (flavour.value) {
         case "text/calendar":
         case "text/unicode":
-            var icssrv = Components.classes["@mozilla.org/calendar/ics-service;1"]
-                                   .getService(Components.interfaces.calIICSService);
-            var calComp = icssrv.parseICS(data);
+            var calComp = getIcsService().parseICS(data, null);
             var subComp = calComp.getFirstSubcomponent("ANY");
             while (subComp) {
                 switch (subComp.componentType) {

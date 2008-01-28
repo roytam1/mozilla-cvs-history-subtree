@@ -194,6 +194,13 @@ public:
                                 nsBoundingMetrics& aBoundingMetrics,
                                 PRInt32*           aFontID = nsnull);
 #endif /* MOZ_MATHML */
+
+#ifdef NOBBCACHE
+	NS_IMETHOD GetBackbuffer(const nsRect &aRequestedSize, const nsRect &aMaxSize,
+                           PRBool aForBlending, nsIDrawingSurface* &aBackbuffer);
+	NS_IMETHOD ReleaseBackbuffer(void);
+#endif
+
   //LockAndUpdateView() - method, similar to UpdateGC (from gtk gfx).
   //Acquires "fresh" drawable mView (BView) from drawing surface, locks it (BeOS specifics),
   //updates font, color and sets clipping region. 
@@ -226,6 +233,7 @@ protected:
 	rgb_color mRGB_color;
 	BFont *mCurrentBFont;
 	nsLineStyle mCurrentLineStyle;
+	pattern mCurrentLinePattern;
 	float mP2T;
 };
 

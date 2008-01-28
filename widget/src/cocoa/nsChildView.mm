@@ -3850,8 +3850,7 @@ static PRBool IsSpecialRaptorKey(UInt32 macKeyCode)
     outGeckoEvent->charCode = 0;
   } 
   
-  if (aMessage == NS_KEY_PRESS && !outGeckoEvent->isMeta && outGeckoEvent->keyCode != NS_VK_PAGE_UP && 
-      outGeckoEvent->keyCode != NS_VK_PAGE_DOWN)
+  if (aMessage == NS_KEY_PRESS && !outGeckoEvent->isMeta)
     ::ObscureCursor();
 }
 

@@ -19,6 +19,7 @@
  *
  * Contributor(s):
  *   Michael Buettner <michael.buettner@sun.com>
+ *   Philipp Kewisch <mozilla@kewis.ch>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -40,10 +41,129 @@ var taskDetailsView = {
      * Task Details Events
      */
     onSelect: function tDV_onSelect(event) {
+
+        var dateFormatter =
+            Components.classes["@mozilla.org/calendar/datetime-formatter;1"]
+            .getService(Components.interfaces.calIDateTimeFormatter);
+
+        var displayElement = function(id,flag) {
+            var element = document.getElementById(id);
+            if (element) {
+                if (flag) {
+                    element.removeAttribute("hidden");
+                } else {
+                    element.setAttribute("hidden", "true");
+                }
+            }
+            return flag;
+        }
+
         var item = document.getElementById("calendar-task-tree").currentTask;
-        if (item != null) {
-            document.getElementById("calendar-task-details-row").removeAttribute("hidden");
+        if (displayElement("calendar-task-details",item != null)) {
+            displayElement("calendar-task-details-title-row", true);
             document.getElementById("calendar-task-details-title").value = item.title;
+            var organizer = item.organizer;
+            if (displayElement("calendar-task-details-organizer-row", organizer != null)) {
+                var name = organizer.commonName;
+                if (!name || name.length <= 0) {
+                  if (organizer.id && organizer.id.length) {
+                      name = organizer.id;
+                      var re = new RegExp("^mailto:(.*)", "i");
+                      var matches = re.exec(name);
+                      if (matches) {
+                          name = matches[1];
+                      }
+                  }
+                }
+                if (displayElement("calendar-task-details-organizer-row", name && name.length)) {
+                    document.getElementById("calendar-task-details-organizer").value = name;
+                }
+            }
+            var priority = 0;
+            if (item.calendar.getProperty("capabilities.priority.supported") != false) {
+                priority = parseInt(item.priority);
+            }
+            if (displayElement("calendar-task-details-priority-row", priority > 0)) {
+                if (priority >= 1 && priority <= 4) {
+                    displayElement("calendar-task-details-priority-low", false);
+                    displayElement("calendar-task-details-priority-normal", false);
+                    displayElement("calendar-task-details-priority-high", true);
+                } else if (priority == 5) {
+                    displayElement("calendar-task-details-priority-low", false);
+                    displayElement("calendar-task-details-priority-high", false);
+                    displayElement("calendar-task-details-priority-normal", true);
+                } else if (priority >= 6 && priority <= 9) {
+                    displayElement("calendar-task-details-priority-normal", false);
+                    displayElement("calendar-task-details-priority-high", false);
+                    displayElement("calendar-task-details-priority-low", true);
+                } else {
+                    displayElement("calendar-task-details-priority-normal", false);
+                    displayElement("calendar-task-details-priority-high", false);
+                    displayElement("calendar-task-details-priority-low", false);
+                }
+            }
+            var status = item.getProperty("STATUS");
+            if (displayElement("calendar-task-details-status-row", status && status.length > 0)) {
+                var statusDetails = document.getElementById("calendar-task-details-status");
+                switch(status) {
+                    case "NEEDS-ACTION":
+                        statusDetails.value = calGetString(
+                            "calendar",
+                            "taskDetailsStatusNeedsAction");
+                        break;
+                    case "IN-PROCESS":
+                        var percent = 0;
+                        var property = item.getProperty("PERCENT-COMPLETE");
+                        if (property != null) {
+                            var percent = parseInt(property);
+                        }
+                        statusDetails.value = calGetString(
+                            "calendar",
+                            "taskDetailsStatusInProgress", [percent]);
+                        break;
+                    case "COMPLETED":
+                        statusDetails.value = calGetString(
+                            "calendar",
+                            "taskDetailsStatusCompletedOn",
+                            [dateFormatter.formatDateTime(item.completedDate)]);
+                        break;
+                    case "CANCELLED":
+                        statusDetails.value = calGetString(
+                            "calendar",
+                            "taskDetailsStatusCancelled");
+                        break; 
+                    default:
+                        displayElement("calendar-task-details-status-row", false);
+                        break;
+                }
+            }
+            var category = item.getProperty("CATEGORIES");
+            if (displayElement("calendar-task-details-category-row", category && category.length)) {
+                document.getElementById("calendar-task-details-category").value = category;
+            }
+            if (displayElement("calendar-task-details-entrydate-row", item.entryDate != null)) {
+                document.getElementById("calendar-task-details-entrydate").value = dateFormatter.formatDateLong(item.entryDate);
+            }
+            if (displayElement("calendar-task-details-entrydate-row", item.entryDate != null)) {
+                document.getElementById("calendar-task-details-entrydate").value = dateFormatter.formatDateLong(item.entryDate);
+            }
+            if (displayElement("calendar-task-details-duedate-row", item.dueDate != null)) {
+                document.getElementById("calendar-task-details-duedate").value = dateFormatter.formatDateLong(item.dueDate);
+            }
+            var parentItem = item;
+            if (parentItem.parentItem != parentItem) {
+                parentItem = parentItem.parentItem;
+            }
+            var recurrenceInfo = parentItem.recurrenceInfo;
+            if (displayElement("calendar-task-details-repeat-row", recurrenceInfo != null)) {
+                var kDefaultTimezone = calendarDefaultTimezone();
+                var startDate = item.entryDate ? item.entryDate.getInTimezone(kDefaultTimezone) : null;
+                var endDate = item.dueDate ? item.dueDate.getInTimezone(kDefaultTimezone) : null;
+                var detailsString = recurrenceRule2String(recurrenceInfo,startDate,endDate,startDate.isDate);
+                if (detailsString) {
+                    document.getElementById("calendar-task-details-repeat").value = detailsString.split("\n").join(" ");
+                }
+            }
             var textbox = document.getElementById("calendar-task-details-description");
             var description = item.hasProperty("DESCRIPTION") ? item.getProperty("DESCRIPTION") : null;
             textbox.value = description;
@@ -52,12 +172,101 @@ var taskDetailsView = {
     }
 };
 
-function taskViewOnLoad() {
-    // set up the custom tree view
-    var tree = document.getElementById("calendar-task-tree");
-    taskTreeView.tree = tree;
-    tree.view = taskTreeView;
+function taskViewUpdate(filter) {
 
+    var percentCompleted = function(item) {
+        var percent = 0;
+        var property = item.getProperty("PERCENT-COMPLETE");
+        if (property != null) {
+            var percent = parseInt(property);
+        }
+        return percent;
+    }
+
+    var filterFunctions = {
+        notstarted: function filterNotStarted(item) {
+            return (percentCompleted(item) <= 0);
+        },
+        overdue: function filterOverdue(item) {
+          // in case the item has no due date
+          // it can't be overdue by definition
+          if (item.dueDate == null) {
+              return false;
+          }
+          return (percentCompleted(item) < 100) &&
+                 !(item.dueDate.compare(now()) > 0);
+        },
+        completed: function filterCompleted(item) {
+            return (percentCompleted(item) >= 100);
+        }
+    }
+
+    var tree = document.getElementById("calendar-task-tree");
+    tree.filterFunction = filterFunctions[filter] || null;
+
+    var todayDate = new Date();
+    var startDate = new Date(todayDate.getFullYear(),
+                             todayDate.getMonth(),
+                             todayDate.getDate(),
+                             0, 0, 0);
+
+    var rangeFunctions = {
+        today: function rangeToday() {
+            tree.startDate = jsDateToDateTime(startDate)
+                .getInTimezone(calendarDefaultTimezone());
+            tree.endDate = jsDateToDateTime(
+                new Date(startDate.getTime() + (1000 * 60 * 60 * 24) - 1))
+                    .getInTimezone(calendarDefaultTimezone());
+        },
+        next7days: function rangeNext7Days() {
+            tree.startDate = jsDateToDateTime(startDate)
+                .getInTimezone(calendarDefaultTimezone());
+            tree.endDate = jsDateToDateTime(
+                new Date(startDate.getTime() + (1000 * 60 * 60 * 24 * 8)))
+                    .getInTimezone(calendarDefaultTimezone());
+        }
+    }
+    
+    if (rangeFunctions[filter]) {
+      rangeFunctions[filter]();
+    } else {
+      tree.startDate = null;
+      tree.endDate = null;
+    }
+
+    tree.refresh();
+}
+
+function taskViewUpdateFilter(event) {
+
+    taskViewUpdate(event.target.value);
+}
+
+function sendMailToOrganizer() {
+    var item = document.getElementById("calendar-task-tree").currentTask;
+    if (item != null) {
+        var organizer = item.organizer;
+        if (organizer) {
+            if (organizer.id && organizer.id.length) {
+                var email = organizer.id;
+                var re = new RegExp("^mailto:(.*)", "i");
+                if (email && email.length) {
+                    if (re.test(email)) {
+                        email = RegExp.$1;
+                    } else {
+                        email = email;
+                    }
+                }
+
+                // Set up the subject
+                var emailSubject = calGetString("sun-calendar-event-dialog",
+                                                "emailSubjectReply",
+                                                [item.title]);
+
+                sendMailTo(email, emailSubject);
+            }
+        }
+    }
 }
 
 function taskViewObserveDisplayDeckChange(event) {
@@ -77,7 +286,8 @@ function taskViewObserveDisplayDeckChange(event) {
 
     // In case we find that the task view has been made visible, we refresh the view.
     if (id == "calendar-task-box") {
-        document.getElementById("calendar-task-tree").refresh();
+        taskViewUpdate(
+            document.getElementById("task-tree-filter").value || "all");
     }
 }
 

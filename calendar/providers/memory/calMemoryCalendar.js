@@ -21,6 +21,7 @@
  * Contributor(s):
  *   Vladimir Vukicevic <vladimir.vukicevic@oracle.com>
  *   Philipp Kewisch <mozilla@kewis.ch>
+ *   Daniel Boelzle <daniel.boelzle@sun.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -43,41 +44,26 @@
 const calCalendarManagerContractID = "@mozilla.org/calendar/manager;1";
 const calICalendarManager = Components.interfaces.calICalendarManager;
 
-const USECS_PER_SECOND = 1000000;
-
 function calMemoryCalendar() {
-    this.wrappedJSObject = this;
-    this.calendarToReturn = this,
+    this.initProviderBase();
     this.initMemoryCalendar();
 }
 
-// END_OF_TIME needs to be the max value a PRTime can be
-const START_OF_TIME = -0x7fffffffffffffff;
-const END_OF_TIME = 0x7fffffffffffffff;
-
 calMemoryCalendar.prototype = {
-    // This will be returned from getItems as the calendar. The ics
-    // calendar overwrites this.
-    calendarToReturn: null,
-    mObservers: null,
+    __proto__: calProviderBase.prototype,
 
     //
     // nsISupports interface
     // 
     QueryInterface: function (aIID) {
-        if (!aIID.equals(Components.interfaces.nsISupports) &&
-            !aIID.equals(Components.interfaces.calICalendarProvider) &&
-            !aIID.equals(Components.interfaces.calICalendar)) {
-            throw Components.results.NS_ERROR_NO_INTERFACE;
-        }
-
-        return this;
+        return doQueryInterface(this, calMemoryCalendar.prototype, aIID,
+                                [Components.interfaces.calISyncCalendar,
+                                 Components.interfaces.calICalendarProvider]);
     },
 
     initMemoryCalendar: function() {
         this.mObservers = new calListenerBag(Components.interfaces.calIObserver);
         this.mItems = { };
-        this.mProperties = {};
     },
 
     //
@@ -104,84 +90,29 @@ calMemoryCalendar.prototype = {
         } catch(ex) {}
     },
 
+    mRelaxedMode: undefined,
+    get relaxedMode calMemoryCalendar_relaxedModeGetter() {
+        if (this.mRelaxedMode === undefined) {
+            this.mRelaxedMode = this.getProperty("relaxedMode");
+        }
+        return this.mRelaxedMode;
+    },
+
     //
     // calICalendar interface
     //
 
-    // attribute AUTF8String name;
-    // attribute AUTF8String id;
-    mID: null,
-    get id() {
-        return this.mID;
-    },
-    set id(id) {
-        if (this.mID)
-            throw Components.results.NS_ERROR_ALREADY_INITIALIZED;
-        return (this.mID = id);
-    },
-
-    get name() {
-        return this.getProperty("name");
-    },
-    set name(name) {
-        return this.setProperty("name", name);
+    getProperty: function calMemoryCalendar_getProperty(aName) {
+        switch (aName) {
+            case "cache.supported":
+            case "requiresNetwork":
+                return false;
+        }
+        return this.__proto__.__proto__.getProperty.apply(this, arguments);
     },
 
     // readonly attribute AUTF8String type;
     get type() { return "memory"; },
-
-    mReadOnly: false,
-
-    // Most of the time you can just let the ics calendar handle this
-    get readOnly() { 
-        return this.getProperty("readOnly");
-    },
-    set readOnly(bool) {
-        return this.setProperty("readOnly", bool);
-    },
-
-    get canRefresh() {
-        return false;
-    },
-
-    // attribute nsIURI uri;
-    mUri: null,
-    get uri() { return this.mUri; },
-    set uri(aURI) { this.mUri = aURI; },
-
-    mProperties: null,
-    getProperty: function(aName) {
-        return this.mProperties[aName];
-    },
-    setProperty: function(aName, aValue) {
-        var oldValue = this.getProperty(aName);
-        if (oldValue != aValue) {
-            this.mProperties[aName] = aValue;
-            this.mObservers.notify("onPropertyChanged",
-                                   [this, aName, aValue, oldValue]);
-        }
-        return aValue;
-    },
-    deleteProperty: function(aName) {
-        this.mObservers.notify("onPropertyDeleting", [this, aName]);
-        delete this.mProperties[aName];
-    },
-
-    refresh: function() {
-        // no-op
-    },
-
-    get sendItipInvitations() { return true; },
-
-    // void addObserver( in calIObserver observer );
-    addObserver: function (aObserver) {
-        this.mObservers.add(aObserver);
-    },
-
-    // void removeObserver( in calIObserver observer );
-    removeObserver: function (aObserver) {
-        this.mObservers.remove(aObserver);
-    },
 
     // void addItem( in calIItemBase aItem, in calIOperationListener aListener );
     addItem: function (aItem, aListener) {
@@ -198,7 +129,7 @@ calMemoryCalendar.prototype = {
 
         if (aItem.id == null) {
             if (aListener)
-                aListener.onOperationComplete (this.calendarToReturn,
+                aListener.onOperationComplete (this.superCalendar,
                                                Components.results.NS_ERROR_FAILURE,
                                                aListener.ADD,
                                                aItem.id,
@@ -207,17 +138,23 @@ calMemoryCalendar.prototype = {
         }
 
         if (this.mItems[aItem.id] != null) {
-            // is this an error?
-            if (aListener)
-                aListener.onOperationComplete (this.calendarToReturn,
-                                               Components.interfaces.calIErrors.DUPLICATE_ID,
-                                               aListener.ADD,
-                                               aItem.id,
-                                               "ID already exists for addItem");
-            return;
+            if (this.relaxedMode) {
+                // we possibly want to interact with the user before deleting
+                delete this.mItems[aItem.id];
+            }
+            else {
+                if (aListener) {
+                    aListener.onOperationComplete (this.superCalendar,
+                                                   Components.interfaces.calIErrors.DUPLICATE_ID,
+                                                   aListener.ADD,
+                                                   aItem.id,
+                                                   "ID already exists for addItem");
+                }
+                return;
+            }
         }
 
-        aItem.calendar = this.calendarToReturn;
+        aItem.calendar = this.superCalendar;
         var rec = aItem.recurrenceInfo;
         if (rec) {
             var exceptions = rec.getExceptionIds({});
@@ -227,19 +164,18 @@ calMemoryCalendar.prototype = {
                     if (!exception.isMutable) {
                         exception = exception.clone();
                     }
-                    exception.calendar = this.calendarToReturn;
+                    exception.calendar = this.superCalendar;
                     rec.modifyException(exception);
                 }
             }
         }
         
-        aItem.generation = 1;
         aItem.makeImmutable();
         this.mItems[aItem.id] = aItem;
 
         // notify the listener
         if (aListener)
-            aListener.onOperationComplete (this.calendarToReturn,
+            aListener.onOperationComplete (this.superCalendar,
                                            Components.results.NS_OK,
                                            aListener.ADD,
                                            aItem.id,
@@ -253,54 +189,57 @@ calMemoryCalendar.prototype = {
         if (this.readOnly) 
             throw Components.interfaces.calIErrors.CAL_IS_READONLY;
         if (!aNewItem) {
-            throw Components.results.NS_ERROR_FAILURE;
-        }
-        if (aNewItem.id == null || this.mItems[aNewItem.id] == null) {
-            // this is definitely an error
-            if (aListener)
-                aListener.onOperationComplete (this.calendarToReturn,
-                                               Components.results.NS_ERROR_FAILURE,
-                                               aListener.MODIFY,
-                                               aNewItem.id,
-                                               "ID for modifyItem doesn't exist, is null, or is from different calendar");
-            return;
+            throw Components.results.NS_ERROR_INVALID_ARG;
         }
 
-        // do the old and new items match?
-        if (aOldItem.id != aNewItem.id) {
-            if (aListener)
-                aListener.onOperationComplete (this.calendarToReturn,
-                                               Components.results.NS_ERROR_FAILURE,
-                                               aListener.MODIFY,
-                                               aNewItem.id,
-                                               "item ID mismatch between old and new items");
-            return;
+        var this_ = this;
+        function reportError(errStr, errId) {
+            if (aListener) {
+                aListener.onOperationComplete(this_.superCalendar,
+                                              errId ? errId : Components.results.NS_ERROR_FAILURE,
+                                              aListener.MODIFY,
+                                              aNewItem.id,
+                                              errStr);
+            }
+            return null;
         }
-        
+
+        if (!aNewItem.id) {
+            // this is definitely an error
+            return reportError(null, "ID for modifyItem item is null");
+        }
+
         if (aNewItem.parentItem != aNewItem) {
+// isn't the below a bug? we modify the passed item's recurrenceInfo; why don't we clone it before, modifiedItem...?
             aNewItem.parentItem.recurrenceInfo.modifyException(aNewItem);
             aNewItem = aNewItem.parentItem;
         }
-        aOldItem = aOldItem.parentItem;
 
-        if (!compareItems(this.mItems[aOldItem.id], aOldItem)) {
-            if (aListener)
-                aListener.onOperationComplete (this.calendarToReturn,
-                                               Components.results.NS_ERROR_FAILURE,
-                                               aListener.MODIFY,
-                                               aNewItem.id,
-                                               "old item mismatch in modifyItem");
-            return;
-        }
+        if (this.relaxedMode) {
+            if (!aOldItem) {
+                aOldItem = (this.mItems[aNewItem.id] || aNewItem);
+            }
+            aOldItem = aOldItem.parentItem;
+        } else {
+            if (!aOldItem || !this.mItems[aNewItem.id]) {
+                // no old item found?  should be using addItem, then.
+                return reportError("ID for modifyItem doesn't exist, is null, or is from different calendar");
+            }
 
-        if (aOldItem.generation != aNewItem.generation) {
-            if (aListener)
-                aListener.onOperationComplete (this.calendarToReturn,
-                                               Components.results.NS_ERROR_FAILURE,
-                                               aListener.MODIFY,
-                                               aNewItem.id,
-                                               "generation mismatch in modifyItem");
-            return;
+            // do the old and new items match?
+            if (aOldItem.id != aNewItem.id) {
+                return reportError("item ID mismatch between old and new items");
+            }
+
+            aOldItem = aOldItem.parentItem;
+
+            if (!compareItems(this.mItems[aOldItem.id], aOldItem)) {
+                return reportError("old item mismatch in modifyItem");
+            }
+
+            if (aOldItem.generation != aNewItem.generation) {
+                return reportError("generation mismatch in modifyItem");
+            }
         }
 
         var modifiedItem = aNewItem.clone();
@@ -309,13 +248,14 @@ calMemoryCalendar.prototype = {
         this.mItems[aNewItem.id] = modifiedItem;
 
         if (aListener)
-            aListener.onOperationComplete (this.calendarToReturn,
+            aListener.onOperationComplete (this.superCalendar,
                                            Components.results.NS_OK,
                                            aListener.MODIFY,
                                            modifiedItem.id,
                                            modifiedItem);
         // notify observers
         this.mObservers.notify("onModifyItem", [modifiedItem, aOldItem]);
+        return null;
     },
 
     // void deleteItem( in calIItemBase aItem, in calIOperationListener aListener );
@@ -324,7 +264,7 @@ calMemoryCalendar.prototype = {
             throw Components.interfaces.calIErrors.CAL_IS_READONLY;
         if (aItem.id == null || this.mItems[aItem.id] == null) {
             if (aListener)
-                aListener.onOperationComplete (this.calendarToReturn,
+                aListener.onOperationComplete (this.superCalendar,
                                                Components.results.NS_ERROR_FAILURE,
                                                aListener.DELETE,
                                                aItem.id,
@@ -335,7 +275,7 @@ calMemoryCalendar.prototype = {
         var oldItem = this.mItems[aItem.id];
         if (oldItem.generation != aItem.generation) {
             if (aListener)
-                aListener.onOperationComplete (this.calendarToReturn,
+                aListener.onOperationComplete (this.superCalendar,
                                                Components.results.NS_ERROR_FAILURE,
                                                aListener.DELETE,
                                                aItem.id,
@@ -346,7 +286,7 @@ calMemoryCalendar.prototype = {
         delete this.mItems[aItem.id];
 
         if (aListener)
-            aListener.onOperationComplete (this.calendarToReturn,
+            aListener.onOperationComplete (this.superCalendar,
                                            Components.results.NS_OK,
                                            aListener.DELETE,
                                            aItem.id,
@@ -362,7 +302,7 @@ calMemoryCalendar.prototype = {
 
         if (aId == null ||
             this.mItems[aId] == null) {
-            aListener.onOperationComplete(this.calendarToReturn,
+            aListener.onOperationComplete(this.superCalendar,
                                           Components.results.NS_ERROR_FAILURE,
                                           aListener.GET,
                                           null,
@@ -378,7 +318,7 @@ calMemoryCalendar.prototype = {
         } else if (item instanceof Components.interfaces.calITodo) {
             iid = Components.interfaces.calITodo;
         } else {
-            aListener.onOperationComplete (this.calendarToReturn,
+            aListener.onOperationComplete (this.superCalendar,
                                            Components.results.NS_ERROR_FAILURE,
                                            aListener.GET,
                                            aId,
@@ -386,12 +326,12 @@ calMemoryCalendar.prototype = {
             return;
         }
 
-        aListener.onGetResult (this.calendarToReturn,
+        aListener.onGetResult (this.superCalendar,
                                Components.results.NS_OK,
                                iid,
                                null, 1, [item]);
 
-        aListener.onOperationComplete (this.calendarToReturn,
+        aListener.onOperationComplete (this.superCalendar,
                                        Components.results.NS_OK,
                                        aListener.GET,
                                        aId,
@@ -412,12 +352,6 @@ calMemoryCalendar.prototype = {
         const calIRecurrenceInfo = Components.interfaces.calIRecurrenceInfo;
 
         var itemsFound = Array();
-        var startTime = START_OF_TIME;
-        var endTime = END_OF_TIME;
-        if (aRangeStart)
-            startTime = aRangeStart.nativeTime;
-        if (aRangeEnd)
-            endTime = aRangeEnd.nativeTime;
 
         //
         // filters
@@ -428,7 +362,7 @@ calMemoryCalendar.prototype = {
         var wantTodos = ((aItemFilter & calICalendar.ITEM_FILTER_TYPE_TODO) != 0);
         if(!wantEvents && !wantTodos) {
             // bail.
-            aListener.onOperationComplete (this.calendarToReturn,
+            aListener.onOperationComplete (this.superCalendar,
                                            Components.results.NS_ERROR_FAILURE,
                                            aListener.GET,
                                            null,
@@ -439,6 +373,9 @@ calMemoryCalendar.prototype = {
         // completed?
         var itemCompletedFilter = ((aItemFilter & calICalendar.ITEM_FILTER_COMPLETED_YES) != 0);
         var itemNotCompletedFilter = ((aItemFilter & calICalendar.ITEM_FILTER_COMPLETED_NO) != 0);
+        function checkCompleted(item) {
+            return (item.isCompleted ? itemCompletedFilter : itemNotCompletedFilter);
+        }
 
         // return occurrences?
         var itemReturnOccurrences = ((aItemFilter & calICalendar.ITEM_FILTER_CLASS_OCCURRENCES) != 0);
@@ -457,168 +394,47 @@ calMemoryCalendar.prototype = {
             }
         }
 
-        //  if aCount != 0, we don't attempt to sort anything, and
-        //  instead return the first aCount items that match.
+        aRangeStart = ensureDateTime(aRangeStart);
+        aRangeEnd = ensureDateTime(aRangeEnd);
 
         for (var itemIndex in this.mItems) {
             var item = this.mItems[itemIndex];
-            var itemtoadd = null;
-
-            var itemStartTime = 0;
-            var itemEndTime = 0;
-
-            var tmpitem = item;
-            if (wantEvents && (item instanceof Components.interfaces.calIEvent)) {
-                tmpitem = item.QueryInterface(Components.interfaces.calIEvent);
-                itemStartTime = (item.startDate
-                                 ? item.startDate.nativeTime
-                                 : START_OF_TIME);
-                itemEndTime = (item.endDate
-                               ? item.endDate.nativeTime
-                               : END_OF_TIME);
-            } else if (wantTodos && (item instanceof Components.interfaces.calITodo)) {
-                // if it's a todo, also filter based on completeness
-                if (item.isCompleted && !itemCompletedFilter)
+            var isEvent_ = isEvent(item);
+            if (isEvent_) {
+                if (!wantEvents) {
                     continue;
-                else if (item.isCompleted && !itemNotCompletedFilter)
-                    continue;
-
-                itemStartTime = (item.entryDate
-                                 ? item.entryDate.nativeTime
-                                 : START_OF_TIME);
-                itemEndTime = (item.dueDate
-                               ? item.dueDate.nativeTime
-                               : END_OF_TIME);
-            } else {
-                // XXX unknown item type, wth do we do?
+                }
+            } else if (!wantTodos) {
                 continue;
             }
 
-            // Correct for floating
-            if (aRangeStart && item.startDate && item.startDate.timezone == 'floating')
-                itemStartTime -= aRangeStart.timezoneOffset * USECS_PER_SECOND;
-            if (aRangeEnd && item.endDate && item.endDate.timezone == 'floating')
-                itemEndTime -= aRangeEnd.timezoneOffset * USECS_PER_SECOND;
-
-            if (itemStartTime < endTime) {
-                // figure out if there are recurrences here we care about
-                if (itemReturnOccurrences && item.recurrenceInfo)
-                {
-                    // there might be some recurrences here that we need to handle
-                    var recs = item.recurrenceInfo.getOccurrences (aRangeStart, aRangeEnd, 0, {});
-                    itemsFound = itemsFound.concat(recs);
-                } else if (itemEndTime >= startTime) {
-                    itemsFound.push(item);
+            if (itemReturnOccurrences && item.recurrenceInfo) {
+                var occurrences = item.recurrenceInfo.getOccurrences(
+                    aRangeStart, aRangeEnd, aCount ? aCount - itemsFound.length : 0, {});
+                if (!isEvent_) {
+                    occurrences = occurrences.filter(checkCompleted);
                 }
+                itemsFound = itemsFound.concat(occurrences);
+            } else if ((isEvent_ || checkCompleted(item)) &&
+                       checkIfInRange(item, aRangeStart, aRangeEnd)) {
+                itemsFound.push(item);
             }
-
-            if (aCount && itemsFound.length >= aCount)
+            if (aCount && itemsFound.length >= aCount) {
                 break;
+            }
         }
 
-        aListener.onGetResult (this.calendarToReturn,
+        aListener.onGetResult (this.superCalendar,
                                Components.results.NS_OK,
                                typeIID,
                                null,
                                itemsFound.length,
                                itemsFound);
 
-        aListener.onOperationComplete (this.calendarToReturn,
+        aListener.onOperationComplete (this.superCalendar,
                                        Components.results.NS_OK,
                                        aListener.GET,
                                        null,
                                        null);
-    },
-
-    startBatch: function ()
-    {
-        this.mObservers.notify("onStartBatch");
-    },
-    endBatch: function ()
-    {
-        this.mObservers.notify("onEndBatch");
-    }
-}
-
-// nsIFactory
-const calMemoryCalendarFactory = {
-    createInstance: function (outer, iid) {
-        if (outer != null)
-            throw Components.results.NS_ERROR_NO_AGGREGATION;
-        return (new calMemoryCalendar()).QueryInterface(iid);
     }
 };
-
-/****
- **** module registration
- ****/
-
-var calMemoryCalendarModule = {
-    mCID: Components.ID("{bda0dd7f-0a2f-4fcf-ba08-5517e6fbf133}"),
-    mContractID: "@mozilla.org/calendar/calendar;1?type=memory",
-
-    mUtilsLoaded: false,
-    loadUtils: function memoryLoadUtils() {
-        if (this.mUtilsLoaded)
-            return;
-
-        const jssslContractID = "@mozilla.org/moz/jssubscript-loader;1";
-        const jssslIID = Components.interfaces.mozIJSSubScriptLoader;
-
-        const iosvcContractID = "@mozilla.org/network/io-service;1";
-        const iosvcIID = Components.interfaces.nsIIOService;
-
-        var loader = Components.classes[jssslContractID].getService(jssslIID);
-        var iosvc = Components.classes[iosvcContractID].getService(iosvcIID);
-
-        // Note that unintuitively, __LOCATION__.parent == .
-        // We expect to find utils in ./../js
-        var appdir = __LOCATION__.parent.parent;
-        appdir.append("js");
-        var scriptName = "calUtils.js";
-
-        var f = appdir.clone();
-        f.append(scriptName);
-
-        try {
-            var fileurl = iosvc.newFileURI(f);
-            loader.loadSubScript(fileurl.spec, this.__parent__.__parent__);
-        } catch (e) {
-            dump("Error while loading " + fileurl.spec + "\n");
-            throw e;
-        }
-
-        this.mUtilsLoaded = true;
-    },
-
-    
-    registerSelf: function (compMgr, fileSpec, location, type) {
-        compMgr = compMgr.QueryInterface(Components.interfaces.nsIComponentRegistrar);
-        compMgr.registerFactoryLocation(this.mCID,
-                                        "Calendar in-memory back-end",
-                                        this.mContractID,
-                                        fileSpec,
-                                        location,
-                                        type);
-    },
-
-    getClassObject: function (compMgr, cid, iid) {
-        if (!cid.equals(this.mCID))
-            throw Components.results.NS_ERROR_NO_INTERFACE;
-
-        if (!iid.equals(Components.interfaces.nsIFactory))
-            throw Components.results.NS_ERROR_NOT_IMPLEMENTED;
-
-        this.loadUtils();
-
-        return calMemoryCalendarFactory;
-    },
-
-    canUnload: function(compMgr) {
-        return true;
-    }
-};
-
-function NSGetModule(compMgr, fileSpec) {
-    return calMemoryCalendarModule;
-}

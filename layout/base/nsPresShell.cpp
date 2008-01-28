@@ -1070,6 +1070,8 @@ class PresShell : public nsIPresShell_MOZILLA_1_8_BRANCH2, public nsIViewObserve
                   public nsSupportsWeakReference
 {
 public:
+  friend class nsIPresShell;
+
   PresShell();
 
   NS_DECL_AND_IMPL_ZEROING_OPERATOR_NEW
@@ -1420,7 +1422,6 @@ protected:
   PRPackedBool mIsDestroying;
   PRPackedBool mIsReleasingAnonymousContent;
 
-  PRPackedBool mDidInitialReflow;
   PRPackedBool mIgnoreFrameDestruction;
   PRPackedBool mHaveShutDown;
 
@@ -5681,22 +5682,23 @@ PresShell::ReconstructFrames(void)
 void
 nsIPresShell::ReconstructStyleDataInternal()
 {
-  mStylesHaveChanged = PR_FALSE;
-
-  nsIFrame* rootFrame = FrameManager()->GetRootFrame();
-  if (!rootFrame)
+  if (NS_UNLIKELY(NS_STATIC_CAST(PresShell*, this)->mIsDestroying))
     return;
 
-  nsStyleChangeList changeList;
-  FrameManager()->ComputeStyleChangeFor(rootFrame, &changeList,
-                                       NS_STYLE_HINT_NONE);
+  mStylesHaveChanged = PR_FALSE;
 
-  NS_ASSERTION(mViewManager, "Should have view manager");
-  mViewManager->BeginUpdateViewBatch();
-  mFrameConstructor->ProcessRestyledFrames(changeList);
-  mViewManager->EndUpdateViewBatch(NS_VMREFRESH_NO_SYNC);
+  if (!mDidInitialReflow) {
+    // Nothing to do here, since we have no frames yet
+    return;
+  }
 
-  VERIFY_STYLE_TREE;
+  nsIContent* root = mDocument->GetRootContent();
+  if (!root) {
+    // No content to restyle
+    return;
+  }
+  
+  mFrameConstructor->PostRestyleEvent(root, eReStyle_Self, NS_STYLE_HINT_NONE);
 
 #ifdef ACCESSIBILITY
   InvalidateAccessibleSubtree(nsnull);
@@ -5706,7 +5708,11 @@ nsIPresShell::ReconstructStyleDataInternal()
 void
 nsIPresShell::ReconstructStyleDataExternal()
 {
+  if (NS_UNLIKELY(NS_STATIC_CAST(PresShell*, this)->mIsDestroying))
+    return;
+
   ReconstructStyleDataInternal();
+  FlushPendingNotifications(Flush_Style);
 }
 
 void
@@ -6499,6 +6505,7 @@ PresShell::HandleEventInternal(nsEvent* aEvent, nsIView *aView,
 
     nsAutoPopupStatePusher popupStatePusher(nsDOMEvent::GetEventPopupControlState(aEvent));
 
+    nsWeakView weakView(aView);
     // 1. Give event to event manager for pre event state changes and
     //    generation of synthetic events.
     rv = manager->PreHandleEvent(mPresContext, aEvent, mCurrentEventFrame,
@@ -6583,7 +6590,7 @@ PresShell::HandleEventInternal(nsEvent* aEvent, nsIView *aView,
       if (NS_SUCCEEDED (rv) &&
           (GetCurrentEventFrame() || !NS_EVENT_NEEDS_FRAME(aEvent))) {
         rv = manager->PostHandleEvent(mPresContext, aEvent, mCurrentEventFrame,
-                                      aStatus, aView);
+                                      aStatus, weakView.GetView());
       }
     }
   }

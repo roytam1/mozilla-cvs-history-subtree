@@ -56,8 +56,8 @@ var appInfo = Components.classes["@mozilla.org/xre/app-info;1"].
                          getService(Components.interfaces.nsIXULAppInfo);
 var isOnBranch = appInfo.platformVersion.indexOf("1.8") == 0;
 
-function calICSCalendar () {
-    this.wrappedJSObject = this;
+function calICSCalendar() {
+    this.initProviderBase();
     this.initICSCalendar();
 
     this.unmappedComponents = [];
@@ -66,32 +66,26 @@ function calICSCalendar () {
 }
 
 calICSCalendar.prototype = {
-    mICSService: null,
+    __proto__: calProviderBase.prototype,
+
     mObserver: null,
     locked: false,
 
     QueryInterface: function (aIID) {
-        if (!aIID.equals(Components.interfaces.nsISupports) &&
-            !aIID.equals(Components.interfaces.calICalendarProvider) &&
-            !aIID.equals(Components.interfaces.calICalendar) &&
-            !aIID.equals(Components.interfaces.nsIStreamListener) &&
-            !aIID.equals(Components.interfaces.nsIStreamLoaderObserver) &&
-            !aIID.equals(Components.interfaces.nsIInterfaceRequestor)) {
-            throw Components.results.NS_ERROR_NO_INTERFACE;
-        }
-
-        return this;
+        return doQueryInterface(this, calICSCalendar.prototype, aIID,
+                                [Components.interfaces.calICalendarProvider,
+                                 Components.interfaces.nsIStreamListener,
+                                 Components.interfaces.nsIStreamLoaderObserver,
+                                 Components.interfaces.nsIInterfaceRequestor]);
     },
     
     initICSCalendar: function() {
         this.mMemoryCalendar = Components.classes["@mozilla.org/calendar/calendar;1?type=memory"]
                                          .createInstance(Components.interfaces.calICalendar);
-        this.mICSService = Components.classes["@mozilla.org/calendar/ics-service;1"]
-                                     .getService(Components.interfaces.calIICSService);
 
+        this.mMemoryCalendar.superCalendar = this;
         this.mObserver = new calICSObserver(this);
         this.mMemoryCalendar.addObserver(this.mObserver);
-        this.mMemoryCalendar.wrappedJSObject.calendarToReturn = this;
     },
 
     //
@@ -116,69 +110,12 @@ calICSCalendar.prototype = {
     //
     // calICalendar interface
     //
-    // attribute AUTF8String id;
-    mID: null,
-    get id() {
-        return this.mID;
-    },
-    set id(id) {
-        if (this.mID)
-            throw Components.results.NS_ERROR_ALREADY_INITIALIZED;
-        return (this.mID = id);
-    },
-
-    get name() {
-        return this.getProperty("name");
-    },
-    set name(name) {
-        return this.setProperty("name", name);
-    },
-
     get type() { return "ics"; },
-
-    mReadOnly: false,
-
-    get readOnly() {
-        return this.getProperty("readOnly");
-    },
-    set readOnly(aValue) {
-        return this.setProperty("readOnly", aValue);
-    },
-
-    getProperty: function calICSCalendar_getProperty(aName) {
-        switch (aName) {
-            case "readOnly":
-                return this.mReadOnly;
-            default:
-                // xxx future: return getPrefSafe("calendars." + this.id + "." + aName, null);
-                return getCalendarManager().getCalendarPref_(this, aName);
-        }
-    },
-    setProperty: function calICSCalendar_setProperty(aName, aValue) {
-        var oldValue = this.getProperty(aName);
-        if (oldValue != aValue) {
-            switch (aName) {
-                case "readOnly":
-                    this.mReadOnly = aValue;
-                    break;
-                default:
-                    // xxx future: setPrefSafe("calendars." + this.id + "." + aName, aValue);
-                    getCalendarManager().setCalendarPref_(this, aName, aValue);
-            }
-            this.mObserver.onPropertyChanged(this, aName, aValue, oldValue);
-        }
-        return aValue;
-    },
-    deleteProperty: function calICSCalendar_deleteProperty(aName) {
-        this.mObserver.onPropertyDeleting(this, aName);
-        getCalendarManager().deleteCalendarPref_(this, aName);
-    },
 
     get canRefresh() {
         return true;
     },
 
-    mUri: null,
     get uri() { return this.mUri },
     set uri(aUri) {
         this.mUri = aUri;
@@ -197,6 +134,14 @@ calICSCalendar.prototype = {
         }
 
         this.refresh();
+    },
+
+    getProperty: function calICSCalendar_getProperty(aName) {
+        switch (aName) {
+            case "requiresNetwork":
+                return (!this.uri.schemeIs("file"));
+        }
+        return this.__proto__.__proto__.getProperty.apply(this, arguments);
     },
 
     refresh: function calICSCalendar_refresh() {
@@ -278,7 +223,7 @@ calICSCalendar.prototype = {
         this.mMemoryCalendar = Components.classes["@mozilla.org/calendar/calendar;1?type=memory"]
                                          .createInstance(Components.interfaces.calICalendar);
         this.mMemoryCalendar.uri = this.mUri;
-        this.mMemoryCalendar.wrappedJSObject.calendarToReturn = this;
+        this.mMemoryCalendar.superCalendar = this;
 
         this.mObserver.onStartBatch();
 
@@ -288,7 +233,7 @@ calICSCalendar.prototype = {
         try {
             var parser = Components.classes["@mozilla.org/calendar/ics-parser;1"].
                                     createInstance(Components.interfaces.calIIcsParser);
-            parser.parseString(str);
+            parser.parseString(str, null);
             var items = parser.getItems({});
             
             for each (var item in items) {
@@ -434,19 +379,13 @@ calICSCalendar.prototype = {
         appStartup.exitLastWindowClosingSurvivalArea();
     },
 
-    addObserver: function (aObserver) {
-        this.mObserver.addObserver(aObserver);
-    },
-    removeObserver: function (aObserver) {
-        this.mObserver.removeObserver(aObserver);
-    },
-
-    get sendItipInvitations() { return true; },
-
     // Always use the queue, just to reduce the amount of places where
     // this.mMemoryCalendar.addItem() and friends are called. less
     // copied code.
     addItem: function (aItem, aListener) {
+        this.adoptItem(aItem.clone(), aListener);
+    },
+    adoptItem: function (aItem, aListener) {
         if (this.readOnly) 
             throw Components.interfaces.calIErrors.CAL_IS_READONLY;
         this.queue.push({action:'add', item:aItem, listener:aListener});
@@ -697,6 +636,7 @@ calICSCalendar.prototype = {
         try {
             var dirService = Components.classes["@mozilla.org/file/directory_service;1"]
                                        .getService(CI.nsIProperties);
+// xxx todo: would we want to migrate the backups into getCalendarDirectory()?
             var backupDir = dirService.get("ProfD", CI.nsILocalFile);
             backupDir.append("backupData");
             if (!backupDir.exists()) {
@@ -731,7 +671,7 @@ calICSCalendar.prototype = {
             doInitialBackup = true;
 
         var doDailyBackup = false;
-        var backupTime = new Number(this.getProperty('backup-time'));
+        var backupTime = this.getProperty('backup-time');
         if (!backupTime ||
             (new Date().getTime() > backupTime + backupDays*24*60*60*1000)) {
             // It's time do to a daily backup
@@ -769,7 +709,7 @@ calICSCalendar.prototype = {
                     copyToOverwriting(result, backupDir, dailyBackupFileName);
 
                 aCallback.call(savedthis);
-            },
+            }
         }
 
         downloader.init(listener, backupFile);
@@ -789,40 +729,38 @@ calICSCalendar.prototype = {
 
 function calICSObserver(aCalendar) {
     this.mCalendar = aCalendar;
-    this.mObservers = new calListenerBag(Components.interfaces.calIObserver);
 }
 
 calICSObserver.prototype = {
     mCalendar: null,
-    mObservers: null,
     mInBatch: false,
 
     // calIObserver:
     onStartBatch: function() {
-        this.mObservers.notify("onStartBatch");
+        this.mCalendar.observers.notify("onStartBatch");
         this.mInBatch = true;
     },
     onEndBatch: function() {
-        this.mObservers.notify("onEndBatch");
+        this.mCalendar.observers.notify("onEndBatch");
         this.mInBatch = false;
     },
     onLoad: function(calendar) {
-        this.mObservers.notify("onLoad", [calendar]);
+        this.mCalendar.observers.notify("onLoad", [calendar]);
     },
     onAddItem: function(aItem) {
-        this.mObservers.notify("onAddItem", [aItem]);
+        this.mCalendar.observers.notify("onAddItem", [aItem]);
     },
     onModifyItem: function(aNewItem, aOldItem) {
-        this.mObservers.notify("onModifyItem", [aNewItem, aOldItem]);
+        this.mCalendar.observers.notify("onModifyItem", [aNewItem, aOldItem]);
     },
     onDeleteItem: function(aDeletedItem) {
-        this.mObservers.notify("onDeleteItem", [aDeletedItem]);
+        this.mCalendar.observers.notify("onDeleteItem", [aDeletedItem]);
     },
     onPropertyChanged: function(aCalendar, aName, aValue, aOldValue) {
-        this.mObservers.notify("onPropertyChanged", [aCalendar, aName, aValue, aOldValue]);
+        this.mCalendar.observers.notify("onPropertyChanged", [aCalendar, aName, aValue, aOldValue]);
     },
     onPropertyDeleting: function(aCalendar, aName) {
-        this.mObservers.notify("onPropertyDeleting", [aCalendar, aName]);
+        this.mCalendar.observers.notify("onPropertyDeleting", [aCalendar, aName]);
     },
 
     // Unless an error number is in this array, we consider it very bad, set
@@ -839,17 +777,7 @@ calICSObserver.prototype = {
         }
         if (!errorIsOk)
             this.mCalendar.readOnly = true;
-        this.mObservers.notify("onError", [aErrNo, aMessage]);
-    },
-
-    // This observer functions as proxy for all the other observers
-    // So need addObserver and removeObserver here
-    addObserver: function (aObserver) {
-        this.mObservers.add(aObserver);
-    },
-
-    removeObserver: function (aObserver) {
-        this.mObservers.remove(aObserver);
+        this.mCalendar.observers.notify("onError", [aErrNo, aMessage]);
     }
 };
 
@@ -891,8 +819,8 @@ dummyHooks.prototype = {
     
     onAfterPut: function(aChannel) {
         return true;
-    },
-}
+    }
+};
 
 function httpHooks() {
     this.mChannel = null;
@@ -985,8 +913,8 @@ httpHooks.prototype = {
             // No etag header. Now what?
             this.mEtag = null;
         }
-    },
-}
+    }
+};
 
 function WebDavResource(url) {
     this.mResourceURL = url;
@@ -1003,86 +931,3 @@ WebDavResource.prototype = {
         throw Components.interfaces.NS_ERROR_NO_INTERFACE;
     }
 };
-
-// nsIFactory
-const calICSCalendarFactory = {
-    createInstance: function (outer, iid) {
-        if (outer != null)
-            throw Components.results.NS_ERROR_NO_AGGREGATION;
-        return (new calICSCalendar()).QueryInterface(iid);
-    }
-};
-
-/****
- **** module registration
- ****/
-
-var calICSCalendarModule = {
-
-    mCID: Components.ID("{f8438bff-a3c9-4ed5-b23f-2663b5469abf}"),
-    mContractID: "@mozilla.org/calendar/calendar;1?type=ics",
-
-    mUtilsLoaded: false,
-    loadUtils: function icsLoadUtils() {
-        if (this.mUtilsLoaded)
-            return;
-
-        const jssslContractID = "@mozilla.org/moz/jssubscript-loader;1";
-        const jssslIID = Components.interfaces.mozIJSSubScriptLoader;
-
-        const iosvcContractID = "@mozilla.org/network/io-service;1";
-        const iosvcIID = Components.interfaces.nsIIOService;
-
-        var loader = Components.classes[jssslContractID].getService(jssslIID);
-        var iosvc = Components.classes[iosvcContractID].getService(iosvcIID);
-
-        // Note that unintuitively, __LOCATION__.parent == .
-        // We expect to find utils in ./../js
-        var appdir = __LOCATION__.parent.parent;
-        appdir.append("js");
-        var scriptName = "calUtils.js";
-
-        var f = appdir.clone();
-        f.append(scriptName);
-
-        try {
-            var fileurl = iosvc.newFileURI(f);
-            loader.loadSubScript(fileurl.spec, this.__parent__.__parent__);
-        } catch (e) {
-            dump("Error while loading " + fileurl.spec + "\n");
-            throw e;
-        }
-
-        this.mUtilsLoaded = true;
-    },
-    
-    registerSelf: function (compMgr, fileSpec, location, type) {
-        compMgr = compMgr.QueryInterface(Components.interfaces.nsIComponentRegistrar);
-        compMgr.registerFactoryLocation(this.mCID,
-                                        "Calendar ICS provider",
-                                        this.mContractID,
-                                        fileSpec,
-                                        location,
-                                        type);
-    },
-
-    getClassObject: function (compMgr, cid, iid) {
-        if (!cid.equals(this.mCID))
-            throw Components.results.NS_ERROR_NO_INTERFACE;
-
-        if (!iid.equals(Components.interfaces.nsIFactory))
-            throw Components.results.NS_ERROR_NOT_IMPLEMENTED;
-
-        this.loadUtils();
-
-        return calICSCalendarFactory;
-    },
-
-    canUnload: function(compMgr) {
-        return true;
-    }
-};
-
-function NSGetModule(compMgr, fileSpec) {
-    return calICSCalendarModule;
-}

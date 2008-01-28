@@ -64,7 +64,7 @@ REQUIRES	+= unicharutil \
 endif
 
 CPPSRCS	= Double.cpp \
-	List.cpp \
+	txList.cpp \
 	txAtoms.cpp \
 	txExpandedNameMap.cpp \
 	txNamespaceMap.cpp \

@@ -38,6 +38,8 @@
  * ***** END LICENSE BLOCK ***** */
 
 #import <Carbon/Carbon.h>
+#import <Sparkle/Sparkle.h>
+#import <SharedMenusCocoa/SharedMenusObj.h>
 
 #import "NSArray+Utils.h"
 #import "NSString+Utils.h"
@@ -66,12 +68,11 @@
 #import "MVPreferencesController.h"
 #import "CertificatesWindowController.h"
 #import "PageInfoWindowController.h"
-#import "FindDlgController.h"
 #import "PreferenceManager.h"
-#import "SharedMenusObj.h"
 #import "SiteIconProvider.h"
 #import "SessionManager.h"
 #import "CHPermissionManager.h"
+#import "AddSearchProviderHandler.h"
 
 #include "nsBuildID.h"
 #include "nsCOMPtr.h"
@@ -126,7 +127,6 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 - (void)openPanelDidEnd:(NSOpenPanel*)inOpenPanel returnCode:(int)inReturnCode contextInfo:(void*)inContextInfo;
 - (void)loadApplicationPage:(NSString*)pageURL;
 - (NSArray*)browserWindows;
-+ (NSURL*)decodeLocalFileURL:(NSURL*)url;
 
 @end
 
@@ -157,7 +157,6 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
     NSString* url = [defaults stringForKey:USER_DEFAULTS_URL_KEY];
     mStartURL = url ? [url retain] : nil;
 
-    mFindDialog = nil;
     mMenuBookmarks = nil;
 
     [NSApp setServicesProvider:self];
@@ -169,12 +168,14 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 
 - (void)dealloc
 {
+  if ([self isInitialized])
+    [[NSUserDefaults standardUserDefaults] removeObserver:self forKeyPath:SUScheduledCheckIntervalKey];
+
   [mCharsets release];
 
   // Terminate shared menus
   [mSharedMenusObj release];
 
-  [mFindDialog release];
   [mKeychainService release];
 
   [super dealloc];
@@ -201,6 +202,9 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
   unsigned int numComps = 0;
   const nsModuleComponentInfo* comps = GetAppComponents(&numComps);
   CHBrowserService::RegisterAppComponents(comps, numComps);
+
+  // add our OpenSearch handler
+  AddSearchProviderHandler::InstallHandler();
 
   mGeckoInitted = YES;
 }
@@ -268,7 +272,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
   [[SiteIconProvider sharedFavoriteIconProvider] registerFaviconImage:[NSImage imageNamed:@"smallDocument"] forPageURI:@"about:blank"];
   [[SiteIconProvider sharedFavoriteIconProvider] registerFaviconImage:[NSImage imageNamed:@"smallDocument"] forPageURI:@"about:local_file"];
   [[SiteIconProvider sharedFavoriteIconProvider] registerFaviconImage:[NSImage imageNamed:@"bm_favicon"]    forPageURI:@"about:bookmarks"];
-  [[SiteIconProvider sharedFavoriteIconProvider] registerFaviconImage:[NSImage imageNamed:@"historyicon"]   forPageURI:@"about:history"];
+  [[SiteIconProvider sharedFavoriteIconProvider] registerFaviconImage:[NSImage imageNamed:@"history_icon"]   forPageURI:@"about:history"];
 
   // listen for the Show Certificates notification (which is send from the Security prefs panel)
   [notificationCenter addObserver:self selector:@selector(showCertificatesNotification:) name:@"ShowCertificatesNotification" object:nil];
@@ -320,6 +324,11 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
       [restoreAfterCrashAlert setMessageText:NSLocalizedString(@"RestoreAfterCrashTitle", nil)];
       [restoreAfterCrashAlert setInformativeText:NSLocalizedString(@"RestoreAfterCrashMessage", nil)];
       [restoreAfterCrashAlert setAlertStyle:NSWarningAlertStyle];
+
+      // It should be impossible for a menu to be open so soon, but this
+      // should be called before displaying any modal dialogs.
+      [NSMenu cancelAllTracking];
+
       if ([restoreAfterCrashAlert runModal] == NSAlertFirstButtonReturn)
         shouldRestoreWindowState = YES;
     }
@@ -335,6 +344,13 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
   else {
     [[SessionManager sharedInstance] clearSavedState];
   }
+  
+  // Watch for any changes to the Sparkle auto-check pref so we can inform
+  // the updater to adjust accordingly.
+  [[NSUserDefaults standardUserDefaults] addObserver:self
+                                          forKeyPath:SUScheduledCheckIntervalKey
+                                             options:NSKeyValueObservingOptionNew
+                                             context:nil];
 
   [self setInitialized:YES];
 }
@@ -486,12 +502,12 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
   NSString* vendorSubString = [prefManager getStringPref:"general.useragent.vendorSub" withSuccess:NULL];
   if ([vendorSubString rangeOfString:@"pre"].location == NSNotFound) {
     // has the user seen this already?
-    NSString* startPageRev = [prefManager getStringPref:"browser.startup_page_override.version" withSuccess:NULL];
-    if (![vendorSubString isEqualToString:startPageRev]) {
-      NSString* startPage = NSLocalizedStringFromTable(@"StartPageDefault", @"WebsiteDefaults", nil);
-      if ([startPage length] && ![startPage isEqualToString:@"StartPageDefault"]) {
+    NSString* newVersionPageRev = [prefManager getStringPref:"browser.startup_page_override.version" withSuccess:NULL];
+    if (![vendorSubString isEqualToString:newVersionPageRev]) {
+      NSString* newVersionPage = NSLocalizedStringFromTable(@"NewVersionPage", @"WebsiteDefaults", nil);
+      if ([newVersionPage length] && ![newVersionPage isEqualToString:@"NewVersionPage"]) {
         [mStartURL release];
-        mStartURL = [startPage retain];
+        mStartURL = [newVersionPage retain];
       }
       // set the pref to say they've seen it
       [prefManager setPref:"browser.startup_page_override.version" toString:vendorSubString];
@@ -518,18 +534,21 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 
 - (void)checkDefaultBrowser
 {
-  NSString* defaultBrowserIdentifier = [[NSWorkspace sharedWorkspace] defaultBrowserIdentifier];
-  NSString* myIdentifier = [[NSBundle mainBundle] bundleIdentifier];
-
-  // silently update from our old to new bundle identifier
-  if ([defaultBrowserIdentifier isEqualToString:@"org.mozilla.navigator"]) {
-    [[NSWorkspace sharedWorkspace] setDefaultBrowserWithIdentifier:myIdentifier];
+  BOOL prefSet;
+  BOOL allowPrompt = [[PreferenceManager sharedInstance] getBooleanPref:"camino.check_default_browser"
+                                                            withSuccess:&prefSet];
+  // Don't show the default browser alert on the very first launch (indicated by
+  // the absence of any setting for camino.check_default_browser). 
+  if (!prefSet) {
+    [[PreferenceManager sharedInstance] setPref:"camino.check_default_browser"
+                                      toBoolean:YES];
+    return;
   }
-  else if (![defaultBrowserIdentifier isEqualToString:myIdentifier]) {
-    BOOL gotPref;
-    BOOL allowPrompt = ([[PreferenceManager sharedInstance] getBooleanPref:"camino.check_default_browser" withSuccess:&gotPref] ||
-                        !gotPref);
-    if (allowPrompt) {
+
+  if (allowPrompt) {
+    NSString* defaultBrowserIdentifier = [[NSWorkspace sharedWorkspace] defaultBrowserIdentifier];
+    NSString* myIdentifier = [[NSBundle mainBundle] bundleIdentifier];
+    if (![defaultBrowserIdentifier isEqualToString:myIdentifier]) {
       nsAlertController* controller = [[nsAlertController alloc] init];
       BOOL dontAskAgain = NO;
       int result = NSAlertErrorReturn;
@@ -746,7 +765,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
   // session is restored.  We want to avoid opening URLs before that happens.
   [self ensureInitializationCompleted];
 
-  NSURL* urlToOpen = [MainController decodeLocalFileURL:[NSURL fileURLWithPath:filename]];
+  NSURL* urlToOpen = [NSURL decodeLocalFileURL:[NSURL fileURLWithPath:filename]];
   [self showURL:[urlToOpen absoluteString]];
   return YES;
 }
@@ -780,7 +799,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
       }
       else {
         openInNewWindow = YES;
-        if (loadNewTabsInBackgroundPref)
+        if (reverseBackgroundPref)
           behindWindow = [browserWindowController window];
       }
       break;
@@ -798,10 +817,10 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 
     case eBookmarkOpenBehavior_NewWindow:
       openInNewWindow = YES;
-      if (loadNewTabsInBackgroundPref)
+      if (reverseBackgroundPref)
         behindWindow = [browserWindowController window];
-        break;
-      
+      break;
+
     case eBookmarkOpenBehavior_Preferred:
       // default, so nothing to be done.
       break;
@@ -860,36 +879,14 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
   }
 }
 
-//
-// This takes an NSURL to a local file, and if that file is a file that contains
-// a URL we want and isn't the content itself, we return the URL it contains.
-// Otherwise, we return the URL we originally got. Right now this supports .url,
-// .webloc and .ftploc files.
-//
-+ (NSURL*)decodeLocalFileURL:(NSURL*)url
-{
-  NSString* urlPathString = [url path];
-  NSString* ext = [[urlPathString pathExtension] lowercaseString];
-  OSType fileType = NSHFSTypeCodeFromFileType(NSHFSTypeOfFile(urlPathString));
-
-  if ([ext isEqualToString:@"url"] || fileType == 'LINK')
-    url = [NSURL URLFromIEURLFile:urlPathString];
-  else if ([ext isEqualToString:@"webloc"] || [ext isEqualToString:@"ftploc"] ||
-           fileType == 'ilht' || fileType == 'ilft')
-    url = [NSURL URLFromInetloc:urlPathString];
-
-  return url;
-}
-
 #pragma mark -
 #pragma mark Delegate/Notification
 
 - (BOOL)applicationShouldHandleReopen:(NSApplication*)theApp hasVisibleWindows:(BOOL)flag
 {
-  // we might be sitting there with the "there is another copy of camino running" dialog up
-  // (which means we're in a modal loop in [PreferenceManager init]). So if we haven't
-  // finished initting prefs yet, just bail.
-  if (![PreferenceManager sharedInstanceDontCreate])
+  // Don't open a new browser window if we're still launching or if there's a
+  // modal alert dialog displayed.
+  if (![self isInitialized] || [NSApp modalWindow])
     return NO;
 
   // ignore |hasVisibleWindows| because we always want to show a browser window when
@@ -909,16 +906,25 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
   [NSApp makeWindowsPerform:@selector(display) inOrder:YES];
 }
 
-- (void)applicationDidBecomeActive:(NSNotification*)aNotification
-{
-  [mFindDialog applicationWasActivated];
-}
-
 - (void)windowLayeringDidChange:(NSNotification*)inNotification
 {
   [self delayedAdjustBookmarksMenuItemsEnabling];
   [self delayedFixCloseMenuItemKeyEquivalents];
   [self delayedUpdatePageInfo];
+}
+
+- (void)observeValueForKeyPath:(NSString *)keyPath
+                      ofObject:(id)object
+                        change:(NSDictionary *)change
+                       context:(void *)context
+{
+  if ([keyPath isEqualToString:SUScheduledCheckIntervalKey]) {
+    NSTimeInterval updatePeriod = [[NSUserDefaults standardUserDefaults] integerForKey:SUScheduledCheckIntervalKey];
+    // Note that this sets up a *repeating* check with this interval, so setting
+    // this shorter to cause the next update to happen quickly would be bad.
+    // An updatePeriod of 0 here disables the checks, which is what we want.
+    [mAutoUpdater scheduleCheckWithInterval:updatePeriod];
+  }
 }
 
 #pragma mark -
@@ -928,20 +934,26 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 //
 // -aboutWindow:
 //
-// Show the (slightly modified) standard about window, with the build id instead of the
-// typical application version. It'll display like "2003120403 (v0.7+)".
+// Show the standard AppKit about window, but replace the build version in
+// parentheses with the Gecko version and build ID.  The build version
+// normally comes from the CFBundleVersion key, but since that's not compatible
+// with Mozilla build IDs, we've got to do this ourselves.
 //
 - (IBAction)aboutWindow:(id)sender
 {
-  NSString* version = [NSString stringWithFormat:@"%010u", NS_BUILD_ID];
-  NSDictionary* d = [NSDictionary dictionaryWithObject:version forKey:@"ApplicationVersion"];
-  [NSApp orderFrontStandardAboutPanelWithOptions:d];
+  NSBundle* mainBundle = [NSBundle mainBundle];
+  NSString* buildVersion = [NSString stringWithFormat:@"%@ %@",
+                                     [mainBundle objectForInfoDictionaryKey:@"MozillaGeckoVersion"],
+                                     [mainBundle objectForInfoDictionaryKey:@"MozillaBuildID"]];
+  NSDictionary* options = [NSDictionary dictionaryWithObject:buildVersion
+                                                      forKey:@"Version"];
+  [NSApp orderFrontStandardAboutPanelWithOptions:options];
 }
 
 - (IBAction)feedbackLink:(id)aSender
 {
-  NSString* pageToLoad = NSLocalizedStringFromTable(@"FeedbackPageDefault", @"WebsiteDefaults", nil);
-  if (![pageToLoad isEqualToString:@"FeedbackPageDefault"])
+  NSString* pageToLoad = NSLocalizedStringFromTable(@"FeedbackPage", @"WebsiteDefaults", nil);
+  if (![pageToLoad isEqualToString:@"FeedbackPage"])
     [self loadApplicationPage:pageToLoad];
 }
 
@@ -1111,6 +1123,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
                           contextInfo:browserController];
   }
   else {
+    [NSMenu cancelAllTracking];
     int result = [openPanel runModalForTypes:fileTypes];
     [self openPanelDidEnd:openPanel returnCode:result contextInfo:nil];
   }
@@ -1134,7 +1147,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
   NSURL* curURL;
   while ((curURL = [urlsEnum nextObject])) {
     [[NSDocumentController sharedDocumentController] noteNewRecentDocumentURL:curURL];
-    curURL = [MainController decodeLocalFileURL:curURL];
+    curURL = [NSURL decodeLocalFileURL:curURL];
     [urlStringsArray addObject:[curURL absoluteString]];
   }
 
@@ -1273,6 +1286,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
   [savePanel setAccessoryView:mExportPanelView];
 
   // start the save panel
+  [NSMenu cancelAllTracking];
   int saveResult = [savePanel runModalForDirectory:nil file:NSLocalizedString(@"ExportedBookmarkFile", @"Exported Bookmarks")];
   int selectedButton = [button indexOfSelectedItem];
   if (saveResult != NSFileHandlingPanelOKButton)
@@ -1320,23 +1334,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 #pragma mark -
 #pragma mark Edit Menu
 
-//
-// -findInPage
-//
-// Called in response to "Find" in edit menu. Gives BWC a chance to handle it, then
-// opens the find dialog. We only keep one around for the whole app to use,
-// showing/hiding as we see fit.
-//
-- (IBAction)findInPage:(id)aSender
-{
-  BrowserWindowController* browserController = [self mainWindowBrowserController];
-
-  if (browserController && ![browserController performFindCommand]) {
-    if (!mFindDialog)
-      mFindDialog = [[FindDlgController alloc] initWithWindowNibName:@"FindDialog"];
-    [mFindDialog showWindow:self];
-  }
-}
+// Nothing specific, everything is now handled by the BWC. 
 
 #pragma mark -
 #pragma mark View Menu
@@ -1527,8 +1525,8 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 
 - (IBAction)aboutServers:(id)aSender
 {
-  NSString* pageToLoad = NSLocalizedStringFromTable(@"RendezvousPageDefault", @"WebsiteDefaults", nil);
-  if (![pageToLoad isEqualToString:@"RendezvousPageDefault"])
+  NSString* pageToLoad = NSLocalizedStringFromTable(@"RendezvousPage", @"WebsiteDefaults", nil);
+  if (![pageToLoad isEqualToString:@"RendezvousPage"])
     [self loadApplicationPage:pageToLoad];
 }
 
@@ -1576,22 +1574,22 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 
 - (IBAction)supportLink:(id)aSender
 {
-  NSString* pageToLoad = NSLocalizedStringFromTable(@"SupportPageDefault", @"WebsiteDefaults", nil);
-  if (![pageToLoad isEqualToString:@"SupportPageDefault"])
+  NSString* pageToLoad = NSLocalizedStringFromTable(@"SupportPage", @"WebsiteDefaults", nil);
+  if (![pageToLoad isEqualToString:@"SupportPage"])
     [self loadApplicationPage:pageToLoad];
 }
 
 - (IBAction)keyboardShortcutsLink:(id)aSender
 {
-  NSString* pageToLoad = NSLocalizedStringFromTable(@"KeyboardShortcutsPageDefault", @"WebsiteDefaults", nil);
-  if (![pageToLoad isEqualToString:@"KeyboardShortcutsPageDefault"])
+  NSString* pageToLoad = NSLocalizedStringFromTable(@"KeyboardShortcutsPage", @"WebsiteDefaults", nil);
+  if (![pageToLoad isEqualToString:@"KeyboardShortcutsPage"])
     [self loadApplicationPage:pageToLoad];
 }
 
 - (IBAction)infoLink:(id)aSender
 {
-  NSString* pageToLoad = NSLocalizedStringFromTable(@"InfoPageDefault", @"WebsiteDefaults", nil);
-  if (![pageToLoad isEqualToString:@"InfoPageDefault"])
+  NSString* pageToLoad = NSLocalizedStringFromTable(@"InfoPage", @"WebsiteDefaults", nil);
+  if (![pageToLoad isEqualToString:@"InfoPage"])
     [self loadApplicationPage:pageToLoad];
 }
 
@@ -1678,10 +1676,6 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
   // or the bookmark/history manager is open
   if (action == @selector(savePage:))
     return (browserController && ![browserController bookmarkManagerIsVisible]);
-
-  // disable the find panel if there's no text content
-  if (action == @selector(findInPage:))
-    return (browserController && [[[browserController browserWrapper] browserView] isTextBasedContent]);
 
   // BrowserWindowController decides about actions that are just sent on to
   // the front window's BrowserWindowController. This works because the selectors
@@ -2009,14 +2003,6 @@ static int SortByProtocolAndName(NSDictionary* item1, NSDictionary* item2, void*
     [[aSender representedObject] setRequiredFileType:@"html"];
   else
     [[aSender representedObject] setRequiredFileType:@"plist"];
-}
-
-#pragma mark -
-#pragma mark Find Panel
-
-- (void)closeFindDialog
-{
-  [mFindDialog close];
 }
 
 @end

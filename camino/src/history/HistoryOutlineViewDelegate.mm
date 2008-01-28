@@ -38,6 +38,7 @@
 
 #import "NSMenu+Utils.h"
 #import "NSPasteboard+Utils.h"
+#import "CmDateFormatter.h"
 
 #import "HistoryItem.h"
 #import "HistoryDataSource.h"
@@ -74,9 +75,9 @@ static NSString* const kExpandedHistoryStatesDefaultsKey = @"history_expand_stat
 // Custom formatter for relative date formatting
 @interface RelativeDateFormatter : NSDateFormatter
 {
-  CFDateFormatterRef mTimeFormatter;     // strong
-  CFDateFormatterRef mDateTimeFormatter; // strong
-  NSDateFormatter*   mWeekdayFormatter;  // strong
+  CmDateFormatter* mTimeFormatter;     // strong
+  CmDateFormatter* mDateTimeFormatter; // strong
+  NSDateFormatter* mWeekdayFormatter;  // strong
 }
 @end
 
@@ -203,8 +204,10 @@ static NSString* const kExpandedHistoryStatesDefaultsKey = @"history_expand_stat
     return;
   }
 
-  BOOL loadInBackground = [BrowserWindowController shouldLoadInBackground:sender];
   BOOL openInTabs       = [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.opentabfor.middleclick" withSuccess:NULL];
+  BOOL loadInBackground = [BrowserWindowController shouldLoadInBackgroundForDestination:(openInTabs ? eDestinationNewTab
+                                                                                                    : eDestinationNewWindow)
+                                                                                 sender:sender];
   BOOL cmdKeyDown       = (([[NSApp currentEvent] modifierFlags] & NSCommandKeyMask) != 0);
   
   NSEnumerator* itemEnum = [selectedHistoryItems objectEnumerator];
@@ -265,7 +268,8 @@ static NSString* const kExpandedHistoryStatesDefaultsKey = @"history_expand_stat
 {
   NSArray* itemsArray = [mHistoryOutlineView selectedItems];
 
-  BOOL backgroundLoad = [BrowserWindowController shouldLoadInBackground:aSender];
+  BOOL backgroundLoad = [BrowserWindowController shouldLoadInBackgroundForDestination:eDestinationNewWindow
+                                                                               sender:aSender];
 
   NSEnumerator* itemsEnum = [itemsArray objectEnumerator];
   HistoryItem* curItem;
@@ -281,7 +285,8 @@ static NSString* const kExpandedHistoryStatesDefaultsKey = @"history_expand_stat
 {
   NSArray* itemsArray = [mHistoryOutlineView selectedItems];
 
-  BOOL backgroundLoad = [BrowserWindowController shouldLoadInBackground:aSender];
+  BOOL backgroundLoad = [BrowserWindowController shouldLoadInBackgroundForDestination:eDestinationNewTab
+                                                                               sender:aSender];
 
   NSEnumerator* itemsEnum = [itemsArray objectEnumerator];
   HistoryItem* curItem;
@@ -307,7 +312,8 @@ static NSString* const kExpandedHistoryStatesDefaultsKey = @"history_expand_stat
   }
 
   // make new window
-  BOOL loadInBackground = [BrowserWindowController shouldLoadInBackground:aSender];
+  BOOL loadInBackground = [BrowserWindowController shouldLoadInBackgroundForDestination:eDestinationNewWindow
+                                                                                 sender:aSender];
   NSWindow* behindWindow = nil;
   if (loadInBackground)
     behindWindow = [mBrowserWindowController window];
@@ -737,37 +743,29 @@ static NSString* const kExpandedHistoryStatesDefaultsKey = @"history_expand_stat
 
 #pragma mark -
 
-// TODO: Once we are 10.4+ the CFDateFormatters can be replaced with
-// NSDateFormatters using NSDateFormatterBehavior10_4 behavior.
 @implementation RelativeDateFormatter
 
 - (id)init
 {
   if ((self = [super init])) {
-    CFLocaleRef userLocale = CFLocaleCopyCurrent();
-    if (userLocale) {
-      mTimeFormatter = CFDateFormatterCreate(NULL,
-                                             userLocale,
-                                             kCFDateFormatterNoStyle,
-                                             kCFDateFormatterShortStyle);
-      mDateTimeFormatter = CFDateFormatterCreate(NULL,
-                                                 userLocale,
-                                                 kCFDateFormatterMediumStyle,
-                                                 kCFDateFormatterShortStyle);
-      mWeekdayFormatter = [[NSDateFormatter alloc] initWithDateFormat:@"%a"
-                                                 allowNaturalLanguage:NO];
-      CFRelease(userLocale);
-    }
+    mTimeFormatter = [[CmDateFormatter alloc] init];
+    [mTimeFormatter setDateStyle:NSDateFormatterNoStyle];
+    [mTimeFormatter setTimeStyle:NSDateFormatterShortStyle];
+
+    mDateTimeFormatter = [[CmDateFormatter alloc] init];
+    [mDateTimeFormatter setDateStyle:NSDateFormatterMediumStyle];
+    [mDateTimeFormatter setTimeStyle:NSDateFormatterShortStyle];
+
+    mWeekdayFormatter = [[NSDateFormatter alloc] initWithDateFormat:@"%A"
+                                               allowNaturalLanguage:NO];
   }
   return self;
 }
 
 - (void)dealloc
 {
-  if (mTimeFormatter)
-    CFRelease(mTimeFormatter);
-  if (mDateTimeFormatter)
-    CFRelease(mDateTimeFormatter);
+  [mTimeFormatter release];
+  [mDateTimeFormatter release];
   [mWeekdayFormatter release];
   [super dealloc];
 }
@@ -777,12 +775,13 @@ static NSString* const kExpandedHistoryStatesDefaultsKey = @"history_expand_stat
   if (!anObject)
     return @"";
 
-  if (mTimeFormatter && mDateTimeFormatter) {
+  if (mTimeFormatter && mDateTimeFormatter &&
+      [anObject isKindOfClass:[NSDate class]]) {
     int day = [[anObject dateWithCalendarFormat:nil timeZone:nil] dayOfCommonEra];
     int today = [[NSCalendarDate calendarDate] dayOfCommonEra];
     
     NSString* dayPrefix = nil;
-    CFDateFormatterRef dateFormatter;
+    CmDateFormatter* dateFormatter;
     if (day == today) {
       dayPrefix = NSLocalizedString(@"Today", nil);
       dateFormatter = mTimeFormatter;
@@ -798,15 +797,13 @@ static NSString* const kExpandedHistoryStatesDefaultsKey = @"history_expand_stat
     else if (day > (today - 7)) {
       // show the shortened weekday for recent dates
       dayPrefix = [mWeekdayFormatter stringForObjectValue:anObject];
-      dateFormatter = mDateTimeFormatter;
+      dateFormatter = mTimeFormatter;
     }
     else {
       dateFormatter = mDateTimeFormatter;
     }
-    
-    NSString* result = [(NSString*)CFDateFormatterCreateStringWithDate(NULL,
-                                                                       dateFormatter,
-                                                                       (CFDateRef)anObject) autorelease];
+
+    NSString* result = [dateFormatter stringFromDate:(NSDate*)anObject];
     if (dayPrefix)
       result = [NSString stringWithFormat:@"%@ %@", dayPrefix, result];
 

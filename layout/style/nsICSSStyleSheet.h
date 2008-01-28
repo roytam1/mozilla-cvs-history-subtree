@@ -106,6 +106,19 @@ public:
   NS_IMETHOD  DropRuleProcessor(nsCSSRuleProcessor* aProcessor) = 0;
 };
 
+// e4431a5a-5bcb-4c68-80a0-408d34578f54
+#define NS_ICSS_STYLE_SHEET_MOZILLA_1_8_BRANCH_IID \
+{ 0xe4431a5a, 0x5bcb, 0x4c68, \
+ { 0x80, 0xa0, 0x40, 0x8d, 0x34, 0x57, 0x8f, 0x54 } }
+
+class nsICSSStyleSheet_MOZILLA_1_8_BRANCH : public nsICSSStyleSheet {
+public:
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_ICSS_STYLE_SHEET_MOZILLA_1_8_BRANCH_IID)
+
+  NS_IMETHOD SetURIs18(nsIURI* aSheetURI, nsIURI* aOriginalSheetURI,
+                       nsIURI* aBaseURI) = 0;
+};
+
 nsresult
 NS_NewCSSStyleSheet(nsICSSStyleSheet** aInstancePtrResult);
 

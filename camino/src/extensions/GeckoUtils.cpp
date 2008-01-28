@@ -63,7 +63,11 @@
 
 #include "nsIDocShell.h"
 #include "nsIDocShellTreeItem.h"
+#include "nsIPresShell.h"
+#include "nsIContent.h"
+#include "nsIFrame.h"
 
+#include "nsIDocument.h"
 #include "nsIDOMDocument.h"
 #include "nsIDOMWindowInternal.h"
 #include "nsIDOMNSHTMLElement.h"
@@ -313,7 +317,7 @@ void GeckoUtils::GetAnchorNodeFromSelection(nsIEditor* inEditor, nsIDOMNode** ou
   selection->GetAnchorNode(outAnchorNode);
 }
 
-void GeckoUtils::GetIntrisicSize(nsIDOMWindow* aWindow,  PRInt32* outWidth, PRInt32* outHeight)
+void GeckoUtils::GetIntrinsicSize(nsIDOMWindow* aWindow,  PRInt32* outWidth, PRInt32* outHeight)
 {
   if (!aWindow)
     return;
@@ -352,3 +356,49 @@ void GeckoUtils::GetIntrisicSize(nsIDOMWindow* aWindow,  PRInt32* outWidth, PRIn
 
   return;
 }
+
+PRBool GeckoUtils::GetFrameInScreenCoordinates(nsIDOMElement* aElement, nsIntRect* aRect)
+{
+  nsCOMPtr<nsIContent> content = do_QueryInterface(aElement);
+  if (!content)
+    return PR_FALSE;
+
+  nsCOMPtr<nsIDocument> doc = content->GetDocument();
+  if (!doc)
+    return PR_FALSE;
+
+  nsIPresShell* presShell = doc->GetShellAt(0);
+  if (!presShell)
+    return PR_FALSE;
+
+  nsIFrame* frame;
+  if (NS_FAILED(presShell->GetPrimaryFrameFor(content, &frame)) || !frame)      
+    return PR_FALSE;
+
+  *aRect = frame->GetScreenRectExternal();
+
+  return PR_TRUE;
+}
+
+void GeckoUtils::ScrollElementIntoView(nsIDOMElement* aElement)
+{
+  nsCOMPtr<nsIContent> content = do_QueryInterface(aElement);
+  if (!content)
+    return;
+
+  nsCOMPtr<nsIDocument> doc = content->GetDocument();
+  if (!doc)
+    return;
+
+  nsIPresShell* presShell = doc->GetShellAt(0);
+  if (!presShell)
+    return;
+
+  nsIFrame* frame;
+  if (NS_FAILED(presShell->GetPrimaryFrameFor(content, &frame)) || !frame)
+    return;
+
+  presShell->ScrollFrameIntoView(frame, NS_PRESSHELL_SCROLL_IF_NOT_VISIBLE,
+                                        NS_PRESSHELL_SCROLL_IF_NOT_VISIBLE);
+}
+

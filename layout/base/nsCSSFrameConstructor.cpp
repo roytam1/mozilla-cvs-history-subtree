@@ -14215,6 +14215,9 @@ nsCSSFrameConstructor::PostRestyleEvent(nsIContent* aContent,
                                         nsReStyleHint aRestyleHint,
                                         nsChangeHint aMinChangeHint)
 {
+  if (NS_UNLIKELY(mIsDestroyingFrameTree))
+    return;
+
   if (aRestyleHint == 0 && !aMinChangeHint) {
     // Nothing to do here
     return;

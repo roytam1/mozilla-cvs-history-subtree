@@ -129,35 +129,15 @@ nsXFormsUtilityService::IsNodeAssocWithModel( nsIDOMNode *aNode,
                                               PRBool     *aModelAssocWithNode)
 {
 
-  nsCOMPtr<nsIDOMNode> modelNode;
-
-  nsAutoString namespaceURI;
-  aNode->GetNamespaceURI(namespaceURI);
-  // If the node is in the XForms namespace and XTF based, then it should
-  //   be able to be handled by GetModel.  Otherwise it is probably an instance
-  //   node in a instance document.
-  if (namespaceURI.EqualsLiteral(NS_NAMESPACE_XFORMS)) {
-    nsCOMPtr<nsIDOMElement> element = do_QueryInterface(aNode);
-    nsCOMPtr<nsIModelElementPrivate> modelPriv = nsXFormsUtils::GetModel(element);
-    modelNode = do_QueryInterface(modelPriv);
-  } else { 
-    // We are assuming that if the node coming in isn't a proper XForms element,
-    //   then it is an instance element in an instance doc.  Now we just have
-    //   to determine if the given model contains this instance document.
-    nsCOMPtr<nsIDOMNode> instNode;
-    nsresult rv =
-      nsXFormsUtils::GetInstanceNodeForData(aNode, getter_AddRefs(instNode));
-    if (NS_SUCCEEDED(rv) && instNode) {
-      instNode->GetParentNode(getter_AddRefs(modelNode));
-    }
+  // Determine if the given model contains this instance document.
+  nsCOMPtr<nsIDOMNode> modelNode, instNode;
+  nsresult rv =
+    nsXFormsUtils::GetInstanceNodeForData(aNode, getter_AddRefs(instNode));
+  if (NS_SUCCEEDED(rv) && instNode) {
+    instNode->GetParentNode(getter_AddRefs(modelNode));
   }
 
-  if (modelNode && (modelNode == aModel)) {
-    *aModelAssocWithNode = PR_TRUE;
-  } else {
-    *aModelAssocWithNode = PR_FALSE;
-  }
-
+  *aModelAssocWithNode = modelNode && (modelNode == aModel);
   return NS_OK;
 }
 

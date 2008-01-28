@@ -74,7 +74,8 @@ public:
                                nsIFrame**     aFrame);
 
   virtual nsIFrame* GetContentInsertionFrame() {
-    return GetFirstChild(nsnull)->GetContentInsertionFrame();
+    nsIFrame* kid = GetFirstChild(nsnull);
+    return kid ? kid->GetContentInsertionFrame() : nsnull;
   }
 
   virtual nsIAtom* GetType() const;

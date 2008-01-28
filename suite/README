@@ -3,5 +3,5 @@ mozilla/suite
 
 This module contains files for the SeaMonkey suite.
 
-Consult http://www.mozilla.org/projects/seamonkey/review-and-flags.html
+Consult http://www.seamonkey-project.org/dev/review-and-flags
 for review rules on stuff in this directory, please.

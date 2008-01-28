@@ -11,6 +11,8 @@ xmlns:em="http://www.mozilla.org/2004/em-rdf#">
         %homepageURLline%
         %updateURLline%
         %iconURLline%
+        %hiddenline%
+        %lockedline%
 
         <em:targetApplication>
             <Description>

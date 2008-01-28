@@ -21,6 +21,7 @@
  *
  * Contributor(s):
  *   Daniel Boelzle <daniel.boelzle@sun.com>
+ *   Philipp Kewisch <mozilla@kewis.ch>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -43,13 +44,13 @@ var g_logPrefObserver = null;
 
 function initLogging()
 {
-    g_logTimezone = getPref("calendar.timezone.local", null);
-    
+    g_logTimezone = calendarDefaultTimezone();
     if (g_logFilestream) {
         try {
             g_logFilestream.close();
         }
         catch (exc) {
+            ASSERT(false, exc);
         }
         g_logFilestream = null;
     }
@@ -200,16 +201,6 @@ function getWindowWatcher() {
     return g_windowWatcher;
 }
 
-var g_icsService = null;
-function getIcsService() {
-    if (!g_icsService) {
-        g_icsService =
-            Components.classes["@mozilla.org/calendar/ics-service;1"]
-                      .getService(Components.interfaces.calIICSService);
-    }
-    return g_icsService;
-}
-
 var g_fbService = null;
 function getFreeBusyService() {
     if (!g_fbService) {
@@ -306,10 +297,10 @@ function getIcalUTC(dt) {
         return "0";
     else {
         var dtz = dt.timezone;
-        if (dtz == "UTC" || dtz == "floating")
+        if (dtz.isUTC || dtz.isFloating)
             return dt.icalString;
         else
-            return dt.getInTimezone("UTC").icalString;
+            return dt.getInTimezone(UTC()).icalString;
     }
 }
 

@@ -58,9 +58,8 @@ static const PRUnichar sUserdefined[] = {'u', 's', 'e', 'r', 'd', 'e', 'f',
                                          'i', 'n', 'e', 'd', 0};
 
 static const PRUnichar kAttributeTerminalChars[] = {
-  PRUnichar('&'), PRUnichar('\b'), PRUnichar('\t'), 
-  PRUnichar('\n'), PRUnichar('\r'), PRUnichar(' '),  
-  PRUnichar('>'),  
+  PRUnichar('&'), PRUnichar('\t'), PRUnichar('\n'),
+  PRUnichar('\r'), PRUnichar(' '), PRUnichar('>'),
   PRUnichar(0) 
 };
 
@@ -716,7 +715,7 @@ nsresult CTextToken::ConsumeCharacterData(PRBool aConservativeConsume,
       if (CaseInsensitiveFindInReadable(theTerminalString,start,end) && 
           (end == endPos || (*end == '>'  || *end == ' '  || 
                              *end == '\t' || *end == '\n' || 
-                             *end == '\r' || *end == '\b'))) {
+                             *end == '\r'))) {
         gtOffset = end;
         // Note that aIgnoreComments is only not set for <script>. We don't
         // want to execute scripts that aren't in the form of: <script\s.*>
@@ -932,7 +931,7 @@ nsresult CTextToken::ConsumeParsedCharacterData(PRBool aDiscardFirstNewline,
       if (CaseInsensitiveFindInReadable(theTerminalString,start,end)) {
         if (end != endPos && (*end == '>'  || *end == ' '  || 
                               *end == '\t' || *end == '\n' || 
-                              *end == '\r' || *end == '\b')) {
+                              *end == '\r')) {
           aFound = PR_TRUE;
           mTextValue.Rebind(theContent.str());
 
@@ -1899,8 +1898,8 @@ nsresult CAttributeToken::Consume(PRUnichar aChar, nsScanner& aScanner, PRInt32 
       PRUnichar('='), PRUnichar('\n'), 
       PRUnichar('\r'), PRUnichar('\t'), 
       PRUnichar('>'), PRUnichar('<'),
-      PRUnichar('\b'), PRUnichar('\''),
-      PRUnichar('/'), PRUnichar(0) };
+      PRUnichar('\''), PRUnichar('/'),
+      PRUnichar(0) };
     static const nsReadEndCondition theEndCondition(theTerminalsChars);
 
     nsScannerIterator start, end;

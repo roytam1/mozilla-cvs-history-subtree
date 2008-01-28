@@ -1476,7 +1476,8 @@ nsXULElement::SetAttrAndNotify(PRInt32 aNamespaceID,
     }
 
     if (doc) {
-        nsXBLBinding *binding = doc->BindingManager()->GetBinding(this);
+        nsRefPtr<nsXBLBinding> binding =
+            doc->BindingManager()->GetBinding(this);
         if (binding) {
             binding->AttributeChanged(aAttribute, aNamespaceID, PR_FALSE, aNotify);
         }
@@ -1697,7 +1698,8 @@ nsXULElement::UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aName, PRBool aNotify)
                                  NS_EVENT_FLAG_INIT, &status);
         }
 
-        nsXBLBinding *binding = doc->BindingManager()->GetBinding(this);
+        nsRefPtr<nsXBLBinding> binding =
+            doc->BindingManager()->GetBinding(this);
         if (binding)
             binding->AttributeChanged(aName, aNameSpaceID, PR_TRUE, aNotify);
 

@@ -110,3 +110,14 @@ interface nsIContentViewer_MOZILLA_1_8_BRANCH : nsISupports
    */
   void openWithEntry(in nsISupports aState, in nsISHEntry aSHEntry);
 };
+
+[scriptable, uuid(ff091bb3-596f-4f28-9de7-96b03b05d984)]
+interface nsIContentViewer_MOZILLA_1_8_BRANCH2 : nsISupports
+{
+
+  /**
+   * Get the history entry that this viewer will save itself into when
+   * destroyed.  Can return null
+   */
+  readonly attribute nsISHEntry historyEntry;
+};

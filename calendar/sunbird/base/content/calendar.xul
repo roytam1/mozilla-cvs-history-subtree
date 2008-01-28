@@ -29,6 +29,7 @@
    -                 Eric Belhaire <belhaire@ief.u-psud.fr>
    -                 Stefan Sitter <ssitter@googlemail.com>
    -                 Philipp Kewisch <mozilla@kewis.ch>
+   -                 Simon Paquet <bugzilla@babylonsounds.com>
    -
    - Alternatively, the contents of this file may be used under the terms of
    - either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -53,7 +54,8 @@
 
 <?xml-stylesheet href="chrome://calendar/content/calendar-view-bindings.css" type="text/css"?>
 <?xml-stylesheet href="chrome://calendar/skin/calendar-views.css" type="text/css"?>
-<?xml-stylesheet href="chrome://calendar/content/calendar-decorated-views.css" type="text/css"?>
+<?xml-stylesheet href="chrome://calendar/skin/calendar-toolbar.css" type="text/css"?>
+<?xml-stylesheet href="chrome://calendar/content/calendar-bindings.css" type="text/css"?>
 
 <!-- Overlays -->
 <?xul-overlay href="chrome://global/content/globalOverlay.xul"?>
@@ -84,8 +86,10 @@
 #include calendar-sets.inc
 
 <!-- All JS files that calendar.xul wishes to include *must* go into the calendar-scripts.inc
-     file so that they can be shared by hiddenWindow.xul. -->
-#include calendar-scripts.inc
+     file (all scripts shared with Lightning) or sunbird-scripts.inc file (scripts relevant 
+     for Sunbird-only)so that they can be shared by hiddenWindow.xul. -->
+#include ../../../base/content/calendar-scripts.inc
+#include sunbird-scripts.inc
 
 <!-- GENERAL CONTEXT MENU -->
 <popupset id="calendar-popupset">
@@ -113,19 +117,19 @@
     <menuitem label="&calendar.context.cutevent.label;"
               accesskey="&calendar.context.cutevent.accesskey;"
               id="general-context-menu-cut"
-              observes="cut_command">
+              observes="cmd_cut">
       <observes element="is_editable" attribute="hidden"/>
     </menuitem>
     <menuitem label="&calendar.context.copyevent.label;"
               accesskey="&calendar.context.copyevent.accesskey;"
               id="general-context-menu-copy"
-              observes="copy_command">
+              observes="cmd_copy">
       <observes element="is_editable" attribute="hidden"/>
     </menuitem>
     <menuitem label="&calendar.context.pasteevent.label;"
               accesskey="&calendar.context.pasteevent.accesskey;"
               id="general-context-menu-paste"
-              observes="paste_command">
+              observes="cmd_paste">
       <observes element="is_editable" attribute="hidden"/>
     </menuitem>
     <menuseparator>
@@ -134,7 +138,7 @@
     <menuitem label="&calendar.context.selectall.label;"
               accesskey="&calendar.context.selectall.accesskey;"
               id="general-context-menu-selectall"
-              observes="select_all_command">
+              observes="cmd_selectAll">
       <observes element="is_editable" attribute="hidden"/>
     </menuitem>
     <menuseparator>
@@ -180,137 +184,21 @@
   </toolbar>
 
   <toolbarpalette id="calendarToolbarPalette">
-    <toolbarbutton class="toolbarbutton-1"
-                   id="calendar-new-event-button"
-                   label="&calendar.newevent.button.label;"
-                   tooltiptext="&calendar.newevent.button.tooltip;"
-                   observes="calendar_new_event_command"/>
-    <toolbarbutton class="toolbarbutton-1"
-                   id="calendar-edit-event-button"
-                   label="&calendar.edit.button.label;"
-                   tooltiptext="&calendar.edit.button.tooltip;"
-                   observes="calendar_modify_event_command"/>
-    <toolbarbutton class="toolbarbutton-1"
-                   id="calendar-delete-event-button"
-                   label="&calendar.delete.button.label;"
-                   tooltiptext="&calendar.delete.button.tooltip;"
-                   observes="calendar_delete_event_command"/>
-    <toolbarbutton class="toolbarbutton-1"
-                   id="calendar-day-view-button"
-                   type="radio"
-                   group="calendarViews"
-                   label="&calendar.day.button.label;"
-                   tooltiptext="&calendar.day.button.tooltip;"
-                   observes="calendar_day-view_command"/>
-    <toolbarbutton class="toolbarbutton-1"
-                   id="calendar-week-view-button"
-                   type="radio"
-                   group="calendarViews"
-                   label="&calendar.week.button.label;"
-                   tooltiptext="&calendar.week.button.tooltip;"
-                   observes="calendar_week-view_command"/>
-    <toolbarbutton class="toolbarbutton-1"
-                   id="calendar-multiweek-view-button"
-                   type="radio"
-                   group="calendarViews"
-                   label="&calendar.multiweek.button.label;"
-                   tooltiptext="&calendar.multiweek.button.tooltip;"
-                   observes="calendar_multiweek-view_command"/>
-    <toolbarbutton class="toolbarbutton-1"
-                   id="calendar-month-view-button"
-                   type="radio"
-                   group="calendarViews"
-                   label="&calendar.month.button.label;"
-                   tooltiptext="&calendar.month.button.tooltip;"
-                   observes="calendar_month-view_command"/>
-
-    <toolbarbutton class="toolbarbutton-1"
-                   id="calendar-cut-button"
-                   label="&calendar.cut.button.label;"
-                   tooltiptext="&calendar.cut.button.tooltip;"
-                   observes="cut_command"/>
-
-    <toolbarbutton class="toolbarbutton-1"
-                   id="calendar-copy-button"
-                   label="&calendar.copy.button.label;"
-                   tooltiptext="&calendar.copy.button.tooltip;"
-                   observes="copy_command"/>
-
-    <toolbarbutton class="toolbarbutton-1"
-                   id="calendar-paste-button"
-                   label="&calendar.paste.button.label;"
-                   tooltiptext="&calendar.paste.button.tooltip;"
-                   observes="paste_command"/>
-
-    <toolbarbutton class="toolbarbutton-1"
-                   id="calendar-import-button"
-                   label="&calendar.import.button.label;"
-                   tooltiptext="&calendar.import.button.tooltip;"
-                   observes="calendar_import_command"/>
-
-    <toolbarbutton class="toolbarbutton-1"
-                   id="calendar-export-button"
-                   label="&calendar.export.button.label;"
-                   tooltiptext="&calendar.export.button.tooltip;"
-                   observes="calendar_export_command"/>
-
-    <toolbarbutton class="toolbarbutton-1"
-                   id="calendar-subscribe-button"
-                   label="&calendar.subscribe.button.label;"
-                   tooltiptext="&calendar.subscribe.button.tooltip;"
-                   observes="calendar_new_calendar_command"/>
-
-    <toolbarbutton class="toolbarbutton-1"
-                   id="calendar-publish-button"
-                   label="&calendar.publish.button.label;"
-                   tooltiptext="&calendar.publish.button.tooltip;"
-                   observes="calendar_publish_calendar_command"/>
-
-    <toolbarbutton class="toolbarbutton-1"
-                   id="calendar-print-button"
-                   label="&calendar.print.button.label;"
-                   tooltiptext="&calendar.print.button.tooltip;"
-                   observes="print_command"/>
-
-    <toolbarbutton class="toolbarbutton-1"
-                   id="calendar-new-task-button"
-                   label="&calendar.newtask.button.label;"
-                   tooltiptext="&calendar.newtask.button.tooltip;"
-                   observes="calendar_new_todo_command"/>
-
-    <toolbarbutton class="toolbarbutton-1"
-                   id="calendar-go-to-today-button"
-                   label="&calendar.today.button.label;"
-                   tooltiptext="&calendar.today.button.tooltip;"
-                   observes="calendar_go_to_today_command"/>
-
-    <toolbarbutton class="toolbarbutton-1"
-                   id="calendar-choose-date-button"
-                   label="&calendar.choosedate.button.label;"
-                   tooltiptext="&calendar.choosedate.button.tooltip;"
-                   observes="go_date_command"/>
-                   
-<!--    <toolbarbutton class="toolbarbutton-1"
-                   id="calendar-local-reload-button"
-                   label="&calendar.localreload.button.label;"
-                   tooltiptext="&calendar.localreload.button.tooltip;"
-                   observes="reload_local_calendars"/> -->
-                   
-    <toolbarbutton class="toolbarbutton-1"
-                   id="calendar-remote-reload-button"
-                   label="&calendar.remotereload.button.label;"
-                   tooltiptext="&calendar.remotereload.button.tooltip;"
-                   observes="calendar_reload_remote_calendars"/>
-
+<!-- All toolbar buttons that calendar.xul wishes to include *must* go either 
+     into the calendar-toolbar.inc file (all toolbar buttons shared with 
+     Lightning) or sunbird-toolbar.inc file (toolbar buttons relevant 
+     only for Sunbird-only). -->
+#include ../../../base/content/calendar-toolbar.inc
+#include sunbird-toolbar.inc
     <toolbaritem id="throbber-box" align="center" pack="center">
       <button id="navigator-throbber"
               oncommand="openAboutDialog();"
               tooltiptext="&aboutCmd.label;"/>
-      </toolbaritem>
+    </toolbaritem>
   </toolbarpalette>
   <toolbar class="toolbar-primary chromeclass-toolbar" id="calendar-bar"
-           iconsize="big"
-           defaultset="calendar-new-event-button,calendar-new-task-button,calendar-edit-event-button,calendar-delete-event-button,separator,calendar-go-to-today-button,separator,calendar-day-view-button,calendar-week-view-button,calendar-multiweek-view-button,calendar-month-view-button,spring,throbber-box"
+           iconsize="large"
+           defaultset="calendar-new-event-button,calendar-new-task-button,calendar-edit-button,calendar-delete-button,separator,calendar-go-to-today-button,separator,calendar-day-view-button,calendar-week-view-button,calendar-multiweek-view-button,calendar-month-view-button,separator,calendar-unifinder-button,spring,throbber-box"
            customizable="true" mode="full"
            toolbarname="&calendar.maintoolbar.name;" accesskey="&calendar.maintoolbar.accesskey;"
            context="toolbar-context-menu"/>
@@ -334,9 +222,9 @@
 <vbox id="calendar-top-box"
       flex="1"
       context="context-menu"
-      ondraggesture="nsDragAndDrop.startDrag(event,calendarDNDObserver);"
-      ondragover="nsDragAndDrop.dragOver(event,calendarDNDObserver);"
-      ondragdrop="nsDragAndDrop.drop(event,calendarDNDObserver);">
+      ondraggesture="nsDragAndDrop.startDrag(event,calendarViewDNDObserver);"
+      ondragover="nsDragAndDrop.dragOver(event,calendarViewDNDObserver);"
+      ondragdrop="nsDragAndDrop.drop(event,calendarViewDNDObserver);">
 
   <!-- Calendar Controls-->
  
@@ -392,13 +280,13 @@
 </vbox>
 
 <statusbar id="status-bar" class="chromeclass-status">
+  <statusbarpanel id="offline-status"
+                  class="statusbarpanel-iconic"
+                  offline="true"
+                  oncommand="calendarOfflineManager.toggleOfflineStatus()"/>
   <statusbarpanel id="statusText"
                   flex="1"
                   value="&statusText.label;"/>
-  <statusbarpanel id="offline-status"
-                  class="statusbarpanel-iconic"
-                  hidden="true"
-                  offline="true"/>
 </statusbar>  
 
 </window>

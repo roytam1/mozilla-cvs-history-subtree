@@ -1540,15 +1540,20 @@ js_HasOwnPropertyHelper(JSContext *cx, JSObject *obj, JSLookupPropOp lookup,
     } else {
         JSClass *clasp;
         JSExtendedClass *xclasp;
+        JSObject *outer;
 
-        clasp = OBJ_GET_CLASS(cx, obj);
-        xclasp = (clasp->flags & JSCLASS_IS_EXTENDED)
-                 ? (JSExtendedClass *)clasp
-                 : NULL;
-        if (xclasp && xclasp->outerObject &&
-            xclasp->outerObject(cx, obj2) == obj) {
+        clasp = OBJ_GET_CLASS(cx, obj2);
+        if (!(clasp->flags & JSCLASS_IS_EXTENDED) ||
+            !(xclasp = (JSExtendedClass *) clasp)->outerObject) {
+            outer = NULL;
+        } else {
+            outer = xclasp->outerObject(cx, obj2);
+            if (!outer)
+                return JS_FALSE;
+        }
+        if (outer == obj) {
             *rval = JSVAL_TRUE;
-        } else if (OBJ_IS_NATIVE(obj2) && OBJ_GET_CLASS(cx, obj2) == clasp) {
+        } else if (OBJ_IS_NATIVE(obj2) && OBJ_GET_CLASS(cx, obj) == clasp) {
             /*
              * The combination of JSPROP_SHARED and JSPROP_PERMANENT in a
              * delegated property makes that property appear to be direct in
@@ -2586,6 +2591,7 @@ js_FindClassObject(JSContext *cx, JSObject *start, jsid id, jsval *vp)
     JSObject *obj, *cobj, *pobj;
     JSProtoKey key;
     JSProperty *prop;
+    jsval v;
     JSScopeProperty *sprop;
 
     if (start || (cx->fp && (start = cx->fp->scopeChain) != NULL)) {
@@ -2623,16 +2629,19 @@ js_FindClassObject(JSContext *cx, JSObject *start, jsid id, jsval *vp)
                                     &pobj, &prop)) {
         return JS_FALSE;
     }
-    if (!prop)  {
-        *vp = JSVAL_VOID;
-        return JS_TRUE;
+    v = JSVAL_VOID;
+    if (prop)  {
+        if (OBJ_IS_NATIVE(pobj)) {
+            sprop = (JSScopeProperty *) prop;
+            if (SPROP_HAS_VALID_SLOT(sprop, OBJ_SCOPE(pobj))) {
+                v = LOCKED_OBJ_GET_SLOT(pobj, sprop->slot);
+                if (JSVAL_IS_PRIMITIVE(v))
+                    v = JSVAL_VOID; 
+            }
+        }
+        OBJ_DROP_PROPERTY(cx, pobj, prop);
     }
-
-    JS_ASSERT(OBJ_IS_NATIVE(pobj));
-    sprop = (JSScopeProperty *) prop;
-    JS_ASSERT(SPROP_HAS_VALID_SLOT(sprop, OBJ_SCOPE(pobj)));
-    *vp = OBJ_GET_SLOT(cx, pobj, sprop->slot);
-    OBJ_DROP_PROPERTY(cx, pobj, prop);
+    *vp = v;
     return JS_TRUE;
 }
 

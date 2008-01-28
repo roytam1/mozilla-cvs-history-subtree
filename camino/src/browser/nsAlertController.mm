@@ -37,6 +37,7 @@
 
 #include "nsServiceManagerUtils.h"
 #include "GeckoUtils.h"
+#include "NSMenu+Utils.h"
 
 #import "nsAlertController.h"
 #import "CHBrowserService.h"
@@ -92,12 +93,12 @@ const int kLabelCheckboxAdjustment = 2; // # pixels the label must be pushed dow
 - (int)runModalWindow:(NSWindow*)inDialog relativeToWindow:(NSWindow*)inParentWindow;
 
 - (NSPanel*)alertPanelWithTitle:(NSString*)title
-        message:(NSString*)message
-        defaultButton:(NSString*)defaultLabel
-        altButton:(NSString*)altLabel
-        otherButton:(NSString*)otherLabel
-        extraView:(NSView*)extraView
-        lastResponder:(NSView*)lastResponder;
+                        message:(NSString*)message
+                  defaultButton:(NSString*)defaultLabel  // "OK" or equiv.
+                      altButton:(NSString*)altLabel      // "Cancel" or equiv.
+                    otherButton:(NSString*)otherLabel
+                      extraView:(NSView*)extraView       // Shown above buttons
+                  lastResponder:(NSView*)lastResponder;  // Last in extraView
         
 - (NSButton*)makeButtonWithTitle:(NSString*)title;
 
@@ -118,37 +119,53 @@ const int kLabelCheckboxAdjustment = 2; // # pixels the label must be pushed dow
 
 @implementation nsAlertController
 
-+ (int)safeRunModalForWindow:(NSWindow*)inWindow relativeToWindow:(NSWindow*)inParentWindow
-{
-  if (inParentWindow)
-  {
-    // If there is already a modal window up, convert a sheet into a modal window,
-    // because AppKit will hang if you try to do this (possibly because we're using
-    // the deprecated and sucky runModalForWindow:relativeToWindow:).
-    // Also, if the parent window already has an attached sheet, or is not visible,
-    // also null out the parent and show this as a modal dialog.
-    if ([NSApp modalWindow] || [inParentWindow attachedSheet] || ![inParentWindow isVisible])
-      inParentWindow = nil;
++ (int)safeRunModalForWindow:(NSWindow*)window
+            relativeToWindow:(NSWindow*)parentWindow {
+  if (parentWindow) {
+    // If there is already a modal window up, convert a sheet into a modal
+    // window, otherwise AppKit will hang if a sheet is shown, possibly because
+    // we're using the deprecated and sucky runModalForWindow:relativeToWindow:.
+    // Also, if the parent window already has an attached sheet, or is not
+    // visible, also null out the parent and show this as a modal dialog.
+    if ([NSApp modalWindow] || [parentWindow attachedSheet] ||
+        ![parentWindow isVisible])
+      parentWindow = nil;
   }
 
   int result = NSAlertErrorReturn;
   nsresult rv = NS_OK;
   StNullJSContextScope hack(&rv);
-  if (NS_SUCCEEDED(rv))
-  {
+  if (NS_SUCCEEDED(rv)) {
+    // If a menu is open (pull-down, pop-up, context, whatever) when a
+    // modal dialog or sheet is displayed, the menu will hang and be unusable
+    // (not responding to any input) but visible.  The dialog will be usable
+    // but possibly obscured by the menu, and will be unable to receive mouse
+    // events in the obscured area.  If this happens, the user could wind up
+    // stuck.  To account for this, close any open menus before showing a
+    // modal dialog.
+    [NSMenu cancelAllTracking];
+
     // be paranoid; we don't want to throw Obj-C exceptions over C++ code
     @try {
-      if (inParentWindow)
-        result = [NSApp runModalForWindow:inWindow relativeToWindow:inParentWindow];
-      else
-        result = [NSApp runModalForWindow:inWindow];
+      if (parentWindow) {
+        result = [NSApp runModalForWindow:window
+                         relativeToWindow:parentWindow];
+      }
+      else {
+        result = [NSApp runModalForWindow:window];
+      }
     }
     @catch (id exception) {
-      NSLog(@"Exception caught in safeRunModalForWindow:relativeToWindow: %@", exception);
+      NSLog(@"Exception caught in safeRunModalForWindow:relativeToWindow: %@",
+            exception);
     }
   }
-    
+
   return result;
+}
+
++ (int)safeRunModalForWindow:(NSWindow*)window {
+  return [nsAlertController safeRunModalForWindow:window relativeToWindow:nil];
 }
 
 - (IBAction)hitButton1:(id)sender
@@ -500,12 +517,14 @@ const int kLabelCheckboxAdjustment = 2; // # pixels the label must be pushed dow
 
 - (int)runModalWindow:(NSWindow*)inDialog relativeToWindow:(NSWindow*)inParentWindow
 {
-  int result = [nsAlertController safeRunModalForWindow:inDialog relativeToWindow:inParentWindow];
-  
+  int result = [nsAlertController safeRunModalForWindow:inDialog
+                                       relativeToWindow:inParentWindow];
+
   // Convert any error into an exception
   if (result == NSAlertErrorReturn)
-      [NSException raise:NSInternalInconsistencyException format:@"-runModalForWindow returned error"];
-  
+      [NSException raise:NSInternalInconsistencyException
+                  format:@"-runModalForWindow returned error"];
+
   return result;
 }
 
@@ -551,46 +570,42 @@ const int kLabelCheckboxAdjustment = 2; // # pixels the label must be pushed dow
   [imageView setImageScaling: NSScaleProportionally];
   [imageView setAutoresizingMask: NSViewMinYMargin | NSViewMaxXMargin];
   [[panel contentView] addSubview: imageView];
-  
+
   //  create buttons
-  
+
   NSButton* defButton = [self makeButtonWithTitle: defaultLabel];
   [defButton setAction: @selector(hitButton1:)];
   [defButton setAutoresizingMask: NSViewMinXMargin | NSViewMaxYMargin];
-  [defButton setKeyEquivalent: @"\r"];		// return
+  [defButton setKeyEquivalent:@"\r"];  // Return
   [[panel contentView] addSubview: defButton];
   [panel setDefaultButtonCell: [defButton cell]];
-  
-  NSView* firstKeyView = (extraView ? extraView : defButton);
+
+  // Keep track of the leftmost created button for setting up the tab chain.
+  // The tab chain should generally cycle top to bottom (if an extraView was
+  // supplied), and within that, left to right.
+  NSView* leftmostButton = defButton;
 
   NSButton* altButton = nil;
   if (altLabel) {
     altButton = [self makeButtonWithTitle: altLabel];
     [altButton setAction: @selector(hitButton2:)];
     [altButton setAutoresizingMask: NSViewMinXMargin | NSViewMaxYMargin];
-    [altButton setKeyEquivalent: @"\e"];		// escape
+    [altButton setKeyEquivalent:@"\e"];  // Esc
     [[panel contentView] addSubview: altButton];
-    [defButton setNextKeyView: altButton];
+    [altButton setNextKeyView:leftmostButton];
+    leftmostButton = altButton;
   }
-  
+
   NSButton* otherButton = nil;
   if (otherLabel) {
     otherButton = [self makeButtonWithTitle: otherLabel];
     [otherButton setAction: @selector(hitButton3:)];
     [otherButton setAutoresizingMask: NSViewMaxXMargin | NSViewMaxYMargin];
     [[panel contentView] addSubview: otherButton];
-    [otherButton setNextKeyView: firstKeyView];
-    if (altButton)
-      [altButton setNextKeyView: otherButton];
-    else
-      [defButton setNextKeyView: otherButton];
-  } else {
-    if (altButton)
-      [altButton setNextKeyView: firstKeyView];
-    else
-      [defButton setNextKeyView: firstKeyView];
+    [otherButton setNextKeyView:leftmostButton];
+    leftmostButton = otherButton;
   }
-  
+
   //  position buttons
   
   float defWidth = NSWidth([defButton frame]);
@@ -654,15 +669,30 @@ const int kLabelCheckboxAdjustment = 2; // # pixels the label must be pushed dow
   [extraView setFrame: extraRect];
   [[panel contentView] addSubview: extraView];
 
-  // If a lastResponder was passed in (the last item in the tab order inside
-  // extraView), hook it up to cycle to defButton.  If not, assume there is
-  // nothing focusable inside extraView and hook up defButton as the first
+  // Close the tab chain.  If an extraView is present, make it the initial
+  // first responder and hook its lastResponder (the last item within
+  // extraView's tab chain) up to the buttons.  If there is no extraView,
+  // make altButton, used for "Cancel" buttons, the initial first responder if
+  // there is one.  Otherwise, make the default button the initial first
   // responder.
 
-  if (lastResponder)
-    [lastResponder setNextKeyView: defButton];
-  else
-    [panel setInitialFirstResponder: defButton];
+  if (extraView && lastResponder) {
+    [panel setInitialFirstResponder:extraView];
+    [lastResponder setNextKeyView:leftmostButton];
+    [defButton setNextKeyView:extraView];
+  }
+  else {
+    if (altButton) {
+      [panel setInitialFirstResponder:altButton];
+    }
+    else {
+      [panel setInitialFirstResponder:defButton];
+    }
+
+    if (defButton != leftmostButton) {
+      [defButton setNextKeyView:leftmostButton];
+    }
+  }
 
   return panel;
 }

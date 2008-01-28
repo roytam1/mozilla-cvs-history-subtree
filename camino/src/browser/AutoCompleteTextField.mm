@@ -114,10 +114,6 @@ NSString* const kWillShowFeedMenu = @"WillShowFeedMenu";
 
 #pragma mark -
 
-@interface AutoCompleteWindow : NSWindow
-- (BOOL)isKeyWindow;
-@end
-
 @implementation AutoCompleteWindow
 
 - (BOOL)isKeyWindow
@@ -931,7 +927,7 @@ NS_IMPL_ISUPPORTS1(AutoCompleteListener, nsIAutoCompleteListener)
   // need to use one of its routines to update the autocomplete status or
   // we could find ourselves with stale results and the popup still open. If
   // it doesn't have focus, we can bypass all that and just use normal routines.
-  if ( [self fieldEditor] && [[self window] firstResponder] == [self fieldEditor] ) {
+  if ([self currentEditor]) {
     [self setStringUndoably:aURI fromLocation:0];   // updates autocomplete correctly
 
     // set insertion point to the end of the url. setStringUndoably:fromLocation:
@@ -1039,6 +1035,7 @@ NS_IMPL_ISUPPORTS1(AutoCompleteListener, nsIAutoCompleteListener)
 - (void) onRowClicked:(NSNotification *)aNote
 {
   [self enterResult:[mTableView clickedRow]];
+  [[self window] endEditingFor:self];
   [[[self window] windowController] goToLocationFromToolbarURLField:self];
 }
 
@@ -1136,7 +1133,7 @@ NS_IMPL_ISUPPORTS1(AutoCompleteListener, nsIAutoCompleteListener)
 - (void)controlTextDidEndEditing:(NSNotification *)aNote
 {
   [self clearResults];
-  id fieldEditor = [[aNote userInfo] objectForKey:@"NSFieldEditor"];
+  NSTextView* fieldEditor = [[aNote userInfo] objectForKey:@"NSFieldEditor"];
   [[fieldEditor undoManager] removeAllActionsWithTarget:fieldEditor];
 }
   

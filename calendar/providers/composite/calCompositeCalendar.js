@@ -278,6 +278,14 @@ calCompositeCalendar.prototype = {
         throw Components.results.NS_ERROR_NOT_IMPLEMENTED;
     },
 
+    get superCalendar() {
+        // There shouldn't be a superCalendar for the composite
+        return this;
+    },
+    set superCalendar(val) {
+        throw Components.results.NS_ERROR_NOT_IMPLEMENTED;
+    },
+
     // this could, at some point, return some kind of URI identifying
     // all the child calendars, thus letting us create nifty calendar
     // trees.
@@ -529,7 +537,7 @@ calCompositeGetListenerHelper.prototype = {
         {
             // this will blow past the limit
             aCount = this.mMaxItems - this.mItemsReceived;
-            aItems = aItems.slice(0, numToSend);
+            aItems = aItems.slice(0, aCount);
         }
 
         // send GetResults to the real listener

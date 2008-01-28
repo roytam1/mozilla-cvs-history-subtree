@@ -380,6 +380,7 @@ nsHTMLSelectListAccessible::CacheOptSiblings(nsIAccessibilityService *aAccServic
 
   PRUint32 numChildren = aParentContent->GetChildCount();
   nsCOMPtr<nsIAccessible> lastGoodAccessible(aLastGoodAccessible);
+  nsCOMPtr<nsIAccessible> newAccessible;
 
   for (PRUint32 count = 0; count < numChildren; count ++) {
     nsIContent *childContent = aParentContent->GetChildAt(count);
@@ -388,12 +389,18 @@ nsHTMLSelectListAccessible::CacheOptSiblings(nsIAccessibilityService *aAccServic
     }
     nsCOMPtr<nsIAtom> tag = childContent->Tag();
     if (tag == nsAccessibilityAtoms::option || tag == nsAccessibilityAtoms::optgroup) {
-      lastGoodAccessible = AccessibleForOption(aAccService,
-                                               childContent,
-                                               lastGoodAccessible);
+      newAccessible = AccessibleForOption(aAccService,
+                                          childContent,
+                                          lastGoodAccessible);
+      if (newAccessible) {
+        lastGoodAccessible = newAccessible;
+      }
       if (tag == nsAccessibilityAtoms::optgroup) {
-        lastGoodAccessible = CacheOptSiblings(aAccService, childContent,
-                                              lastGoodAccessible);
+        newAccessible = CacheOptSiblings(aAccService, childContent,
+                                         lastGoodAccessible);
+        if (newAccessible) {
+          lastGoodAccessible = newAccessible;
+        }
       }
     }
   }

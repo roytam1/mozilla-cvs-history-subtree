@@ -45,6 +45,9 @@ extern NSString* const NSMenuClosedNotification;
 
 @interface NSMenu(ChimeraMenuUtils)
 
+// Closes all open menus.  Use this before displaying a modal sheet or dialog.
++ (void)cancelAllTracking;
+
 // turn on "NSMenuWillDisplayNotification" firing
 + (void)setupMenuWillDisplayNotifications;
 
@@ -70,6 +73,8 @@ extern NSString* const NSMenuClosedNotification;
 
 // remove all items including and after the given index (i.e. all items if index is 0)
 - (void)removeItemsFromIndex:(int)inItemIndex;
+
+- (void)removeAllItemsWithTag:(int)tag;
 
 // return YES if this menu is the target of the 'will display' notification.
 // the param should be the [NSNotification object]

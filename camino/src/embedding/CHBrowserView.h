@@ -73,8 +73,8 @@ class nsIFocusController;
 - (void)onLoadingCompleted:(BOOL)succeeded;
 // Called when each resource on a page (the main HTML plus any subsidiary
 // resources such as images and style sheets) starts ond finishes.
-- (void)onResourceLoadingStarted:(NSNumber*)resourceIdentifier;
-- (void)onResourceLoadingCompleted:(NSNumber*)resourceIdentifier;
+- (void)onResourceLoadingStarted:(NSValue*)resourceIdentifier;
+- (void)onResourceLoadingCompleted:(NSValue*)resourceIdentifier;
 // Invoked regularly as data associated with a page streams
 // in. If the total number of bytes expected is unknown,
 // maxBytes is -1.
@@ -95,6 +95,8 @@ class nsIFocusController;
 - (void)onFoundShortcutIcon:(NSString*)inIconURI;
 // Called when a feed link element is noticed
 - (void)onFeedDetected:(NSString*)inFeedURI feedTitle:(NSString*)inFeedTitle;
+// Called when a search plugin link element is noticed.
+- (void)onSearchPluginDetected:(NSURL*)pluginURL mimeType:(NSString*)pluginMIMEType displayName:(NSString*)pluginName;
 
 @end
 

@@ -1365,9 +1365,11 @@ NS_METHOD nsWindow::SetCursor(nsCursor aCursor)
 	if (!mView)
 		return NS_ERROR_FAILURE;
 
-	// Only change cursor if it's changing
-	if (aCursor != mCursor) 
-	{
+// mCursor isn't always right.  Scrollbars and others change it, too.
+// If we want this optimization we need a better way to do it.
+// See bug 403406 for more information.
+//	if (aCursor != mCursor) 
+//	{
 		BCursor const *newCursor = B_CURSOR_SYSTEM_DEFAULT;
 		
 		// Check to see if the array has been loaded, if not, do it.
@@ -1537,7 +1539,7 @@ NS_METHOD nsWindow::SetCursor(nsCursor aCursor)
 		NS_ASSERTION(newCursor != nsnull, "Cursor not stored in array properly!");
 		mCursor = aCursor;
 		be_app->SetCursor(newCursor, true);
-	}
+//	}
 	return NS_OK;
 }
 

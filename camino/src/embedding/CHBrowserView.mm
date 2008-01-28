@@ -153,6 +153,7 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
 - (NSString*)locationFromDOMWindow:(nsIDOMWindow*)inDOMWindow;
 - (void)ensurePrintSettings;
 - (void)savePrintSettings;
+- (BOOL)isPasswordFieldFocused;
 
 - (already_AddRefed<nsISecureBrowserUI>)secureBrowserUI;
 
@@ -804,12 +805,12 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
 }
 
 //
-// -performFindPanelAction:
+// -findActions:
 //
 // Called on the first responder when the user executes one of the find commands. The
 // tag is the action to perform.
 //
-- (IBAction)performFindPanelAction:(id)inSender
+- (IBAction)findActions:(id)inSender
 {
   switch ([inSender tag]) {
     case NSFindPanelActionSetFindString:
@@ -879,6 +880,7 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
     return NO;
 
   webFind->SetFindBackwards(inBackwards);
+  webFind->SetWrapFind(PR_TRUE);
 
   PRBool found;
   webFind->FindNext(&found);
@@ -989,7 +991,8 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
 {
   nsCOMPtr<nsICommandManager> commandMgr(do_GetInterface(_webBrowser));
   if (commandMgr) {
-    nsresult rv = commandMgr->DoCommand(commandName, nsnull, nsnull);
+    nsresult rv;
+    rv = commandMgr->DoCommand(commandName, nsnull, nsnull);
 #if DEBUG
     if (NS_FAILED(rv))
       NSLog(@"DoCommand failed");
@@ -1007,7 +1010,8 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
   PRBool	isEnabled = PR_FALSE;
   nsCOMPtr<nsICommandManager> commandMgr(do_GetInterface(_webBrowser));
   if (commandMgr) {
-    nsresult rv = commandMgr->IsCommandEnabled(commandName, nsnull, &isEnabled);
+    nsresult rv;
+    rv = commandMgr->IsCommandEnabled(commandName, nsnull, &isEnabled);
 #if DEBUG
     if (NS_FAILED(rv))
       NSLog(@"IsCommandEnabled failed");
@@ -1062,7 +1066,8 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
   nsCOMPtr<nsIClipboardCommands> clipboard(do_GetInterface(_webBrowser));
   if ( clipboard )
     clipboard->CanCutSelection(&canCut);
-  return canCut;
+  // Core considers password field text copyable, so check it ourselves
+  return canCut && ![self isPasswordFieldFocused];
 }
 
 -(IBAction)copy:(id)aSender
@@ -1074,11 +1079,12 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
 
 -(BOOL)canCopy
 {
-  PRBool canCut = PR_FALSE;
+  PRBool canCopy = PR_FALSE;
   nsCOMPtr<nsIClipboardCommands> clipboard(do_GetInterface(_webBrowser));
   if ( clipboard )
-    clipboard->CanCopySelection(&canCut);
-  return canCut;
+    clipboard->CanCopySelection(&canCopy);
+  // Core considers password field text copyable, so check it ourselves
+  return canCopy && ![self isPasswordFieldFocused];
 }
 
 -(IBAction)paste:(id)aSender
@@ -1180,6 +1186,29 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
   PRBool canUnload;
   contentViewer->PermitUnload(&canUnload);
   return canUnload ? YES : NO;
+}
+
+// -isPasswordFieldFocused
+//
+// Returs YES if a password field in the content area has focus.
+// We need this only because core believes that password fields are
+// valid cut/copy targets (see bug 217729).
+//
+- (BOOL)isPasswordFieldFocused
+{
+  BOOL isFocused = NO;
+
+  nsCOMPtr<nsIDOMElement> focusedItem = dont_AddRef([self focusedDOMElement]);
+
+  nsCOMPtr<nsIDOMHTMLInputElement> input = do_QueryInterface(focusedItem);
+  if (input) {
+    nsAutoString type;
+    input->GetType(type);
+    if (type.Equals(NS_LITERAL_STRING("password")))
+      isFocused = YES;
+  }
+
+  return isFocused;
 }
 
 // -isTextFieldFocused
@@ -1496,7 +1525,7 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
     return [self canRedo];
   else if (action == @selector(selectAll:))
     return YES;
-  else if (action == @selector(performFindPanelAction:)) {
+  else if (action == @selector(findActions:)) {
     if (![self isTextBasedContent])
       return NO;
     long tag = [aMenuItem tag];

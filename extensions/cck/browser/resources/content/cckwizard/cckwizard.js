@@ -365,7 +365,7 @@ var prefsLockOnly = ["browser.startup.homepage", "browser.throbber.url",
 
 function OnPrefLoad()
 {
-  listbox = this.opener.document.getElementById('prefList');    
+  var listbox = this.opener.document.getElementById('prefList');    
   if (window.name == 'editpref') {
     window.title = listbox.selectedItem.cck['type'];
     if (listbox.selectedItem.cck['type'] == "integer") {
@@ -446,7 +446,7 @@ function OnPrefOK()
 {
   var bundle = this.opener.document.getElementById("bundle_cckwizard");
   
-  listbox = this.opener.document.getElementById("prefList");
+  var listbox = this.opener.document.getElementById("prefList");
   for (var i=0; i < listbox.getRowCount(); i++) {
     if ((document.getElementById('prefname').value == listbox.getItemAtIndex(i).label) && (window.name == 'newpref')) {
       gPromptService.alert(window, bundle.getString("windowTitle"),
@@ -507,7 +507,7 @@ function OnPrefOK()
 
 function getPageId()
 {
-  temp = document.getElementById('example-window');
+  var temp = document.getElementById('example-window');
   if (!temp)
     temp = this.opener.document.getElementById('example-window');
   return temp.currentPage.id;
@@ -526,7 +526,7 @@ function onEditBookmark()
 
 function OnBookmarkLoad()
 {
-  listbox = this.opener.document.getElementById(getPageId() +'.bookmarkList');    
+  var listbox = this.opener.document.getElementById(getPageId() +'.bookmarkList');    
   if (window.name == 'editbookmark') {
     document.getElementById('bookmarkname').value = listbox.selectedItem.label;
     document.getElementById('bookmarkurl').value = listbox.selectedItem.value;
@@ -554,7 +554,7 @@ function bookmarkCheckOKButton()
 function OnBookmarkOK()
 {
 
-  listbox = this.opener.document.getElementById(getPageId() +'.bookmarkList');
+  var listbox = this.opener.document.getElementById(getPageId() +'.bookmarkList');
   var listitem;
   if (window.name == 'newbookmark') {
     if (document.getElementById('bookmarktype').value == "separator") {
@@ -584,7 +584,7 @@ function OnBookmarkOK()
 }
 
 function enableBookmarkButtons() {
-  listbox = document.getElementById(getPageId() +'.bookmarkList');
+  var listbox = document.getElementById(getPageId() +'.bookmarkList');
   if (listbox.selectedItem) {
     document.getElementById(getPageId() +'editBookmarkButton').disabled = false;
     document.getElementById(getPageId() +'deleteBookmarkButton').disabled = false;
@@ -606,7 +606,7 @@ function onEditBrowserPlugin()
 
 function OnPluginLoad()
 {
-  listbox = this.opener.document.getElementById('browserPluginList');    
+  var listbox = this.opener.document.getElementById('browserPluginList');    
   if (window.name == 'editplugin') {
     document.getElementById('pluginpath').value = listbox.selectedItem.label;
     document.getElementById('plugintype').value = listbox.selectedItem.value;
@@ -630,9 +630,9 @@ function OnBrowserPluginOK()
     return false;
   }
 
-  listbox = this.opener.document.getElementById('browserPluginList');    
+  var listbox = this.opener.document.getElementById('browserPluginList');    
   if (window.name == 'newplugin') {
-    listitem = listbox.appendItem(document.getElementById('pluginpath').value, document.getElementById('plugintype').value);
+    var listitem = listbox.appendItem(document.getElementById('pluginpath').value, document.getElementById('plugintype').value);
   } else {
     listbox.selectedItem.label = document.getElementById('pluginpath').value;
     listbox.selectedItem.value = document.getElementById('plugintype').selectedItem.value;
@@ -651,7 +651,7 @@ function onEditRegKey()
 
 function OnRegLoad()
 {
-  listbox = this.opener.document.getElementById('regList');
+  var listbox = this.opener.document.getElementById('regList');
   if (window.name == 'editreg') {
     document.getElementById('PrettyName').value = listbox.selectedItem.label;
     document.getElementById('RootKey').value = listbox.selectedItem.cck['rootkey'];
@@ -677,7 +677,7 @@ function regCheckOKButton()
 
 function OnRegOK()
 {
-  listbox = this.opener.document.getElementById('regList');
+  var listbox = this.opener.document.getElementById('regList');
   var listitem;
   if (window.name == 'newreg') {
     listitem = listbox.appendItem(document.getElementById('PrettyName').value, "");
@@ -712,10 +712,10 @@ function RefreshDefaultSearchEngines()
   var setcuritem = false;
   
   var bundle = document.getElementById("bundle_cckwizard");
-  menulistitem = menulist.appendItem(bundle.getString("useBrowserDefault"), "");
+  var menulistitem = menulist.appendItem(bundle.getString("useBrowserDefault"), "");
   menulistitem.minWidth=menulist.width;
   for (var i=0; i < listbox.getRowCount(); i++) {
-    listitem = listbox.getItemAtIndex(i);
+    var listitem = listbox.getItemAtIndex(i);
     name = listitem.getAttribute("label");
     menulistitem = menulist.appendItem(name, name);
     if (name == curitem)
@@ -740,7 +740,7 @@ function onEditSearchEngine()
 
 function OnSearchEngineLoad()
 {
-  listbox = this.opener.document.getElementById('searchEngineList');    
+  var listbox = this.opener.document.getElementById('searchEngineList');    
   if (window.name == 'editsearchengine') {
     document.getElementById('searchengine').value = listbox.selectedItem.cck['engineurl'];
     document.getElementById('searchengineicon').value = listbox.selectedItem.cck['iconurl'];
@@ -762,6 +762,7 @@ function searchEngineCheckOKButton()
     document.documentElement.getButton("accept").setAttribute( "disabled", "true" );  
   }
   if (!(document.getElementById("searchengineicon").value)) {
+    var searchengineimage;
     if (searchengineimage = getSearchEngineImage(document.getElementById("searchengine").value)) {
       document.getElementById('icon').src = searchengineimage;
       document.getElementById("searchengineicon").setAttribute( "disabled", "true" );
@@ -790,7 +791,7 @@ function OnSearchEngineOK()
     return false;
   }
 
-  listbox = this.opener.document.getElementById('searchEngineList');
+  var listbox = this.opener.document.getElementById('searchEngineList');
   var listitem;
   var name = getSearchEngineName(document.getElementById('searchengine').value);
   if (!name) {
@@ -843,7 +844,7 @@ function onEditCert()
 
 function OnCertLoad()
 {
-  listbox = this.opener.document.getElementById('certList');    
+  var listbox = this.opener.document.getElementById('certList');    
   if (window.name == 'editcert') {
     document.getElementById('certpath').value = listbox.selectedItem.label;
     var trustString = listbox.selectedItem.value;
@@ -892,7 +893,7 @@ function OnCertOK()
     trustString += "c"
   }
 
-  listbox = this.opener.document.getElementById('certList');
+  var listbox = this.opener.document.getElementById('certList');
   var listitem;
   if (window.name == 'newcert') {
     listitem = listbox.appendItem(document.getElementById('certpath').value, trustString);
@@ -917,8 +918,8 @@ function onNewBundle()
                      nsIFilePicker.filterAll | nsIFilePicker.filterImages | nsIFilePicker.filterXML);
 
     if (fp.show() == nsIFilePicker.returnOK && fp.fileURL.spec && fp.fileURL.spec.length > 0) {
-      listbox = document.getElementById('bundleList');
-      listitem = listbox.appendItem(fp.file.path, "");
+      var listbox = document.getElementById('bundleList');
+      var listitem = listbox.appendItem(fp.file.path, "");
     }
   }
   catch(ex) {
@@ -927,8 +928,8 @@ function onNewBundle()
 
 function onEditBundle()
 {
-  listbox = document.getElementById('bundleList');
-  filename = listbox.selectedItem.label;
+  var listbox = document.getElementById('bundleList');
+  var filename = listbox.selectedItem.label;
   var sourcefile = Components.classes["@mozilla.org/file/local;1"]
                        .createInstance(Components.interfaces.nsILocalFile);
   try {
@@ -987,10 +988,10 @@ function CreateCCK()
   if (document.getElementById("noaboutconfig").checked)
     CCKCopyChromeToFile("cck-config.css", destdir)
 
-  listbox = document.getElementById('certList');
+  var listbox = document.getElementById('certList');
 
   for (var i=0; i < listbox.getRowCount(); i++) {
-    listitem = listbox.getItemAtIndex(i);
+    var listitem = listbox.getItemAtIndex(i);
     CCKCopyFile(listitem.getAttribute("label"), destdir);
   }
 
@@ -1284,7 +1285,7 @@ function CCKZip(zipfile, location)
     zipLocation = "zip";
   }
 
-  platform = navigator.platform;
+  var platform = navigator.platform;
   var scriptfile = location.clone();
              
   if ((navigator.platform == "Win32") || (navigator.platform == "OS/2"))
@@ -1309,7 +1310,7 @@ function CCKZip(zipfile, location)
   if ((navigator.platform == "Win32") || (navigator.platform == "OS/2"))
     line =  "\"" + zipLocation + "\" " + zipParams + " \"" + location.path + "\\" + zipfile + "\"";
   else
-    line = zipLocation + " " + zipParmams + " \"" + location.path + "/" + zipfile + "\"";  
+    line = zipLocation + " " + zipParams + " \"" + location.path + "/" + zipfile + "\"";  
   for (var i=2; i < arguments.length; i++) {
     line += " " + arguments[i];
   }
@@ -1391,8 +1392,8 @@ function CCKWriteXULOverlay(destdir)
   scriptableStream.close();
   input.close();
 
-  var tooltip = document.getElementById("AnimatedLogoTooltip").value;
-  if (tooltip && (tooltip.length > 0))
+  var throbberurl = document.getElementById("AnimatedLogoURL").value;
+  if (throbberurl && (throbberurl.length > 0)) 
     str = str.replace(/%button%/g, tooltipXUL);
   else
     str = str.replace(/%button%/g, "");
@@ -1578,7 +1579,7 @@ function CCKWriteProperties(destdir)
     cos.writeString(str);
   }
 
-  radio = document.getElementById('ToolbarLocation');
+  var radio = document.getElementById('ToolbarLocation');
   str = "ToolbarLocation=" + radio.value + "\n";
   cos.writeString(str);
 
@@ -1587,7 +1588,7 @@ function CCKWriteProperties(destdir)
   if (str && str.length) {
     str = "ToolbarFolder1=" + str + "\n";
     cos.writeString(str);
-    listbox = document.getElementById('tbFolder.bookmarkList');    
+    var listbox = document.getElementById('tbFolder.bookmarkList');    
     for (var j=0; j < listbox.getRowCount(); j++) {
       listitem = listbox.getItemAtIndex(j);
       str = "ToolbarFolder1.BookmarkTitle" + (j+1) + "=" + listitem.getAttribute("label") + "\n";
@@ -1603,7 +1604,7 @@ function CCKWriteProperties(destdir)
 
   listbox = document.getElementById('tb.bookmarkList');    
   for (var j=0; j < listbox.getRowCount(); j++) {
-    listitem = listbox.getItemAtIndex(j);
+    var listitem = listbox.getItemAtIndex(j);
     str = "ToolbarBookmarkTitle" + (j+1) + "=" + listitem.getAttribute("label") + "\n";
     cos.writeString(str);
     var str = "ToolbarBookmarkURL" + (j+1) + "=" + listitem.getAttribute("value") + "\n";
@@ -1701,9 +1702,9 @@ function CCKWriteProperties(destdir)
 
 function prefIsLocked(prefname)
 {
-  listbox = document.getElementById("prefList");
+  var listbox = document.getElementById("prefList");
   for (var i=0; i < listbox.getRowCount(); i++) {
-    listitem = listbox.getItemAtIndex(i);
+    var listitem = listbox.getItemAtIndex(i);
     if (prefname == listitem.getAttribute("label"))
       if (listitem.cck['lock'] == "true")
         return true;
@@ -1786,9 +1787,9 @@ function CCKWriteDefaultJS(destdir)
   }
 
   // Preferences
-  listbox = document.getElementById("prefList");
+  var listbox = document.getElementById("prefList");
   for (var i=0; i < listbox.getRowCount(); i++) {
-    listitem = listbox.getItemAtIndex(i);
+    var listitem = listbox.getItemAtIndex(i);
     /* allow for locking prefs without setting value */
     if ((listitem.getAttribute("value").length) && (!(prefsLockOnly.exists(listitem.getAttribute("label"))))) {
       var line;
@@ -1941,13 +1942,14 @@ function CCKWriteInstallRDF(destdir)
   var homepageURLline = "<em:homepageURL>%homepageURL%</em:homepageURL>";
   var updateURLline =   "<em:updateURL>%updateURL%</em:updateURL>";  
   var iconURLline =     "<em:iconURL>chrome://cck/content/%iconURL%</em:iconURL>";
-
+  var hiddenline =      "<em:hidden>true</em:hidden>";
+  var lockedline =      "<em:locked>true</em:locked>";
 
   var file = destdir.clone();
 
   file.append("install.rdf");
   try {
-    file.remove(false);                         
+    file.remove(false);
   } catch (ex) {
   }
   var fos = Components.classes["@mozilla.org/network/file-output-stream;1"]
@@ -2034,6 +2036,18 @@ function CCKWriteInstallRDF(destdir)
     str = str.replace(/%iconURL%/g, sourcefile.leafName);
   } else {
     str = str.replace(/%iconURLline%/g, "");
+  }
+  
+  if (document.getElementById("hidden").checked) {
+    str = str.replace(/%hiddenline%/g, hiddenline);
+  } else {
+    str = str.replace(/%hiddenline%/g, "");
+  }
+
+  if (document.getElementById("locked").checked) {
+    str = str.replace(/%lockedline%/g, lockedline);
+  } else {
+    str = str.replace(/%lockedline%/g, "");
   }
 
   cos.writeString(str);
@@ -2173,7 +2187,7 @@ function CCKWriteConfigFile(destdir)
             file.create(Components.interfaces.nsIFile.DIRECTORY_TYPE, 0775);
           } catch (ex) {
             gPromptService.alert(window, bundle.getString("windowTitle"),
-                                 bundle.getString("createDirError").replace(/%S/g, filename));
+                                 bundle.getString("createDirError").replace(/%S/g, file.path));
             return;
           }
         } else {
@@ -2214,9 +2228,9 @@ function CCKWriteConfigFile(destdir)
         }
       }
     } else if (elements[i].id == "prefList") {
-      listbox = document.getElementById('prefList');    
+      var listbox = document.getElementById('prefList');    
       for (var j=0; j < listbox.getRowCount(); j++) {
-        listitem = listbox.getItemAtIndex(j);
+        var listitem = listbox.getItemAtIndex(j);
         var line = "PreferenceName" + (j+1) + "=" + listitem.getAttribute("label") + "\n";
         cos.writeString(line);
         if (listitem.getAttribute("value").length) {
@@ -2392,8 +2406,8 @@ function CCKReadConfigFile(srcdir)
     var str = line.value;
     var equals = str.indexOf('=');
     if (equals != -1) {
-      firstpart = str.substring(0,equals);
-      secondpart = str.substring(equals+1);
+      var firstpart = str.substring(0,equals);
+      var secondpart = str.substring(equals+1);
       configarray[firstpart] = secondpart;
       try {
         (document.getElementById(firstpart).value = secondpart)
@@ -2402,15 +2416,16 @@ function CCKReadConfigFile(srcdir)
   } while (more);
   
   // handle prefs
-  listbox = document.getElementById('prefList');
+  var listbox = document.getElementById('prefList');
   listbox.clear();
 
   var i = 1;
+  var prefname;
   while( prefname = configarray['PreferenceName' + i]) {
     /* Old config file - figure out pref type */
     if (!(configarray['PreferenceType' + i])) {
       /* We're going to use this a lot */
-      value = configarray['PreferenceValue' + i];
+      var value = configarray['PreferenceValue' + i];
       if ((value.toLowerCase() == "true") || (value.toLowerCase() == "false")) {
         configarray['PreferenceType' + i] = "boolean";
         value = value.toLowerCase();
@@ -2448,6 +2463,7 @@ function CCKReadConfigFile(srcdir)
   
 
   var i = 1;
+  var pluginname;
   while( pluginname = configarray['BrowserPluginPath' + i]) {
     if (configarray['BrowserPluginType' + i]) {
       listbox.appendItem(pluginname, configarray['BrowserPluginType' + i]);
@@ -2563,6 +2579,7 @@ function CCKReadConfigFile(srcdir)
   listbox.clear();
 
   var i = 1;
+  var regname;
   while( regname = configarray['RegName' + i]) {
     var listitem = listbox.appendItem(regname, "");
     listitem.cck['rootkey'] = configarray['RootKey' + i];
@@ -2578,6 +2595,7 @@ function CCKReadConfigFile(srcdir)
   listbox.clear();
 
   var i = 1;
+  var certpath;
   while( certpath = configarray['CertPath' + i]) {
     var listitem;
     if (configarray['CertTrust' + i]) {
@@ -2593,6 +2611,7 @@ function CCKReadConfigFile(srcdir)
   listbox.clear();
 
   var i = 1;
+  var bundlepath;
   while( bundlepath = configarray['BundlePath' + i]) {
     var listitem = listbox.appendItem(bundlepath, "");
     i++;
@@ -2617,6 +2636,7 @@ function CCKReadConfigFile(srcdir)
   }
 
   var i = 1;
+  var searchengineurl;
   while(searchengineurl = configarray[searchname + i]) {
     name = getSearchEngineName(searchengineurl);
     listitem = listbox.appendItem(name, "");
@@ -2800,6 +2820,7 @@ function toggleProxySettings()
   var ports = [ftpPort,gopherPort,sslPort];
   var allFields = [ftp,gopher,ssl,ftpPort,gopherPort,sslPort,socks,socksPort,socksVersion,socksVersion4,socksVersion5];
 
+  var i;
   if ((document.getElementById("shareAllProxies").checked) || document.getElementById("ProxyType").value != "1") {
     for (i = 0; i < allFields.length; i++)
       allFields[i].setAttribute("disabled", "true");

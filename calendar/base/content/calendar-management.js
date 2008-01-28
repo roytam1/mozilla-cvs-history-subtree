@@ -111,10 +111,12 @@ function loadCalendarManager() {
 
         // Wrapping this in a try/catch block, as if any of the migration code
         // fails, the app may not load.
-        try {
-            gDataMigrator.checkAndMigrate();
-        } catch (e) {
-            Components.utils.reportError("Migrator error: " + e);
+        if (getPrefSafe("calendar.migrator.enabled", true)) {
+            try {
+                gDataMigrator.checkAndMigrate();
+            } catch (e) {
+                Components.utils.reportError("Migrator error: " + e);
+            }
         }
 
         calendars = [homeCalendar];
@@ -206,6 +208,12 @@ var calendarListTreeView = {
     treebox: null,
     mContextElement: null,
 
+    QueryInterface: function cLTV_QueryInterface(aIID) {
+        return doQueryInterface(this, calendarListTreeView.__proto__, aIID,
+                                [Components.interfaces.nsISupports,
+                                 Components.interfaces.nsITreeView]);
+    },
+
     /**
      * High-level calendar tree manipulation
      */
@@ -238,11 +246,6 @@ var calendarListTreeView = {
             aCalendar.id == composite.defaultCalendar.id) {
             this.tree.view.selection.select(this.mCalendarList.length - 1);
         }
-
-        if (!aCalendar.readOnly) {
-            calendarManagerObserver.mWritableCalendars++;
-            calendarManagerObserver.setupWritableCalendars();
-        }
     },
 
     removeCalendar: function cLTV_removeCalendar(aCalendar) {
@@ -259,11 +262,6 @@ var calendarListTreeView = {
         }
 
         this.tree.view.selection.select(index);
-
-        if (!aCalendar.readOnly) {
-            calendarManagerObserver.mWritableCalendars--;
-            calendarManagerObserver.setupWritableCalendars();
-        }
     },
 
     updateCalendar: function cLTV_updateCalendar(aCalendar) {
@@ -301,6 +299,8 @@ var calendarListTreeView = {
         return this.mCalendarList.length;
     },
 
+    getRowProperties: function cLTV_getRowProperties(aRow, aProps) {},
+
     getCellProperties: function cLTV_getCellProperties(aRow, aCol, aProps) {
         var calendar = this.mCalendarList[aRow];
         var composite = getCompositeCalendar();
@@ -335,6 +335,82 @@ var calendarListTreeView = {
         }
     },
 
+    getColumnProperties: function cLTV_getColumnProperties(a, aProps) {},
+
+    isContainer: function cLTV_isContainer(aRow) {
+        return false;
+    },
+
+    isContainerOpen: function cLTV_isContainerOpen(aRow) {
+        return false;
+    },
+
+    isContainerEmpty: function cLTV_isContainerEmpty(aRow) {
+        return false;
+    },
+
+    isSeparator: function cLTV_isSeparator(aRow) {
+        return false;
+    },
+
+    isSorted: function cLTV_isSorted(aRow) {
+        return false;
+    },
+
+    canDrop: function cLTV_canDrop(aRow, aOrientation) {
+        return false;
+    },
+
+    drop: function cLTV_drop(aRow, aOrientation) {},
+
+    getParentIndex: function cLTV_getParentIndex(aRow) {
+        return -1;
+    },
+
+    hasNextSibling: function cLTV_hasNextSibling(aRow, aAfterIndex) {},
+
+    getLevel: function cLTV_getLevel(aRow) {
+        return 0;
+    },
+
+    getImageSrc: function cLTV_getImageSrc(aRow, aOrientation) {},
+
+    getProgressMode: function cLTV_getProgressMode(aRow, aCol) {},
+
+    getCellValue: function cLTV_getCellValue(aRow, aCol) {
+        var calendar = this.mCalendarList[aRow];
+        var composite = getCompositeCalendar();
+
+        switch (aCol.id) {
+            case "calendar-list-tree-checkbox":
+                return composite.getCalendar(calendar.uri) ? "true" : "false";
+            case "calendar-list-tree-color":
+                // The value of this cell shows the calendar readonly state
+                return (calendar.readOnly ? "true" : "false");
+        }
+        return null;
+    },
+
+    getCellText: function cLTV_getCellText(aRow, aCol) {
+        var calendar = this.mCalendarList[aRow];
+        var composite = getCompositeCalendar();
+
+        switch (aCol.id) {
+            case "calendar-list-tree-calendar":
+                return this.mCalendarList[aRow].name;
+
+        }
+        return "";
+    },
+
+    setTree: function cLTV_setTree(aTreeBox) {
+        this.treebox = aTreeBox;
+    },
+
+    toggleOpenState: function cLTV_toggleOpenState(aRow) {},
+
+    cycleHeader: function cLTV_cycleHeader(aCol) { },
+
     cycleCell: function cLTV_cycleCell(aRow, aCol) {
         var calendar = this.mCalendarList[aRow];
         var composite = getCompositeCalendar();
@@ -355,18 +431,8 @@ var calendarListTreeView = {
         this.treebox.invalidateRow(aRow);
     },
 
-    getCellValue: function cLTV_getCellValue(aRow, aCol) {
-        var calendar = this.mCalendarList[aRow];
-        var composite = getCompositeCalendar();
-
-        switch (aCol.id) {
-            case "calendar-list-tree-checkbox":
-                return composite.getCalendar(calendar.uri) ? "true" : "false";
-            case "calendar-list-tree-color":
-                // The value of this cell shows the calendar readonly state
-                return (calendar.readOnly ? "true" : "false");
-        }
-        return null;
+    isEditable: function cLTV_isEditable(aRow, aCol) {
+        return false;
     },
 
     setCellValue: function cLTV_setCellValue(aRow, aCol, aValue) {
@@ -390,51 +456,13 @@ var calendarListTreeView = {
         return aValue;
     },
 
-    getCellText: function cLTV_getCellText(aRow, aCol) {
-        var calendar = this.mCalendarList[aRow];
-        var composite = getCompositeCalendar();
+    setCellText: function cLTV_setCellText(aRow, aCol, aValue) {},
 
-        switch (aCol.id) {
-            case "calendar-list-tree-calendar":
-                return this.mCalendarList[aRow].name;
+    performAction: function cLTV_performAction(aAction) {},
 
-        }
-        return "";
-    },
+    performActionOnRow: function cLTV_performActionOnRow(aAction, aRow) {},
 
-    getImageSrc: function cLTV_getImageSrc(aRow, aCol) {
-        return null;
-    },
-
-    isEditable: function cLTV_isEditable(aRow, aCol) {
-        return false;
-    },
-
-    setTree: function cLTV_setTree(aTreeBox) {
-        this.treebox = aTreeBox;
-    },
-
-    isContainer: function cLTV_isContainer(aRow) {
-        return false;
-    },
-
-    isSeparator: function cLTV_isSeparator(aRow) {
-        return false;
-    },
-
-    isSorted: function cLTV_isSorted(aRow) {
-        return false;
-    },
-
-    getLevel: function cLTV_getLevel(aRow) {
-        return 0;
-    },
-
-    getRowProperties: function cLTV_getRowProperties(aRow, aProps) {},
-
-    getColumnProperties: function cLTV_getColumnProperties(aCol, aProps) {},
-
-    cycleHeader: function cLTV_cycleHeader(aCol) { },
+    performActionOnCell: function cLTV_performActionOnCell(aAction, aRow, aCol) {},
 
     /**
      * Calendar Tree Events
@@ -512,6 +540,10 @@ var calendarListTreeView = {
             column: col && col.value
         };
 
+        // Only enable calendar search if there's actually the chance of finding something:
+        document.getElementById("list-calendars-context-find").setAttribute(
+            "collapsed", (getCalendarSearchService().getProviders({}).length > 0 ? "false" : "true"));
+
         if (calendar) {
             document.getElementById("list-calendars-context-edit")
                     .removeAttribute("disabled");
@@ -587,7 +619,6 @@ var calendarManagerCompositeObserver = {
 
 var calendarManagerObserver = {
     mDefaultCalendarItem: null,
-    mWritableCalendars: 0,
 
     QueryInterface: function cMO_QueryInterface(aIID) {
         if (!aIID.equals(Components.interfaces.calICalendarManagerObserver) &&
@@ -615,16 +646,9 @@ var calendarManagerObserver = {
         // or changing items.
         aCalendar.addObserver(this);
 
-        // Make sure we can delete calendars when there is more than one.
-        if (calendars.length > 1) {
-            document.getElementById("calendar_delete_calendar_command")
-                    .removeAttribute("disabled");
-        }
-
-        if (aCalendar.canRefresh) {
-            document.getElementById("calendar_reload_remote_calendars")
-                    .removeAttribute("disabled");
-        }
+        // Update the calendar commands for number of remote calendars and for
+        // more than one calendar
+        document.commandDispatcher.updateCommands("calendar_commands");
     },
 
     setupWritableCalendars: function cMO_setupWritableCalendars() {
@@ -655,30 +679,15 @@ var calendarManagerObserver = {
         calendarListTreeView.removeCalendar(aCalendar);
         aCalendar.removeObserver(this);
 
-        // We want to make sure its not possible to delete the last calendar.
-        // Since at this point the current calendar hasn't been deleted yet,
-        // start disabling when there are two calendars.
-        if (calendars.length <= 2) {
-            document.getElementById("calendar_delete_calendar_command")
-                    .setAttribute("disabled", true);
-        }
+        // Make sure the calendar is removed from the composite calendar
+        getCompositeCalendar().removeCalendar(aCalendar.uri);
 
-        if (aCalendar.canRefresh) {
-            // This may be the last refreshable calendar. In that case, disable
-            // the possibility to reload remote calendars.
-            function calCanRefresh(cal) {
-                return (cal.canRefresh && !cal.uri.equals(aCalendar.uri));
-            }
-            if (!calendars.some(calCanRefresh)) {
-                document.getElementById("calendar_reload_remote_calendars")
-                        .setAttribute("disabled", true);
-            }
-        }
+        // Update commands to disallow deleting the last calendar and only
+        // allowing reload remote calendars when there are remote calendars.
+        document.commandDispatcher.updateCommands("calendar_commands");
     },
 
     onCalendarDeleting: function cMO_onCalendarDeleting(aCalendar) {
-        // Make sure the calendar is removed from the composite calendar
-        getCompositeCalendar().removeCalendar(aCalendar.uri);
     },
 
     // calIObserver. Note that each registered calendar uses this observer, not
@@ -711,9 +720,10 @@ var calendarManagerObserver = {
                 calendarListTreeView.updateCalendar(aCalendar);
                 break;
             case "readOnly":
-                this.mWritableCalendars += (aValue ? -1 : 1);
-                this.setupWritableCalendars();
                 calendarListTreeView.updateCalendar(aCalendar);
+                // Fall through, update commands in any cases.
+            case "requiresNetwork":
+                document.commandDispatcher.updateCommands("calendar_commands");
                 break;
         }
     },
@@ -773,6 +783,67 @@ var calendarManagerObserver = {
         if (aPrefName.substring(0, 24) == "calendar.category.color.") {
             var categoryName = aPrefName.substring(24);
             updateStyleSheetForObject(categoryName, gCachedStyleSheet);
+        }
+    }
+};
+
+function openCalendarSubscriptionsDialog() {
+    // the dialog will reset this to auto when it is done loading
+    window.setCursor("wait");
+ 
+    // open the dialog modally
+    window.openDialog("chrome://calendar/content/calendar-subscriptions-dialog.xul",
+                      "_blank",
+                      "chrome,titlebar,modal,resizable");
+}
+
+/**
+ * Calendar Offline Manager
+ */
+var calendarOfflineManager = {
+    QueryInterface: function cOM_QueryInterface(aIID) {
+        return doQueryInterface(this, calendarOfflineManager.prototype, aIID,
+                                [Components.interfaces.nsIObserver, Components.interfaces.nsISupports]);
+    },
+
+    init: function cOM_init() {
+        if (this.initialized) {
+            throw Components.results.NS_ERROR_ALREADY_INITIALIZED;
+        }
+        var os = Components.classes["@mozilla.org/observer-service;1"]
+                           .getService(Components.interfaces.nsIObserverService);
+        os.addObserver(this, "network:offline-status-changed", false);
+
+        this.updateOfflineUI(!this.isOnline());
+        this.initialized = true;
+    },
+
+    uninit: function cOM_uninit() {
+        if (!this.initialized) {
+            throw Components.results.NS_ERROR_NOT_INITIALIZED;
+        }
+        var os = Components.classes["@mozilla.org/observer-service;1"]
+                           .getService(Components.interfaces.nsIObserverService);
+        os.removeObserver(this, "network:offline-status-changed", false);
+        this.initialized = false;
+    },
+
+    isOnline: function cOM_isOnline() {
+        return (!getIOService().offline);
+
+    },
+
+    updateOfflineUI: function cOM_updateOfflineUI(aIsOffline) {
+        // Refresh the current view
+        currentView().goToDay(currentView().selectedDay);
+
+        // Set up disabled locks for offline
+        document.commandDispatcher.updateCommands("calendar_commands");
+    },
+
+    observe: function cOM_observe(aSubject, aTopic, aState) {
+        if (aTopic == "network:offline-status-changed") {
+            this.updateOfflineUI(aState == "offline");
         }
     }
 };

@@ -55,19 +55,24 @@
 
 #pragma mark Policy Definitions
 
-const int CHPermissionUnknown = nsIPermissionManager::UNKNOWN_ACTION;
-const int CHPermissionAllow = nsIPermissionManager::ALLOW_ACTION;
-const int CHPermissionDeny = nsIPermissionManager::DENY_ACTION;
-const int CHPermissionAllowForSession = nsICookiePermission::ACCESS_SESSION;
+__attribute__((used)) const int CHPermissionUnknown = nsIPermissionManager::UNKNOWN_ACTION;
+__attribute__((used)) const int CHPermissionAllow = nsIPermissionManager::ALLOW_ACTION;
+__attribute__((used)) const int CHPermissionDeny = nsIPermissionManager::DENY_ACTION;
+__attribute__((used)) const int CHPermissionAllowForSession = nsICookiePermission::ACCESS_SESSION;
+// gcc 3.3 ignores the used attribute on const non-pointer types, so
+// protect the unused constants manually.
+asm(".no_dead_strip _CHPermissionUnknown");
+asm(".no_dead_strip _CHPermissionAllowForSession");
 
 #pragma mark Permission Type Definitions
 
-NSString* const CHPermissionTypeCookie = @"cookie";
-NSString* const CHPermissionTypePopup = @"popup";
+__attribute__((used)) NSString* const CHPermissionTypeCookie = @"cookie";
+__attribute__((used)) NSString* const CHPermissionTypePopup = @"popup";
 
 #pragma mark -
 
 @interface CHPermission (CHPermissionManagerMethods)
++ (id)permissionWithGeckoPermission:(nsIPermission*)geckoPermission;
 - (id)initWithGeckoPermission:(nsIPermission*)geckoPermission;
 @end
 
@@ -212,9 +217,9 @@ static CHPermissionManager* sPermissionManager = nil;
     permEnumerator->GetNext(getter_AddRefs(curr));
     nsCOMPtr<nsIPermission> currPerm(do_QueryInterface(curr));
     if (currPerm) {
-      nsCAutoString type;
-      currPerm->GetType(type);
-      if (type.Equals(typeCString)) {
+      nsCAutoString permType;
+      currPerm->GetType(permType);
+      if (!type || permType.Equals(typeCString)) {
         CHPermission* perm = [CHPermission permissionWithGeckoPermission:currPerm.get()];
         [permissions addObject:perm];
       }
