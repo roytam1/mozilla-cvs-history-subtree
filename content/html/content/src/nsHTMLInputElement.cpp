@@ -323,7 +323,16 @@ protected:
 
   void FocusFileInputButton(nsIFormControlFrame* aFormControlFrame,
                             nsPresContext* aPresContext);
-  
+
+  /**
+   * In the case of <input type="file">, this method clears the file name if
+   * aEvent is trusted keyup/keydown/keypress (but not enter/return/tab key) and
+   * aDOMEvent isn't targeted to the browse... button.
+   * If file name is cleared, mHasBeenDisabled is set to PR_FALSE.
+   */
+  void MaybeClearFilename(nsEvent* aEvent, nsIDOMEvent** aDOMEvent,
+                          PRInt32 aOldType);
+
   nsCOMPtr<nsIControllers> mControllers;
 
   /**
@@ -351,6 +360,8 @@ protected:
    * SetFileName to update this member.
    */
   nsAutoPtr<nsString>      mFileName;
+
+  PRBool                   mHasBeenDisabled;
 };
 
 #ifdef ACCESSIBILITY
@@ -371,7 +382,8 @@ nsHTMLInputElement::nsHTMLInputElement(nsINodeInfo *aNodeInfo,
   : nsGenericHTMLFormElement(aNodeInfo),
     mType(NS_FORM_INPUT_TEXT), // default value
     mBitField(0),
-    mValue(nsnull)
+    mValue(nsnull),
+    mHasBeenDisabled(PR_FALSE)
 {
   SET_BOOLBIT(mBitField, BF_PARSER_CREATING, aFromParser);
 }
@@ -499,6 +511,9 @@ nsHTMLInputElement::AfterSetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
     return;
   }
 
+  if (aName == nsHTMLAtoms::disabled && !mHasBeenDisabled) {
+    GetDisabled(&mHasBeenDisabled);
+  }
   //
   // When name or type changes, radio should be added to radio group.
   // (type changes are handled in the form itself currently)
@@ -1625,6 +1640,9 @@ nsHTMLInputElement::HandleDOMEvent(nsPresContext* aPresContext,
       !(aFlags & NS_EVENT_FLAG_CAPTURE) &&
       !(aFlags & NS_EVENT_FLAG_SYSTEM_EVENT)) {
     if (nsEventStatus_eIgnore == *aEventStatus) {
+      if (mHasBeenDisabled) {
+        MaybeClearFilename(aEvent, aDOMEvent, oldType);
+      }
       switch (aEvent->message) {
 
         case NS_FOCUS_CONTENT:
@@ -1849,37 +1867,10 @@ nsHTMLInputElement::HandleDOMEvent(nsPresContext* aPresContext,
         // not ignored) so if there is a stored submission, it needs to
         // be submitted immediately.
         mForm->FlushPendingSubmission();
-      } else if (NS_IS_TRUSTED_EVENT(aEvent) &&
-                 (oldType == NS_FORM_INPUT_FILE || mType == NS_FORM_INPUT_FILE) &&
-                 (aEvent->message == NS_KEY_UP ||
-                  aEvent->message == NS_KEY_DOWN ||
-                  aEvent->message == NS_KEY_PRESS)) {
-        PRBool isButton = PR_FALSE;
-        if (aDOMEvent) {
-          nsCOMPtr<nsIDOMNSEvent> nsEvent(do_QueryInterface(*aDOMEvent));
-          if (nsEvent) {
-            nsCOMPtr<nsIDOMEventTarget> originalTarget;
-            nsEvent->GetOriginalTarget(getter_AddRefs(originalTarget));
-            nsCOMPtr<nsIContent> maybeButton(do_QueryInterface(originalTarget));
-            if (maybeButton && maybeButton->IsNativeAnonymous() &&
-                maybeButton->GetParent() == this) {
-              nsAutoString type;
-              maybeButton->GetAttr(kNameSpaceID_None, nsHTMLAtoms::type, type);
-              isButton = type.EqualsLiteral("button");
-            }
-          }
-        }
-        nsKeyEvent* keyEvent = NS_STATIC_CAST(nsKeyEvent*, aEvent);
-        if (!isButton &&
-            keyEvent->keyCode != NS_VK_RETURN &&
-            keyEvent->keyCode != NS_VK_ENTER &&
-            keyEvent->keyCode != NS_VK_TAB) {
-          // Because of security issues related to type="file", canceling default
-          // action clears file name.
-          // Preventing submission and tabbing is allowed, otherwise this is
-          // very restrictive.
-          SetFileName(EmptyString(), PR_TRUE);
-        }
+      } else {
+        // Because of security issues related to type="file", canceling default
+        // action may clear file name.
+        MaybeClearFilename(aEvent, aDOMEvent, oldType);
       }
     } //if
   } // if
@@ -2947,6 +2938,40 @@ nsHTMLInputElement::VisitGroup(nsIRadioVisitor* aVisitor)
   return rv;
 }
 
+void
+nsHTMLInputElement::MaybeClearFilename(nsEvent* aEvent, nsIDOMEvent** aDOMEvent,
+                                       PRInt32 aOldType)
+{
+  if (NS_IS_TRUSTED_EVENT(aEvent) &&
+      (aOldType == NS_FORM_INPUT_FILE || mType == NS_FORM_INPUT_FILE) &&
+       (aEvent->message == NS_KEY_UP ||
+        aEvent->message == NS_KEY_DOWN ||
+        aEvent->message == NS_KEY_PRESS)) {
+        PRBool isButton = PR_FALSE;
+    if (aDOMEvent) {
+      nsCOMPtr<nsIDOMNSEvent> nsEvent(do_QueryInterface(*aDOMEvent));
+      if (nsEvent) {
+        nsCOMPtr<nsIDOMEventTarget> originalTarget;
+        nsEvent->GetOriginalTarget(getter_AddRefs(originalTarget));
+        nsCOMPtr<nsIContent> maybeButton(do_QueryInterface(originalTarget));
+        if (maybeButton && maybeButton->IsNativeAnonymous() &&
+            maybeButton->GetParent() == this) {
+          nsAutoString type;
+          maybeButton->GetAttr(kNameSpaceID_None, nsHTMLAtoms::type, type);
+          isButton = type.EqualsLiteral("button");
+        }
+      }
+    }
+    nsKeyEvent* keyEvent = NS_STATIC_CAST(nsKeyEvent*, aEvent);
+    if (!isButton &&
+        keyEvent->keyCode != NS_VK_RETURN &&
+        keyEvent->keyCode != NS_VK_ENTER &&
+        keyEvent->keyCode != NS_VK_TAB) {
+      SetFileName(EmptyString(), PR_TRUE);
+      mHasBeenDisabled = PR_FALSE;
+    }
+  }
+}
 
 //
 // Visitor classes
