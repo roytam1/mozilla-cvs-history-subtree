@@ -332,9 +332,7 @@ nsXBLProtoImplAnonymousMethod::Execute(nsIContent* aBoundElement)
   // Now call the method
 
   // Use nsCxPusher to make sure we call ScriptEvaluated when we're done.
-  nsCxPusher pusher;
-  NS_ENSURE_STATE(pusher.Push(aBoundElement));
-
+  nsCxPusher pusher(aBoundElement);
 
   // Check whether it's OK to call the method.
   rv = nsContentUtils::GetSecurityManager()->CheckFunctionAccess(cx, method, thisObject);

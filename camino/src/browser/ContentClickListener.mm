@@ -115,9 +115,7 @@ ContentClickListener::MouseClick(nsIDOMEvent* aEvent)
     // Open the link in a new window or tab if it's an internally handled, non-Javascript link.
     if (![hrefScheme isEqualToString:@"javascript"] && GeckoUtils::isProtocolInternal([hrefScheme UTF8String])) {
       BOOL useTab           = [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.opentabfor.middleclick" withSuccess:NULL];
-      BOOL loadInBackground = [BrowserWindowController shouldLoadInBackgroundForDestination:(useTab ? eDestinationNewTab
-                                                                                                    : eDestinationNewWindow)
-                                                                                     sender:nil];
+      BOOL loadInBackground = [BrowserWindowController shouldLoadInBackground:nil];
 
       if (useTab)
         [mBrowserController openNewTabWithURL:hrefStr referrer:referrer loadInBackground:loadInBackground allowPopups:NO setJumpback:YES];

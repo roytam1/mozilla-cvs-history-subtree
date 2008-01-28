@@ -4312,7 +4312,6 @@ void nsImapMailFolder::EndOfflineDownload()
     if (mDatabase)
       mDatabase->Commit(nsMsgDBCommitType::kLargeCommit);
   }
-  m_offlineHeader = nsnull;
 }
 
 NS_IMETHODIMP

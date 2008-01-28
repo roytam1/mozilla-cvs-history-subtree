@@ -1560,10 +1560,7 @@ var BookmarksUtils = {
     //            This is because when a full page plugin is loaded, there is
     //            no DOMWindow (?) but information about the loaded document
     //            may still be obtained from the webNavigation. 
-    var uri = aDocShell.currentURI;
-    if (uri.schemeIs("javascript") || uri.schemeIs("data"))
-      aShowDialog = true;
-    var url = uri.spec;
+    var url = aDocShell.currentURI.spec;
     var title, docCharset = null;
     try {
       title = aDocShell.document.title || url;

@@ -1070,8 +1070,6 @@ class PresShell : public nsIPresShell_MOZILLA_1_8_BRANCH2, public nsIViewObserve
                   public nsSupportsWeakReference
 {
 public:
-  friend class nsIPresShell;
-
   PresShell();
 
   NS_DECL_AND_IMPL_ZEROING_OPERATOR_NEW
@@ -3951,7 +3949,12 @@ PresShell::RecreateFramesFor(nsIContent* aContent)
 
   NS_ASSERTION(mViewManager, "Should have view manager");
   mViewManager->BeginUpdateViewBatch();
+
+  // Mark ourselves as not safe to flush while we're doing frame construction.
+  ++mChangeNestCount;
   nsresult rv = mFrameConstructor->ProcessRestyledFrames(changeList);
+  --mChangeNestCount;
+  
   mViewManager->EndUpdateViewBatch(NS_VMREFRESH_NO_SYNC);
 #ifdef ACCESSIBILITY
   InvalidateAccessibleSubtree(aContent);
@@ -5682,9 +5685,6 @@ PresShell::ReconstructFrames(void)
 void
 nsIPresShell::ReconstructStyleDataInternal()
 {
-  if (NS_UNLIKELY(NS_STATIC_CAST(PresShell*, this)->mIsDestroying))
-    return;
-
   mStylesHaveChanged = PR_FALSE;
 
   if (!mDidInitialReflow) {
@@ -5708,9 +5708,6 @@ nsIPresShell::ReconstructStyleDataInternal()
 void
 nsIPresShell::ReconstructStyleDataExternal()
 {
-  if (NS_UNLIKELY(NS_STATIC_CAST(PresShell*, this)->mIsDestroying))
-    return;
-
   ReconstructStyleDataInternal();
   FlushPendingNotifications(Flush_Style);
 }
@@ -7422,7 +7419,11 @@ PresShell::Observe(nsISupports* aSubject,
       nsStyleChangeList changeList;
       WalkFramesThroughPlaceholders(mPresContext, rootFrame,
                                     ReframeImageBoxes, &changeList);
+      // Mark ourselves as not safe to flush while we're doing frame
+      // construction.
+      ++mChangeNestCount;
       mFrameConstructor->ProcessRestyledFrames(changeList);
+      --mChangeNestCount;
 
       mViewManager->EndUpdateViewBatch(NS_VMREFRESH_NO_SYNC);
 #ifdef ACCESSIBILITY

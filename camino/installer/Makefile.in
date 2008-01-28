@@ -44,7 +44,7 @@ include $(DEPTH)/config/autoconf.mk
 
 include $(topsrcdir)/config/rules.mk
 
-CAMINO_VERSION=1.6b2
+CAMINO_VERSION=1.6b1
 _RELNOTE_VERSION:=$(subst .,-,$(CAMINO_VERSION))
 
 # The packager runs in the dist directory, paths must be relative to there.
@@ -59,15 +59,6 @@ MOZ_PKG_MAC_EXTRA=--copy "$(_ABS_TOPSRCDIR)/camino/docs/ReadMe.rtf" \
                   --attribute "E:/ReadMe.rtf:/Release Notes.rtf"
 
 include $(topsrcdir)/toolkit/mozapps/installer/packager.mk
-
-# Use striptease instead of strip.  Strip out debugging symbols and local
-# symbols, but leave local symbols in text sections intact.  This keeps
-# CrashReporter stacks usable.  Use pwd to get an absolute path based
-# on $(DIST) relative to this directory.  If $(DIST) were used directly, the
-# strip part of packger.mk might not be able to find strip, because $(DIST)
-# is a relative path, and the stripper changes directory.
-STRIP:=$(shell pwd)/$(DIST)/host/bin/tease
-STRIP_FLAGS=-S -t
 
 # The core build system thinks it's Mozilla.  Override what's necessary.
 # Do this after including packager.mk because it has dependencies that

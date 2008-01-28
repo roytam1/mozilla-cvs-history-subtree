@@ -144,15 +144,12 @@ PR_STATIC_CALLBACK(PLDHashOperator) DoDeferredActions(nsISupports * aModel,
 
 NS_IMETHODIMP
 nsXFormsActionElement::HandleAction(nsIDOMEvent* aEvent,
-                                    nsIXFormsActionElement* aParentAction)
+                                    nsIXFormsActionElement *aParentAction)
 {
-  return nsXFormsActionModuleBase::DoHandleAction(this, aEvent, aParentAction);
-}
+  if (!mElement) {
+    return NS_OK;
+  }
 
-nsresult
-nsXFormsActionElement::HandleSingleAction(nsIDOMEvent* aEvent,
-                                          nsIXFormsActionElement* aParentAction)
-{
   if (!mDeferredUpdates.IsInitialized()) {
     NS_ENSURE_TRUE(mDeferredUpdates.Init(), NS_ERROR_OUT_OF_MEMORY);
   } else {

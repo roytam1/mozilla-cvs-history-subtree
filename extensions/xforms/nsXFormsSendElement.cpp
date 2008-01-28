@@ -45,18 +45,19 @@ class nsXFormsSendElement : public nsXFormsActionModuleBase
 {
 public:
   nsXFormsSendElement();
-  virtual nsresult HandleSingleAction(nsIDOMEvent *aEvent,
-                                      nsIXFormsActionElement *aParentAction);
+  NS_DECL_NSIXFORMSACTIONMODULEELEMENT
 };
 
-nsXFormsSendElement::nsXFormsSendElement()
-{
+nsXFormsSendElement::nsXFormsSendElement() {
 }
 
-nsresult
-nsXFormsSendElement::HandleSingleAction(nsIDOMEvent *aEvent,
-                                        nsIXFormsActionElement *aParentAction)
+NS_IMETHODIMP
+nsXFormsSendElement::HandleAction(nsIDOMEvent* aEvent,
+                                  nsIXFormsActionElement *aParentAction)
 {
+  if (!mElement)
+    return NS_OK;
+
   NS_NAMED_LITERAL_STRING(submission, "submission");
   nsAutoString submissionID;
   mElement->GetAttribute(submission, submissionID);

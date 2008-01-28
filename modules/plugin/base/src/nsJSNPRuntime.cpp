@@ -228,22 +228,7 @@ struct AutoCXPusher
 
   ~AutoCXPusher()
   {
-    JSContext *cx = nsnull;
-    sContextStack->Pop(&cx);
-
-    JSContext *currentCx = nsnull;
-    sContextStack->Peek(&currentCx);
-
-    if (!currentCx) {
-      // No JS is running, tell the context we're done executing
-      // script.
-
-      nsIScriptContext *scx = GetScriptContextFromJSContext(cx);
-
-      if (scx) {
-        scx->ScriptEvaluated(PR_TRUE);
-      }
-    }
+    sContextStack->Pop(nsnull);
 
     OnWrapperDestroyed();
   }

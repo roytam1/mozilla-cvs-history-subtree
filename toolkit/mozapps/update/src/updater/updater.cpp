@@ -1187,7 +1187,7 @@ int main(int argc, char **argv)
   LogFinish();
 
 #ifdef XP_WIN
-  if (gSucceeded && argc > 4)
+  if (gSucceeded)
     LaunchWinPostProcess(argv[4]);
 #endif
 
