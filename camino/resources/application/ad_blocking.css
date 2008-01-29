@@ -467,10 +467,14 @@ iframe[src*="mozilla.org"]
 
 { display: inline ! important }
 
-@-moz-document domain(caminobrowser.org) {
+@-moz-document domain(wiki.caminobrowser.org) {
 img[src*="/ad/"] {display: inline !important }
 }
 
 @-moz-document domain(apple.com) {
 img[src*="/ads/"] {display: inline !important }
+}
+
+@-moz-document domain(nasdaq.com) {
+div[id*="panel_content_ads"] {display: block !important }
 }
