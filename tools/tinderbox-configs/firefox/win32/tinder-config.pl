@@ -142,11 +142,11 @@ $ConfigureOnly = 1;
 # Existing build files to download.
 %WGetFiles = (
 # CONFIG:	      'http://%stagingServer%/pub/mozilla.org/firefox/nightly/%version%-candidates/rc%rc%/unsigned/firefox-%version%.en-US.win32.installer.exe' =>
-'http://build-console.build.mozilla.org/pub/mozilla.org/firefox/nightly/2.0.0.11-candidates/rc1/unsigned/firefox-2.0.0.11.en-US.win32.installer.exe' =>
+'http://production-1.8-master.build.mozilla.org/pub/mozilla.org/firefox/nightly/2.0.0.12-candidates/rc1/unsigned/firefox-2.0.0.12.en-US.win32.installer.exe' =>
 # CONFIG:	      "%l10n_buildDir%/%l10n_buildPlatform%/firefox-installer.exe",
 "/cygdrive/c/builds/tinderbox/Fx-Mozilla1.8-l10n-Release/WINNT_5.2_Depend/firefox-installer.exe",
 # CONFIG:	      'http://%stagingServer%/pub/mozilla.org/firefox/nightly/%version%-candidates/rc%rc%/unsigned/firefox-%version%.en-US.win32.zip' =>
-'http://build-console.build.mozilla.org/pub/mozilla.org/firefox/nightly/2.0.0.11-candidates/rc1/unsigned/firefox-2.0.0.11.en-US.win32.zip' =>
+'http://production-1.8-master.build.mozilla.org/pub/mozilla.org/firefox/nightly/2.0.0.12-candidates/rc1/unsigned/firefox-2.0.0.12.en-US.win32.zip' =>
 # CONFIG:	      "%l10n_buildDir%/%l10n_buildPlatform%/firefox.zip"
 "/cygdrive/c/builds/tinderbox/Fx-Mozilla1.8-l10n-Release/WINNT_5.2_Depend/firefox.zip"
 	      );
@@ -168,7 +168,7 @@ $BuildTree  = 'MozillaRelease';
 
 #$BuildName = '';
 # CONFIG: $BuildTag = '%productTag%_RELEASE';
-$BuildTag = 'FIREFOX_2_0_0_11_RELEASE';
+$BuildTag = 'FIREFOX_2_0_0_12_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -202,13 +202,13 @@ $ssh_version   = "2";
 # CONFIG: $ssh_user      = "%sshUser%";
 $ssh_user      = "cltbld";
 # CONFIG: $ssh_server    = "%sshServer%";
-$ssh_server    = "build-console.build.mozilla.org";
+$ssh_server    = "production-1.8-master.build.mozilla.org";
 $ftp_path      = "/home/ftp/pub/firefox/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
 # CONFIG: $milestone     = 'firefox%version%-l10n';
-$milestone     = 'firefox2.0.0.11-l10n';
+$milestone     = 'firefox2.0.0.12-l10n';
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 1;
