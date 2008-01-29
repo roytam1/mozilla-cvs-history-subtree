@@ -40,6 +40,11 @@
 
 @interface NSURL (CaminoExtensions) 
 
+// This takes an NSURL to a local file, and if that file is a file that
+// represents a URL, we return the URL it contains. Otherwise, we return the URL
+// we originally got. Supports .url, .webloc and .ftploc files.
++ (NSURL*)decodeLocalFileURL:(NSURL*)url;
+
 +(NSURL*)URLFromInetloc:(NSString*)inFile;
 +(NSURL*)URLFromIEURLFile:(NSString*)inFile;
 
