@@ -145,7 +145,9 @@ NS_NewDOMDocument_MOZILLA_1_8_BRANCH(nsIDOMDocument** aInstancePtrResult,
   }
 
   doc->SetScriptHandlingObject(aScriptHandler);
-  doc->SetLoadedAsData(aLoadedAsData);
+  // This is not used on 1.8 branch because of
+  // https://bugzilla.mozilla.org/show_bug.cgi?id=414856
+  // doc->SetLoadedAsData(aLoadedAsData);
   doc->nsIDocument::SetDocumentURI(aBaseURI);
   doc->SetBaseURI(aBaseURI);
 
