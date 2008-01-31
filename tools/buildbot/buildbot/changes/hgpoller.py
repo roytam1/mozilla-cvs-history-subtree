@@ -108,6 +108,9 @@ class HgPoller(base.ChangeSource):
                                when = change["pubDate"],
                                branch = self.branch)
             self.parent.addChange(c)
-        self.lastChange = max(self.lastPoll, *[c["pubDate"] for c in
-                                                   change_list])
+        if len(change_list) > 0:
+            self.lastChange = max(self.lastPoll, *[c["pubDate"] for c in
+                                                       change_list])
+        else:
+            self.lastChange = self.lastPoll
 
