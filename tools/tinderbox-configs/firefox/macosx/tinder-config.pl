@@ -57,7 +57,6 @@ $ProductName              = 'BonEcho';
 $MacOSProductName         = 'BonEcho';
 $VendorName               = "";
 
-# CONFIG: $RunMozillaTests          = %runMozillaTests%;
 $RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
 $RegxpcomTest             = 1;
 $AliveTest                = 1;
@@ -78,6 +77,7 @@ $DHTMLPerformanceTest     = 1;  # Tdhtml
 $XULWindowOpenTest        = 1;  # Txul
 $StartupPerformanceTest   = 1;  # Ts
 
+# CONFIG: $TestsPhoneHome           = %testsPhoneHome%;  # Should test report back to server?
 $TestsPhoneHome           = 1;  # Should test report back to server?
 
 # $results_server

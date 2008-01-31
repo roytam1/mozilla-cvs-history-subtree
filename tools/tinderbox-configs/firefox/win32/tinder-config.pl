@@ -56,7 +56,6 @@ $CleanProfile             = 1;
 $ProductName              = "Firefox";
 $VendorName               = "Mozilla";
 
-# CONFIG: $RunMozillaTests          = %runMozillaTests%;
 $RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
 $RegxpcomTest             = 1;
 $AliveTest                = 1;
@@ -76,6 +75,7 @@ $LayoutPerformanceTest    = 0;  # Tp
 $XULWindowOpenTest        = 0;  # Txul
 $StartupPerformanceTest   = 0;  # Ts
 
+# CONFIG: $TestsPhoneHome           = %testsPhoneHome%;  # Should test report back to server?
 $TestsPhoneHome           = 1;  # Should test report back to server?
 
 # $results_server

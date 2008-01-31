@@ -63,7 +63,6 @@ $DisplayServer = ':1.0';
 $ProductName              = "Firefox";
 #$VendorName               = '';
 
-# CONFIG: $RunMozillaTests          = %runMozillaTests%;
 $RunMozillaTests          = 0;  # Allow turning off of all tests if needed.
 #$RegxpcomTest             = 1;
 #$AliveTest                = 1;
@@ -83,6 +82,7 @@ $RunMozillaTests          = 0;  # Allow turning off of all tests if needed.
 #$XULWindowOpenTest        = 0;  # Txul
 #$StartupPerformanceTest   = 0;  # Ts
 
+# CONFIG: $TestsPhoneHome           = %testsPhoneHome%;  # Should test report back to server?
 #$TestsPhoneHome           = 0;  # Should test report back to server?
 
 # $results_server
