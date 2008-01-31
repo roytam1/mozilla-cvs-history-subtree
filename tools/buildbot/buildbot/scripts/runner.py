@@ -839,10 +839,12 @@ class ConfigLoader(master.BuildMaster):
             configFile = open(configFileName, "r")
             self.loadConfig(configFile)
         except:
-            raise
-        finally:
             os.chdir(dir)
             rmtree(tempdir)
+            raise
+        os.chdir(dir)
+        rmtree(tempdir)
+
 
 class CheckConfigOptions(usage.Options):
     optFlags = [
