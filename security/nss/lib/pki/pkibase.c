@@ -847,7 +847,10 @@ nssPKIObjectCollection_AddInstances (
     PRBool foundIt;
     pkiObjectCollectionNode *node;
     if (instances) {
-	while ((!numInstances || i < numInstances) && *instances) {
+	for (; *instances; instances++, i++) {
+	    if (numInstances > 0 && i == numInstances) {
+		break;
+	    }
 	    if (status == PR_SUCCESS) {
 		node = add_object_instance(collection, *instances, &foundIt);
 		if (node == NULL) {
@@ -858,8 +861,6 @@ nssPKIObjectCollection_AddInstances (
 	    } else {
 		nssCryptokiObject_Destroy(*instances);
 	    }
-	    instances++;
-	    i++;
 	}
     }
     return status;

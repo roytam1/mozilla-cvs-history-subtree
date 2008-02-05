@@ -79,7 +79,7 @@ NSS_CmpCertChainWCANames(CERTCertificate *cert, CERTDistNames *caNames)
     
     /* compute an alternate issuer name for compatibility with 2.0
      * enterprise server, which send the CA names without
-     * the outer layer of DER header
+     * the outer layer of DER hearder
      */
     rv = DER_Lengths(&issuerName, &headerlen, (PRUint32 *)&contentlen);
     if ( rv == SECSuccess ) {

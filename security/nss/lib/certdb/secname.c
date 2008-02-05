@@ -589,7 +589,7 @@ CERT_CompareRDN(CERTRDN *a, CERTRDN *b)
 	    }
     	}
 	if (!bava)  /* didn't find a match */
-	    return SECGreaterThan;
+	    break;
     }
     return rv;
 }

@@ -160,6 +160,7 @@ ALL_HDRS =  \
 	rijndael.h \
 	camellia.h \
 	secmpi.h \
+	sha.h \
 	sha_fast.h \
 	sha256.h \
 	shsign.h \

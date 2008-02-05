@@ -150,7 +150,7 @@ builtins_mdToken_OpenSession
   return nss_builtins_CreateSession(fwSession, pError);
 }
 
-const NSSCKMDToken
+NSS_IMPLEMENT_DATA const NSSCKMDToken
 nss_builtins_mdToken = {
   (void *)NULL, /* etc */
   NULL, /* Setup */

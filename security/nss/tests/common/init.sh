@@ -262,9 +262,14 @@ if [ -z "${INIT_SOURCED}" -o "${INIT_SOURCED}" != "TRUE" ]; then
     COMMON=${TEST_COMMON-$common}
     export COMMON
 
-    MAKE=gmake
-    $MAKE -v >/dev/null 2>&1 || MAKE=make
-    $MAKE -v >/dev/null 2>&1 || { echo "You are missing make."; exit 5; }
+    MAKE=`which gmake`
+    if [ -z "$MAKE" ]; then
+		MAKE=`which make`
+    fi
+    if [ -z "$MAKE" ]; then
+		You are missing make.
+		exit 5
+    fi
 
     DIST=${DIST-${MOZILLA_ROOT}/dist}
     SECURITY_ROOT=${SECURITY_ROOT-${MOZILLA_ROOT}/security/nss}
@@ -274,8 +279,6 @@ if [ -z "${INIT_SOURCED}" -o "${INIT_SOURCED}" != "TRUE" ]; then
     DLL_PREFIX=`(cd $COMMON; $MAKE dll_prefix)`
     DLL_SUFFIX=`(cd $COMMON; $MAKE dll_suffix)`
     OS_NAME=`uname -s | sed -e "s/-[0-9]*\.[0-9]*//" | sed -e "s/-WOW64//"`
-
-    BINDIR="${DIST}/${OBJDIR}/bin"
 
     # Pathnames constructed from ${TESTDIR} are passed to NSS tools
     # such as certutil, which don't understand Cygwin pathnames.
@@ -437,24 +440,23 @@ if [ -z "${INIT_SOURCED}" -o "${INIT_SOURCED}" != "TRUE" ]; then
         html "<HR><BR>" 
         html "<HTML><BODY>" 
 
-        echo "********************************************" | tee -a ${LOGFILE}
-        echo "   Platform: ${OBJDIR}"                       | tee -a ${LOGFILE}
-        echo "   Results: ${HOST}.$version"                 | tee -a ${LOGFILE}
-        echo "********************************************" | tee -a ${LOGFILE}
-	echo "$BC_ACTION"                                   | tee -a ${LOGFILE}
-#if running remote side of the distributed stress test 
-# let the user know who it is...
+        echo "********************************************" | tee ${LOGFILE}
+        echo "   Platform: ${OBJDIR}" | tee ${LOGFILE}
+        echo "   Results: ${HOST}.$version" | tee ${LOGFILE}
+        echo "********************************************" | tee ${LOGFILE}
+	echo "$BC_ACTION" | tee ${LOGFILE}
+    #if running remote side of the distributed stress test let the user know who it is...
     elif [ -n "$DO_REM_ST" -a "$DO_REM_ST" = "TRUE" ] ; then
-        echo "********************************************" | tee -a ${LOGFILE}
-        echo "   Platform: ${OBJDIR}"                       | tee -a ${LOGFILE}
-        echo "   Results: ${HOST}.$version"                 | tee -a ${LOGFILE}
-        echo "   remote side of distributed stress test "   | tee -a ${LOGFILE}
-        echo "   `uname -n -s`"                             | tee -a ${LOGFILE}
-        echo "********************************************" | tee -a ${LOGFILE}
+        echo "********************************************" | tee ${LOGFILE}
+        echo "   Platform: ${OBJDIR}" | tee ${LOGFILE}
+        echo "   Results: ${HOST}.$version" | tee ${LOGFILE}
+        echo "   remote side of distributed stress test " | tee ${LOGFILE}
+        echo "   `uname -n -s`" | tee ${LOGFILE}
+        echo "********************************************" | tee ${LOGFILE}
     fi
 
-    echo "$SCRIPTNAME init: Testing PATH $PATH against LIB $LD_LIBRARY_PATH" |\
-        tee -a ${LOGFILE}
+    echo "$SCRIPTNAME init: Testing PATH $PATH against LIB $LD_LIBRARY_PATH" |
+        tee ${LOGFILE}
 
     KILL="kill"
 

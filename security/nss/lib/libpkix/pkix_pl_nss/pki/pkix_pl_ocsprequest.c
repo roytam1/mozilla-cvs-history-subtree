@@ -348,9 +348,6 @@ pkix_pl_OcspRequest_Create(
         ocspRequest->decoded = NULL;
         ocspRequest->encoded = NULL;
 
-        ocspRequest->certList = NULL;
-        ocspRequest->location = NULL;
-
         nssCert = cert->nssCert;
 
         /*
@@ -433,10 +430,8 @@ pkix_pl_OcspRequest_Create(
         ocspRequest->encoded = encoding;
 
         *pRequest = ocspRequest;
-        ocspRequest = NULL;
 
 cleanup:
-        PKIX_DECREF(ocspRequest);
 
         PKIX_RETURN(OCSPREQUEST);
 }

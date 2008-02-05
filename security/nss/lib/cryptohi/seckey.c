@@ -502,7 +502,9 @@ seckey_UpdateCertPQGChain(CERTCertificate * subjectCert, int count)
     }
 
     /* check if the cert is self-signed */
-    if (subjectCert->isRoot) {
+    rvCompare = (SECStatus)SECITEM_CompareItem(&subjectCert->derSubject,
+				    &subjectCert->derIssuer);
+    if (rvCompare == SECEqual) {
       /* fail since cert is self-signed and has no pqg params. */
 	return SECFailure;     
     }

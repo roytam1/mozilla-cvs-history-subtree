@@ -60,8 +60,6 @@ static const char CVS_ID[] = "@(#) $RCSfile$ $Revision$ $Date$";
 
 #include "cert.h"
 
-#include "prbit.h"
-
 /* 
  * Certificate Store
  *
@@ -721,9 +719,9 @@ nss_certificate_hash (
     NSSCertificate *c = (NSSCertificate *)key;
     h = 0;
     for (i=0; i<c->issuer.size; i++)
-	h = PR_ROTATE_LEFT32(h, 4) ^ ((unsigned char *)c->issuer.data)[i];
+	h = (h >> 28) ^ (h << 4) ^ ((unsigned char *)c->issuer.data)[i];
     for (i=0; i<c->serial.size; i++)
-	h = PR_ROTATE_LEFT32(h, 4) ^ ((unsigned char *)c->serial.data)[i];
+	h = (h >> 28) ^ (h << 4) ^ ((unsigned char *)c->serial.data)[i];
     return h;
 }
 
