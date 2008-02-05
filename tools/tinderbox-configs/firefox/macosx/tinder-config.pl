@@ -167,7 +167,7 @@ $LocaleProduct = "browser";
 $LocalizationVersionFile = 'browser/config/version.txt';
 %WGetFiles = (
 # CONFIG:             "http://%stagingServer%/pub/mozilla.org/firefox/nightly/%version%-candidates/rc%rc%/firefox-%version%.en-US.mac.dmg" => 
-"http://production-trunk-automation.build.mozilla.org/pub/mozilla.org/firefox/nightly/3.0b2-candidates/rc1/firefox-3.0b2.en-US.mac.dmg" => 
+"http://production-1.9-master.build.mozilla.org/pub/mozilla.org/firefox/nightly/3.0b3-candidates/rc1/firefox-3.0b3.en-US.mac.dmg" => 
 # CONFIG:             "%l10n_buildDir%/%l10n_buildPlatform%/firefox.dmg"
 "/builds/tinderbox/Fx-Mozilla1.9-l10n-Release/Darwin_8.8.4_Depend/firefox.dmg"
 	      );
@@ -199,7 +199,7 @@ $BuildTree  = 'MozillaRelease';
 
 #$BuildName = '';
 # CONFIG: $BuildTag = '%productTag%_RELEASE';
-$BuildTag = 'FIREFOX_3_0b2_RELEASE';
+$BuildTag = 'FIREFOX_3_0b3_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -232,14 +232,14 @@ $ssh_user      = "cltbld";
 # CONFIG: $ssh_key       = "'$ENV{HOME}/.ssh/%sshUser%_dsa'";
 $ssh_key       = "'$ENV{HOME}/.ssh/cltbld_dsa'";
 # CONFIG: $ssh_server    = "%sshServer%";
-$ssh_server    = "production-trunk-automation.build.mozilla.org";
+$ssh_server    = "production-1.9-master.build.mozilla.org";
 $ReleaseGroup  = "firefox";
 $ftp_path      = "/home/ftp/pub/firefox/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
 # CONFIG: $milestone     = "firefox%version%-l10n";
-$milestone     = "firefox3.0b2-l10n";
+$milestone     = "firefox3.0b3-l10n";
 $notify_list   = "build-announce\@mozilla.org";
 $stub_installer = 0;
 $sea_installer = 0;
