@@ -39,12 +39,9 @@
 #import "AppListMenuFactory.h"
 #import "NSWorkspace+Utils.h"
 
-// Xcode 2.x's ld dead-strips this symbol.  Xcode 3.0's ld is fine.
-asm(".no_dead_strip .objc_class_name_AppListMenuFactory");
-
-__attribute__((used)) NSString* const kUserChosenBrowserUserDefaultsKey = @"UserChosenBrowsers";
-__attribute__((used)) NSString* const kUserChosenFeedViewerUserDefaultsKey = @"UserChosenFeedViewer";
-__attribute__((used)) NSString* const kDefaultFeedViewerChanged = @"DefaultFeedViewerChanged";
+NSString* const kUserChosenBrowserUserDefaultsKey = @"UserChosenBrowsers";
+NSString* const kUserChosenFeedViewerUserDefaultsKey = @"UserChosenFeedViewer";
+NSString* const kDefaultFeedViewerChanged = @"DefaultFeedViewerChanged";
 
 @interface AppListMenuFactory(Private)
 

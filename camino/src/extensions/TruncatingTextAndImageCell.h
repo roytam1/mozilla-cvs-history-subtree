@@ -48,6 +48,7 @@
   float           mImageSpace;
   float           mImageAlpha;
   float           mRightGutter;           // leave space for an icon on the right
+  BOOL            mImageIsVisible;
   float           mMaxImageHeight;
   NSRect          mImageFrame;
   NSProgressIndicator *mProgressIndicator;
@@ -59,6 +60,7 @@
 -(void)setImageSpace:(float)space;
 -(void)setImageAlpha:(float)alpha;
 -(void)setMaxImageHeight:(float)height;
+-(void)setImageVisible:(BOOL)visible;
 -(void)setRightGutter:(float)rightPadding;
 -(void)setImage:(NSImage *)anImage;
 -(NSImage*)image;

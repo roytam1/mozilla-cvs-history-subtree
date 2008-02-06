@@ -40,16 +40,12 @@
 // Security must be imported first, because of uint32 declaration conflicts
 #import <Security/Security.h>
 
-#import "NSString+Gecko.h"
+#import "NSString+Utils.h"
 
 #import "KeychainItem.h"
 #import "KeychainService.h"
-#import "KeychainDenyList.h"
 #import "CHBrowserService.h"
 #import "PreferenceManager.h"
-#import "AutoCompleteUtils.h"
-#import "KeyEquivView.h"
-#import "nsAlertController.h"
 
 #include "nsIPref.h"
 #include "nsIObserverService.h"
@@ -65,12 +61,10 @@
 #include "nsIDocument.h"
 #include "nsIDOMHTMLDocument.h"
 #include "nsIDOMHTMLCollection.h"
-#include "nsIDOMNSHTMLInputElement.h"
+#include "nsIDOMHTMLFormElement.h"
+#include "nsIDOMHTMLInputElement.h"
 #include "nsIDOMHTMLSelectElement.h"
 #include "nsIDOMHTMLOptionElement.h"
-#include "nsIDOMEvent.h"
-#include "nsIDOMEventTarget.h"
-#include "nsIDOMEventListener.h"
 #include "nsIURL.h"
 #include "nsIDOMWindowCollection.h"
 #include "nsIContent.h"
@@ -80,34 +74,28 @@
 #include "nsAppDirectoryServiceDefs.h"
 
 #ifdef __LITTLE_ENDIAN__
-static const PRUint32 kSecAuthenticationTypeHTTPDigestReversed = 'httd';
+const PRUint32 kSecAuthenticationTypeHTTPDigestReversed = 'httd';
 #else
-static const PRUint32 kSecAuthenticationTypeHTTPDigestReversed = 'dtth';
+const PRUint32 kSecAuthenticationTypeHTTPDigestReversed = 'dtth';
 #endif
 
-static const OSType kCaminoKeychainCreatorCode = 'CMOZ';
+const OSType kCaminoKeychainCreatorCode = 'CMOZ';
 
-static const int kDefaultHTTPSPort = 443;
-
-// Keys for dictionaries holding login information during user prompts
-static NSString* const kLoginUsernameKey = @"username";             // NSString
-static NSString* const kLoginPasswordKey = @"password";             // NSString
-static NSString* const kLoginHostKey = @"host";                     // NSString
-static NSString* const kLoginSecurityDomainKey = @"securityDomain"; // NSString
-static NSString* const kLoginPortKey = @"port";                     // NSNumber
-static NSString* const kLoginSchemeKey = @"scheme";                 // NSString
-static NSString* const kLoginKeychainEntry = @"kechainEntry";       // KeychainItem
-
-// Number of seconds to keep a keychain item cached
-static const int kCacheTimeout = 120;
+const int kDefaultHTTPSPort = 443;
 
 // from CHBrowserService.h
 extern NSString* const XPCOMShutDownNotificationName;
 
-static NSWindow* GetNSWindow(nsIDOMWindow* inWindow);
+
+nsresult
+FindUsernamePasswordFields(nsIDOMHTMLFormElement* inFormElement, nsIDOMHTMLInputElement** outUsername,
+                           nsIDOMHTMLInputElement** outPassword, PRBool inStopWhenFound);
+
+NSWindow*
+GetNSWindow(nsIDOMWindow* inWindow);
 
 @interface KeychainService(Private)
-- (KeychainItem*)findLegacyKeychainEntryForHost:(NSString*)host port:(UInt16)port;
+- (KeychainItem*)findLegacyKeychainEntryForHost:(NSString*)host port:(PRInt32)port;
 - (void)upgradeLegacyKeychainEntry:(KeychainItem*)keychainItem
                         withScheme:(NSString*)scheme
                             isForm:(BOOL)isFrom;
@@ -175,12 +163,8 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
     if (!mAllowedActionHosts)
       mAllowedActionHosts = [[NSMutableDictionary alloc] init];
 
-    mCachedKeychainItems = [[NSMutableDictionary alloc] init];
-    mKeychainCacheTimers = [[NSMutableDictionary alloc] init];
-
     // load the keychain.nib file with our dialogs in it
-    BOOL success;
-    success = [NSBundle loadNibNamed:@"Keychain" owner:self];
+    BOOL success = [NSBundle loadNibNamed:@"Keychain" owner:self];
     NS_ASSERTION(success, "can't load keychain prompt dialogs");
   }
   return self;
@@ -193,8 +177,6 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
   [[NSNotificationCenter defaultCenter] removeObserver:self];
   
   [mAllowedActionHosts release];
-  [mCachedKeychainItems release];
-  [mKeychainCacheTimers release];
 
   [super dealloc];
 }
@@ -222,161 +204,21 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
   return mFormPasswordFillIsEnabled;
 }
 
-- (KeychainItem*)findWebFormKeychainEntryForUsername:(NSString*)username
-                                             forHost:(NSString*)host
-                                                port:(UInt16)port
-                                              scheme:(NSString*)scheme
+- (KeychainItem*)findKeychainEntryForHost:(NSString*)host
+                                     port:(PRInt32)port
+                                   scheme:(NSString*)scheme
+                           securityDomain:(NSString*)securityDomain
+                                   isForm:(BOOL)isForm;
 {
+  if (port == -1)
+    port = kAnyPort;
   SecProtocolType protocol = [scheme isEqualToString:@"https"] ? kSecProtocolTypeHTTPS : kSecProtocolTypeHTTP;
-
-  KeychainItem* item = [KeychainItem keychainItemForHost:host
-                                                username:username
-                                                    port:port
-                                                protocol:protocol
-                                      authenticationType:kSecAuthenticationTypeHTMLForm];
-
-  if (item && [item password] && ![[item password] isEqualToString:@" "])
-    return item;
-
-  item = [self findLegacyKeychainEntryForHost:host port:port];
-  if (item && [item password] && [[item username] isEqualToString:username])
-    return item;
-
-  return nil;
-}
-
-- (KeychainItem*)findDefaultWebFormKeychainEntryForHost:(NSString*)host
-                                                   port:(UInt16)port
-                                                 scheme:(NSString*)scheme
-{
-  NSArray* keychainItems = [self allWebFormKeychainItemsForHost:host port:port scheme:scheme];
-
-  return [self defaultFromKeychainItems:keychainItems];
-}
-
-//
-// setDefaultWebFormKeychainEntry
-//
-// Discussion of how the default keychain entry is chosen in Camino and Safari:
-//  Safari sets its default entry by entering 'default' in the keychain entry
-//  comment field.  We designed Camino so that it can use another default
-//  by setting 'camino_default' in the comment field. Camino first checks for
-//  'camino_default', then looks for 'default' if there isn't one.  Safari will
-//  overwrite the comment field when setting the default.  If Safari changes the
-//  'camino_default' entry to 'default', Camino will still treat it as the
-//  default.  Camino won't overwrite a comment field, meaning that the Safari
-//  default will be preserved if the user selects the same item in Camino.
-//
-// This method sets the default Camino keychain entry.  The default Camino
-// entry will have a comment value set to "camino_default".  It first clears
-// any existing default Camino entry before setting the passed in keychain to
-// the new default.  It doesn't modify any other comment values, meaning that
-// the Safari default will preserved.
-- (void)setDefaultWebFormKeychainEntry:(KeychainItem*)keychainItem
-{
-  NSArray* keychainArray =  [KeychainItem allKeychainItemsForHost:[keychainItem host]
-                                                             port:[keychainItem port]
-                                                         protocol:[keychainItem protocol]
-                                               authenticationType:[keychainItem authenticationType]
-                                                          creator:0];
-
-  NSEnumerator* keychainEnumerator = [keychainArray objectEnumerator];
-  KeychainItem* keychainTemp;
-  while ((keychainTemp = [keychainEnumerator nextObject])) {
-    if ([[keychainTemp comment] isEqualToString:@"camino_default"])
-      [keychainTemp setComment:@""];
-  }
-
-  if ([[keychainItem comment] isEqualToString:@""])
-    [keychainItem setComment:@"camino_default"];
-}
-
-- (NSArray*)allWebFormKeychainItemsForHost:(NSString*)host port:(UInt16)port scheme:(NSString*)scheme
-{
-  SecProtocolType protocol = [scheme isEqualToString:@"https"] ? kSecProtocolTypeHTTPS : kSecProtocolTypeHTTP;
-
-  // Since there are old-style (pre-1.1) authenticationType values, retrieve them all then filter.
-  NSArray* keychainItems = [KeychainItem allKeychainItemsForHost:host
-                                                            port:port
-                                                        protocol:protocol
-                                              authenticationType:0
-                                                         creator:0];
-
-  NSMutableArray* returnItems = [[[NSMutableArray alloc] init] autorelease];
-  KeychainItem* item;
-  NSEnumerator* keychainEnumerator = [keychainItems objectEnumerator];
-  while ((item = [keychainEnumerator nextObject])) {
-    if ([item authenticationType] == kSecAuthenticationTypeHTMLForm ||
-        [item authenticationType] == kSecAuthenticationTypeHTTPDigest) {
-      [returnItems addObject:item];
-    }
-    else if ([item authenticationType] == kSecAuthenticationTypeHTTPDigestReversed) {
-      [item setAuthenticationType:kSecAuthenticationTypeHTTPDigest];
-      [returnItems addObject:item];
-    }
-  }
-  
-  return returnItems;
-}
-
-//
-// defaultFromKeychainItems
-//
-// Method that takes an array of web form keychain items and returns the default.
-//
-- (KeychainItem*)defaultFromKeychainItems:(NSArray*)items
-{
-  // First, check for the default Camino entry.
-  KeychainItem* item;
-  NSEnumerator* keychainEnumerator = [items objectEnumerator];
-  while ((item = [keychainEnumerator nextObject])) {
-    if ([[item comment] isEqualToString:@"camino_default"] && [item password])
-      return item;
-  }
-
-  // Next, check for Safari's default.
-  keychainEnumerator = [items objectEnumerator];
-  while ((item = [keychainEnumerator nextObject])) {
-    if ([[item comment] isEqualToString:@"default"]) {
-      // Safari doesn't bother to set kSecNegativeItemAttr on "Passwords not saved"
-      // items; that's just the way they roll. This fragile method is the best we can do.
-      if ([[item password] isEqualToString:@" "])
-        continue;
-      if ([item password])
-        return item;
-    }
-  }
-
-  // Then check for the first new-style Camino keychain entry.
-  keychainEnumerator = [items objectEnumerator];
-  while ((item = [keychainEnumerator nextObject])) {
-    if (([item creator] == kCaminoKeychainCreatorCode) && [item password])
-      return item;
-  }
-
-  // Finally, just arbitrarily pick the first one.
-  keychainEnumerator = [items objectEnumerator];
-  while ((item = [keychainEnumerator nextObject])) {
-    if ([[item password] isEqualToString:@" "])
-      continue;
-    if ([item password])
-      return item;
-  }
-
-  return nil;
-}
-
-- (KeychainItem*)findAuthKeychainEntryForHost:(NSString*)host
-                                         port:(UInt16)port
-                                       scheme:(NSString*)scheme
-                               securityDomain:(NSString*)securityDomain
-{
-  SecProtocolType protocol = [scheme isEqualToString:@"https"] ? kSecProtocolTypeHTTPS : kSecProtocolTypeHTTP;
+  SecAuthenticationType authType = isForm ? kSecAuthenticationTypeHTMLForm : kSecAuthenticationTypeDefault;
 
   NSArray* newKeychainItems = [KeychainItem allKeychainItemsForHost:host
-                                                               port:port
+                                                               port:(UInt16)port
                                                            protocol:protocol
-                                                 authenticationType:kSecAuthenticationTypeDefault
+                                                 authenticationType:authType
                                                             creator:0];
 
   // If we have a security domain, discard mismatched domains and re-sort the array
@@ -418,7 +260,22 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
   if (item && [item password])
     return item;
 
-  // Finally, just arbitrarily pick the first one that looks plausible.
+  // Finally, check for a new style entry created by something other than Camino.
+  // Since we don't yet have any UI for multiple accounts, we use Safari's default
+  // if we can find it, otherwise we just arbitrarily pick the first one that
+  // looks plausible.
+  keychainEnumerator = [newKeychainItems objectEnumerator];
+  while ((item = [keychainEnumerator nextObject])) {
+    NSString* comment = [item comment];
+    if (comment && ([comment rangeOfString:@"default"].location != NSNotFound)) {
+      // Safari doesn't bother to set kSecNegativeItemAttr on "Passwords not saved"
+      // items; that's just the way they roll. This fragile method is the best we can do.
+      if ([[item password] isEqualToString:@" "])
+        continue;
+      if ([item password])
+        return item;
+    }
+  }
   keychainEnumerator = [newKeychainItems objectEnumerator];
   while ((item = [keychainEnumerator nextObject])) {
     if ([[item password] isEqualToString:@" "])
@@ -434,18 +291,16 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
 // and may have been created with the authentication type backward due to an
 // endian bug in KeychainManager. This can be removed once it's reasonable to
 // assume people no longer have old-style keychain items.
-- (KeychainItem*)findLegacyKeychainEntryForHost:(NSString*)host port:(UInt16)port
+- (KeychainItem*)findLegacyKeychainEntryForHost:(NSString*)host port:(PRInt32)port
 {
   KeychainItem* item = [KeychainItem keychainItemForHost:host
-                                                username:nil
-                                                    port:port
+                                                    port:(UInt16)port
                                                 protocol:kSecProtocolTypeHTTP
                                       authenticationType:kSecAuthenticationTypeHTTPDigest];
   if (!item) {
     // check for the reverse auth type
     item = [KeychainItem keychainItemForHost:host
-                                    username:nil
-                                        port:port
+                                        port:(UInt16)port
                                     protocol:kSecProtocolTypeHTTP
                           authenticationType:kSecAuthenticationTypeHTTPDigestReversed];
     // fix it for future queries
@@ -454,19 +309,21 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
   return item;
 }
 
-- (KeychainItem*)storeUsername:(NSString*)username
-                      password:(NSString*)password
-                       forHost:(NSString*)host
-                securityDomain:(NSString*)securityDomain
-                          port:(UInt16)port
-                        scheme:(NSString*)scheme
-                        isForm:(BOOL)isForm
+- (void)storeUsername:(NSString*)username
+             password:(NSString*)password
+              forHost:(NSString*)host
+       securityDomain:(NSString*)securityDomain
+                 port:(PRInt32)port
+               scheme:(NSString*)scheme
+               isForm:(BOOL)isForm
 {
+  if (port == -1)
+    port = kAnyPort;
   SecProtocolType protocol = [scheme isEqualToString:@"https"] ? kSecProtocolTypeHTTPS : kSecProtocolTypeHTTP;
   SecAuthenticationType authType = isForm ? kSecAuthenticationTypeHTMLForm : kSecAuthenticationTypeDefault;
 
   KeychainItem* newItem = [KeychainItem addKeychainItemForHost:host
-                                                          port:port
+                                                          port:(UInt16)port
                                                       protocol:protocol
                                             authenticationType:authType
                                                   withUsername:username
@@ -478,8 +335,6 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
     else
       [newItem setSecurityDomain:securityDomain];
   }
-  
-  return newItem;
 }
 
 // Stores changes to a site's stored account. Note that this may return a different item than
@@ -487,10 +342,20 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
 // store an acccount in Camino that isn't the one we pick up from Safari. For password updates
 // we update the existing item, but for username updates we make a new item if the one we were
 // using wasn't Camino-created.
-- (KeychainItem*)updateAuthKeychainEntry:(KeychainItem*)keychainItem
-                            withUsername:(NSString*)username
-                                password:(NSString*)password
+- (KeychainItem*)updateKeychainEntry:(KeychainItem*)keychainItem
+                        withUsername:(NSString*)username
+                            password:(NSString*)password
+                              scheme:(NSString*)scheme
+                              isForm:(BOOL)isForm
 {
+  // If this is one of our old items, upgrade it to the new format. We do this here instead of when
+  // we first find the item so that users trying out 1.1 previews won't be missing the passwords of
+  // all the sites they visit if/when they go back to 1.0.x, as well as to prevent passwords from accidentally
+  // being associated with the wrong type (e.g., if a user has a password stored for a site's web form,
+  // but hits the http auth dialog first).
+  if ([keychainItem authenticationType] == kSecAuthenticationTypeHTTPDigest)
+    [self upgradeLegacyKeychainEntry:keychainItem withScheme:scheme isForm:isForm];
+  
   if ([username isEqualToString:[keychainItem username]] || [keychainItem creator] == kCaminoKeychainCreatorCode) {
     [keychainItem setUsername:username password:password];
   }
@@ -575,73 +440,26 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
 }
 
 //
-// promptToStoreLogin:inWindow:
+// confirmStorePassword:
 //
 // Puts up a dialog when the keychain doesn't yet have an entry from
 // this site asking to store it, forget it this once, or mark the site
 // on a deny list so we never ask again.
 //
-- (void)promptToStoreLogin:(NSDictionary*)loginInfo inWindow:(NSWindow*)window
+- (KeychainPromptResult)confirmStorePassword:(NSWindow*)parent
 {
-  // Retain the context info across to the sheet callback (where it is released)
-  [loginInfo retain];
-
-  NSAlert* alert = [[[NSAlert alloc] init] autorelease];
-  [alert setMessageText:NSLocalizedString(@"KeychainStoreAlertTitle", nil)];
-  [alert setInformativeText:NSLocalizedString(@"KeychainStoreAlertText", nil)];
-
-  [alert addButtonWithTitle:NSLocalizedString(@"KeychainStoreAlertStoreButton", nil)];
-
-  NSButton* dontStore = [alert addButtonWithTitle:NSLocalizedString(@"KeychainStoreAlertDontStoreButton", nil)];
-  [dontStore setKeyEquivalent:@"\e"];  // Esc
-  [dontStore setKeyEquivalentModifierMask:0];
-
-  KeyEquivView* dontStoreEquiv = [KeyEquivView kevWithKeyEquivalent:@"d"
-                                          keyEquivalentModifierMask:NSCommandKeyMask
-                                                             target:dontStore
-                                                             action:@selector(performClick:)];
-  [[[alert window] contentView] addSubview:dontStoreEquiv];
-
-  NSButton* neverStore = [alert addButtonWithTitle:NSLocalizedString(@"KeychainStoreAlertNeverStoreButton", nil)];
-  [neverStore setKeyEquivalent:@"n"];
-  [neverStore setKeyEquivalentModifierMask:NSCommandKeyMask];
-
-  [[alert window] setInitialFirstResponder:dontStore];
-  [alert beginSheetModalForWindow:window
-                    modalDelegate:self
-                   didEndSelector:@selector(storeSheetDidEnd:returnCode:contextInfo:)
-                      contextInfo:(void*)loginInfo];
-}
-
-- (void)storeSheetDidEnd:(NSAlert*)sheet
-              returnCode:(int)returnCode
-             contextInfo:(void*)contextInfo
-{
-  NSDictionary* loginInfo = (NSDictionary*)contextInfo;
-  switch (returnCode) {
-    case NSAlertFirstButtonReturn: {  // Save
-        KeychainItem* keychainEntry =
-          [self storeUsername:[loginInfo objectForKey:kLoginUsernameKey]
-                     password:[loginInfo objectForKey:kLoginPasswordKey]
-                      forHost:[loginInfo objectForKey:kLoginHostKey]
-               securityDomain:[loginInfo objectForKey:kLoginSecurityDomainKey]
-                         port:[[loginInfo objectForKey:kLoginPortKey] intValue]
-                       scheme:[loginInfo objectForKey:kLoginSchemeKey]
-                       isForm:YES];
-        [self setDefaultWebFormKeychainEntry:keychainEntry];
-      }
-
-      break;
-      
-    case NSAlertSecondButtonReturn: // Don't remember
-      // do nothing at all
-      break;
-      
-    case NSAlertThirdButtonReturn:  // Never remember
-      [self addHostToDenyList:[loginInfo objectForKey:kLoginHostKey]];
-      break;
+  int result = [NSApp runModalForWindow:mConfirmStorePasswordPanel relativeToWindow:parent];
+  [mConfirmStorePasswordPanel close];
+  
+  KeychainPromptResult keychainAction = kDontRemember;
+  switch (result) {
+    case NSAlertDefaultReturn:    keychainAction = kSave;          break;
+    default:
+    case NSAlertAlternateReturn:  keychainAction = kDontRemember;  break;
+    case NSAlertOtherReturn:      keychainAction = kNeverRemember; break;
   }
-  [loginInfo release]; // balance the retain in the alert creation
+
+  return keychainAction;
 }
 
 //
@@ -650,46 +468,11 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
 // The password stored in the keychain differs from what the user typed
 // in. Ask what they want to do to resolve the issue.
 //
-- (void)promptToUpdateKeychainItem:(KeychainItem*)keychainItem
-                      withUsername:(NSString*)username
-                          password:(NSString*)password
-                          inWindow:(NSWindow*)window
+- (BOOL)confirmChangePassword:(NSWindow*)parent
 {
-  // Retain the context info across to the sheet callback (where it is released)
-  NSDictionary* contextInfo = [NSDictionary dictionaryWithObjectsAndKeys:
-        username, kLoginUsernameKey,
-        password, kLoginPasswordKey,
-    keychainItem, kLoginKeychainEntry,
-                  nil];
-  [contextInfo retain];
-  
-  NSAlert* alert = [[[NSAlert alloc] init] autorelease];
-  [alert setMessageText:NSLocalizedString(@"KeychainUpdateAlertTitle", nil)];
-  [alert setInformativeText:NSLocalizedString(@"KeychainUpdateAlertText", nil)];
-
-  [alert addButtonWithTitle:NSLocalizedString(@"KeychainUpdateAlertUpdateButton", nil)];
-
-  NSButton* dontUpdate = [alert addButtonWithTitle:NSLocalizedString(@"KeychainUpdateAlertDontUpdateButton", nil)];
-  [dontUpdate setKeyEquivalent:@"\e"];  // Esc
-  [dontUpdate setKeyEquivalentModifierMask:0];
-
-  [alert beginSheetModalForWindow:window
-                    modalDelegate:self
-                   didEndSelector:@selector(updateSheetDidEnd:returnCode:contextInfo:)
-                      contextInfo:(void*)contextInfo];
-}
-
-- (void)updateSheetDidEnd:(NSAlert*)sheet
-               returnCode:(int)returnCode
-              contextInfo:(void*)contextInfo
-{
-  NSDictionary* loginInfo = (NSDictionary*)contextInfo;
-  if (returnCode == NSAlertFirstButtonReturn) {
-    KeychainItem* keychainItem = [loginInfo objectForKey:kLoginKeychainEntry];
-    [keychainItem setUsername:[loginInfo objectForKey:kLoginUsernameKey]
-                     password:[loginInfo objectForKey:kLoginPasswordKey]];
-  }
-  [loginInfo release]; // balance the retain in the alert creation
+  int result = [NSApp runModalForWindow:mConfirmChangePasswordPanel relativeToWindow:parent];
+  [mConfirmChangePasswordPanel close];
+  return (result == NSAlertDefaultReturn);
 }
 
 //
@@ -700,8 +483,7 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
 //
 - (BOOL)confirmFillPassword:(NSWindow*)parent
 {
-  int result = [nsAlertController safeRunModalForWindow:mConfirmFillPasswordPanel
-                                       relativeToWindow:parent];
+  int result = [NSApp runModalForWindow:mConfirmFillPasswordPanel relativeToWindow:parent];
   [mConfirmFillPasswordPanel close];
   // Default is not to fill
   return (result != NSAlertDefaultReturn);
@@ -740,45 +522,91 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
   return [profilePath stringByAppendingPathComponent:@"AllowedActionHosts.plist"];
 }
 
-// To prevent two lookups for every keychain use (once to fill, and another to
-// compare against on submit), we cache each keychain entry for a little while.
-// This ensures that we update the same entry we filled with, as well as
-// preventing multiple auth dialogs if the user chooses "allow once" the first
-// time.
+@end
+
+
+@interface KeychainDenyList (KeychainDenyListPrivate)
+- (void)writeToDisk;
+- (NSString*)pathToDenyListFile;
+- (NSString*)pathToLegacyDenyListFile;
+@end
+
+
+@implementation KeychainDenyList
+
+static KeychainDenyList *sDenyListInstance = nil;
+
++ (KeychainDenyList*)instance
+{
+  return sDenyListInstance ? sDenyListInstance : sDenyListInstance = [[self alloc] init];
+}
+
+- (id)init
+{
+  if ((self = [super init])) {
+    mDenyList = [[NSMutableArray alloc] initWithContentsOfFile:[self pathToDenyListFile]];
+    // If there's no new deny list file, try the old one
+    if (!mDenyList)
+      mDenyList = [[NSUnarchiver unarchiveObjectWithFile:[self pathToLegacyDenyListFile]] retain];
+    if (!mDenyList)
+      mDenyList = [[NSMutableArray alloc] init];
+  }
+  return self;
+}
+
+- (void)dealloc
+{
+  [mDenyList release];
+  [super dealloc];
+}
+
 //
-// Call with |nil| for |keychainItem| to clear a cached entry.
-- (void)cacheKeychainEntry:(KeychainItem*)keychainItem forKey:(NSString*)key {
-  if (!key)
-    return;
+// writeToDisk
+//
+// flushes the deny list to the save file in the user's profile.
+//
+- (void)writeToDisk
+{
+  [mDenyList writeToFile:[self pathToDenyListFile] atomically:YES];
+}
 
-  if (keychainItem) {
-    // If there was already an invalidation timer running for a previously
-    // cached keychain entry for this host, invalidate it so that the new
-    // cached entry will last the full duration.
-    [[mKeychainCacheTimers objectForKey:key] invalidate];
-    [mCachedKeychainItems setObject:keychainItem forKey:key];
-    NSTimer* invalidationTimer = [NSTimer scheduledTimerWithTimeInterval:kCacheTimeout
-                                                                  target:self
-                                                                selector:@selector(expirationTimerFired:)
-                                                                userInfo:(id)key
-                                                                 repeats:NO];
-    [mKeychainCacheTimers setObject:invalidationTimer forKey:key];
-  }
-  else {
-    [[mKeychainCacheTimers objectForKey:key] invalidate];
-    [mKeychainCacheTimers removeObjectForKey:key];
-    [mCachedKeychainItems removeObjectForKey:key];
+- (BOOL)isHostPresent:(NSString*)host
+{
+  return [mDenyList containsObject:host];
+}
+
+- (void)addHost:(NSString*)host
+{
+  if (![self isHostPresent:host]) {
+    [mDenyList addObject:host];
+    [self writeToDisk];
   }
 }
 
-- (KeychainItem*)cachedKeychainEntryForKey:(NSString*)key {
-  return [[[mCachedKeychainItems objectForKey:key] retain] autorelease];
+- (void)removeHost:(NSString*)host
+{
+  if ([self isHostPresent:host]) {
+    [mDenyList removeObject:host];
+    [self writeToDisk];
+  }
 }
 
-- (void)expirationTimerFired:(NSTimer*)theTimer {
-  // Ensure that the key will survive past the timer invalidation
-  NSString* key = [[[theTimer userInfo] retain] autorelease];
-  [self cacheKeychainEntry:nil forKey:key];
+- (void)removeAllHosts
+{
+  [mDenyList removeAllObjects];
+  [self writeToDisk];
+}
+
+- (NSString*)pathToDenyListFile
+{
+  NSString* profilePath = [[PreferenceManager sharedInstance] profilePath];
+  return [profilePath stringByAppendingPathComponent:@"KeychainDenyList.plist"];
+}
+
+- (NSString*)pathToLegacyDenyListFile
+{
+  NSString* profilePath = [[PreferenceManager sharedInstance] profilePath];
+  return [profilePath stringByAppendingPathComponent:@"Keychain Deny List"];
 }
 
 @end
@@ -812,50 +640,52 @@ KeychainPrompt::~KeychainPrompt()
 // netwerk/protocol/ftp/src/nsFtpConnectionThread.cpp).
 //
 void
-KeychainPrompt::ExtractRealmComponents(NSString* inRealmBlob, NSString** outHost, NSString** outRealm, UInt16* outPort)
+KeychainPrompt::ExtractRealmComponents(const PRUnichar* inRealmBlob, NSString** outHost, NSString** outRealm, PRInt32* outPort)
 {
   if (!outHost || !outPort)
     return;
   *outHost = nil;
   *outRealm = nil;
   *outPort = -1;
+  
+  NSString* realmStr = [NSString stringWithPRUnichars:inRealmBlob];
 
   // first check for an ftp url and pull out the server from the realm
-  if ([inRealmBlob rangeOfString:@"ftp://"].location != NSNotFound) {
+  if ([realmStr rangeOfString:@"ftp://"].location != NSNotFound) {
     // cut out ftp://
-    inRealmBlob = [inRealmBlob substringFromIndex:strlen("ftp://")];
+    realmStr = [realmStr substringFromIndex:strlen("ftp://")];
     
     // cut out any of the path
-    NSRange pathDelimeter = [inRealmBlob rangeOfString:@"/"];
+    NSRange pathDelimeter = [realmStr rangeOfString:@"/"];
     if (pathDelimeter.location != NSNotFound)
-      inRealmBlob = [inRealmBlob substringToIndex:(pathDelimeter.location - 1)];
+      realmStr = [realmStr substringToIndex:(pathDelimeter.location - 1)];
     
     // now we're left with "username@server" with username being optional
-    NSRange usernameMarker = [inRealmBlob rangeOfString:@"@"];
+    NSRange usernameMarker = [realmStr rangeOfString:@"@"];
     if (usernameMarker.location != NSNotFound)
-      *outHost = [inRealmBlob substringFromIndex:(usernameMarker.location + 1)];
+      *outHost = [realmStr substringFromIndex:(usernameMarker.location + 1)];
     else
-      *outHost = inRealmBlob;
+      *outHost = realmStr;
   }
   else { // it's an http realm
     // pull off the " (realm)" part
-    NSRange openParen = [inRealmBlob rangeOfString:@"("];
+    NSRange openParen = [realmStr rangeOfString:@"("];
     if (openParen.location != NSNotFound) {
-      NSRange closeParen = [inRealmBlob rangeOfString:@")"];
+      NSRange closeParen = [realmStr rangeOfString:@")"];
       if (closeParen.location != NSNotFound) {
         NSRange realmRange = NSMakeRange(openParen.location + 1, closeParen.location - openParen.location - 1);
-        *outRealm = [inRealmBlob substringWithRange:realmRange];
+        *outRealm = [realmStr substringWithRange:realmRange];
       }
-      inRealmBlob = [inRealmBlob substringToIndex:openParen.location - 1];
+      realmStr = [realmStr substringToIndex:openParen.location - 1];
     }
     
     // separate the host and the port
-    NSRange endOfHost = [inRealmBlob rangeOfString:@":"];
+    NSRange endOfHost = [realmStr rangeOfString:@":"];
     if (endOfHost.location == NSNotFound)
-      *outHost = inRealmBlob;
+      *outHost = realmStr;
     else {
-      *outHost = [inRealmBlob substringToIndex:endOfHost.location];
-      *outPort = [[inRealmBlob substringFromIndex:(endOfHost.location + 1)] intValue];
+      *outHost = [realmStr substringToIndex:endOfHost.location];
+      *outPort = [[realmStr substringFromIndex:(endOfHost.location + 1)] intValue];
     }
   }
 }
@@ -865,21 +695,16 @@ KeychainPrompt::PreFill(const PRUnichar *realmBlob, PRUnichar **user, PRUnichar 
 {
   NSString* host = nil;
   NSString* realm = nil;
-  UInt16 port = kAnyPort;
-  NSString* realmBlobString = [NSString stringWithPRUnichars:realmBlob];
-  ExtractRealmComponents(realmBlobString, &host, &realm, &port);
+  PRInt32 port = -1;
+  ExtractRealmComponents(realmBlob, &host, &realm, &port);
 
   // Pre-fill user/password if found in the keychain.
   // We don't get scheme information from gecko, so guess based on the port
   NSString* scheme = (port == kDefaultHTTPSPort) ? @"https" : @"http";
 
   KeychainService* keychain = [KeychainService instance];
-  KeychainItem* entry = [keychain findAuthKeychainEntryForHost:host
-                                                          port:port
-                                                        scheme:scheme
-                                                securityDomain:realm];
+  KeychainItem* entry = [keychain findKeychainEntryForHost:host port:port scheme:scheme securityDomain:realm isForm:NO];
   if (entry) {
-    [keychain cacheKeychainEntry:entry forKey:realmBlobString];
     if (user)
       *user = [[entry username] createNewUnicodeBuffer];
     if (pwd)
@@ -892,9 +717,8 @@ KeychainPrompt::ProcessPrompt(const PRUnichar* realmBlob, bool checked, PRUnicha
 {
   NSString* host = nil;
   NSString* realm = nil;
-  UInt16 port = kAnyPort;
-  NSString* realmBlobString = [NSString stringWithPRUnichars:realmBlob];
-  ExtractRealmComponents(realmBlobString, &host, &realm, &port);
+  PRInt32 port = -1;
+  ExtractRealmComponents(realmBlob, &host, &realm, &port);
 
   NSString* username = [NSString stringWithPRUnichars:user];
   NSString* password = [NSString stringWithPRUnichars:pwd];
@@ -902,44 +726,21 @@ KeychainPrompt::ProcessPrompt(const PRUnichar* realmBlob, bool checked, PRUnicha
   // We don't get scheme information from gecko, so guess based on the port
   NSString* scheme = (port == kDefaultHTTPSPort) ? @"https" : @"http";
 
-  // Check the cache first, then fall back to a search in case a cached
-  // entry expired before the user submitted.
   KeychainService* keychain = [KeychainService instance];
-  KeychainItem* keychainEntry = [keychain cachedKeychainEntryForKey:realmBlobString];
-  if (!keychainEntry) {
-    keychainEntry = [keychain findAuthKeychainEntryForHost:host
-                                                      port:port
-                                                    scheme:scheme
-                                            securityDomain:realm];
-  }
+  KeychainItem* keychainEntry = [keychain findKeychainEntryForHost:host port:port scheme:scheme securityDomain:realm isForm:NO];
 
   // Update, store or remove the user/password depending on the user
   // choice and whether or not we found the username/password in the
   // keychain.
   if (checked) {
     if (!keychainEntry) {
-      [keychain storeUsername:username
-                     password:password
-                      forHost:host
-               securityDomain:realm
-                         port:port
-                       scheme:scheme
-                       isForm:NO];
+      [keychain storeUsername:username password:password forHost:host securityDomain:realm port:port scheme:scheme isForm:NO];
     }
     else {
-      // If it's an old-style entry, upgrade it now that we know what it goes with.
-      if ([keychainEntry authenticationType] == kSecAuthenticationTypeHTTPDigest)
-        [keychain upgradeLegacyKeychainEntry:keychainEntry withScheme:scheme isForm:NO];
-
       if (![[keychainEntry username] isEqualToString:username] ||
           ![[keychainEntry password] isEqualToString:password])
-      {
-        keychainEntry = [keychain updateAuthKeychainEntry:keychainEntry
-                                             withUsername:username
-                                                 password:password];
-      }
-      // TODO: this is just to upgrade pre-1.1 HTTPAuth items; at some point in
-      // the future remove from here...
+        keychainEntry = [keychain updateKeychainEntry:keychainEntry withUsername:username password:password scheme:scheme isForm:NO];
+      // TODO: this is just to upgrade pre-1.1 HTTPAuth items; at some point in the future remove from here...
       if (realm && [[keychainEntry securityDomain] isEqualToString:@""])
         [keychainEntry setSecurityDomain:realm];
       // ... to here.
@@ -948,8 +749,6 @@ KeychainPrompt::ProcessPrompt(const PRUnichar* realmBlob, bool checked, PRUnicha
   else if (keychainEntry) {
     [keychainEntry removeFromKeychain];
   }
-  // We are done with the entry, so remove it from the cache.
-  [keychain cacheKeychainEntry:nil forKey:realmBlobString];
 }
 
 //
@@ -1090,9 +889,6 @@ KeychainFormSubmitObserver::Notify(nsIContent* node, nsIDOMWindowInternal* windo
     nsIURI* docURL = doc->GetDocumentURI();
     if (!docURL)
       return NS_OK;
-    nsCAutoString uriCAString;
-    rv = docURL->GetSpec(uriCAString);
-    NSString* uri = [NSString stringWithCString:uriCAString.get()];
 
     nsCAutoString hostCAString;
     docURL->GetHost(hostCAString);
@@ -1102,19 +898,11 @@ KeychainFormSubmitObserver::Notify(nsIContent* node, nsIDOMWindowInternal* windo
     if ([keychain isHostInDenyList:host])
       return NS_OK;
 
-    // Get the host in punycode for keychain use.
-    nsCAutoString asciiHostCAString;
-    rv = docURL->GetAsciiHost(asciiHostCAString);
-    NSString* asciiHost = NS_SUCCEEDED(rv) ? [NSString stringWithCString:asciiHostCAString.get()]
-                                           : host;
-
     nsCAutoString schemeCAString;
     docURL->GetScheme(schemeCAString);
     NSString* scheme = [NSString stringWithCString:schemeCAString.get()];
-
-    PRInt32 signedPort;
-    docURL->GetPort(&signedPort);
-    UInt16 port = (signedPort < 0) ? kAnyPort : (UInt16)signedPort;
+    PRInt32 port = -1;
+    docURL->GetPort(&port);
 
     nsAutoString action;
     formNode->GetAction(action);
@@ -1123,67 +911,43 @@ KeychainFormSubmitObserver::Notify(nsIContent* node, nsIDOMWindowInternal* windo
     if (!actionHost)
       actionHost = host;
 
-    // Search for an existing keychain entry with the same username.
-    // Check the cache first, then fall back to a search in case a cached
-    // entry expired before the user submitted.
-    KeychainItem* keychainEntry = [keychain cachedKeychainEntryForKey:uri];
-    // We weren't using punycode for keychain entries up through 1.5, so try
-    // non-punycode first to favor Camino entries.
-    if (!keychainEntry || ![[keychainEntry username] isEqualToString:username]) {
-      keychainEntry = [keychain findWebFormKeychainEntryForUsername:username
-                                                            forHost:host
-                                                               port:port
-                                                             scheme:scheme];
-    }
-    if (!keychainEntry && ![asciiHost isEqualToString:host]) {
-      keychainEntry = [keychain findWebFormKeychainEntryForUsername:username
-                                                            forHost:asciiHost
-                                                               port:port
-                                                             scheme:scheme];
-    }
-    // If there's already an entry in the keychain for the username, check if the
-    // password matches. If not, ask the user what they want to do and replace
-    // it as necessary. If there's no entry for this username, ask if they want to
-    // remember it and then put it into the keychain
+    //
+    // If there's already an entry in the keychain, check if the username
+    // and password match. If not, ask the user what they want to do and replace
+    // it as necessary. If there's no entry, ask if they want to remember it
+    // and then put it into the keychain
+    //
+    KeychainItem* keychainEntry = [keychain findKeychainEntryForHost:host port:port scheme:scheme securityDomain:nil isForm:YES];
     if (keychainEntry) {
-      // If it's an old-style entry, upgrade it now that we know what it goes with.
-      if ([keychainEntry authenticationType] == kSecAuthenticationTypeHTTPDigest)
-        [keychain upgradeLegacyKeychainEntry:keychainEntry withScheme:scheme isForm:YES];
-
-      // This is just to fix items touched in the pre-1.5 nightlies, before we
-      // discovered that using securityDomain for the action hosts broke Safari.
-      // At some point in the future remove from here...
+      if ((![[keychainEntry username] isEqualToString:username] ||
+           ![[keychainEntry password] isEqualToString:password]) &&
+          [keychain confirmChangePassword:GetNSWindow(window)])
+        keychainEntry = [keychain updateKeychainEntry:keychainEntry withUsername:username password:password scheme:scheme isForm:YES];
+      // This is just to fix items touched in the pre-1.1 nightlies, before we discovered that using securityDomain
+      // for the action hosts broke Safari. At some point in the future remove from here...
       if (![[keychainEntry securityDomain] isEqualToString:@""]) {
-        [keychain setAllowedActionHosts:[[keychainEntry securityDomain] componentsSeparatedByString:@";"]
-                                forHost:host];
+        [keychain setAllowedActionHosts:[[keychainEntry securityDomain] componentsSeparatedByString:@";"] forHost:host];
         [keychainEntry setSecurityDomain:@""];
       }
       // ... to here.
-
-      if (![[keychainEntry password] isEqualToString:password]) {
-        [keychain promptToUpdateKeychainItem:keychainEntry
-                                withUsername:username
-                                    password:password
-                                    inWindow:GetNSWindow(window)];
-      }
-
-      [keychain setDefaultWebFormKeychainEntry:keychainEntry];
-
       if ([[keychain allowedActionHostsForHost:host] count] == 0)
         [keychain setAllowedActionHosts:[NSArray arrayWithObject:actionHost] forHost:host];
-      // We don't need to look up the entry again, so remove it from the cache.
-      [keychain cacheKeychainEntry:nil forKey:uri];
     }
     else {
-      NSDictionary* loginInfo = [NSDictionary dictionaryWithObjectsAndKeys:
-                             username, kLoginUsernameKey,
-                             password, kLoginPasswordKey,
-                            asciiHost, kLoginHostKey,
-                           actionHost, kLoginSecurityDomainKey,
-        [NSNumber numberWithInt:port], kLoginPortKey,
-                               scheme, kLoginSchemeKey,
-                                       nil];
-      [keychain promptToStoreLogin:loginInfo inWindow:GetNSWindow(window)];
+      switch ([keychain confirmStorePassword:GetNSWindow(window)]) {
+        case kSave:
+          [keychain storeUsername:username password:password forHost:host securityDomain:actionHost port:port scheme:scheme isForm:YES];
+          break;
+
+        case kNeverRemember:
+          // tell the keychain we never want to be prompted about this host again
+          [keychain addHostToDenyList:host];
+          break;
+
+        case kDontRemember:
+          // do nothing at all
+          break;
+      }
     }
   }
 
@@ -1228,10 +992,6 @@ KeychainFormSubmitObserver::Notify(nsIContent* node, nsIDOMWindowInternal* windo
     return;
   }
   
-  nsIURI* docURL = doc->GetDocumentURI();
-  if (!docURL)
-    return;
-
   nsCOMPtr<nsIDOMHTMLDocument> htmldoc(do_QueryInterface(doc));
   if (!htmldoc)
     return;
@@ -1241,19 +1001,17 @@ KeychainFormSubmitObserver::Notify(nsIContent* node, nsIDOMWindowInternal* windo
   if (NS_FAILED(rv) || !forms)
     return;
 
-  NSString* uri = nil;
-  NSString* host = nil;
-  KeychainItem* keychainEntry = nil;
   BOOL silentlyDenySuspiciousForms = NO;
+  PRUint32 numForms;
+  forms->GetLength(&numForms);
 
   //
   // Seek out username and password element in all forms. If found in
   // a form, check the keychain to see if the username password are
   // stored and prefill the elements.
   //
-  PRUint32 numForms;
-  forms->GetLength(&numForms);
   for (PRUint32 formX = 0; formX < numForms; formX++) {
+
     nsCOMPtr<nsIDOMNode> formNode;
     rv = forms->Item(formX, getter_AddRefs(formNode));
     if (NS_FAILED(rv) || formNode == nsnull)
@@ -1267,91 +1025,68 @@ KeychainFormSubmitObserver::Notify(nsIContent* node, nsIDOMWindowInternal* windo
     rv = FindUsernamePasswordFields(formElement, getter_AddRefs(usernameElement), getter_AddRefs(passwordElement),
                                     PR_TRUE);
 
-    if (!(NS_SUCCEEDED(rv) && usernameElement && passwordElement))
-      continue;
+    if (NS_SUCCEEDED(rv) && usernameElement && passwordElement) {
+      //
+      // We found the text field and password field. Check if there's
+      // a username/password stored in the keychain for this host and
+      // pre-fill the fields if that's the case.
+      //
+      nsIURI* docURL = doc->GetDocumentURI();
+      if (!docURL)
+        return;
 
-    // We found a login form; if it's the first one we've seen, check the
-    // keychain for a saved password.
-    if (!keychainEntry) {
       nsCAutoString hostCAString;
       docURL->GetHost(hostCAString);
-      host = [NSString stringWithCString:hostCAString.get()];
-      nsCAutoString asciiHostCAString;
-      docURL->GetAsciiHost(asciiHostCAString);
-      NSString* asciiHost = NS_SUCCEEDED(rv) ? [NSString stringWithCString:asciiHostCAString.get()]
-                                             : host;
+      NSString *host = [NSString stringWithCString:hostCAString.get()];
       nsCAutoString schemeCAString;
       docURL->GetScheme(schemeCAString);
-      NSString* scheme = [NSString stringWithCString:schemeCAString.get()];
+      NSString *scheme = [NSString stringWithCString:schemeCAString.get()];
+      PRInt32 port = -1;
+      docURL->GetPort(&port);
 
-      PRInt32 signedPort;
-      docURL->GetPort(&signedPort);
-      UInt16 port = (signedPort < 0) ? kAnyPort : (UInt16)signedPort;
+      KeychainItem* keychainEntry = [keychain findKeychainEntryForHost:host port:port scheme:scheme securityDomain:nil isForm:YES];
+      if (keychainEntry) {
+        // To help prevent password stealing on sites that allow user-created HTML (but not JS),
+        // only fill if the form's action host is one that has been authorized by the user.
+        // If the keychain entry doesn't have any authorized hosts, either because it pre-dates
+        // this code or because it's a non-Camino entry, fill any form.
+        nsAutoString action;
+        formElement->GetAction(action);
+        NSString* actionHost = [[NSURL URLWithString:[NSString stringWith_nsAString:action]] host];
+        if (!actionHost)
+          actionHost = host;
+        NSArray* allowedActionHosts = [keychain allowedActionHostsForHost:host];
+        if ([allowedActionHosts count] > 0 && ![allowedActionHosts containsObject:actionHost]) {
+          // The form has an un-authorized action domain. If we haven't
+          // asked the user about this page, ask. If we have and they said
+          // no, don't ask (to prevent a malicious page from throwing
+          // dialogs until the user tries the other button).
+          if (silentlyDenySuspiciousForms)
+            continue;
+          if (![keychain confirmFillPassword:GetNSWindow(inDOMWindow)]) {
+            silentlyDenySuspiciousForms = YES;
+            continue;
+          }
+          // Remember the approval
+          [keychain setAllowedActionHosts:[allowedActionHosts arrayByAddingObject:actionHost] forHost:host];
+        }
 
-      // We weren't using punycode for keychain entries up through 1.5, so try
-      // non-punycode first to favor Camino entries.
-      keychainEntry = [keychain findDefaultWebFormKeychainEntryForHost:host
-                                                                  port:port
-                                                                scheme:scheme];
-      // TODO: once a released version checks for punycode, anything found with
-      // the above search (and with a Camino creator code) should be fixed
-      // immediately to have the right host.
-      if (!keychainEntry && ![asciiHost isEqualToString:host]) {
-        keychainEntry = [keychain findDefaultWebFormKeychainEntryForHost:asciiHost
-                                                                    port:port
-                                                                  scheme:scheme];
+        nsAutoString user, pwd;
+        [[keychainEntry username] assignTo_nsAString:user];
+        [[keychainEntry password] assignTo_nsAString:pwd];
+
+        // if the server specifies a value attribute (bug 169760), only autofill
+        // the password if what we have in keychain matches what the server supplies,
+        // otherwise don't. Don't bother checking the password field for a value; i can't
+        // imagine the server ever prefilling a password
+        nsAutoString userValue;
+        usernameElement->GetAttribute(NS_LITERAL_STRING("value"), userValue);
+        if (!userValue.Length() || userValue.Equals(user, nsCaseInsensitiveStringComparator())) {
+          rv = usernameElement->SetValue(user);
+          rv = passwordElement->SetValue(pwd);
+        }
       }
     }
-    // If we don't have a password for the page, don't bother looking for
-    // more forms.
-    if (!keychainEntry)
-      break;
-
-    // To help prevent password stealing on sites that allow user-created HTML (but not JS),
-    // only fill if the form's action host is one that has been authorized by the user.
-    // If the site doesn't have any authorized hosts, either because it pre-dates
-    // this code or because it's a non-Camino entry we haven't used before, fill any form.
-    nsAutoString action;
-    formElement->GetAction(action);
-    NSString* actionHost = [[NSURL URLWithString:[NSString stringWith_nsAString:action]] host];
-    if (!actionHost)
-      actionHost = host;
-    NSArray* allowedActionHosts = [keychain allowedActionHostsForHost:host];
-    if ([allowedActionHosts count] > 0 && ![allowedActionHosts containsObject:actionHost]) {
-      // The form has an un-authorized action domain. If we haven't
-      // asked the user about this page, ask. If we have and they said
-      // no, don't ask (to prevent a malicious page from throwing
-      // dialogs until the user tries the other button).
-      if (silentlyDenySuspiciousForms)
-        continue;
-      if (![keychain confirmFillPassword:GetNSWindow(inDOMWindow)]) {
-        silentlyDenySuspiciousForms = YES;
-        continue;
-      }
-      // Remember the approval
-      [keychain setAllowedActionHosts:[allowedActionHosts arrayByAddingObject:actionHost] forHost:host];
-    }
-
-    nsAutoString user, pwd;
-    [[keychainEntry username] assignTo_nsAString:user];
-    [[keychainEntry password] assignTo_nsAString:pwd];
-
-    // If the server specifies a value attribute, only autofill the password if
-    // what we have in keychain matches what the server supplies (bug 169760).
-    nsAutoString userValue;
-    usernameElement->GetAttribute(NS_LITERAL_STRING("value"), userValue);
-    if (!userValue.Length() || userValue.Equals(user, nsCaseInsensitiveStringComparator())) {
-      rv = usernameElement->SetValue(user);
-      rv = passwordElement->SetValue(pwd);
-    }
-
-    // Now that we have actually filled the password, cache the keychain entry.
-    if (!uri) {
-      nsCAutoString uriCAString;
-      rv = docURL->GetSpec(uriCAString);
-      uri = [NSString stringWithCString:uriCAString.get()];
-    }
-    [keychain cacheKeychainEntry:keychainEntry forKey:uri];
   } // for each form on page
 
   // recursively check sub-frames and iframes
@@ -1375,7 +1110,7 @@ KeychainFormSubmitObserver::Notify(nsIContent* node, nsIDOMWindowInternal* windo
     return;
   
   // prime the pump with the top dom window.
-  nsCOMPtr<nsIDOMWindow> domWin = [mBrowserView contentWindow];
+  nsCOMPtr<nsIDOMWindow> domWin = [mBrowserView getContentWindow];
   if (!domWin)
     return;
   
@@ -1387,11 +1122,11 @@ KeychainFormSubmitObserver::Notify(nsIContent* node, nsIDOMWindowInternal* windo
 {
 }
 
-- (void)onResourceLoadingStarted:(NSValue*)resourceIdentifier
+- (void)onResourceLoadingStarted:(NSNumber*)resourceIdentifier
 {
 }
 
-- (void)onResourceLoadingCompleted:(NSValue*)resourceIdentifier
+- (void)onResourceLoadingCompleted:(NSNumber*)resourceIdentifier
 {
 }
 
@@ -1439,10 +1174,6 @@ KeychainFormSubmitObserver::Notify(nsIContent* node, nsIDOMWindowInternal* windo
 {
 }
 
-- (void)onSearchPluginDetected:(NSURL*)pluginURL mimeType:(NSString*)pluginMIMEType displayName:(NSString*)pluginName
-{
-}
-
 @end
 
 //
@@ -1450,7 +1181,8 @@ KeychainFormSubmitObserver::Notify(nsIContent* node, nsIDOMWindowInternal* windo
 //
 // Finds the native window for the given DOM window
 //
-NSWindow* GetNSWindow(nsIDOMWindow* inWindow)
+NSWindow*
+GetNSWindow(nsIDOMWindow* inWindow)
 {
   CHBrowserView* browserView = [CHBrowserView browserViewFromDOMWindow:inWindow];
   return [browserView getNativeWindow];
@@ -1467,10 +1199,9 @@ NSWindow* GetNSWindow(nsIDOMWindow* inWindow)
 // "change your password" form). If we find one, null out
 // |outPassword| since we probably don't want to prefill this form.
 //
-nsresult FindUsernamePasswordFields(nsIDOMHTMLFormElement* inFormElement,
-                                    nsIDOMHTMLInputElement** outUsername,
-                                    nsIDOMHTMLInputElement** outPassword,
-                                    PRBool inStopWhenFound)
+nsresult
+FindUsernamePasswordFields(nsIDOMHTMLFormElement* inFormElement, nsIDOMHTMLInputElement** outUsername,
+                            nsIDOMHTMLInputElement** outPassword, PRBool inStopWhenFound)
 {
   if (!outUsername || !outPassword)
     return NS_ERROR_FAILURE;
@@ -1483,7 +1214,7 @@ nsresult FindUsernamePasswordFields(nsIDOMHTMLFormElement* inFormElement,
   nsAutoString autocomplete;
   inFormElement->GetAttribute(NS_LITERAL_STRING("autocomplete"), autocomplete);
   if (autocomplete.EqualsIgnoreCase("off") && !autoCompleteOverride)
-    return NS_ERROR_FAILURE;
+    return NS_OK;
   
   //
   // Search the form the password field and the preceding text field
@@ -1496,7 +1227,7 @@ nsresult FindUsernamePasswordFields(nsIDOMHTMLFormElement* inFormElement,
   nsCOMPtr<nsIDOMHTMLCollection> elements;
   nsresult rv = inFormElement->GetElements(getter_AddRefs(elements));
   if (NS_FAILED(rv) || !elements)
-    return NS_ERROR_FAILURE;
+    return NS_OK;
 
   PRUint32 numElements;
   elements->GetLength(&numElements);
@@ -1537,7 +1268,7 @@ nsresult FindUsernamePasswordFields(nsIDOMHTMLFormElement* inFormElement,
     if (!inStopWhenFound && isPassword && *outPassword) {
       NS_RELEASE(*outPassword);
       *outPassword = nsnull;
-      return NS_ERROR_FAILURE;
+      return NS_OK;
     }
     
     // Keep taking text fields until we have a password, so that
@@ -1558,5 +1289,5 @@ nsresult FindUsernamePasswordFields(nsIDOMHTMLFormElement* inFormElement,
     
   } // for each item in form
 
-  return (*outPassword && *outUsername) ? NS_OK : NS_ERROR_FAILURE;
+  return NS_OK;
 }

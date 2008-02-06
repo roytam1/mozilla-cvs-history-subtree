@@ -35,6 +35,8 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+#import "NSString+Utils.h"
+
 #import "DraggableImageAndTextCell.h"
 
 @interface DraggableImageAndTextCell(Private)

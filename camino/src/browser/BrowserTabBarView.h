@@ -21,7 +21,6 @@
  *
  * Contributor(s):
  *   Geoff Beier <me@mollyandgeoff.com>
- *   Desmond Elliott <d.elliott@inf.ed.ac.uk>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -38,10 +37,8 @@
  * ***** END LICENSE BLOCK ***** */
 
 #import <Cocoa/Cocoa.h>
-
-@class BrowserTabView;
-@class BrowserTabViewItem;
-@class TabButtonView;
+#import "BrowserTabView.h"
+#import "TabButtonCell.h"
 
 @interface BrowserTabBarView : NSView 
 {
@@ -49,14 +46,14 @@
   // this tab view should be tabless and borderless
   IBOutlet BrowserTabView*  mTabView;
   
-  NSButton*         mOverflowRightButton; // button to slide tabs to the left
-  NSButton*         mOverflowLeftButton;  // button to slide tabs to the right
-  NSButton*         mOverflowMenuButton;  // button to popup the tab menu
+  TabButtonCell*    mActiveTabButton;     // active tab button, mainly useful for handling drags (STRONG)
+  NSButton*         mOverflowButton;      // button for overflow menu if we've got more tabs than space (STRONG)
+  NSMenu*           mOverflowMenu;        // menu for tab overflow (STRONG);
   
   // drag tracking
-  BOOL              mDragOverBar;
-
-  NSTimeInterval    mLastClickTime;
+  NSPoint           mLastClickPoint;
+  BOOL              mDragOverBar;         // either over a button, or the bar background
+  TabButtonCell*    mDragDestButton;
   
   BOOL              mVisible;             // whether tabs are visible or not; used to disable creation of tracking rects when they're not
   BOOL              mOverflowTabs;        // track whether there are more tabs than we can fit onscreen
@@ -64,9 +61,6 @@
   
   NSImage*          mBackgroundImage;
   NSImage*          mButtonDividerImage;
-  
-  int               mLeftMostVisibleTabIndex;    // Index of tab view item left-most in the tab bar
-  int               mNumberOfVisibleTabs;        // Number of tab view items drawn in the tab bar
 }
 
 // destroy the tab bar and recreate it from the tabview
@@ -74,10 +68,11 @@
 // return the height the tab bar should be
 -(float)tabBarHeight;
 -(BrowserTabViewItem*)tabViewItemAtPoint:(NSPoint)location;
+-(void)windowClosed;
+-(IBAction)overflowMenu:(id)sender;
 -(BOOL)isVisible;
 // show or hide tabs- should be called if this view will be hidden, to give it a chance to register or
 // unregister tracking rects as appropriate
 -(void)setVisible:(BOOL)show;
--(void)scrollTabIndexToVisible:(int)index;
 
 @end

@@ -54,10 +54,10 @@
   if (![NSWorkspace isLeopardOrHigher]) {
     // optimize drawing a bit so we're not *always* redrawing our top header. Only
     // draw if the area we're asked to draw overlaps with the top line.
-    NSRect bounds = [self bounds];
-    if (NSMaxY(bounds) <= NSMaxY(aRect)) {
-      NSPoint leftPoint = NSMakePoint(bounds.origin.x, bounds.origin.y + bounds.size.height);
-      NSPoint rightPoint = NSMakePoint(bounds.origin.x + bounds.size.width, bounds.origin.y + bounds.size.height);
+    NSRect frame = [self frame];
+    if (NSMaxY(frame) <= NSMaxY(aRect)) {
+      NSPoint leftPoint = NSMakePoint(frame.origin.x, frame.origin.y + frame.size.height);
+      NSPoint rightPoint = NSMakePoint(frame.origin.x + frame.size.width, frame.origin.y + frame.size.height);
       [NSBezierPath strokeLineFromPoint:leftPoint toPoint:rightPoint];
     }
   }

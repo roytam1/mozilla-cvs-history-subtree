@@ -23,6 +23,6 @@
 	<key>NSMainNibFile</key>
 	<string>Tabs</string>
 	<key>NSPrincipalClass</key>
-	<string>OrgMozillaCaminoPreferenceTabs</string>
+	<string>OrgMozillaChimeraPreferenceTabs</string>
 </dict>
 </plist>

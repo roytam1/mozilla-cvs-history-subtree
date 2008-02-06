@@ -48,7 +48,7 @@ extern NSString* const kAddBookmarkItemPrimaryTabKey;   // NSNumber with book, t
 {
   IBOutlet NSTextField*     mTitleField;
   IBOutlet NSPopUpButton*   mParentFolderPopup;
-  IBOutlet NSButton*        mTabGroupCheckbox;  // nil if creating folder
+  IBOutlet NSButton*        mTabGroupCheckbox;
 
   BookmarkViewController*   mBookmarkViewController;    // not retained
 
@@ -56,9 +56,10 @@ extern NSString* const kAddBookmarkItemPrimaryTabKey;   // NSNumber with book, t
   int                       mInitialParentFolderIndex;
   NSArray*                  mBookmarkItems;   // array of NSDictionary
   NSString*                 mDefaultTitle;
+  BOOL                      mCreatingFolder;
 }
 
-+ (AddBookmarkDialogController*)controller;
++ (AddBookmarkDialogController*)sharedAddBookmarkDialogController;
 
 - (IBAction)confirmAddBookmark:(id)sender;
 - (IBAction)cancelAddBookmark:(id)sender;

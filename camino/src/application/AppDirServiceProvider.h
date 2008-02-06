@@ -69,7 +69,7 @@ protected:
     nsresult                GetParentCacheDirectory(nsILocalFile** outFolder);
       
     nsresult                GetSystemDirectory(OSType inFolderType, nsILocalFile** outFolder);
-    static nsresult         EnsureExists(nsILocalFile* inFolder);
+    static nsresult         AppDirServiceProvider::EnsureExists(nsILocalFile* inFolder);
   
 protected:
     nsCOMPtr<nsILocalFile>  mProfileDir;

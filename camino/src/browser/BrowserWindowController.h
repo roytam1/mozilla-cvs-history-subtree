@@ -96,12 +96,6 @@ typedef enum
 	  
 } ETabOpenPolicy;
 
-typedef enum  {
-  eDestinationNewWindow = 0,
-  eDestinationNewTab,
-  eDestinationCurrentView
-} EOpenDestination;
-
 @class CHBrowserView;
 @class BookmarkViewController;
 @class BookmarkToolbar;
@@ -110,9 +104,8 @@ typedef enum  {
 @class BrowserContentView;
 @class BrowserTabViewItem;
 @class AutoCompleteTextField;
+@class SearchTextField;
 @class ExtendedSplitView;
-@class WebSearchField;
-@class FindBarController;
 
 
 @interface BrowserWindowController : NSWindowController<Find, BrowserUIDelegate, BrowserUICreationDelegate>
@@ -121,7 +114,7 @@ typedef enum  {
   IBOutlet ExtendedSplitView* mLocationToolbarView;     // parent splitter of location and search, strong
   IBOutlet AutoCompleteTextField* mURLBar;
   IBOutlet NSTextField*       mStatus;
-  IBOutlet NSProgressIndicator* mProgress;
+  IBOutlet NSProgressIndicator* mProgress;              // STRONG reference
   IBOutlet NSWindow*          mLocationSheetWindow;
   IBOutlet NSTextField*       mLocationSheetURLField;
   IBOutlet NSView*            mStatusBar;     // contains the status text, progress bar, and lock
@@ -130,8 +123,8 @@ typedef enum  {
   
   IBOutlet BookmarkToolbar*     mPersonalToolbar;
 
-  IBOutlet WebSearchField*      mSearchBar;
-  IBOutlet WebSearchField*      mSearchSheetTextField;
+  IBOutlet SearchTextField*     mSearchBar;
+  IBOutlet SearchTextField*     mSearchSheetTextField;
   IBOutlet NSWindow*            mSearchSheetWindow;
   
   // Context menu outlets.
@@ -159,11 +152,6 @@ typedef enum  {
   
   BrowserWrapper*               mBrowserView;   // browser wrapper of frontmost tab
 
-  // The browser view that the user was on before a prompt forced a switch (weak)
-  BrowserWrapper*               mLastBrowserView;
-
-  FindBarController*            mFindController;
-  
   BOOL mMoveReentrant;
   BOOL mClosingWindow;
 
@@ -187,12 +175,15 @@ typedef enum  {
 
   // Funky field editor for URL bar
   NSTextView *mURLFieldEditor;
-
-  NSString *mLastKnownPreferredSearchEngine;
+  
+  // cached superview for progress meter so we know where to add/remove it. This
+  // could be an outlet, but i figure it's easier to get it at runtime thereby saving
+  // someone from messing up in the nib when making changes.
+  NSView* mProgressSuperview;                // WEAK ptr
 }
 
-- (BrowserTabView*)tabBrowser;
-- (BrowserWrapper*)browserWrapper;
+- (BrowserTabView*)getTabBrowser;
+- (BrowserWrapper*)getBrowserWrapper;
 
 - (void)loadURL:(NSString*)aURLSpec referrer:(NSString*)aReferrer focusContent:(BOOL)focusContent allowPopups:(BOOL)inAllowPopups;
 - (void)loadURL:(NSString*)aURLSpec;
@@ -217,11 +208,9 @@ typedef enum  {
 - (void)beginSearchSheet;
 - (IBAction)endSearchSheet:(id)sender;
 - (IBAction)cancelSearchSheet:(id)sender;
-- (IBAction)manageSearchEngines:(id)sender;
 
 - (NSSize)windowWillResize:(NSWindow *)sender toSize:(NSSize)proposedFrameSize;
 
-- (IBAction)toggleStatusBar:(id)aSender;
 - (IBAction)viewSource:(id)aSender;			// focussed frame or page
 - (IBAction)viewPageSource:(id)aSender;	// top-level page
 
@@ -230,7 +219,7 @@ typedef enum  {
 
 - (IBAction)printDocument:(id)aSender;
 - (IBAction)pageSetup:(id)aSender;
-- (IBAction)searchFieldTriggered:(id)aSender;
+- (IBAction)performSearch:(id)aSender;
 - (IBAction)searchForSelection:(id)aSender;
 - (IBAction)sendURL:(id)aSender;
 - (IBAction)sendURLFromLink:(id)aSender;
@@ -239,9 +228,8 @@ typedef enum  {
 - (void)stopThrobber;
 - (void)clickThrobber:(id)aSender;
 
-- (void)find:(id)aSender;
-
 - (BOOL)validateActionBySelector:(SEL)action;
+- (BOOL)performFindCommand;
 - (BOOL)canMakeTextBigger;
 - (BOOL)canMakeTextSmaller;
 - (BOOL)canMakeTextDefaultSize;
@@ -316,7 +304,7 @@ typedef enum  {
 - (NSMenuItem*)prepareAddToAddressBookMenuItem:(NSString*)emailAddress;
 - (NSMenu*)getContextMenu;
 - (NSArray*)mailAddressesInContextMenuLinkNode;
-- (NSString*)contextMenuNodeHrefText;
+- (NSString*)getContextMenuNodeHrefText;
 
 // Context menu methods
 - (IBAction)openLinkInNewWindow:(id)aSender;
@@ -350,6 +338,10 @@ typedef enum  {
 
 - (BookmarkToolbar*) bookmarkToolbar;
 
+- (NSProgressIndicator*) progressIndicator;
+- (void) showProgressIndicator;
+- (void) hideProgressIndicator;
+
 - (BOOL)windowClosesQuietly;
 - (void)setWindowClosesQuietly:(BOOL)inClosesQuietly;
 
@@ -362,16 +354,16 @@ typedef enum  {
 + (NSImage*) secureIcon;
 + (NSImage*) brokenIcon;
 
+// cache the search engines and their search strings we parse from a plist
++ (NSDictionary *)searchURLDictionary;
+
 // cache the toolbar defaults we parse from a plist
 + (NSArray*) toolbarDefaults;
 
-// Get the correct load-in-background behvaior for the given destination based
-// on prefs and the state of the shift key. If possible, aSender's
-// keyEquivalentModifierMask is used to determine the shift key's state.
-// Otherwise (if aSender doesn't respond to keyEquivalentModifierMask is nil)
-// it uses the current event's modifier flags.
-+ (BOOL)shouldLoadInBackgroundForDestination:(EOpenDestination)destination
-                                      sender:(id)sender;
+// Get the load-in-background pref.  If possible, aSender's keyEquivalentModifierMask
+// is used to determine the shift key's state.  Otherwise (if aSender doesn't respond to
+// keyEquivalentModifierMask or aSender is nil) uses the current event's modifier flags.
++ (BOOL)shouldLoadInBackground:(id)aSender;
 
 // Accessor to get the proxy icon view
 - (PageProxyIcon *)proxyIconView;

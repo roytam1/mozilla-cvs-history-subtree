@@ -39,7 +39,6 @@
  * ***** END LICENSE BLOCK ***** */
 
 #import "BookmarkButton.h"
-#import "ImageAdditions.h"
 #import "NSString+Utils.h"
 #import "NSPasteboard+Utils.h"
 #import "DraggableImageAndTextCell.h"
@@ -51,12 +50,6 @@
 #import "BrowserWindowController.h"
 #import "MainController.h"
 #import "PreferenceManager.h"
-
-#if MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_4
-@interface NSCell(TigerCellMethods)
-- (void)setLineBreakMode:(NSLineBreakMode)mode;
-@end
-#endif
 
 @interface BookmarkButton(Private)
 
@@ -81,8 +74,6 @@
     [self setImagePosition:NSImageLeft];
     [self setRefusesFirstResponder:YES];
     [self setFont:[NSFont labelFontOfSize:11.0]];
-    if ([[self cell] respondsToSelector:@selector(setLineBreakMode:)])
-      [[self cell] setLineBreakMode:NSLineBreakByTruncatingTail];
 
     mLastEventWasMenu = NO;
   }
@@ -320,8 +311,8 @@
   // deallocated too soon.  This occurs with SDK >= 10.3, but not earlier.
   // Change in cleanup strategy?  Hold on tight.
   [[self retain] autorelease];
-  [self dragImage:[NSImage dragImageWithIcon:[self image]
-                                       title:([item isSeparator] ? @"" : title)]
+  [self dragImage:[MainController createImageForDragging:[self image]
+                                                   title:([item isSeparator] ? @"" : title)]
                at:NSMakePoint(0, NSHeight([self bounds]))
            offset:NSMakeSize(0, 0)
             event:aEvent

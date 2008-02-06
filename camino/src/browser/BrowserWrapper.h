@@ -40,7 +40,6 @@
 
 @class BrowserWindowController;
 @class ToolTip;
-@class FormFillController;
 @class AutoCompleteTextField;
 @class RolloverImageButton;
 
@@ -69,7 +68,6 @@ class nsIArray;
 - (void)showPopupBlocked:(BOOL)blocked;
 - (void)showSecurityState:(unsigned long)state;
 - (void)showFeedDetected:(BOOL)inDetected;
-- (void)showSearchPluginDetected:(BOOL)pluginsAreDetected;
 - (void)showBlockedPopups:(nsIArray*)blockedSites whitelistingSource:(BOOL)shouldWhitelist;
 - (void)blacklistPopupsFromURL:(NSString*)inURL;
 
@@ -146,11 +144,9 @@ class nsIArray;
     // later. If nil, no sites are blocked. Cleared after each new page.
   nsIMutableArray*          mBlockedPopups;
   NSMutableArray*           mFeedList;         // list of feeds found on page
-  NSMutableArray*           mDetectedSearchPlugins; // STRONG;
 
   CHBrowserView*            mBrowserView;      // retained
   ToolTip*                  mToolTip;
-  FormFillController*       mFormFillController;  // strong
   NSMutableArray*           mStatusStrings;    // current status bar messages, STRONG
   NSMutableSet*             mLoadingResources; // page resources currently loading, STRONG
 
@@ -189,7 +185,7 @@ class nsIArray;
 
 
 // accessors
-- (CHBrowserView*)browserView;
+- (CHBrowserView*)getBrowserView;
 - (BOOL)isBusy;
 - (BOOL)isEmpty;                      // is about:blank loaded?
 - (BOOL)isInternalURI;
@@ -198,6 +194,7 @@ class nsIArray;
 
 - (NSString*)pendingURI;
 - (NSString*)currentURI;
+- (NSString*)displayTitle;
 - (NSString*)pageTitle;
 - (NSImage*)siteIcon;
 - (NSString*)statusString;
@@ -206,7 +203,6 @@ class nsIArray;
 - (BOOL)feedsDetected;
 - (unsigned long)securityState;
 - (NSArray*)feedList;
-- (NSArray*)detectedSearchPlugins;
 
 - (IBAction)showPopups:(id)sender;
 - (IBAction)unblockPopups:(id)sender;
@@ -236,8 +232,8 @@ class nsIArray;
 // CHBrowserListener messages
 - (void)onLoadingStarted;
 - (void)onLoadingCompleted:(BOOL)succeeded;
-- (void)onResourceLoadingStarted:(NSValue*)resourceIdentifier;
-- (void)onResourceLoadingCompleted:(NSValue*)resourceIdentifier;
+- (void)onResourceLoadingStarted:(NSNumber*)resourceIdentifier;
+- (void)onResourceLoadingCompleted:(NSNumber*)resourceIdentifier;
 - (void)onProgressChange64:(long long)currentBytes outOf:(long long)maxBytes;
 - (void)onProgressChange:(long)currentBytes outOf:(long)maxBytes;
 - (void)onLocationChange:(NSString*)urlSpec isNewPage:(BOOL)newPage requestSucceeded:(BOOL)requestOK;

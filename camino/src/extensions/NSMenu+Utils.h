@@ -45,9 +45,6 @@ extern NSString* const NSMenuClosedNotification;
 
 @interface NSMenu(ChimeraMenuUtils)
 
-// Closes all open menus.  Use this before displaying a modal sheet or dialog.
-+ (void)cancelAllTracking;
-
 // turn on "NSMenuWillDisplayNotification" firing
 + (void)setupMenuWillDisplayNotifications;
 
@@ -57,9 +54,6 @@ extern NSString* const NSMenuClosedNotification;
 // treat a set of items each sharing the same tagMask as a radio group,
 // turning on the one with the given unmasked tag value.
 - (void)checkItemWithTag:(int)unmaskedTag inGroupWithMask:(int)tagMask;
-
-// gets the first checked item in the menu, or nil if none are checked.
-- (NSMenuItem*)firstCheckedItem;
 
 // enable or disable all items in the menu including and after inFirstItem,
 // optionally recursing into submenus.
@@ -73,8 +67,6 @@ extern NSString* const NSMenuClosedNotification;
 
 // remove all items including and after the given index (i.e. all items if index is 0)
 - (void)removeItemsFromIndex:(int)inItemIndex;
-
-- (void)removeAllItemsWithTag:(int)tag;
 
 // return YES if this menu is the target of the 'will display' notification.
 // the param should be the [NSNotification object]

@@ -38,8 +38,11 @@
 
 
 #import <AppKit/AppKit.h>
+#import "ProgressViewController.h"
 
-@class ProgressViewController;
+extern NSString* const kDownloadInstanceSelectedNotificationName;
+extern NSString* const kDownloadInstanceOpenedNotificationName;
+extern NSString* const kDownloadInstanceCancelledNotificationName;
 
 //
 // interface ProgressView
@@ -52,13 +55,16 @@
 @interface ProgressView : NSView
 {
 @private
-  IBOutlet NSImageView*   mFileIconView;
+  int mLastModifier;
   ProgressViewController* mProgressController;     // WEAK reference
-  NSEvent*                mFileIconMouseDownEvent; // STRONG reference
 }
+
+// returns the most recent modifier key used during the last 
+// click on this view
+-(int)lastModifier;
 
 // get/set our owning controller, to which we maintain a weak link
 -(void)setController:(ProgressViewController*)controller;
--(ProgressViewController*)controller;
+-(ProgressViewController*)getController;
 
 @end

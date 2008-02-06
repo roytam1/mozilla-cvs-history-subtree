@@ -38,6 +38,8 @@
 
 #import <Carbon/Carbon.h>
 
+#import "NSResponder+Utils.h"
+
 #import "NSMenu+Utils.h"
 
 
@@ -59,7 +61,7 @@ static OSStatus MenuEventHandler(EventHandlerCallRef inHandlerCallRef, EventRef 
         OSStatus err = GetEventParameter(inEvent, kEventParamDirectObject, typeMenuRef, NULL, sizeof(MenuRef), NULL, &theCarbonMenu);
         if (err == noErr)
         {
-          @try {
+          NS_DURING
             // we can't map from MenuRef to NSMenu, so we have to let receivers of the notification
             // do the test.
             NSString* notificationName = @"";
@@ -70,10 +72,9 @@ static OSStatus MenuEventHandler(EventHandlerCallRef inHandlerCallRef, EventRef 
             
             [[NSNotificationCenter defaultCenter] postNotificationName:notificationName
                                                                 object:[NSValue valueWithPointer:theCarbonMenu]];
-          }
-          @catch (id exception) {
-            NSLog(@"Caught exception %@", exception);
-          }
+          NS_HANDLER
+            NSLog(@"Caught exception %@", localException);
+          NS_ENDHANDLER
         }
       }
       break;
@@ -84,76 +85,6 @@ static OSStatus MenuEventHandler(EventHandlerCallRef inHandlerCallRef, EventRef 
 }
 
 #pragma mark -
-
-@interface CarbonMenuList : NSObject
-{
-  NSMutableArray* mList;
-}
-
-+ (CarbonMenuList*)instance;
-- (id)init;
-- (void)dealloc;
-- (NSArray*)list;
-- (void)setupNotifications;
-- (void)menuOpen:(NSNotification*)notification;
-- (void)menuClose:(NSNotification*)notification;
-@end
-
-@implementation CarbonMenuList
-
-+ (CarbonMenuList*)instance {
-  static CarbonMenuList* sInstance;
-  if (!sInstance) {
-    sInstance = [[self alloc] init];
-  }
-  return sInstance;
-}
-
-- (id)init {
-  if ((self = [super init])) {
-    // 16 slots is more than enough, as it's really only possible to wind up
-    // with as many open menus as the maximum submenu depth.  Even if the
-    // capacity here lowballs it, the array will expand dynamically.
-    mList = [[NSMutableArray alloc] initWithCapacity:16];
-  }
-  return self;
-}
-
-- (void)dealloc {
-  [[NSNotificationCenter defaultCenter] removeObserver:self];
-  [mList release];
-  [super dealloc];
-}
-
-- (NSArray*)list {
-  return mList;
-}
-
-- (void)setupNotifications {
-  NSNotificationCenter* notificationCenter = [NSNotificationCenter defaultCenter];
-  [notificationCenter addObserver:self
-                         selector:@selector(menuOpen:)
-                             name:NSMenuWillDisplayNotification
-                           object:nil];
-  [notificationCenter addObserver:self
-                         selector:@selector(menuClose:)
-                             name:NSMenuClosedNotification
-                           object:nil];
-}
-
-- (void)menuOpen:(NSNotification*)notification {
-  NSValue* value = [notification object];
-  if (![mList containsObject:value]) {
-    [mList addObject:value];
-  }
-}
-
-- (void)menuClose:(NSNotification*)notification {
-  [mList removeObject:[notification object]];
-}
-
-@end
-
 
 @implementation NSMenu(ChimeraMenuUtils)
 
@@ -172,35 +103,6 @@ static OSStatus MenuEventHandler(EventHandlerCallRef inHandlerCallRef, EventRef 
                                    GetEventTypeCount(menuEventList),
                                    menuEventList, (void*)self, NULL);
     sInstalled = YES;
-  }
-
-  [[CarbonMenuList instance] setupNotifications];
-}
-
-+ (void)cancelAllTracking {
-  // This method uses Carbon functions to do its dirty work, which seems to
-  // work.  It's no hackier than the other Carbon MenuRef action that the
-  // rest of this class uses.  There isn't really a good Cocoa substitute for
-  // CancelMenuTracking.  In Leopard, there's -[NSMenu cancelMenuTracking],
-  // but that doesn't seem to work to stop menu tracking when a sheet is
-  // about to be displayed.  Perhaps that's because it tries to fade the
-  // menu out, as CancelMenuTracking would do with |false| as its second
-  // argument.  (That doesn't work either.)
-
-  // Stop tracking the menu bar.  Even though the CarbonMenuList contains
-  // the menu bar's submenus, it doesn't contain the menu bar itself, and
-  // CancelMenuTracking will only stop tracking if called with the same
-  // MenuRef used for MenuSelect.  For menu bar pull-down menu tracking,
-  // that's the menu bar.
-  MenuRef rootMenu = AcquireRootMenu();
-  CancelMenuTracking(rootMenu, true, 0);
-  DisposeMenu(rootMenu);
-
-  // Stop tracking other types of menus, like pop-ups and contextual menus.
-  NSArray* list = [[CarbonMenuList instance] list];
-  for (unsigned int index = 0; index < [list count]; ++index) {
-    MenuRef menuRef = [(NSValue*)[list objectAtIndex:index] pointerValue];
-    CancelMenuTracking(menuRef, true, 0);
   }
 }
 
@@ -231,17 +133,6 @@ static OSStatus MenuEventHandler(EventHandlerCallRef inHandlerCallRef, EventRef 
   }
 }
 
-- (NSMenuItem*)firstCheckedItem
-{
-  NSEnumerator* itemsEnumerator = [[self itemArray] objectEnumerator];
-  NSMenuItem* currentItem;
-  while ((currentItem = [itemsEnumerator nextObject])) {
-    if ([currentItem state] == NSOnState)
-      return currentItem;
-  }
-  return nil;
-}
-
 - (void)setAllItemsEnabled:(BOOL)inEnable startingWithItemAtIndex:(int)inFirstItem includingSubmenus:(BOOL)includeSubmenus
 {
   NSArray* menuItems = [self itemArray];
@@ -261,7 +152,7 @@ static OSStatus MenuEventHandler(EventHandlerCallRef inHandlerCallRef, EventRef 
 - (NSMenuItem*)itemWithTarget:(id)anObject andAction:(SEL)actionSelector
 {
   int itemIndex = [self indexOfItemWithTarget:anObject andAction:actionSelector];
-  return (itemIndex == -1) ? (NSMenuItem*)nil : [self itemAtIndex:itemIndex];
+  return (itemIndex == -1) ? nil : [self itemAtIndex:itemIndex];
 }
 
 - (void)removeItemsAfterItem:(NSMenuItem*)inItem
@@ -283,16 +174,6 @@ static OSStatus MenuEventHandler(EventHandlerCallRef inHandlerCallRef, EventRef 
     [self removeItemAtIndex:inItemIndex];
 }
 
-- (void)removeAllItemsWithTag:(int)tagToRemove
-{
-  NSEnumerator* reverseItemEnumerator = [[self itemArray] reverseObjectEnumerator];
-  NSMenuItem* menuItem = nil;
-  while ((menuItem = [reverseItemEnumerator nextObject])) {
-    if ([menuItem tag] == tagToRemove)
-      [self removeItem:menuItem];
-  }
-}
-
 // because there's no way to map back from a MenuRef to a Cocoa NSMenu, we have
 // to let receivers of the notification do the test by calling this method.
 - (BOOL)isTargetOfMenuDisplayNotification:(id)inObject
@@ -302,14 +183,6 @@ static OSStatus MenuEventHandler(EventHandlerCallRef inHandlerCallRef, EventRef 
 
 - (void)addCommandKeyAlternatesForMenuItem:(NSMenuItem *)inMenuItem
 {
-  // Find the item we are adding alternates for. Since this is generally used
-  // when building a menu, check the last item first as an optimization.
-  int itemIndex = [self numberOfItems] - 1;
-  if (![[self itemAtIndex:itemIndex] isEqual:inMenuItem])
-    itemIndex = [self indexOfItem:inMenuItem];
-  if (itemIndex == -1)
-    return;
-
   [inMenuItem setKeyEquivalentModifierMask:0]; // Needed since by default NSMenuItems have NSCommandKeyMask
 
   NSString* title = [inMenuItem title];
@@ -324,7 +197,7 @@ static OSStatus MenuEventHandler(EventHandlerCallRef inHandlerCallRef, EventRef 
                                                              modifiers:NSCommandKeyMask];
   [altMenuItem setRepresentedObject:representedObject];
   [altMenuItem setImage:image];
-  [self insertItem:altMenuItem atIndex:(itemIndex + 1)];
+  [self addItem:altMenuItem];
   [altMenuItem release];
 
   altMenuItem = [[NSMenuItem alloc] initAlternateWithTitle:title
@@ -333,7 +206,7 @@ static OSStatus MenuEventHandler(EventHandlerCallRef inHandlerCallRef, EventRef 
                                                  modifiers:(NSCommandKeyMask | NSShiftKeyMask)];
   [altMenuItem setRepresentedObject:representedObject];
   [altMenuItem setImage:image];
-  [self insertItem:altMenuItem atIndex:(itemIndex + 2)];
+  [self addItem:altMenuItem];
   [altMenuItem release];
 }
 
@@ -344,7 +217,7 @@ static OSStatus MenuEventHandler(EventHandlerCallRef inHandlerCallRef, EventRef 
 
 - (id)initAlternateWithTitle:(NSString *)title action:(SEL)action target:(id)target modifiers:(int)modifiers
 {
-  if ((self = [self initWithTitle:title action:action keyEquivalent:@""])) {
+  if (self = [self initWithTitle:title action:action keyEquivalent:@""]) {
     [self setTarget:target];
     [self setKeyEquivalentModifierMask:modifiers];
     [self setAlternate:YES];

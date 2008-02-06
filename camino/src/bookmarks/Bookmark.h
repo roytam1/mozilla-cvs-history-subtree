@@ -22,7 +22,6 @@
  * Contributor(s):
  *   David Haas <haasd@cae.wisc.edu>
  *   Josh Aas <josh@mozilla.com>
- *   Stuart Morgan <stuart.morgan@alumni.case.edu>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -40,34 +39,41 @@
 
 #import "BookmarkItem.h"
 
+//Status Flags
+#define kBookmarkOKStatus 0
+#define kBookmarkSpacerStatus 9
+
 @interface Bookmark : BookmarkItem
 {
   NSString*     mURL;
   NSDate*       mLastVisit;
-  BOOL          mIsSeparator;
+  unsigned int  mStatus;
   unsigned int  mNumberOfVisits;
   NSString*     mFaviconURL;  // only used for <link> favicons
 }
 
-+ (Bookmark*)separator;
-+ (Bookmark*)bookmarkWithTitle:(NSString*)aTitle
-                           url:(NSString*)aURL
-                     lastVisit:(NSDate*)aLastVisit;
-+ (Bookmark*)bookmarkWithNativeDictionary:(NSDictionary*)aDict;
-+ (Bookmark*)bookmarkWithSafariDictionary:(NSDictionary*)aDict;
-
 - (NSString *)url;
-- (NSDate *)lastVisit;  // nil if not visited
+- (NSDate *)lastVisit;
 - (unsigned)numberOfVisits;
+- (unsigned)status;
 
 - (NSString*)faviconURL;
 - (void)setFaviconURL:(NSString*)inURL;
 
 - (void)setUrl:(NSString *)aURL;
 - (void)setLastVisit:(NSDate *)aLastVisit;
-- (void)setNumberOfVisits:(unsigned)aNumber;  // if 0, clears lastVisit
+- (void)setStatus:(unsigned)aStatus;
+- (void)setIsSeparator:(BOOL)aSeparatorFlag;
+- (void)setNumberOfVisits:(unsigned)aNumber;
 
 - (void)notePageLoadedWithSuccess:(BOOL)inSuccess;
+
+// methods used for saving to files; are guaranteed never to return nil
+- (id)savedURL;
+- (id)savedLastVisit;
+- (id)savedStatus;
+- (id)savedNumberOfVisits;
+- (id)savedFaviconURL;
 
 @end
 

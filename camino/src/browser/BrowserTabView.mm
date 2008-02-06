@@ -37,12 +37,11 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+#import "NSString+Utils.h"
 #import "NSPasteboard+Utils.h"
 #import "PreferenceManager.h"
 
 #import "BrowserTabView.h"
-#import "BrowserTabViewItem.h"
-#import "TabButtonView.h"
 #import "BrowserWrapper.h"
 #import "BookmarkFolder.h"
 #import "Bookmark.h"
@@ -133,6 +132,10 @@ NSString* const kTabBarBackgroundDoubleClickedNotification = @"kTabBarBackground
   [self setJumpbackTab:nil];
   
   [super addTabViewItem:tabViewItem];
+  // the new tab view item needs to have its tab visibility synchronized to the tab bar so that
+  // its content view will be hooked up correctly
+  if ([tabViewItem isMemberOfClass:[BrowserTabViewItem class]])
+    [(BrowserTabViewItem*)tabViewItem updateTabVisibility:[mTabBar isVisible]];
   [self showOrHideTabsAsAppropriate];
 }
 
@@ -150,8 +153,8 @@ NSString* const kTabBarBackgroundDoubleClickedNotification = @"kTabBarBackground
   // any way (even closing a tab) will clear the jumpback tab and return to
   // the "select to the right" behavior. 
   
-  // make sure the tab view is removed
-  [(BrowserTabViewItem *)tabViewItem willBeRemoved];
+  // make sure the close button and spinner get removed
+  [(BrowserTabViewItem *)tabViewItem willBeRemoved:YES];
   if ([self selectedTabViewItem] == tabViewItem) {
     BOOL tabJumpbackPref = [[PreferenceManager sharedInstance] getBooleanPref:"camino.enable_tabjumpback" withSuccess:NULL];
 
@@ -259,6 +262,13 @@ NSString* const kTabBarBackgroundDoubleClickedNotification = @"kTabBarBackground
   }
 }
 
+- (void)refreshTab:(BrowserTabViewItem*)tab
+{
+  if ([self tabsVisible]) {
+    [mTabBar setNeedsDisplayInRect:[[tab tabButtonCell] frame]];
+  }
+}
+
 // Only to be used with the 2 types of tab view which we use in Camino.
 - (void)showOrHideTabsAsAppropriate
 {
@@ -285,11 +295,22 @@ NSString* const kTabBarBackgroundDoubleClickedNotification = @"kTabBarBackground
     }
     tabsVisible = [mTabBar isVisible];
     
-    // Ensure that the last tab isn't closeable.
-    if (tabsVisible && [self barAlwaysVisible])
-      [[[[self tabViewItems] objectAtIndex:0] buttonView] setCloseButtonEnabled:(numItems > 1)];
+    // We don't want to have the close button enabled on the only open tab, so make
+    // sure we keep its state current depending on the number of tabs.
+    if (tabsVisible && [self barAlwaysVisible]) {
+      BOOL initialCloseButtonEnabled = (numItems > 1);
+      [[[[self tabViewItems] objectAtIndex:0] closeButton] setEnabled:initialCloseButtonEnabled];
+    }
     
     if (tabVisibilityChanged) {
+      // tell the tabs that visibility changed
+      NSArray* tabViewItems = [self tabViewItems];
+      for (int i = 0; i < numItems; i ++) {
+        NSTabViewItem* tabItem = [tabViewItems objectAtIndex:i];
+        if ([tabItem isMemberOfClass:[BrowserTabViewItem class]])
+          [(BrowserTabViewItem*)tabItem updateTabVisibility:tabsVisible];
+      }
+      
       // tell the superview to resize its subviews
       [[self superview] resizeSubviewsWithOldSize:[[self superview] frame].size];
       [self setNeedsDisplay:YES];
@@ -319,6 +340,9 @@ NSString* const kTabBarBackgroundDoubleClickedNotification = @"kTabBarBackground
     NSTabViewItem* item = [self tabViewItemAtIndex: i];
     [[item view] browserClosed];
   }
+  
+  // Tell the tab bar the window is closed so it will perform any needed cleanup
+  [mTabBar windowClosed];
 }
 
 - (BOOL)tabsVisible
@@ -461,16 +485,14 @@ NSString* const kTabBarBackgroundDoubleClickedNotification = @"kTabBarBackground
 {
   if ([urls count] == 1) {
     NSString* url = [urls objectAtIndex:0];
-    BOOL loadInBackground = [BrowserWindowController shouldLoadInBackgroundForDestination:eDestinationNewTab
-                                                                                   sender:nil];
     if (targetTab) {
       [[targetTab view] loadURI:url referrer:nil flags:NSLoadFlagsNone focusContent:YES allowPopups:NO];
       
-      if (!loadInBackground)
+      if (![BrowserWindowController shouldLoadInBackground:nil])
         [self selectTabViewItem:targetTab];
     }
     else {
-      [self addTabForURL:url referrer:nil inBackground:loadInBackground];
+      [self addTabForURL:url referrer:nil inBackground:[BrowserWindowController shouldLoadInBackground:nil]];
     }
   }
   else {
@@ -523,13 +545,6 @@ NSString* const kTabBarBackgroundDoubleClickedNotification = @"kTabBarBackground
   id object = [inNotify object];
   if (!object || object != [self selectedTabViewItem])
     [self setJumpbackTab:nil];
-}
-
-// Tabs should be scrolled into view when selected.
--(void)selectTabViewItem:(NSTabViewItem*)item
-{
-  [super selectTabViewItem:item];
-  [mTabBar scrollTabIndexToVisible:[self indexOfTabViewItem:item]];
 }
 
 @end

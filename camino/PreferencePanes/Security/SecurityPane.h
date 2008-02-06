@@ -40,6 +40,8 @@
 
 #import "PreferencePaneBase.h"
 
+class nsIPref;
+
 @interface OrgMozillaChimeraPreferenceSecurity : PreferencePaneBase
 {
   IBOutlet NSButton* mLeaveEncrypted;

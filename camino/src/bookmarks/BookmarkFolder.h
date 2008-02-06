@@ -21,7 +21,6 @@
  *
  * Contributor(s):
  *   David Haas <haasd@cae.wisc.edu>
- *   Stuart Morgan <stuart.morgan@alumni.case.edu>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -51,9 +50,10 @@ enum {
 };
 
 
+//root AE code: DB14
 @class Bookmark;
 
-@interface BookmarkFolder : BookmarkItem
+@interface BookmarkFolder : BookmarkItem  //AE code: DBAE
 {
   NSMutableArray* mChildArray;
   unsigned int    mSpecialFlag;
@@ -73,7 +73,7 @@ enum {
 - (void)setIdentifier:(NSString*)inIdentifier;
 - (NSString*)identifier;
 
-- (BOOL)isSpecial;  // True for special (app-defined) collections. Different meaning than the "special" in "special flag".
+- (BOOL)isSpecial;
 - (BOOL)isToolbar;
 - (BOOL)isRoot;
 - (BOOL)isGroup;
@@ -81,7 +81,7 @@ enum {
 - (BOOL)isDockMenu;
 
 - (void)setChildArray:(NSMutableArray *)aChildArray; //should be private?
-- (void)setIsGroup:(BOOL)aGroupFlag;
+- (void)setIsGroup:(BOOL)aGroupFlag;    //AE code: DBAg
 - (void)setIsRoot:(BOOL)aFlag;
 - (void)setIsToolbar:(BOOL)aFlag;
 - (void)setIsSmartFolder:(BOOL)aFlag;
@@ -97,9 +97,17 @@ enum {
 // methods used for saving to files; are guaranteed never to return nil
 - (id)savedSpecialFlag;
 
-// for reading from disk
-- (BOOL)readNativeDictionary:(NSDictionary *)aDict;
-- (BOOL)readSafariDictionary:(NSDictionary *)aDict;
+// ways to add a new bookmark
+- (Bookmark *)addBookmark; //adds to end
+- (Bookmark *)addBookmark:(NSString *)aTitle url:(NSString *)aURL inPosition:(unsigned)aIndex isSeparator:(BOOL)aBool;
+- (Bookmark *)addBookmark:(NSString *)aTitle
+               inPosition:(unsigned)aIndex
+                  keyword:(NSString *)aKeyword
+                      url:(NSString *)aURL
+              description:(NSString *)aDescription
+                lastVisit:(NSDate *)aDate
+                   status:(unsigned)aStatus
+              isSeparator:(BOOL)aBool;
 
 // ways to add a new bookmark array
 - (BookmarkFolder *)addBookmarkFolder; //adds to end
@@ -137,8 +145,14 @@ enum {
 - (void)buildFlatFolderList:(NSMenu *)menu depth:(unsigned)pad;
 
 // searching
-- (NSArray*)resolveShortcut:(NSString *)shortcut withArgs:(NSString *)args;
-- (NSArray*)bookmarksWithString:(NSString*)searchString inFieldWithTag:(int)tag;
+- (NSArray*)resolveKeyword:(NSString *)keyword withArgs:(NSString *)args;
+- (NSSet *)bookmarksWithString:(NSString *)searchString inFieldWithTag:(int)tag;
 - (BOOL)containsChildItem:(BookmarkItem*)inItem;
+
+// Scripting - should be a protocol we could use for these
+// two, but i'm not sure which one, so we'll declare them here
+// and avoid the compiler warning
+- (NSArray *)indicesOfObjectsByEvaluatingRelativeSpecifier:(NSRelativeSpecifier *)relSpec;
+- (NSArray *)indicesOfObjectsByEvaluatingRangeSpecifier:(NSRangeSpecifier *)rangeSpec;
 
 @end

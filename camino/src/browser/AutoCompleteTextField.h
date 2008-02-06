@@ -40,11 +40,12 @@
 
 #import <AppKit/AppKit.h>
 
+#import "AutoCompleteDataSource.h"
+
 class nsIAutoCompleteSession;
 class nsIAutoCompleteResults;
 class nsIAutoCompleteListener;
 
-@class AutoCompleteDataSource;
 @class ClickMenuImageView;
 @class PageProxyIcon;
 
@@ -100,8 +101,4 @@ extern NSString* const kWillShowFeedMenu;
 - (void)displayFeedIcon:(BOOL)inDisplay;
 - (void)setFeedIconContextMenu:(NSMenu*)inMenu;
 
-@end
-
-@interface AutoCompleteWindow : NSWindow
-- (BOOL)isKeyWindow;
 @end

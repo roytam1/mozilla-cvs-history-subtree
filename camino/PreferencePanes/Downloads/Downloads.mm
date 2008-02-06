@@ -42,10 +42,13 @@
 #import <Cocoa/Cocoa.h>
 
 #import "Downloads.h"
+#import "NSString+Utils.h"
 
 #include "nsCOMPtr.h"
 #include "nsILocalFileMac.h"
 #include "nsDirectoryServiceDefs.h"
+
+const int kDefaultExpireDays = 9;
 
 // handly stack-based class to start and stop an Internet Config session
 class StInternetConfigSession
@@ -78,7 +81,7 @@ private:
 
 @interface OrgMozillaChimeraPreferenceDownloads(Private)
 
-- (NSString*)downloadFolderDescription;
+- (NSString*)getDownloadFolderDescription;
 - (void)setupDownloadMenuWithPath:(NSString*)inDLPath;
 - (void)setDownloadFolder:(NSString*)inNewFolder;
 
@@ -108,13 +111,13 @@ private:
   [mEnableHelperApps setState:[self getBooleanPref:"browser.download.autoDispatch" withSuccess:&gotPref]];
   [mDownloadRemovalPolicy selectItem:[[mDownloadRemovalPolicy menu] itemWithTag:[self getIntPref:"browser.download.downloadRemoveAction" withSuccess:&gotPref]]];
 
-  NSString* downloadFolderDesc = [self downloadFolderDescription];
+  NSString* downloadFolderDesc = [self getDownloadFolderDescription];
   if ([downloadFolderDesc length] == 0)
-    downloadFolderDesc = [self localizedStringForKey:@"MissingDlFolder"];
+    downloadFolderDesc = [self getLocalizedString:@"MissingDlFolder"];
   
   [self setupDownloadMenuWithPath:downloadFolderDesc];
   
-//  [mDownloadFolder setStringValue:[self downloadFolderDescription]];
+//  [mDownloadFolder setStringValue:[self getDownloadFolderDescription]];
 }
 
 - (IBAction)checkboxClicked:(id)sender
@@ -130,7 +133,7 @@ private:
   }
 }
 
-- (NSString*)downloadFolderDescription
+- (NSString*)getDownloadFolderDescription
 {
   NSString* downloadStr = @"";
   nsCOMPtr<nsIFile> downloadsDir;
@@ -219,7 +222,7 @@ private:
 // display a file picker sheet allowing the user to set their new download folder
 - (IBAction)chooseDownloadFolder:(id)sender
 {
-  NSString* oldDLFolder = [self downloadFolderDescription];
+  NSString* oldDLFolder = [self getDownloadFolderDescription];
   NSOpenPanel* panel = [NSOpenPanel openPanel];
   [panel setCanChooseFiles:NO];
   [panel setCanChooseDirectories:YES];

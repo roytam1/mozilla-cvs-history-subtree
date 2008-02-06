@@ -34,11 +34,22 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
+ 
 #import <Cocoa/Cocoa.h>
 #import <PreferencePanes/NSPreferencePane.h>
 
 #import "PreferencePaneBase.h"
+
+#import "nsCOMArray.h"
+
+#import "ExtendedTableView.h"
+#import "SearchTextField.h"
+
+class nsIPref;
+class nsIPermissionManager;
+class nsIPermission;
+class nsICookieManager;
+class nsICookie;
 
 @class ExtendedTableView;
 
@@ -59,12 +70,12 @@ typedef enum ECookiePolicyPopupIndex
   eDenyIndex
 } ECookiePolicyPopupIndex;
 
-@interface OrgMozillaCaminoPreferencePrivacy : PreferencePaneBase
+@interface OrgMozillaChimeraPreferencePrivacy : PreferencePaneBase
 {
   // pane
   IBOutlet NSMatrix*          mCookieBehavior;
   IBOutlet NSButton*          mAskAboutCookies;
-
+  
   IBOutlet NSButton*          mStorePasswords;
 
   BOOL                        mSortedAscending;   // sort direction for tables in sheets
@@ -73,50 +84,42 @@ typedef enum ECookiePolicyPopupIndex
   IBOutlet id                 mPermissionsPanel;
   IBOutlet ExtendedTableView* mPermissionsTable;
   IBOutlet NSTableColumn*     mPermissionColumn;
-  IBOutlet NSSearchField*     mPermissionFilterField;
-  NSMutableArray*             mPermissions;        // strong
-
+  IBOutlet SearchTextField*   mPermissionFilterField;
+  nsIPermissionManager*       mPermissionManager;   // STRONG (should be nsCOMPtr)
+  nsCOMArray<nsIPermission>*  mCachedPermissions;   // parallel list for speed, STRONG
+      
   // cookie sheet
   IBOutlet id                 mCookiesPanel;
   IBOutlet ExtendedTableView* mCookiesTable;
-  IBOutlet NSSearchField*     mCookiesFilterField;
-  NSMutableArray*             mCookies;            // strong
-
-  // Keychain Exclusions sheet
-  IBOutlet id                 mKeychainExclusionsPanel;
-  IBOutlet ExtendedTableView* mKeychainExclusionsTable;
-  IBOutlet NSSearchField*     mKeychainExclusionsFilterField;
-  NSMutableArray*             mKeychainExclusions; // strong
+  IBOutlet SearchTextField*   mCookiesFilterField;
+  nsICookieManager*           mCookieManager;
+  nsCOMArray<nsICookie>*      mCachedCookies;
 }
 
 // main panel button actions
-- (IBAction)clickCookieBehavior:(id)aSender;
-- (IBAction)clickAskAboutCookies:(id)sender;
-- (IBAction)clickStorePasswords:(id)sender;
-- (IBAction)launchKeychainAccess:(id)sender;
-- (IBAction)editKeychainExclusions:(id)sender;
+-(IBAction) clickCookieBehavior:(id)aSender;
+-(IBAction) clickAskAboutCookies:(id)sender;
+-(IBAction) clickStorePasswords:(id)sender;
+-(IBAction) launchKeychainAccess:(id)sender;
 
 // cookie editing functions
-- (IBAction)editCookies:(id)aSender;
-- (IBAction)editCookiesDone:(id)aSender;
-- (IBAction)removeCookies:(id)aSender;
-- (IBAction)removeAllCookies:(id)aSender;
-- (IBAction)allowCookiesFromSites:(id)aSender;
-- (IBAction)blockCookiesFromSites:(id)aSender;
-- (IBAction)removeCookiesAndBlockSites:(id)aSender;
+-(void) populateCookieCache;
+-(IBAction) editCookies:(id)aSender;
+-(IBAction) editCookiesDone:(id)aSender;
+-(IBAction) removeCookies:(id)aSender;
+-(IBAction) removeAllCookies:(id)aSender;
+-(IBAction) blockCookiesFromSites:(id)aSender;
+-(IBAction) removeCookiesAndBlockSites:(id)aSender;
 
 // permission editing functions
-- (IBAction)editPermissions:(id)aSender;
-- (IBAction)editPermissionsDone:(id)aSender;
-- (IBAction)expandCookiePermission:(id)aSender;
-- (IBAction)removeCookiePermissions:(id)aSender;
-- (IBAction)removeAllCookiePermissions:(id)aSender;
+-(void) populatePermissionCache;
+-(IBAction) editPermissions:(id)aSender;
+-(IBAction) editPermissionsDone:(id)aSender;
+-(IBAction) removeCookiePermissions:(id)aSender;
+-(IBAction) removeAllCookiePermissions:(id)aSender;
+-(int) getRowForPermissionWithHost:(NSString *)aHost;
 
-// keychain exclusion list editing functions
-- (IBAction)editKeychainExclusions:(id)sender;
-- (IBAction)editKeychainExclusionsDone:(id)sender;
-- (IBAction)removeKeychainExclusions:(id)sender;
-- (IBAction)removeAllKeychainExclusions:(id)sender;
+-(void) mapCookiePrefToGUI:(int)pref;
 
 // data source informal protocol (NSTableDataSource)
 - (int)numberOfRowsInTableView:(NSTableView *)aTableView;
@@ -126,7 +129,18 @@ typedef enum ECookiePolicyPopupIndex
 // NSTableView delegate methods
 - (void)tableView:(NSTableView *)aTableView didClickTableColumn:(NSTableColumn *)aTableColumn;
 
-// Filtering delegate
-- (IBAction)filterChanged:(id)sender;
+// sorting support methods
+- (void)sortCookiesByColumn:(NSTableColumn *)aTableColumn inAscendingOrder:(BOOL)ascending;
+- (void)sortPermissionsByColumn:(NSTableColumn *)aTableColumn inAscendingOrder:(BOOL)ascending;
 
+  //filtering methods
+- (void) filterCookiesPermissionsWithString: (NSString*) inFilterString;
+- (void) filterCookiesWithString: (NSString*) inFilterString;
+@end
+
+// custom formatter for cookies list to handle session cookie expiration sanely
+@interface CookieDateFormatter : NSDateFormatter
+{
+  CFDateFormatterRef mLocaleFormatter; // strong
+}
 @end

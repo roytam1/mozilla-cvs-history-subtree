@@ -53,6 +53,7 @@
                 openLinkInNewTab = id; 
                 openLinkInNewWindow = id; 
                 pageSetup = id; 
+                performSearch = id; 
                 previousTab = id; 
                 printDocument = id; 
                 reload = id; 
@@ -63,7 +64,6 @@
                 saveImageAs = id; 
                 saveLinkAs = id; 
                 savePageAs = id; 
-                searchFieldTriggered = id; 
                 searchForSelection = id; 
                 sendURL = id; 
                 sendURLFromLink = id; 
@@ -71,7 +71,6 @@
                 showPageInfo = id; 
                 showSiteCertificate = id; 
                 stop = id; 
-                toggleStatusBar = id; 
                 viewOnlyThisImage = id; 
                 viewPageSource = id; 
                 viewSource = id; 
@@ -96,8 +95,8 @@
                 mPersonalToolbar = BookmarkToolbar; 
                 mProgress = NSProgressIndicator; 
                 mProxyIcon = PageProxyIcon; 
-                mSearchBar = WebSearchField; 
-                mSearchSheetTextField = WebSearchField; 
+                mSearchBar = SearchTextField; 
+                mSearchSheetTextField = SearchTextField; 
                 mSearchSheetWindow = NSWindow; 
                 mStatus = NSTextField; 
                 mStatusBar = NSView; 
@@ -117,8 +116,6 @@
                 addTabGroup = id; 
                 addTabGroupWithoutPrompt = id; 
                 fillForm = id; 
-                find = id; 
-                findActions = id; 
                 getInfo = id; 
                 miniaturizeAll = id; 
                 showPageInfo = id; 
@@ -194,7 +191,6 @@
                 mAddTabGroupMenuItem = NSMenuItem; 
                 mAddTabGroupWithoutPromptMenuItem = NSMenuItem; 
                 mApplication = NSApplication; 
-                mAutoUpdater = SUUpdater; 
                 mBookmarksHelperMenu = NSMenu; 
                 mBookmarksMenu = BookmarkMenu; 
                 mBookmarksToolbarMenuItem = NSMenuItem; 
@@ -219,12 +215,6 @@
             SUPERCLASS = NSView; 
         }, 
         {CLASS = NSObject; LANGUAGE = ObjC; }, 
-        {
-            ACTIONS = {checkForUpdates = id; }; 
-            CLASS = SUUpdater; 
-            LANGUAGE = ObjC; 
-            SUPERCLASS = NSObject; 
-        }, 
         {CLASS = ThrobberHandler; LANGUAGE = ObjC; SUPERCLASS = NSObject; }, 
         {
             CLASS = ToolbarController; 

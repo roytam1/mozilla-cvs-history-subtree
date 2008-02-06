@@ -37,9 +37,8 @@
  * ***** END LICENSE BLOCK ***** */
 
 #import <Cocoa/Cocoa.h>
-#import <ApplicationServices/ApplicationServices.h>
 
-#import "NSString+Gecko.h"
+#import "NSString+Utils.h"
 
 #import "mozView.h"
 
@@ -136,7 +135,7 @@ NS_IMETHODIMP
 CHBrowserListener::GetInterface(const nsIID &aIID, void** aInstancePtr)
 {
   if (aIID.Equals(NS_GET_IID(nsIDOMWindow))) {
-    nsCOMPtr<nsIWebBrowser> browser = dont_AddRef([mView webBrowser]);
+    nsCOMPtr<nsIWebBrowser> browser = dont_AddRef([mView getWebBrowser]);
     if (browser)
       return browser->GetContentDOMWindow((nsIDOMWindow **) aInstancePtr);
   }
@@ -167,7 +166,7 @@ CHBrowserListener::CreateChromeWindow(nsIWebBrowserChrome *parent,
     return NS_ERROR_FAILURE;
   }
   
-  CHBrowserListener* listener = [childView cocoaBrowserListener];
+  CHBrowserListener* listener = [childView getCocoaBrowserListener];
   if (!listener) {
 #if DEBUG
     NSLog(@"Uh-oh! No listener yet for a newly created window (nsCocoaBrowserlistener)");
@@ -187,7 +186,7 @@ CHBrowserListener::CreateChromeWindow(nsIWebBrowserChrome *parent,
   // apply scrollbar chrome flags
   if (!(chromeFlags & nsIWebBrowserChrome::CHROME_SCROLLBARS))
   {
-    nsCOMPtr<nsIDOMWindow> contentWindow = [childView contentWindow];
+    nsCOMPtr<nsIDOMWindow> contentWindow = [childView getContentWindow];
     if (contentWindow)
     {
       nsCOMPtr<nsIDOMBarProp> scrollbars;
@@ -233,10 +232,10 @@ CHBrowserListener::ProvideWindow(nsIDOMWindow *inParent, PRUint32 inChromeFlags,
   BOOL prefersTabs = [mContainer shouldReuseExistingWindow];
   if (prefersTabs) {
     CHBrowserView* newContainer = [mContainer reuseExistingBrowserWindow:inChromeFlags];
-    nsCOMPtr<nsIDOMWindow> contentWindow = [newContainer contentWindow];
+    nsCOMPtr<nsIDOMWindow> contentWindow = [newContainer getContentWindow];
     
     // make sure gecko knows whether we're creating a new browser window (new tabs don't count)
-    nsCOMPtr<nsIDOMWindow> currentWindow = [mView contentWindow];
+    nsCOMPtr<nsIDOMWindow> currentWindow = [mView getContentWindow];
     *outWindowIsNew = (contentWindow != currentWindow);
     
     NS_IF_ADDREF(*outDOMWindow = contentWindow.get());
@@ -297,7 +296,7 @@ CHBrowserListener::GetWebBrowser(nsIWebBrowser * *aWebBrowser)
   if (!mView) {
     return NS_ERROR_FAILURE;
   }
-  *aWebBrowser = [mView webBrowser];
+  *aWebBrowser = [mView getWebBrowser];
 
   return NS_OK;
 }
@@ -370,7 +369,7 @@ CHBrowserListener::ShowAsModal()
   }
 
   mIsModal = PR_TRUE;
-  //int result = [nsAlertController safeRunModalForWindow:window];
+  //int result = [NSApp runModalForWindow:window];
   mIsModal = PR_FALSE;
 
   return NS_OK;
@@ -419,10 +418,16 @@ CHBrowserListener::SetDimensions(PRUint32 flags, PRInt32 x, PRInt32 y, PRInt32 c
 
   if (flags & nsIEmbeddingSiteWindow::DIM_FLAGS_POSITION)
   {
+    NSPoint origin;
+    origin.x = (float)x;
+    origin.y = (float)y;
+    
     // websites assume the origin is the topleft of the window and that the screen origin
     // is "topleft" (quickdraw coordinates). As a result, we have to convert it.
-    CGRect screenRect = CGDisplayBounds(CGMainDisplayID());
-    NSPoint origin = NSMakePoint(x, screenRect.size.height - y);
+    GDHandle screenDevice = ::GetMainDevice();
+    Rect screenRect = (**screenDevice).gdRect;
+    short screenHeight = screenRect.bottom - screenRect.top;
+    origin.y = screenHeight - origin.y;
     
     [window setFrameTopLeftPoint:origin];
   }
@@ -470,8 +475,10 @@ CHBrowserListener::GetDimensions(PRUint32 flags,  PRInt32 *x,  PRInt32 *y, PRInt
       // websites (and gecko) expect the |y| value to be in "quickdraw" coordinates 
       // (topleft of window, origin is topleft of main device). Convert from cocoa -> 
       // quickdraw coord system.
-      CGRect screenRect = CGDisplayBounds(CGMainDisplayID());
-      *y = (PRInt32)(screenRect.size.height - NSMaxY(frame));
+      GDHandle screenDevice = ::GetMainDevice();
+      Rect screenRect = (**screenDevice).gdRect;
+      short screenHeight = screenRect.bottom - screenRect.top;
+      *y = screenHeight - (PRInt32)(frame.origin.y + frame.size.height);
     }
   }
   if (flags & nsIEmbeddingSiteWindow::DIM_FLAGS_SIZE_OUTER) {
@@ -670,7 +677,7 @@ CHBrowserListener::OnStateChange(nsIWebProgress *aWebProgress, nsIRequest *aRequ
         [obj onLoadingStarted];
     }
     while ((obj = [enumerator nextObject]))
-      [obj onResourceLoadingStarted:[NSValue valueWithPointer:aRequest]];
+      [obj onResourceLoadingStarted:[NSNumber numberWithUnsignedLongLong:(unsigned long long)aRequest]];
   }
   else if (aStateFlags & nsIWebProgressListener::STATE_STOP) {
     if (aStateFlags & nsIWebProgressListener::STATE_IS_NETWORK) {
@@ -678,7 +685,7 @@ CHBrowserListener::OnStateChange(nsIWebProgress *aWebProgress, nsIRequest *aRequ
         [obj onLoadingCompleted:(NS_SUCCEEDED(aStatus))];
     }
     while ((obj = [enumerator nextObject]))
-      [obj onResourceLoadingCompleted:[NSValue valueWithPointer:aRequest]];
+      [obj onResourceLoadingCompleted:[NSNumber numberWithUnsignedLongLong:(unsigned long long)aRequest]];
   }
 
   return NS_OK;
@@ -820,8 +827,6 @@ CHBrowserListener::HandleLinkAddedEvent(nsIDOMEvent* inEvent)
     HandleFaviconLink(linkElement);
   else if (linkAttrType == eFeedType)
     HandleFeedLink(linkElement);
-  else if (linkAttrType == eSearchPluginType)
-    HandleSearchPluginLink(linkElement);
 
   return NS_OK;
 }
@@ -829,29 +834,24 @@ CHBrowserListener::HandleLinkAddedEvent(nsIDOMEvent* inEvent)
 ELinkAttributeType
 CHBrowserListener::GetLinkAttributeType(nsIDOMElement* inElement)
 {
-  nsAutoString relAttribute;
-  inElement->GetAttribute(NS_LITERAL_STRING("rel"), relAttribute);
+  nsAutoString attribute;
+  inElement->GetAttribute(NS_LITERAL_STRING("rel"), attribute);
   
   // Favicon link type
-  if (relAttribute.EqualsIgnoreCase("shortcut icon") || relAttribute.EqualsIgnoreCase("icon"))
+  if (attribute.EqualsIgnoreCase("shortcut icon") || attribute.EqualsIgnoreCase("icon"))
     return eFavIconType;
-  
-  // Search Plugin type
-  if (relAttribute.Equals(NS_LITERAL_STRING("search")))
-    return eSearchPluginType;
 
   // Check for feed type next
-  nsAutoString typeAttribute;
-  inElement->GetAttribute(NS_LITERAL_STRING("type"), typeAttribute);
+  inElement->GetAttribute(NS_LITERAL_STRING("type"), attribute);
   
   // kinda ugly, but if we don't match any of these strings return
-  if (typeAttribute.Equals(NS_LITERAL_STRING("application/rssxml")) ||
-      typeAttribute.Equals(NS_LITERAL_STRING("application/rss+xml")) ||
-      typeAttribute.Equals(NS_LITERAL_STRING("application/atomxml")) ||
-      typeAttribute.Equals(NS_LITERAL_STRING("application/atom+xml")) ||
-      typeAttribute.Equals(NS_LITERAL_STRING("text/xml")) ||
-      typeAttribute.Equals(NS_LITERAL_STRING("application/xml")) ||
-      typeAttribute.Equals(NS_LITERAL_STRING("application/rdfxml")))
+  if (attribute.Equals(NS_LITERAL_STRING("application/rssxml")) ||
+      attribute.Equals(NS_LITERAL_STRING("application/rss+xml")) ||
+      attribute.Equals(NS_LITERAL_STRING("application/atomxml")) ||
+      attribute.Equals(NS_LITERAL_STRING("application/atom+xml")) ||
+      attribute.Equals(NS_LITERAL_STRING("text/xml")) ||
+      attribute.Equals(NS_LITERAL_STRING("application/xml")) ||
+      attribute.Equals(NS_LITERAL_STRING("application/rdfxml")))
   {
     return eFeedType;
   }
@@ -967,23 +967,11 @@ CHBrowserListener::HandleFeedLink(nsIDOMElement* inElement)
   if (NS_FAILED(rv))
     return;
   
-  // set the scheme to feed: so sending to an outside application is only one call
-  PRBool isHttp;
+  // set the scheme to feed:// so sending to outside application is one only one call
+  feedURI->SetScheme(NS_LITERAL_CSTRING("feed"));
+  
   nsCAutoString feedFullURI;
-
-  rv = feedURI->SchemeIs("http", &isHttp);
-  if (isHttp)
-  {
-    // for http:, we want feed://example.com
-    feedURI->SetScheme(NS_LITERAL_CSTRING("feed"));
-    feedURI->GetAsciiSpec(feedFullURI);
-  }
-  else
-  {
-    // for https:, we want feed:https://example.com
-    feedURI->GetAsciiSpec(feedFullURI);
-    feedFullURI.Insert(NS_LITERAL_CSTRING("feed:"), 0);
-  }
+  feedURI->GetAsciiSpec(feedFullURI);
   
   // get the two specs, the feed's uri and the feed's title
   NSString* feedSpec = [NSString stringWith_nsACString:feedFullURI];
@@ -993,57 +981,4 @@ CHBrowserListener::HandleFeedLink(nsIDOMElement* inElement)
   
   // notify that a feed has sucessfully been discovered
   [mContainer onFeedDetected:feedSpec feedTitle:titleSpec];
-}
-
-void
-CHBrowserListener::HandleSearchPluginLink(nsIDOMElement* inElement)
-{
-  nsresult rv;
-  
-  nsCOMPtr<nsIDOMDocument> domDoc;
-  inElement->GetOwnerDocument(getter_AddRefs(domDoc));
-  
-  nsAutoString titleAttribute;
-  rv = inElement->GetAttribute(NS_LITERAL_STRING("title"), titleAttribute);
-  if (NS_FAILED(rv))
-    return;
-  
-  nsAutoString hrefAttribute;
-  rv = inElement->GetAttribute(NS_LITERAL_STRING("href"), hrefAttribute);
-  if (NS_FAILED(rv))
-    return;
-
-  // get the document uri
-  nsCOMPtr<nsIDOM3Document> doc = do_QueryInterface(domDoc);
-  if (!doc)
-    return;
-  
-  nsAutoString docURISpec;
-  rv = doc->GetDocumentURI(docURISpec);
-  if (NS_FAILED(rv))
-    return;
-  
-  nsCOMPtr<nsIURI> documentURI;
-  rv = NS_NewURI(getter_AddRefs(documentURI), docURISpec);
-  if (NS_FAILED(rv))
-    return;
-  
-  nsCOMPtr<nsIURI> fullSearchPluginURI;
-  rv = NS_NewURI(getter_AddRefs(fullSearchPluginURI), NS_ConvertUTF16toUTF8(hrefAttribute), nsnull, documentURI);
-  if (NS_FAILED(rv))
-    return;
-  
-  nsCAutoString fullSearchPluginURISpec;
-  fullSearchPluginURI->GetSpec(fullSearchPluginURISpec);
-
-  nsAutoString typeAttribute;
-  rv = inElement->GetAttribute(NS_LITERAL_STRING("type"), typeAttribute);
-  if (NS_FAILED(rv))
-    return;
-  
-  NSString* title = [NSString stringWith_nsAString:titleAttribute];
-  NSURL* location = [NSURL URLWithString:[NSString stringWith_nsACString:fullSearchPluginURISpec]];
-  NSString* mimeType = [NSString stringWith_nsAString:typeAttribute];
-
-  [mContainer onSearchPluginDetected:location mimeType:mimeType displayName:title];
 }

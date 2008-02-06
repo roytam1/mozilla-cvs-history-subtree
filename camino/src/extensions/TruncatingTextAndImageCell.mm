@@ -53,6 +53,7 @@
     mImageSpace = 2;
     mMaxImageHeight = 16;
 	  mRightGutter = 0.0;
+    mImageIsVisible = NO;
   }
   return self;
 }
@@ -73,6 +74,7 @@
   cell->mTruncLabelString = nil;
   cell->mLabelStringWidth = -1;
   cell->mRightGutter = mRightGutter;
+  cell->mImageIsVisible = mImageIsVisible;
   return cell;
 }
 
@@ -90,18 +92,18 @@
   // we always reserve space for the image, even if there isn't one
   // assume the image rect is always square
   float imageWidth = NSHeight(cellFrame) - 2 * mImagePadding;
-  //Put the favicon/spinner to the left of the text
-  NSDivideRect(cellFrame, &imageRect, &textRect, imageWidth, NSMinXEdge);
-
   // draw the progress indicator if we have a reference to it, otherwise draw the favicon
   if (mProgressIndicator) {
+    NSDivideRect(cellFrame, &textRect, &imageRect, NSWidth(cellFrame) - imageWidth, NSMinXEdge);
     if (controlView != [mProgressIndicator superview]) {
       [controlView addSubview:mProgressIndicator];
     }
     [mProgressIndicator setFrame:imageRect];
     [mProgressIndicator setNeedsDisplay:YES];
   }
-  else if (mImage) {
+  else if (mImage && mImageIsVisible) {
+    //Put the favicon to the left of the text
+    NSDivideRect(cellFrame,&imageRect,&textRect,imageWidth,NSMinXEdge);
     NSRect imageSrcRect = NSZeroRect;
     imageSrcRect.size = [mImage size];
     float imagePadding = mImagePadding;
@@ -112,7 +114,9 @@
     [mImage drawInRect:NSInsetRect(imageRect, mImagePadding, mImagePadding)
             fromRect:imageSrcRect operation:NSCompositeSourceOver fraction:mImageAlpha];
   }
-
+  else {
+    NSDivideRect(cellFrame,&imageRect,&textRect,imageWidth,NSMinXEdge);
+  }
   mImageFrame = [controlView convertRect:imageRect toView:nil];
   // remove image space
   NSDivideRect(textRect, &imageRect, &textRect, mImageSpace, NSMinXEdge);
@@ -156,6 +160,11 @@
   }
 }
 
+-(void)setImageVisible:(BOOL)visible
+{
+  mImageIsVisible = visible;
+}
+
 -(NSImage *)image
 {
   return mImage;
@@ -184,8 +193,6 @@
 // called by BrowserTabViewItem when progress display should start
 - (void)addProgressIndicator:(NSProgressIndicator*)indicator
 {
-  if (mProgressIndicator)
-    [self removeProgressIndicator];
   mProgressIndicator = [indicator retain];
 }
 
@@ -198,7 +205,7 @@
   mProgressIndicator = nil;
 }
 
-// called by TabButtonView to constrain the height of the favicon to the height of the close button
+// called by TabButtonCell to constrain the height of the favicon to the height of the close button
 // for best results, both should be 16x16
 - (void)setMaxImageHeight:(float)height
 {

@@ -390,7 +390,7 @@ enum {
 {
   if (!mIsFileSave && !mUserCancelled && !mDownloadFailed) {
     if ([[PreferenceManager sharedInstance] getBooleanPref:"browser.download.autoDispatch" withSuccess:NULL]) {
-      [[NSWorkspace sharedWorkspace] openFile:mDestPath];
+      [[NSWorkspace sharedWorkspace] openFile:mDestPath withApplication:nil andDeactivate:NO];
     }
   }
 }
@@ -690,23 +690,6 @@ enum {
     return (mUserCancelled || mDownloadDone);
   }
   return YES;
-}
-
-#pragma mark -
-
--(void)updateSelectionWithBehavior:(DownloadSelectionBehavior)behavior
-{
-  [mProgressWindowController updateSelectionOfDownload:self withBehavior:behavior];
-}
-
--(void)openSelectedDownloads
-{
-  [mProgressWindowController open:self];
-}
-
--(void)cancelSelectedDownloads
-{
-  [mProgressWindowController cancel:self];
 }
 
 #pragma mark -

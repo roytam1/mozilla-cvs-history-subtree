@@ -120,17 +120,15 @@ static const int kEscapeKeyCode = 53;
     BOOL shiftKeyIsDown = (([theEvent modifierFlags] & NSShiftKeyMask) != 0);
     handled = [windowController handleCommandReturn:shiftKeyIsDown];
   } else if (keyChar == '+') {
-    if (([theEvent modifierFlags] & NSCommandKeyMask) != 0) {
-      // If someone assigns this shortcut to a menu, we want that to win.
-      if ([[NSApp mainMenu] performKeyEquivalent:theEvent])
-        return YES;
-
-      if ([windowController canMakeTextBigger])
-       [windowController makeTextBigger:nil];
-     else
-       NSBeep();
-     handled = YES;
-   }
+    // If someone assigns this shortcuts to a menu, we want that to win.
+    if ([[NSApp mainMenu] performKeyEquivalent:theEvent])
+      return YES;
+    
+    if ([windowController canMakeTextBigger])
+      [windowController makeTextBigger:nil];
+    else
+      NSBeep();
+    handled = YES;
   } else if (keyChar >= '1' && keyChar <= '9') {
     if (([theEvent modifierFlags] & standardModifierKeys) == NSCommandKeyMask) {
       // If someone assigns one of these shortcuts to a menu, we want that to win.
@@ -172,7 +170,7 @@ static const int kEscapeKeyCode = 53;
 // accessor for the 'URL' Apple Event attribute
 - (NSString*)getURL
 {
-  BrowserWrapper* browserWrapper = [(BrowserWindowController*)[self delegate] browserWrapper];
+  BrowserWrapper* browserWrapper = [(BrowserWindowController*)[self delegate] getBrowserWrapper];
 
   return [browserWrapper currentURI];
 }

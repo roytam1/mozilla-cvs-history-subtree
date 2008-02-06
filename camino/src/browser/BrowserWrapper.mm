@@ -34,7 +34,8 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
+ 
+#import "NSString+Utils.h"
 #import "NSView+Utils.h"
 #import "ImageAdditions.h"
 
@@ -46,18 +47,16 @@
 #import "BrowserTabView.h"
 #import "BrowserTabViewItem.h"
 #import "ToolTip.h"
-#import "FormFillController.h"
 #import "PageProxyIcon.h"
 #import "KeychainService.h"
 #import "AutoCompleteTextField.h"
 #import "RolloverImageButton.h"
-#import "CHPermissionManager.h"
-#import "XMLSearchPluginParser.h"
 
 #include "CHBrowserService.h"
 #include "ContentClickListener.h"
 
 #include "nsCOMPtr.h"
+#include "nsIServiceManager.h"
 
 #ifdef MOZILLA_1_8_BRANCH
 #include "nsIArray.h"
@@ -81,9 +80,13 @@
 #include "nsIDOMEventReceiver.h"
 #include "nsIWebProgressListener.h"
 #include "nsIBrowserDOMWindow.h"
+#include "nsIPermissionManager.h"
 #include "nsIScriptSecurityManager.h"
 
 class nsIDOMPopupBlockedEvent;
+
+// for camino.enable_plugins; needs to match string in WebFeatures.mm
+static NSString* const kEnablePluginsChangedNotificationName = @"EnablePluginsChanged";
 
 // types of status bar messages, in order of priority for showing to the user
 enum StatusPriority {
@@ -167,9 +170,6 @@ enum StatusPriority {
 
     mToolTip = [[ToolTip alloc] init];
 
-    mFormFillController = [[FormFillController alloc] init]; 
-    [mFormFillController attachToBrowser:mBrowserView];
-
     //[self setSiteIconImage:[NSImage imageNamed:@"globe_ico"]];
     //[self setSiteIconURI: [NSString string]];
 
@@ -177,12 +177,10 @@ enum StatusPriority {
     mStatusStrings = [[NSMutableArray alloc] initWithObjects:[NSNull null], [NSNull null],
                                                              [NSNull null], [NSNull null], nil];
 
-    mDisplayTitle = [NSLocalizedString(@"UntitledPageTitle", nil) retain];
+    mDisplayTitle = [[NSString alloc] init];
     
     mLoadingResources = [[NSMutableSet alloc] init];
     
-    mDetectedSearchPlugins = [[NSMutableArray alloc] initWithCapacity:1];
-
     [self registerNotificationListener];
   }
   return self;
@@ -203,14 +201,12 @@ enum StatusPriority {
 
   [mToolTip release];
   [mDisplayTitle release];
-  [mFormFillController release];
   [mPendingURI release];
   
   NS_IF_RELEASE(mBlockedPopups);
   
   [mFeedList release];
-  [mDetectedSearchPlugins release];
-
+  
   [mBrowserView release];
   [mContentViewProviders release];
 
@@ -280,7 +276,7 @@ enum StatusPriority {
 
 -(NSString*)currentURI
 {
-  return [mBrowserView currentURI];
+  return [mBrowserView getCurrentURI];
 }
 
 - (void)setFrame:(NSRect)frameRect
@@ -341,9 +337,14 @@ enum StatusPriority {
   return mIsBusy;
 }
 
-- (NSString*)pageTitle
+- (NSString*)displayTitle
 {
   return mDisplayTitle;
+}
+
+- (NSString*)pageTitle
+{
+  return [mBrowserView pageTitle];
 }
 
 - (NSImage*)siteIcon
@@ -402,7 +403,7 @@ enum StatusPriority {
   // position isn't messed up when we finally display the tab.
   if (mDelegate == nil)
   {
-    NSRect tabContentRect = [[[mWindow delegate] tabBrowser] contentRect];
+    NSRect tabContentRect = [[[mWindow delegate] getTabBrowser] contentRect];
     [self setFrame:tabContentRect resizingBrowserViewIfHidden:YES];
   }
 
@@ -424,7 +425,7 @@ enum StatusPriority {
     if (!clickListener)
       return;
     
-    nsCOMPtr<nsIDOMWindow> contentWindow = [[self browserView] contentWindow];
+    nsCOMPtr<nsIDOMWindow> contentWindow = [[self getBrowserView] getContentWindow];
     nsCOMPtr<nsPIDOMWindow> piWindow(do_QueryInterface(contentWindow));
     nsIChromeEventHandler *chromeHandler = piWindow->GetChromeEventHandler();
     nsCOMPtr<nsIDOMEventReceiver> rec(do_QueryInterface(chromeHandler));
@@ -508,8 +509,6 @@ enum StatusPriority {
   
   [mDelegate showFeedDetected:NO];
   [mFeedList removeAllObjects];
-  [mDelegate showSearchPluginDetected:NO];
-  [mDetectedSearchPlugins removeAllObjects];
   
   [mTabItem setLabel:NSLocalizedString(@"TabLoading", @"")];
 }
@@ -528,7 +527,7 @@ enum StatusPriority {
   [(BrowserTabViewItem*)mTabItem stopLoadAnimation];
 
   NSString *urlString = [self currentURI];
-  NSString *titleString = [mBrowserView pageTitle];
+  NSString *titleString = [self pageTitle];
   
   // If we never got a page title, then the tab title will be stuck at "Loading..."
   // so be sure to set the title here
@@ -548,12 +547,12 @@ enum StatusPriority {
   }
 }
 
-- (void)onResourceLoadingStarted:(NSValue*)resourceIdentifier
+- (void)onResourceLoadingStarted:(NSNumber*)resourceIdentifier
 {
   [mLoadingResources addObject:resourceIdentifier];
 }
 
-- (void)onResourceLoadingCompleted:(NSValue*)resourceIdentifier
+- (void)onResourceLoadingCompleted:(NSNumber*)resourceIdentifier
 {
   if ([mLoadingResources containsObject:resourceIdentifier])
   {
@@ -822,48 +821,11 @@ enum StatusPriority {
   [mDelegate showFeedDetected:YES];
 }
 
-- (void)onSearchPluginDetected:(NSURL*)pluginURL mimeType:(NSString*)pluginMIMEType displayName:(NSString*)pluginName
-{
-  if ([XMLSearchPluginParser canParsePluginMIMEType:pluginMIMEType]) {
-    NSDictionary* searchPluginDict = [NSDictionary dictionaryWithObjectsAndKeys:pluginURL, kWebSearchPluginURLKey,
-                                                                                pluginMIMEType, kWebSearchPluginMIMETypeKey,
-                                                                                pluginName, kWebSearchPluginNameKey, 
-                                                                                nil];
-    [mDetectedSearchPlugins addObject:searchPluginDict];
-    [mDelegate showSearchPluginDetected:YES];
-  }
-}
-
 // Called when a context menu should be shown.
 - (void)onShowContextMenu:(int)flags domEvent:(nsIDOMEvent*)aEvent domNode:(nsIDOMNode*)aNode
 {
   // presumably this is only called on the primary tab
   [[mWindow delegate] onShowContextMenu:flags domEvent:aEvent domNode:aNode];
-}
-
-// -deleteBackward:
-//
-// map backspace key to Back according to browser.backspace_action pref
-//
-- (void)deleteBackward:(id)sender
-{
-  // there are times when backspaces can seep through from IME gone wrong. As a 
-  // workaround until we can get them all fixed, ignore backspace when the
-  // focused widget is a text field or plugin
-  if ([mBrowserView isTextFieldFocused] || [mBrowserView isPluginFocused])
-    return;
-
-  int backspaceAction = [[PreferenceManager sharedInstance] getIntPref:"browser.backspace_action"
-                                                           withSuccess:NULL];
-
-  if (backspaceAction == 0) { // map to back/forward
-    if ([[NSApp currentEvent] modifierFlags] & NSShiftKeyMask)
-      [mBrowserView goForward];
-    else
-      [mBrowserView goBack];
-  }
-  // Any other value means no action for backspace. We deliberately don't
-  // support 1 (PgUp/PgDn) as it has no precedent on Mac OS.
 }
 
 -(NSMenu*)getContextMenu
@@ -886,7 +848,7 @@ enum StatusPriority {
   if ((dragSource == self) || (dragSource == mTabItem) || (dragSource  == [[mWindow delegate] proxyIconView]))
     return NO;
   
-  if ([mTabItem isMemberOfClass:[BrowserTabViewItem class]] && (dragSource == [(BrowserTabViewItem*)mTabItem buttonView]))
+  if ([mTabItem isMemberOfClass:[BrowserTabViewItem class]] && (dragSource == [(BrowserTabViewItem*)mTabItem tabItemContentsView]))
     return NO;
   
   return YES;
@@ -925,6 +887,11 @@ enum StatusPriority {
   [[mWindow delegate] didDismissPromptForBrowser:self];
 }
 
+- (void)enablePluginsChanged:(NSNotification*)aNote
+{
+  [self updatePluginsEnabledState];
+}
+
 //
 // sizeBrowserTo
 //
@@ -958,8 +925,8 @@ enum StatusPriority {
   
   [controller window];		// force window load. The window gets made visible by CHBrowserListener::SetVisibility
   
-  [[controller browserWrapper] setPendingActive: YES];
-  return [[controller browserWrapper] browserView];
+  [[controller getBrowserWrapper] setPendingActive: YES];
+  return [[controller getBrowserWrapper] getBrowserView];
 }
 
 
@@ -975,18 +942,12 @@ enum StatusPriority {
   CHBrowserView* viewToUse = mBrowserView;
   int openNewWindow = [[PreferenceManager sharedInstance] getIntPref:"browser.link.open_newwindow" withSuccess:NULL];
   if (openNewWindow == nsIBrowserDOMWindow::OPEN_NEWTAB) {
-    // If browser.tabs.loadDivertedInBackground isn't set, we decide whether or
-    // not to open the new tab in the background based on whether we're the fg
-    // tab. If we are, we assume the user wants to see the new tab because it's 
-    // contextually relevant. If this tab is in the bg, the user doesn't want to
-    // be bothered with a bg tab throwing things up in their face. We know
+    // we decide whether or not to open the new tab in the background based on
+    // if we're the fg tab. If we are, we assume the user wants to see the new tab
+    // because it's contextually relevat. If this tab is in the bg, the user doesn't
+    // want to be bothered with a bg tab throwing things up in their face. We know
     // we're in the bg if our delegate is nil.
-    BOOL loadInBackground;
-    if ([[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.loadDivertedInBackground" withSuccess:NULL])
-      loadInBackground = YES;
-    else
-      loadInBackground = (mDelegate == nil);
-    viewToUse = [mCreateDelegate createNewTabBrowser:loadInBackground];
+    viewToUse = [mCreateDelegate createNewTabBrowser:(mDelegate == nil)];
   }
 
   return viewToUse;
@@ -1012,7 +973,7 @@ enum StatusPriority {
   return ([[PreferenceManager sharedInstance] getIntPref:"browser.link.open_newwindow.restriction" withSuccess:NULL] == 2);
 }
 
-- (CHBrowserView*)browserView
+- (CHBrowserView*)getBrowserView
 {
   return mBrowserView;
 }
@@ -1046,7 +1007,7 @@ enum StatusPriority {
     if (!siteIcon)
     {
       if (inLoadError)
-        siteIcon = [NSImage imageNamed:@"error_page_site_icon"];
+        siteIcon = [NSImage imageNamed:@"brokenbookmark_icon"];   // it should have its own image
       else
         siteIcon = [NSImage imageNamed:@"globe_ico"];
     }
@@ -1084,6 +1045,11 @@ enum StatusPriority {
                                            selector:@selector(imageLoadedNotification:)
                                                name:SiteIconLoadNotificationName
                                              object:self];
+
+  [[NSNotificationCenter defaultCenter] addObserver:self
+                                           selector:@selector(enablePluginsChanged:)
+                                               name:kEnablePluginsChangedNotificationName
+                                             object:nil];
 }
 
 // called when [[SiteIconProvider sharedFavoriteIconProvider] fetchFavoriteIconForPage:...] completes
@@ -1133,7 +1099,7 @@ enum StatusPriority {
 
   // Check for any potential security implications as determined by nsIScriptSecurityManager's
   // DISALLOW_SCRIPT_OR_DATA. (e.g. |javascript:| or |data:| URIs)
-  nsCOMPtr<nsIDOMWindow> domWindow = [mBrowserView contentWindow];
+  nsCOMPtr<nsIDOMWindow> domWindow = [mBrowserView getContentWindow];
   if (!domWindow) 
     return NO;
   nsCOMPtr<nsIDOMDocument> domDocument;
@@ -1173,12 +1139,12 @@ enum StatusPriority {
 
 - (IBAction)reloadWithNewCharset:(NSString*)charset
 {
-  [[self browserView] reloadWithNewCharset:charset];
+  [[self getBrowserView] reloadWithNewCharset:charset];
 }
 
 - (NSString*)currentCharset
 {
-  return [[self browserView] currentCharset];
+  return [[self getBrowserView] currentCharset];
 }
 
 //
@@ -1191,18 +1157,19 @@ enum StatusPriority {
   return mFeedList;
 }
 
-- (NSArray*)detectedSearchPlugins
-{
-  return mDetectedSearchPlugins;
-}
-
 #pragma mark -
 
 - (BOOL)popupsAreBlacklistedForURL:(NSString*)inURL
 {
-  int policy = [[CHPermissionManager permissionManager] policyForURI:inURL
-                                                                type:CHPermissionTypePopup];
-  return (policy == CHPermissionDeny);
+  nsCOMPtr<nsIURI> uri;
+  NS_NewURI(getter_AddRefs(uri), [inURL UTF8String]);
+  nsCOMPtr<nsIPermissionManager> pm(do_GetService(NS_PERMISSIONMANAGER_CONTRACTID));
+  if (pm && uri) {
+    PRUint32 permission;
+    pm->TestPermission(uri, "popup", &permission);
+    return (permission == nsIPermissionManager::DENY_ACTION);
+  }
+  return NO;
 }
 
 //

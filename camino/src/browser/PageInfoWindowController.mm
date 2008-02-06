@@ -35,6 +35,8 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+#import "NSString+Utils.h"
+
 #include "nsXPIDLString.h"
 
 #include "nsIDOMWindow.h"
@@ -47,7 +49,6 @@
 #import "ViewCertificateDialogController.h"
 
 #import "PageInfoWindowController.h"
-#import "CmDateFormatter.h"
 
 
 static PageInfoWindowController* gSingletonPageInfoController;
@@ -167,23 +168,24 @@ static PageInfoWindowController* gSingletonPageInfoController;
 
 - (void)updateGeneralInfoFromBrowserView:(CHBrowserView*)inBrowserView
 {
-  nsCOMPtr<nsIDOMWindow> contentWindow = [inBrowserView contentWindow];
+  nsCOMPtr<nsIDOMWindow> contentWindow = [inBrowserView getContentWindow];
   if (!contentWindow) return;
 
   // general info
   [mPageTitleField setStringValue:[inBrowserView pageTitle]];
-  [mPageLocationField setStringValue:[inBrowserView currentURI]];
+  [mPageLocationField setStringValue:[inBrowserView getCurrentURI]];
   NSDate* lastModDate = [inBrowserView pageLastModifiedDate];
 
-  NSString* dateString = @"";
-  if (lastModDate) {
-    CmDateFormatter* dateFormatter = [[CmDateFormatter alloc] init];
-    [dateFormatter setDateStyle:NSDateFormatterLongStyle];
-    [dateFormatter setTimeStyle:NSDateFormatterLongStyle];
-    dateString = [dateFormatter stringFromDate:lastModDate];
-    [dateFormatter release];
+  if (lastModDate)
+  {
+    NSString* dateFormat = NSLocalizedString(@"PageInfoDateFormat", @"");
+    NSDictionary* curCalendarLocale = [[NSUserDefaults standardUserDefaults] dictionaryRepresentation];
+
+    NSString* dateString = [lastModDate descriptionWithCalendarFormat:dateFormat
+                                                             timeZone:nil
+                                                               locale:curCalendarLocale];
+    [mPageModDateField setStringValue:dateString];
   }
-  [mPageModDateField setStringValue:dateString];
 }
 
 - (void)updateSecurityInfoFromBrowserView:(CHBrowserView*)inBrowserView

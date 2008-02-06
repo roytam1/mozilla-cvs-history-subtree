@@ -38,7 +38,6 @@
 
 #import "NSMenu+Utils.h"
 #import "NSPasteboard+Utils.h"
-#import "CmDateFormatter.h"
 
 #import "HistoryItem.h"
 #import "HistoryDataSource.h"
@@ -71,15 +70,6 @@ enum
 };
 
 static NSString* const kExpandedHistoryStatesDefaultsKey = @"history_expand_state";
-
-// Custom formatter for relative date formatting
-@interface RelativeDateFormatter : NSDateFormatter
-{
-  CmDateFormatter* mTimeFormatter;     // strong
-  CmDateFormatter* mDateTimeFormatter; // strong
-  NSDateFormatter* mWeekdayFormatter;  // strong
-}
-@end
 
 @interface HistoryOutlineViewDelegate(Private)
 
@@ -127,11 +117,6 @@ static NSString* const kExpandedHistoryStatesDefaultsKey = @"history_expand_stat
   [[NSNotificationCenter defaultCenter] addObserver:self
                                         selector:@selector(historyChanged:)
                                         name:kNotificationNameHistoryDataSourceChanged object:[self historyDataSource]];
-
-  // Set up the date column formatting
-  RelativeDateFormatter* dateFormatter = [[[RelativeDateFormatter alloc] init] autorelease];
-  [[[mHistoryOutlineView tableColumnWithIdentifier:@"first_visit"] dataCell] setFormatter:dateFormatter];
-  [[[mHistoryOutlineView tableColumnWithIdentifier:@"last_visit"] dataCell] setFormatter:dateFormatter];
 }
 
 - (void)setBrowserWindowController:(BrowserWindowController*)bwController
@@ -204,10 +189,8 @@ static NSString* const kExpandedHistoryStatesDefaultsKey = @"history_expand_stat
     return;
   }
 
+  BOOL loadInBackground = [BrowserWindowController shouldLoadInBackground:sender];
   BOOL openInTabs       = [[PreferenceManager sharedInstance] getBooleanPref:"browser.tabs.opentabfor.middleclick" withSuccess:NULL];
-  BOOL loadInBackground = [BrowserWindowController shouldLoadInBackgroundForDestination:(openInTabs ? eDestinationNewTab
-                                                                                                    : eDestinationNewWindow)
-                                                                                 sender:sender];
   BOOL cmdKeyDown       = (([[NSApp currentEvent] modifierFlags] & NSCommandKeyMask) != 0);
   
   NSEnumerator* itemEnum = [selectedHistoryItems objectEnumerator];
@@ -226,7 +209,7 @@ static NSString* const kExpandedHistoryStatesDefaultsKey = @"history_expand_stat
         [mBrowserWindowController openNewWindowWithURL:url referrer: nil loadInBackground:loadInBackground allowPopups:NO];
     }
     else
-      [[mBrowserWindowController browserWrapper] loadURI:url referrer:nil flags:NSLoadFlagsNone focusContent:YES allowPopups:NO];
+      [[mBrowserWindowController getBrowserWrapper] loadURI:url referrer:nil flags:NSLoadFlagsNone focusContent:YES allowPopups:NO];
   }
 }
 
@@ -243,16 +226,15 @@ static NSString* const kExpandedHistoryStatesDefaultsKey = @"history_expand_stat
   mUpdatesDisabled = YES;
   
   // catch exceptions to make sure we turn updating back on
-  @try {
+  NS_DURING
     NSEnumerator* itemsEnum = [doomedItems objectEnumerator];
     HistoryItem* curItem;
     while ((curItem = [itemsEnum nextObject]))
     {
       [self recursiveDeleteItem:curItem];
     }
-  }
-  @catch (id exception) {
-  }
+  NS_HANDLER
+  NS_ENDHANDLER
   
   if (clearSelectionWhenDone)
     [mHistoryOutlineView deselectAll:self];
@@ -268,8 +250,7 @@ static NSString* const kExpandedHistoryStatesDefaultsKey = @"history_expand_stat
 {
   NSArray* itemsArray = [mHistoryOutlineView selectedItems];
 
-  BOOL backgroundLoad = [BrowserWindowController shouldLoadInBackgroundForDestination:eDestinationNewWindow
-                                                                               sender:aSender];
+  BOOL backgroundLoad = [BrowserWindowController shouldLoadInBackground:aSender];
 
   NSEnumerator* itemsEnum = [itemsArray objectEnumerator];
   HistoryItem* curItem;
@@ -285,8 +266,7 @@ static NSString* const kExpandedHistoryStatesDefaultsKey = @"history_expand_stat
 {
   NSArray* itemsArray = [mHistoryOutlineView selectedItems];
 
-  BOOL backgroundLoad = [BrowserWindowController shouldLoadInBackgroundForDestination:eDestinationNewTab
-                                                                               sender:aSender];
+  BOOL backgroundLoad = [BrowserWindowController shouldLoadInBackground:aSender];
 
   NSEnumerator* itemsEnum = [itemsArray objectEnumerator];
   HistoryItem* curItem;
@@ -312,8 +292,7 @@ static NSString* const kExpandedHistoryStatesDefaultsKey = @"history_expand_stat
   }
 
   // make new window
-  BOOL loadInBackground = [BrowserWindowController shouldLoadInBackgroundForDestination:eDestinationNewWindow
-                                                                                 sender:aSender];
+  BOOL loadInBackground = [BrowserWindowController shouldLoadInBackground:aSender];
   NSWindow* behindWindow = nil;
   if (loadInBackground)
     behindWindow = [mBrowserWindowController window];
@@ -578,7 +557,7 @@ static NSString* const kExpandedHistoryStatesDefaultsKey = @"history_expand_stat
   NSMutableArray* urlList = [NSMutableArray array];
   NSEnumerator* historyItemsEnum = [historyItemsToCopy objectEnumerator];
   HistoryItem* curItem;
-  while ((curItem = [historyItemsEnum nextObject]))
+  while (curItem = [historyItemsEnum nextObject])
   {
     if ([curItem isKindOfClass:[HistorySiteItem class]]) {
       [urlList addObject:[(HistorySiteItem*)curItem url]];
@@ -737,81 +716,6 @@ static NSString* const kExpandedHistoryStatesDefaultsKey = @"history_expand_stat
     }
     curRow ++;
   }
-}
-
-@end
-
-#pragma mark -
-
-@implementation RelativeDateFormatter
-
-- (id)init
-{
-  if ((self = [super init])) {
-    mTimeFormatter = [[CmDateFormatter alloc] init];
-    [mTimeFormatter setDateStyle:NSDateFormatterNoStyle];
-    [mTimeFormatter setTimeStyle:NSDateFormatterShortStyle];
-
-    mDateTimeFormatter = [[CmDateFormatter alloc] init];
-    [mDateTimeFormatter setDateStyle:NSDateFormatterMediumStyle];
-    [mDateTimeFormatter setTimeStyle:NSDateFormatterShortStyle];
-
-    mWeekdayFormatter = [[NSDateFormatter alloc] initWithDateFormat:@"%A"
-                                               allowNaturalLanguage:NO];
-  }
-  return self;
-}
-
-- (void)dealloc
-{
-  [mTimeFormatter release];
-  [mDateTimeFormatter release];
-  [mWeekdayFormatter release];
-  [super dealloc];
-}
-
-- (NSString*)stringForObjectValue:(id)anObject
-{
-  if (!anObject)
-    return @"";
-
-  if (mTimeFormatter && mDateTimeFormatter &&
-      [anObject isKindOfClass:[NSDate class]]) {
-    int day = [[anObject dateWithCalendarFormat:nil timeZone:nil] dayOfCommonEra];
-    int today = [[NSCalendarDate calendarDate] dayOfCommonEra];
-    
-    NSString* dayPrefix = nil;
-    CmDateFormatter* dateFormatter;
-    if (day == today) {
-      dayPrefix = NSLocalizedString(@"Today", nil);
-      dateFormatter = mTimeFormatter;
-    }
-    else if (day == (today - 1)) {
-      dayPrefix = NSLocalizedString(@"Yesterday", nil);
-      dateFormatter = mTimeFormatter;
-    }
-    else if (day == (today + 1)) {
-      dayPrefix = NSLocalizedString(@"Tomorrow", nil);
-      dateFormatter = mTimeFormatter;
-    }
-    else if (day > (today - 7)) {
-      // show the shortened weekday for recent dates
-      dayPrefix = [mWeekdayFormatter stringForObjectValue:anObject];
-      dateFormatter = mTimeFormatter;
-    }
-    else {
-      dateFormatter = mDateTimeFormatter;
-    }
-
-    NSString* result = [dateFormatter stringFromDate:(NSDate*)anObject];
-    if (dayPrefix)
-      result = [NSString stringWithFormat:@"%@ %@", dayPrefix, result];
-
-    return result;
-  }
-  
-  // If all else fails, fall back on the standard date formatter
-  return [super stringForObjectValue:anObject];
 }
 
 @end

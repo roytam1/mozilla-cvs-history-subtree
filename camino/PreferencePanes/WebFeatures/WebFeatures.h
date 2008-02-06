@@ -21,9 +21,8 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   William Dell Wisner <william@dell.wisner.name>
- *   Josh Aas <josh@mozilla.com>
- *   Stuart Morgan <stuart.morgan@alumni.case.edu>
+ *   william@dell.wisner.name (William Dell Wisner)
+ *   josh@mozilla.com (Josh Aas)
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -42,20 +41,24 @@
 #import <Cocoa/Cocoa.h>
 #import <PreferencePanes/NSPreferencePane.h>
 #import "PreferencePaneBase.h"
+#import "ExtendedTableView.h"
 
-@class ExtendedTableView;
+class nsIPref;
+class nsIPermissionManager;
+class nsISupportsArray;
 
-@interface OrgMozillaCaminoPreferenceWebFeatures : PreferencePaneBase
+@interface OrgMozillaChimeraPreferenceWebFeatures : PreferencePaneBase
 {
-  IBOutlet NSButton*      mEnableJS;
-  IBOutlet NSButton*      mEnableJava;
-  IBOutlet NSButton*      mEnablePopupBlocking;
-  IBOutlet NSButton*      mEnableAdBlocking;
-  IBOutlet NSButton*      mPreventAnimation;
-  IBOutlet NSButton*      mEditWhitelist;
-  IBOutlet NSButton*      mEnableFlashBlock;
-  IBOutlet NSButton*      mEnableAnnoyanceBlocker;
-  IBOutlet NSPopUpButton* mTabBehaviorPopup;
+  IBOutlet NSButton* mEnableJS;
+  IBOutlet NSButton* mEnableJava;
+  IBOutlet NSButton* mEnablePlugins;
+
+  IBOutlet NSButton *mEnablePopupBlocking;
+  IBOutlet NSButton *mEnableAdBlocking;
+  IBOutlet NSButton *mImageResize;
+  IBOutlet NSButton *mPreventAnimation;
+  IBOutlet NSButton *mEditWhitelist;
+  IBOutlet NSButton *mEnableFlashBlock;  
 
   IBOutlet id mWhitelistPanel;
   IBOutlet ExtendedTableView*   mWhitelistTable;
@@ -63,14 +66,22 @@
   IBOutlet NSTextField*         mAddField;
   IBOutlet NSButton*            mAddButton;
 
-  NSMutableArray* mCachedPermissions;		// cached list for speed, STRONG
+  nsIPermissionManager* mManager;         // STRONG (should be nsCOMPtr)  
+  nsISupportsArray* mCachedPermissions;		// parallel list of permissions for speed, STRONG (should be nsCOMPtr)
+
+  IBOutlet NSButton* mEnableAnnoyanceBlocker;
+
+  IBOutlet NSButton* mTabToFormElements;
+  IBOutlet NSButton* mTabToLinks;
 }
 
 -(IBAction) clickEnableJS:(id)sender;
 -(IBAction) clickEnableJava:(id)sender;
+-(IBAction) clickEnablePlugins:(id)sender;
 
 -(IBAction) clickEnablePopupBlocking:(id)sender;
 -(IBAction) clickEnableAdBlocking:(id)sender;
+-(IBAction) clickEnableImageResizing:(id)sender;
 -(IBAction) clickPreventAnimation:(id)sender;
 -(IBAction) editWhitelist:(id)sender;
 -(IBAction) clickEnableFlashBlock:(id)sender;
@@ -78,13 +89,14 @@
 -(IBAction) clickEnableAnnoyanceBlocker:(id)sender;
 -(void) setAnnoyingWindowPrefsTo:(BOOL)inValue;
 
--(IBAction) tabFocusBehaviorChanged:(id)sender;
+-(IBAction) clickTabFocusCheckboxes:(id)sender;
 
 // whitelist sheet methods
 -(IBAction) editWhitelistDone:(id)aSender;
 -(IBAction) removeWhitelistSite:(id)aSender;
 -(IBAction) addWhitelistSite:(id)sender;
 -(void) editWhitelistSheetDidEnd:(NSWindow *)sheet returnCode:(int)returnCode contextInfo:(void  *)contextInfo;
+-(void) populatePermissionCache:(nsISupportsArray*)inPermissions;
 
 // data source informal protocol (NSTableDataSource)
 - (int)numberOfRowsInTableView:(NSTableView *)aTableView;

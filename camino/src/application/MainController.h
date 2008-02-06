@@ -46,8 +46,8 @@
 @class BrowserWindowController;
 @class SharedMenusObj;
 @class PreferenceManager;
+@class FindDlgController;
 @class MVPreferencesController;
-@class SUUpdater;
 
 
 typedef enum EBookmarkOpenBehavior
@@ -88,8 +88,6 @@ typedef enum EBookmarkOpenBehavior
     IBOutlet NSMenuItem*    mCreateBookmarksSeparatorMenuItem;  // unused
     IBOutlet NSMenuItem*    mShowAllBookmarksMenuItem;
 
-    IBOutlet SUUpdater*     mAutoUpdater;
-
     BOOL                    mInitialized;
     BOOL                    mOffline;
     BOOL                    mGeckoInitted;
@@ -101,6 +99,8 @@ typedef enum EBookmarkOpenBehavior
     BookmarkMenu*           mDockBookmarks;
 
     KeychainService*        mKeychainService;
+
+    FindDlgController*      mFindDialog;
 
     NSString*               mStartURL;
 
@@ -134,7 +134,7 @@ typedef enum EBookmarkOpenBehavior
 - (IBAction)toggleOfflineMode:(id)aSender; // unused
 
 // Edit menu actions
-// (none)
+- (IBAction)findInPage:(id)aSender;
 
 // View menu actions.
 - (IBAction)toggleBookmarksToolbar:(id)aSender;
@@ -181,9 +181,10 @@ typedef enum EBookmarkOpenBehavior
 - (IBAction)showCertificates:(id)aSender;
 
 // if the main/key window is a browser window, return its controller, otherwise nil
-- (BrowserWindowController*)mainWindowBrowserController;
-- (BrowserWindowController*)keyWindowBrowserController;
-- (NSWindow*)frontmostBrowserWindow;
+- (BrowserWindowController*)getMainWindowBrowserController;
+- (BrowserWindowController*)getKeyWindowBrowserController;
+- (NSWindow*)getFrontmostBrowserWindow;
+- (BOOL)isMainWindowABrowserWindow;
 
 - (BrowserWindowController*)openBrowserWindowWithURL:(NSString*)aURL andReferrer:(NSString*)aReferrer behind:(NSWindow*)window allowPopups:(BOOL)inAllowPopups;
 - (BrowserWindowController*)openBrowserWindowWithURLs:(NSArray*)urlArray behind:(NSWindow*)window allowPopups:(BOOL)inAllowPopups;
@@ -196,6 +197,11 @@ typedef enum EBookmarkOpenBehavior
 - (void)delayedAdjustBookmarksMenuItemsEnabling;
 - (void)delayedUpdatePageInfo;
 
-- (NSView*)savePanelView;
+- (NSView*)getSavePanelView;
+
++ (NSImage*)createImageForDragging:(NSImage*)aIcon title:(NSString*)aTitle;
+// utility routine to test if a url is "blank" (either empty or about:blank)
++ (BOOL)isBlankURL:(NSString*)inURL;
+- (void)closeFindDialog;
 
 @end

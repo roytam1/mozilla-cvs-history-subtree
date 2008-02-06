@@ -39,19 +39,34 @@
 
 #import "ProgressView.h"
 
-#import "ProgressViewController.h"
+
+NSString* const kDownloadInstanceSelectedNotificationName = @"DownloadInstanceSelected";
+NSString* const kDownloadInstanceOpenedNotificationName   = @"DownloadInstanceOpened";
+NSString* const kDownloadInstanceCancelledNotificationName = @"DownloadInstanceCancelled";
+
+@interface ProgressView(Private)
+
+-(BOOL)isSelected;
+-(void)setSelected:(BOOL)inSelected;
+
+@end
+
 
 @implementation ProgressView
 
-- (void)dealloc
+- (id)initWithFrame:(NSRect)frame
 {
-  [mFileIconMouseDownEvent release];
-  [super dealloc];
+  self = [super initWithFrame:frame];
+  if (self) {
+    mLastModifier = kNoKey;
+    mProgressController = nil;
+  }
+  return self;
 }
 
 -(void)drawRect:(NSRect)rect
 {
-  if ([mProgressController isSelected]) {
+  if ([self isSelected]) {
     [[NSColor selectedTextBackgroundColor] set];
   }
   else {
@@ -63,103 +78,60 @@
 -(void)mouseDown:(NSEvent*)theEvent
 {
   unsigned int mods = [theEvent modifierFlags];
-  DownloadSelectionBehavior selectionBehavior;
-  // Favor command behavior over shift, like most table views do
-  if (mods & NSCommandKeyMask)
-    selectionBehavior = DownloadSelectByInverting;
-  else if (mods & NSShiftKeyMask)
-    selectionBehavior = DownloadSelectByExtending;
-  else
-    selectionBehavior = DownloadSelectExclusively;
-  [mProgressController updateSelectionWithBehavior:selectionBehavior];
-
-  [mFileIconMouseDownEvent release];
-  mFileIconMouseDownEvent = nil;
-  if ([theEvent type] == NSLeftMouseDown) {
-    // See if it's a double-click; if so, send a notification off to the
-    // controller which will handle it accordingly. Doing it after processing
-    // the selection change allows someone to shift-double-click and open all
-    // selected items in the list in one action.
-    if ([theEvent clickCount] == 2) {
-      [mProgressController openSelectedDownloads];
+  mLastModifier = kNoKey;
+  BOOL shouldSelect = YES;
+  // set mLastModifier to any relevant modifier key
+  if (!((mods & NSShiftKeyMask) && (mods & NSCommandKeyMask))) {
+    if (mods & NSShiftKeyMask) {
+      mLastModifier = kShiftKey;
     }
-    // If not, and the download isn't active, see if it's a click on the icon.
-    else if (![mProgressController isActive]) {
-      NSPoint clickPoint = [self convertPoint:[theEvent locationInWindow] fromView:nil];
-      if (NSPointInRect(clickPoint, [mFileIconView frame]))
-        mFileIconMouseDownEvent = [theEvent retain];
+    else if (mods & NSCommandKeyMask) {
+      if ([self isSelected])
+        shouldSelect = NO;
+      mLastModifier = kCommandKey;
     }
   }
+  [self setSelected:shouldSelect];
+  [[NSNotificationCenter defaultCenter] postNotificationName:kDownloadInstanceSelectedNotificationName object:self];
+
+  // after we've processed selection and modifiers, see if it's a double-click. If so, 
+  // send a notification off to the controller which will handle it accordingly. Doing it after
+  // processing the modifiers allows someone to shift-dblClick and open all selected items
+  // in the list in one action.
+  if ([theEvent type] == NSLeftMouseDown && [theEvent clickCount] == 2)
+    [[NSNotificationCenter defaultCenter] postNotificationName:kDownloadInstanceOpenedNotificationName object:self];
 }
 
-- (BOOL)acceptsFirstMouse:(NSEvent*)theEvent {
-  // Allow click-through on the file icon to allow dragging files even if the
-  // view is in a background window.
-  NSPoint clickPoint = [self convertPoint:[theEvent locationInWindow] fromView:nil];
-  return NSPointInRect(clickPoint, [mFileIconView frame]);
-}
-
-- (void)mouseDragged:(NSEvent*)aEvent
+-(int)lastModifier
 {
-  if (!mFileIconMouseDownEvent)
-    return;
-
-  // Check that the controller thinks this view represents a file we know about,
-  // but also that the file is actually still there in case the controller's
-  // information is stale.
-  if (![mProgressController fileExists])
-    return;
-  NSString* filePath = [mProgressController representedFilePath];
-  if (!(filePath && [[NSFileManager defaultManager] fileExistsAtPath:filePath]))
-    return;
-
-  NSPasteboard* pasteboard = [NSPasteboard pasteboardWithName:NSDragPboard];
-  [pasteboard declareTypes:[NSArray arrayWithObject:NSFilenamesPboardType] owner:nil];
-  [pasteboard setPropertyList:[NSArray arrayWithObject:filePath] forType:NSFilenamesPboardType];
-
-  NSRect fileIconFrame = [mFileIconView frame];
-
-  NSImage* dragImage = [[[NSImage alloc] initWithSize:fileIconFrame.size] autorelease];
-  [dragImage lockFocus];
-  NSRect imageRect = NSMakeRect(0, 0, fileIconFrame.size.width, fileIconFrame.size.height);
-  [[mFileIconView image] drawAtPoint:NSMakePoint(0, 0)
-                           fromRect:imageRect
-                          operation:NSCompositeCopy
-                           fraction:0.8];
-  [dragImage unlockFocus];
-
-  NSPoint clickLocation = [self convertPoint:[mFileIconMouseDownEvent locationInWindow] fromView:nil];
-  [self dragImage:dragImage
-               at:fileIconFrame.origin
-           offset:NSMakeSize(clickLocation.x - fileIconFrame.origin.x,
-                             clickLocation.y - fileIconFrame.origin.y)
-            event:mFileIconMouseDownEvent
-       pasteboard:pasteboard
-           source:self
-        slideBack:YES];
+  return mLastModifier;
 }
 
-- (unsigned int)draggingSourceOperationMaskForLocal:(BOOL)localFlag
+- (BOOL)isSelected
 {
-  return NSDragOperationEvery;
+  // make sure the controller is not nil before checking if it is selected
+  if (!mProgressController)
+    return NO;
+  
+  return [mProgressController isSelected];
 }
 
-- (void)draggedImage:(NSImage *)anImage endedAt:(NSPoint)aPoint operation:(NSDragOperation)operation
+-(void)setSelected:(BOOL)inSelected
 {
-  if (operation == NSDragOperationDelete) {
-    [mProgressController deleteFile];
-    [mProgressController remove:self];
-  }
-  if (operation == NSDragOperationMove)
-    [mProgressController remove:self];
+  // make sure the controller is not nil before setting its selected state
+  if (!mProgressController)
+    return;
+  
+  [mProgressController setSelected:inSelected];
 }
 
 -(void)setController:(ProgressViewController*)controller
 {
+  // Don't retain since this view will only exist if its controller does
   mProgressController = controller;
 }
 
--(ProgressViewController*)controller
+-(ProgressViewController*)getController
 {
   return mProgressController;
 }
@@ -167,11 +139,13 @@
 -(NSMenu*)menuForEvent:(NSEvent*)theEvent
 {  
   // if the item is unselected, select it and deselect everything else before displaying the contextual menu
-  if (![mProgressController isSelected]) {
-    [mProgressController updateSelectionWithBehavior:DownloadSelectExclusively];
-    [self display]; // change visual selection immediately
+  if (![self isSelected]) {
+    mLastModifier = kNoKey; // control is only special because it means its contextual menu time
+    [self setSelected:YES];
+    [self display]; // change selection immediately
+    [[NSNotificationCenter defaultCenter] postNotificationName:kDownloadInstanceSelectedNotificationName object:self];
   }
-  return [[self controller] contextualMenu];
+  return [[self getController] contextualMenu];
 }
 
 -(BOOL)performKeyEquivalent:(NSEvent*)theEvent
@@ -181,7 +155,7 @@
       ([theEvent modifierFlags] & NSCommandKeyMask) != 0) && 
       [[theEvent characters] isEqualToString:@"."]) 
   {
-    [mProgressController cancelSelectedDownloads];
+    [[NSNotificationCenter defaultCenter] postNotificationName:kDownloadInstanceCancelledNotificationName object:self];
     return YES;
   }
   

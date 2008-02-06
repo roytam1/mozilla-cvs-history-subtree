@@ -12,8 +12,7 @@
                 mWindow = NSWindow; 
             }; 
             SUPERCLASS = NSObject; 
-        }, 
-        {CLASS = PreferencesWindow; LANGUAGE = ObjC; SUPERCLASS = NSWindow; }
+        }
     ); 
     IBVersion = 1; 
 }

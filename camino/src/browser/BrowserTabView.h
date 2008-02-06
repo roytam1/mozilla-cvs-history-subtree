@@ -39,7 +39,7 @@
 
 #import <Cocoa/Cocoa.h>
 
-@class BrowserTabViewItem;
+#import "BrowserTabViewItem.h"
 @class BrowserTabBarView;
 
 // notification sent when someone double-clicks on the background of the tab bar.
@@ -73,6 +73,7 @@ extern NSString* const kTabBarBackgroundDoubleClickedNotification;
 - (int)indexOfTabViewItemWithURL:(NSString*)aURL;
 - (BrowserTabViewItem*)itemWithTag:(int)tag;
 - (void)refreshTabBar:(BOOL)rebuild;
+- (void)refreshTab:(BrowserTabViewItem*)tab;
 - (BOOL)isVisible;
 // inform the view that it will be shown or hidden; e.g. prior to showing or hiding the bookmarks
 - (void)setVisible:(BOOL)show;

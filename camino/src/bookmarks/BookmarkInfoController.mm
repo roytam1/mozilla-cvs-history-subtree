@@ -43,7 +43,6 @@
 #import "BookmarkInfoController.h"
 #import "Bookmark.h"
 #import "BookmarkFolder.h"
-#import "CmDateFormatter.h"
 
 // determined through weeks of trial and error
 #define kMaxLengthOfWindowTitle 49
@@ -59,10 +58,9 @@ enum EBookmarkInfoViewType {
 - (void)commitChanges:(id)sender;
 - (void)configureWindowForView:(EBookmarkInfoViewType)inViewType;
 - (void)updateUI;
-- (void)updateLastVisitField;
 - (void)dockMenuChanged:(NSNotification *)aNote;
 
-@end
+@end;
 
 @implementation BookmarkInfoController
 
@@ -103,8 +101,8 @@ static BookmarkInfoController* gSharedBookmarkInfoController = nil;
 {
   [self setShouldCascadeWindows:NO];
   [[self window] setFrameAutosaveName:@"BookmarkInfoWindow"];
-  [mBookmarkShortcutField setFormatter:[[[BookmarkShortcutFormatter alloc] init] autorelease]];
-  [mFolderShortcutField setFormatter:[[[BookmarkShortcutFormatter alloc] init] autorelease]];
+  [mBookmarkKeywordField setFormatter:[[[BookmarkKeywordFormatter alloc] init] autorelease]];
+  [mFolderKeywordField setFormatter:[[[BookmarkKeywordFormatter alloc] init] autorelease]];
 }
 
 - (void)windowDidLoad
@@ -219,20 +217,20 @@ static BookmarkInfoController* gSharedBookmarkInfoController = nil;
     if ((tabViewItem == mBookmarkInfoTabView) && isBookmark) {
       [mBookmarkItem setTitle:[mBookmarkNameField stringValue]];
       [mBookmarkItem setItemDescription:[NSString stringWithString:[mBookmarkDescField stringValue]]];
-      [mBookmarkItem setShortcut:[mBookmarkShortcutField stringValue]];
+      [mBookmarkItem setKeyword:[mBookmarkKeywordField stringValue]];
       [(Bookmark *)mBookmarkItem setUrl:[mBookmarkLocationField stringValue]];
     }
     else if ([[self window] contentView] == mFolderView && !isBookmark) {
       [mBookmarkItem setTitle:[mFolderNameField stringValue]];
       [mBookmarkItem setItemDescription:[NSString stringWithString:[mFolderDescField stringValue]]];
       if ([(BookmarkFolder *)mBookmarkItem isGroup])
-        [mBookmarkItem setShortcut:[mFolderShortcutField stringValue]];
+        [mBookmarkItem setKeyword:[mFolderKeywordField stringValue]];
     }
   }
   else if ((changedField == mBookmarkNameField) || (changedField == mFolderNameField))
     [mBookmarkItem setTitle:[changedField stringValue]];
-  else if ((changedField == mBookmarkShortcutField) || (changedField == mFolderShortcutField))
-    [mBookmarkItem setShortcut:[changedField stringValue]];
+  else if ((changedField == mBookmarkKeywordField) || (changedField == mFolderKeywordField))
+    [mBookmarkItem setKeyword:[changedField stringValue]];
   else if ((changedField == mBookmarkDescField) || (changedField == mFolderDescField))
     [mBookmarkItem setItemDescription:[NSString stringWithString:[changedField stringValue]]];
   else if ((changedField == mBookmarkLocationField) && isBookmark)
@@ -303,10 +301,12 @@ static BookmarkInfoController* gSharedBookmarkInfoController = nil;
     [self configureWindowForView:eBookmarkInfoView];
     [mBookmarkNameField setStringValue:[mBookmarkItem title]];
     [mBookmarkDescField setStringValue:[mBookmarkItem itemDescription]];
-    [mBookmarkShortcutField setStringValue:[mBookmarkItem shortcut]];
+    [mBookmarkKeywordField setStringValue:[mBookmarkItem keyword]];
     [mBookmarkLocationField setStringValue:[(Bookmark *)mBookmarkItem url]];
     [mNumberVisitsField setIntValue:[(Bookmark *)mBookmarkItem numberOfVisits]];
-    [self updateLastVisitField];
+    [mLastVisitField setStringValue:[[(Bookmark *)mBookmarkItem lastVisit] descriptionWithCalendarFormat:[[mLastVisitField formatter] dateFormat]
+                                                                                                timeZone:[NSTimeZone localTimeZone]
+                                                                                                  locale:nil]];
 
     // if its parent is a smart folder or it's a menu separator,
     // we turn off all the fields.  if it isn't, then we turn them all on
@@ -316,7 +316,7 @@ static BookmarkInfoController* gSharedBookmarkInfoController = nil;
                    (![(Bookmark *)mBookmarkItem isSeparator]);
     [mBookmarkNameField setEditable:canEdit];
     [mBookmarkDescField setEditable:canEdit];
-    [mBookmarkShortcutField setEditable:canEdit];
+    [mBookmarkKeywordField setEditable:canEdit];
     [mBookmarkLocationField setEditable:canEdit];
   }
   // Folders
@@ -326,7 +326,7 @@ static BookmarkInfoController* gSharedBookmarkInfoController = nil;
     [mTabgroupCheckbox setState:[(BookmarkFolder *)mBookmarkItem isGroup] ? NSOnState : NSOffState];
 
     [mFolderNameField setStringValue:[mBookmarkItem title]];
-    [mFolderShortcutField setStringValue:[mBookmarkItem shortcut]];
+    [mFolderKeywordField setStringValue:[mBookmarkItem keyword]];
     [mFolderDescField setStringValue:[mBookmarkItem itemDescription]];
 
     // we can unselect dock menu - we have a fallback default
@@ -340,12 +340,12 @@ static BookmarkInfoController* gSharedBookmarkInfoController = nil;
     // clear stuff
     [mBookmarkNameField setStringValue:@""];
     [mBookmarkDescField setStringValue:@""];
-    [mBookmarkShortcutField setStringValue:@""];
+    [mBookmarkKeywordField setStringValue:@""];
     [mBookmarkLocationField setStringValue:@""];
 
     [mBookmarkNameField setEditable:NO];
     [mBookmarkDescField setEditable:NO];
-    [mBookmarkShortcutField setEditable:NO];
+    [mBookmarkKeywordField setEditable:NO];
     [mBookmarkLocationField setEditable:NO];
 
     [mNumberVisitsField setIntValue:0];
@@ -362,25 +362,6 @@ static BookmarkInfoController* gSharedBookmarkInfoController = nil;
   else {
     [[self window] setTitle:NSLocalizedString(@"BlankBookmarkInfoTitle", nil)];
   }
-}
-
-- (void)updateLastVisitField
-{
-  NSDate* lastVisit = [(Bookmark*)mBookmarkItem lastVisit];
-  NSString* lastVisitString;
-
-  if (!lastVisit) {
-    lastVisitString = NSLocalizedString(@"BookmarkVisitedNever", nil);
-  }
-  else {
-    CmDateFormatter* dateFormatter = [[CmDateFormatter alloc] init];
-    [dateFormatter setDateStyle:NSDateFormatterLongStyle];
-    [dateFormatter setTimeStyle:NSDateFormatterLongStyle];
-    lastVisitString = [dateFormatter stringFromDate:lastVisit];
-    [dateFormatter release];
-  }
-
-  [mLastVisitField setStringValue:lastVisitString];
 }
 
 - (BookmarkItem *)bookmark
@@ -416,7 +397,9 @@ static BookmarkInfoController* gSharedBookmarkInfoController = nil;
   BookmarkItem *item = [aNote object];
   if ([item isKindOfClass:[Bookmark class]]) {
     [mNumberVisitsField setIntValue:[(Bookmark *)item numberOfVisits]];
-    [self updateLastVisitField];
+    [mLastVisitField setStringValue:[[(Bookmark *)item lastVisit] descriptionWithCalendarFormat:[[mLastVisitField formatter] dateFormat]
+                                                                                       timeZone:[NSTimeZone localTimeZone]
+                                                                                         locale:nil]];
   }
 }
 

@@ -189,6 +189,13 @@ matchHostCallback(nsIMdbRow *row, void *aClosure)
   return hostInfo->history->MatchHost(row, hostInfo);
 }
 
+static PRBool
+matchQueryCallback(nsIMdbRow *row, void *aClosure)
+{
+  MatchQueryData *query = (MatchQueryData*)aClosure;
+  return query->history->RowMatches(row, query->query);
+}
+
 static PRBool HasCell(nsIMdbEnv *aEnv, nsIMdbRow* aRow, mdb_column aCol)
 {
   mdbYarn yarn;
@@ -322,11 +329,13 @@ public:
   nsMdbTableAllRowsEnumerator(nsSimpleGlobalHistory* inHistory,
                               nsIMdbTable* aTable,
                               mdb_column inHiddenColumnToken)
-              : nsHistoryMdbTableEnumerator(inHistory, aTable),
-                mHiddenColumnToken(inHiddenColumnToken)
+              : mHiddenColumnToken(inHiddenColumnToken),
+                nsHistoryMdbTableEnumerator(inHistory, aTable) 
+                
               {}
   virtual     ~nsMdbTableAllRowsEnumerator() 
-              {}
+              {
+              }
 
 protected:
   virtual PRBool IsResult(nsIMdbRow* aRow)
@@ -442,10 +451,10 @@ nsHistoryItem::GetID(nsACString& outIDString)
 
 nsSimpleGlobalHistory::nsSimpleGlobalHistory()
   : mExpireDays(9), // make default be nine days
+    mAutocompleteOnlyTyped(PR_FALSE),
     mBatchesInProgress(0),
     mDirty(PR_FALSE),
     mPagesRemoved(PR_FALSE),
-    mAutocompleteOnlyTyped(PR_FALSE),
     mEnv(nsnull),
     mStore(nsnull),
     mTable(nsnull)
@@ -2143,7 +2152,7 @@ nsSimpleGlobalHistory::CloseDB()
   NotifyObserversHistoryClosing();
 
   ExpireEntries(PR_FALSE /* don't notify */);
-  Commit(kSessionCommit);
+  mdb_err err = Commit(kSessionCommit);
 
   // order is important here - logically smallest objects first
   mMetaRow = nsnull;
@@ -2647,8 +2656,8 @@ nsSimpleGlobalHistory::AutoCompleteSearch(const nsACString& aSearchString,
 void
 nsSimpleGlobalHistory::AutoCompleteGetExcludeInfo(const nsACString& aURL, AutocompleteExcludeData* aExclude)
 {
-  aExclude->schemePrefix = -1U;
-  aExclude->hostnamePrefix = -1U;
+  aExclude->schemePrefix = -1;
+  aExclude->hostnamePrefix = -1;
   
   PRInt32 index = 0;
   PRInt32 i;
