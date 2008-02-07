@@ -162,7 +162,7 @@ $BinaryName = 'thunderbird.exe';
 # Release build options
 $ReleaseBuild  = 1;
 $shiptalkback  = 1;
-$UsePrebuiltTalkback = "/cygdrive/c/builds/tinderbox/talkback-thunderbird-1.8-win32.tar.bz2";
+$UsePrebuiltTalkback = "/cygdrive/e/builds/tinderbox/talkback-thunderbird-1.8-win32.tar.bz2";
 $build_hour    = "3";
 $package_creation_path = "/mail/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
