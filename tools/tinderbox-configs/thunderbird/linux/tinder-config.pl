@@ -105,8 +105,6 @@ $RunMozillaTests          = 0;  # Allow turning off of all tests if needed.
 
 $moz_cvsroot   = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 
-$MofoRoot   = ":ext:cltbld\@cvs.mozilla.org:/mofo";
-
 #- Set these proper values for your tinderbox server
 #$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
 
@@ -160,7 +158,7 @@ $BinaryName = 'thunderbird-bin';
 
 # Release build options
 $ReleaseBuild  = 1;
-#$shiptalkback  = 1;
+$shiptalkback  = 0;
 $build_hour    = "3";
 $package_creation_path = "/mail/installer";
 $ssh_version   = "2";

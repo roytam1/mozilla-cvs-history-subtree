@@ -138,8 +138,6 @@ $use_blat       = 1;
 
 $moz_cvsroot   = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 
-$MofoRoot   = ":ext:cltbld\@cvs.mozilla.org:/mofo";
-
 #- Set these proper values for your tinderbox server
 #$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
 
@@ -191,7 +189,7 @@ $BinaryName = 'firefox.exe';
 $ReleaseBuild  = 1;
 #$clean_objdir = 1; # remove objdir when starting release cycle?
 #$clean_srcdir = 1; # remove srcdir when starting release cycle?
-$shiptalkback  = 1;
+$shiptalkback  = 0;
 #$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
 #$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
 #$ReleaseGroup = ''; # group to set uploaded files to
