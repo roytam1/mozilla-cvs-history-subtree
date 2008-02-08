@@ -1029,6 +1029,12 @@
 		DE74F8CB0AB2711C00FD1D5B /* OpenFeed.nib in Resources */ = {isa = PBXBuildFile; fileRef = DE74F8C80AB2711C00FD1D5B /* OpenFeed.nib */; };
 		DE74F8CD0AB2717F00FD1D5B /* feed.tiff in Resources */ = {isa = PBXBuildFile; fileRef = DE74F8CC0AB2717F00FD1D5B /* feed.tiff */; };
 		DE74F8CE0AB2717F00FD1D5B /* feed.tiff in Resources */ = {isa = PBXBuildFile; fileRef = DE74F8CC0AB2717F00FD1D5B /* feed.tiff */; };
+		DE80DD4F0D4682E6001C33F5 /* GoogleFeedHandler.app in Resources */ = {isa = PBXBuildFile; fileRef = DE80DD4C0D4682E6001C33F5 /* GoogleFeedHandler.app */; };
+		DE80DD500D4682E6001C33F5 /* BloglinesFeedHandler.app in Resources */ = {isa = PBXBuildFile; fileRef = DE80DD4D0D4682E6001C33F5 /* BloglinesFeedHandler.app */; };
+		DE80DD510D4682E6001C33F5 /* MyYahooFeedHandler.app in Resources */ = {isa = PBXBuildFile; fileRef = DE80DD4E0D4682E6001C33F5 /* MyYahooFeedHandler.app */; };
+		DE80DD520D4682E6001C33F5 /* GoogleFeedHandler.app in Resources */ = {isa = PBXBuildFile; fileRef = DE80DD4C0D4682E6001C33F5 /* GoogleFeedHandler.app */; };
+		DE80DD530D4682E6001C33F5 /* BloglinesFeedHandler.app in Resources */ = {isa = PBXBuildFile; fileRef = DE80DD4D0D4682E6001C33F5 /* BloglinesFeedHandler.app */; };
+		DE80DD540D4682E6001C33F5 /* MyYahooFeedHandler.app in Resources */ = {isa = PBXBuildFile; fileRef = DE80DD4E0D4682E6001C33F5 /* MyYahooFeedHandler.app */; };
 		DE8AD7400ADB4F67009D44F6 /* bm_horizontal_separator.tiff in Resources */ = {isa = PBXBuildFile; fileRef = DE8AD73F0ADB4F67009D44F6 /* bm_horizontal_separator.tiff */; };
 		DE8AD7410ADB4F67009D44F6 /* bm_horizontal_separator.tiff in Resources */ = {isa = PBXBuildFile; fileRef = DE8AD73F0ADB4F67009D44F6 /* bm_horizontal_separator.tiff */; };
 		DE8C629F0AB67E8A00078871 /* hidemanager.tiff in Resources */ = {isa = PBXBuildFile; fileRef = DE8C629E0AB67E8A00078871 /* hidemanager.tiff */; };
@@ -2393,6 +2399,9 @@
 		DE74F8C50AB270F200FD1D5B /* FeedServiceController.mm */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.objcpp; name = FeedServiceController.mm; path = src/browser/FeedServiceController.mm; sourceTree = "<group>"; };
 		DE74F8C90AB2711C00FD1D5B /* English */ = {isa = PBXFileReference; lastKnownFileType = wrapper.nib; name = English; path = resources/localized/English.lproj/OpenFeed.nib; sourceTree = "<group>"; };
 		DE74F8CC0AB2717F00FD1D5B /* feed.tiff */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; name = feed.tiff; path = resources/images/chrome/feed.tiff; sourceTree = SOURCE_ROOT; };
+		DE80DD4C0D4682E6001C33F5 /* GoogleFeedHandler.app */ = {isa = PBXFileReference; lastKnownFileType = wrapper.application; name = GoogleFeedHandler.app; path = generated/feedhandlers/GoogleFeedHandler.app; sourceTree = SOURCE_ROOT; };
+		DE80DD4D0D4682E6001C33F5 /* BloglinesFeedHandler.app */ = {isa = PBXFileReference; lastKnownFileType = wrapper.application; name = BloglinesFeedHandler.app; path = generated/feedhandlers/BloglinesFeedHandler.app; sourceTree = SOURCE_ROOT; };
+		DE80DD4E0D4682E6001C33F5 /* MyYahooFeedHandler.app */ = {isa = PBXFileReference; lastKnownFileType = wrapper.application; name = MyYahooFeedHandler.app; path = generated/feedhandlers/MyYahooFeedHandler.app; sourceTree = SOURCE_ROOT; };
 		DE8AD73F0ADB4F67009D44F6 /* bm_horizontal_separator.tiff */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; name = bm_horizontal_separator.tiff; path = resources/images/chrome/bm_horizontal_separator.tiff; sourceTree = SOURCE_ROOT; };
 		DE8C629E0AB67E8A00078871 /* hidemanager.tiff */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; name = hidemanager.tiff; path = resources/images/toolbar/hidemanager.tiff; sourceTree = SOURCE_ROOT; };
 		DE963D5E0D43F472007D44EE /* KeychainAutoCompleteSession.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = KeychainAutoCompleteSession.mm; path = src/formfill/KeychainAutoCompleteSession.mm; sourceTree = SOURCE_ROOT; };
@@ -3270,6 +3279,7 @@
 		29B97317FDCFA39411CA2CEA /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				DE80DD4B0D46825E001C33F5 /* Feed Handlers */,
 				3FBDC84C08253C7100D7F8E0 /* Form Fill Tables */,
 				F58A94F2023F10CA010001CA /* Nibs */,
 				F5264FCB020D4C25010001CA /* Toolbar-Browser */,
@@ -3654,6 +3664,16 @@
 				DE137C020D35975F00A0A9BB /* XMLSearchPluginParser.h */,
 			);
 			name = "Plug-ins";
+			sourceTree = "<group>";
+		};
+		DE80DD4B0D46825E001C33F5 /* Feed Handlers */ = {
+			isa = PBXGroup;
+			children = (
+				DE80DD4D0D4682E6001C33F5 /* BloglinesFeedHandler.app */,
+				DE80DD4C0D4682E6001C33F5 /* GoogleFeedHandler.app */,
+				DE80DD4E0D4682E6001C33F5 /* MyYahooFeedHandler.app */,
+			);
+			name = "Feed Handlers";
 			sourceTree = "<group>";
 		};
 		E091C0D006225EA3007D9E8F /* cursors */ = {
@@ -4898,6 +4918,9 @@
 				DE137BAA0D35845400A0A9BB /* search_editor_bottom_background.png in Resources */,
 				DE137BAB0D35845400A0A9BB /* search_editor_action.png in Resources */,
 				DE137BBB0D3584CB00A0A9BB /* SearchEngineEditor.nib in Resources */,
+				DE80DD500D4682E6001C33F5 /* BloglinesFeedHandler.app in Resources */,
+				DE80DD4F0D4682E6001C33F5 /* GoogleFeedHandler.app in Resources */,
+				DE80DD510D4682E6001C33F5 /* MyYahooFeedHandler.app in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -5106,6 +5129,9 @@
 				DE137BA80D35845400A0A9BB /* search_editor_bottom_background.png in Resources */,
 				DE137BA90D35845400A0A9BB /* search_editor_action.png in Resources */,
 				DE137BBA0D3584CB00A0A9BB /* SearchEngineEditor.nib in Resources */,
+				DE80DD530D4682E6001C33F5 /* BloglinesFeedHandler.app in Resources */,
+				DE80DD520D4682E6001C33F5 /* GoogleFeedHandler.app in Resources */,
+				DE80DD540D4682E6001C33F5 /* MyYahooFeedHandler.app in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
