@@ -100,6 +100,7 @@
 - (void)dealloc
 {
   [mItem release];
+  [mLastMouseDownEvent release];
   [super dealloc];
 }
 
@@ -277,6 +278,8 @@
 
 - (void)mouseDown:(NSEvent*)aEvent
 {
+  [mLastMouseDownEvent release];
+  mLastMouseDownEvent = [aEvent retain];
   mLastEventWasMenu = NO;
   [super mouseDown:aEvent];
   if ([[self cell] lastClickHoldTimedOut])
@@ -324,7 +327,7 @@
                                        title:([item isSeparator] ? @"" : title)]
                at:NSMakePoint(0, NSHeight([self bounds]))
            offset:NSMakeSize(0, 0)
-            event:aEvent
+            event:mLastMouseDownEvent
        pasteboard:pboard
            source:self
         slideBack:YES];
