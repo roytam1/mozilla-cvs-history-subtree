@@ -1113,8 +1113,12 @@ calendar/sunbird/base/Makefile
 
 MAKEFILES_macbrowser="
 camino/Makefile
+camino/IBPalette/Makefile
+camino/feedhandlers/Makefile
 camino/flashblock/Makefile
+camino/idl/Makefile
 camino/installer/Makefile
+camino/striptease/Makefile
 "
 
 MAKEFILES_sql="
