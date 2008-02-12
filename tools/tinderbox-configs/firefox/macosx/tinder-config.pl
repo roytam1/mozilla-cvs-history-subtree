@@ -140,9 +140,6 @@ $StartupPerformanceTest   = 0;  # Ts
 # CONFIG: $moz_cvsroot   = '%mozillaCvsroot%';
 $moz_cvsroot   = 'cltbld@cvs.mozilla.org:/cvsroot';
 
-# CONFIG: $MofoRoot   = '%mofoCvsroot%';
-$MofoRoot   = 'cltbld@cvs.mozilla.org:/mofo';
-
 #- Set these proper values for your tinderbox server
 #$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
 
@@ -196,6 +193,7 @@ $BinaryName = 'firefox-bin';
 # Release build options
 $ReleaseBuild  = 1;
 $shiptalkback  = 1;
+$UsePrebuiltTalkback = "/builds/tinderbox/talkback-firefox-1.8-macosx.tar.bz2";
 $ReleaseToLatest = 0; # Push the release to latest-<milestone>?
 $ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
 $build_hour    = 3;

@@ -142,8 +142,6 @@ $AliveTest                = 1;
 # CONFIG: $moz_cvsroot   = '%mozillaCvsroot%';
 $moz_cvsroot   = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 
-$MofoRoot   = ":ext:cltbld\@cvs.mozilla.org:/mofo";
-
 #- Set these proper values for your tinderbox server
 #$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
 
@@ -200,6 +198,7 @@ $ReleaseBuild  = 1;
 $ReleaseToLatest = 0; # Push the release to latest-<milestone>?
 $ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
 $shiptalkback  = 1;
+$UsePrebuiltTalkback = "/builds/tinderbox/talkback-thunderbird-1.8-macosx.tar.bz2";
 $build_hour    = "3";
 $package_creation_path = "/mail/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
