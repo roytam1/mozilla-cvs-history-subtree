@@ -4468,7 +4468,8 @@ FindConstructorContractID(PRInt32 aDOMClassInfoID)
 }
 
 static nsresult
-BaseStubConstructor(const nsGlobalNameStruct *name_struct, JSContext *cx,
+BaseStubConstructor(nsIWeakReference* aWeakOwner,
+                    const nsGlobalNameStruct *name_struct, JSContext *cx,
                     JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
   nsresult rv;
@@ -4489,11 +4490,22 @@ BaseStubConstructor(const nsGlobalNameStruct *name_struct, JSContext *cx,
     return rv;
   }
 
-  nsCOMPtr<nsIJSNativeInitializer> initializer(do_QueryInterface(native));
-  if (initializer) {
-    rv = initializer->Initialize(cx, obj, argc, argv);
+  nsCOMPtr<nsIJSNativeInitializer_MOZILLA_1_8_BRANCH> initializer18 =
+    do_QueryInterface(native);
+  if (initializer18) {
+    nsCOMPtr<nsISupports> owner = do_QueryReferent(aWeakOwner);
+    NS_ENSURE_STATE(owner);
+    rv = initializer18->Initialize(owner, cx, obj, argc, argv);
     if (NS_FAILED(rv)) {
       return NS_ERROR_NOT_INITIALIZED;
+    }
+  } else {
+    nsCOMPtr<nsIJSNativeInitializer> initializer(do_QueryInterface(native));
+    if (initializer) {
+      rv = initializer->Initialize(cx, obj, argc, argv);
+      if (NS_FAILED(rv)) {
+        return NS_ERROR_NOT_INITIALIZED;
+      }
     }
   }
 
@@ -4598,8 +4610,11 @@ DefineInterfaceConstants(JSContext *cx, JSObject *obj, const nsIID *aIID)
 class nsDOMConstructor : public nsIDOMConstructor
 {
 public:
-  nsDOMConstructor(const PRUnichar *aName)
-    : mClassName(aName)
+  nsDOMConstructor(const PRUnichar *aName,
+                   nsISupports* aOwner)
+    : mClassName(aName),
+      mWeakOwner(do_GetWeakReference(aOwner))
+
   {
   }
 
@@ -4635,6 +4650,7 @@ public:
 
 private:
   const PRUnichar *mClassName;
+  nsWeakPtr        mWeakOwner;
 };
 
 NS_IMPL_ADDREF(nsDOMConstructor)
@@ -4684,7 +4700,7 @@ nsDOMConstructor::Construct(nsIXPConnectWrappedNative *wrapper, JSContext * cx,
     return NS_ERROR_DOM_NOT_SUPPORTED_ERR;
   }
 
-  return BaseStubConstructor(name_struct, cx, obj, argc, argv, vp);
+  return BaseStubConstructor(mWeakOwner, name_struct, cx, obj, argc, argv, vp);
 }
 
 nsresult
@@ -5409,7 +5425,8 @@ nsWindowSH::GlobalResolve(nsGlobalWindow *aWin, JSContext *cx,
 
     nsRefPtr<nsDOMConstructor> constructor =
       new nsDOMConstructor(NS_REINTERPRET_CAST(PRUnichar *,
-                                               ::JS_GetStringChars(str)));
+                                               ::JS_GetStringChars(str)),
+                           NS_STATIC_CAST(nsPIDOMWindow*, aWin));
     if (!constructor) {
       return NS_ERROR_OUT_OF_MEMORY;
     }
@@ -5470,7 +5487,8 @@ nsWindowSH::GlobalResolve(nsGlobalWindow *aWin, JSContext *cx,
 
     const PRUnichar *name = NS_REINTERPRET_CAST(PRUnichar *,
                                                 ::JS_GetStringChars(str));
-    nsRefPtr<nsDOMConstructor> constructor = new nsDOMConstructor(name);
+    nsRefPtr<nsDOMConstructor> constructor =
+      new nsDOMConstructor(name, NS_STATIC_CAST(nsPIDOMWindow*, aWin));
     if (!constructor) {
       return NS_ERROR_OUT_OF_MEMORY;
     }
@@ -5686,7 +5704,8 @@ nsWindowSH::GlobalResolve(nsGlobalWindow *aWin, JSContext *cx,
   }
 
   if (name_struct->mType == nsGlobalNameStruct::eTypeExternalConstructor) {
-    nsRefPtr<nsDOMConstructor> constructor = new nsDOMConstructor(class_name);
+    nsRefPtr<nsDOMConstructor> constructor =
+      new nsDOMConstructor(class_name, NS_STATIC_CAST(nsPIDOMWindow*, aWin));
     if (!constructor) {
       return NS_ERROR_OUT_OF_MEMORY;
     }

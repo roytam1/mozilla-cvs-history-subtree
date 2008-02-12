@@ -44,10 +44,13 @@
 #include "nsIEventQueueService.h"
 #include "nsIDOMLoadListener.h"
 #include "nsWeakReference.h"
+#include "nsWeakPtr.h"
+#include "nsIJSNativeInitializer.h"
 
 class nsDOMParser : public nsIDOMParser,
                     public nsIDOMLoadListener,
-                    public nsSupportsWeakReference
+                    public nsSupportsWeakReference,
+                    public nsIJSNativeInitializer_MOZILLA_1_8_BRANCH
 {
 public: 
   nsDOMParser();
@@ -68,10 +71,14 @@ public:
   NS_IMETHOD Abort(nsIDOMEvent* aEvent);
   NS_IMETHOD Error(nsIDOMEvent* aEvent);
 
+  // nsIJSNativeInitializer_MOZILLA_1_8_BRANCH
+  NS_IMETHOD Initialize(nsISupports* aOwner, JSContext* cx, JSObject* obj,
+                        PRUint32 argc, jsval* argv);
 private:
   nsCOMPtr<nsIURI> mBaseURI;
   nsCOMPtr<nsIEventQueueService> mEventQService;
   PRBool mLoopingForSyncLoad;
+  nsWeakPtr mOwner;
 };
 
 #endif
