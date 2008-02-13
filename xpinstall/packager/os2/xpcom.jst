@@ -8,6 +8,15 @@ function upgradeCleanup()
   deleteThisFile("Components", "xptitemp.dat");
 
   deleteThisFile("Program", "mozrmi36.dll");
+
+  // extra files shipped in enhanced builds distributed by Peter Weilbacher
+  deleteThisFile("Program", "RWSCLI07.DLL");
+  deleteThisFile("Program", "RWSSRV07.DLL");
+  deleteThisFile("Program", "RWSUTIL07.CMD");
+  deleteThisFile("Program", "RWSUTIL.CMD");
+  deleteThisFile("Program", "RWS08.CMD");
+  deleteThisFile("Components", "rwsos2.dll");
+  deleteThisFile("Components", "rwsos2.xpt");
 }
 
 // main
