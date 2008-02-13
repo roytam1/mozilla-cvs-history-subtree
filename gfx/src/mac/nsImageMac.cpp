@@ -41,6 +41,20 @@
 #include "nsRegionPool.h"
 #include "prmem.h"
 
+#include <limits.h>
+
+/* CoreGraphics limitation with flipped CTM surfaces: height must be less than signed 16-bit max */
+#define CG_MAX_HEIGHT   SHRT_MAX
+#define CG_MAX_WIDTH    USHRT_MAX
+
+// wrapper for CGContextDrawImage to protect against large-image calls - see bug 328258, 399286
+static void CallCGContextDrawImage(CGContextRef c, CGRect rect, CGImageRef image) {
+  if ( rect.size.width <= CG_MAX_WIDTH && rect.size.height <= CG_MAX_HEIGHT ) {
+    ::CGContextDrawImage(c, rect, image);
+  }
+}
+
+
 // Number of bits for each component in a pixel.
 #define BITS_PER_COMPONENT  8
 // Number of components per pixel (i.e. as in ARGB).
@@ -377,7 +391,7 @@ nsImageMac::Draw(nsIRenderingContext &aContext, nsIDrawingSurface* aSurface,
   }
 
   ::CGContextClipToRect(context, destRect);
-  ::CGContextDrawImage(context, drawRect, mImage);
+  CallCGContextDrawImage(context, drawRect, mImage);
   surface->EndQuartzDrawing(context);
 
   return NS_OK;
@@ -435,8 +449,8 @@ nsImageMac::DrawToImage(nsIImage* aDstImage, PRInt32 aDX, PRInt32 aDY,
     ::CGContextClearRect(bitmapContext, destRect);
 
     // draw destination and then this image into bitmap
-    ::CGContextDrawImage(bitmapContext, destRect, dest->mImage);
-    ::CGContextDrawImage(bitmapContext, drawRect, mImage);
+    CallCGContextDrawImage(bitmapContext, destRect, dest->mImage);
+    CallCGContextDrawImage(bitmapContext, drawRect, mImage);
 
     ::CGContextRelease(bitmapContext);
 
@@ -539,7 +553,7 @@ nsImageMac::LockImagePixels(PRBool aMaskPixels)
   // clear the bitmap context & draw mImage into it
   CGRect drawRect = ::CGRectMake(0, 0, mWidth, mHeight);
   ::CGContextClearRect(bitmapContext, drawRect);
-  ::CGContextDrawImage(bitmapContext, drawRect, mImage);
+  CallCGContextDrawImage(bitmapContext, drawRect, mImage);
   ::CGContextRelease(bitmapContext);
 
   // 'imageBits' now contains the image and (possibly) alpha bits for image.
@@ -761,7 +775,7 @@ nsImageMac::ConvertToPICT(PicHandle* outPicture)
 
       // Draw image into GWorld
       CGRect drawRect = ::CGRectMake(0, 0, mWidth, mHeight);
-      ::CGContextDrawImage(bitmapContext, drawRect, mImage);
+      CallCGContextDrawImage(bitmapContext, drawRect, mImage);
       ::CGContextRelease(bitmapContext);
 
       PicHandle thePicture = ::OpenPicture(&picFrame);
@@ -890,7 +904,7 @@ nsImageMac::DrawTileQuickly(nsIRenderingContext &aContext,
     // Draw image into 'bottom' of bitmap, to make the calculations in the
     // following for loops somewhat simpler.
     CGRect drawRect = ::CGRectMake(0, bitmapHeight - mHeight, mWidth, mHeight);
-    ::CGContextDrawImage(bitmapContext, drawRect, mImage);
+    CallCGContextDrawImage(bitmapContext, drawRect, mImage);
     ::CGContextRelease(bitmapContext);
 
     // Manually blit image, doubling each time.
@@ -958,7 +972,7 @@ nsImageMac::DrawTileQuickly(nsIRenderingContext &aContext,
     }
 
     ::CGContextClipToRect(context, destRect);
-    ::CGContextDrawImage(context, drawRect, tiledImage);
+    CallCGContextDrawImage(context, drawRect, tiledImage);
 
     ::CGImageRelease(tiledImage);
     surface->EndQuartzDrawing(context);
@@ -977,7 +991,7 @@ DrawTileAsPattern(void *aInfo, CGContextRef aContext)
   float width = ::CGImageGetWidth(image);
   float height = ::CGImageGetHeight(image);
   CGRect drawRect = ::CGRectMake(0, 0, width, height);
-  ::CGContextDrawImage(aContext, drawRect, image);
+  CallCGContextDrawImage(aContext, drawRect, image);
 }
 
 nsresult
