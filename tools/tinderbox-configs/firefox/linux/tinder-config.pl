@@ -83,7 +83,7 @@ $RunMozillaTests          = 0;  # Allow turning off of all tests if needed.
 #$StartupPerformanceTest   = 0;  # Ts
 
 # CONFIG: $TestsPhoneHome           = %testsPhoneHome%;  # Should test report back to server?
-#$TestsPhoneHome           = 0;  # Should test report back to server?
+$TestsPhoneHome           = 1;  # Should test report back to server?
 
 # $results_server
 #----------------------------------------------------------------------------
@@ -210,7 +210,7 @@ $ssh_version   = "2";
 $ssh_user      = "cltbld";
 #$ssh_key       = "'$ENV{HOME}/.ssh/ffxbld_dsa'";
 # CONFIG: $ssh_server    = "%sshServer%";
-$ssh_server    = "stage.mozilla.org";
+$ssh_server    = "production-1.8-master.build.mozilla.org";
 #$ReleaseGroup  = "firefox";
 $ftp_path      = "/home/ftp/pub/firefox/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
@@ -228,7 +228,7 @@ $update_version = "2.0";
 $update_platform = "Linux_x86-gcc3";
 $update_hash = "sha1";
 # CONFIG: $update_filehost = "%externalStagingServer%";
-$update_filehost = "ftp.mozilla.org";
+$update_filehost = "stage.mozilla.org";
 $update_ver_file = "browser/config/version.txt";
 # CONFIG: $update_aus_host = '%ausServer%';
 $update_aus_host = 'aus2-staging.mozilla.org';
