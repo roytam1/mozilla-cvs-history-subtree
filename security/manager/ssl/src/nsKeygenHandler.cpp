@@ -75,6 +75,15 @@ static SECKeySizeChoiceInfo SECKeySizeChoiceList[] = {
     { nsnull, 0 }, 
 };
 
+DERTemplate SECAlgorithmIDTemplate[] = {
+    { DER_SEQUENCE,
+	  0, NULL, sizeof(SECAlgorithmID) },
+    { DER_OBJECT_ID,
+	  offsetof(SECAlgorithmID,algorithm), },
+    { DER_OPTIONAL | DER_ANY,
+	  offsetof(SECAlgorithmID,parameters), },
+    { 0, }
+};
 
 DERTemplate CERTSubjectPublicKeyInfoTemplate[] = {
     { DER_SEQUENCE,
@@ -92,16 +101,6 @@ DERTemplate CERTPublicKeyAndChallengeTemplate[] =
     { DER_SEQUENCE, 0, nsnull, sizeof(CERTPublicKeyAndChallenge) },
     { DER_ANY, offsetof(CERTPublicKeyAndChallenge,spki), },
     { DER_IA5_STRING, offsetof(CERTPublicKeyAndChallenge,challenge), },
-    { 0, }
-};
-
-DERTemplate SECAlgorithmIDTemplate[] = {
-    { DER_SEQUENCE,
-	  0, NULL, sizeof(SECAlgorithmID) },
-    { DER_OBJECT_ID,
-	  offsetof(SECAlgorithmID,algorithm), },
-    { DER_OPTIONAL | DER_ANY,
-	  offsetof(SECAlgorithmID,parameters), },
     { 0, }
 };
 
