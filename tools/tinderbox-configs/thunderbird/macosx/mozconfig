@@ -1,0 +1,25 @@
+#
+## hostname: bm-xserve02.mozilla.org
+## uname: Darwin bm-xserve02.mozilla.org 8.7.0 Darwin Kernel Version 8.7.0: Fri May 26 15:20:53 PDT 2006; root:xnu-792.6.76.obj~1/RELEASE_PPC Power Macintosh powerpc
+#
+
+. $topsrcdir/build/macosx/universal/mozconfig
+
+# Make flags
+mk_add_options MOZ_CO_PROJECT=mail
+mk_add_options MOZ_MAKE_FLAGS=-j1
+mk_add_options MOZ_CO_MODULE="mozilla/tools/update-packaging"
+mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/../build/universal
+
+# Configure flags
+ac_add_options --enable-application=mail
+ac_add_options --enable-update-channel="release"
+ac_add_options --enable-optimize="-O2 -g"
+ac_add_options --disable-debug
+ac_add_options --disable-tests
+ac_add_options --enable-official-branding
+ac_add_options --enable-static
+ac_add_options --disable-shared
+ac_add_app_options ppc --enable-prebinding
+
+ac_add_options --enable-update-packaging
