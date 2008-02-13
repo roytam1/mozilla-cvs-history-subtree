@@ -3948,8 +3948,8 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
 #endif
 
         /* Generate code for the function's body. */
-        cg2mark = JS_ARENA_MARK(&cx->tempPool);
-        JS_ARENA_ALLOCATE_TYPE(cg2, JSCodeGenerator, &cx->tempPool);
+        cg2mark = JS_ARENA_MARK(cg->codePool);
+        JS_ARENA_ALLOCATE_TYPE(cg2, JSCodeGenerator, cg->codePool);
         if (!cg2) {
             JS_ReportOutOfMemory(cx);
             return JS_FALSE;
@@ -3975,7 +3975,7 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
             cg->treeContext.flags |= TCF_FUN_HEAVYWEIGHT;
         }
         js_FinishCodeGenerator(cx, cg2);
-        JS_ARENA_RELEASE(&cx->tempPool, cg2mark);
+        JS_ARENA_RELEASE(cg->codePool, cg2mark);
 
         /* Make the function object a literal in the outer script's pool. */
         ale = js_IndexAtom(cx, pn->pn_funAtom, &cg->atomList);
