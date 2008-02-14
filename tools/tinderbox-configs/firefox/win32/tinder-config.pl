@@ -138,7 +138,7 @@ $use_blat       = 0;
 
 #$moz_cvsroot   = $ENV{CVSROOT};
 # CONFIG: $moz_cvsroot   = '%mozillaCvsroot%';
-$moz_cvsroot = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
+$moz_cvsroot   = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 
 #- Set these proper values for your tinderbox server
 #$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
@@ -203,7 +203,7 @@ $ssh_version   = "2";
 $ssh_user      = "cltbld";
 #$ssh_key       = "'$ENV{HOME}/.ssh/ffxbld_dsa'";
 # CONFIG: $ssh_server    = "%sshServer%";
-$ssh_server    = "stage.mozilla.org";
+$ssh_server    = "production-1.8-master.build.mozilla.org";
 #$ReleaseGroup  = "firefox";
 $ftp_path      = "/home/ftp/pub/firefox/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
@@ -221,7 +221,7 @@ $update_version = "2.0";
 $update_platform = "WINNT_x86-msvc";
 $update_hash = "sha1";
 # CONFIG: $update_filehost = "%externalStagingServer%";
-$update_filehost = "ftp.mozilla.org";
+$update_filehost = "stage.mozilla.org";
 $update_ver_file = "browser/config/version.txt";
 $update_pushinfo = 1;
 # CONFIG: $update_aus_host = '%ausServer%';
