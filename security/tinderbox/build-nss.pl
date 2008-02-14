@@ -39,7 +39,7 @@ sub tree_specific_overides {
         '-r NSS_3_11_BRANCH mozilla/security/dbm', 
         '-r NSS_3_11_BRANCH mozilla/security/coreconf', 
         '-r NSS_3_11_BRANCH mozilla/security/nss', 
-        '-r JSS_4_2_5_RTM mozilla/security/jss', 
+        'mozilla/security/jss', 
         '-r NSS_3_11_1_RTM mozilla/security/nss/lib/freebl/ecl/ecl-curve.h'
     );
 

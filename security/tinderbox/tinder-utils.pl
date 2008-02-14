@@ -217,7 +217,7 @@ sub PrintExampleConfig {
 
 sub GetSystemInfo {
     $Settings::OS = `uname -s`;
-    my $os_ver = `uname -r`;
+    my $os_ver = `uname -r | sed "s/(.*//"`;
     $Settings::CPU = `uname -m`;
     #$Settings::ObjDir = '';
     my $host = ::hostname();
