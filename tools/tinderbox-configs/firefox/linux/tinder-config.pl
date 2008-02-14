@@ -212,8 +212,8 @@ $ssh_user      = "cltbld";
 # CONFIG: $ssh_server    = "%sshServer%";
 $ssh_server    = "stage.mozilla.org";
 #$ReleaseGroup  = "firefox";
-$ftp_path      = "/home/ftp/pub/firefox/nightly";
-$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
+$ftp_path      = "/home/ftp/pub/firefox/nightly/experimental/18relauto";
+$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/experimental/18relauto";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
 $milestone     = "mozilla1.8";
@@ -232,7 +232,7 @@ $update_filehost = "ftp.mozilla.org";
 $update_ver_file = "browser/config/version.txt";
 # CONFIG: $update_aus_host = '%ausServer%';
 $update_aus_host = 'aus2-staging.mozilla.org';
-$update_pushinfo = 1;
+$update_pushinfo = 0;
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
