@@ -4062,6 +4062,7 @@ JS_CompileUCFunctionForPrincipals(JSContext *cx, JSObject *obj,
     JSTokenStream *ts;
     JSFunction *fun;
     JSAtom *funAtom, *argAtom;
+    JSTempValueRooter tvr;
     uintN i;
 
     CHECK_REQUEST(cx);
@@ -4069,7 +4070,7 @@ JS_CompileUCFunctionForPrincipals(JSContext *cx, JSObject *obj,
     ts = js_NewTokenStream(cx, chars, length, filename, lineno, principals);
     if (!ts) {
         fun = NULL;
-        goto out;
+        goto out2;
     }
     if (!name) {
         funAtom = NULL;
@@ -4077,12 +4078,15 @@ JS_CompileUCFunctionForPrincipals(JSContext *cx, JSObject *obj,
         funAtom = js_Atomize(cx, name, strlen(name), 0);
         if (!funAtom) {
             fun = NULL;
-            goto out;
+            goto out2;
         }
     }
     fun = js_NewFunction(cx, NULL, NULL, nargs, 0, obj, funAtom);
     if (!fun)
         goto out;
+
+    /* From this point the control must flow through the label out. */
+    JS_PUSH_TEMP_ROOT_FUNCTION(cx, fun, &tvr);
     if (nargs) {
         for (i = 0; i < nargs; i++) {
             argAtom = js_Atomize(cx, argnames[i], strlen(argnames[i]), 0);
@@ -4112,7 +4116,12 @@ JS_CompileUCFunctionForPrincipals(JSContext *cx, JSObject *obj,
             return NULL;
         }
     }
-out:
+
+  out:
+    cx->weakRoots.newborn[GCX_PRIVATE] = (JSGCThing *) fun;
+    JS_POP_TEMP_ROOT(cx, &tvr);
+
+  out2:
     if (ts)
         js_CloseTokenStream(cx, ts);
     JS_ARENA_RELEASE(&cx->tempPool, mark);
