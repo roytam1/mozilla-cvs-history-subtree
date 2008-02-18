@@ -203,6 +203,8 @@
 		333FC6440C760D4300B61438 /* WebSearchField.mm in Sources */ = {isa = PBXBuildFile; fileRef = 333FC6400C760D4300B61438 /* WebSearchField.mm */; };
 		3381EEFB0D32C6CC004CF402 /* CHCookieStorage.mm in Sources */ = {isa = PBXBuildFile; fileRef = 3381EEF90D32C6CC004CF402 /* CHCookieStorage.mm */; };
 		3381EEFD0D32C6CC004CF402 /* CHCookieStorage.mm in Sources */ = {isa = PBXBuildFile; fileRef = 3381EEF90D32C6CC004CF402 /* CHCookieStorage.mm */; };
+		33C165C60D63A052007D1EAD /* FindBarTextured.nib in Resources */ = {isa = PBXBuildFile; fileRef = 33C165C40D63A052007D1EAD /* FindBarTextured.nib */; };
+		33C165C70D63A052007D1EAD /* FindBarTextured.nib in Resources */ = {isa = PBXBuildFile; fileRef = 33C165C40D63A052007D1EAD /* FindBarTextured.nib */; };
 		33E1EB520D36959E00910BBD /* AddSearchProviderHandler.mm in Sources */ = {isa = PBXBuildFile; fileRef = 33E1EB500D36959E00910BBD /* AddSearchProviderHandler.mm */; };
 		33E1EB540D36959E00910BBD /* AddSearchProviderHandler.mm in Sources */ = {isa = PBXBuildFile; fileRef = 33E1EB500D36959E00910BBD /* AddSearchProviderHandler.mm */; };
 		33E1EB570D3695F400910BBD /* caminosearch.xpt in Copy Component XPTs */ = {isa = PBXBuildFile; fileRef = 33E1EB560D3695DA00910BBD /* caminosearch.xpt */; };
@@ -2184,6 +2186,7 @@
 		33563BB20C85260200DC4D06 /* ViewCertificateDialogController.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = ViewCertificateDialogController.h; path = src/security/ViewCertificateDialogController.h; sourceTree = "<group>"; };
 		3381EEF80D32C6CC004CF402 /* CHCookieStorage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CHCookieStorage.h; path = src/embedding/CHCookieStorage.h; sourceTree = "<group>"; };
 		3381EEF90D32C6CC004CF402 /* CHCookieStorage.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = CHCookieStorage.mm; path = src/embedding/CHCookieStorage.mm; sourceTree = "<group>"; };
+		33C165C50D63A052007D1EAD /* English */ = {isa = PBXFileReference; lastKnownFileType = wrapper.nib; name = English; path = resources/localized/English.lproj/FindBarTextured.nib; sourceTree = "<group>"; };
 		33E1EB4F0D36959E00910BBD /* AddSearchProviderHandler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AddSearchProviderHandler.h; path = src/websearch/AddSearchProviderHandler.h; sourceTree = "<group>"; };
 		33E1EB500D36959E00910BBD /* AddSearchProviderHandler.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AddSearchProviderHandler.mm; path = src/websearch/AddSearchProviderHandler.mm; sourceTree = "<group>"; };
 		33E1EB560D3695DA00910BBD /* caminosearch.xpt */ = {isa = PBXFileReference; lastKnownFileType = file; name = caminosearch.xpt; path = ../dist/bin/components/caminosearch.xpt; sourceTree = SOURCE_ROOT; };
@@ -4243,6 +4246,7 @@
 				F583E3BB03B820AC01A80166 /* ProgressView.nib */,
 				F5F7EF0D03C1F29C01BDD337 /* Keychain.nib */,
 				E43EF9F10D13388000DACA10 /* FindBar.nib */,
+				33C165C40D63A052007D1EAD /* FindBarTextured.nib */,
 				F507A85003116E7901026D5D /* BookmarkInfoPanel.nib */,
 				3FB2BAE50545EBAB002B9691 /* BookmarkImportDlg.nib */,
 				3FC7EBFA05AA1D1C00C557AA /* AccessoryViews.nib */,
@@ -4921,6 +4925,7 @@
 				DE80DD500D4682E6001C33F5 /* BloglinesFeedHandler.app in Resources */,
 				DE80DD4F0D4682E6001C33F5 /* GoogleFeedHandler.app in Resources */,
 				DE80DD510D4682E6001C33F5 /* MyYahooFeedHandler.app in Resources */,
+ 				33C165C60D63A052007D1EAD /* FindBarTextured.nib in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -5132,6 +5137,7 @@
 				DE80DD530D4682E6001C33F5 /* BloglinesFeedHandler.app in Resources */,
 				DE80DD520D4682E6001C33F5 /* GoogleFeedHandler.app in Resources */,
 				DE80DD540D4682E6001C33F5 /* MyYahooFeedHandler.app in Resources */,
+ 				33C165C70D63A052007D1EAD /* FindBarTextured.nib in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -5810,6 +5816,14 @@
 			);
 			name = ExpiredCertDialog.nib;
 			sourceTree = SOURCE_ROOT;
+		};
+		33C165C40D63A052007D1EAD /* FindBarTextured.nib */ = {
+			isa = PBXVariantGroup;
+			children = (
+				33C165C50D63A052007D1EAD /* English */,
+			);
+			name = FindBarTextured.nib;
+			sourceTree = "<group>";
 		};
 		3F8C004F06800D8D00658CBC /* Localizable.strings */ = {
 			isa = PBXVariantGroup;
