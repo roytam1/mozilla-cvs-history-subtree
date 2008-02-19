@@ -160,6 +160,7 @@ MODULES_core :=                                 \
   mozilla/gfx                                   \
   mozilla/parser                                \
   mozilla/layout                                \
+  mozilla/memory/jemalloc                       \
   mozilla/jpeg                                  \
   mozilla/js/src/fdlibm                         \
   mozilla/js/src/liveconnect                    \
@@ -434,8 +435,8 @@ MODULES_all :=                                  \
 # adding '-f' everywhere that we pull with the checkout tag, we force
 # the head revision if a file is not tagged
 MOZ_CO_TAG           = ZAP_20050610_BRANCH
-NSPR_CO_TAG          = NSPR_HEAD_20071218
-NSS_CO_TAG           = NSS_3_12_ALPHA_2B
+NSPR_CO_TAG          = NSPR_HEAD_20080129_PLUS_414997
+NSS_CO_TAG           = NSS_3_12_BETA1
 LDAPCSDK_CO_TAG      = LDAPCSDK_6_0_3_CLIENT_BRANCH
 LOCALES_CO_TAG       =
 
@@ -814,9 +815,9 @@ ifdef RUN_AUTOCONF_LOCALLY
 	$(RM) -f $(CONFIGURES)
 endif
 	@echo "checkout start: "`date` | tee $(CVSCO_LOGFILE)
-	@echo '$(CVSCO) $(CVS_CO_DATE_FLAGS) mozilla/client.mk $(MOZCONFIG_MODULES)'; \
+	@echo '$(CVSCO) mozilla/client.mk $(MOZCONFIG_MODULES)'; \
         cd $(ROOTDIR) && \
-	$(CVSCO) $(CVS_CO_DATE_FLAGS) mozilla/client.mk $(MOZCONFIG_MODULES)
+	$(CVSCO) mozilla/client.mk $(MOZCONFIG_MODULES)
 	@cd $(ROOTDIR) && $(MAKE) -f mozilla/client.mk real_checkout
 
 #	Start the checkout. Split the output to the tty and a log file.
@@ -912,9 +913,9 @@ l10n-checkout:
 	else true; \
 	fi
 	@echo "checkout start: "`date` | tee $(CVSCO_LOGFILE_L10N)
-	@echo '$(CVSCO) $(CVS_CO_DATE_FLAGS) mozilla/client.mk $(MOZCONFIG_MODULES)'; \
+	@echo '$(CVSCO) mozilla/client.mk $(MOZCONFIG_MODULES)'; \
         cd $(ROOTDIR) && \
-	$(CVSCO) $(CVS_CO_DATE_FLAGS) mozilla/client.mk $(MOZCONFIG_MODULES)
+	$(CVSCO) mozilla/client.mk $(MOZCONFIG_MODULES)
 	@cd $(ROOTDIR) && $(MAKE) -f mozilla/client.mk real_l10n-checkout
 
 FULL_EN_US_DIRS := toolkit \
@@ -1048,7 +1049,7 @@ CONFIG_STATUS_DEPS := \
 	$(wildcard $(TOPSRCDIR)/directory/c-sdk/configure) \
 	$(wildcard $(TOPSRCDIR)/config/milestone.txt) \
 	$(wildcard $(TOPSRCDIR)/config/chrome-versions.sh) \
-  $(wildcard $(addsuffix confvars.sh,$(wildcard */))) \
+  $(wildcard $(addsuffix confvars.sh,$(wildcard $(TOPSRCDIR)/*/))) \
 	$(NULL)
 
 # configure uses the program name to determine @srcdir@. Calling it without
@@ -1318,4 +1319,4 @@ branchtag_zap:
 diff_zap:
 	cvs -z3 diff $(ZAP_BRANCH_MODIFIED_FILES) $(ZAP_BRANCH_NEW_FILES)
 
-.PHONY: checkout real_checkout depend build export libs alldep install clean realclean distclean cleansrcdir pull_all build_all clobber clobber_all pull_and_build_all everything configure preflight_all preflight postflight postflight_all
+.PHONY: checkout real_checkout depend build profiledbuild export libs alldep install clean realclean distclean cleansrcdir pull_all build_all clobber clobber_all pull_and_build_all everything configure preflight_all preflight postflight postflight_all

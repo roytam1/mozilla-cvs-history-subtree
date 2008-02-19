@@ -40,11 +40,7 @@
 
 #include "nsIScriptableInputStream.h"
 #include "nsIScriptableInputStreamEx.h"
-#include "nsIScriptableStreams.h"
 #include "nsIInputStream.h"
-#include "nsISeekableStream.h"
-#include "nsIMultiplexInputStream.h"
-#include "nsIUnicharInputStream.h"
 #include "nsCOMPtr.h"
 
 #define NS_SCRIPTABLEINPUTSTREAM_CID        \
@@ -53,44 +49,20 @@
 #define NS_SCRIPTABLEINPUTSTREAM_CONTRACTID "@mozilla.org/scriptableinputstream;1"
 #define NS_SCRIPTABLEINPUTSTREAM_CLASSNAME "Scriptable Input Stream"
 
-class nsScriptableInputStream : public nsIScriptableInputStreamEx,
-                                public nsIScriptableIOInputStream,
-                                public nsISeekableStream,
-                                public nsIMultiplexInputStream
+class nsScriptableInputStream : public nsIScriptableInputStreamEx
 {
 public:
     // nsISupports methods
     NS_DECL_ISUPPORTS
 
+    // nsIScriptableInputStream methods
+    NS_DECL_NSISCRIPTABLEINPUTSTREAM
+
     // nsIScriptableInputStreamEx methods
     NS_DECL_NSISCRIPTABLEINPUTSTREAMEX
-    
-    // nsIScriptableIOInputStream methods
-    NS_DECL_NSISCRIPTABLEIOINPUTSTREAM
-
-    // nsISeekableStream methods
-    NS_DECL_NSISEEKABLESTREAM
-
-    // nsIMultiplexInputStream methods
-    NS_DECL_NSIMULTIPLEXINPUTSTREAM
-
-    // nsIInputStream and nsIScriptableInputStream methods
-    NS_IMETHOD Available(PRUint32 *aAvailable);
-    NS_IMETHOD Close();
-    NS_IMETHOD IsNonBlocking(PRBool *aIsNonBlocking);
-    NS_IMETHOD Read(char* aData,
-                    PRUint32 aCount,
-                    PRUint32 *aReadCount);
-    NS_IMETHOD ReadSegments(nsWriteSegmentFun aFn,
-                            void* aClosure,
-                            PRUint32 aCount,
-                            PRUint32 *aReadCount);
-    NS_IMETHOD Init(nsIInputStream* aInputStream);
-    NS_IMETHOD Read(PRUint32 aCount, char** aData);
 
     // nsScriptableInputStream methods
-    nsScriptableInputStream() :
-      mUnicharInputStreamHasMore(PR_TRUE) {}
+    nsScriptableInputStream() {}
 
     static NS_METHOD
     Create(nsISupports *aOuter, REFNSIID aIID, void **aResult);
@@ -98,11 +70,7 @@ public:
 private:
     ~nsScriptableInputStream() {}
 
-    nsresult ReadFully(PRUint32 aCount, char* aBuf);
-
-    PRBool mUnicharInputStreamHasMore;
     nsCOMPtr<nsIInputStream> mInputStream;
-    nsCOMPtr<nsIUnicharInputStream> mUnicharInputStream;
 };
 
 #endif // ___nsscriptableinputstream___h_

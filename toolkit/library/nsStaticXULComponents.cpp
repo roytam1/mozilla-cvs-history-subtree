@@ -271,6 +271,15 @@
 #define ZAP_MODULES
 #endif
 
+#ifdef MOZ_XUL
+#ifdef MOZ_ENABLE_GTK2
+#define UNIXPROXY_MODULE MODULE(nsUnixProxyModule)
+#endif
+#endif
+#ifndef UNIXPROXY_MODULE
+#define UNIXPROXY_MODULE
+#endif
+
 #define XUL_MODULES                          \
     MODULE(xpconnect)                        \
     MATHML_MODULES                           \
@@ -323,6 +332,7 @@
     XMLEXTRAS_MODULE                         \
     LAYOUT_DEBUG_MODULE                      \
     ZAP_MODULES                              \
+    UNIXPROXY_MODULE                         \
     /* end of list */
 
 #define MODULE(_name) \

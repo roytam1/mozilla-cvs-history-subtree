@@ -48,7 +48,6 @@ default alldep all::
 	$(RM) -rf $(DIST)/sdk
 	$(RM) -rf $(DIST)/include
 	$(RM) -rf _tests
-	$(MAKE) -C config export
 
 TIERS += base
 
@@ -61,6 +60,10 @@ tier_base_dirs = \
 	probes \
 	$(NULL)
 
+ifdef MOZ_MEMORY
+tier_base_dirs += memory/jemalloc
+endif
+
 include $(topsrcdir)/$(MOZ_BUILD_APP)/build.mk
 
 TIERS += testharness
@@ -70,11 +73,11 @@ ifdef ENABLE_TESTS
 tier_testharness_dirs += tools/test-harness
 endif
 
-GARBAGE_DIRS += dist
+GARBAGE_DIRS += dist _javagen _tests staticlib
 DIST_GARBAGE = config.cache config.log config.status config-defs.h \
    dependencies.beos config/autoconf.mk config/myrules.mk config/myconfig.mk \
    unallmakefiles mozilla-config.h \
-   gfx/gfx-config.h netwerk/necko-config.h xpcom/xpcom-config.h xpcom/xpcom-private.h \
+   netwerk/necko-config.h xpcom/xpcom-config.h xpcom/xpcom-private.h \
    $(topsrcdir)/.mozconfig.mk $(topsrcdir)/.mozconfig.out
 
 # Build pseudo-external modules first when export is explicitly called

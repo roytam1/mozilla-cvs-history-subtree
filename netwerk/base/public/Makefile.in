@@ -104,6 +104,7 @@ XPIDLSRCS	= \
 		nsIStreamTransportService.idl \
 		nsIStreamLoader.idl \
 		nsISyncStreamListener.idl \
+		nsISystemProxySettings.idl \
 		nsIUnicharStreamLoader.idl \
 		nsIStandardURL.idl \
 		nsINestedURI.idl \
@@ -125,7 +126,6 @@ XPIDLSRCS	= \
 		nsIChannelEventSink.idl \
 		nsINetUtil.idl \
 		nsIProxiedChannel.idl \
-		nsIScriptableIO.idl \
 		nsIRandomGenerator.idl \
 		$(NULL)
 
