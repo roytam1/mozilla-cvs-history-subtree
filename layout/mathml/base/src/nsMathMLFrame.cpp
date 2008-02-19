@@ -555,10 +555,11 @@ GetMathMLAttributeStyleSheet(nsPresContext* aPresContext,
   NS_NewURI(getter_AddRefs(uri), "about:internal-mathml-attribute-stylesheet");
   if (!uri)
     return;
-  nsCOMPtr<nsICSSStyleSheet> cssSheet(do_CreateInstance(kCSSStyleSheetCID));
+  nsCOMPtr<nsICSSStyleSheet_MOZILLA_1_8_BRANCH> cssSheet =
+    do_CreateInstance(kCSSStyleSheetCID);
   if (!cssSheet)
     return;
-  cssSheet->SetURIs(uri, uri);
+  cssSheet->SetURIs18(uri, uri, uri);
   cssSheet->SetTitle(NS_ConvertASCIItoUCS2(kTitle));
   // all done, no further activity from the net involved, so we better do this
   cssSheet->SetComplete();

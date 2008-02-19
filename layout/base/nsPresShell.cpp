@@ -2346,7 +2346,9 @@ nsresult PresShell::CreatePreferenceStyleSheet(void)
     result = NS_NewURI(getter_AddRefs(uri), "about:PreferenceStyleSheet", nsnull);
     if (NS_SUCCEEDED(result)) {
       NS_ASSERTION(uri, "null but no error");
-      result = mPrefStyleSheet->SetURIs(uri, uri);
+      nsCOMPtr<nsICSSStyleSheet_MOZILLA_1_8_BRANCH> sheet =
+        do_QueryInterface(mPrefStyleSheet);
+      result = sheet->SetURIs18(uri, uri, uri);
       if (NS_SUCCEEDED(result)) {
         mPrefStyleSheet->SetComplete();
         nsCOMPtr<nsIDOMCSSStyleSheet> sheet(do_QueryInterface(mPrefStyleSheet));
