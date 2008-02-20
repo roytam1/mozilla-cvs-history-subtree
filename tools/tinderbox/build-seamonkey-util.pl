@@ -1208,6 +1208,8 @@ sub BuildIt {
                 my $buildTarget = $TreeSpecific::build_target;
                 if ($Settings::ConfigureOnly) {
                     $buildTarget = "configure";
+                } elsif ($Settings::ProfiledBuild) {
+                    $buildTarget = "profiledbuild";
                 }
 
                 $status = run_shell_command "$make $buildTarget";
