@@ -46,13 +46,8 @@
 {
   IBOutlet BookmarkToolbar  *mBookmarksToolbar;
   IBOutlet NSView           *mBrowserContainerView;   // manages tabs and web content
-  IBOutlet NSView           *mFindBar;                // will be nil if hidden
   IBOutlet NSView           *mStatusBar;
 }
-
-// displays |inBarView| as the find bar just above the status bar. Pass nil to
-// make the bar disappear. 
-- (void)showFindBar:(NSView*)inBarView;
 
 @end
 
