@@ -10,7 +10,7 @@ export MOZILLA_OFFICIAL=1
 
 mk_add_options MOZ_CO_PROJECT=mail
 mk_add_options MOZ_CO_LOCALES=all
-mk_add_options LOCALES_CVSROOT=:ext:cltbld@cvs.mozilla.org:/l10n
+mk_add_options LOCALES_CVSROOT=:ext:tbirdbld@cvs.mozilla.org:/l10n
 mk_add_options MOZ_MAKE_FLAGS="-j3"
 mk_add_options MOZ_CO_MODULE="mozilla/tools/update-packaging"
 mk_add_options LOCALES_CO_TAG=MOZILLA_1_8_0_BRANCH
