@@ -7,7 +7,7 @@
 #-    Uncomment the variables you need to set.
 #-    The default values are the same as the commented variables.
 
-$ENV{CVSROOT}=":ext:cltbld\@cvs.mozilla.org:/cvsroot";
+$ENV{CVSROOT}=":ext:tbirdbld\@cvs.mozilla.org:/cvsroot";
 $ENV{MOZ_INSTALLER_USE_7ZIP}="1";
 $ENV{MOZ_PACKAGE_MSI} = 0;
 
@@ -167,10 +167,9 @@ $build_hour    = "3";
 $package_creation_path = "/mail/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
 $ssh_version   = "2";
-$ssh_user      = "cltbld";
-#$ssh_key       = "'$ENV{HOME}/.ssh/tbirdbld_dsa'";
+$ssh_user      = "tbirdbld";
+$ssh_key       = "'$ENV{HOME}/.ssh/tbirdbld_dsa'";
 $ssh_server    = "stage.mozilla.org";
-$ReleaseGroup  = "thunderbird";
 $ftp_path      = "/home/ftp/pub/thunderbird/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly";
 $tbox_ftp_path      = "/home/ftp/pub/thunderbird/tinderbox-builds";
