@@ -50,6 +50,8 @@
 #include "nsIURI.h"
 #include "nsCOMPtr.h"
 
+class nsIPrincipal;
+
 // Popup control state enum. The values in this enum must go from most
 // permissive to least permissive so that it's safe to push state in
 // all situations. Pushing popup state onto the stack never makes the
@@ -252,6 +254,8 @@ public:
     return win->mIsHandlingResizeEvent;
   }
 
+  // DO NOT USE THIS FUNCTION.  IT DOES NOTHING.  USE
+  // SetOpenerScriptPrincipal INSTEAD.
   virtual void SetOpenerScriptURL(nsIURI* aURI) = 0;
 
   virtual PopupControlState PushPopupControlState(PopupControlState aState,
@@ -313,7 +317,6 @@ protected:
 
   // These members are only used on outer windows.
   nsIDOMElement *mFrameElement; // weak
-  nsCOMPtr<nsIURI> mOpenerScriptURL; // strong; used to determine whether to clear scope
 
   // These variables are only used on inner windows.
   nsTimeout             *mRunningTimeout;
@@ -329,6 +332,30 @@ protected:
   nsPIDOMWindow         *mOuterWindow;
 };
 
+#define NS_PIDOMWINDOW_MOZILLA_1_8_BRANCH2_IID \
+{ 0xddd4affd, 0x6ad4, 0x44b4, \
+ { 0xa8, 0xfc, 0x78, 0x1d, 0xbd, 0xf1, 0x87, 0x1d } }
+
+class nsPIDOMWindow_MOZILLA_1_8_BRANCH2 : public nsPIDOMWindow
+{
+public:
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_PIDOMWINDOW_MOZILLA_1_8_BRANCH2_IID)
+
+  // Tell this window who opened it.  This only has an effect if there is
+  // either no document currently in the window or if the document is the
+  // original document this window came with (an about:blank document either
+  // preloaded into it when it was created, or created by
+  // CreateAboutBlankContentViewer()).
+  virtual void SetOpenerScriptPrincipal(nsIPrincipal* aPrincipal) = 0;
+  // Ask this window who opened it.
+  virtual nsIPrincipal* GetOpenerScriptPrincipal() = 0;
+
+protected:
+  nsPIDOMWindow_MOZILLA_1_8_BRANCH2(nsPIDOMWindow *aOuterWindow)
+    : nsPIDOMWindow(aOuterWindow)
+  {
+  }                                     
+};
 
 #ifdef _IMPL_NS_LAYOUT
 PopupControlState

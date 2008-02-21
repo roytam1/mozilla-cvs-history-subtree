@@ -100,6 +100,7 @@ private:
                                  PRInt32 aDefault, PRBool *aPresenceFlag);
   static nsresult   ReadyOpenedDocShellItem(nsIDocShellTreeItem *aOpenedItem,
                                             nsIDOMWindow *aParent,
+                                            PRBool aWindowIsNew,
                                             nsIDOMWindow **aOpenedWindow);
   static void       SizeOpenedDocShellItem(nsIDocShellTreeItem *aDocShellItem,
                                            nsIDOMWindow *aParent,
