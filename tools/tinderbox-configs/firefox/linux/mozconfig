@@ -6,7 +6,7 @@ export MOZILLA_OFFICIAL=1
 #mk_add_options PROFILE_GEN_SCRIPT=@TOPSRCDIR@/build/profile_pageloader.pl
 
 mk_add_options MOZ_CO_LOCALES=all
-mk_add_options LOCALES_CVSROOT=:ext:cltbld@cvs.mozilla.org:/l10n
+mk_add_options LOCALES_CVSROOT=:ext:ffxbld@cvs.mozilla.org:/l10n
 #mk_add_options LOCALES_CO_TAG=AVIARY_1_0_20040515_BRANCH
 mk_add_options MOZ_CO_MODULE="mozilla/tools/update-packaging"
 #mk_add_options MOZ_CO_LOCALES_DATE="11/17/2005 18:00:00 PST"
