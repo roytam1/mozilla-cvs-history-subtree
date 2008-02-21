@@ -1,1 +1,3 @@
-Clobbering to pick up bug 414515 mozconfig changes
+b=399848
+- testing fix for nightly-update snippet-push
+
