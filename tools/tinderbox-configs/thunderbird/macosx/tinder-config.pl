@@ -119,7 +119,7 @@ $VendorName               = 'Mozilla';
 # Note that win32 may not need \@, depends on ' or ".
 # :pserver:$ENV{USER}%netscape.com@cvs.mozilla.org:/cvsroot
 
-$moz_cvsroot   = ":ext:cltbld\@cvs.mozilla.org:/cvsroot";
+$moz_cvsroot   = ":ext:ffxbld\@cvs.mozilla.org:/cvsroot";
 
 #- Set these proper values for your tinderbox server
 #$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
@@ -195,10 +195,9 @@ $build_hour    = "9";
 $package_creation_path = "/mail/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
 $mac_bundle_path = "/mail/app";
-$ssh_user      = "cltbld";
-#$ssh_key       = "'$ENV{HOME}/.ssh/tbirdbld_dsa'";
+$ssh_user      = "tbirdbld";
+$ssh_key       = "'$ENV{HOME}/.ssh/tbirdbld_dsa'";
 $ssh_server    = "stage.mozilla.org";
-#$ReleaseGroup  = "thunderbird";
 $ftp_path      = "/home/ftp/pub/thunderbird/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly";
 $tbox_ftp_path = "/home/ftp/pub/thunderbird/tinderbox-builds";
