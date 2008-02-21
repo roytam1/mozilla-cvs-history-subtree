@@ -2587,6 +2587,11 @@ sub run_all_tests {
       my $startup_build_dir = $build_dir;
       if (is_windows()) {
         $startup_build_dir = "/".$win32_build_dir;
+        # MSYS paths confuse the startup tests. They expect a filepath
+        # that starts with /<driveletter>:/, e.g. /e:/builds/...
+        if ($^O eq 'msys') {
+          $startup_build_dir =~ s/^\/\/([A-Za-z])\//\/$1\:\//;
+        }
       }
 
       my $app_args;
