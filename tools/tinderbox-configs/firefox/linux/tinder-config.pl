@@ -141,7 +141,7 @@ $RunMozillaTests          = 0;  # Allow turning off of all tests if needed.
 # Note that win32 may not need \@, depends on ' or ".
 # :pserver:$ENV{USER}%netscape.com@cvs.mozilla.org:/cvsroot
 
-$moz_cvsroot   = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
+$moz_cvsroot   = ':ext:ffxbld@cvs.mozilla.org:/cvsroot';
 
 #- Set these proper values for your tinderbox server
 #$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
@@ -204,7 +204,8 @@ $build_hour    = "4";
 $package_creation_path = "/browser/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
 $ssh_version   = "2";
-$ssh_user      = "cltbld";
+$ssh_user      = "ffxbld";
+$ssh_key       = "'$ENV{HOME}/.ssh/ffxbld_dsa'";
 $ssh_server    = "stage.mozilla.org";
 $ftp_path      = "/home/ftp/pub/firefox/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
