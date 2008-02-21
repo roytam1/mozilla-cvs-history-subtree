@@ -11,7 +11,7 @@ export MOZILLA_OFFICIAL=1
 #mk_add_options PROFILE_GEN_SCRIPT=@TOPSRCDIR@/build/profile_pageloader.pl
 
 mk_add_options MOZ_CO_LOCALES=all
-mk_add_options LOCALES_CVSROOT=:ext:cltbld@cvs.mozilla.org:/l10n
+mk_add_options LOCALES_CVSROOT=:ext:ffxbld@cvs.mozilla.org:/l10n
 #mk_add_options LOCALES_CO_TAG=MOZILLA_1_8_0_BRANCH
 mk_add_options MOZ_CO_MODULE="mozilla/tools/update-packaging"
 #mk_add_options MOZ_CO_LOCALES_DATE="15 Mar 2006 18:00:00 +0000"
