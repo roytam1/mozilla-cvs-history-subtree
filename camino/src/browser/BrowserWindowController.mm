@@ -1697,6 +1697,7 @@ public:
 
   // Always allow the search engine menu to work
   if (action == @selector(searchEngineChanged:) ||
+      action == @selector(installSearchPlugin:) ||
       action == @selector(manageSearchEngines:) ||
       action == @selector(findSearchEngines:))
   {
@@ -4706,10 +4707,15 @@ public:
 
 - (void)showSearchPluginDetected:(BOOL)pluginsAreDetected
 {
-  if (pluginsAreDetected)
-    [mSearchBar setDetectedSearchPlugins:[[self browserWrapper] detectedSearchPlugins]];
-  else
+  if (pluginsAreDetected) {
+    NSArray* detectedPlugins = [[self browserWrapper] detectedSearchPlugins];
+    [mSearchBar setDetectedSearchPlugins:detectedPlugins];
+    [mSearchSheetTextField setDetectedSearchPlugins:detectedPlugins];
+  }
+  else {
     [mSearchBar setDetectedSearchPlugins:nil];
+    [mSearchSheetTextField setDetectedSearchPlugins:nil];
+  }
 }
 
 - (BOOL)webSearchField:(WebSearchField*)searchField shouldListDetectedSearchPlugin:(NSDictionary *)searchPluginInfoDict
@@ -4746,6 +4752,7 @@ public:
     // Because of this, select the last engine.
     NSString* installedPluginName = [[[SearchEngineManager sharedSearchEngineManager] installedSearchEngineNames] lastObject];
     [mSearchBar setCurrentSearchEngine:installedPluginName];
+    [mSearchSheetTextField setCurrentSearchEngine:installedPluginName];
   }
   else {
     NSString* searchPluginName = [searchPlugin valueForKey:kWebSearchPluginNameKey];
@@ -4754,10 +4761,15 @@ public:
     [alert setMessageText:NSLocalizedString(@"SearchPluginInstallationErrorTitle", nil)];
     [alert setInformativeText:[NSString stringWithFormat:NSLocalizedString(@"SearchPluginInstallationErrorMessage", nil), searchPluginName]];
     [alert setAlertStyle:NSWarningAlertStyle];
-    [alert beginSheetModalForWindow:[self window] 
-                      modalDelegate:self 
-                     didEndSelector:NULL
-                        contextInfo:NULL];
+    if ([[self window] attachedSheet]) {
+      [alert runModal];
+    }
+    else {
+      [alert beginSheetModalForWindow:[self window] 
+                        modalDelegate:self 
+                       didEndSelector:NULL
+                          contextInfo:NULL];
+    }
   }
 }
 
