@@ -152,7 +152,7 @@ $moz_cvsroot = ':ext:ffxbld@cvs.mozilla.org:/cvsroot';
 $ObjDir = 'obj-fx-trunk';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'Nightly';
+$BuildNameExtra = 'PGO';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -168,7 +168,7 @@ $BuildNameExtra = 'Nightly';
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
 # CONFIG: $BuildTree  = '%buildTree%';
-$BuildTree  = 'Firefox';
+$BuildTree  = 'MozillaExperimental';
 
 #$BuildName = '';
 #$BuildTag = '';
@@ -205,8 +205,8 @@ $ssh_key       = "'$ENV{HOME}/.ssh/ffxbld_dsa'";
 # CONFIG: $ssh_server    = "%sshServer%";
 $ssh_server    = "stage.mozilla.org";
 $ReleaseGroup  = "firefox";
-$ftp_path      = "/home/ftp/pub/firefox/nightly";
-$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
+$ftp_path      = "/home/ftp/pub/firefox/nightly/experimental/pgo";
+$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/experimental/pgo";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
 $milestone     = "trunk";
@@ -225,9 +225,9 @@ $update_hash = "sha1";
 # CONFIG: $update_filehost = '%externalStagingServer%';
 $update_filehost = "ftp.mozilla.org";
 $update_ver_file = 'browser/config/version.txt';
-$update_pushinfo = 1;
+$update_pushinfo = 0;
 $crashreporter_buildsymbols = 1;
-$crashreporter_pushsymbols = 1;
+$crashreporter_pushsymbols = 0;
 # CONFIG: $ENV{'SYMBOL_SERVER_HOST'}    = '%symbolServer%';
 $ENV{'SYMBOL_SERVER_HOST'} = 'stage.mozilla.org';
 # CONFIG: $ENV{'SYMBOL_SERVER_USER'}    = '%symbolServerUser%';
