@@ -54,6 +54,8 @@
 		008116EF0B2722EB001CB3F0 /* KeychainItem.m in Sources */ = {isa = PBXBuildFile; fileRef = 008116EB0B2722EB001CB3F0 /* KeychainItem.m */; };
 		00BBC0010D70A8F200C2D916 /* tab_loading.tiff in Resources */ = {isa = PBXBuildFile; fileRef = 00BBC0000D70A8F200C2D916 /* tab_loading.tiff */; };
 		00BBC0020D70A8F200C2D916 /* tab_loading.tiff in Resources */ = {isa = PBXBuildFile; fileRef = 00BBC0000D70A8F200C2D916 /* tab_loading.tiff */; };
+		00BBC09A0D75269200C2D916 /* CHGradient.m in Sources */ = {isa = PBXBuildFile; fileRef = 00BBC0990D75269200C2D916 /* CHGradient.m */; };
+		00BBC09B0D75269200C2D916 /* CHGradient.m in Sources */ = {isa = PBXBuildFile; fileRef = 00BBC0990D75269200C2D916 /* CHGradient.m */; };
 		032FFDD5077351DA00440548 /* Downloads.mm in Sources */ = {isa = PBXBuildFile; fileRef = 032FFDCE077351A800440548 /* Downloads.mm */; };
 		032FFDD6077351EA00440548 /* Downloads.tiff in Resources */ = {isa = PBXBuildFile; fileRef = 032FFDCF077351A800440548 /* Downloads.tiff */; };
 		032FFDD7077351EA00440548 /* Downloads.nib in Resources */ = {isa = PBXBuildFile; fileRef = 032FFDD0077351A800440548 /* Downloads.nib */; };
@@ -2051,6 +2053,8 @@
 		008116EA0B2722EB001CB3F0 /* KeychainItem.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = KeychainItem.h; path = src/formfill/KeychainItem.h; sourceTree = "<group>"; };
 		008116EB0B2722EB001CB3F0 /* KeychainItem.m */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.objc; name = KeychainItem.m; path = src/formfill/KeychainItem.m; sourceTree = "<group>"; };
 		00BBC0000D70A8F200C2D916 /* tab_loading.tiff */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; name = tab_loading.tiff; path = chrome/tab_loading.tiff; sourceTree = "<group>"; };
+		00BBC0980D75269200C2D916 /* CHGradient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CHGradient.h; path = src/extensions/CHGradient.h; sourceTree = "<group>"; };
+		00BBC0990D75269200C2D916 /* CHGradient.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = CHGradient.m; path = src/extensions/CHGradient.m; sourceTree = "<group>"; };
 		00F3BE280C4F280700E19B0C /* Camino.xcconfig */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text.xcconfig; name = Camino.xcconfig; path = config/Camino.xcconfig; sourceTree = "<group>"; };
 		00F3BE290C4F280700E19B0C /* Debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text.xcconfig; name = Debug.xcconfig; path = config/Debug.xcconfig; sourceTree = "<group>"; };
 		00F3BE2A0C4F280700E19B0C /* PrefPane.xcconfig */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text.xcconfig; name = PrefPane.xcconfig; path = config/PrefPane.xcconfig; sourceTree = "<group>"; };
@@ -3851,6 +3855,8 @@
 				DE74F8C20AB270D800FD1D5B /* AppListMenuFactory.mm */,
 				0F557D8D0943873800EF68F6 /* AutoSizingTextField.h */,
 				0F557D960943876800EF68F6 /* AutoSizingTextField.m */,
+				00BBC0980D75269200C2D916 /* CHGradient.h */,
+				00BBC0990D75269200C2D916 /* CHGradient.m */,
 				F583E3C203B8228F01A80166 /* CHStackView.h */,
 				F583E3BF03B8228701A80166 /* CHStackView.m */,
 				F5FDF166031AF47301DE816D /* DraggableImageAndTextCell.h */,
@@ -5366,6 +5372,7 @@
 				DE963D6C0D43F472007D44EE /* AutoCompleteUtils.mm in Sources */,
 				DE963D6D0D43F472007D44EE /* FormFillController.mm in Sources */,
 				7B2F39890D4674330031AB6B /* CmDateFormatter.mm in Sources */,
+				00BBC09A0D75269200C2D916 /* CHGradient.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -5539,6 +5546,7 @@
 				DE963D680D43F472007D44EE /* AutoCompleteUtils.mm in Sources */,
 				DE963D690D43F472007D44EE /* FormFillController.mm in Sources */,
 				7B2F398A0D4674330031AB6B /* CmDateFormatter.mm in Sources */,
+				00BBC09B0D75269200C2D916 /* CHGradient.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
