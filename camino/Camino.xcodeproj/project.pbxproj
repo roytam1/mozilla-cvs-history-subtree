@@ -48,6 +48,8 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
+		001D4A9A0D75B12600464BE4 /* MoveCommand.mm in Sources */ = {isa = PBXBuildFile; fileRef = 001D4A990D75B12600464BE4 /* MoveCommand.mm */; };
+		001D4A9B0D75B12600464BE4 /* MoveCommand.mm in Sources */ = {isa = PBXBuildFile; fileRef = 001D4A990D75B12600464BE4 /* MoveCommand.mm */; };
 		008116E60B272204001CB3F0 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 008116E50B272204001CB3F0 /* Security.framework */; };
 		008116E70B272204001CB3F0 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 008116E50B272204001CB3F0 /* Security.framework */; };
 		008116ED0B2722EB001CB3F0 /* KeychainItem.m in Sources */ = {isa = PBXBuildFile; fileRef = 008116EB0B2722EB001CB3F0 /* KeychainItem.m */; };
@@ -2049,6 +2051,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		001D4A980D75B12600464BE4 /* MoveCommand.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MoveCommand.h; path = src/appleevents/MoveCommand.h; sourceTree = "<group>"; };
+		001D4A990D75B12600464BE4 /* MoveCommand.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = MoveCommand.mm; path = src/appleevents/MoveCommand.mm; sourceTree = "<group>"; };
 		008116E50B272204001CB3F0 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = /System/Library/Frameworks/Security.framework; sourceTree = "<absolute>"; };
 		008116EA0B2722EB001CB3F0 /* KeychainItem.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = KeychainItem.h; path = src/formfill/KeychainItem.h; sourceTree = "<group>"; };
 		008116EB0B2722EB001CB3F0 /* KeychainItem.m */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.objc; name = KeychainItem.m; path = src/formfill/KeychainItem.m; sourceTree = "<group>"; };
@@ -3827,6 +3831,8 @@
 			children = (
 				F51B70B6026EC98B01A80166 /* GetURLCommand.h */,
 				F51B70B7026EC98B01A80166 /* GetURLCommand.mm */,
+				001D4A980D75B12600464BE4 /* MoveCommand.h */,
+				001D4A990D75B12600464BE4 /* MoveCommand.mm */,
 				33F3B7250C63FC25007DFBD0 /* ScriptingSupport.mm */,
 			);
 			name = "Apple Events";
@@ -5373,6 +5379,7 @@
 				DE963D6D0D43F472007D44EE /* FormFillController.mm in Sources */,
 				7B2F39890D4674330031AB6B /* CmDateFormatter.mm in Sources */,
 				00BBC09A0D75269200C2D916 /* CHGradient.m in Sources */,
+				001D4A9A0D75B12600464BE4 /* MoveCommand.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -5547,6 +5554,7 @@
 				DE963D690D43F472007D44EE /* FormFillController.mm in Sources */,
 				7B2F398A0D4674330031AB6B /* CmDateFormatter.mm in Sources */,
 				00BBC09B0D75269200C2D916 /* CHGradient.m in Sources */,
+				001D4A9B0D75B12600464BE4 /* MoveCommand.mm in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
