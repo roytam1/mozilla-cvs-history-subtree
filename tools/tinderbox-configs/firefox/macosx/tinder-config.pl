@@ -157,7 +157,7 @@ $moz_cvsroot   = ":ext:ffxbld\@cvs.mozilla.org:/cvsroot";
 $ObjDir = '../build/universal';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'PGO';
+$BuildNameExtra = 'Leopard';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -211,8 +211,8 @@ $ssh_key       = "'$ENV{HOME}/.ssh/ffxbld_dsa'";
 # CONFIG: $ssh_server    = "%sshServer%";
 $ssh_server    = "stage.mozilla.org";
 $ReleaseGroup  = "firefox";
-$ftp_path      = "/home/ftp/pub/firefox/nightly/experimental/pgo";
-$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/experimental/pgo";
+$ftp_path      = "/home/ftp/pub/firefox/nightly/experimental/leopard";
+$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/experimental/leopard";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
 $milestone     = "trunk";
