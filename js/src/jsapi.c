@@ -2056,7 +2056,7 @@ JS_ValueToId(JSContext *cx, jsval v, jsid *idp)
         *idp = INT_JSVAL_TO_JSID(v);
     } else {
 #if JS_HAS_XML_SUPPORT
-        if (JSVAL_IS_OBJECT(v)) {
+        if (!JSVAL_IS_PRIMITIVE(v)) {
             *idp = OBJECT_JSVAL_TO_JSID(v);
             return JS_TRUE;
         }
