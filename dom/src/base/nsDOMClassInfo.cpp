@@ -4493,8 +4493,9 @@ BaseStubConstructor(nsIWeakReference* aWeakOwner,
   nsCOMPtr<nsIJSNativeInitializer_MOZILLA_1_8_BRANCH> initializer18 =
     do_QueryInterface(native);
   if (initializer18) {
-    nsCOMPtr<nsISupports> owner = do_QueryReferent(aWeakOwner);
-    NS_ENSURE_STATE(owner);
+    nsCOMPtr<nsPIDOMWindow> owner = do_QueryReferent(aWeakOwner);
+    NS_ENSURE_STATE(owner && owner->GetOuterWindow() &&
+                    owner->GetOuterWindow()->GetCurrentInnerWindow() == owner);
     rv = initializer18->Initialize(owner, cx, obj, argc, argv);
     if (NS_FAILED(rv)) {
       return NS_ERROR_NOT_INITIALIZED;
@@ -4609,14 +4610,20 @@ DefineInterfaceConstants(JSContext *cx, JSObject *obj, const nsIID *aIID)
 
 class nsDOMConstructor : public nsIDOMConstructor
 {
-public:
+protected:
   nsDOMConstructor(const PRUnichar *aName,
-                   nsISupports* aOwner)
+                   nsPIDOMWindow* aOwner)
     : mClassName(aName),
       mWeakOwner(do_GetWeakReference(aOwner))
 
   {
   }
+
+public:
+
+  static nsresult Create(const PRUnichar* aName,
+                         nsPIDOMWindow* aOwner,
+                         nsDOMConstructor** aResult);
 
   virtual ~nsDOMConstructor();
 
@@ -4652,6 +4659,26 @@ private:
   const PRUnichar *mClassName;
   nsWeakPtr        mWeakOwner;
 };
+
+//static
+nsresult
+nsDOMConstructor::Create(const PRUnichar* aName,
+                         nsPIDOMWindow* aOwner,
+                         nsDOMConstructor** aResult)
+{
+  *aResult = nsnull;
+  if (!aOwner->IsOuterWindow()) {
+    *aResult = new nsDOMConstructor(aName, aOwner);
+  } else if (!nsContentUtils::CanCallerAccess(aOwner)) {
+    return NS_ERROR_DOM_SECURITY_ERR;
+  } else {
+    *aResult =
+      new nsDOMConstructor(aName, aOwner->GetCurrentInnerWindow());
+  }
+  NS_ENSURE_TRUE(*aResult, NS_ERROR_OUT_OF_MEMORY);
+  NS_ADDREF(*aResult);
+  return NS_OK;
+}
 
 NS_IMPL_ADDREF(nsDOMConstructor)
 NS_IMPL_RELEASE(nsDOMConstructor)
@@ -5423,13 +5450,12 @@ nsWindowSH::GlobalResolve(nsGlobalWindow *aWin, JSContext *cx,
     // We're resolving a name of a DOM interface for which there is no
     // direct DOM class, create a constructor object...
 
-    nsRefPtr<nsDOMConstructor> constructor =
-      new nsDOMConstructor(NS_REINTERPRET_CAST(PRUnichar *,
-                                               ::JS_GetStringChars(str)),
-                           NS_STATIC_CAST(nsPIDOMWindow*, aWin));
-    if (!constructor) {
-      return NS_ERROR_OUT_OF_MEMORY;
-    }
+    nsRefPtr<nsDOMConstructor> constructor;
+    rv = nsDOMConstructor::Create(NS_REINTERPRET_CAST(PRUnichar *,
+                                    ::JS_GetStringChars(str)),
+                                  NS_STATIC_CAST(nsPIDOMWindow*, aWin),
+                                  getter_AddRefs(constructor));
+    NS_ENSURE_SUCCESS(rv, rv);
 
     PRBool doSecurityCheckInAddProperty = sDoSecurityCheckInAddProperty;
     sDoSecurityCheckInAddProperty = PR_FALSE;
@@ -5487,11 +5513,11 @@ nsWindowSH::GlobalResolve(nsGlobalWindow *aWin, JSContext *cx,
 
     const PRUnichar *name = NS_REINTERPRET_CAST(PRUnichar *,
                                                 ::JS_GetStringChars(str));
-    nsRefPtr<nsDOMConstructor> constructor =
-      new nsDOMConstructor(name, NS_STATIC_CAST(nsPIDOMWindow*, aWin));
-    if (!constructor) {
-      return NS_ERROR_OUT_OF_MEMORY;
-    }
+    nsRefPtr<nsDOMConstructor> constructor;
+    rv = nsDOMConstructor::Create(name,
+                                  NS_STATIC_CAST(nsPIDOMWindow*, aWin),
+                                  getter_AddRefs(constructor));
+    NS_ENSURE_SUCCESS(rv, rv);
 
     PRBool doSecurityCheckInAddProperty = sDoSecurityCheckInAddProperty;
     sDoSecurityCheckInAddProperty = PR_FALSE;
@@ -5704,11 +5730,11 @@ nsWindowSH::GlobalResolve(nsGlobalWindow *aWin, JSContext *cx,
   }
 
   if (name_struct->mType == nsGlobalNameStruct::eTypeExternalConstructor) {
-    nsRefPtr<nsDOMConstructor> constructor =
-      new nsDOMConstructor(class_name, NS_STATIC_CAST(nsPIDOMWindow*, aWin));
-    if (!constructor) {
-      return NS_ERROR_OUT_OF_MEMORY;
-    }
+    nsRefPtr<nsDOMConstructor> constructor;
+    rv = nsDOMConstructor::Create(class_name,
+                                  NS_STATIC_CAST(nsPIDOMWindow*, aWin),
+                                  getter_AddRefs(constructor));
+    NS_ENSURE_SUCCESS(rv, rv);
 
     jsval val;
     nsCOMPtr<nsIXPConnectJSObjectHolder> holder;
