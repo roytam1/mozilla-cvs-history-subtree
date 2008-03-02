@@ -128,6 +128,7 @@ LIBGNOME_VERSION=2.0
 STARTUP_NOTIFICATION_VERSION=0.8
 DBUS_VERSION=0.60
 LCMS_VERSION=1.17
+SQLITE_VERSION=3.5
 
 MSMANIFEST_TOOL=
 
@@ -146,6 +147,7 @@ dnl Do not allow a separate objdir build if a srcdir build exists.
 dnl ==============================================================
 _topsrcdir=`cd \`dirname $0\`; pwd`
 _objdir=`pwd`
+
 if test "$_topsrcdir" != "$_objdir"
 then
   # Check for a couple representative files in the source tree
@@ -215,11 +217,11 @@ case "$target" in
     echo Building Windows CE Shunt Library and Tool Chain
     echo -----------------------------------------------------------------------------
 
-    echo -n "#define TOPSRCDIR \"" > $srcdir/build/wince/tools/topsrcdir.h
-    `$srcdir/build/cygwin-wrapper echo -n $_topsrcdir >> $srcdir/build/wince/tools/topsrcdir.h`
-    echo -n \" >> $srcdir/build/wince/tools/topsrcdir.h
+    ac_exeext=.exe
 
-    make -C  $srcdir/build/wince/tools
+    echo -n "#define TOPSRCDIR \"" > $srcdir/build/wince/tools/topsrcdir.h
+    echo `cd "$_topsrcdir" && pwd -W | tr '\n' '\"'` >> $srcdir/build/wince/tools/topsrcdir.h
+    make -C $srcdir/build/wince/tools
     echo -----------------------------------------------------------------------------
     ;;
 esac
@@ -377,7 +379,7 @@ dnl Special win32 checks
 dnl ========================================================
 case "$target" in
 *-wince)
-    WINVER=400
+    WINVER=500
     ;;
 *)
     if test -n "$GNU_CC"; then  
@@ -1614,6 +1616,7 @@ case "$target" in
     _PLATFORM_DEFAULT_TOOLKIT='cairo-cocoa'
     MOZ_ENABLE_POSTSCRIPT=
     TARGET_NSPR_MDCPUCFG='\"md/_darwin.cfg\"'
+    LDFLAGS="$LDFLAGS -framework Cocoa"
     # set MACOSX to generate lib/mac/MoreFiles/Makefile
     MACOSX=1
 
@@ -1774,6 +1777,8 @@ case "$target" in
     HOST_LD=link
     HOST_AR='lib -OUT:$@'
     HOST_RANLIB='echo ranlib'
+    HOST_CFLAGS="$HOST_CFLAGS -D_X86_"
+        
         
     WARNINGS_AS_ERRORS='-WX'
 	MOZ_OPTIMIZE_FLAGS='-O1'
@@ -1902,6 +1907,12 @@ case "$target" in
         MOZ_XPCOM_OBSOLETE_LIBS='$(LIBXUL_DIST)/lib/xpcom_compat.lib'
         if test $_MSC_VER -ge 1400; then
             LDFLAGS="$LDFLAGS -NXCOMPAT -SAFESEH"
+            # For profile-guided optimization
+            PROFILE_GEN_CFLAGS="-GL"
+            PROFILE_GEN_LDFLAGS="-LTCG:PGINSTRUMENT"
+            PROFILE_USE_CFLAGS="-GL"
+            #XXX: should be -LTCG:PGOPTIMIZE, but that fails on libxul
+            PROFILE_USE_LDFLAGS="-LTCG:PGUPDATE"
         fi
     fi
     MOZ_JPEG_LIBS='$(call EXPAND_LIBNAME_PATH,jpeg$(MOZ_BITS)$(VERSION_NUMBER),$(DEPTH)/jpeg)'
@@ -4311,7 +4322,7 @@ basic)
   MOZ_SVG=
   MOZ_UNIVERSALCHARDET=
   MOZ_UPDATER=
-  MOZ_USE_NATIVE_UCONV=1
+  MOZ_USE_NATIVE_UCONV=
   MOZ_VIEW_SOURCE=
   MOZ_XPFE_COMPONENTS=
   MOZ_XPINSTALL=
@@ -4676,9 +4687,6 @@ AC_SUBST(MOZ_GTK2_CFLAGS)
 AC_SUBST(MOZ_GTK2_LIBS)
 
 AC_SUBST(MOC)
-
-AC_DEFINE(MOZ_THEBES)
-AC_DEFINE(MOZ_CAIRO_GFX)
 
 if test "$MOZ_ENABLE_GTK2"
 then
@@ -5746,7 +5754,6 @@ fi
 
 dnl ========================================================
 dnl = Enable mozStorage
-dnl = XXX need to implement --with-system-sqlite3 (see bug 263381)
 dnl ========================================================
 dnl Implicitly enabled by default if building calendar or places
 MOZ_ARG_ENABLE_BOOL(storage,
@@ -5756,6 +5763,26 @@ MOZ_ARG_ENABLE_BOOL(storage,
 if test -n "$MOZ_STORAGE"; then
     AC_DEFINE(MOZ_STORAGE)
 fi
+
+dnl ========================================================
+dnl Check for sqlite
+dnl ========================================================
+
+MOZ_NATIVE_SQLITE=
+MOZ_ARG_ENABLE_BOOL(system-sqlite,
+[  --enable-system-sqlite  Use system sqlite (located with pkgconfig)],
+MOZ_NATIVE_SQLITE=1,
+MOZ_NATIVE_SQLITE= )
+
+if test -z "$MOZ_NATIVE_SQLITE"
+then
+    SQLITE_CFLAGS=
+    SQLITE_LIBS='$(call EXPAND_LIBNAME_PATH,sqlite3,$(DIST)/lib)'
+else
+    PKG_CHECK_MODULES(SQLITE, sqlite3 >= $SQLITE_VERSION)
+fi
+
+AC_SUBST(MOZ_NATIVE_SQLITE)
 
 dnl ========================================================
 dnl = Enable safe browsing (anti-phishing)
@@ -6109,6 +6136,13 @@ if test "$MOZ_MEMORY"; then
     dnl Needs to be in PATH too, since our tools will wind up linked against it.
     dnl This needs to be unix style.
     MOZ_PATH="$PATH:$_WIN_UNIX_CRT_PATH"
+    dnl Statically link the C++ stdlib.  We only use this for Breakpad anyway.
+    AC_DEFINE(_STATIC_CPPLIB)
+    dnl Don't generate a manifest, since we're linking to a custom CRT.
+    LDFLAGS="$LDFLAGS -MANIFEST:NO"
+    dnl Also pass this to NSPR/NSS
+    DLLFLAGS="$DLLFLAGS -MANIFEST:NO"
+    export DLLFLAGS
     ;;
   *)
     AC_MSG_ERROR([--enable-jemalloc not supported on ${target}])
@@ -6120,6 +6154,8 @@ AC_SUBST(WIN32_CRT_SRC_DIR)
 AC_SUBST(WIN32_CUSTOM_CRT_DIR)
 AC_SUBST(MOZ_LIB)
 AC_SUBST(MOZ_PATH)
+dnl Need to set this for make because NSS doesn't have configure
+AC_SUBST(DLLFLAGS)
 
 dnl ========================================================
 dnl = Use malloc wrapper lib
@@ -6515,6 +6551,9 @@ if test "$_IGNORE_LONG_LONG_WARNINGS"; then
      CFLAGS="$_SAVE_CFLAGS"
 fi
 
+dnl ========================================================
+dnl Profile guided optimization
+dnl ========================================================
 dnl Test for profiling options
 dnl Under gcc 3.3, use -fprofile-arcs/-fbranch-probabilities
 dnl Under gcc 3.4+, use -fprofile-generate/-fprofile-use

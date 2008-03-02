@@ -435,8 +435,8 @@ MODULES_all :=                                  \
 # adding '-f' everywhere that we pull with the checkout tag, we force
 # the head revision if a file is not tagged
 MOZ_CO_TAG           = ZAP_20050610_BRANCH
-NSPR_CO_TAG          = NSPR_HEAD_20080129_PLUS_414997
-NSS_CO_TAG           = NSS_3_12_BETA1
+NSPR_CO_TAG          = NSPR_4_7_1_BETA1
+NSS_CO_TAG           = NSS_3_12_BETA2
 LDAPCSDK_CO_TAG      = LDAPCSDK_6_0_3_CLIENT_BRANCH
 LOCALES_CO_TAG       =
 
@@ -1121,9 +1121,8 @@ build::  $(OBJDIR)/Makefile $(OBJDIR)/config.status
 profiledbuild:: $(OBJDIR)/Makefile $(OBJDIR)/config.status
 	$(MOZ_MAKE) MOZ_PROFILE_GENERATE=1
 	OBJDIR=${OBJDIR} $(PROFILE_GEN_SCRIPT)
-	$(MOZ_MAKE) clobber_all
+	$(MOZ_MAKE) maybe_clobber_profiledbuild
 	$(MOZ_MAKE) MOZ_PROFILE_USE=1
-	find $(OBJDIR) -name "*.da" -exec rm {} \;
 
 ####################################
 # Other targets
