@@ -252,11 +252,8 @@ function ltnOnLoad(event)
     // Make sure we update ourselves if the program stays open over midnight
     scheduleMidnightUpdate(refreshUIBits);
 
-    if (getPrefSafe("calendar.prototypes.wcap", false)) {
-        document.loadOverlay(
-            "chrome://lightning/content/sun-messenger-overlay-sidebar.xul",
-            null);
-    }
+    scheduleInvitationsUpdate(FIRST_DELAY_STARTUP, REPEAT_DELAY);
+    getCalendarManager().addObserver(gInvitationsCalendarManagerObserver);
 
     // Set up the command controller from calendar-common-sets.js
     injectCalendarCommandController();
@@ -448,9 +445,12 @@ function LtnObserveDisplayDeckChange(event) {
 }
 
 function ltnFinish() {
+    getCalendarManager().removeObserver(gInvitationsCalendarManagerObserver);
     getCompositeCalendar().removeObserver(agendaTreeView.calendarObserver);
 
     unloadCalendarManager();
+
+    removeCalendarCommandController();
 }
 
 // After 1.5 was released, the search box was moved into an optional toolbar
@@ -488,11 +488,26 @@ function ltnInitializeMenus(){
     copyPopupMenus();
     ltnRemoveMailOnlyItems(calendarpopuplist, "calendar");
     ltnRemoveMailOnlyItems(taskpopuplist, "task");
-    document.getElementById("calendar-toolbar").setAttribute("collapsed", "true")
     var modeToolbar = document.getElementById("mode-toolbar");
     var visible = !modeToolbar.hasAttribute("collapsed");
     document.getElementById("modeBroadcaster").setAttribute("checked", visible);
+    document.getElementById("calendar-toolbar").setAttribute("collapsed", gCurrentMode!="calendar");
+    document.getElementById("task-toolbar").setAttribute("collapsed", gCurrentMode!="task");
+
+    var taskProgressButton = document.getElementById("task-progress-button");
+    if (taskProgressButton) {
+        taskProgressButton.appendChild(clonePopupMenu("calendar.context.progress-menu",
+                                                      "toolbar-progress-menu",
+                                                      "tb-"));
     }
+
+    var taskPriorityButton = document.getElementById("task-priority-button");
+    if (taskPriorityButton) {
+        taskPriorityButton.appendChild(clonePopupMenu("calendar.context.priority-menu",
+                                                      "toolbar-priority-menu",
+                                                      "tb-"));
+    }
+}
 
 function getMenuElementById(aElementId, aMenuPopup) {
         var element = null;
@@ -597,13 +612,7 @@ function copyPopupMenus() {
     addToPopupList(menulist[1], null, taskpopuplist, excludeList, true, false);
     addToPopupList(menulist[2], null, taskpopuplist, excludeList, true, true);
     addToPopupList(menulist[3], document.getElementById("calendar-GoPopupMenu"), taskpopuplist, excludeList, true, false);
-    var tasksViewMenuPopup = document.getElementById("taskitem-context-menu").cloneNode(true);
-    tasksViewMenuPopup.setAttribute("id", "taskitem-menu");
-    var menuElements = tasksViewMenuPopup.getElementsByAttribute("id", "*");
-    for (var i = menuElements.length; i-- > 0;) {
-        var lid = menuElements[i].getAttribute("id");
-        menuElements[i].setAttribute("id", "menu-" + lid);
-    }
+    var tasksViewMenuPopup = clonePopupMenu("taskitem-context-menu", "taskitem-menu", "menu-");
     tasksViewMenuPopup.removeChild(getMenuElementById("menu-" + "task-context-menu-modify", tasksViewMenuPopup));
     tasksViewMenuPopup.removeChild(getMenuElementById("menu-" + "task-context-menu-delete", tasksViewMenuPopup));
     addToPopupList(menulist[4], tasksViewMenuPopup, taskpopuplist, excludeList, false, false);
@@ -618,8 +627,8 @@ function copyPopupMenus() {
     var tbGoPopupMenu = menulist[3].lastChild;
     var calGoPopupMenu = document.getElementById("calendar-GoPopupMenu").cloneNode(true);
     var calGoItem;
-    while(calGoItem = calGoPopupMenu.firstChild) {
-        tbGoPopupMenu.appendChild(calGoItem);
+    while ((calGoItem = calGoPopupMenu.firstChild)) {
+        tbGoPopupMenu.appendChild(calGoPopupMenu.removeChild(calGoItem));
     }
     addToPopupList(menulist[3], null, mailpopuplist, excludeList, false, false);
     addToPopupList(menulist[4], null, mailpopuplist, excludeList, false, false);
@@ -745,6 +754,79 @@ function removeMenuElements(aRoot, aModeValue) {
             }
         }
     }
+}
+
+// == invitations link
+const FIRST_DELAY_STARTUP = 100;
+const FIRST_DELAY_RESCHEDULE = 100;
+const FIRST_DELAY_REGISTER = 10000;
+const FIRST_DELAY_UNREGISTER = 0;
+const REPEAT_DELAY = 180000;
+
+var gInvitationsOperationListener = {
+    onOperationComplete: function sBOL_onOperationComplete(aCalendar,
+                                                           aStatus,
+                                                           aOperationType,
+                                                           aId,
+                                                           aDetail) {
+        if (!Components.isSuccessCode(aStatus)) {
+            var invitationsBox = document.getElementById("invitations");
+            invitationsBox.setAttribute("hidden", "true");
+        }
+    },
+
+    onGetResult: function sBOL_onGetResult(aCalendar,
+                                           aStatus,
+                                           aItemType,
+                                           aDetail,
+                                           aCount,
+                                           aItems) {
+        if (!Components.isSuccessCode(aStatus)) {
+            return;
+        }
+        var invitationsBox = document.getElementById("invitations");
+        var value = invitationsLabel + " (" + aCount + ")";
+        invitationsBox.setAttribute("value", value);
+        invitationsBox.removeAttribute("hidden");
+    }
+};
+
+var gInvitationsCalendarManagerObserver = {
+    mSideBar: this,
+
+    onCalendarRegistered: function cMO_onCalendarRegistered(aCalendar) {
+        this.mSideBar.rescheduleInvitationsUpdate(FIRST_DELAY_REGISTER,
+                                                  REPEAT_DELAY);
+    },
+
+    onCalendarUnregistering: function cMO_onCalendarUnregistering(aCalendar) {
+        this.mSideBar.rescheduleInvitationsUpdate(FIRST_DELAY_UNREGISTER,
+                                                  REPEAT_DELAY);
+    },
+
+    onCalendarDeleting: function cMO_onCalendarDeleting(aCalendar) {
+    }
+};
+
+function scheduleInvitationsUpdate(firstDelay, repeatDelay) {
+    getInvitationsManager().scheduleInvitationsUpdate(firstDelay,
+                                                      repeatDelay,
+                                                      gInvitationsOperationListener);
+}
+
+function rescheduleInvitationsUpdate(firstDelay, repeatDelay) {
+    getInvitationsManager().cancelInvitationsUpdate();
+    scheduleInvitationsUpdate(firstDelay, repeatDelay);
+}
+
+function openInvitationsDialog() {
+    getInvitationsManager().cancelInvitationsUpdate();
+    getInvitationsManager().openInvitationsDialog(
+        gInvitationsOperationListener,
+        function oiD_callback() {
+            scheduleInvitationsUpdate(FIRST_DELAY_RESCHEDULE,
+                                     REPEAT_DELAY);
+        });
 }
 
 SelectMessage = function(messageUri) {

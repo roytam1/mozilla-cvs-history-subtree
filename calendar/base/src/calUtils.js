@@ -166,12 +166,40 @@ function calendarDefaultTimezone() {
 
 /**
  * Format the given string to work inside a CSS rule selector
+ * (and as part of a non-unicode preference key).
  *
- * @param aString       The string to format
- * @return              The formatted string
+ * Replaces each space ' ' char with '_'.
+ * Replaces each char other than ascii digits and letters, with '-uxHHH-'
+ * where HHH is unicode in hexadecimal (variable length, terminated by the '-').
+ *
+ * Ensures: result only contains ascii digits, letters,'-', and '_'.
+ * Ensures: result is invertible, so (f(a) = f(b)) implies (a = b).
+ *   also means f is not idempotent, so (a != f(a)) implies (f(a) != f(f(a))).
+ * Ensures: result must be lowercase.
+ * Rationale: preference keys require 8bit chars, and ascii chars are legible
+ *              in most fonts (in case user edits PROFILE/prefs.js).
+ *            CSS class names in Gecko 1.8 seem to require lowercase,
+ *              no punctuation, and of course no spaces.
+ *   nmchar		[_a-zA-Z0-9-]|{nonascii}|{escape}
+ *   name		{nmchar}+
+ *   http://www.w3.org/TR/CSS21/grammar.html#scanner
+ *
+ * @param aString       The unicode string to format
+ * @return              The formatted string using only chars [_a-zA-Z0-9-]
  */
 function formatStringForCSSRule(aString) {
-    return aString.replace(/ /g, "_").toLowerCase();
+    function toReplacement(ch) {
+        // char code is natural number (positive integer)
+        var nat = ch.charCodeAt(0);
+        switch(nat) {
+            case 0x20: // space
+                return "_";
+            default:
+                return "-ux" + nat.toString(16) + "-"; // lowercase
+        }
+    }
+    // Result must be lowercase or style rule will not work.
+    return aString.toLowerCase().replace(/[^a-zA-Z0-9]/g, toReplacement);
 }
 
 /**
@@ -870,6 +898,21 @@ function calRadioGroupSelectItem(aRadioGroupId, aItemId) {
     radioGroup.selectedIndex = index;
 }
 
+
+/** checks if an item is supported by a Calendar
+* @param aCalendar the calendar
+* @param aItem the item either a task or an event
+* @return true or false
+*/
+function isItemSupported(aItem, aCalendar) {
+    if (isToDo(aItem)) {
+        return (aCalendar.getProperty("capabilities.tasks.supported") !== false);
+    } else if (isEvent(aItem)) {
+        return (aCalendar.getProperty("capabilities.events.supported") !== false);
+    }
+    return false;
+}
+
 /**
  * Determines whether or not the aObject is a calIEvent
  *
@@ -977,6 +1020,80 @@ function getLocalizedPref(aPrefName, aDefault) {
         return aDefault;
     }
     return result;
+}
+
+/**
+ * Get array of category names from preferences or locale default,
+ * unescaping any commas in each category name.
+ * @return array of category names
+ */
+function getPrefCategoriesArray() {
+    var categories = getLocalizedPref("calendar.categories.names", null);
+    // If no categories are configured load a default set from properties file
+    if (!categories || categories == "") {
+        categories = calGetString("categories", "categories");
+        setLocalizedPref("calendar.categories.names", categories);
+    }
+    return categoriesStringToArray(categories);
+}
+
+/**
+ * Convert categories string to list of category names.
+ *
+ * Stored categories may include escaped commas within a name.
+ * Split categories string at commas, but not at escaped commas (\,).
+ * Afterward, replace escaped commas (\,) with commas (,) in each name.
+ * @param aCategoriesPrefValue string from "calendar.categories.names" pref,
+ * which may contain escaped commas (\,) in names.
+ * @return list of category names
+ */
+function categoriesStringToArray(aCategories) {
+    // \u001A is the unicode "SUBSTITUTE" character
+    function revertCommas(name) { return name.replace(/\u001A/g, ","); }
+    return aCategories.replace(/\\,/g, "\u001A").split(",").map(revertCommas);
+}
+
+/**
+ * Set categories preference, escaping any commas in category names.
+ * @param aCategoriesArray array of category names,
+ * may contain unescaped commas which will be escaped in combined pref.
+ */
+function setPrefCategoriesFromArray(aCategoriesArray) {
+    setLocalizedPref("calendar.categories.names",
+                     categoriesArrayToString(aCategoriesList));
+}
+
+/**
+ * Convert array of category names to string.
+ *
+ * Category names may contain commas (,).  Escape commas (\,) in each,
+ * then join them in comma separated string for storage.
+ * @param aSortedCategoriesArray sorted array of category names,
+ * may contain unescaped commas, which will be escaped in combined string.
+ */
+function categoriesArrayToString(aSortedCategoriesArray) {
+    function escapeComma(category) { return category.replace(/,/g,"\\,"); }
+    return aSortedCategoriesArray.map(escapeComma).join(",");
+}
+
+/**
+ * Sort an array of strings according to the current locale.
+ * Modifies aStringArray, returning it sorted.
+ */
+function sortArrayByLocaleCollator(aStringArray) {
+    // get a current locale string collator for compareEvents
+    var localeService =
+        Components
+        .classes["@mozilla.org/intl/nslocaleservice;1"]
+        .getService(Components.interfaces.nsILocaleService);
+    var localeCollator =
+        Components
+        .classes["@mozilla.org/intl/collation-factory;1"]
+        .getService(Components.interfaces.nsICollationFactory)
+        .CreateCollation(localeService.getApplicationLocale());
+    function compare(a, b) { return localeCollator.compareString(0, a, b); }
+    aStringArray.sort(compare);
+    return aStringArray;
 }
 
 /**
@@ -1257,6 +1374,19 @@ function ASSERT(aCondition, aMessage, aCritical) {
     }
 }
 
+/**
+ * Uses the prompt service to display an error message.
+ *
+ * @param aMsg The message to be shown
+ */
+function showError(aMsg) {
+    var promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"]
+                                  .getService(Components.interfaces.nsIPromptService);
+
+    promptService.alert(window,
+                        calGetString("calendar", "errorTitle"),
+                        aMsg);
+}
 
 /**
  * Auth prompt implementation - Uses password manager if at all possible.
@@ -1280,23 +1410,39 @@ calAuthPrompt.prototype = {
         var username;
         var password;
         var found = false;
-        var passwordManager = Components.classes["@mozilla.org/passwordmanager;1"]
-                                        .getService(Components.interfaces.nsIPasswordManager);
-        var pwenum = passwordManager.enumerator;
-        // step through each password in the password manager until we find the one we want:
-        while (pwenum.hasMoreElements()) {
-            try {
-                var pass = pwenum.getNext().QueryInterface(Components.interfaces.nsIPassword);
-                if (pass.host == aPasswordRealm) {
-                     // found it!
-                     username = pass.user;
-                     password = pass.password;
-                     found = true;
-                     break;
+
+        if ("@mozilla.org/passwordmanager;1" in Components.classes) {
+            var passwordManager = Components.classes["@mozilla.org/passwordmanager;1"]
+                                            .getService(Components.interfaces.nsIPasswordManager);
+            var passwordRealm = aPasswordRealm.passwordRealm || aPasswordRealm;
+            var pwenum = passwordManager.enumerator;
+            // step through each password in the password manager until we find the one we want:
+            while (pwenum.hasMoreElements()) {
+                try {
+                    var pass = pwenum.getNext().QueryInterface(Components.interfaces.nsIPassword);
+                    if (pass.host == passwordRealm) {
+                         // found it!
+                         username = pass.user;
+                         password = pass.password;
+                         found = true;
+                    }
+                } catch (ex) {
+                         found = true;
+                         break;
+                    // don't do anything here, ignore the password that could not
+                    // be read
                 }
-            } catch (ex) {
-                // don't do anything here, ignore the password that could not
-                // be read
+            }
+        } else {
+            var loginManager = Components.classes["@mozilla.org/login-manager;1"]
+                                         .getService(Components.interfaces
+                                         .nsILoginManager);
+            var logins = loginManager.findLogins({}, aPasswordRealm.prePath, null,
+                                                 aPasswordRealm.realm);
+            if (logins.length) {
+                username = logins[0].username;
+                password = logins[0].password;
+                found = true;
             }
         }
         return {found: found, username: username, password: password};
@@ -1325,21 +1471,23 @@ calAuthPrompt.prototype = {
 
     // promptAuth is needed/used on trunk only
     promptAuth: function capPA(aChannel, aLevel, aAuthInfo) {
-        // need to match the way the password manager stores host/realm
-        var hostRealm = aChannel.URI.host + ":" + aChannel.URI.port + " (" +
-                        aAuthInfo.realm + ")";
+        var hostRealm = {};
+        hostRealm.prePath = aChannel.URI.prePath;
+        hostRealm.realm = aAuthInfo.realm;
+        hostRealm.passwordRealm = aChannel.URI.host + ":" + aChannel.URI.port +
+                                          " (" + aAuthInfo.realm + ")";
+
         var pw;
         if (!this.mTriedStoredPassword) {
             pw = this.getPasswordInfo(hostRealm);
         }
-
         if (pw && pw.found) {
             this.mTriedStoredPassword = true;
             aAuthInfo.username = pw.username;
             aAuthInfo.password = pw.password;
             return true;
         } else {
-            var prompter2 = 
+            var prompter2 =
                 Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
                           .getService(Components.interfaces.nsIPromptFactory)
                           .getPrompt(null, Components.interfaces.nsIAuthPrompt2);
@@ -1457,12 +1605,12 @@ function checkIfInRange(item, rangeStart, rangeEnd, returnDtstartOrDue)
     var queryEnd = ensureDateTime(rangeEnd);
 
     if (start.compare(end) == 0) {
-        if (!queryStart || start.compare(queryStart) >= 0 &&
+        if ((!queryStart || start.compare(queryStart) >= 0) &&
             (!queryEnd || start.compare(queryEnd) < 0)) {
             return startDate;
         }
     } else {
-        if (!queryEnd || start.compare(queryEnd) < 0 &&
+        if ((!queryEnd || start.compare(queryEnd) < 0) &&
             (!queryStart || end.compare(queryStart) > 0)) {
             return startDate;
         }
@@ -1595,10 +1743,10 @@ function sendMailTo(aRecipient, aSubject, aBody) {
         var ioService = Components.classes["@mozilla.org/network/io-service;1"]
                         .getService(Components.interfaces.nsIIOService);
 
-        var uriString = "";
+        var uriString = "mailto:";
         var uriParams = [];
-        if (!aRecipient || aRecipient.length < 1) {
-            uriString = "mailto:" + aRecipient;
+        if (aRecipient) {
+            uriString += aRecipient;
         }
 
         if (aSubject) {
@@ -1779,6 +1927,27 @@ function getAdjacentSibling(aElement, aDistance) {
 }
 
 /**
+ * deeply clones a popupmenu
+ *
+ * @param aMenuPopupId The Id of the popup-menu to be cloned
+ * @param aNewPopupId The new id of the cloned popup-menu
+ * @param aNewIdPrefix To keep the ids unique the childnodes of the returned 
+ * popup-menu are prepended with a prefix
+ * @return the cloned popup-menu
+ */
+function clonePopupMenu(aMenuPopupId, aNewPopupId, aNewIdPrefix) {
+    var oldMenuPopup = document.getElementById(aMenuPopupId);
+    var retMenuPopup = oldMenuPopup.cloneNode(true);
+    retMenuPopup.setAttribute("id", aNewPopupId);
+    var menuElements = retMenuPopup.getElementsByAttribute("id", "*");
+    for (var i = 0; i < menuElements.length; i++) {
+        var lid = menuElements[i].getAttribute("id");
+        menuElements[i].setAttribute("id", aNewIdPrefix + lid);
+    }
+    return retMenuPopup;
+}
+
+/**
  * applies a value to all children of a Menu. If the respective childnodes define
  * a command the value is applied to the attribute of thecommand of the childnode
  *
@@ -1791,7 +1960,10 @@ function applyAttributeToMenuChildren(aElement, aAttributeName, aValue) {
    do {
        if (sibling) {
            var domObject = sibling;
-           var commandName = sibling.getAttribute("command");
+           var commandName = null;
+           if (sibling.hasAttribute("command")){
+               commandName = sibling.getAttribute("command");
+           }
            if (commandName) {
                var command = document.getElementById(commandName);
                if (command) {
@@ -1860,18 +2032,72 @@ function getParentNode(aNode, aLocalName) {
   return node;
 }
 
-function addCalendarsToMenu(aMenuItem, aFunctionName) {
-    var calendarList = aMenuItem;
-    var calendars = getCalendarManager().getCalendars({});
-    for (i in calendars) {
-        var calendar = calendars[i];
-        var menuitem = calendarList.appendItem(calendar.name, i);
-        if (aFunctionName) {
-            menuitem.setAttribute("oncommand", aFunctionName)
-        }
-        menuitem.calendar = calendar;
+function setItemProperty(item, propertyName, aValue, aCapability) {
+    var isSupported = (item.calendar.getProperty("capabilities." + aCapability + ".supported") !== false)
+    var value = (aCapability && !isSupported ? null : aValue);
+
+    switch (propertyName) {
+        case "startDate":
+            if (value.isDate && !item.startDate.isDate ||
+                !value.isDate && item.startDate.isDate ||
+                !compareObjects(value.timezone, item.startDate.timezone) ||
+                value.compare(item.startDate) != 0) {
+                item.startDate = value;
+            }
+            break;
+        case "endDate":
+            if (value.isDate && !item.endDate.isDate ||
+                !value.isDate && item.endDate.isDate ||
+                !compareObjects(value.timezone, item.endDate.timezone) ||
+                value.compare(item.endDate) != 0) {
+                item.endDate = value;
+            }
+            break;
+        case "entryDate":
+            if (value == item.entryDate) {
+                break;
+            }
+            if (value && !item.entryDate ||
+                !value && item.entryDate ||
+                value.isDate != item.entryDate.isDate ||
+                !compareObjects(value.timezone, item.entryDate.timezone) ||
+                value.compare(item.entryDate) != 0) {
+                item.entryDate = value;
+            }
+            break;
+        case "dueDate":
+            if (value == item.dueDate) {
+                break;
+            }
+            if (value && !item.dueDate ||
+                !value && item.dueDate ||
+                value.isDate != item.dueDate.isDate ||
+                !compareObjects(value.timezone, item.dueDate.timezone) ||
+                value.compare(item.dueDate) != 0) {
+                item.dueDate = value;
+            }
+            break;
+        case "isCompleted":
+            if (value != item.isCompleted) {
+                item.isCompleted = value;
+            }
+            break;
+        case "title":
+            if (value != item.title) {
+                item.title = value;
+            }
+            break;
+        default:
+            if (!value || value == "") {
+                item.deleteProperty(propertyName);
+            } else if (item.getProperty(propertyName) != value) {
+                item.setProperty(propertyName, value);
+            }
+            break;
     }
 }
+
+
 /**
  * Implements a property bag.
  */
@@ -1941,3 +2167,86 @@ calPropertyBagEnumerator.prototype = {
     }
 };
 
+// Send iTIP invitation
+function sendItipInvitation(aItem) {
+    // XXX Until we rethink attendee support and until such support
+    // is worked into the event dialog (which has been done in the prototype
+    // dialog to a degree) then we are going to simply hack in some attendee
+    // support so that we can round-trip iTIP invitations.
+    // Since there is no way to determine the type of transport an
+    // attendee requires, we default to email
+    var emlSvc = Components.classes["@mozilla.org/calendar/itip-transport;1?type=email"]
+                           .createInstance(Components.interfaces.calIItipTransport);
+
+    var itipItem = Components.classes["@mozilla.org/calendar/itip-item;1"]
+                             .createInstance(Components.interfaces.calIItipItem);
+
+    var sbs = Components.classes["@mozilla.org/intl/stringbundle;1"]
+                        .getService(Components.interfaces.nsIStringBundleService);
+
+    var sb = sbs.createBundle("chrome://lightning/locale/lightning.properties");
+    var recipients = [];
+
+    // We have to modify our item a little, so we clone it.
+    var item = aItem.clone();
+
+    // Fix up our attendees for invitations using some good defaults
+    itemAtt = item.getAttendees({}); // reuse cloned attendees
+    item.removeAllAttendees();
+    for each (var attendee in itemAtt) {
+        attendee.role = "REQ-PARTICIPANT";
+        attendee.participationStatus = "NEEDS-ACTION";
+        attendee.rsvp = true;
+        item.addAttendee(attendee);
+        recipients.push(attendee);
+    }
+
+    // XXX The event dialog has no means to set us as the organizer
+    // since we defaulted to email above, we know we need to prepend
+    // mailto when we convert it to an attendee
+    // This also means that when we are Updating an event, we will be making
+    // a blatant assumption that you (the updater) are the organizer of the event.
+    // This is probably ok since we don't support the iTIP COUNTER method,
+    // but it would be better if we didn't allow you to modify an event that you
+    // are not the organizer of and send out invitations to it as if you were.
+    // For this support, we'll need a real invitation manager component.
+    var organizer = Components.classes["@mozilla.org/calendar/attendee;1"]
+                              .createInstance(Components.interfaces.calIAttendee);
+    organizer.id = "mailto:" + emlSvc.defaultIdentity;
+    organizer.role = "REQ-PARTICIPANT";
+    organizer.participationStatus = "ACCEPTED";
+    organizer.isOrganizer = true;
+
+    // Add our organizer to the item. Again, the event dialog really doesn't
+    // have a mechanism for creating an item with a method, so let's add
+    // that too while we're at it.  We'll also fake Sequence ID support.
+    item.organizer = organizer;
+    item.setProperty("METHOD", "REQUEST");
+    item.setProperty("SEQUENCE", item.generation);
+
+    var summary
+    if (item.getProperty("SUMMARY")) {
+        summary = item.getProperty("SUMMARY");
+    } else {
+        summary = "";
+    }
+
+    // Initialize and set our properties on the item
+    itipItem.init(item.icalString);
+    itipItem.isSend = true;
+    itipItem.receivedMethod = "REQUEST";
+    itipItem.responseMethod = "REQUEST";
+    itipItem.autoResponse = Components.interfaces.calIItipItem.USER;
+
+    // Get ourselves some default text - when we handle organizer properly
+    // We'll need a way to configure the Common Name attribute and we should
+    // use it here rather than the email address
+    var subject = sb.formatStringFromName("itipRequestSubject",
+                                          [summary], 1);
+    var body = sb.formatStringFromName("itipRequestBody",
+                                       [emlSvc.defaultIdentity, summary],
+                                       2);
+
+    // Send it!
+    emlSvc.sendItems(recipients.length, recipients, subject, body, itipItem);
+}

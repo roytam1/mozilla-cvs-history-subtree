@@ -54,6 +54,7 @@
 #include "nsBoxFrame.h"
 #include "nsIMenuParent.h"
 #include "nsIWidget.h"
+#include "nsLayoutAtoms.h"
 
 #include "nsITimer.h"
 
@@ -187,6 +188,8 @@ public:
   nsIMenuParent* GetContextMenu();
 
   NS_IMETHOD KillCloseTimer();
+
+  virtual nsIAtom* GetType() const { return nsLayoutAtoms::menuPopupFrame; }
 
 #ifdef DEBUG
   NS_IMETHOD GetFrameName(nsAString& aResult) const

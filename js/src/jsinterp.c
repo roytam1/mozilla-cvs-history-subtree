@@ -173,6 +173,7 @@ js_EnablePropertyCache(JSContext *cx)
         if (JSDOUBLE_IS_INT(d, i_) && INT_FITS_IN_JSVAL(i_)) {                \
             v_ = INT_TO_JSVAL(i_);                                            \
         } else {                                                              \
+            SAVE_SP_AND_PC(fp);                                               \
             ok = js_NewDoubleValue(cx, d, &v_);                               \
             if (!ok)                                                          \
                 goto out;                                                     \
@@ -187,6 +188,7 @@ js_EnablePropertyCache(JSContext *cx)
         if (INT_FITS_IN_JSVAL(i)) {                                           \
             v_ = INT_TO_JSVAL(i);                                             \
         } else {                                                              \
+            SAVE_SP_AND_PC(fp);                                               \
             ok = js_NewDoubleValue(cx, (jsdouble)(i), &v_);                   \
             if (!ok)                                                          \
                 goto out;                                                     \
@@ -201,6 +203,7 @@ js_EnablePropertyCache(JSContext *cx)
         if ((u) <= JSVAL_INT_MAX) {                                           \
             v_ = INT_TO_JSVAL(u);                                             \
         } else {                                                              \
+            SAVE_SP_AND_PC(fp);                                               \
             ok = js_NewDoubleValue(cx, (jsdouble)(u), &v_);                   \
             if (!ok)                                                          \
                 goto out;                                                     \
@@ -3348,10 +3351,10 @@ interrupt:
                 JS_ASSERT(INT_FITS_IN_JSVAL(i));
                 rval = INT_TO_JSVAL(i);
             } else {
+                SAVE_SP_AND_PC(fp);
                 if (JSVAL_IS_DOUBLE(rval)) {
                     d = *JSVAL_TO_DOUBLE(rval);
                 } else {
-                    SAVE_SP_AND_PC(fp);
                     ok = js_ValueToNumber(cx, rval, &d);
                     if (!ok)
                         goto out;

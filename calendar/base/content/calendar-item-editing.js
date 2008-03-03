@@ -65,6 +65,14 @@ function createEventWithDialog(calendar, startDate, endDate, summary, event)
     }
 
     if (event) {
+        // If the event should be created from a template, then make sure to
+        // remove the id so that the item obtains a new id when doing the
+        // transaction
+        if (event.id) {
+            event = event.clone();
+            event.id = null;
+        }
+
         openEventDialog(event, calendar, "new", onNewEvent, null);
         return;
     }
@@ -86,7 +94,8 @@ function createEventWithDialog(calendar, startDate, endDate, summary, event)
             startDate = startDate.clone();
         }
         startDate.isDate = false;
-        startDate.hour = now().hour;
+        // The time for the event should default to the next full hour
+        startDate.hour = now().hour + 1;
         startDate.minute = 0;
         startDate.second = 0;
    }
@@ -124,6 +133,13 @@ function createTodoWithDialog(calendar, dueDate, summary, todo)
     }
 
     if (todo) {
+        // If the too should be created from a template, then make sure to
+        // remove the id so that the item obtains a new id when doing the
+        // transaction
+        if (todo.id) {
+            todo = todo.clone();
+            todo.id = null;
+        }
         openEventDialog(todo, calendar, "new", onNewItem, null);
         return;
     }
@@ -245,7 +261,7 @@ function openEventDialog(calendarItem, calendar, mode, callback, job)
 
     // open the dialog modeless
     var url = "chrome://calendar/content/sun-calendar-event-dialog.xul";
-    if (isInvitation || !isCalendarWritable(calendar)) {
+    if ((mode != "new" && isInvitation) || !isCalendarWritable(calendar)) {
         url = "chrome://calendar/content/calendar-summary-dialog.xul";
     }
     openDialog(url, "_blank", "chrome,titlebar,resizable", args);
@@ -434,80 +450,12 @@ function checkForAttendees(aItem, aOriginalItem)
         }
     }
 
-    // XXX Until we rethink attendee support and until such support
-    // is worked into the event dialog (which has been done in the prototype
-    // dialog to a degree) then we are going to simply hack in some attendee
-    // support so that we can round-trip iTIP invitations.
+    // Check to see if some part of the item was updated, if so, re-send invites
+    if (!sendInvite && (aItem.generation != aOriginalItem.generation))
+        sendInvite = true;
+
     if (sendInvite) {
-        // Since there is no way to determine the type of transport an
-        // attendee requires, we default to email
-        var emlSvc = Components.classes["@mozilla.org/calendar/itip-transport;1?type=email"]
-                               .createInstance(Components.interfaces.calIItipTransport);
-
-        var itipItem = Components.classes["@mozilla.org/calendar/itip-item;1"]
-                                 .createInstance(Components.interfaces.calIItipItem);
-
-        var sbs = Components.classes["@mozilla.org/intl/stringbundle;1"]
-                            .getService(Components.interfaces.nsIStringBundleService);
-
-        var sb = sbs.createBundle("chrome://lightning/locale/lightning.properties");
-        var recipients = [];
-
-        // We have to modify our item a little, so we clone it.
-        var item = aItem.clone();
-
-        // Fix up our attendees for invitations using some good defaults
-        itemAtt = item.getAttendees({}); // reuse cloned attendees
-        item.removeAllAttendees();
-        for each (var attendee in itemAtt) {
-            attendee.role = "REQ-PARTICIPANT";
-            attendee.participationStatus = "NEEDS-ACTION";
-            attendee.rsvp = true;
-            item.addAttendee(attendee);
-            recipients.push(attendee);
-        }
-
-        // XXX The event dialog has no means to set us as the organizer
-        // since we defaulted to email above, we know we need to prepend
-        // mailto when we convert it to an attendee
-        var organizer = Components.classes["@mozilla.org/calendar/attendee;1"]
-                                  .createInstance(Components.interfaces.calIAttendee);
-        organizer.id = "mailto:" + emlSvc.defaultIdentity;
-        organizer.role = "REQ-PARTICIPANT";
-        organizer.participationStatus = "ACCEPTED";
-        organizer.isOrganizer = true;
-
-        // Add our organizer to the item. Again, the event dialog really doesn't
-        // have a mechanism for creating an item with a method, so let's add
-        // that too while we're at it.  We'll also fake Sequence ID support.
-        item.organizer = organizer;
-        item.setProperty("METHOD", "REQUEST");
-        item.setProperty("SEQUENCE", "1");
-
-        var summary
-        if (item.getProperty("SUMMARY")) {
-            summary = item.getProperty("SUMMARY");
-        } else {
-            summary = "";
-        }
-
-        // Initialize and set our properties on the item
-        itipItem.init(item.icalString);
-        itipItem.isSend = true;
-        itipItem.receivedMethod = "REQUEST";
-        itipItem.responseMethod = "REQUEST";
-        itipItem.autoResponse = Components.interfaces.calIItipItem.USER;
-
-        // Get ourselves some default text - when we handle organizer properly
-        // We'll need a way to configure the Common Name attribute and we should
-        // use it here rather than the email address
-        var subject = sb.formatStringFromName("itipRequestSubject",
-                                              [summary], 1);
-        var body = sb.formatStringFromName("itipRequestBody",
-                                           [emlSvc.defaultIdentity, summary],
-                                           2);
-
-        // Send it!
-        emlSvc.sendItems(recipients.length, recipients, subject, body, itipItem);
+        // Now use calUtils.js to send these
+        sendItipInvitation(aItem);
     }
 }

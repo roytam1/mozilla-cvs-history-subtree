@@ -64,5 +64,23 @@ public:
                         PRUint32 argc, jsval *argv) = 0;
 };
 
+#define NS_IJSNATIVEINITIALIZER_MOZILLA_1_8_BRANCH_IID \
+  { 0xa26542c9, 0xc825, 0x45e9,                        \
+    { 0xb3, 0xcc, 0x66, 0x87, 0x31, 0x3c, 0xf5, 0x73 } }
+
+// If an object doesn't implement this interface, but does implement
+// nsIJSNativeInitializer, nsIJSNativeInitializer::Initialize(...) is called.
+class nsIJSNativeInitializer_MOZILLA_1_8_BRANCH : public nsISupports {
+public:
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IJSNATIVEINITIALIZER_MOZILLA_1_8_BRANCH_IID)
+
+  /**
+   * Initialize a newly created native instance using the owner of the
+   * constructor and the parameters passed into the JavaScript constructor.
+   */ 
+  NS_IMETHOD Initialize(nsISupports* aOwner, JSContext *cx, JSObject *obj,
+                        PRUint32 argc, jsval *argv) = 0;
+};
+
 
 #endif // nsIJSNativeInitializer_h__

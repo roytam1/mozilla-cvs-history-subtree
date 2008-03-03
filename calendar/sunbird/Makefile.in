@@ -21,6 +21,7 @@
 # Contributor(s):
 #   Brian Ryner <bryner@brianryner.com>
 #   Matthew Willis <mattwillis@gmail.com>
+#   Philipp Kewisch <mozilla@kewis.ch>
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -43,7 +44,7 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-DIRS = base themes app
+DIRS = base themes locales app
 
 ifeq ($(OS_ARCH),WINNT)
 ifdef MOZ_INSTALLER

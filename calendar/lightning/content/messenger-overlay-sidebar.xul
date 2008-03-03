@@ -50,6 +50,7 @@
   <!ENTITY % dtd1 SYSTEM "chrome://lightning/locale/lightning.dtd" > %dtd1;
   <!ENTITY % dtd2 SYSTEM "chrome://calendar/locale/menuOverlay.dtd" > %dtd2;
   <!ENTITY % dtd3 SYSTEM "chrome://calendar/locale/calendar.dtd" > %dtd3;
+  <!ENTITY % dtd4 SYSTEM "chrome://lightning/locale/sun-lightning.dtd" > %dtd4;
   <!ENTITY % messengerDTD SYSTEM "chrome://messenger/locale/messenger.dtd"> %messengerDTD;
 ]>
 
@@ -149,19 +150,17 @@
            accesskey="&showCurrentView.accesskey;">
        <menupopup>
          <menuitem type="checkbox"
-                   id="ltn-workdays-only"
-                   persist="checked"
+                   id="ltn-workdays-only-menuitem"
                    label="&calendar.onlyworkday.checkbox.label;"
                    accesskey="&calendar.onlyworkday.checkbox.accesskey;"
                    mode="calendar"
-                   oncommand="toggleWorkdaysOnly()"/>
+                   observes="calendar_toggle_workdays_only_command"/>
          <menuitem type="checkbox"
-                   id="ltn-tasks-in-view"
-                   persist="checked"
+                   id="ltn-tasks-in-view-menuitem"
                    label="&calendar.displaytodos.checkbox.label;"
                    accesskey="&calendar.displaytodos.checkbox.accesskey;"
                    mode="calendar"
-                   oncommand="toggleTasksInView()"/>
+                   observes="calendar_toggle_tasks_in_view_command"/>
          <menuitem type="checkbox"
                    id="ltn-multiday-rotated"
                    label="&calendar.orientation.label;"
@@ -269,13 +268,21 @@
              command="cmd_toggleCalendarToolbar"
              observes="cmd_toggleCalendarToolbar"
              position="1"/>
+   <menuitem id="ltnTaskToolbar"
+             type="checkbox"
+             label="&task.toolbar.label;"
+             accesskey="&task.toolbar.accesskey;"
+             mode="task"
+             command="cmd_toggleTaskToolbar"
+             observes="cmd_toggleTaskToolbar"
+             position="2"/>
    <menuitem id="ltnModeToolbar"
              type="checkbox"
              label="&mode.toolbar.label;"
              accesskey="&mode.toolbar.accesskey;"
              observes="modeBroadcaster"
              command="cmd_toggleModeToolbar"
-             position="2"/>
+             position="3"/>
   </menupopup>
 
 <window id="messengerWindow">
@@ -296,6 +303,7 @@
     <command id="cmd_toggleTodayPane" oncommand="toggleTodayPaneinMailMode()"/>
     <command id="cmd_toggleModeToolbar" oncommand="toggleToolbar('cmd_toggleModeToolbar', 'mode-toolbar')"/>
     <command id="cmd_toggleCalendarToolbar" oncommand="toggleControlinMode('cmd_toggleCalendarToolbar', 'calendar-toolbar')"/>
+    <command id="cmd_toggleTaskToolbar" oncommand="toggleControlinMode('cmd_toggleTaskToolbar', 'task-toolbar')"/>
     <command id="calendar-delete-command" oncommand="ltnDeleteSelectedItem()" disabledwhennoeventsselected="true"/>
     <command id="calendar_new_todo_command" oncommand="createTodoWithDialog(getSelectedCalendar());"/>
     <command id="modify_todo_command" oncommand="editToDo()"/>
@@ -481,6 +489,10 @@
                 collapsable="true"
                 persist="collapsed"/>
         </vbox>
+        <label id="invitations"
+               class="text-link calendar-invitations-sidebar-label"
+               value="&lightning.sidebar.invitations.label;"
+               onclick="openInvitationsDialog();"/>
       </vbox>
     </deck>
 

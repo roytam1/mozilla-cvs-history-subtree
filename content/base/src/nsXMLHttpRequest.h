@@ -51,6 +51,7 @@
 #include "nsIStreamListener.h"
 #include "nsIEventQueueService.h"
 #include "nsWeakReference.h"
+#include "nsWeakPtr.h"
 #include "jsapi.h"
 #include "nsIScriptContext.h"
 #include "nsIChannelEventSink.h"
@@ -60,7 +61,8 @@
 #include "nsJSUtils.h"
 #include "nsTArray.h"
 #include "nsIDOMGCParticipant.h"
-
+#include "nsIJSNativeInitializer.h"
+#include "nsPIDOMWindow.h"
 #include "nsIDOMLSProgressEvent.h"
 
 class nsILoadGroup;
@@ -74,7 +76,8 @@ class nsXMLHttpRequest : public nsIXMLHttpRequest,
                          public nsIProgressEventSink,
                          public nsIInterfaceRequestor,
                          public nsIDOMGCParticipant,
-                         public nsSupportsWeakReference
+                         public nsSupportsWeakReference,
+                         public nsIJSNativeInitializer_MOZILLA_1_8_BRANCH
 {
 public:
   nsXMLHttpRequest();
@@ -116,6 +119,13 @@ public:
   // nsIInterfaceRequestor
   NS_DECL_NSIINTERFACEREQUESTOR
 
+  // nsIJSNativeInitializer
+  NS_IMETHOD Initialize(nsISupports* aOwner, JSContext* cx, JSObject* obj,
+                       PRUint32 argc, jsval* argv);
+
+  // This is called by the factory constructor.
+  nsresult Init();
+
   // nsIDOMGCParticipant
   virtual nsIDOMGCParticipant* GetSCCIndex();
   virtual void AppendReachableList(nsCOMArray<nsIDOMGCParticipant>& aArray);
@@ -152,7 +162,22 @@ protected:
   void ClearEventListeners();
   already_AddRefed<nsIHttpChannel> GetCurrentHttpChannel();
 
+  nsresult CheckInnerWindowCorrectness()
+  {
+    if (mOwner) {
+      nsCOMPtr<nsPIDOMWindow> win = do_QueryReferent(mOwner);
+      NS_ENSURE_STATE(win);
+      NS_ASSERTION(win->IsInnerWindow(), "Should have inner window here!\n");
+      nsPIDOMWindow* outer = win->GetOuterWindow();
+      if (!outer || outer->GetCurrentInnerWindow() != win) {
+        return NS_ERROR_FAILURE;
+      }
+    }
+    return NS_OK;
+  }
+
   nsCOMPtr<nsISupports> mContext;
+  nsCOMPtr<nsIPrincipal> mPrincipal;
   nsCOMPtr<nsIChannel> mChannel;
   nsCOMPtr<nsIRequest> mReadRequest;
   nsCOMPtr<nsIDOMDocument> mDocument;
@@ -160,6 +185,7 @@ protected:
   nsTArray<ListenerHolder*> mLoadEventListeners;
   nsTArray<ListenerHolder*> mErrorEventListeners;
   nsCOMPtr<nsIScriptContext> mScriptContext;
+  nsWeakPtr mOwner; // Inner window.
 
   nsMarkedJSFunctionHolder<nsIDOMEventListener> mOnLoadListener;
   nsMarkedJSFunctionHolder<nsIDOMEventListener> mOnErrorListener;

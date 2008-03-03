@@ -244,7 +244,9 @@ function newDateTime(aNativeTime, aTimezone) {
 
 function calStorageCalendar() {
     this.initProviderBase();
-    this.mItemCache = new Array();
+    this.mItemCache = {};
+    this.mRecEventCache = {};
+    this.mRecTodoCache = {};
 }
 
 calStorageCalendar.prototype = {
@@ -255,6 +257,10 @@ calStorageCalendar.prototype = {
     mDB: null,
     mDBTwo: null,
     mCalId: 0,
+    mItemCache: null,
+    mRecItemCacheInited: false,
+    mRecEventCache: null,
+    mRecTodoCache: null,
 
     //
     // nsISupports interface
@@ -544,6 +550,8 @@ calStorageCalendar.prototype = {
         }
         if (aItem.parentItem != aItem) {
             aItem.parentItem.recurrenceInfo.removeExceptionFor(aItem.recurrenceId);
+            // xxx todo: would we want to support this case? Removing an occurrence currently results
+            //           in a modifyItem(parent)
             return;
         }
 
@@ -645,9 +653,15 @@ calStorageCalendar.prototype = {
             return;
         }
 
-        var wantCompletedItems = ((aItemFilter & kCalICalendar.ITEM_FILTER_COMPLETED_YES) != 0);
-        var wantNotCompletedItems = ((aItemFilter & kCalICalendar.ITEM_FILTER_COMPLETED_NO) != 0);
-        
+        this.assureRecurringItemCaches();
+
+        var itemCompletedFilter = ((aItemFilter & kCalICalendar.ITEM_FILTER_COMPLETED_YES) != 0);
+        var itemNotCompletedFilter = ((aItemFilter & kCalICalendar.ITEM_FILTER_COMPLETED_NO) != 0);
+
+        function checkCompleted(item) {
+            return (item.isCompleted ? itemCompletedFilter : itemNotCompletedFilter);
+        }
+
         // sending items to the listener 1 at a time sucks. instead,
         // queue them up.
         // if we ever have more than maxQueueSize items outstanding,
@@ -683,20 +697,30 @@ calStorageCalendar.prototype = {
 
         // helper function to handle converting a row to an item,
         // expanding occurrences, and queue the items for the listener
-        function handleResultItem(item, flags, theIID) {
-            self.getAdditionalDataForItem(item, flags);
-            item.makeImmutable();
-
-            var expandedItems;
-
-            if (asOccurrences && item.recurrenceInfo) {
-                expandedItems = item.recurrenceInfo.getOccurrences (aRangeStart, aRangeEnd, 0, {});
+        function handleResultItem(item, theIID, optionalFilterFunc) {
+            var expandedItems = [];
+            if (item.recurrenceInfo) {
+                if (asOccurrences) {
+                    // If the item is recurring, get all ocurrences that fall in
+                    // the range. If the item doesn't fall into the range at all,
+                    // this expands to 0 items.
+                    expandedItems = item.recurrenceInfo
+                                    .getOccurrences(aRangeStart, aRangeEnd, 0, {});
+                } else if (checkIfInRange(item, aRangeStart, aRangeEnd)) {
+                    // If no occurrences are wanted, check only the parent item.
+                    // This will be changed with bug 416975.
+                    expandedItems = [ item ];
+                }
             } else {
+                // non-recurring item
                 expandedItems = [ item ];
             }
 
-            queueItems (expandedItems, theIID);
+            if (expandedItems.length && optionalFilterFunc) {
+                expandedItems = expandedItems.filter(optionalFilterFunc);
+            }
 
+            queueItems (expandedItems, theIID);
             return expandedItems.length;
         }
 
@@ -722,136 +746,79 @@ calStorageCalendar.prototype = {
 
         // First fetch all the events
         if (wantEvents) {
-            // this will contain a lookup table of item ids that we've already dealt with,
-            // if we have recurrence to care about.
-            var handledRecurringEvents = { };
             var sp;             // stmt params
-
             var resultItems = [];
 
-            // first get non-recurring events and recurring events that happen
-            // to fall within the range
-            sp = this.mSelectEventsByRange.params;
+            // first get non-recurring events that happen to fall within the range
+            //
+            sp = this.mSelectNonRecurringEventsByRange.params;
             sp.cal_id = this.mCalId;
             sp.range_start = startTime;
             sp.range_end = endTime;
             sp.start_offset = aRangeStart ? aRangeStart.timezoneOffset * USECS_PER_SECOND : 0;
             sp.end_offset = aRangeEnd ? aRangeEnd.timezoneOffset * USECS_PER_SECOND : 0;
 
-            while (this.mSelectEventsByRange.step()) {
-                var row = this.mSelectEventsByRange.row;
-                var flags = {};
-                var item = this.getEventFromRow(row, flags);
-                flags = flags.value;
-
-                resultItems.push({item: item, flags: flags});
-
-                if (asOccurrences && flags & CAL_ITEM_FLAG_HAS_RECURRENCE)
-                    handledRecurringEvents[row.id] = true;
+            while (this.mSelectNonRecurringEventsByRange.step()) {
+                var row = this.mSelectNonRecurringEventsByRange.row;
+                var item = this.getEventFromRow(row, {});
+                resultItems.push(item);
             }
-            this.mSelectEventsByRange.reset();
+            this.mSelectNonRecurringEventsByRange.reset();
 
-            // then, if we want occurrences, we need to query database-wide.. yuck
-            if (asOccurrences) {
-                sp = this.mSelectEventsWithRecurrence.params;
-                sp.cal_id = this.mCalId;
-                while (this.mSelectEventsWithRecurrence.step()) {
-                    var row = this.mSelectEventsWithRecurrence.row;
-                    // did we already deal with this event id?
-                    if (row.id in handledRecurringEvents &&
-                        handledRecurringEvents[row.id] == true) {
-                        continue;
-                    }
-
-                    var flags = {};
-                    var item = this.getEventFromRow(row, flags);
-                    flags = flags.value;
-
-                    resultItems.push({item: item, flags: flags});
-                }
-                this.mSelectEventsWithRecurrence.reset();
-            }
-
-            // process the events
+            // process the non-recurring events:
             for each (var evitem in resultItems) {
-                count += handleResultItem(evitem.item, evitem.flags, Components.interfaces.calIEvent);
-                if (checkCount())
+                count += handleResultItem(evitem, Components.interfaces.calIEvent);
+                if (checkCount()) {
                     return;
+                }
+            }
+
+            // process the recurring events from the cache
+            for each (var evitem in this.mRecEventCache) {
+                count += handleResultItem(evitem, Components.interfaces.calIEvent);
+                if (checkCount()) {
+                    return;
+                }
             }
         }
 
-
         // if todos are wanted, do them next
         if (wantTodos) {
-            // this will contain a lookup table of item ids that we've already dealt with,
-            // if we have recurrence to care about.
-            var handledRecurringTodos = { };
             var sp;             // stmt params
-
             var resultItems = [];
 
-            // first get non-recurring todos and recurring todos that happen
-            // to fall within the range
-            sp = this.mSelectTodosByRange.params;
+            // first get non-recurring todos that happen to fall within the range
+            sp = this.mSelectNonRecurringTodosByRange.params;
             sp.cal_id = this.mCalId;
             sp.range_start = startTime;
             sp.range_end = endTime;
             sp.start_offset = aRangeStart ? aRangeStart.timezoneOffset * USECS_PER_SECOND : 0;
             sp.end_offset = aRangeEnd ? aRangeEnd.timezoneOffset * USECS_PER_SECOND : 0;
 
-            while (this.mSelectTodosByRange.step()) {
-                var row = this.mSelectTodosByRange.row;
-                var flags = {};
-                var item = this.getTodoFromRow(row, flags);
-                flags = flags.value;
-
-                if (!item.isCompleted && !wantNotCompletedItems)
-                    continue;
-                if (item.isCompleted && !wantCompletedItems)
-                    continue;
-
-                var completed = 
-                resultItems.push({item: item, flags: flags});
-                if (asOccurrences && row.flags & CAL_ITEM_FLAG_HAS_RECURRENCE)
-                    handledRecurringTodos[row.id] = true;
+            while (this.mSelectNonRecurringTodosByRange.step()) {
+                var row = this.mSelectNonRecurringTodosByRange.row;
+                resultItems.push(this.getTodoFromRow(row, {}));
             }
-            this.mSelectTodosByRange.reset();
+            this.mSelectNonRecurringTodosByRange.reset();
 
-            // then, if we want occurrences, we need to query database-wide.. yuck
-            if (asOccurrences) {
-                sp = this.mSelectTodosWithRecurrence.params;
-                sp.cal_id = this.mCalId;
-                while (this.mSelectTodosWithRecurrence.step()) {
-                    var row = this.mSelectTodosWithRecurrence.row;
-                    // did we already deal with this todo id?
-                    if (handledRecurringTodos[row.id] == true)
-                        continue;
-
-                    var flags = {};
-                    var item = this.getTodoFromRow(row, flags);
-                    flags = flags.value;
-
-                    var itemIsCompleted = false;
-                    if (item.todo_complete == 100 ||
-                        item.todo_completed != null ||
-                        item.ical_status == Components.interfaces.calITodo.CAL_TODO_STATUS_COMPLETED)
-                        itemIsCompleted = true;
-
-                    if (!itemIsCompleted && !wantNotCompletedItems)
-                        continue;
-                    if (itemIsCompleted && !wantCompletedItems)
-                        continue;
-
-                    resultItems.push({item: item, flags: flags});
-                }
-                this.mSelectTodosWithRecurrence.reset();
-            }
-
-            // process the todos
+            // process the non-recurring todos:
             for each (var todoitem in resultItems) {
-                count += handleResultItem(todoitem.item, todoitem.flags, Components.interfaces.calITodo);
-                if (checkCount())
+                count += handleResultItem(todoitem, Components.interfaces.calITodo, checkCompleted);
+                if (checkCount()) {
                     return;
+                }
+            }
+
+            // Note: Reading the code, completed *occurrences* seems to be broken, because
+            //       only the parent item has been filtered; I fixed that.
+            //       Moreover item.todo_complete etc seems to be a leftover...
+
+            // process the recurring todos from the cache
+            for each (var todoitem in this.mRecTodoCache) {
+                count += handleResultItem(todoitem, Components.interfaces.calITodo, checkCompleted);
+                if (checkCount()) {
+                    return;
+                }
             }
         }
 
@@ -891,7 +858,7 @@ calStorageCalendar.prototype = {
         this.mDB.executeSimpleSQL("INSERT INTO cal_calendar_schema_version VALUES(" + this.DB_SCHEMA_VERSION + ")");
     },
 
-    DB_SCHEMA_VERSION: 7,
+    DB_SCHEMA_VERSION: 8,
 
     /** 
      * @return      db schema version
@@ -935,7 +902,7 @@ calStorageCalendar.prototype = {
             db.executeSimpleSQL("ALTER TABLE " + tableName + " ADD COLUMN " + colName + " " + colType);
         }
 
-        if (oldVersion == 2 && this.DB_SCHEMA_VERSION >= 3) {
+        if (oldVersion == 2) {
             dump ("**** Upgrading schema from 2 -> 3\n");
 
             this.mDB.beginTransaction();
@@ -988,7 +955,7 @@ calStorageCalendar.prototype = {
             }
         }
 
-        if (oldVersion == 3 && this.DB_SCHEMA_VERSION >= 4) {
+        if (oldVersion == 3) {
             dump ("**** Upgrading schema from 3 -> 4\n");
 
             this.mDB.beginTransaction();
@@ -1021,7 +988,7 @@ calStorageCalendar.prototype = {
             }
         }
 
-        if (oldVersion == 4 && this.DB_SCHEMA_VERSION >= 5) {
+        if (oldVersion == 4) {
             dump ("**** Upgrading schema from 4 -> 5\n");
 
             this.mDB.beginTransaction();
@@ -1050,7 +1017,7 @@ calStorageCalendar.prototype = {
             }
         }
 
-        if (oldVersion == 5 && this.DB_SCHEMA_VERSION >= 6) {
+        if (oldVersion == 5) {
             dump ("**** Upgrading schema from 5 -> 6\n");
 
             this.mDB.beginTransaction();
@@ -1160,8 +1127,9 @@ calStorageCalendar.prototype = {
             }
         }
 
-        if (oldVersion == 6 && this.DB_SCHEMA_VERSION >= 7) {
-            dump ("**** Upgrading schema from 6 -> 7\n");
+        // run TZID updates both on db of version 6 and 7:
+        if (oldVersion == 6 || oldVersion == 7) {
+            dump ("**** Upgrading schema from 6/7 -> 8\n");
 
             var getTzIds;
             this.mDB.beginTransaction();
@@ -1171,6 +1139,11 @@ calStorageCalendar.prototype = {
                 // - Migrate all stored mozilla.org timezones from 20050126_1
                 //   to 20070129_1.  Note that there are some exceptions where
                 //   timezones were deleted and/or renamed.
+
+                // Schema changes between v7 and v8:
+                //
+                // - Migrate all stored mozilla.org timezones from 20070129_1
+                //   to 20071231_1.
 
                 // Get a list of the /mozilla.org/* timezones used in the db
                 var tzId;
@@ -1218,11 +1191,10 @@ calStorageCalendar.prototype = {
                             "UPDATE cal_todos      SET alarm_time_tz    = '" + update.newTzId + "' WHERE recurrence_id_tz = '" + update.oldTzId + "';");
                     }
                 }
-
                 // Update the version stamp, and commit.
-                this.mDB.executeSimpleSQL("UPDATE cal_calendar_schema_version SET version = 7;");
+                this.mDB.executeSimpleSQL("UPDATE cal_calendar_schema_version SET version = 8;");
                 this.mDB.commitTransaction();
-                oldVersion = 7;
+                oldVersion = 8;
             } catch (e) {
                 dump ("+++++++++++++++++ DB Error: " + this.mDB.lastErrorString + "\n");
                 Components.utils.reportError("Upgrade failed! DB Error: " +
@@ -1232,7 +1204,7 @@ calStorageCalendar.prototype = {
             }
         }
 
-        if (oldVersion != 7) {
+        if (oldVersion != this.DB_SCHEMA_VERSION) {
             dump ("#######!!!!! calStorageCalendar Schema Update failed -- db version: " + oldVersion + " this version: " + this.DB_SCHEMA_VERSION + "\n");
             throw Components.results.NS_ERROR_FAILURE;
         }
@@ -1286,7 +1258,7 @@ calStorageCalendar.prototype = {
         var floatingEventEnd = "event_end_tz = 'floating' AND event_end"
         var nonFloatingEventEnd = "event_end_tz != 'floating' AND event_end"
         // The query needs to take both floating and non floating into account
-        this.mSelectEventsByRange = createStatement(
+        this.mSelectNonRecurringEventsByRange = createStatement(
             this.mDB,
             "SELECT * FROM cal_events " +
             "WHERE " +
@@ -1299,7 +1271,7 @@ calStorageCalendar.prototype = {
             " AND " +
             "  (("+floatingEventStart+" < :range_end + :end_offset) OR " +
             "   ("+nonFloatingEventStart+" < :range_end)) " +
-            " AND cal_id = :cal_id AND recurrence_id IS NULL"
+            " AND cal_id = :cal_id AND flags & 16 == 0 AND recurrence_id IS NULL"
             );
        /**
         * WHERE (due > rangeStart AND start < rangeEnd) OR
@@ -1317,7 +1289,7 @@ calStorageCalendar.prototype = {
         var floatingCompleted = "todo_completed_tz = 'floating' AND todo_completed";
         var nonFloatingCompleted = "todo_completed_tz != 'floating' AND todo_completed";
 
-        this.mSelectTodosByRange = createStatement(
+        this.mSelectNonRecurringTodosByRange = createStatement(
             this.mDB,
             "SELECT * FROM cal_todos " +
             "WHERE " +
@@ -1343,7 +1315,7 @@ calStorageCalendar.prototype = {
             "   ("+nonFloatingTodoDue+" >= :range_start)) AND " +
             "  (("+floatingTodoDue+" < :range_end + :end_offset) OR " +
             "   ("+nonFloatingTodoDue+" < :range_end)))) " +
-            " AND cal_id = :cal_id AND recurrence_id IS NULL"
+            " AND cal_id = :cal_id AND flags & 16 == 0 AND recurrence_id IS NULL"
             );
 
         this.mSelectEventsWithRecurrence = createStatement(
@@ -1589,8 +1561,56 @@ calStorageCalendar.prototype = {
         }
     },
 
-    getEventFromRow: function (row, flags) {
-        var item = createEvent();
+    cacheItem: function stor_cacheItem(item) {
+        this.mItemCache[item.id] = item;
+        if (item.recurrenceInfo) {
+            if (isEvent(item)) {
+                this.mRecEventCache[item.id] = item;
+            } else {
+                this.mRecTodoCache[item.id] = item;
+            }
+        }
+    },
+
+    assureRecurringItemCaches: function stor_assureRecurringItemCaches() {
+        if (this.mRecItemCacheInited) {
+            return;
+        }
+        // build up recurring event and todo cache, because we need that on every query:
+        // for recurring items, we need to query database-wide.. yuck
+
+        sp = this.mSelectEventsWithRecurrence.params;
+        sp.cal_id = this.mCalId;
+        while (this.mSelectEventsWithRecurrence.step()) {
+            var row = this.mSelectEventsWithRecurrence.row;
+            var item = this.getEventFromRow(row, {});
+            this.mRecEventCache[item.id] = item;
+        }
+        this.mSelectEventsWithRecurrence.reset();
+
+        sp = this.mSelectTodosWithRecurrence.params;
+        sp.cal_id = this.mCalId;
+        while (this.mSelectTodosWithRecurrence.step()) {
+            var row = this.mSelectTodosWithRecurrence.row;
+            var item = this.getTodoFromRow(row, {});
+            this.mRecTodoCache[item.id] = item;
+        }
+        this.mSelectTodosWithRecurrence.reset();
+
+        this.mRecItemCacheInited = true;
+    },
+
+    // xxx todo: consider removing flags parameter
+    getEventFromRow: function stor_getEventFromRow(row, flags, isException) {
+        var item;
+        if (!isException) { // only parent items are cached
+            item = this.mItemCache[row.id];
+            if (item) {
+                return item;
+            }
+        }
+
+        item = createEvent();
 
         if (row.event_start)
             item.startDate = newDateTime(row.event_start, row.event_start_tz);
@@ -1605,12 +1625,25 @@ calStorageCalendar.prototype = {
 
         // This must be done last to keep the modification time intact.
         this.getItemBaseFromRow (row, flags, item);
+        this.getAdditionalDataForItem(item, flags.value);
 
+        if (!isException) { // keep exceptions modifyable to set the parentItem
+            item.makeImmutable();
+            this.cacheItem(item);
+        }
         return item;
     },
 
-    getTodoFromRow: function (row, flags) {
-        var item = createTodo();
+    getTodoFromRow: function stor_getTodoFromRow(row, flags, isException) {
+        var item;
+        if (!isException) { // only parent items are cached
+            item = this.mItemCache[row.id];
+            if (item) {
+                return item;
+            }
+        }
+
+        item = createTodo();
 
         if (row.todo_entry)
             item.entryDate = newDateTime(row.todo_entry, row.todo_entry_tz);
@@ -1623,7 +1656,12 @@ calStorageCalendar.prototype = {
 
         // This must be done last to keep the modification time intact.
         this.getItemBaseFromRow (row, flags, item);
+        this.getAdditionalDataForItem(item, flags.value);
 
+        if (!isException) { // keep exceptions modifyable to set the parentItem
+            item.makeImmutable();
+            this.cacheItem(item);
+        }
         return item;
     },
 
@@ -1768,40 +1806,34 @@ calStorageCalendar.prototype = {
         }
 
         if (flags & CAL_ITEM_FLAG_HAS_EXCEPTIONS) {
+            // it's safe that we don't run into this branch again for exceptions
+            // (getAdditionalDataForItem->get[Event|Todo]FromRow->getAdditionalDataForItem):
+            // every excepton has a recurrenceId and isn't flagged as CAL_ITEM_FLAG_HAS_EXCEPTIONS
             if (item.recurrenceId)
                 throw Components.results.NS_ERROR_UNEXPECTED;
 
             var rec = item.recurrenceInfo;
 
-            var exceptions = [];
-
             if (item instanceof Components.interfaces.calIEvent) {
                 this.mSelectEventExceptions.params.id = item.id;
                 while (this.mSelectEventExceptions.step()) {
                     var row = this.mSelectEventExceptions.row;
-                    var eflags = {};
-                    var exc = this.getEventFromRow(row, eflags);
-                    exceptions.push({item: exc, flags: eflags.value});
+                    var exc = this.getEventFromRow(row, {}, true /*isException*/);
+                    exc.parentItem = item;
+                    rec.modifyException(exc);
                 }
                 this.mSelectEventExceptions.reset();
             } else if (item instanceof Components.interfaces.calITodo) {
                 this.mSelectTodoExceptions.params.id = item.id;
                 while (this.mSelectTodoExceptions.step()) {
                     var row = this.mSelectTodoExceptions.row;
-                    var eflags = {};
-                    var exc = this.getTodoFromRow(row, eflags);
-                    
-                    exceptions.push({item: exc, flags: eflags.value});
+                    var exc = this.getTodoFromRow(row, {}, true /*isException*/);
+                    exc.parentItem = item;
+                    rec.modifyException(exc);
                 }
                 this.mSelectTodoExceptions.reset();
             } else {
                 throw Components.results.NS_ERROR_UNEXPECTED;
-            }
-
-            for each (var exc in exceptions) {
-                this.getAdditionalDataForItem(exc.item, exc.flags);
-                exc.item.parentItem = item;
-                rec.modifyException(exc.item);
             }
         }
 
@@ -1826,15 +1858,16 @@ calStorageCalendar.prototype = {
     // get item from db or from cache with given iid
     //
     getItemById: function (aID) {
-        // cached?
-        if (this.mItemCache[aID] != null)
-            return this.mItemCache[aID];
+        this.assureRecurringItemCaches();
 
-        var retval = null;
+        // cached?
+        var item = this.mItemCache[aID];
+        if (item) {
+            return item;
+        }
 
         // not cached; need to read from the db
         var flags = {};
-        var item = null;
 
         // try events first
         this.mSelectEvent.params.id = aID;
@@ -1849,17 +1882,6 @@ calStorageCalendar.prototype = {
                 item = this.getTodoFromRow(this.mSelectTodo.row, flags);
             this.mSelectTodo.reset();
         }
-
-        // bail if still not found
-        if (!item)
-            return null;
-
-        this.getAdditionalDataForItem(item, flags.value);
-
-        item.makeImmutable();
-
-        // cache it
-        this.mItemCache[aID] = item;
 
         return item;
     },
@@ -1884,8 +1906,11 @@ calStorageCalendar.prototype = {
     },
 
     flushItem: function (item, olditem) {
+        ASSERT(!item.recurrenceId, "no parent item passed!", true);
+
         this.mDB.beginTransaction();
         try {
+            this.deleteItemById(olditem ? olditem.id : item.id, true /* hasGuardingTransaction */);
             this.writeItem(item, olditem);
             this.mDB.commitTransaction();
         } catch (e) {
@@ -1896,31 +1921,7 @@ calStorageCalendar.prototype = {
             throw e;
         }
 
-        this.mItemCache[item.id] = item;
-    },
-
-    //
-    // Nuke olditem, if any
-    //
-
-    deleteOldItem: function (item, olditem) {
-        if (olditem) {
-            var oldItemDeleteStmt;
-            if (olditem instanceof Components.interfaces.calIEvent)
-                oldItemDeleteStmt = this.mDeleteEvent;
-            else if (olditem instanceof Components.interfaces.calITodo)
-                oldItemDeleteStmt = this.mDeleteTodo;
-
-            oldItemDeleteStmt.params.id = olditem.id;
-            this.mDeleteAttendees.params.item_id = olditem.id;
-            this.mDeleteProperties.params.item_id = olditem.id;
-            this.mDeleteRecurrence.params.item_id = olditem.id;
-
-            this.mDeleteRecurrence.execute();
-            this.mDeleteProperties.execute();
-            this.mDeleteAttendees.execute();
-            oldItemDeleteStmt.execute();
-        }
+        this.cacheItem(item);
     },
 
     //
@@ -1932,8 +1933,6 @@ calStorageCalendar.prototype = {
 
     writeItem: function (item, olditem) {
         var flags = 0;
-
-        this.deleteOldItem(item, olditem);
 
         flags |= this.writeAttendees(item, olditem);
         flags |= this.writeRecurrence(item, olditem);
@@ -2167,23 +2166,30 @@ calStorageCalendar.prototype = {
     //
     // delete the item with the given uid
     //
-    deleteItemById: function (aID) {
-        this.mDB.beginTransaction();
+    deleteItemById: function stor_deleteItemById(aID, hasGuardingTransaction) {
+        if (!hasGuardingTransaction) {
+            this.mDB.beginTransaction();
+        }
         try {
             this.mDeleteAttendees(aID);
             this.mDeleteProperties(aID);
             this.mDeleteRecurrence(aID);
             this.mDeleteEvent(aID);
             this.mDeleteTodo(aID);
-            this.mDB.commitTransaction();
+            if (!hasGuardingTransaction) {
+                this.mDB.commitTransaction();
+            }
         } catch (e) {
-            Components.utils.reportError("deleteItemById DB error: " + 
-                                         this.mDB.lastErrorString);
-            this.mDB.rollbackTransaction();
+            Components.utils.reportError("deleteItemById DB error: " + this.mDB.lastErrorString);
+            if (!hasGuardingTransaction) {
+                this.mDB.rollbackTransaction();
+            }
             throw e;
         }
 
         delete this.mItemCache[aID];
+        delete this.mRecEventCache[aID];
+        delete this.mRecTodoCache[aID];
     }
 }
 

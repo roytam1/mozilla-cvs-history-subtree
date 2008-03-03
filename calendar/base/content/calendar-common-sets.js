@@ -60,7 +60,18 @@ var calendarController = {
         "calendar_publish_selected_events_command": true,
 
         "calendar_reload_remote_calendars": true,
-
+        "calendar_percentComplete-0_command": true,
+        "calendar_percentComplete-25_command": true,
+        "calendar_percentComplete-50_command": true,
+        "calendar_percentComplete-75_command": true,
+        "calendar_percentComplete-100_command": true,
+        "calendar_percentComplete-100_command2": true,
+        "calendar_priority-0_command": true,
+        "calendar_priority-9_command": true,
+        "calendar_priority-5_command": true,
+        "calendar_priority-1_command": true,
+        "calendar_general-priority_command": true,
+        "calendar_task_category_command": true,
         "cmd_cut": true,
         "cmd_copy": true,
         "cmd_paste": true,
@@ -104,8 +115,21 @@ var calendarController = {
             case "calendar_new_todo_command":
                 return this.writable && this.calendars_support_tasks;
             case "calendar_modify_todo_command":
-                return this.todo_items_selected;
+                return this.todo_items_selected &&
+                       this.todo_tasktree_focused;
             case "calendar_delete_todo_command":
+            case "calendar_percentComplete-0_command":
+            case "calendar_percentComplete-25_command":
+            case "calendar_percentComplete-50_command":
+            case "calendar_percentComplete-75_command":
+            case "calendar_percentComplete-100_command":
+            case "calendar_percentComplete-100_command2":
+            case "calendar_priority-0_command":
+            case "calendar_priority-9_command":
+            case "calendar_priority-5_command":
+            case "calendar_priority-1_command":
+            case "calendar_task_category_command":
+            case "calendar_general-priority_command":
                 return this.writable &&
                        this.todo_items_selected &&
                        this.todo_items_writable;
@@ -121,13 +145,24 @@ var calendarController = {
                 return this.item_selected;
 
             case "calendar_reload_remote_calendar":
-                return !this.no_network_calendars && !this.offline
+                return !this.no_network_calendars && !this.offline;
             default:
-                if (aCommand in this.commands) {
-                    // All other commands we support should be enabled by default
-                    return true;
-                }            
                 if (this.defaultController && !this.isCalendarInForeground()) {
+                    // The delete-button demands a special handling in mail-mode
+                    // as it is supposed to delete an element of the focused pane
+                    if (aCommand == "cmd_delete" || aCommand == "button_delete") {
+                        var focusedElement = document.commandDispatcher.focusedElement;
+                        if (focusedElement) {
+                            if (focusedElement.getAttribute("id") == "agenda-listbox") {
+                                 return agendaListbox.isEventSelected();
+                            } else if (focusedElement.className == "calendar-task-tree") {
+                                 return this.writable &&
+                                        this.todo_items_selected &&
+                                        this.todo_items_writable;
+                            }
+                        }
+                    }
+
                     // If calendar is not in foreground, let the default controller take
                     // care. If we don't have a default controller (i.e sunbird), just
                     // continue.
@@ -153,9 +188,12 @@ var calendarController = {
                     case "cmd_delete":
                         return this.item_selected;
                 }
+                if (aCommand in this.commands) {
+                    // All other commands we support should be enabled by default
+                    return true;
+                }            
         }
         return false;
-          
     },
 
     doCommand: function cC_doCommand(aCommand) {
@@ -217,8 +255,53 @@ var calendarController = {
             case "calendar_reload_remote_calendars":
                 getCompositeCalendar().refresh();
                 break;
+            case "calendar_percentComplete-0_command":
+                contextChangeTaskProgress(0);
+                break;
+            case "calendar_percentComplete-25_command":
+                contextChangeTaskProgress(25);
+                break;
+            case "calendar_percentComplete-50_command":
+                contextChangeTaskProgress(50);
+                break;
+            case "calendar_percentComplete-75_command":
+                contextChangeTaskProgress(75);
+                break;
+            case "calendar_percentComplete-100_command":
+                contextChangeTaskProgress(100);
+                break;
+            case "calendar_percentComplete-100_command2":
+                contextChangeTaskProgress2(100);
+                break;
+            case "calendar_priority-0_command":
+                contextChangeTaskPriority(0);
+                break;
+            case "calendar_priority-9_command":
+                contextChangeTaskPriority(9);
+                break;
+            case "calendar_priority-5_command":
+                contextChangeTaskPriority(5);
+                break;
+            case "calendar_priority-1_command":
+                contextChangeTaskPriority(1);
+                break;
             default:
                 if (this.defaultController && !this.isCalendarInForeground()) {
+                    // The delete-button demands a special handling in mail-mode
+                    // as it is supposed to delete an element of the focused pane
+                    if (aCommand == "cmd_delete" || aCommand == "button_delete") {
+                        var focusedElement = document.commandDispatcher.focusedElement;
+                        if (focusedElement) {
+                            if (focusedElement.getAttribute("id") == "agenda-listbox") {
+                                agendaListbox.deleteSelectedItem(false);
+                                return;
+                            } else if (focusedElement.className == "calendar-task-tree") {
+                                deleteToDoCommand(false);
+                                return;
+                            }
+                        }
+                    }
+
                     // If calendar is not in foreground, let the default controller take
                     // care. If we don't have a default controller (i.e sunbird), just
                     // continue.
@@ -404,4 +487,8 @@ function injectCalendarCommandController() {
     }
     top.controllers.insertControllerAt(0, calendarController);
     document.commandDispatcher.updateCommands("calendar_commands");
+}
+
+function removeCalendarCommandController() {
+    top.controllers.removeController(calendarController);
 }

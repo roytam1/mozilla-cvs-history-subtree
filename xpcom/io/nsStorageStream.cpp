@@ -553,6 +553,9 @@ nsStorageInputStream::Seek(PRUint32 aPosition)
     if (aPosition >= length)
         return NS_ERROR_INVALID_ARG;
 
+    if (length == 0)
+        return NS_OK;
+
     mSegmentNum = SegNum(aPosition);
     PRUint32 segmentOffset = SegOffset(aPosition);
     mReadCursor = mStorageStream->mSegmentedBuffer->GetSegment(mSegmentNum) +

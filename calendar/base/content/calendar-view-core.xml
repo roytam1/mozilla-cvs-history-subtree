@@ -206,13 +206,11 @@
           container.setAttribute("item-calendar", item.calendar.uri.spec);
 
           var categoriesSelectorList = "";
-          if (item.getProperty("CATEGORIES") != null) {
-            var categoriesList = item.getProperty("CATEGORIES").split(",");
-            for (var i = 0; i < categoriesList.length; i++ ) {
-              // Remove illegal chars.
-              categoriesList[i] = formatStringForCSSRule(categoriesList[i]);
-            }
-            categoriesSelectorList = categoriesList.join(" ");
+          var categoriesProperty = item.getProperty("CATEGORIES");
+          if (categoriesProperty) {
+            var categoriesArray = categoriesStringToArray(categoriesProperty);
+            var cssClassesArray = categoriesArray.map(formatStringForCSSRule);
+            categoriesSelectorList = cssClassesArray.join(" ");
           }
 
           var box = document.
@@ -230,10 +228,12 @@
               }
           }
 
-          var alarmImage = document.getAnonymousElementByAttribute(this, "anonid", "alarm-image");
           if ((item.alarmOffset || item.parentItem.alarmOffset) &&
-              getPrefSafe("calendar.alarms.indicator.show", true) &&
-              !item.calendar.getProperty("suppressAlarms")) {
+              getPrefSafe("calendar.alarms.indicator.show", true)) {
+              var alarmImage = document.getAnonymousElementByAttribute(this, "anonid", "alarm-image");
+              if (item.calendar.getProperty("suppressAlarms")) {
+                  alarmImage.setAttribute("suppressed", "true");
+              }
               alarmImage.removeAttribute("hidden");
           }
         ]]></body>

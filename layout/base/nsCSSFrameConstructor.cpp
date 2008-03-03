@@ -12659,7 +12659,10 @@ nsCSSFrameConstructor::CreateFloatingLetterFrame(
   NS_ASSERTION(letterContent->GetBindingParent() != letterContent,
                "Reframes of this letter frame will mess with the root of a "
                "native anonymous content subtree!");
-  InitAndRestoreFrame(aState, letterContent, aParentFrame, aStyleContext,
+  InitAndRestoreFrame(aState, letterContent,
+                      aState.GetGeometricParent(aStyleContext->GetStyleDisplay(),
+                                                aParentFrame),
+                      aStyleContext,
                       nsnull, letterFrame);
 
   // Init the text frame to refer to the letter frame. Make sure we

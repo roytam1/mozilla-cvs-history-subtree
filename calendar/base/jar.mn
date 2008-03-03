@@ -22,6 +22,7 @@ calendar.jar:
 # This ^^^ isn't currently used by Lightning, but it's here for completeness
     content/calendar/calendar-decorated-month-view.xml  (content/calendar-decorated-month-view.xml)
     content/calendar/calendar-dialog-utils.js    (content/calendar-dialog-utils.js)
+*   content/calendar/calendar-dnd-listener.js    (content/calendar-dnd-listener.js)
     content/calendar/calendar-event-dialog.css   (content/calendar-event-dialog.css)
     content/calendar/calendar-event-dialog.js    (content/calendar-event-dialog.js)
     content/calendar/calendar-event-dialog.xul   (content/calendar-event-dialog.xul)
@@ -73,7 +74,6 @@ calendar.jar:
     content/calendar/preferences/timezones.xul   (content/preferences/timezones.xul)
     content/calendar/preferences/views.js        (content/preferences/views.js)
     content/calendar/preferences/views.xul       (content/preferences/views.xul)
-    content/calendar/sound.wav                   (/calendar/resources/content/sound.wav)
     content/calendar/sun-calendar-event-dialog.css  (/calendar/prototypes/wcap/sun-calendar-event-dialog.css)
 *   content/calendar/sun-calendar-event-dialog.js  (/calendar/prototypes/wcap/sun-calendar-event-dialog.js)
     content/calendar/sun-calendar-event-dialog.xul  (/calendar/prototypes/wcap/sun-calendar-event-dialog.xul)
@@ -90,8 +90,11 @@ calendar.jar:
     content/calendar/sun-calendar-event-dialog-attendees.js  (/calendar/prototypes/wcap/sun-calendar-event-dialog-attendees.js)
 % skin calendar classic/1.0 %skin/classic/calendar/
     skin/classic/calendar/abcard.png             (themes/common/abcard.png)
+    skin/classic/calendar/alarm-suppressed.png   (themes/common/alarm-suppressed.png)
     skin/classic/calendar/alarm-flashing.png     (themes/common/alarm-flashing.png)
     skin/classic/calendar/alarm.png              (themes/common/alarm.png)
+	skin/classic/calendar/priority_high_inverse.png (themes/common/priority_high_inverse.png)
+	skin/classic/calendar/priority_low_inverse.png (themes/common/priority_low_inverse.png)
 #expand    skin/classic/calendar/cal-icon32.png         (themes/__THEME__/cal-icon32.png)
 #expand    skin/classic/calendar/daypicker-background.png  (/calendar/base/themes/common/daypicker-background.png)
 #expand    skin/classic/calendar/calendar-alarm-dialog.css   (themes/__THEME__/calendar-alarm-dialog.css)

@@ -67,6 +67,7 @@ bin\components\autoconfig.xpt
 bin\components\calbscmp.dll
 bin\components\calbase.xpt
 bin\components\calbaseinternal.xpt
+bin\components\caldav.xpt
 bin\components\caps.xpt
 bin\components\chardet.xpt
 bin\components\chrome.xpt
@@ -144,7 +145,11 @@ bin\components\necko_res.xpt
 bin\components\necko_socket.xpt
 bin\components\necko_strconv.xpt
 bin\components\necko_viewsource.xpt
+#ifdef MOZILLA_1_8_BRANCH
 bin\components\passwordmgr.xpt
+#else
+bin\components\loginmgr.xpt
+#endif
 bin\components\pipboot.xpt
 bin\components\pipnss.xpt
 bin\components\pippki.xpt
@@ -217,6 +222,10 @@ bin\components\nsProxyAutoConfig.js
 bin\components\nsExtensionManager.js
 #ifndef MOZILLA_1_8_BRANCH
 bin\components\nsBlocklistService.js
+bin\components\nsLoginInfo.js
+bin\components\nsLoginManager.js
+bin\components\nsLoginManagerPrompter.js
+bin\components\storage-Legacy.js
 #endif
 bin\components\calendarService.js
 bin\components\calCompositeCalendar.js

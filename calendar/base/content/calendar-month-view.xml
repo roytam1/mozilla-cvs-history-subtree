@@ -522,14 +522,13 @@
               }
 
               var categoriesSelectorList = "";
-              if (itd.item.getProperty("CATEGORIES") != null) {
-                var categoriesList = itd.item.getProperty("CATEGORIES").split(",");
-                for (var i = 0; i < categoriesList.length; i++ ) {
-                  // Remove illegal chars.
-                  categoriesList[i] = formatStringForCSSRule(categoriesList[i]);
-                }
-                categoriesSelectorList = categoriesList.join(" ");
+              var categoriesProperty = itd.item.getProperty("CATEGORIES");
+              if (categoriesProperty) {
+                var categoriesArray = categoriesStringToArray(categoriesProperty);
+                var cssClassesArray = categoriesArray.map(formatStringForCSSRule);
+                categoriesSelectorList = cssClassesArray.join(" ");
               }
+
               box.setAttribute("item-category", categoriesSelectorList);
 
               this.dayitems.insertBefore(box, before);
@@ -607,9 +606,11 @@
         var dragService = Components.classes["@mozilla.org/widget/dragservice;1"].
                           getService(Components.interfaces.nsIDragService);
         var session = dragService.getCurrentSession();
-        session.canDrop = true;
-        this.removeDropShadows();
-        this.addDropShadows();
+        if (session) {
+            session.canDrop = true;
+            this.removeDropShadows();
+            this.addDropShadows();
+        }
       ]]></handler>
 
       <handler event="dragover"><![CDATA[
@@ -650,15 +651,6 @@
          var newEnd;
 
          var boxDate = this.mDate;
-         var offset = this.monthView.mShadowIndex;
-
-         function adjustDate(date) {
-           var newDate = date.clone();
-           newDate.day = boxDate.day - offset;
-           newDate.month = boxDate.month;
-           newDate.year = boxDate.year;
-           return newDate;
-         }
 
          if (!session.sourceNode || !session.sourceNode.occurrence) {
              return;
@@ -666,47 +658,36 @@
 
          event.stopPropagation();
          var item = session.sourceNode.occurrence;
-        var beginMove = session.sourceNode.mParentBox.date;
-           var duration = boxDate.subtractDate(beginMove);
-        if (isEvent(item)) {
-           // Since both boxDate and beginMove are dates (note datetimes),
-           // subtractDate will only give us a non-zero number of hours on DST
-           // changes. While strictly speaking, subtractDate's behavior is 
-           // correct, we need to move the event a discrete number of days here.
-           // There is no need for normalization here, since addDuration does 
-           // the job for us.
-           if (duration.hours == 23) {
-             // entering DST
-             duration.hours++;
-           } else if (duration.hours == 1) {
-             // leaving DST
-             duration.hours--;
-           }
+         var beginMove = session.sourceNode.mParentBox.date;
+         var duration = boxDate.subtractDate(beginMove);
 
-           newStart = item.startDate.clone();
-           newStart.addDuration(duration);
-           newEnd = item.endDate.clone();
-           newEnd.addDuration(duration);
+         // Since both boxDate and beginMove are dates (note datetimes),
+         // subtractDate will only give us a non-zero number of hours on DST
+         // changes. While strictly speaking, subtractDate's behavior is 
+         // correct, we need to move the event a discrete number of days here.
+         if (duration.hours == 23) {
+             // crossing DT/DST border (spring)
+             duration.hours++;
+             duration.normalize();
+         } else if (duration.hours == 1) {
+            // crossing DST/DT border (autumn)
+            duration.hours--;
+         }
+
+        if (isEvent(item)) {
+            newStart = item.startDate.clone();
+            newStart.addDuration(duration);
+            newEnd = item.endDate.clone();
+            newEnd.addDuration(duration);
          } else if (isToDo(item)) {
-           if (item.entryDate && item.dueDate) {
-             newStart = item.entryDate.clone();
-             newStart.addDuration(duration);
-             newEnd = item.dueDate.clone();
-             newEnd.addDuration(duration);
-           } else if (item.entryDate) {
-             newStart = adjustDate(item.entryDate);
-             // zero offset so we don't double-count
-             offset = 0;
-           } else { // only due date
-             newEnd = adjustDate(item.dueDate);
-             offset = 0;
-           }
-         }
-         if (newStart && offset) {
-           newStart.day -= offset;
-         }
-         if (newEnd && offset) {
-           newEnd.day -= offset;
+             if (item.entryDate) {
+                 newStart = item.entryDate.clone();
+                 newStart.addDuration(duration);
+             }
+             if (item.dueDate) {
+                 newEnd = item.dueDate.clone();
+                 newEnd.addDuration(duration);
+             }
          }
 
          this.removeDropShadows();
@@ -1299,12 +1280,7 @@
           }
 
           var dateBoxes = [];
-
-          // clear out the old today
-          var oldToday = document.getAnonymousElementByAttribute(this, "today", "true");
-          if (oldToday) {
-            oldToday.removeAttribute("today");
-          }
+          var today = this.today();
 
           // This gets set to true, telling us to collapse the rest of the rows
           var finished = false;
@@ -1348,6 +1324,19 @@
                 boxClass = "calendar-month-day-box-day-off " + boxClass;
               }
 
+              // Set up date relations
+              switch (date.compare(today)) {
+                  case -1:
+                      daybox.setAttribute("relation", "past");
+                      break;
+                  case 0:
+                      daybox.setAttribute("relation", "today");
+                      break;
+                  case 1:
+                      daybox.setAttribute("relation", "future");
+                      break;
+              }
+
               daybox.setAttribute("class", boxClass);
 
               daybox.setDate(date);
@@ -1387,7 +1376,6 @@
           this.hideDaysOff();
 
           // Highlight today, if it's in the range of the view
-          var today = this.today();
           if (today.compare(dateList[0]) != -1 &&
               today.compare(dateList[dateList.length-1]) != 1) {
               this.findBoxForDate(today).box.setAttribute("today", "true");
@@ -1545,6 +1533,9 @@
           },
   
           onOperationComplete: function(aCalendar, aStatus, aOperationType, aId, aDetail) {
+            // Fire viewloaded event
+            this.calView.fireEvent('viewloaded', aOperationType);
+          
             // signal that the current operation finished.
             this.calView.mRefreshPending = null;
 

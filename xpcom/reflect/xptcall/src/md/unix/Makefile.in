@@ -98,7 +98,7 @@ endif
 # BeOS/Intel (uses the same unixish_x86 code)
 #
 ifeq ($(OS_ARCH)$(OS_TEST),BeOSBePC)
-CPPSRCS		:= xptcinvoke_unixish_x86.cpp xptcstubs_unixish_x86.cpp
+CPPSRCS		:= xptcinvoke_gcc_x86_unix.cpp xptcstubs_gcc_x86_unix.cpp
 endif
 #
 # Neutrino/Intel (uses the same unixish_x86 code)

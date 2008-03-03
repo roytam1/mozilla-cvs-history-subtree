@@ -19,6 +19,7 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ *   Berend Cornelius <berend.cornelius@sun.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -177,6 +178,139 @@ function enableElementWithLock(elementId, lockId) {
         if (n <= 0) {
             enableElement(elementId);
         }
+    }
+}
+
+
+/** 
+ * Unchecks the commands of the child elements of a DOM-tree-node e.g of a menu
+ *
+ * @param aEvent    The event from which the target is taken to retrieve the
+ *                    child elements
+ */
+function uncheckChildNodes(aEvent) {
+    var liveList = aEvent.target.getElementsByAttribute("checked", "true");
+    for (var i = liveList.length - 1; i >= 0; i-- ) {
+        var commandName = liveList.item(i).getAttribute("command");
+        var command = document.getElementById(commandName);
+        if (command) {
+            command.setAttribute("checked", "false");
+        }
+    }
+}
+
+/**
+ * Fills up a menu - either a menupopup or a menulist - with menuitems that refer
+ * to calendars.
+ *
+ * @param aItem                 The event or task
+ * @param aCalendarMenuParent   The direct parent of the menuitems - either a
+ *                                menupopup or a menulist
+ * @param aCalendarToUse        The default-calendar
+ * @param aOnCommand            A string that is applied to the "oncommand" 
+ *                                attribute of each menuitem
+ * @return                      The index of the calendar that matches the
+ *                                default-calendar. By default 0 is returned.
+ */
+function appendCalendarItems(aItem, aCalendarMenuParent, aCalendarToUse, aOnCommand) {
+    var calendarToUse = aCalendarToUse || aItem.calendar;
+    var calendars = getCalendarManager().getCalendars({});
+    var indexToSelect = 0;
+    var index = -1;
+    for (var i = 0; i < calendars.length; ++i) {
+        var calendar = calendars[i];
+        if (calendar.id == calendarToUse.id ||
+            (calendar &&
+             isCalendarWritable(calendar) &&
+             isItemSupported(aItem, calendar))) {
+            var menuitem = addMenuItem(aCalendarMenuParent, calendar.name, calendar.name);
+            menuitem.calendar = calendar;
+            index++;
+            if (aOnCommand) {
+                menuitem.setAttribute("oncommand", aOnCommand);
+            }
+            if (aCalendarMenuParent.localName == "menupopup") {
+                menuitem.setAttribute("type", "checkbox");
+            }
+            if (calendarToUse && calendarToUse.id == calendar.id) {
+                indexToSelect = index;
+            }
+        }
+    }
+    return indexToSelect;
+}
+
+function appendCategoryItems(aItem, aCategoryMenuList, aCommand) {
+    var categoriesList = getPrefCategoriesArray();
+
+    // 'split'may return an array containing one
+    // empty string, rather than an empty array. This results in an empty
+    // menulist item with no corresponding category.
+    if (categoriesList.length == 1 && !categoriesList[0].length) {
+        categoriesList.pop();
+    }
+
+    // insert the category already in the menulist so it doesn't get lost
+    if (aItem) {
+        var itemProperty = aItem.getProperty("CATEGORIES");
+        if (itemProperty) {
+            var itemCategories = categoriesStringToArray(itemProperty);
+            for each (var itemCategory in itemCategories) {
+                if (!categoriesList.some(function(cat){ return cat == itemCategory; })){
+                    categoriesList.push(itemCategory);
+                }
+            }
+        }
+        sortArrayByLocaleCollator(categoriesList);
+    }
+    
+    while (aCategoryMenuList.hasChildNodes()) {
+       aCategoryMenuList.removeChild(aCategoryMenuList.lastChild);
+    }
+
+    var indexToSelect = 0;
+    var menuitem = addMenuItem(aCategoryMenuList, calGetString("calendar", "None"), "NONE", aCommand);
+    if (aCategoryMenuList.localName == "menupopup") {
+        menuitem.setAttribute("type", "checkbox");
+    }
+    for (var i in categoriesList) {
+        var menuitem = addMenuItem(aCategoryMenuList, categoriesList[i], categoriesList[i], aCommand);
+        if (aCategoryMenuList.localName == "menupopup") {
+            menuitem.setAttribute("type", "checkbox");
+        }
+        if (itemCategory && categoriesList[i] == itemCategory) {
+            indexToSelect = parseInt(i) + 1;  // Add 1 because of 'None'
+        }
+    }
+    return indexToSelect;
+}
+
+function addMenuItem(aParent, aLabel, aValue, aCommand) {
+    if (aParent.localName == "menupopup") {
+        var item = document.createElementNS("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul", "menuitem");
+        item.setAttribute("label", aLabel);
+        if (aValue) {
+            item.value = aValue;
+        }
+        if (aCommand) {
+          item.command = aCommand;
+        }
+        aParent.appendChild(item);
+    }
+    else if (aParent.localName == "menulist") {
+        item = aParent.appendItem(aLabel, aValue);
+    }
+    return item;
+}
+
+function setCategory(aItem, aMenuElement) {
+    // Category
+    var category = getElementValue(aMenuElement);
+
+    if (category != "NONE") {
+       setItemProperty(aItem, "CATEGORIES", categoriesArrayToString([category]));
+    } else {
+       aItem.deleteProperty("CATEGORIES");
     }
 }
 
