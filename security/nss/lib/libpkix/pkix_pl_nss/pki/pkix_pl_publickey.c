@@ -494,7 +494,7 @@ PKIX_PL_PublicKey_MakeInheritedDSAPublicKey(
                                             &secondSPKI->algorithm.parameters);
 
                         if (rv != SECSuccess) {
-                                PKIX_ERROR(PKIX_OUTOFMEMORY);
+                                PKIX_ERROR(PKIX_SECITEMCOPYITEMFAILED);
                         }
 
                         /* create a PKIX_PL_PublicKey object */

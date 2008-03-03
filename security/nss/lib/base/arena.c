@@ -1143,13 +1143,3 @@ nss_ZRealloc
   }
   /*NOTREACHED*/
 }
-
-PRStatus 
-nssArena_Shutdown(void)
-{
-  PRStatus rv = PR_SUCCESS;
-#ifdef DEBUG
-  rv = nssPointerTracker_finalize(&arena_pointer_tracker);
-#endif
-  return rv;
-}

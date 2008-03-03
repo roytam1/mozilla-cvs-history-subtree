@@ -934,9 +934,9 @@ pkix_CheckChain(
                         PKIX_LISTGETITEMFAILED);
 
                 /* check if cert pointer is valid */
-                PORT_Assert(cert);
                 if (cert == NULL) {
-                    continue;
+                        PKIX_ERROR_FATAL
+                                (PKIX_VALIDATIONFAILEDNULLCERTPOINTER);
                 }
 
                 if (revChecking == PKIX_FALSE) {

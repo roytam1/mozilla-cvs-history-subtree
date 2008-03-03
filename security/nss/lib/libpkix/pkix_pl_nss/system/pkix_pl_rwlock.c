@@ -129,7 +129,7 @@ PKIX_PL_RWLock_Create(
 
         if (rwLock->lock == NULL) {
                 PKIX_DECREF(rwLock);
-                PKIX_ERROR(PKIX_OUTOFMEMORY);
+                PKIX_ERROR(PKIX_ERRORALLOCATINGPRRWLOCK);
         }
 
         rwLock->readCount = 0;

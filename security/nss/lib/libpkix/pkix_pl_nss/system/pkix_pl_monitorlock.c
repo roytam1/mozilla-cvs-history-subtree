@@ -130,7 +130,7 @@ PKIX_PL_MonitorLock_Create(
 
         if (monitorLock->lock == NULL) {
                 PKIX_DECREF(monitorLock);
-                PKIX_ERROR(PKIX_OUTOFMEMORY);
+                PKIX_ERROR(PKIX_ERRORALLOCATINGPRMONITORLOCK);
         }
 
         *pNewLock = monitorLock;
@@ -159,11 +159,15 @@ PKIX_PL_MonitorLock_Exit(
         PKIX_PL_MonitorLock *monitorLock,
         void *plContext)
 {
+        PRStatus prStatus;
         PKIX_ENTER_NO_LOGGER(MONITORLOCK, "PKIX_PL_MonitorLock_Exit");
         PKIX_NULLCHECK_ONE(monitorLock);
 
         PKIX_MONITORLOCK_DEBUG("\tCalling PR_ExitMonitor)\n");
-        PR_ExitMonitor(monitorLock->lock);
+        prStatus = PR_ExitMonitor(monitorLock->lock);
+        if (prStatus != PR_SUCCESS) {
+                PKIX_ERROR(PKIX_MONITORLOCKEXITFAILED);
+        }
 
 cleanup:
 

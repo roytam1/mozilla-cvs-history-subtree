@@ -59,8 +59,6 @@
 #include "pkix_pl_common.h"
 #include "pkix_pl_ekuchecker.h"
 
-extern PRLogModuleInfo *pkixLog;
-
 #ifdef DEBUG_volkov
 /* Temporary declarations of functioins. Will be removed with fix for
  * 391183 */
@@ -271,6 +269,7 @@ cert_NssCertificateUsageToPkixKUAndEKU(
 {
     PKIX_List           *ekuOidsList = NULL;
     PKIX_PL_OID         *ekuOid = NULL;
+    PKIX_UInt32          keyUsage = 0;
     int                  i = 0;
     int                  ekuIndex = ekuIndexUnknown;
 
@@ -573,7 +572,7 @@ cert_CreatePkixProcessingParams(
                                                              plContext),
         PKIX_PROCESSINGPARAMSSETNISTREVOCATIONENABLEDFAILED);
 
-#ifdef DEBUG_volkov1
+#ifdef DEBUG_volkov
     /* Enables ocsp rev checking of the chain cert through pkix OCSP
      * implementation. */
     if (checkAllCertsOCSP) {
@@ -664,11 +663,11 @@ cert_PkixToNssCertsChain(
     }
     arena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
     if (arena == NULL) {
-        PKIX_ERROR(PKIX_OUTOFMEMORY);
+        PKIX_ERROR(PKIX_PORTNEWARENAFAILED);
     }
     validChain = (CERTCertList*)PORT_ArenaZAlloc(arena, sizeof(CERTCertList));
     if (validChain == NULL) {
-        PKIX_ERROR(PKIX_PORTARENAALLOCFAILED);
+        PKIX_ERROR(PKIX_PORTARENAZNEWFAILED);
     }
     PR_INIT_CLIST(&validChain->list);
     validChain->arena = arena;
@@ -693,7 +692,7 @@ cert_PkixToNssCertsChain(
             (CERTCertListNode *)PORT_ArenaZAlloc(validChain->arena,
                                                  sizeof(CERTCertListNode));
         if ( node == NULL ) {
-            PKIX_ERROR(PKIX_PORTARENAALLOCFAILED);
+            PKIX_ERROR(PKIX_PORTARENAZNEWFAILED);
         }
 
         PR_INSERT_BEFORE(&node->links, &validChain->list);
@@ -821,36 +820,15 @@ cleanup:
 static PKIX_Error *
 cert_PkixErrorToNssCode(
     PKIX_Error *error,
-    SECErrorCodes *pNssErr,
+    unsigned long *nssCode,
     void *plContext)
 {
-    int errLevel = 0;
-    PKIX_UInt32 nssErr = 0;
-    PKIX_Error *errPtr = error;
-
+    PKIX_ERRORCODE errorCode = 0; /* unknown pkix error code */
     PKIX_ENTER(CERTVFYPKIX, "cert_PkixErrorToNssCode");
-    PKIX_NULLCHECK_TWO(error, pNssErr);
+    PKIX_NULLCHECK_ONE(nssCode);
     
-    /* Loop until we find at least one error with non-null
-     * plErr code, that is going to be nss error code. */
-    while (errPtr) {
-        if (errPtr->plErr && !nssErr) {
-            nssErr = errPtr->plErr;
-            if (!pkixLog) break;
-        }
-        if (pkixLog) {
-            PR_LOG(pkixLog, 1, ("Error at level %d: %s\n", errLevel,
-                                PKIX_ErrorText[error->errCode]));
-        }
-        errPtr = errPtr->cause;
-        errLevel += 1; 
-    }
-    PORT_Assert(nssErr);
-    if (!nssErr) {
-        *pNssErr = SEC_ERROR_LIBPKIX_INTERNAL;
-    } else {
-        *pNssErr = nssErr;
-    }
+    /* PKIX-XXX: Convert pkix code to nss code. See bug 391183 */
+    *nssCode = SEC_ERROR_CERT_NOT_VALID;
 
     PKIX_RETURN(CERTVFYPKIX);
 }
@@ -906,12 +884,14 @@ cert_GetLogFromVerifyNode(
             PKIX_PL_Free(string, NULL);
 #endif
             if (log != NULL) {
-                SECErrorCodes nssErrorCode = 0;
+                unsigned long nssErrorCode = 0;
 
                 PKIX_CHECK(
                     PKIX_PL_Cert_GetCERTCertificate(node->verifyCert, &cert,
                                                     plContext),
                     PKIX_CERTGETCERTCERTIFICATEFAILED);
+
+                nssErrorCode = PKIX_CERTIFICATEDOESNTHAVEVALIDCRL;
 
                 PKIX_CHECK(
                     cert_PkixErrorToNssCode(node->error, &nssErrorCode,
@@ -1017,7 +997,7 @@ cert_GetBuildResults(
     }
 
     if (error) {
-        SECErrorCodes nssErrorCode = 0;
+        unsigned long nssErrorCode = 0;
 #ifdef DEBUG_volkov        
         char *temp = pkix_Error2ASCII(error, plContext);
         fprintf(stderr, "BUILD ERROR:\n%s\n", temp);
@@ -1680,6 +1660,7 @@ SECStatus CERT_PKIXVerifyCert(
     error = PKIX_ProcessingParams_SetTargetCertConstraints
         (procParams, certSelector, plContext);
     if (error != NULL) {
+        PORT_SetError(SEC_ERROR_IO);    /* need pkix->nss error map */
         goto cleanup;
     }
 
@@ -1687,6 +1668,7 @@ SECStatus CERT_PKIXVerifyCert(
     error = PKIX_ProcessingParams_SetCertStores
         (procParams, certStores, plContext);
     if (error != NULL) {
+        PORT_SetError(SEC_ERROR_IO);   /* need pkix->nss error map */
         goto cleanup;
     }
 
@@ -1694,24 +1676,28 @@ SECStatus CERT_PKIXVerifyCert(
                              &buildState, &buildResult, NULL,
             plContext);
     if (error != NULL) {
+        PORT_SetError(SEC_ERROR_IO);  /* need pkix->nss error map */
         goto cleanup;
     }
 
     error = PKIX_BuildResult_GetValidateResult( buildResult, &valResult,
                                                 plContext);
     if (error != NULL) {
+        PORT_SetError(SEC_ERROR_IO);  /* need pkix->nss error map */
         goto cleanup;
     }
 
     error = PKIX_ValidateResult_GetTrustAnchor( valResult, &trustAnchor,
                                                 plContext);
     if (error != NULL) {
+        PORT_SetError(SEC_ERROR_IO);  /* need pkix->nss error map */
         goto cleanup;
     }
 
     error = PKIX_TrustAnchor_GetTrustedCert( trustAnchor, &trustAnchorCert,
                                                 plContext);
     if (error != NULL) {
+        PORT_SetError(SEC_ERROR_IO);   /* need pkix->nss error map */
         goto cleanup;
     }
 
@@ -1748,13 +1734,8 @@ cleanup:
     if (certSelector != NULL) 
        PKIX_PL_Object_DecRef((PKIX_PL_Object *)certSelector, plContext);
 
-    if (error != NULL) {
-        SECErrorCodes         nssErrorCode = 0;
-
-        cert_PkixErrorToNssCode(error, &nssErrorCode, plContext);
-        PORT_SetError(nssErrorCode);
-        PKIX_PL_Object_DecRef((PKIX_PL_Object *)error, plContext);
-    }
+    if (error != NULL) 
+       PKIX_PL_Object_DecRef((PKIX_PL_Object *)error, plContext);
 
     PKIX_PL_NssContext_Destroy(plContext);
 

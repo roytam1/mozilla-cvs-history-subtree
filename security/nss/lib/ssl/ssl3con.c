@@ -535,8 +535,7 @@ static void SSL_AtomicIncrementLong(long * x)
         PR_AtomicIncrement((PRInt32 *)x);
     } else {
     	tooLong * tl = (tooLong *)x;
-	if (PR_AtomicIncrement(&tl->low) == 0)
-	    PR_AtomicIncrement(&tl->high);
+	PR_AtomicIncrement(&tl->low) || PR_AtomicIncrement(&tl->high);
     }
 }
 
@@ -3923,24 +3922,13 @@ typedef struct {
 static PZLock *          symWrapKeysLock = NULL;
 static ssl3SymWrapKey    symWrapKeys[SSL_NUM_WRAP_MECHS];
 
-SECStatus ssl_FreeSymWrapKeysLock(void)
-{
-    if (symWrapKeysLock) {
-        PZ_DestroyLock(symWrapKeysLock);
-        symWrapKeysLock = NULL;
-        return SECSuccess;
-    }
-    PORT_SetError(SEC_ERROR_NOT_INITIALIZED);
-    return SECFailure;
-}
-
 SECStatus
 SSL3_ShutdownServerCache(void)
 {
     int             i, j;
 
     if (!symWrapKeysLock)
-    	return SECSuccess;	/* lock was never initialized */
+    	return SECSuccess;	/* was never initialized */
     PZ_Lock(symWrapKeysLock);
     /* get rid of all symWrapKeys */
     for (i = 0; i < SSL_NUM_WRAP_MECHS; ++i) {
@@ -3955,7 +3943,8 @@ SSL3_ShutdownServerCache(void)
     }
 
     PZ_Unlock(symWrapKeysLock);
-    ssl_FreeSessionCacheLocks();
+    PZ_DestroyLock(symWrapKeysLock);
+    symWrapKeysLock = NULL;
     return SECSuccess;
 }
 
@@ -4001,7 +3990,7 @@ getWrappingKey( sslSocket *       ss,
 
     pSymWrapKey = &symWrapKeys[symWrapMechIndex].symWrapKey[exchKeyType];
 
-    ssl_InitSessionCacheLocks(PR_TRUE);
+    ssl_InitLocks(PR_TRUE);
 
     PZ_Lock(symWrapKeysLock);
 

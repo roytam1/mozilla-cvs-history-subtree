@@ -168,7 +168,7 @@ pkix_Throw(
         PKIX_Error **pError,
         void *plContext)
 {
-        PKIX_Error *error = NULL;
+        PKIX_ERRORCLASS causeClass;
 
         PKIX_ENTER(ERROR, "pkix_Throw");
         PKIX_NULLCHECK_TWO(funcName, pError);
@@ -188,18 +188,7 @@ pkix_Throw(
         }
 
        pkixTempResult = PKIX_Error_Create(errorClass, cause, NULL,
-                                           errorCode, &error, plContext);
-       
-       if (!pkixTempResult) {
-           /* Setting plErr error code:
-            *    get it from PORT_GetError if it is a leaf error and
-            *    default error code does not exist(eq 0)               */
-           if (!cause && !error->plErr) {
-               error->plErr = PKIX_PL_GetPLErrorCode();
-           }
-       }
-
-       *pError = error;
+                                           errorCode, pError, plContext);
 
 cleanup:
 
