@@ -6179,22 +6179,17 @@ no_catch:;
         goto inline_return;
 
     /*
-     * If fp has blocks on its scope chain, home their locals now unless we
-     * are inside the generator.
-     */
-    if ((fp->flags & (JSFRAME_POP_BLOCKS | JSFRAME_GENERATOR)) ==
-        JSFRAME_POP_BLOCKS) {
-        SAVE_SP_AND_PC(fp);
-        ok &= PutBlockObjects(cx, fp);
-    }
-
-    /*
      * Reset sp before freeing stack slots, because our caller may GC soon.
      * Clear spbase to indicate that we've popped the 2 * depth operand slots.
      * Restore the previous frame's execution state.
      */
     if (JS_LIKELY(mark != NULL)) {
         /* If fp has blocks on its scope chain, home their locals now. */
+        if (fp->flags & JSFRAME_POP_BLOCKS) {
+            SAVE_SP_AND_PC(fp);
+            ok &= PutBlockObjects(cx, fp);
+        }
+
         fp->sp = fp->spbase;
         fp->spbase = NULL;
         js_FreeRawStack(cx, mark);
