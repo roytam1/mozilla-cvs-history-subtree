@@ -172,7 +172,7 @@ $BuildTree  = 'MozillaRelease';
 
 #$BuildName = '';
 # CONFIG: $BuildTag = '%productTag%_RELEASE';
-$BuildTag = 'FIREFOX_3_0b3_RELEASE';
+$BuildTag = 'FIREFOX_3_0b4_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -210,7 +210,7 @@ $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
 # CONFIG: $milestone     = 'firefox%version%';
-$milestone     = 'firefox3.0b3';
+$milestone     = 'firefox3.0b4';
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 1;
@@ -233,7 +233,7 @@ $ENV{'SYMBOL_SERVER_USER'}    = 'ffxbld';
 # CONFIG: $ENV{'SYMBOL_SERVER_PATH'}    = '%symbolServerPath%';
 $ENV{'SYMBOL_SERVER_PATH'}    = '/mnt/netapp/breakpad/symbols_ffx';
 # CONFIG: $ENV{'SYMBOL_SERVER_SSH_KEY'} = '%symbolServerKey%';
-$ENV{'SYMBOL_SERVER_SSH_KEY'} = '/home/cltbld/.ssh/ffxbld_dsa';
+$ENV{'SYMBOL_SERVER_SSH_KEY'} = '/c/Documents and Settings/cltbld/.ssh/ffxbld_dsa';
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
