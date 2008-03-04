@@ -285,6 +285,13 @@ nsXFormsActionElement::SetRefresh(nsIModelElementPrivate* aModel,
   return NS_OK;
 }
 
+NS_IMETHODIMP
+nsXFormsActionElement::GetCurrentEvent(nsIDOMEvent** aEvent)
+{
+  NS_IF_ADDREF(*aEvent = mCurrentEvent);
+  return NS_OK;
+}
+
 NS_HIDDEN_(nsresult)
 NS_NewXFormsActionElement(nsIXTFElement **aResult)
 {

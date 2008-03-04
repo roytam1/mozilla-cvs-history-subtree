@@ -21,6 +21,7 @@
  *
  * Contributor(s):
  *  Aaron Reed <aaronr@us.ibm.com>
+ *  Merle Sterling <msterlin@us.ibm.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -249,6 +250,10 @@ nsXFormsXPathEvaluator::XFormsParseContextImpl::resolveFunctionCall(
     else if (aName == txXPathAtoms::current) {
       aFnCall = new XFormsFunctionCall(XFormsFunctionCall::CURRENT,
                                        mOriginalContext);
+    }
+    else if (aName == txXPathAtoms::event) {
+      aFnCall = new XFormsFunctionCall(XFormsFunctionCall::EVENT,
+                                       mResolverNode);
     }
     else {
       // didn't find functioncall here, aFnCall should be null

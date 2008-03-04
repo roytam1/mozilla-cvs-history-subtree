@@ -41,6 +41,7 @@
 
 #include "nsCOMArray.h"
 #include "nsCOMPtr.h"
+#include "nsString.h"
 #include "nsIDOMElement.h"
 #include "nsIDOMNode.h"
 #include "nsIDOMXPathResult.h"

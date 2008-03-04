@@ -21,6 +21,7 @@
  *
  * Contributor(s):
  *  Darin Fisher <darin@meer.net>
+ *  Merle Sterling <msterlin@us.ibm.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -50,6 +51,9 @@
 #include "nsIInterfaceRequestor.h"
 #include "nsHashSets.h"
 #include "nsIDocument.h"
+#include "nsIHttpHeaderVisitor.h"
+#include "nsIXFormsContextInfo.h"
+#include "nsDataHashtable.h"
 
 
 class nsIMultiplexInputStream;
@@ -71,7 +75,8 @@ class nsXFormsSubmissionElement : public nsXFormsStubElement,
                                   public nsIRequestObserver,
                                   public nsIXFormsSubmissionElement,
                                   public nsIChannelEventSink,
-                                  public nsIInterfaceRequestor
+                                  public nsIInterfaceRequestor,
+                                  public nsIHttpHeaderVisitor
 {
 public:
   NS_DECL_ISUPPORTS_INHERITED
@@ -79,13 +84,15 @@ public:
   NS_DECL_NSIXFORMSSUBMISSIONELEMENT
   NS_DECL_NSICHANNELEVENTSINK
   NS_DECL_NSIINTERFACEREQUESTOR
+  NS_DECL_NSIHTTPHEADERVISITOR
 
   nsXFormsSubmissionElement()
     : mElement(nsnull),
       mSubmissionActive(PR_FALSE),
       mIsReplaceInstance(PR_FALSE),
       mIsSOAPRequest(PR_FALSE),
-      mFormat(0)
+      mFormat(0),
+      mSubmissionBody(nsnull)
   {}
 
   // nsIXTFGenericElement overrides
@@ -157,6 +164,15 @@ private:
   // input end of pipe, which contains response data.
   nsCOMPtr<nsIInputStream>         mPipeIn;
 
+  // Context Info for events.
+  nsCOMArray<nsIXFormsContextInfo> mContextInfo;
+  // Document for http header context info.
+  nsCOMPtr<nsIDOMDocument>         mHttpHeaderDoc;
+  // Submission body from xforms-submit-serialize.
+  nsCOMPtr<nsIDOMNode>              mSubmissionBody;
+  // Type of submit error.
+  nsString                         mSubmitError;
+
   /**
    * @return true if aTestURI has the same origin as aBaseURI or if
    * there is no need for a same origin check.
@@ -197,6 +213,21 @@ private:
    */
   nsresult CreateAttachments(nsIModelElementPrivate *aModel, nsIDOMNode *aDoc,
                              SubmissionAttachmentArray *aAttachments);
+
+  /**
+   * Set context info.
+   */
+  nsresult SetContextInfo();
+
+  /**
+   * Set Http context info.
+   *
+   * @param aResponse         Protocol response code
+   * @param aResponseText     Protocol response reason phrase
+   */
+  nsresult SetHttpContextInfo(PRUint32 aResponse, const nsAString &aResponseText);
+
+  nsresult ParseErrorResponse(nsIChannel *aChannel);
 };
 
 NS_HIDDEN_(nsresult)

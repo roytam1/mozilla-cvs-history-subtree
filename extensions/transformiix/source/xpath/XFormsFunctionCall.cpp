@@ -21,6 +21,7 @@
  *
  * Contributor(s):
  *  Aaron Reed <aaronr@us.ibm.com>
+ *  Merle Sterling <msterlin@us.ibm.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -532,6 +533,45 @@ XFormsFunctionCall::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
 
       return NS_OK;
     }
+    case EVENT:
+    {
+      // The Event function returns a nodeset of context info associated with
+      // an event.
+      nsresult rv;
+      if (!requireParams(1, 1, aContext))
+        return NS_ERROR_XPATH_BAD_ARGUMENT_COUNT;
+
+      nsRefPtr<txNodeSet> resultSet;
+      rv = aContext->recycler()->getNodeSet(getter_AddRefs(resultSet));
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      // Get the name of the context info property.
+      nsAutoString contextName;
+      evaluateToString((Expr*)iter.next(), aContext, contextName);
+
+      nsCOMPtr<nsIXFormsUtilityService>xformsService =
+            do_GetService("@mozilla.org/xforms-utility-service;1", &rv);
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      // mNode is the node that contained the Event XPath expression.
+      nsCOMArray<nsIDOMNode> contextInfo;
+      rv = xformsService->GetEventContextInfo(contextName, mNode, &contextInfo);
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      // Add each of the context info nodes to the resultSet.
+      PRInt32 i;
+      for (i = 0; i < contextInfo.Count(); ++i) {
+        nsAutoPtr<txXPathNode> txNode(txXPathNativeNode::createXPathNode(contextInfo[i]));
+        if (txNode) {
+          resultSet->add(*txNode);
+        }
+      }
+
+      *aResult = resultSet;
+      NS_ADDREF(*aResult);
+
+      return NS_OK;
+    }
   } /* switch() */
 
   aContext->receiveError(NS_LITERAL_STRING("Internal error"),
@@ -617,6 +657,11 @@ XFormsFunctionCall::getNameAtom(nsIAtom** aAtom)
     case CURRENT:
     {
       *aAtom = txXPathAtoms::current;
+      break;
+    }
+    case EVENT:
+    {
+      *aAtom = txXPathAtoms::event;
       break;
     }
     default:

@@ -21,6 +21,7 @@
  *
  * Contributor(s):
  *  Aaron Reed <aaronr@us.ibm.com>
+ *  Merle Sterling <msterlin@us.ibm.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -54,6 +55,8 @@
 #include "prdtoa.h"
 #include "nsIXFormsControl.h"
 #include "nsIModelElementPrivate.h"
+#include "nsIXFormsActionModuleElement.h"
+#include "nsIXFormsContextInfo.h"
 
 NS_IMPL_ISUPPORTS1(nsXFormsUtilityService, nsIXFormsUtilityService)
 
@@ -425,6 +428,75 @@ nsXFormsUtilityService::GetDaysFromDateTime(const nsAString & aValue,
 
   // convert whole seconds to days.  86400 seconds in a day.
   *aDays = secs32/86400;
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsXFormsUtilityService::GetEventContextInfo(const nsAString & aContextName,
+                                       nsIDOMNode           * aNode,
+                                       nsCOMArray<nsIDOMNode> *aResult)
+{
+  nsresult rv;
+
+  nsCOMPtr<nsIXFormsContextInfo> contextInfo;
+  nsCOMPtr<nsIXFormsActionModuleElement> actionElt(do_QueryInterface(aNode));
+  if (!actionElt)
+    return NS_OK;
+
+  nsCOMPtr<nsIDOMEvent> domEvent;
+  actionElt->GetCurrentEvent(getter_AddRefs(domEvent));
+  nsCOMPtr<nsIXFormsDOMEvent> xfEvent(do_QueryInterface(domEvent));
+  if (!xfEvent) {
+    // Event being called for an nsIDOMEvent that is not an
+    // nsIXFormsDOMEvent.
+    return NS_OK;
+  }
+  xfEvent->GetContextInfo(aContextName, getter_AddRefs(contextInfo));
+  if (!contextInfo) {
+    // The requested context info property does not exist.
+    return NS_OK;
+  }
+
+  // Determine the type of context info property.
+  PRInt32 resultType;
+  contextInfo->GetType(&resultType);
+
+  if (resultType == nsIXFormsContextInfo::NODESET_TYPE) {
+    // The context property is a nodeset. Snapshot each individual node
+    // in the nodeset and add them one at a time to the context info array.
+    nsCOMPtr<nsIDOMXPathResult> nodeset;
+    contextInfo->GetNodesetValue(getter_AddRefs(nodeset));
+    if (nodeset) {
+      PRUint32 nodesetSize;
+      rv = nodeset->GetSnapshotLength(&nodesetSize);
+      NS_ENSURE_SUCCESS(rv, rv);
+      for (PRUint32 i=0; i < nodesetSize; ++i) {
+        nsCOMPtr<nsIDOMNode> node;
+        nodeset->SnapshotItem(i, getter_AddRefs(node));
+        aResult->AppendObject(node);
+      }
+    }
+  } else {
+    // The type is a dom node, string, or number. Strings and numbers
+    // are encapsulated in a text node.
+    nsCOMPtr<nsIDOMNode> node;
+    contextInfo->GetNodeValue(getter_AddRefs(node));
+    if (node) {
+      aResult->AppendObject(node);
+    }
+#ifdef DEBUG
+    PRInt32 type;
+    contextInfo->GetType(&type);
+    if (type == nsXFormsContextInfo::STRING_TYPE) {
+      nsAutoString str;
+      contextInfo->GetStringValue(str);
+    } else if (type == nsXFormsContextInfo::NUMBER_TYPE) {
+      PRInt32 number;
+      contextInfo->GetNumberValue(&number);
+    }
+#endif
+  }
 
   return NS_OK;
 }

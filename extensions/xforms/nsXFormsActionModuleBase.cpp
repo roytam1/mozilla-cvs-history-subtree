@@ -156,6 +156,7 @@ nsXFormsActionModuleBase::DoHandleAction(nsXFormsActionModuleHelper *aXFormsActi
   if (!element) {
     return NS_OK;
   }
+  aXFormsAction->SetCurrentEvent(aEvent);
 
   // Set the maximum run time for the loop (in microseconds).
   PRTime microseconds = nsXFormsUtils::waitLimit * PR_USEC_PER_SEC;
@@ -272,4 +273,11 @@ nsXFormsActionModuleBase::CanPerformAction(nsIDOMElement *aElement,
   }
 
   return PR_TRUE;
+}
+
+NS_IMETHODIMP
+nsXFormsActionModuleBase::GetCurrentEvent(nsIDOMEvent **aEvent)
+{
+  NS_IF_ADDREF(*aEvent = mCurrentEvent);
+  return NS_OK;
 }

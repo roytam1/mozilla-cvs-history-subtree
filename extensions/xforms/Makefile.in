@@ -150,6 +150,8 @@ XPIDLSRCS	= \
 		nsIXFormsCopyElement.idl \
 		nsIXFormsEphemeralMessageUI.idl \
 		nsIXFormsRangeConditionAccessors.idl \
+		nsIXFormsDOMEvent.idl \
+		nsIXFormsContextInfo.idl \
 		$(NULL)
 
 # XForms source files
@@ -211,6 +213,8 @@ CPPSRCS		= \
 		nsXFormsRangeAccessors.cpp \
 		nsXFormsCopyElement.cpp \
 		nsXFormsRangeConditionAccessors.cpp \
+		nsXFormsDOMEvent.cpp \
+		nsXFormsContextInfo.cpp \
 		$(NULL)
 
 # Standard Mozilla make rules

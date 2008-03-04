@@ -21,6 +21,7 @@
  *
  * Contributor(s):
  *  Aaron Reed <aaronr@us.ibm.com>
+ *  Merle Sterling <msterlin@us.ibm.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -41,6 +42,7 @@
 
 
 #include "nsISupports.h"
+#include "nsCOMArray.h"
 
 /* For IDL files that don't want to include root IDL files. */
 #ifndef NS_NO_VTABLE
@@ -50,13 +52,12 @@ class nsIDOMNode; /* forward declaration */
 
 class nsIXFormsModelElement; /* forward declaration */
 
-
 /* starting interface:    nsIXFormsUtilityService */
-#define NS_IXFORMSUTILITYSERVICE_IID_STR "1e51f8fb-22e1-4d5d-a5f3-ab34e76efe8e"
+#define NS_IXFORMSUTILITYSERVICE_IID_STR "2ad098f4-5ee7-4282-a9f7-584eb95e1d69"
 
 #define NS_IXFORMSUTILITYSERVICE_IID \
-  {0x1e51f8fb, 0x22e1, 0x4d5d, \
-    { 0xa5, 0xf3, 0xab, 0x34, 0xe7, 0x6e, 0xfe, 0x8e }}
+  {0x2ad098f4, 0x5ee7, 0x4282, \
+    { 0xa9, 0xf7, 0x58, 0x4e, 0xb9, 0x5e, 0x1d, 0x69 }}
 
 #define NS_XFORMS_UTILITY_CONTRACTID   "@mozilla.org/xforms-utility-service;1"
 
@@ -70,7 +71,8 @@ class nsIXFormsModelElement; /* forward declaration */
   NS_IMETHOD GetMonths(const nsAString & aValue, PRInt32 *aMonths); \
   NS_IMETHOD GetSeconds(const nsAString & aValue, double *aSeconds); \
   NS_IMETHOD GetSecondsFromDateTime(const nsAString & aValue, double *aSeconds); \
-  NS_IMETHOD GetDaysFromDateTime(const nsAString & aValue, PRInt32 *aDays);
+  NS_IMETHOD GetDaysFromDateTime(const nsAString & aValue, PRInt32 *aDays); \
+  NS_IMETHOD GetEventContextInfo(const nsAString & aContextName, nsIDOMNode *aNode, nsCOMArray<nsIDOMNode> *aResult);
 
 /**
  * Private interface implemented by the nsXFormsUtilityService in XForms extension.
@@ -156,6 +158,13 @@ class NS_NO_VTABLE nsIXFormsUtilityService : public nsISupports {
   /* AString getDaysFromDateTime (in DOMString aValue); */
   NS_IMETHOD GetDaysFromDateTime(const nsAString & aValue, 
                                  PRInt32         * aDays) = 0;
+
+  /**
+   * Function to retrieve the context info for the property 'aContextName'
+   */
+  /* nsCOMArray getEventContextInfo (in DOMString aContextName, in nsIDOMNode aNode); */
+  NS_IMETHOD GetEventContextInfo(const nsAString & aContextName, nsIDOMNode *aNode,
+                                 nsCOMArray<nsIDOMNode> *aResult) = 0;
 };
 
 #define NS_ERROR_XFORMS_CALCUATION_EXCEPTION \

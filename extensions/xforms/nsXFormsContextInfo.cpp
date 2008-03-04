@@ -130,9 +130,9 @@ nsXFormsContextInfo::GetNumberValue(PRInt32 *aResult)
     nsAutoString numberStr;
     nsXFormsUtils::GetNodeValue(mNode, numberStr);
 
-    nsresult rv;
-    *aResult = numberStr.ToInteger(&rv);
-    NS_ENSURE_SUCCESS(rv, rv);
+    PRInt32 errCode;
+    *aResult = numberStr.ToInteger(&errCode);
+    NS_ENSURE_TRUE(errCode == 0, NS_ERROR_FAILURE);
   } else {
     NS_WARNING("GetNumberValue: context type is not a number!");
   }

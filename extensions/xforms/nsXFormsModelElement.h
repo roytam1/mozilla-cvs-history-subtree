@@ -464,6 +464,13 @@ private:
   NS_HIDDEN_(nsresult) BuiltinTypeToPrimative(nsISchemaBuiltinType *aSchemaType,
                                               PRUint16             *aPrimType);
 
+  /** Set context info for events.
+   *
+   * @param aName     Name of the context property.
+   * @param aValue    Value of the context property.
+   */
+  nsresult SetContextInfo(const char *aName, const nsAString &aValue);
+
   nsIDOMElement            *mElement;
   nsCOMPtr<nsISchemaLoader> mSchemas;
   nsStringArray             mPendingInlineSchemas;
@@ -556,6 +563,9 @@ private:
    * @see http://www.w3.org/TR/xforms/slice6.html#model-prop-p3ptype
    */
   nsClassHashtable<nsISupportsHashKey, nsString> mNodeToP3PType;
+
+  // Context Info for events.
+  nsCOMArray<nsIXFormsContextInfo> mContextInfo;
 
   friend class Updating;
 };

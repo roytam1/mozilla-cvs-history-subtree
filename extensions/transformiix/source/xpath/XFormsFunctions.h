@@ -67,7 +67,8 @@ public:
         PROPERTY,             // property()
         SECONDS,              // seconds()
         SECONDSFROMDATETIME,  // seconds-from-dateTime()
-        CURRENT               // current()
+        CURRENT,              // current()
+        EVENT                 // event()
     };
 
     /*
