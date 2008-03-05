@@ -49,8 +49,8 @@ $BuildLocales      = 1;      # Do l10n packaging?
 # Tests
 $CleanProfile             = 1;
 $ResetHomeDirForTests     = 1;
-#$ProductName              = "Sunbird";
-$ProductName              = 'Calendar';
+$ProductName              = "Sunbird";
+#$ProductName              = 'Calendar';
 $VendorName               = 'Mozilla';
 
 #$RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
@@ -185,8 +185,8 @@ $BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Sb-Mozilla1.8-l10n/Linux_2.4.21-37
 $BuildTree  = 'Mozilla1.8-l10n';
 
 #$BuildName = '';
-$BuildTag = 'MOZILLA_1_8_BRANCH';
-#$BuildTag = 'SUNBIRD_0_7_BRANCH';
+#$BuildTag = 'MOZILLA_1_8_BRANCH';
+$BuildTag = 'SUNBIRD_0_8_BRANCH';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
