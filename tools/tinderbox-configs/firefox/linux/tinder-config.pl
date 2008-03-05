@@ -74,13 +74,13 @@ $StartupPerformanceTest   = 1;  # Ts
 $TestsPhoneHome           = 1;  # Should test report back to server?
 $TestOnlyTinderbox = 1;
 $DownloadBuildFile = 'firefox-2.0.0.13pre.en-US.linux-i686.tar.gz';
-$DownloadBuildURL = 'http://stage.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds/prometheus-vm-mozilla1.8';
+$DownloadBuildURL = 'http://stage.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds/production-prometheus-vm-mozilla1.8';
 $DownloadBuildDir = 'firefox';
 
 # If TestOnlyTinderbox is enabled, fetch the latest build info from tinderbox in a 
 # parseable format
 $TinderboxServerURL = 'http://tinderbox.mozilla.org/showbuilds.cgi?tree=Mozilla1.8&quickparse=1';
-$MatchBuildname = "Linux prometheus-vm Depend Fx-Nightly";
+$MatchBuildname = "Linux production-prometheus-vm Depend Fx-Nightly";
 
 #$GraphNameOverride        = $MatchBuildname."-test1"; # Override name built from ::hostname() and $BuildTag
 
@@ -154,7 +154,7 @@ $AliveTestTimeout                 = 5;
 #$ObjDir = '';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'prometheus-vm perf test';
+$BuildNameExtra = 'production-prometheus-vm perf test';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";

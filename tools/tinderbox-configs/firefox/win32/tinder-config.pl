@@ -76,7 +76,7 @@ $TestsPhoneHome           = 1;  # Should test report back to server?
 # If TestOnlyTinderbox is enabled, fetch the latest build info from tinderbox in a 
 # parseable format
 $TinderboxServerURL = 'http://tinderbox.mozilla.org/showbuilds.cgi?tree=Mozilla1.8&quickparse=1';
-$MatchBuildname = "WINNT 5.2 pacifica-vm Depend Fx-Nightly";
+$MatchBuildname = "WINNT 5.2 prod-pacifica-vm Depend Fx-Nightly";
 #$GraphNameOverride        = 'Fx-Mozilla1.8-win32-test1'; # Override name built from ::hostname() and $BuildTag
 
 # $results_server
@@ -150,7 +150,7 @@ $AliveTestTimeout                 = 45;
 #$ObjDir = '';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'pacifica-vm perf test';
+$BuildNameExtra = 'prod-pacifica-vm perf test';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -239,5 +239,5 @@ $BinaryName = 'firefox.exe';
 # the latest build and unpack it rather than building it.
 $TestOnlyTinderbox = 1;
 $DownloadBuildFile = 'firefox-2.0.0.13pre.en-US.win32.zip';
-$DownloadBuildURL = 'http://stage.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds/pacifica-vm-mozilla1.8';
+$DownloadBuildURL = 'http://stage.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds/prod-pacifica-vm-mozilla1.8';
 $DownloadBuildDir = 'firefox';
