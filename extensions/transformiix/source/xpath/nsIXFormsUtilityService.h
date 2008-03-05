@@ -72,7 +72,8 @@ class nsIXFormsModelElement; /* forward declaration */
   NS_IMETHOD GetSeconds(const nsAString & aValue, double *aSeconds); \
   NS_IMETHOD GetSecondsFromDateTime(const nsAString & aValue, double *aSeconds); \
   NS_IMETHOD GetDaysFromDateTime(const nsAString & aValue, PRInt32 *aDays); \
-  NS_IMETHOD GetEventContextInfo(const nsAString & aContextName, nsIDOMNode *aNode, nsCOMArray<nsIDOMNode> *aResult);
+  NS_IMETHOD GetEventContextInfo(const nsAString & aContextName, nsIDOMNode *aNode, nsCOMArray<nsIDOMNode> *aResult); \
+  NS_IMETHOD GetTime(nsAString & aValue, PRBool aUTC);
 
 /**
  * Private interface implemented by the nsXFormsUtilityService in XForms extension.
@@ -165,6 +166,14 @@ class NS_NO_VTABLE nsIXFormsUtilityService : public nsISupports {
   /* nsCOMArray getEventContextInfo (in DOMString aContextName, in nsIDOMNode aNode); */
   NS_IMETHOD GetEventContextInfo(const nsAString & aContextName, nsIDOMNode *aNode,
                                  nsCOMArray<nsIDOMNode> *aResult) = 0;
+
+  /**
+   * Function to retrieve the current time as a string.  For example,
+   * 2007-01-11T17:57:30-6:00 if UTC is not set and 2007-01-11T23:57:30Z if
+   * it is.
+   */
+  /* void getTime(out DOMString, PRBool aUTC); */
+  NS_IMETHOD GetTime(nsAString & aValue, PRBool aUTC) = 0;
 };
 
 #define NS_ERROR_XFORMS_CALCUATION_EXCEPTION \

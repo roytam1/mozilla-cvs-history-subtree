@@ -425,26 +425,70 @@ XFormsFunctionCall::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
       if (!requireParams(0, 0, aContext))
         return NS_ERROR_XPATH_BAD_ARGUMENT_COUNT;
 
-      PRExplodedTime time;
-      char ctime[60];
-   
-      PR_ExplodeTime(PR_Now(), PR_LocalTimeParameters, &time);
-      int gmtoffsethour = time.tm_params.tp_gmt_offset < 0 ? 
-                          -1*time.tm_params.tp_gmt_offset / 3600 : 
-                          time.tm_params.tp_gmt_offset / 3600;
-      int remainder = time.tm_params.tp_gmt_offset%3600;
-      int gmtoffsetminute = remainder ? remainder/60 : 00;
+      nsCOMPtr<nsIXFormsUtilityService>xformsService =
+            do_GetService("@mozilla.org/xforms-utility-service;1", &rv);
+      NS_ENSURE_SUCCESS(rv, rv);
 
-      char zone_location[40];
-      const int zoneBufSize = sizeof(zone_location);
-      PR_snprintf(zone_location, zoneBufSize, "%c%02d:%02d\0",
-                  time.tm_params.tp_gmt_offset < 0 ? '-' : '+',
-                  gmtoffsethour, gmtoffsetminute);
+      nsAutoString res;
+      xformsService->GetTime(res, PR_TRUE);
    
-      PR_FormatTime(ctime, sizeof(ctime), "%Y-%m-%dT%H:%M:%S\0", &time);
-      nsString sTime = NS_ConvertASCIItoUTF16(ctime) + NS_ConvertASCIItoUTF16(zone_location);
+      return aContext->recycler()->getStringResult(res, aResult);
+    }
+    case LOCALDATETIME:
+    {
+      if (!requireParams(0, 0, aContext))
+        return NS_ERROR_XPATH_BAD_ARGUMENT_COUNT;
+
+      nsCOMPtr<nsIXFormsUtilityService>xformsService =
+            do_GetService("@mozilla.org/xforms-utility-service;1", &rv);
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      nsAutoString res;
+      xformsService->GetTime(res, PR_FALSE);
    
-      return aContext->recycler()->getStringResult(sTime, aResult);
+      return aContext->recycler()->getStringResult(res, aResult);
+    }
+    case LOCALDATE:
+    {
+      if (!requireParams(0, 0, aContext))
+        return NS_ERROR_XPATH_BAD_ARGUMENT_COUNT;
+
+      nsCOMPtr<nsIXFormsUtilityService>xformsService =
+            do_GetService("@mozilla.org/xforms-utility-service;1", &rv);
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      nsAutoString time, res;
+      xformsService->GetTime(time, PR_FALSE);
+
+      // since we know that the returned string will be in the format of
+      // yyyy-mm-ddThh:mm:ss.ssszzzz, we just need to grab the first 10
+      // characters to represent the date and then strip off the time zone
+      // information from the end and append it to the string to get our answer
+      res = Substring(time, 0, 10);
+      PRInt32 timeSeparator = time.FindChar(PRUnichar('T'));
+      if (timeSeparator == kNotFound) {
+        // though this should probably never happen, if this is the case we
+        // certainly don't have to worry about timezones.  Just return.
+        return NS_ERROR_UNEXPECTED;
+      }
+  
+      // Time zone information can be of the format '-hh:ss', '+hh:ss', or 'Z'
+      // might be no time zone information at all.
+      nsAutoString hms(Substring(time, timeSeparator+1, time.Length()));
+      PRInt32 timeZoneSeparator = hms.FindChar(PRUnichar('-'));
+      if (timeZoneSeparator == kNotFound) {
+        timeZoneSeparator = hms.FindChar(PRUnichar('+'));
+        if (timeZoneSeparator == kNotFound) {
+          timeZoneSeparator = hms.FindChar(PRUnichar('Z'));
+          if (timeZoneSeparator == kNotFound) {
+            // no time zone information available
+            return NS_ERROR_UNEXPECTED;
+          }
+        }
+      }
+  
+      res.Append(Substring(hms, timeZoneSeparator, hms.Length()));
+      return aContext->recycler()->getStringResult(res, aResult);
     }
     case PROPERTY:
     {
@@ -699,6 +743,16 @@ XFormsFunctionCall::getNameAtom(nsIAtom** aAtom)
     case NOW:
     {
       *aAtom = txXPathAtoms::now;
+      break;
+    }
+    case LOCALDATETIME:
+    {
+      *aAtom = txXPathAtoms::localDateTime;
+      break;
+    }
+    case LOCALDATE:
+    {
+      *aAtom = txXPathAtoms::localDate;
       break;
     }
     case PROPERTY:

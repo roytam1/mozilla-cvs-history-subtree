@@ -238,6 +238,12 @@ nsXFormsXPathEvaluator::XFormsParseContextImpl::resolveFunctionCall(
     else if (aName == txXPathAtoms::now) {
       aFnCall = new XFormsFunctionCall(XFormsFunctionCall::NOW);
     }
+    else if (aName == txXPathAtoms::localDateTime) {
+      aFnCall = new XFormsFunctionCall(XFormsFunctionCall::LOCALDATETIME);
+    }
+    else if (aName == txXPathAtoms::localDate) {
+      aFnCall = new XFormsFunctionCall(XFormsFunctionCall::LOCALDATE);
+    }
     else if (aName == txXPathAtoms::property) {
       aFnCall = new XFormsFunctionCall(XFormsFunctionCall::PROPERTY);
     }
