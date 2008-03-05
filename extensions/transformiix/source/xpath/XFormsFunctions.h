@@ -68,7 +68,10 @@ public:
         SECONDS,              // seconds()
         SECONDSFROMDATETIME,  // seconds-from-dateTime()
         CURRENT,              // current()
-        EVENT                 // event()
+        EVENT,                 // event()
+        POWER,                // power()
+        RANDOM,               // random()
+        COMPARE               // compare()
     };
 
     /*

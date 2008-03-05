@@ -255,6 +255,15 @@ nsXFormsXPathEvaluator::XFormsParseContextImpl::resolveFunctionCall(
       aFnCall = new XFormsFunctionCall(XFormsFunctionCall::EVENT,
                                        mResolverNode);
     }
+    else if (aName == txXPathAtoms::power) {
+      aFnCall = new XFormsFunctionCall(XFormsFunctionCall::POWER);
+    }
+    else if (aName == txXPathAtoms::random) {
+      aFnCall = new XFormsFunctionCall(XFormsFunctionCall::RANDOM);
+    }
+    else if (aName == txXPathAtoms::compare) {
+      aFnCall = new XFormsFunctionCall(XFormsFunctionCall::COMPARE);
+    }
     else {
       // didn't find functioncall here, aFnCall should be null
       isOutOfMem = PR_FALSE;

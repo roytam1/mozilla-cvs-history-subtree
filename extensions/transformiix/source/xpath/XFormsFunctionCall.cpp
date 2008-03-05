@@ -58,6 +58,9 @@
 #include "nsIXFormsUtilityService.h"
 #include "nsServiceManagerUtils.h"  // needed for do_GetService?
 #include "prprf.h"
+#include "prrng.h"
+#include <errno.h>
+#include <stdlib.h>
 
 /*
  * Creates a XFormsFunctionCall of the given type
@@ -572,6 +575,65 @@ XFormsFunctionCall::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
 
       return NS_OK;
     }
+    case POWER:
+    {
+      if (!requireParams(2, 2, aContext))
+        return NS_ERROR_XPATH_BAD_ARGUMENT_COUNT;
+
+      double result = 0;
+      double base = evaluateToNumber((Expr*)iter.next(), aContext);
+      double exponent = evaluateToNumber((Expr*)iter.next(), aContext);
+
+      // If base is negative and exponent is not an integral value, or if base
+      // is zero and exponent is negative, a domain error occurs, setting the
+      // global variable errno to the value EDOM.
+      // If the result is too large (ERANGE), we consider the result to be kNaN.
+      result = pow(base, exponent);
+      if (errno == EDOM || errno == ERANGE) {
+        result = Double::NaN;
+      }
+
+      return aContext->recycler()->getNumberResult(result, aResult);
+    }
+    case RANDOM:
+    {
+      if (!requireParams(0, 1, aContext))
+        return NS_ERROR_XPATH_BAD_ARGUMENT_COUNT;
+
+      PRBool useSeed = PR_FALSE;
+      Expr *expr = (Expr*)iter.next();
+      if (expr) {
+        useSeed = evaluateToBoolean(expr, aContext);
+      }
+
+      if (useSeed) {
+        // initialize random seed.
+        PRUint32 seed = 0;
+        PRSize rSize = PR_GetRandomNoise(&seed, sizeof(seed));
+        if (rSize) {
+          srand (seed);
+        }
+      }
+      double result = (rand() / ((double)RAND_MAX + 1.0));
+
+      return aContext->recycler()->getNumberResult(result, aResult);
+    }
+    case COMPARE:
+    {
+      if (!requireParams(2, 2, aContext))
+        return NS_ERROR_XPATH_BAD_ARGUMENT_COUNT;
+
+      nsAutoString string1, string2;
+      evaluateToString((Expr*)iter.next(), aContext, string1);
+      evaluateToString((Expr*)iter.next(), aContext, string2);
+
+      // Using strcmp because Compare is not a member of nsAutoString.
+      double result = 0;
+      result = strcmp(NS_ConvertUTF16toUTF8(string1).get(),
+                      NS_ConvertUTF16toUTF8(string2).get());
+
+      return aContext->recycler()->getNumberResult(result, aResult);
+    }
   } /* switch() */
 
   aContext->receiveError(NS_LITERAL_STRING("Internal error"),
@@ -579,7 +641,7 @@ XFormsFunctionCall::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
   return NS_ERROR_UNEXPECTED;
 }
 
-#ifdef TX_TO_STRING
+  #ifdef TX_TO_STRING
 nsresult
 XFormsFunctionCall::getNameAtom(nsIAtom** aAtom)
 {
@@ -662,6 +724,21 @@ XFormsFunctionCall::getNameAtom(nsIAtom** aAtom)
     case EVENT:
     {
       *aAtom = txXPathAtoms::event;
+      break;
+    }
+    case POWER:
+    {
+      *aAtom = txXPathAtoms::power;
+      break;
+    }
+    case RANDOM:
+    {
+      *aAtom = txXPathAtoms::random;
+      break;
+    }
+    case COMPARE:
+    {
+      *aAtom = txXPathAtoms::compare;
       break;
     }
     default:

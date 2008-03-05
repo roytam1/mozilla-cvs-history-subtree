@@ -109,4 +109,7 @@ TX_ATOM(seconds, "seconds")
 TX_ATOM(secondsFromDateTime, "seconds-from-dateTime")
 TX_ATOM(current, "current")
 TX_ATOM(event, "event")
+TX_ATOM(power, "power")
+TX_ATOM(random, "random")
+TX_ATOM(compare, "compare")
 #endif
