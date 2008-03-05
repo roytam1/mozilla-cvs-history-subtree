@@ -104,7 +104,7 @@ public:
 
     // Gets the array of registered content sniffers
     const nsCOMArray<nsIContentSniffer_MOZILLA_1_8_BRANCH>&
-    GetContentSniffers() const {
+    GetContentSniffers() {
       return mContentSniffers.GetEntries();
     }
 
