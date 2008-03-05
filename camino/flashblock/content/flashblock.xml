@@ -211,12 +211,6 @@ function flashblockSetTitle(current, placeholder, isStandalone) {
 				break;
 			}
 		}
-		var embeds = current.getElementsByTagName("embed");
-		if (embeds && embeds.length > 0 && embeds[0].hasAttribute("src")) {
-			placeholder.title = embeds[0].getAttribute("src");
-			placeholder.setAttribute("embedsrc", embeds[0].getAttribute("src"));
-			embeds[0].setAttribute("src",fakeURI);
-		}
 	}
 }
 
