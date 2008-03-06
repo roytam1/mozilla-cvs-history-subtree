@@ -208,6 +208,7 @@ $mac_bundle_path = "/browser/app";
 $ssh_version   = 2;
 # CONFIG: $ssh_user      = "%sshUser%";
 $ssh_user      = "cltbld";
+# CONFIG: $ssh_key       = "'$ENV{HOME}/.ssh/%sshUser%_dsa'";
 $ssh_key       = "'$ENV{HOME}/.ssh/ffxbld_dsa'";
 # CONFIG: $ssh_server    = "%sshServer%";
 $ssh_server    = "stage.mozilla.org";
