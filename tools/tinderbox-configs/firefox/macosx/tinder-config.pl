@@ -142,7 +142,7 @@ $DHTMLPerformanceTestTimeout       = 180;  # entire test, seconds
 
 #$moz_cvsroot   = $ENV{CVSROOT};
 # CONFIG: $moz_cvsroot   = '%mozillaCvsroot%';
-$moz_cvsroot   = ':ext:ffxbld@cvs.mozilla.org:/cvsroot';
+$moz_cvsroot   = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 #$moz_cvsroot   = "/builds/cvs.hourly/cvsroot";
 
 #- Set these proper values for your tinderbox server
@@ -207,7 +207,7 @@ $package_creation_path = "/browser/installer";
 $mac_bundle_path = "/browser/app";
 $ssh_version   = 2;
 # CONFIG: $ssh_user      = "%sshUser%";
-$ssh_user      = "ffxbld";
+$ssh_user      = "cltbld";
 $ssh_key       = "'$ENV{HOME}/.ssh/ffxbld_dsa'";
 # CONFIG: $ssh_server    = "%sshServer%";
 $ssh_server    = "stage.mozilla.org";
