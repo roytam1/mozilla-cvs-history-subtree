@@ -43,7 +43,7 @@ $BuildAdministrator = 'build@mozilla.org';
 #$BuildDebug        = 0;      # Debug or Opt (Darwin)
 #$ReportStatus      = 1;      # Send results to server, or not
 #$ReportFinalStatus = 1;      # Finer control over $ReportStatus.
-#$UseTimeStamp      = 1;      # Use the CVS 'pull-by-timestamp' option, or not
+$UseTimeStamp      = 0;      # Use the CVS 'pull-by-timestamp' option, or not
 #$BuildOnce         = 0;      # Build once, don't send results to server
 #$TestOnly          = 0;      # Only run tests, don't pull/build
 #$BuildEmbed        = 0;      # After building seamonkey, go build embed app.
@@ -136,6 +136,7 @@ $use_blat       = 1;
 # :pserver:$ENV{USER}%netscape.com@cvs.mozilla.org:/cvsroot
 
 #$moz_cvsroot   = $ENV{CVSROOT};
+# CONFIG: $moz_cvsroot = '%mozillaCvsroot%';
 $moz_cvsroot   = ":ext:xrbld\@cvs.mozilla.org:/cvsroot";
 
 #- Set these proper values for your tinderbox server
@@ -148,7 +149,7 @@ $moz_cvsroot   = ":ext:xrbld\@cvs.mozilla.org:/cvsroot";
 $ObjDir = 'obj-xulrunner';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'Nightly';
+$BuildNameExtra = 'Release';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -163,9 +164,11 @@ $BuildNameExtra = 'Nightly';
 
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
+# CONFIG: $BuildTree  = '%buildTree%';
 $BuildTree  = 'XULRunner';
 
 #$BuildName = '';
+# CONFIG: $BuildTag = '%productTag%_RELEASE';
 #$BuildTag = '';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
@@ -188,26 +191,39 @@ $BinaryName = 'xulrunner.exe';
 # Release build options
 $ReleaseBuild  = 1;
 $shiptalkback  = 0;
-#$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
+#$ReleaseToLatest = 0; # Push the release to latest-<milestone>?
 #$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
 #$build_hour    = "8";
 $package_creation_path = "/xulrunner/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
 $ssh_version   = "2";
+# CONFIG: $ssh_user      = "%sshUser%";
 $ssh_user      = "xrbld";
-$ssh_key       = "'$ENV{HOME}/.ssh/xrbld_dsa'";
+#$ssh_key       = "'$ENV{HOME}/.ssh/xrbld_dsa'";
+# CONFIG: $ssh_server    = "%sshServer%";
 $ssh_server    = "stage.mozilla.org";
 $ReleaseGroup  = "xulrunner";
 $ftp_path      = "/home/ftp/pub/xulrunner/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/xulrunner/nightly";
 $tbox_ftp_path = "/home/ftp/pub/xulrunner/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/xulrunner/tinderbox-builds";
+# CONFIG: $milestone     = 'xulrunner%version%';
 $milestone     = "trunk";
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 0;
 $archive       = 1;
 $push_raw_xpis = 0;
+$crashreporter_buildsymbols = 0;
+$crashreporter_pushsymbols = 0;
+# CONFIG: $ENV{'SYMBOL_SERVER_HOST'}    = '%symbolServer%';
+$ENV{'SYMBOL_SERVER_HOST'} = 'stage.mozilla.org';
+# CONFIG: $ENV{'SYMBOL_SERVER_USER'}    = '%symbolServerUser%';
+$ENV{'SYMBOL_SERVER_USER'}   = 'xrbld';
+# CONFIG: $ENV{'SYMBOL_SERVER_PATH'}    = '%symbolServerPath%';
+$ENV{'SYMBOL_SERVER_PATH'}   = '/mnt/netapp/breakpad/symbols_xr/';
+# CONFIG: $ENV{'SYMBOL_SERVER_SSH_KEY'} = '%symbolServerKey%';
+$ENV{'SYMBOL_SERVER_SSH_KEY'}   = "$ENV{HOME}/.ssh/xrbld_dsa";
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
