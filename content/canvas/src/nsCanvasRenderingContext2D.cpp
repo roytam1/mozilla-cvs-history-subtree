@@ -668,6 +668,12 @@ nsCanvasRenderingContext2D::DirtyAllStyles()
 void
 nsCanvasRenderingContext2D::DoDrawImageSecurityCheck(nsIURI* aURI, PRBool forceWriteOnly)
 {
+    // Callers should ensure that mCanvasElement is non-null before calling this
+    if (!mCanvasElement) {
+        NS_WARNING("DoDrawImageSecurityCheck called without canvas element!");
+        return;
+    }
+
     if (mCanvasElement->IsWriteOnly())
         return;
 
@@ -737,6 +743,9 @@ nsCanvasRenderingContext2D::ApplyStyle(PRInt32 aWhichStyle)
 
     nsCanvasPattern* pattern = CurrentState().patternStyles[aWhichStyle];
     if (pattern) {
+        if (!mCanvasElement)
+            return;
+
         DoDrawImageSecurityCheck(pattern->GetURI(), pattern->GetForceWriteOnly());
         pattern->Apply(mCairo);
         return;
@@ -1858,6 +1867,9 @@ nsCanvasRenderingContext2D::DrawImage()
 {
     nsresult rv;
 
+    if (!mCanvasElement)
+        return NS_ERROR_FAILURE;
+
     nsCOMPtr<nsIXPCNativeCallContext> ncc;
     rv = nsContentUtils::XPConnect()->
         GetCurrentNativeCallContext(getter_AddRefs(ncc));
@@ -2967,6 +2979,9 @@ NS_IMETHODIMP
 nsCanvasRenderingContext2D::GetImageData()
 {
     nsresult rv;
+
+    if (!mCanvasElement)
+        return NS_ERROR_FAILURE;
 
     if (mCanvasElement->IsWriteOnly()) {
         nsCOMPtr<nsIScriptSecurityManager> ssm =
