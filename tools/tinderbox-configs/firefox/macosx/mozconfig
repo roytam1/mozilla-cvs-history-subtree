@@ -3,9 +3,9 @@
 ## uname: Darwin bm-xserve16.local 9.2.0 Darwin Kernel Version 9.2.0: Tue Feb  5 16:13:22 PST 2008; root:xnu-1228.3.13~1/RELEASE_I386 i386
 #
 
-# symbols for breakpad
-export CFLAGS="-g -gfull"
-export CXXFLAGS="-g -gfull"
+# symbols for breakpad, stabs+ to not get DWARF
+export CFLAGS="-gstabs+ -gfull"
+export CXXFLAGS="-gstabs+ -gfull"
 
 . $topsrcdir/build/macosx/universal/mozconfig
 
