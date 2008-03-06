@@ -7996,6 +7996,7 @@ nsTypedSelection::NotifySelectionListeners()
     return NS_OK;
   }
   PRInt32 cnt = mSelectionListeners.Count();
+  nsCOMArray<nsISelectionListener> selectionListeners(mSelectionListeners);
   
   nsCOMPtr<nsIDOMDocument> domdoc;
   nsCOMPtr<nsIPresShell> shell;
@@ -8005,7 +8006,7 @@ nsTypedSelection::NotifySelectionListeners()
   short reason = mFrameSelection->PopReason();
   for (PRInt32 i = 0; i < cnt; i++)
   {
-    nsISelectionListener* thisListener = mSelectionListeners[i];
+    nsISelectionListener* thisListener = selectionListeners[i];
     if (thisListener)
       thisListener->NotifySelectionChanged(domdoc, this, reason);
   }

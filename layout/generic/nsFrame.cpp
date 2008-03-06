@@ -1752,6 +1752,10 @@ NS_IMETHODIMP nsFrame::HandleDrag(nsPresContext* aPresContext,
     return NS_OK;            
 
   frameselection->StopAutoScrollTimer();
+  // If we have capturing view, it must be ensured that |this| doesn't 
+  // get deleted during HandleDrag.
+  nsWeakFrame weakFrame = GetNearestCapturingView(this) ? this : nsnull;
+
   // Check if we are dragging in a table cell
   nsCOMPtr<nsIContent> parentContent;
   PRInt32 contentOffset;
@@ -1766,14 +1770,16 @@ NS_IMETHODIMP nsFrame::HandleDrag(nsPresContext* aPresContext,
   else
     frameselection->HandleDrag(aPresContext, this, aEvent->point);
 
-  nsIView* captureView = GetNearestCapturingView(this);
-  if (captureView) {
-    // Get the view that aEvent->point is relative to. This is disgusting.
-    nsPoint dummyPoint;
-    nsIView* eventView;
-    GetOffsetFromView(dummyPoint, &eventView);
-    nsPoint pt = aEvent->point + eventView->GetOffsetTo(captureView);
-    frameselection->StartAutoScrollTimer(aPresContext, captureView, pt, 30);
+  if (weakFrame) {
+    nsIView* captureView = GetNearestCapturingView(this);
+    if (captureView) {
+      // Get the view that aEvent->point is relative to. This is disgusting.
+      nsPoint dummyPoint;
+      nsIView* eventView;
+      GetOffsetFromView(dummyPoint, &eventView);
+      nsPoint pt = aEvent->point + eventView->GetOffsetTo(captureView);
+      frameselection->StartAutoScrollTimer(aPresContext, captureView, pt, 30);
+    }
   }
 
   return NS_OK;
