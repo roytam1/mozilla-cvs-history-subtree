@@ -687,7 +687,8 @@ nsChromeRegistry::Canonify(nsIURL* aChromeURL)
             return NS_ERROR_DOM_BAD_URI;
           break;
         case '?':
-          // ignore query part, we're done
+        case '#':
+          // ignore query or ref part, we're done
           pos = end;
           continue;
       }
