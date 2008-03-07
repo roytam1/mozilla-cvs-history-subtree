@@ -7001,11 +7001,11 @@ PresShell::ProcessReflowCommands(PRBool aInterruptible)
 
   if (0 != mReflowCommands.Count()) {
     nsHTMLReflowMetrics   desiredSize(nsnull);
-    nsIRenderingContext*  rcx;
+    nsCOMPtr<nsIRenderingContext> rcx;
     nsIFrame*             rootFrame = FrameManager()->GetRootFrame();
     nsSize          maxSize = rootFrame->GetSize();
 
-    nsresult rv=CreateRenderingContext(rootFrame, &rcx);
+    nsresult rv=CreateRenderingContext(rootFrame, getter_AddRefs(rcx));
     if (NS_FAILED(rv)) return rv;
 
 #ifdef DEBUG
@@ -7034,56 +7034,59 @@ PresShell::ProcessReflowCommands(PRBool aInterruptible)
     mDocument->BeginUpdate(UPDATE_ALL);
     mDocument->EndUpdate(UPDATE_ALL);
 
-    mIsReflowing = PR_TRUE;
+    // That might have executed (via XBL binding constructors).  So we
+    // may no longer have reflow commands.  In fact, we may have
+    // gotten destroyed.
+    if (!mIsDestroying && mReflowCommands.Count() != 0) {
+      mIsReflowing = PR_TRUE;
 
-    do {
-      // Coalesce the reflow commands into a tree.
-      IncrementalReflow reflow;
-      for (PRInt32 i = mReflowCommands.Count() - 1; i >= 0; --i) {
-        nsHTMLReflowCommand *command =
-          NS_STATIC_CAST(nsHTMLReflowCommand *, mReflowCommands[i]);
+      do {
+        // Coalesce the reflow commands into a tree.
+        IncrementalReflow reflow;
+        for (PRInt32 i = mReflowCommands.Count() - 1; i >= 0; --i) {
+          nsHTMLReflowCommand *command =
+            NS_STATIC_CAST(nsHTMLReflowCommand *, mReflowCommands[i]);
 
-        IncrementalReflow::AddCommandResult res =
-          reflow.AddCommand(mPresContext, command);
-        if (res == IncrementalReflow::eEnqueued ||
-            res == IncrementalReflow::eCancel) {
-          // Remove the command from the queue.
-          mReflowCommands.RemoveElementAt(i);
-          ReflowCommandRemoved(command);
-          if (res == IncrementalReflow::eCancel)
-            delete command;
-        }
-        else {
-          // The reflow command couldn't be added to the tree; leave
-          // it in the queue, and we'll handle it next time.
+          IncrementalReflow::AddCommandResult res =
+            reflow.AddCommand(mPresContext, command);
+          if (res == IncrementalReflow::eEnqueued ||
+              res == IncrementalReflow::eCancel) {
+            // Remove the command from the queue.
+            mReflowCommands.RemoveElementAt(i);
+            ReflowCommandRemoved(command);
+            if (res == IncrementalReflow::eCancel)
+              delete command;
+          }
+          else {
+            // The reflow command couldn't be added to the tree; leave
+            // it in the queue, and we'll handle it next time.
 #ifdef DEBUG
-          printf("WARNING: Couldn't add reflow command, so splitting.\n");
+            printf("WARNING: Couldn't add reflow command, so splitting.\n");
 #endif
+          }
         }
-      }
 
 #ifdef DEBUG
-      if (VERIFY_REFLOW_NOISY_RC & gVerifyReflowFlags) {
-        printf("Incremental reflow tree:\n");
-        reflow.Dump(mPresContext);
-      }
+        if (VERIFY_REFLOW_NOISY_RC & gVerifyReflowFlags) {
+          printf("Incremental reflow tree:\n");
+          reflow.Dump(mPresContext);
+        }
 #endif
 
-      // Dispatch an incremental reflow.
-      reflow.Dispatch(mPresContext, desiredSize, maxSize, *rcx);
+        // Dispatch an incremental reflow.
+        reflow.Dispatch(mPresContext, desiredSize, maxSize, *rcx);
 
-      // Keep going until we're out of reflow commands, or we've run
-      // past our deadline.
-    } while (mReflowCommands.Count() &&
-             (!aInterruptible || PR_IntervalNow() < deadline));
+        // Keep going until we're out of reflow commands, or we've run
+        // past our deadline.
+      } while (mReflowCommands.Count() &&
+               (!aInterruptible || PR_IntervalNow() < deadline));
 
-    // XXXwaterson for interruptible reflow, examine the tree and
-    // re-enqueue any unflowed reflow targets.
+      // XXXwaterson for interruptible reflow, examine the tree and
+      // re-enqueue any unflowed reflow targets.
 
-    mIsReflowing = PR_FALSE;
-
-    NS_IF_RELEASE(rcx);
-
+      mIsReflowing = PR_FALSE;
+    }
+    
     // If any new reflow commands were enqueued during the reflow,
     // schedule another reflow event to process them.
     if (mReflowCommands.Count())
