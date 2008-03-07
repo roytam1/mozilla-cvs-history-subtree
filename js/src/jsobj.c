@@ -1260,13 +1260,21 @@ obj_eval(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     JS_ASSERT(!caller || caller->pc);
     indirectCall = (caller && *caller->pc != JSOP_EVAL);
 
-    if (indirectCall &&
-        !JS_ReportErrorFlagsAndNumber(cx,
-                                      JSREPORT_WARNING | JSREPORT_STRICT,
-                                      js_GetErrorMessage, NULL,
-                                      JSMSG_BAD_INDIRECT_CALL,
-                                      js_eval_str)) {
-        return JS_FALSE;
+    /* 
+     * Ban all indirect uses of eval (global.foo = eval; global.foo(...)) and
+     * calls that attempt to use a non-global object as the "with" object in
+     * the former indirect case.
+     */
+    scopeobj = OBJ_GET_PARENT(cx, obj);
+    if (indirectCall || scopeobj) {
+        uintN flags = scopeobj
+                      ? JSREPORT_ERROR
+                      : JSREPORT_STRICT | JSREPORT_WARNING;
+        if (!JS_ReportErrorFlagsAndNumber(cx, flags, js_GetErrorMessage, NULL,
+                                          JSMSG_BAD_INDIRECT_CALL,
+                                          js_eval_str)) {
+            return JS_FALSE;
+        }
     }
 
     if (!JSVAL_IS_STRING(argv[0])) {
@@ -1346,8 +1354,10 @@ obj_eval(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 
     /* Ensure we compile this eval with the right object in the scope chain. */
     scopeobj = js_CheckScopeChainValidity(cx, scopeobj, js_eval_str);
-    if (!scopeobj)
-        return JS_FALSE;
+    if (!scopeobj) {
+        ok = JS_FALSE;
+        goto out;
+    }
 
     str = JSVAL_TO_STRING(argv[0]);
     if (caller) {
@@ -1417,6 +1427,7 @@ out:
     if (setCallerVarObj)
         caller->varobj = callerVarObj;
 #endif
+
     return ok;
 }
 
@@ -1776,7 +1787,6 @@ static JSFunctionSpec object_methods[] = {
     {js_toString_str,             js_obj_toString,    0, 0, OBJ_TOSTRING_EXTRA},
     {js_toLocaleString_str,       js_obj_toLocaleString, 0, 0, OBJ_TOSTRING_EXTRA},
     {js_valueOf_str,              obj_valueOf,        0,0,0},
-    {js_eval_str,                 obj_eval,           1,0,0},
 #if JS_HAS_OBJ_WATCHPOINT
     {js_watch_str,                obj_watch,          2,0,0},
     {js_unwatch_str,              obj_unwatch,        1,0,0},
@@ -2230,22 +2240,15 @@ JSObject *
 js_InitObjectClass(JSContext *cx, JSObject *obj)
 {
     JSObject *proto;
-    jsval eval;
 
     proto = JS_InitClass(cx, obj, NULL, &js_ObjectClass, Object, 1,
                          object_props, object_methods, NULL, NULL);
     if (!proto)
         return NULL;
 
-    /* ECMA (15.1.2.1) says 'eval' is also a property of the global object. */
-    if (!OBJ_GET_PROPERTY(cx, proto,
-                          ATOM_TO_JSID(cx->runtime->atomState.evalAtom),
-                          &eval)) {
-        return NULL;
-    }
-    if (!OBJ_DEFINE_PROPERTY(cx, obj,
-                             ATOM_TO_JSID(cx->runtime->atomState.evalAtom),
-                             eval, NULL, NULL, 0, NULL)) {
+    /* ECMA (15.1.2.1) says 'eval' is a property of the global object. */
+    if (!js_DefineFunction(cx, obj, cx->runtime->atomState.evalAtom,
+                           obj_eval, 1, 0)) {
         return NULL;
     }
 
