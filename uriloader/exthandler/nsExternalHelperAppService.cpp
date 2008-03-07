@@ -1609,13 +1609,16 @@ nsresult nsExternalAppHandler::SetUpTempFile(nsIChannel * aChannel)
   nsCAutoString ext;
   mMimeInfo->GetPrimaryExtension(ext);
   if (!ext.IsEmpty()) {
+    ext.ReplaceChar(FILE_PATH_SEPARATOR FILE_ILLEGAL_CHARACTERS, '_');
     if (ext.First() != '.')
       saltedTempLeafName.Append(PRUnichar('.'));
     AppendUTF8toUTF16(ext, saltedTempLeafName);
   }
 
-  mTempFile->Append(saltedTempLeafName); // make this file unique!!!
-  mTempFile->CreateUnique(nsIFile::NORMAL_FILE_TYPE, 0600);
+  rv = mTempFile->Append(saltedTempLeafName); // make this file unique!!!
+  NS_ENSURE_SUCCESS(rv, rv);
+  rv = mTempFile->CreateUnique(nsIFile::NORMAL_FILE_TYPE, 0600);
+  NS_ENSURE_SUCCESS(rv, rv);
 
 #if defined(XP_MAC) || defined (XP_MACOSX)
  // Now that the file exists set Mac type and creator
