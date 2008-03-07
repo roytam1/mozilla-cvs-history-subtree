@@ -1,4 +1,5 @@
 /* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* vim: set ts=2 sw=2 et tw=78: */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -58,11 +59,12 @@
 #include "nsDOMClassInfo.h"
 #include "nsIDOMGCParticipant.h"
 #include "nsIWeakReference.h"
+#include "nsIScriptSecurityManager.h"
 
 
 JSBool
 nsJSUtils::GetCallingLocation(JSContext* aContext, const char* *aFilename,
-                              PRUint32 *aLineno)
+                              PRUint32* aLineno, JSPrincipals* aPrincipals)
 {
   // Get the current filename and line number
   JSStackFrame* frame = nsnull;
@@ -76,6 +78,37 @@ nsJSUtils::GetCallingLocation(JSContext* aContext, const char* *aFilename,
   } while (frame && !script);
 
   if (script) {
+    // If aPrincipals is non-null then our caller is asking us to ensure
+    // that the filename we return does not have elevated privileges.
+    if (aPrincipals) {
+      // The principals might not be in the script, but we can always
+      // find the right principals in the frame's callee.
+      JSPrincipals* scriptPrins = JS_GetScriptPrincipals(aContext, script);
+      if (!scriptPrins) {
+        JSObject *callee = JS_GetFrameCalleeObject(aContext, frame);
+        nsCOMPtr<nsIPrincipal> prin;
+        nsIScriptSecurityManager *ssm = nsContentUtils::GetSecurityManager();
+        if (NS_FAILED(ssm->GetObjectPrincipal(aContext, callee,
+                                              getter_AddRefs(prin))) ||
+            !prin) {
+          return JS_FALSE;
+        }
+
+        prin->GetJSPrincipals(aContext, &scriptPrins);
+
+        // The script has a reference to the principals.
+        JSPRINCIPALS_DROP(aContext, scriptPrins);
+      }
+
+      // Return the weaker of the two principals if they differ.
+      if (scriptPrins != aPrincipals &&
+          scriptPrins->subsume(scriptPrins, aPrincipals)) {
+        *aFilename = aPrincipals->codebase;
+        *aLineno = 0;
+        return JS_TRUE;
+      }
+    }
+
     const char* filename = ::JS_GetScriptFilename(aContext, script);
 
     if (filename) {
