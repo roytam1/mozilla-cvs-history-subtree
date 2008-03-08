@@ -290,7 +290,7 @@ NS_IMETHODIMP nsSVGImageFrame::ConstructPath(nsISVGRendererPathBuilder* pathBuil
 
   /* In a perfect world, this would be handled by the DOM, and 
      return a DOM exception. */
-  if (width == 0 || height == 0)
+  if (width <= 0 || height <= 0)
     return NS_OK;
 
   pathBuilder->Moveto(x, y);
@@ -308,6 +308,12 @@ NS_IMETHODIMP
 nsSVGImageFrame::PaintSVG(nsISVGRendererCanvas* canvas, const nsRect& dirtyRectTwips)
 {
   if (!GetStyleVisibility()->IsVisible())
+    return NS_OK;
+
+  float width, height;
+  mWidth->GetValue(&width);
+  mHeight->GetValue(&height);
+  if (width <= 0 || height <= 0)
     return NS_OK;
 
   if (mSurfaceInvalid) {
@@ -353,11 +359,9 @@ nsSVGImageFrame::PaintSVG(nsISVGRendererCanvas* canvas, const nsRect& dirtyRectT
     nsCOMPtr<nsIDOMSVGMatrix> ctm;
     GetCanvasTM(getter_AddRefs(ctm));
 
-    float x, y, width, height;
+    float x, y;
     mX->GetValue(&x);
     mY->GetValue(&y);
-    mWidth->GetValue(&width);
-    mHeight->GetValue(&height);
 
     if (GetStyleDisplay()->IsScrollableOverflow())
       canvas->SetClipRect(ctm, x, y, width, height);
