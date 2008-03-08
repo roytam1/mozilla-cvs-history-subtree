@@ -81,6 +81,7 @@
 #endif
 #include "nsLayoutUtils.h"
 #include "nsBoxLayoutState.h"
+#include "nsCSSAnonBoxes.h"
 
 #ifdef IBMBIDI
 #include "nsBidiPresUtils.h"
@@ -7242,18 +7243,27 @@ nsBlockFrame::SetInitialChildList(nsPresContext* aPresContext,
   }
   else {
 
-    // Lookup up the two pseudo style contexts
-    if (nsnull == mPrevInFlow) {
-      nsRefPtr<nsStyleContext> firstLetterStyle = GetFirstLetterStyle(aPresContext);
-      if (nsnull != firstLetterStyle) {
-        mState |= NS_BLOCK_HAS_FIRST_LETTER_STYLE;
-#ifdef NOISY_FIRST_LETTER
-        ListTag(stdout);
-        printf(": first-letter style found\n");
+#ifdef DEBUG
+    // The only times a block that is an anonymous box is allowed to have a
+    // first-letter frame are when it's the block inside a non-anonymous cell,
+    // the block inside a fieldset, a scrolled content block, or a column
+    // content block.  Also, a block that has a previous continuation can't
+    // have a first letter frame.
+    nsIAtom *pseudo = GetStyleContext()->GetPseudoType();
+    PRBool haveFirstLetterStyle =
+      !mPrevInFlow &&
+      (!pseudo ||
+       (pseudo == nsCSSAnonBoxes::cellContent &&
+        mParent->GetStyleContext()->GetPseudoType() == nsnull) ||
+       pseudo == nsCSSAnonBoxes::fieldsetContent ||
+       pseudo == nsCSSAnonBoxes::scrolledContent ||
+       pseudo == nsCSSAnonBoxes::columnContent) &&
+      nsRefPtr<nsStyleContext>(GetFirstLetterStyle(aPresContext)) != nsnull;
+    NS_ASSERTION(haveFirstLetterStyle ==
+                 ((mState & NS_BLOCK_HAS_FIRST_LETTER_STYLE) != 0),
+                 "NS_BLOCK_HAS_FIRST_LETTER_STYLE state out of sync");
 #endif
-      }
-    }
-
+    
     rv = AddFrames(aChildList, nsnull);
     if (NS_FAILED(rv)) {
       return rv;

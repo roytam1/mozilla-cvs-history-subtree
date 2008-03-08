@@ -8860,11 +8860,10 @@ nsCSSFrameConstructor::ContentAppended(nsIContent*     aContainer,
   PRBool haveFirstLetterStyle = PR_FALSE, haveFirstLineStyle = PR_FALSE;
   nsIFrame* containingBlock = state.mFloatedItems.containingBlock;
   if (containingBlock) {
-    nsIContent* blockContent = containingBlock->GetContent();
-    nsStyleContext* blockSC = containingBlock->GetStyleContext();
-    HaveSpecialBlockStyle(blockContent, blockSC,
-                          &haveFirstLetterStyle,
-                          &haveFirstLineStyle);
+    haveFirstLetterStyle = HaveFirstLetterStyle(containingBlock);
+    haveFirstLineStyle =
+      HaveFirstLineStyle(containingBlock->GetContent(),
+                         containingBlock->GetStyleContext());
   }
 
   if (haveFirstLetterStyle) {
@@ -9507,11 +9506,10 @@ nsCSSFrameConstructor::ContentInserted(nsIContent*            aContainer,
       (NS_STYLE_DISPLAY_INLINE_BLOCK == parentDisplay->mDisplay)) {
     // Recover the special style flags for the containing block
     if (containingBlock) {
-      blockSC = containingBlock->GetStyleContext();
-      blockContent = containingBlock->GetContent();
-      HaveSpecialBlockStyle(blockContent, blockSC,
-                            &haveFirstLetterStyle,
-                            &haveFirstLineStyle);
+      haveFirstLetterStyle = HaveFirstLetterStyle(containingBlock);
+      haveFirstLineStyle =
+        HaveFirstLineStyle(containingBlock->GetContent(),
+                           containingBlock->GetStyleContext());
     }
 
     if (haveFirstLetterStyle) {
@@ -10007,10 +10005,7 @@ nsCSSFrameConstructor::ContentRemoved(nsIContent*     aContainer,
     // Examine the containing-block for the removed content and see if
     // :first-letter style applies.
     nsIFrame* containingBlock = GetFloatContainingBlock(parentFrame);
-    PRBool haveFLS = containingBlock ?
-      HaveFirstLetterStyle(containingBlock->GetContent(),
-                           containingBlock->GetStyleContext()) :
-      PR_FALSE;
+    PRBool haveFLS = containingBlock && HaveFirstLetterStyle(containingBlock);
     if (haveFLS) {
       // Trap out to special routine that handles adjusting a blocks
       // frame tree when first-letter style is present.
@@ -10424,42 +10419,45 @@ nsCSSFrameConstructor::CharacterDataChanged(nsIContent* aContent,
         aSubContent, frame));
 #endif
 
-    // Special check for text content that is a child of a letter
-    // frame. There are two interesting cases that we have to handle
-    // carefully: text content that is going empty (which means we
-    // should select a new text node as the first-letter text) or text
-    // content that empty but is no longer empty (it might be the
-    // first-letter text but isn't currently).
-    //
-    // To deal with both of these we make a simple change: map a
-    // CharacterDataChanged into a ReinsertContent when we are changing text
-    // that is part of a first-letter situation.
-    PRBool doCharacterDataChanged = PR_TRUE;
+    // Special check for text content that is a child of a letter frame.  If
+    // this happens, we should remove the letter frame, do whatever we're
+    // planning to do with this notification, then put the letter frame back.
+    // Note that this is basically what ReinsertContent ends up doing; the
+    // reason we dont' want to call that here is that our text content could be
+    // native anonymous, in which case ReinsertContent would completely barf on
+    // it.  And reinserting the non-anonymous ancestor would just lead us to
+    // come back into this notification (e.g. if quotes or counters are
+    // involved), leading to a loop.
+    PRBool haveFirstLetterStyle = PR_FALSE;
+    nsIFrame* block = nsnull;
     nsCOMPtr<nsITextContent> textContent(do_QueryInterface(aContent));
     if (textContent) {
       // Ok, it's text content. Now do some real work...
-      nsIFrame* block = GetFloatContainingBlock(frame);
+      block = GetFloatContainingBlock(frame);
       if (block) {
         // See if the block has first-letter style applied to it.
-        nsIContent* blockContent = block->GetContent();
-        nsStyleContext* blockSC = block->GetStyleContext();
-        PRBool haveFirstLetterStyle =
-          HaveFirstLetterStyle(blockContent, blockSC);
+        haveFirstLetterStyle = HaveFirstLetterStyle(block);
         if (haveFirstLetterStyle) {
-          // The block has first-letter style. Use content-replaced to
-          // repair the blocks frame structure properly.
-          nsCOMPtr<nsIContent> container = aContent->GetParent();
-          if (container) {
-            doCharacterDataChanged = PR_FALSE;
-            rv = ReinsertContent(container, aContent);
-          }
+          RemoveLetterFrames(mPresShell->GetPresContext(), mPresShell,
+                             mPresShell->FrameManager(), block);
+          // Reget |frame|, since we might have killed it.  Do we
+          // really need to call CharacterDataChanged in this case,
+          // though?
+          mPresShell->GetPrimaryFrameFor(aContent, &frame);
+          NS_ASSERTION(frame, "Should have frame here!");
         }
       }
     }
 
-    if (doCharacterDataChanged) {
-      frame->CharacterDataChanged(mPresShell->GetPresContext(), aContent,
-                                  aAppend);
+    frame->CharacterDataChanged(mPresShell->GetPresContext(), aContent,
+                                aAppend);
+
+    if (haveFirstLetterStyle) {
+      // Note that if we got here |block| is not null
+      nsFrameConstructorState state(mPresShell, mFixedContainingBlock,
+                                    GetAbsoluteContainingBlock(frame),
+                                    block, nsnull);
+      RecoverLetterFrames(state, block);
     }
   }
 
@@ -12180,6 +12178,22 @@ nsCSSFrameConstructor::HaveFirstLetterStyle(nsIContent* aContent,
 }
 
 PRBool
+nsCSSFrameConstructor::HaveFirstLetterStyle(nsIFrame* aBlockFrame)
+{
+  NS_PRECONDITION(aBlockFrame, "Need a frame");
+  
+#ifdef DEBUG
+  nsBlockFrame* block;
+  NS_ASSERTION(NS_SUCCEEDED(aBlockFrame->QueryInterface(kBlockFrameCID,
+                                                        (void**)&block)) &&
+               block,
+               "Not a block frame?");
+#endif
+
+  return (aBlockFrame->GetStateBits() & NS_BLOCK_HAS_FIRST_LETTER_STYLE) != 0;
+}
+
+PRBool
 nsCSSFrameConstructor::HaveFirstLineStyle(nsIContent* aContent,
                                           nsStyleContext* aStyleContext)
 {
@@ -12690,7 +12704,14 @@ nsCSSFrameConstructor::CreateFloatingLetterFrame(
   nsStyleSet *styleSet = mPresShell->StyleSet();
 
   NS_NewFirstLetterFrame(mPresShell, &letterFrame);  
-  InitAndRestoreFrame(aState, aTextContent, aParentFrame, aStyleContext,
+  // We don't want to use a text content for a non-text frame (because we want
+  // its primary frame to be a text frame).  So use its parent for the
+  // first-letter.
+  nsIContent* letterContent = aTextContent->GetParent();
+  NS_ASSERTION(letterContent->GetBindingParent() != letterContent,
+               "Reframes of this letter frame will mess with the root of a "
+               "native anonymous content subtree!");
+  InitAndRestoreFrame(aState, letterContent, aParentFrame, aStyleContext,
                       nsnull, letterFrame);
 
   // Init the text frame to refer to the letter frame. Make sure we
@@ -12709,7 +12730,7 @@ nsCSSFrameConstructor::CreateFloatingLetterFrame(
   nsIFrame* placeholderFrame;
   CreatePlaceholderFrameFor(mPresShell,
                             aState.mPresContext, aState.mFrameManager,
-                            aTextContent, letterFrame,
+                            letterContent, letterFrame,
                             aStyleContext, aParentFrame,
                             &placeholderFrame);
 
@@ -12786,8 +12807,14 @@ nsCSSFrameConstructor::CreateLetterFrame(nsFrameConstructorState& aState,
         nsIFrame* letterFrame;
         nsresult rv = NS_NewFirstLetterFrame(mPresShell, &letterFrame);
         if (NS_SUCCEEDED(rv)) {
-          // Initialize the first-letter-frame.
-          letterFrame->Init(aState.mPresContext, aTextContent, aParentFrame,
+          // Initialize the first-letter-frame.  We don't want to use a text
+          // content for a non-text frame (because we want its primary frame to
+          // be a text frame).  So use its parent for the first-letter.
+          nsIContent* letterContent = aTextContent->GetParent();
+          NS_ASSERTION(letterContent->GetBindingParent() != letterContent,
+                       "Reframes of this letter frame will mess with the root "
+                       "of a native anonymous content subtree!");
+          letterFrame->Init(aState.mPresContext, letterContent, aParentFrame,
                             sc, nsnull);
           nsRefPtr<nsStyleContext> textSC;
           textSC = mPresShell->StyleSet()->ResolveStyleForNonElement(sc);
@@ -12814,6 +12841,8 @@ nsCSSFrameConstructor::WrapFramesInFirstLetterFrame(
   nsFrameItems&            aBlockFrames)
 {
   nsresult rv = NS_OK;
+
+  aBlockFrame->AddStateBits(NS_BLOCK_HAS_FIRST_LETTER_STYLE);
 
   nsIFrame* parentFrame = nsnull;
   nsIFrame* textFrame = nsnull;
@@ -13134,6 +13163,8 @@ nsCSSFrameConstructor::RecoverLetterFrames(nsFrameConstructorState& aState,
                                            nsIFrame* aBlockFrame)
 {
   nsresult rv = NS_OK;
+
+  aBlockFrame->AddStateBits(NS_BLOCK_HAS_FIRST_LETTER_STYLE);
 
   nsIFrame* blockKids = aBlockFrame->GetFirstChild(nsnull);
   nsIFrame* parentFrame = nsnull;
@@ -14240,6 +14271,9 @@ nsCSSFrameConstructor::PostRestyleEvent(nsIContent* aContent,
     // Nothing to do here
     return;
   }
+
+  NS_ASSERTION(aContent->IsContentOfType(nsIContent::eELEMENT),
+               "Shouldn't be trying to restyle non-elements directly");
   
   RestyleData existingData;
   existingData.mRestyleHint = nsReStyleHint(0);
