@@ -8928,9 +8928,6 @@ nsCSSFrameConstructor::ContentAppended(nsIContent*     aContainer,
     }
   }
 
-  // We built some new frames.  Initialize any newly-constructed bindings.
-  mDocument->BindingManager()->ProcessAttachedQueue();
-
   // process the current pseudo frame state
   if (!state.mPseudoFrames.IsEmpty()) {
     ProcessPseudoFrames(state, frameItems);
@@ -9361,8 +9358,6 @@ nsCSSFrameConstructor::ContentInserted(nsIContent*            aContainer,
 #endif
     }
 
-    mDocument->BindingManager()->ProcessAttachedQueue();
-
     // otherwise this is not a child of the root element, and we
     // won't let it have a frame.
     return NS_OK;
@@ -9604,10 +9599,6 @@ nsCSSFrameConstructor::ContentInserted(nsIContent*            aContainer,
       frameItems.AddChild(tempItems.childList);
     }
   }
-
-  // Now that we've created frames, run the attach queue.
-  //XXXwaterson should we do this after we've processed pseudos, too?
-  mDocument->BindingManager()->ProcessAttachedQueue();
 
   // process the current pseudo frame state
   if (!state.mPseudoFrames.IsEmpty())
@@ -13217,8 +13208,6 @@ nsCSSFrameConstructor::CreateListBoxContent(nsPresContext* aPresContext,
     *aNewFrame = newFrame;
 
     if (NS_SUCCEEDED(rv) && (nsnull != newFrame)) {
-      mDocument->BindingManager()->ProcessAttachedQueue();
-
       // Notify the parent frame
       if (aIsAppend)
         rv = ((nsListBoxBodyFrame*)aParentFrame)->ListBoxAppendFrames(newFrame);
@@ -14235,11 +14224,11 @@ nsCSSFrameConstructor::ProcessPendingRestyles()
                       currentRestyle->mChangeHint);
   }
 
+  delete [] restylesToProcess;
+
   EndUpdate();
 
   viewManager->EndUpdateViewBatch(NS_VMREFRESH_NO_SYNC);
-
-  delete [] restylesToProcess;
 }
 
 void
@@ -14281,7 +14270,7 @@ nsCSSFrameConstructor::PostRestyleEvent(nsIContent* aContent,
 void nsCSSFrameConstructor::RestyleEvent::HandleEvent() {
   nsCSSFrameConstructor* constructor =
     NS_STATIC_CAST(nsCSSFrameConstructor*, owner);
-  nsIViewManager* viewManager =
+  nsCOMPtr<nsIViewManager> viewManager =
     constructor->mDocument->GetShellAt(0)->GetPresContext()->GetViewManager();
   NS_ASSERTION(viewManager, "Must have view manager for update");
 
@@ -14297,6 +14286,7 @@ void nsCSSFrameConstructor::RestyleEvent::HandleEvent() {
   constructor->mRestyleEventQueue = nsnull;
 
   constructor->ProcessPendingRestyles();
+  constructor->mDocument->BindingManager()->ProcessAttachedQueue();
   viewManager->EndUpdateViewBatch(NS_VMREFRESH_NO_SYNC);
 }
 

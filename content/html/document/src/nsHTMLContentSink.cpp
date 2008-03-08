@@ -1637,6 +1637,9 @@ SinkContext::AddText(const nsAString& aText)
 nsresult
 SinkContext::FlushTags(PRBool aNotify)
 {
+  // Not starting an update here, unlike trunk.  We'll get XBL
+  // constructors firing async of the stuff we flush right now.
+   
   // Don't release last text node in case we need to add to it again
   FlushText();
 

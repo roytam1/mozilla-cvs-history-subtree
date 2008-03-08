@@ -305,8 +305,11 @@ SetOrRemoveObject(PLDHashTable& table, nsISupports* aKey, nsISupports* aValue)
 NS_IMPL_ISUPPORTS3(nsBindingManager, nsIBindingManager, nsIStyleRuleSupplier, nsIDocumentObserver)
 
 // Constructors/Destructors
-nsBindingManager::nsBindingManager(void)
-: mProcessingAttachedStack(PR_FALSE)
+nsBindingManager::nsBindingManager(nsIDocument* aDocument)
+  : mProcessingAttachedStack(PR_FALSE),
+    mProcessOnEndUpdate(PR_FALSE),
+    mProcessAttachedQueueEvent(nsnull),
+    mDocument(aDocument)
 {
   mContentListTable.ops = nsnull;
   mAnonymousNodesTable.ops = nsnull;
@@ -786,6 +789,28 @@ nsBindingManager::AddToAttachedQueue(nsXBLBinding* aBinding)
     return NS_ERROR_OUT_OF_MEMORY;
 
   NS_ADDREF(aBinding);
+
+  // If we're in the middle of processing our queue already, don't
+  // bother posting the event.
+  if (!mProcessingAttachedStack && !mProcessAttachedQueueEvent) {
+    nsCOMPtr<nsIEventQueueService> eventQueueService =
+      do_GetService(NS_EVENTQUEUESERVICE_CONTRACTID);
+    nsCOMPtr<nsIEventQueue> eventQueue;
+    if (eventQueueService) {
+      eventQueueService->
+        GetSpecialEventQueue(nsIEventQueueService::UI_THREAD_EVENT_QUEUE,
+                             getter_AddRefs(eventQueue));
+    }
+    if (eventQueue) {
+      ProcessAttachedQueueEvent* ev = new ProcessAttachedQueueEvent(this);
+      if (ev && NS_FAILED(eventQueue->PostEvent(ev))) {
+        PL_DestroyEvent(ev);
+      } else {
+        mProcessAttachedQueueEvent = ev;
+      }
+    }
+  }
+  
   return NS_OK;
 }
 
@@ -797,10 +822,21 @@ nsBindingManager::ClearAttachedQueue()
   return NS_OK;
 }
 
+void
+nsBindingManager::DoProcessAttachedQueue()
+{
+  ProcessAttachedQueue();
+
+  NS_ASSERTION(mAttachedStack.Count() == 0,
+               "Shouldn't have pending bindings!");
+  
+  mProcessAttachedQueueEvent = nsnull;
+}
+
 NS_IMETHODIMP
 nsBindingManager::ProcessAttachedQueue()
 {
-  if (mProcessingAttachedStack)
+  if (mProcessingAttachedStack || mAttachedStack.Count() == 0)
     return NS_OK;
 
   mProcessingAttachedStack = PR_TRUE;
@@ -817,7 +853,7 @@ nsBindingManager::ProcessAttachedQueue()
   }
 
   mProcessingAttachedStack = PR_FALSE;
-  ClearAttachedQueue();
+  NS_ASSERTION(mAttachedStack.Count() == 0, "How did we get here?");
   return NS_OK;
 }
 
@@ -1307,5 +1343,59 @@ nsBindingManager::ContentRemoved(nsIDocument* aDocument,
         }
       }
     }
+  }
+}
+
+void
+nsBindingManager::DocumentWillBeDestroyed(nsIDocument* aDocument)
+{
+  // Make sure to not run any more XBL constructors
+  mProcessingAttachedStack = PR_TRUE;
+
+  mDocument = nsnull;
+}
+
+void
+nsBindingManager::BeginOutermostUpdate()
+{
+  mProcessOnEndUpdate = (mAttachedStack.Count() == 0);
+}
+
+void
+nsBindingManager::EndOutermostUpdate()
+{
+  if (mProcessOnEndUpdate) {
+    mProcessOnEndUpdate = PR_FALSE;
+    ProcessAttachedQueue();
+  }
+}
+
+static void PR_CALLBACK
+HandlePLEvent(nsBindingManager::ProcessAttachedQueueEvent* aEvent)
+{
+  aEvent->HandleEvent();
+}
+
+static void PR_CALLBACK
+DestroyPLEvent(nsBindingManager::ProcessAttachedQueueEvent* aEvent)
+{
+  delete aEvent;
+}
+
+nsBindingManager::ProcessAttachedQueueEvent::ProcessAttachedQueueEvent(nsBindingManager* aBindingManager)
+  : mBindingManager(aBindingManager)
+{
+  PL_InitEvent(this, aBindingManager,
+               (PLHandleEventProc) ::HandlePLEvent,
+               (PLDestroyEventProc) ::DestroyPLEvent);
+  if (aBindingManager->mDocument) {
+    aBindingManager->mDocument->BlockOnload();
+  }
+}
+
+nsBindingManager::ProcessAttachedQueueEvent::~ProcessAttachedQueueEvent()
+{
+  if (mBindingManager->mDocument) {
+    mBindingManager->mDocument->UnblockOnload();
   }
 }

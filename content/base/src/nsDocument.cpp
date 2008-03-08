@@ -979,12 +979,14 @@ nsDocument::Init()
   mLinkMap.Init();
 
   // Force initialization.
-  nsBindingManager *bindingManager = new nsBindingManager();
+  nsBindingManager *bindingManager = new nsBindingManager(this);
   NS_ENSURE_TRUE(bindingManager, NS_ERROR_OUT_OF_MEMORY);
   mBindingManager = bindingManager;
 
   // The binding manager must always be the first observer of the document.
-  mObservers.PrependElement(bindingManager);
+  if (!mObservers.PrependElement(bindingManager)) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
 
   mOnloadBlocker = new nsOnloadBlocker();
   NS_ENSURE_TRUE(mOnloadBlocker, NS_ERROR_OUT_OF_MEMORY);
@@ -2235,6 +2237,12 @@ nsDocument::RemoveObserver(nsIDocumentObserver* aObserver)
 void
 nsDocument::BeginUpdate(nsUpdateType aUpdateType)
 {
+  if (mUpdateNestLevel == 0) {
+    nsIBindingManager* bm = mBindingManager;
+    NS_STATIC_CAST(nsBindingManager*, bm)->BeginOutermostUpdate();
+  }
+  
+  ++mUpdateNestLevel;
   if (mScriptLoader) {
     NS_STATIC_CAST(nsScriptLoader*,
                    NS_STATIC_CAST(nsIScriptLoader*,
@@ -2247,6 +2255,15 @@ void
 nsDocument::EndUpdate(nsUpdateType aUpdateType)
 {
   NS_DOCUMENT_NOTIFY_OBSERVERS(EndUpdate, (this, aUpdateType));
+
+  --mUpdateNestLevel;
+  if (mUpdateNestLevel == 0) {
+    // This set of updates may have created XBL bindings.  Let the
+    // binding manager know we're done.
+    nsIBindingManager* bm = mBindingManager;
+    NS_STATIC_CAST(nsBindingManager*, bm)->EndOutermostUpdate();
+  }
+
   if (mScriptLoader) {
     NS_STATIC_CAST(nsScriptLoader*,
                    NS_STATIC_CAST(nsIScriptLoader*,

@@ -894,6 +894,9 @@ private:
   nsTHashtable<nsUint32ToContentHashEntry> mLinkMap;
   // URIs whose visitedness has changed while we were hidden
   nsCOMArray<nsIURI> mVisitednessChangedURIs;
+
+  // Our update nesting level
+  PRUint32 mUpdateNestLevel;
 };
 
 
