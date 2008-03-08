@@ -5383,11 +5383,14 @@ PresShell::FlushPendingNotifications(mozFlushType aType)
   IsSafeToFlush(isSafeToFlush);
 
   NS_ASSERTION(!isSafeToFlush || mViewManager, "Must have view manager");
-  if (isSafeToFlush && mViewManager) {
+  // Make sure the view manager stays alive while batching view updates.
+  nsCOMPtr<nsIViewManager> viewManager = mViewManager;
+  if (isSafeToFlush && viewManager) {
+
     // Style reresolves not in conjunction with reflows can't cause
     // painting or geometry changes, so don't bother with view update
     // batching if we only have style reresolve
-    mViewManager->BeginUpdateViewBatch();
+    viewManager->BeginUpdateViewBatch();
 
     if (aType & Flush_StyleReresolves) {
       // Processing pending restyles can kill us, and some callers only
@@ -5427,7 +5430,7 @@ PresShell::FlushPendingNotifications(mozFlushType aType)
       // at the end of this view batch.
       updateFlags = NS_VMREFRESH_DEFERRED;
     }
-    mViewManager->EndUpdateViewBatch(updateFlags);
+    viewManager->EndUpdateViewBatch(updateFlags);
   }
 
   return NS_OK;
