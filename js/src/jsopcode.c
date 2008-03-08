@@ -66,6 +66,7 @@
 #include "jsobj.h"
 #include "jsopcode.h"
 #include "jsregexp.h"
+#include "jsscan.h"
 #include "jsscope.h"
 #include "jsscript.h"
 #include "jsstr.h"
@@ -2531,14 +2532,21 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
 #else
                 if (lastop == JSOP_GETTER || lastop == JSOP_SETTER) {
                     rval += strlen(js_function_str) + 1;
-                    todo = Sprint(&ss->sprinter, "%s%s%s %s%.*s",
-                                  lval,
-                                  (lval[1] != '\0') ? ", " : "",
-                                  (lastop == JSOP_GETTER)
-                                  ? js_get_str : js_set_str,
-                                  xval,
-                                  strlen(rval) - 1,
-                                  rval);
+                    if (!atom || !ATOM_IS_STRING(atom) ||
+                        !ATOM_IS_IDENTIFIER(atom) ||
+                        ((ss->opcodes[ss->top+1] != JSOP_ANONFUNOBJ ||
+                          strncmp(rval, js_function_str, 8) != 0) &&
+                         ss->opcodes[ss->top+1] != JSOP_NAMEDFUNOBJ)) {
+
+                        todo = Sprint(&ss->sprinter, "%s%s%s %s%.*s",
+                                      lval,
+                                      (lval[1] != '\0') ? ", " : "",
+                                      (lastop == JSOP_GETTER)
+                                      ? js_get_str : js_set_str,
+                                      xval,
+                                      strlen(rval) - 1,
+                                      rval);
+                    }
                 } else {
                     todo = Sprint(&ss->sprinter, "%s%s%s:%s",
                                   lval,
@@ -2554,8 +2562,10 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                 xval = POP_STR();
                 lval = POP_STR();
                 sn = js_GetSrcNote(jp->script, pc);
-                if (sn && SN_TYPE(sn) == SRC_LABEL)
+                if (sn && SN_TYPE(sn) == SRC_LABEL) {
+                    atom = NULL;
                     goto do_initprop;
+                }
                 todo = Sprint(&ss->sprinter, "%s%s%s",
                               lval,
                               (lval[1] != '\0' || *xval != '0') ? ", " : "",
