@@ -3399,6 +3399,14 @@ function BrowserToolboxCustomizeDone(aToolboxChanged)
     gProxyDeck = document.getElementById("page-proxy-deck");
     gHomeButton.updateTooltip();
     window.XULBrowserWindow.init();
+
+    // maintain forward compatibility with Firefox 3.0
+    var navBar = document.getElementById("nav-bar");
+    navBar.setAttribute("currentset",
+                        navBar.getAttribute("currentset")
+                              .replace(/(^|,)back-button($|,)/,
+                                "$1unified-back-forward-button,back-button$2"));
+    document.persist(navBar.id, "currentset");
   }
 
   // Update the urlbar

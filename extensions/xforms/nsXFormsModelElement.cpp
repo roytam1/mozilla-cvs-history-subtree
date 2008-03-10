@@ -809,6 +809,7 @@ nsXFormsModelElement::InitializeInstances()
 
     for (PRInt32 i=0; i<mSchemaTotal; ++i) {
       rv = NS_OK;
+      nsCAutoString uriSpec;
       nsCOMPtr<nsIURI> newURI;
       NS_NewURI(getter_AddRefs(newURI), *schemas[i], nsnull, baseURI);
       nsCOMPtr<nsIURL> newURL = do_QueryInterface(newURI);
@@ -846,7 +847,6 @@ nsXFormsModelElement::InitializeInstances()
             i--;
           }
         } else {
-          nsCAutoString uriSpec;
           newURI->GetSpec(uriSpec);
           rv = mSchemas->LoadAsync(NS_ConvertUTF8toUTF16(uriSpec), this);
         }
@@ -854,7 +854,11 @@ nsXFormsModelElement::InitializeInstances()
       if (NS_FAILED(rv)) {
         // this is a fatal error
         nsXFormsUtils::ReportError(NS_LITERAL_STRING("schemaLoadError"), mElement);
-        nsXFormsUtils::DispatchEvent(mElement, eEvent_LinkException);
+        // Context Info: 'resource-uri'
+        // The URI associated with the failed link.
+        SetContextInfo("resource-uri", NS_ConvertUTF8toUTF16(uriSpec));
+        nsXFormsUtils::DispatchEvent(mElement, eEvent_LinkException, nsnull,
+                                     nsnull, &mContextInfo);
         return NS_OK;
       }
     }
@@ -2330,7 +2334,15 @@ nsXFormsModelElement::MaybeNotifyCompletion()
     if (!extFunctionAtt.IsEmpty()) {
       nsXFormsUtils::ReportError(NS_LITERAL_STRING("invalidExtFunction"),
                                  tElement);
-      nsXFormsUtils::DispatchEvent(tElement, eEvent_ComputeException);
+
+      // Context Info: 'error-message'
+      // Error message containing the expression being processed.
+      nsAutoString errorMsg;
+      errorMsg.AssignLiteral("Non-existent extension functions: ");
+      errorMsg.Append(extFunctionAtt);
+      SetContextInfo("error-message", errorMsg);
+      nsXFormsUtils::DispatchEvent(tElement, eEvent_ComputeException, nsnull,
+                                   nsnull, &mContextInfo);
       return;
     }
   }
@@ -2416,7 +2428,15 @@ nsXFormsModelElement::ProcessBind(nsIXFormsXPathEvaluator *aEvaluator,
       const PRUnichar *strings[] = { flat.get() };
       nsXFormsUtils::ReportError(NS_LITERAL_STRING("exprParseError"),
                                  strings, 1, aBindElement, nsnull);
-      nsXFormsUtils::DispatchEvent(mElement, eEvent_ComputeException);
+
+      // Context Info: 'error-message'
+      // Error message containing the expression being processed.
+      nsAutoString errorMsg;
+      errorMsg.AssignLiteral("Error parsing XPath expression: ");
+      errorMsg.Append(expr);
+      SetContextInfo("error-message", errorMsg);
+      nsXFormsUtils::DispatchEvent(mElement, eEvent_ComputeException, nsnull,
+                                   nsnull, &mContextInfo);
     } else {
 #ifdef DEBUG
       printf("xforms-binding-exception: XPath Evaluation failed\n");
@@ -2504,7 +2524,15 @@ nsXFormsModelElement::ProcessBind(nsIXFormsXPathEvaluator *aEvaluator,
           const PRUnichar *strings[] = { propStrings[j].get() };
           nsXFormsUtils::ReportError(NS_LITERAL_STRING("mipParseError"),
                                      strings, 1, aBindElement, aBindElement);
-          nsXFormsUtils::DispatchEvent(mElement, eEvent_ComputeException);
+
+          // Context Info: 'error-message'
+          // Error message containing the expression being processed.
+          nsAutoString errorMsg;
+          errorMsg.AssignLiteral("Error while parsing model item property: ");
+          errorMsg.Append(propStrings[j]);
+          SetContextInfo("error-message", errorMsg);
+          nsXFormsUtils::DispatchEvent(mElement, eEvent_ComputeException,
+                                       nsnull, nsnull, &mContextInfo);
           return rv;
         }
 
@@ -3429,6 +3457,17 @@ nsXFormsModelElement::IsDuplicateSchema(nsIDOMElement *aSchemaElement)
                              nsnull);
   nsXFormsUtils::DispatchEvent(mElement, eEvent_LinkError);
   return PR_TRUE;
+}
+
+nsresult
+nsXFormsModelElement::SetContextInfo(const char *aName, const nsAString &aValue)
+{
+  nsCOMPtr<nsXFormsContextInfo> contextInfo = new nsXFormsContextInfo(mElement);
+  NS_ENSURE_TRUE(contextInfo, NS_ERROR_OUT_OF_MEMORY);
+  contextInfo->SetStringValue(aName, aValue);
+  mContextInfo.AppendObject(contextInfo);
+
+  return NS_OK;
 }
 
 nsresult

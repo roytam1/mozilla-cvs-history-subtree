@@ -36,7 +36,6 @@
  * ***** END LICENSE BLOCK ***** */
 
 #import "NSView+Utils.h"
-#import "ImageAdditions.h"
 
 #import "PreferenceManager.h"
 #import "BrowserWrapper.h"
@@ -53,6 +52,8 @@
 #import "RolloverImageButton.h"
 #import "CHPermissionManager.h"
 #import "XMLSearchPluginParser.h"
+#import "FindBarController.h"
+#import "CHGradient.h"
 
 #include "CHBrowserService.h"
 #include "ContentClickListener.h"
@@ -122,6 +123,9 @@ enum StatusPriority {
 - (void)addBlockedPopupViewAndDisplay;
 - (void)removeBlockedPopupViewAndDisplay;
 
+- (void)addFindBarViewAndDisplay;
+- (void)removeFindBarViewAndDisplay;
+
 @end
 
 #pragma mark -
@@ -170,6 +174,9 @@ enum StatusPriority {
     mFormFillController = [[FormFillController alloc] init]; 
     [mFormFillController attachToBrowser:mBrowserView];
 
+    mFindBarController = [[FindBarController alloc] initWithContent:self
+                                                             finder:(id<Find>)mBrowserView];
+
     //[self setSiteIconImage:[NSImage imageNamed:@"globe_ico"]];
     //[self setSiteIconURI: [NSString string]];
 
@@ -210,6 +217,10 @@ enum StatusPriority {
   
   [mFeedList release];
   [mDetectedSearchPlugins release];
+
+  // Make sure this is gone before |mBrowserView|, which it has a weak ref to.
+  [mFindBarView removeFromSuperviewWithoutNeedingDisplay];
+  [mFindBarController release];
 
   [mBrowserView release];
   [mContentViewProviders release];
@@ -300,12 +311,13 @@ enum StatusPriority {
   // sure that we maintain the scroll position in background tabs correctly.
   if ([self window] || inResizeBrowser) {
     NSRect bounds = [self bounds];
+    NSRect browserFrame = bounds;
     if (mBlockedPopupView) {
       // First resize the width of blockedPopupView to match this view.
       // The blockedPopupView will, during its setFrame method, wrap information 
       // text if necessary and adjust its own height to enclose that text.
       // Then find out the actual (possibly adjusted) height of blockedPopupView 
-      // and resize the browser view accordingly.
+      // and adjust the browser view frame accordingly.
       // Recall that we're flipped, so the origin is the top left.
 
       NSRect popupBlockFrame = [mBlockedPopupView frame];
@@ -314,15 +326,19 @@ enum StatusPriority {
       [mBlockedPopupView setFrame:popupBlockFrame];
 
       NSRect blockedPopupViewFrameAfterResized = [mBlockedPopupView frame];
-      NSRect browserFrame = [mBrowserView frame];
       browserFrame.origin.y = blockedPopupViewFrameAfterResized.size.height;
-      browserFrame.size.width = bounds.size.width;
-      browserFrame.size.height = bounds.size.height-blockedPopupViewFrameAfterResized.size.height;
-      
-      [mBrowserView setFrame:browserFrame];
+      browserFrame.size.height -= blockedPopupViewFrameAfterResized.size.height;
     }
-    else
-      [mBrowserView setFrame:bounds];
+    if (mFindBarView) {
+      NSRect findBarFrame;
+      NSRect remainderRect;
+      NSDivideRect(browserFrame, &findBarFrame, &remainderRect,
+                   [mFindBarView frame].size.height, NSMaxYEdge);
+      [mFindBarView setFrame:findBarFrame];
+
+      browserFrame = remainderRect;
+    }
+    [mBrowserView setFrame:browserFrame];
   }
 }
 
@@ -588,15 +604,23 @@ enum StatusPriority {
 {
   if (newPage)
   {
-    // defer hiding of blocked popup view until we've loaded the new page
+    // Defer hiding of extra views until we've loaded the new page.
+    // If we are being called from within a history navigation, then core code
+    // has already stored our old size, and will incorrectly truncate the page
+    // later (see bug 350752, and the XXXbryner comment in nsDocShell.cpp). To
+    // work around that, re-set the frame once core is done meddling.
+    BOOL needsFrameAdjustment = NO;
     if (mBlockedPopupView) {
       [self removeBlockedPopupViewAndDisplay];
-      // If we are being called from within a history navigation, then core code
-      // has already stored our old size, and will incorrectly truncate the page
-      // later (see bug 350752, and the XXXbryner comment in nsDocShell.cpp). To
-      // work around that, re-set the frame once core is done meddling.
-      [self performSelector:@selector(reapplyFrame) withObject:nil afterDelay:0];
+      needsFrameAdjustment = YES;
     }
+    if (mFindBarView) {
+      [self removeFindBarViewAndDisplay];
+      needsFrameAdjustment = YES;
+    }
+    if (needsFrameAdjustment)
+      [self performSelector:@selector(reapplyFrame) withObject:nil afterDelay:0];
+
     if(mBlockedPopups)
       mBlockedPopups->Clear();
     [mDelegate showPopupBlocked:NO];
@@ -1287,8 +1311,7 @@ enum StatusPriority {
 // -removeBlockedPopupViewAndDisplay
 //
 // If we're showing the blocked popup view, this removes it and resizes the
-// browser view to again take up all the space. Causes a full redraw of our
-// view.
+// browser view to fill that space. Causes a full redraw of our view.
 //
 - (void)removeBlockedPopupViewAndDisplay
 {
@@ -1304,6 +1327,69 @@ enum StatusPriority {
 - (IBAction)hideBlockedPopupView:(id)sender
 {
   [self removeBlockedPopupViewAndDisplay];
+}
+
+#pragma mark -
+#pragma mark Find Bar
+
+//
+// -showFindBar
+//
+// Shows the find bar at the bottom of the content area.
+//
+- (void)showFindBar
+{
+  [mFindBarController showFindBar];
+}
+
+//
+// -showFindBarView:
+//
+// Meant for use by FindBarController; internally, use
+// add/removeFindBarViewAndDisplay.
+//
+- (void)showFindBarView:(NSView*)inBarView
+{
+  if (inBarView && (inBarView != mFindBarView)) {
+    [mFindBarView removeFromSuperviewWithoutNeedingDisplay];
+    mFindBarView = inBarView;
+    if (inBarView)
+      [self addFindBarViewAndDisplay];
+  }
+  else if (!inBarView && mFindBarView) {
+    // Pull focus back to the content area.
+    [[self window] makeFirstResponder:mBrowserView];
+    [self removeFindBarViewAndDisplay];
+  }
+}
+
+//
+// -addFindBarViewAndDisplay
+//
+// Even if we're hidden, we ensure that the new view is in the view hierarchy
+// and it will be resized when the current tab is eventually displayed.
+//
+- (void)addFindBarViewAndDisplay
+{
+  [self addSubview:mFindBarView];
+  [self setFrame:[self frame] resizingBrowserViewIfHidden:YES];
+  [self display];
+}
+
+//
+// -removeFindBarViewAndDisplay
+//
+// If we're showing the find bar view, this removes it and resizes the
+// browser view to fill that space. Causes a full redraw of our view.
+//
+- (void)removeFindBarViewAndDisplay
+{
+  if (mFindBarView) {
+    [mFindBarView removeFromSuperview];
+    mFindBarView = nil;
+    [self setFrame:[self frame] resizingBrowserViewIfHidden:YES];
+    [self display];
+  }
 }
 
 @end
@@ -1371,107 +1457,28 @@ enum StatusPriority {
 }
 
 //
-// CalculateShadingValues
-//
-// Callback function; Generates a color based upon
-// the current interval (location) of the shading.
-//
-static void CalculateShadingValues(void *info, const float *in, float *out)
-{
-  static float beginTopHalf[4] =    { 0.364706f, 0.364706f, 0.364706f, 1.0f };
-  static float endTopHalf[4] =      { 0.298039f, 0.298039f, 0.298039f, 1.0f };
-  static float beginBottomHalf[4] = { 0.207843f, 0.207843f, 0.207843f, 1.0f };
-  static float endBottomHalf[4] =   { 0.290196f, 0.290196f, 0.290196f, 1.0f };
-
-  float *startColor;
-  float *endColor;
-
-  // The interval is the sole item in the input array.
-  // It ranges from 0 - 1.0.
-  float currentInterval = in[0];
-
-  // Determine which shading to draw based upon the interval and adjust
-  // that interval so each shading contains a full range of 0 - 1.0.
-  if (currentInterval < 0.5f) {
-    startColor = beginTopHalf;
-    endColor = endTopHalf;
-    currentInterval /= 0.5f;
-  }
-  else {
-    startColor = beginBottomHalf;
-    endColor = endBottomHalf;
-    currentInterval = (currentInterval - 0.5f) / 0.5f;
-  }
-
-  // Using the interval, compute and set each color component (RGBa) output.
-  for(int i = 0; i < 4; i++)
-    out[i] = (1.0f - currentInterval) * startColor[i] + currentInterval * endColor[i];
-}
-
-//
 // -drawRect:
 //
 // Draws a shading behind the view's contents.
 //
 - (void)drawRect:(NSRect)aRect
 {
-  struct CGFunctionCallbacks shadingCallback = { 0, &CalculateShadingValues, NULL };
-
-  CGFunctionRef shadingFunction = CGFunctionCreate(NULL,              // void *info
-                                                   1,                 // number of inputs
-                                                   NULL,              // valid intervals of input values
-                                                   4,                 // number of outputs (4 = RGBa)
-                                                   NULL,              // valid intervals of output values
-                                                   &shadingCallback); // pointer to callback function
-
-  if (!shadingFunction) {
-    NSLog(@"Failed to create a shading function.");
-    return;
-  }
-
   NSRect bounds = [self bounds];
+  NSRect topHalf, bottomHalf;
+  NSDivideRect(bounds, &topHalf, &bottomHalf, ceilf(bounds.size.height / 2.0), NSMaxYEdge);
 
-  // Start/end at the top/bottom midpoint
-  CGPoint startPoint = CGPointMake(NSMidX(bounds), NSMaxY(bounds));
-  CGPoint endPoint = CGPointMake(NSMidX(bounds), NSMinY(bounds));
-
-  // To preserve 10.3 compatibility, create a color space
-  // using the CGColorSpaceCreateDeviceRGB function.
-
-  // CGColorSpaceCreateDeviceRGB has two possible behaviors:
-  // 1. On 10.3 or earlier it returns a device-dependent color space.
-  // 2. On 10.4 or later it will map to a generic (and more accurate)
-  //    device-independent color space.
-  CGColorSpaceRef colorspace = CGColorSpaceCreateDeviceRGB();
-
-  if (!colorspace) {
-    NSLog(@"Failed to create a color space for the shading.");
-    CGFunctionRelease(shadingFunction);
-    return;
-  }
-
-  // Creates (but does not draw) the axial shading
-  CGShadingRef shading = CGShadingCreateAxial(colorspace,       // CGColorSpaceRef colorspace
-                                              startPoint,       // CGPoint start
-                                              endPoint,         // CGPoint end
-                                              shadingFunction,  // CGFunctionRef function
-                                              false,            // bool extendStart
-                                              false);           // bool extendEnd
-
-  if (!shading) {
-    NSLog(@"Failed to create the shading.");
-    CGFunctionRelease(shadingFunction);
-    CGColorSpaceRelease(colorspace);
-    return;
-  }
-
-  CGContextRef context = (CGContextRef)[[NSGraphicsContext currentContext] graphicsPort];
-
-  CGContextDrawShading(context, shading);
-
-  CGShadingRelease(shading);
-  CGColorSpaceRelease(colorspace);
-  CGFunctionRelease(shadingFunction);
+  CHGradient* topGradient =
+    [[[CHGradient alloc] initWithStartingColor:[NSColor colorWithDeviceWhite:0.364706
+                                                                       alpha:1.0]
+                                   endingColor:[NSColor colorWithDeviceWhite:0.298039
+                                                                       alpha:1.0]] autorelease];
+  CHGradient* bottomGradient =
+    [[[CHGradient alloc] initWithStartingColor:[NSColor colorWithDeviceWhite:0.207843
+                                                                       alpha:1.0]
+                                   endingColor:[NSColor colorWithDeviceWhite:0.290196
+                                                                       alpha:1.0]] autorelease];
+  [topGradient drawInRect:topHalf angle:270.0];
+  [bottomGradient drawInRect:bottomHalf angle:270.0];
 
   [super drawRect:aRect];
 }

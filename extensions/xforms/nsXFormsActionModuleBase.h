@@ -63,6 +63,7 @@ public:
   nsXFormsActionModuleHelper() : mCanIterate(PR_TRUE) {}
   virtual nsIDOMElement* GetElement() = 0;
   PRBool CanIterate() { return mCanIterate; }
+  void SetCurrentEvent(nsIDOMEvent* aEvent) { mCurrentEvent = aEvent; }
   /**
    * With the `while` attribute, actions can potentially be iterated.  The
    * `HandleSingleAction` method processes one iteration of an action (that
@@ -82,6 +83,11 @@ protected:
    * additional information in the future.
    */
   PRBool mCanIterate;
+
+  /**
+   * The event currently being processed.
+   */
+  nsCOMPtr<nsIDOMEvent> mCurrentEvent;
 };
 
 class nsXFormsActionModuleBase : public nsIDOMEventListener,

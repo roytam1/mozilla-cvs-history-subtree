@@ -69,8 +69,12 @@ calWcapCalendar.prototype.encodeNscpTzid =
 function calWcapCalendar_encodeNscpTzid(dateTime)
 {
     var params = "X-NSCP-ORIGINAL-OPERATION=X-NSCP-WCAP-PROPERTY-";
-    if (!dateTime || !dateTime.isValid || dateTime.timezone.isUTC || dateTime.timezone.isFloating) {
+    if (!dateTime || !dateTime.isValid || dateTime.timezone.isUTC) {
         params += "DELETE^";
+    } else if (dateTime.timezone.isFloating) {
+        // cs cannot cope with floating, always enforces server tz,
+        // better use user's tz then:
+        params += ("REPLACE^" + encodeURIComponent(this.defaultTimezone));
     } else {
         params += ("REPLACE^" + encodeURIComponent(this.getAlignedTzid(dateTime.timezone)));
     }
@@ -317,7 +321,7 @@ function calWcapCalendar_storeItem(bAddItem, item, oldItem, request, netRespFunc
     var params = "";
     
     var calId = this.calId;
-    if (this.isInvitation(item)) { // REPLY
+    if (!bAddItem && this.isInvitation(item)) { // REPLY
         method = METHOD_REPLY;
         var att = getAttendeeByCalId(item.getAttendees({}), calId);
         if (att) {
@@ -487,9 +491,6 @@ function calWcapCalendar_storeItem(bAddItem, item, oldItem, request, netRespFunc
             case "IN-PROCESS":   params += "&status=5"; break;
             case "DRAFT":        params += "&status=6"; break;
             case "FINAL":        params += "&status=7"; break;
-            default:
-                params += "&status=3"; // NEEDS-ACTION
-                break;
             }
         }
         

@@ -21,6 +21,7 @@
  *
  * Contributor(s):
  *  Aaron Reed <aaronr@us.ibm.com>
+ *  Merle Sterling <msterlin@us.ibm.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -52,8 +53,11 @@
 #include "nsISchemaDuration.h"
 #include "nsXFormsSchemaValidator.h"
 #include "prdtoa.h"
+#include "prprf.h"
 #include "nsIXFormsControl.h"
 #include "nsIModelElementPrivate.h"
+#include "nsIXFormsActionModuleElement.h"
+#include "nsIXFormsContextInfo.h"
 
 NS_IMPL_ISUPPORTS1(nsXFormsUtilityService, nsIXFormsUtilityService)
 
@@ -385,29 +389,28 @@ nsXFormsUtilityService::GetSecondsFromDateTime(const nsAString & aValue,
 }
 
 NS_IMETHODIMP
-nsXFormsUtilityService::GetDaysFromDateTime(const nsAString & aValue, 
+nsXFormsUtilityService::GetDaysFromDateTime(const nsAString & aValue,
                                             PRInt32         * aDays)
 {
   NS_ASSERTION(aDays, "no return buffer for days, we'll crash soon");
   *aDays = 0;
 
   PRTime date;
-  nsCOMPtr<nsISchemaValidator> schemaValidator = 
+  nsCOMPtr<nsISchemaValidator> schemaValidator =
     do_CreateInstance(NS_SCHEMAVALIDATOR_CONTRACTID);
   NS_ENSURE_TRUE(schemaValidator, NS_ERROR_FAILURE);
 
-  // aValue could be a xsd:date or a xsd:dateTime.  If it is a dateTime, we
-  // should ignore the hours, minutes, and seconds according to 7.10.2 in
-  // the spec.  So search for such things now.  If they are there, strip 'em.
-  int findTime = aValue.FindChar('T');
+  // aValue could be a xsd:date or a xsd:dateTime.  If it is a xsd:dateTime,
+  // there will be a 'T' separating the date portion of the string from the time
+  // portion http://www.w3.org/TR/xmlschema-2/#dateTime
+  PRInt32 timeSeparator = aValue.FindChar('T');
 
-  nsAutoString dateString;
-  dateString.Assign(aValue);
-  if (findTime >= 0) {
-    dateString.Assign(Substring(dateString, 0, findTime));
+  nsresult rv;
+  if (timeSeparator >= 0) {
+    rv = schemaValidator->ValidateBuiltinTypeDateTime(aValue, &date);
+  } else {
+    rv = schemaValidator->ValidateBuiltinTypeDate(aValue, &date);
   }
-
-  nsresult rv = schemaValidator->ValidateBuiltinTypeDate(dateString, &date); 
   NS_ENSURE_SUCCESS(rv, rv);
 
   PRTime secs64 = date;
@@ -423,8 +426,143 @@ nsXFormsUtilityService::GetDaysFromDateTime(const nsAString & aValue,
   // convert whole seconds to PRInt32
   LL_L2I(secs32, secs64);
 
-  // convert whole seconds to days.  86400 seconds in a day.
+  // If aValue was a dateTime, "Hour, minute, and second components are ignored
+  // after normalization" according to 7.10.2 in the spec.  So according to spec
+  // we should strip off the fraction of a day after normalizing and before
+  // figuring out its distance from the epoch.  But secs32 already has been
+  // normalized and contains the distance from the epoch.  So now we might have
+  // to alter aDays to account for the fact that we didn't remove any fraction
+  // before.  For example, if aValue is 1970-01-02T12:00:00, then this is
+  // 1.5 days after the epoch.  But if we removed the fraction before the
+  // calculation we'd have 1970-01-02, which is 1 day from the epoch.  So
+  // GetDaysFromDateTime would return 1.  So we see that if aValue is on or
+  // after the epoch, we can ignore the remainder.  However, if aValue is
+  // 1969-12-31T12:00:00, this would be -0.5 days from the epoch.  Applying
+  // the spec rule of dropping the fractional day, we would be calculating
+  // using 1969-12-31 which would give us -1 days from the epoch (negative
+  // because it is before the epoch).  So we can't simply ignore the remainder.
+  // If we have a negative value with a remainder, we need to round down to
+  // the next whole day value.  So that is what we will do below.
+
+  // Convert seconds to days.  86400 seconds in a day.
   *aDays = secs32/86400;
+
+  // Apply the rule from above to simulate having removed the fractional day
+  // prior to calculating the distance from the epoch.  If secs32 is negative
+  // then if there was a fraction of a day, round down a day.
+  if (secs32 < 0) {
+    PRInt32 remainder = secs32%86400;
+    if (remainder) {
+      --*aDays;
+    }
+  }
+
+
+  return NS_OK;
+}
+
+
+/* static */ nsresult
+nsXFormsUtilityService::GetTime(nsAString & aResult, PRBool aUTC)
+{
+    PRExplodedTime time;
+    char ctime[60];
+
+    PR_ExplodeTime(PR_Now(),
+                   aUTC ? PR_GMTParameters : PR_LocalTimeParameters, &time);
+
+    PR_FormatTime(ctime, sizeof(ctime), "%Y-%m-%dT%H:%M:%S\0", &time);
+
+    aResult.AssignLiteral(ctime);
+
+    if (aUTC) {
+      aResult.AppendLiteral("Z");
+      return NS_OK;
+    }
+
+    int gmtoffsethour = time.tm_params.tp_gmt_offset < 0 ?
+                        -1*time.tm_params.tp_gmt_offset / 3600 :
+                        time.tm_params.tp_gmt_offset / 3600;
+    int remainder = time.tm_params.tp_gmt_offset%3600;
+    int gmtoffsetminute = remainder ? remainder/60 : 00;
+  
+    char zone_location[40];
+    const int zoneBufSize = sizeof(zone_location);
+    PR_snprintf(zone_location, zoneBufSize, "%c%02d:%02d\0",
+                time.tm_params.tp_gmt_offset < 0 ? '-' : '+',
+                gmtoffsethour, gmtoffsetminute);
+
+    aResult.Append(NS_ConvertASCIItoUTF16(zone_location));
+
+    return NS_OK;
+}
+
+
+NS_IMETHODIMP
+nsXFormsUtilityService::GetEventContextInfo(const nsAString & aContextName,
+                                       nsIDOMNode           * aNode,
+                                       nsCOMArray<nsIDOMNode> *aResult)
+{
+  nsresult rv;
+
+  nsCOMPtr<nsIXFormsContextInfo> contextInfo;
+  nsCOMPtr<nsIXFormsActionModuleElement> actionElt(do_QueryInterface(aNode));
+  if (!actionElt)
+    return NS_OK;
+
+  nsCOMPtr<nsIDOMEvent> domEvent;
+  actionElt->GetCurrentEvent(getter_AddRefs(domEvent));
+  nsCOMPtr<nsIXFormsDOMEvent> xfEvent(do_QueryInterface(domEvent));
+  if (!xfEvent) {
+    // Event being called for an nsIDOMEvent that is not an
+    // nsIXFormsDOMEvent.
+    return NS_OK;
+  }
+  xfEvent->GetContextInfo(aContextName, getter_AddRefs(contextInfo));
+  if (!contextInfo) {
+    // The requested context info property does not exist.
+    return NS_OK;
+  }
+
+  // Determine the type of context info property.
+  PRInt32 resultType;
+  contextInfo->GetType(&resultType);
+
+  if (resultType == nsIXFormsContextInfo::NODESET_TYPE) {
+    // The context property is a nodeset. Snapshot each individual node
+    // in the nodeset and add them one at a time to the context info array.
+    nsCOMPtr<nsIDOMXPathResult> nodeset;
+    contextInfo->GetNodesetValue(getter_AddRefs(nodeset));
+    if (nodeset) {
+      PRUint32 nodesetSize;
+      rv = nodeset->GetSnapshotLength(&nodesetSize);
+      NS_ENSURE_SUCCESS(rv, rv);
+      for (PRUint32 i=0; i < nodesetSize; ++i) {
+        nsCOMPtr<nsIDOMNode> node;
+        nodeset->SnapshotItem(i, getter_AddRefs(node));
+        aResult->AppendObject(node);
+      }
+    }
+  } else {
+    // The type is a dom node, string, or number. Strings and numbers
+    // are encapsulated in a text node.
+    nsCOMPtr<nsIDOMNode> node;
+    contextInfo->GetNodeValue(getter_AddRefs(node));
+    if (node) {
+      aResult->AppendObject(node);
+    }
+#ifdef DEBUG
+    PRInt32 type;
+    contextInfo->GetType(&type);
+    if (type == nsXFormsContextInfo::STRING_TYPE) {
+      nsAutoString str;
+      contextInfo->GetStringValue(str);
+    } else if (type == nsXFormsContextInfo::NUMBER_TYPE) {
+      PRInt32 number;
+      contextInfo->GetNumberValue(&number);
+    }
+#endif
+  }
 
   return NS_OK;
 }

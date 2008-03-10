@@ -38,7 +38,14 @@
 
 #import "KeychainItem.h"
 
+// Prior to 10.5, we can't use kSecLabelItemAttr due to a bug in Keychain
+// Services (see bug 420665). The recommendation from Apple is to use the raw
+// index instead of the attribute, which for password items is 7.
+// Once we are 10.5+, we can just use kSecLabelItemAttr instead.
+static const unsigned int kRawKeychainLabelIndex = 7;
+
 @interface KeychainItem(Private)
++ (NSString*)labelForHost:(NSString*)host username:(NSString*)username;
 - (KeychainItem*)initWithRef:(SecKeychainItemRef)ref;
 - (void)loadKeychainData;
 - (void)loadKeychainPassword;
@@ -166,6 +173,12 @@
   }
 
   KeychainItem* item = [[[KeychainItem alloc] initWithRef:keychainItemRef] autorelease];
+  if (authType == kSecAuthenticationTypeHTMLForm) {
+    [item setAttributeType:kSecDescriptionItemAttr
+                  toString:NSLocalizedString(@"WebFormPassword", nil)];
+  }
+  [item setLabel:[KeychainItem labelForHost:host username:username]];
+
   return item;
 }
 
@@ -187,6 +200,7 @@
   [mHost release];
   [mComment release];
   [mSecurityDomain release];
+  [mLabel release];
   [super dealloc];
 }
 
@@ -195,7 +209,7 @@
   if (!mKeychainItemRef)
     return;
   SecKeychainAttributeInfo attrInfo;
-  UInt32 tags[8];
+  UInt32 tags[9];
   tags[0] = kSecAccountItemAttr;
   tags[1] = kSecServerItemAttr;
   tags[2] = kSecPortItemAttr;
@@ -204,6 +218,7 @@
   tags[5] = kSecSecurityDomainItemAttr;
   tags[6] = kSecCreatorItemAttr;
   tags[7] = kSecCommentItemAttr;
+  tags[8] = kRawKeychainLabelIndex;
   attrInfo.count = sizeof(tags)/sizeof(UInt32);
   attrInfo.tag = tags;
   attrInfo.format = NULL;
@@ -220,6 +235,8 @@
   mComment = nil;
   [mSecurityDomain autorelease];
   mSecurityDomain = nil;
+  [mLabel autorelease];
+  mLabel = nil;
 
   if (result != noErr) {
     NSLog(@"Couldn't load keychain data (error %d)", result);
@@ -240,6 +257,8 @@
       mComment = [[NSString alloc] initWithBytes:(char*)(attr.data) length:attr.length encoding:NSUTF8StringEncoding];
     else if (attr.tag == kSecSecurityDomainItemAttr)
       mSecurityDomain = [[NSString alloc] initWithBytes:(char*)(attr.data) length:attr.length encoding:NSUTF8StringEncoding];
+    else if (attr.tag == kRawKeychainLabelIndex || attr.tag == kSecLabelItemAttr)
+      mLabel = [[NSString alloc] initWithBytes:(char*)(attr.data) length:attr.length encoding:NSUTF8StringEncoding];
     else if (attr.tag == kSecPortItemAttr)
       mPort = *((UInt16*)(attr.data));
     else if (attr.tag == kSecProtocolItemAttr)
@@ -299,6 +318,7 @@
 
 - (void)setUsername:(NSString*)username password:(NSString*)password
 {
+  NSString* oldUsernameLabel = [KeychainItem labelForHost:[self host] username:[self username]];
   SecKeychainAttribute user;
   user.tag = kSecAccountItemAttr;
   const char* usernameString = [username UTF8String];
@@ -316,6 +336,9 @@
     mUsername = [username copy];
     [mPassword autorelease];
     mPassword = [password copy];
+    NSString* currentLabel = [self label];
+    if (![currentLabel length] || [currentLabel isEqualToString:oldUsernameLabel])
+      [self setLabel:[KeychainItem labelForHost:[self host] username:username]];
   }
 }
 
@@ -328,9 +351,13 @@
 
 - (void)setHost:(NSString*)host
 {
+  NSString* oldHostLabel = [KeychainItem labelForHost:[self host] username:[self username]];
   if ([self setAttributeType:kSecServerItemAttr toString:host]) {
     [mHost autorelease];
     mHost = [host copy];
+    NSString* currentLabel = [self label];
+    if (![currentLabel length] || [currentLabel isEqualToString:oldHostLabel])
+      [self setLabel:[KeychainItem labelForHost:host username:[self username]]];
   }
   else {
     NSLog(@"Couldn't update keychain item host");
@@ -376,10 +403,22 @@
 
 - (void)setAuthenticationType:(SecAuthenticationType)authType
 {
-  if ([self setAttributeType:kSecAuthenticationTypeItemAttr toValue:&authType withLength:sizeof(SecAuthenticationType)])
+  if ([self setAttributeType:kSecAuthenticationTypeItemAttr
+                     toValue:&authType
+                  withLength:sizeof(SecAuthenticationType)])
+  {
     mAuthenticationType = authType;
-  else
+    if (authType == kSecAuthenticationTypeHTMLForm) {
+      [self setAttributeType:kSecDescriptionItemAttr
+                    toString:NSLocalizedString(@"WebFormPassword", nil)];
+    }
+    else {
+      [self setAttributeType:kSecDescriptionItemAttr toString:nil];
+    }
+  }
+  else {
     NSLog(@"Couldn't update keychain item auth type");
+  }
 }
 
 - (OSType)creator
@@ -415,6 +454,13 @@
   }
 }
 
+- (NSString*)securityDomain
+{
+  if (!mDataLoaded)
+    [self loadKeychainData];
+  return mSecurityDomain;
+}
+
  - (void)setSecurityDomain:(NSString*)securityDomain
 {
   if ([self setAttributeType:kSecSecurityDomainItemAttr toString:securityDomain]) {
@@ -425,14 +471,24 @@
     NSLog(@"Couldn't update keychain item security domains");
   }
 }
- 
-- (NSString*)securityDomain
+
+- (NSString*)label
 {
   if (!mDataLoaded)
     [self loadKeychainData];
-  return mSecurityDomain;
+  return mLabel;
 }
- 
+
+ - (void)setLabel:(NSString*)label
+{
+  if ([self setAttributeType:kRawKeychainLabelIndex toString:label]) {
+    [mLabel autorelease];
+    mLabel = [label copy];
+  }
+  else {
+    NSLog(@"Couldn't update keychain item label");
+  }
+}
 
 - (BOOL)setAttributeType:(SecKeychainAttrType)type toString:(NSString*)value {
   const char* cString = [value UTF8String];
@@ -455,6 +511,13 @@
 - (void)removeFromKeychain
 {
   SecKeychainItemDelete(mKeychainItemRef);
+}
+
++ (NSString*)labelForHost:(NSString*)host username:(NSString*)username
+{
+  // KeychainLabelFormat takes host, username (e.g., "%1$@ (%2$@)")
+  return [NSString stringWithFormat:NSLocalizedString(@"KeychainLabelFormat", nil),
+                                    host, username];
 }
 
 @end

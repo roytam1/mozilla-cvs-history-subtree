@@ -144,9 +144,11 @@ js_EnablePropertyCache(JSContext *cx)
  * homes in fp, when calling out of the interpreter loop or threaded code.
  * RESTORE_SP_AND_PC copies the other way, to update registers after a call
  * to a subroutine that interprets a piece of the current script.
+ * ASSERT_SAVED_SP_AND_PC checks that SAVE_SP_AND_PC was called.
  */
 #define SAVE_SP_AND_PC(fp)      (SAVE_SP(fp), (fp)->pc = pc)
 #define RESTORE_SP_AND_PC(fp)   (RESTORE_SP(fp), pc = (fp)->pc)
+#define ASSERT_SAVED_SP_AND_PC(fp) JS_ASSERT((fp)->sp == sp && (fp)->pc == pc);
 
 /*
  * Push the generating bytecode's pc onto the parallel pc stack that runs
@@ -173,6 +175,7 @@ js_EnablePropertyCache(JSContext *cx)
         if (JSDOUBLE_IS_INT(d, i_) && INT_FITS_IN_JSVAL(i_)) {                \
             v_ = INT_TO_JSVAL(i_);                                            \
         } else {                                                              \
+            SAVE_SP_AND_PC(fp);                                               \
             ok = js_NewDoubleValue(cx, d, &v_);                               \
             if (!ok)                                                          \
                 goto out;                                                     \
@@ -187,6 +190,7 @@ js_EnablePropertyCache(JSContext *cx)
         if (INT_FITS_IN_JSVAL(i)) {                                           \
             v_ = INT_TO_JSVAL(i);                                             \
         } else {                                                              \
+            SAVE_SP_AND_PC(fp);                                               \
             ok = js_NewDoubleValue(cx, (jsdouble)(i), &v_);                   \
             if (!ok)                                                          \
                 goto out;                                                     \
@@ -201,6 +205,7 @@ js_EnablePropertyCache(JSContext *cx)
         if ((u) <= JSVAL_INT_MAX) {                                           \
             v_ = INT_TO_JSVAL(u);                                             \
         } else {                                                              \
+            SAVE_SP_AND_PC(fp);                                               \
             ok = js_NewDoubleValue(cx, (jsdouble)(u), &v_);                   \
             if (!ok)                                                          \
                 goto out;                                                     \
@@ -3348,10 +3353,10 @@ interrupt:
                 JS_ASSERT(INT_FITS_IN_JSVAL(i));
                 rval = INT_TO_JSVAL(i);
             } else {
+                SAVE_SP_AND_PC(fp);
                 if (JSVAL_IS_DOUBLE(rval)) {
                     d = *JSVAL_TO_DOUBLE(rval);
                 } else {
-                    SAVE_SP_AND_PC(fp);
                     ok = js_ValueToNumber(cx, rval, &d);
                     if (!ok)
                         goto out;
@@ -5123,7 +5128,8 @@ interrupt:
                 id   = ATOM_TO_JSID(atom);
                 goto gs_get_lval;
 
-              case JSOP_INITELEM:
+              default:
+                JS_ASSERT(op2 == JSOP_INITELEM);
                 JS_ASSERT(sp - fp->spbase >= 3);
                 rval = FETCH_OPND(-1);
                 FETCH_ELEMENT_ID(-2, id);
@@ -5133,9 +5139,6 @@ interrupt:
                 JS_ASSERT(JSVAL_IS_OBJECT(lval));
                 obj = JSVAL_TO_OBJECT(lval);
                 break;
-
-              default:
-                JS_ASSERT(0);
             }
 
             /* Ensure that id has a type suitable for use with obj. */
@@ -5978,6 +5981,7 @@ interrupt:
             ASSERT_NOT_THROWING(cx);
             if (fp->flags & JSFRAME_FILTERING) {
                 /* FIXME: bug 309894 -- fix to eliminate this error. */
+                SAVE_SP_AND_PC(fp);
                 JS_ReportErrorNumberUC(cx, js_GetErrorMessage, NULL,
                                        JSMSG_YIELD_FROM_FILTER);
                 ok = JS_FALSE;
@@ -6201,7 +6205,10 @@ out2:
 
 atom_not_defined:
     {
-        const char *printable = js_AtomToPrintableString(cx, atom);
+        const char *printable;
+
+        ASSERT_SAVED_SP_AND_PC(fp);
+        printable = js_AtomToPrintableString(cx, atom);
         if (printable)
             js_ReportIsNotDefined(cx, printable);
         ok = JS_FALSE;

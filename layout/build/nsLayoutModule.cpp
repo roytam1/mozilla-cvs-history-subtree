@@ -196,7 +196,7 @@ void NS_FreeSVGRendererGDIPlusGlobals();
 #endif // MOZ_SVG
 
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsDOMSerializer)
-NS_GENERIC_FACTORY_CONSTRUCTOR(nsXMLHttpRequest)
+NS_GENERIC_FACTORY_CONSTRUCTOR_INIT(nsXMLHttpRequest, Init)
 NS_GENERIC_FACTORY_CONSTRUCTOR(nsDOMParser)
 
 //-----------------------------------------------------------------------------

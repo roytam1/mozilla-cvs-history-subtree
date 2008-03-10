@@ -39,11 +39,18 @@
     font-weight: bold;
     text-align: right;
     background-color: transparent;
+    border: none;
 }
 
+#calendar-task-details-attachment,
 .task-details-value {
     text-align: left;
     background-color: transparent;
+    border: none;
+}
+
+#calendar-task-tree {
+    min-height: 98px;
 }
 
 #calendar-task-tree > .calendar-task-tree > treechildren::-moz-tree-cell {
@@ -73,4 +80,8 @@
 
 #unifinder-todo-tree > .calendar-task-tree {
     margin-bottom: 0;
+}
+
+#calendar-task-details-container {
+  overflow: hidden;
 }

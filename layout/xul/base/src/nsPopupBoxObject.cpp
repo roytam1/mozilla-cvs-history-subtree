@@ -65,6 +65,13 @@ public:
   nsPopupBoxObject();
   virtual ~nsPopupBoxObject();
 
+  nsMenuPopupFrame* GetMenuPopupFrame()
+  {
+    nsIFrame* frame = GetFrame();
+    if (frame && frame->GetType() == nsLayoutAtoms::menuPopupFrame)
+      return NS_STATIC_CAST(nsMenuPopupFrame*, frame);
+    return nsnull;
+  }
 };
 
 /* Implementation file */
@@ -209,10 +216,7 @@ nsPopupBoxObject::ShowPopup(nsIDOMElement* aSrcContent,
 NS_IMETHODIMP
 nsPopupBoxObject::MoveTo(PRInt32 aLeft, PRInt32 aTop)
 {
-  nsIFrame* frame = GetFrame();
-  if (!frame) return NS_OK;
-
-  nsMenuPopupFrame* menuPopupFrame = NS_STATIC_CAST(nsMenuPopupFrame*, frame);
+  nsMenuPopupFrame* menuPopupFrame = GetMenuPopupFrame();
   if (!menuPopupFrame) return NS_OK;
 
   menuPopupFrame->MoveTo(aLeft, aTop);
@@ -237,10 +241,7 @@ nsPopupBoxObject::SizeTo(PRInt32 aWidth, PRInt32 aHeight)
 NS_IMETHODIMP
 nsPopupBoxObject::GetAutoPosition(PRBool* aShouldAutoPosition)
 {
-  nsIFrame* frame = GetFrame();
-  if (!frame) return NS_OK;
-
-  nsMenuPopupFrame* menuPopupFrame = NS_STATIC_CAST(nsMenuPopupFrame*, frame);
+  nsMenuPopupFrame* menuPopupFrame = GetMenuPopupFrame();
   if (!menuPopupFrame) return NS_OK;
 
   menuPopupFrame->GetAutoPosition(aShouldAutoPosition);
@@ -251,10 +252,7 @@ nsPopupBoxObject::GetAutoPosition(PRBool* aShouldAutoPosition)
 NS_IMETHODIMP
 nsPopupBoxObject::SetAutoPosition(PRBool aShouldAutoPosition)
 {
-  nsIFrame* frame = GetFrame();
-  if (!frame) return NS_OK;
-
-  nsMenuPopupFrame* menuPopupFrame = NS_STATIC_CAST(nsMenuPopupFrame*, frame);
+  nsMenuPopupFrame* menuPopupFrame = GetMenuPopupFrame();
   if (!menuPopupFrame) return NS_OK;
 
   menuPopupFrame->SetAutoPosition(aShouldAutoPosition);
@@ -265,10 +263,7 @@ nsPopupBoxObject::SetAutoPosition(PRBool aShouldAutoPosition)
 NS_IMETHODIMP
 nsPopupBoxObject::EnableRollup(PRBool aShouldRollup)
 {
-  nsIFrame* frame = GetFrame();
-  if (!frame) return NS_OK;
-
-  nsMenuPopupFrame* menuPopupFrame = NS_STATIC_CAST(nsMenuPopupFrame*, frame);
+  nsMenuPopupFrame* menuPopupFrame = GetMenuPopupFrame();
   if (!menuPopupFrame) return NS_OK;
 
   menuPopupFrame->EnableRollup(aShouldRollup);
@@ -279,10 +274,7 @@ nsPopupBoxObject::EnableRollup(PRBool aShouldRollup)
 NS_IMETHODIMP
 nsPopupBoxObject::EnableKeyboardNavigator(PRBool aEnableKeyboardNavigator)
 {
-  nsIFrame* frame = GetFrame();
-  if (!frame) return NS_OK;
-
-  nsMenuPopupFrame* menuPopupFrame = NS_STATIC_CAST(nsMenuPopupFrame*, frame);
+  nsMenuPopupFrame* menuPopupFrame = GetMenuPopupFrame();
   if (!menuPopupFrame) return NS_OK;
 
   if (aEnableKeyboardNavigator)

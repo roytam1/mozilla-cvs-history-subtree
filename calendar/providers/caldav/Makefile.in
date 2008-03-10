@@ -43,10 +43,12 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-MODULE = calDavCalendar
+MODULE = caldav
+
+DIRS = public
 
 ifeq (,$(filter webdav,$(MOZ_EXTENSIONS)))
-DIRS = ../../../extensions/webdav
+DIRS += ../../../extensions/webdav
 endif
 
 EXTRA_COMPONENTS = calDavCalendarModule.js

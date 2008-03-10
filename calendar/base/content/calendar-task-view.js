@@ -122,10 +122,12 @@ var taskDetailsView = {
                             "taskDetailsStatusInProgress", [percent]);
                         break;
                     case "COMPLETED":
-                        statusDetails.value = calGetString(
-                            "calendar",
-                            "taskDetailsStatusCompletedOn",
-                            [dateFormatter.formatDateTime(item.completedDate)]);
+                        if (item.completedDate) {
+                            statusDetails.value = calGetString(
+                                "calendar",
+                                "taskDetailsStatusCompletedOn",
+                                [dateFormatter.formatDateTime(item.completedDate)]);
+                        }
                         break;
                     case "CANCELLED":
                         statusDetails.value = calGetString(
@@ -168,6 +170,12 @@ var taskDetailsView = {
             var description = item.hasProperty("DESCRIPTION") ? item.getProperty("DESCRIPTION") : null;
             textbox.value = description;
             textbox.inputField.readOnly = true;
+            var gURL = item.getProperty("URL");
+            if (displayElement("calendar-task-details-attachment-row", gURL && gURL.length)) {
+                var urlLabel = document.getElementById("calendar-task-details-attachment");
+                urlLabel.value = gURL;
+                urlLabel.setAttribute("tooltiptext", gURL);
+            }
         }
     }
 };

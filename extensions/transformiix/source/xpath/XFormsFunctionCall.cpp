@@ -21,6 +21,7 @@
  *
  * Contributor(s):
  *  Aaron Reed <aaronr@us.ibm.com>
+ *  Merle Sterling <msterlin@us.ibm.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -57,6 +58,9 @@
 #include "nsIXFormsUtilityService.h"
 #include "nsServiceManagerUtils.h"  // needed for do_GetService?
 #include "prprf.h"
+#include "prrng.h"
+#include <errno.h>
+#include <stdlib.h>
 
 /*
  * Creates a XFormsFunctionCall of the given type
@@ -421,26 +425,70 @@ XFormsFunctionCall::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
       if (!requireParams(0, 0, aContext))
         return NS_ERROR_XPATH_BAD_ARGUMENT_COUNT;
 
-      PRExplodedTime time;
-      char ctime[60];
-   
-      PR_ExplodeTime(PR_Now(), PR_LocalTimeParameters, &time);
-      int gmtoffsethour = time.tm_params.tp_gmt_offset < 0 ? 
-                          -1*time.tm_params.tp_gmt_offset / 3600 : 
-                          time.tm_params.tp_gmt_offset / 3600;
-      int remainder = time.tm_params.tp_gmt_offset%3600;
-      int gmtoffsetminute = remainder ? remainder/60 : 00;
+      nsCOMPtr<nsIXFormsUtilityService>xformsService =
+            do_GetService("@mozilla.org/xforms-utility-service;1", &rv);
+      NS_ENSURE_SUCCESS(rv, rv);
 
-      char zone_location[40];
-      const int zoneBufSize = sizeof(zone_location);
-      PR_snprintf(zone_location, zoneBufSize, "%c%02d:%02d\0",
-                  time.tm_params.tp_gmt_offset < 0 ? '-' : '+',
-                  gmtoffsethour, gmtoffsetminute);
+      nsAutoString res;
+      xformsService->GetTime(res, PR_TRUE);
    
-      PR_FormatTime(ctime, sizeof(ctime), "%Y-%m-%dT%H:%M:%S\0", &time);
-      nsString sTime = NS_ConvertASCIItoUTF16(ctime) + NS_ConvertASCIItoUTF16(zone_location);
+      return aContext->recycler()->getStringResult(res, aResult);
+    }
+    case LOCALDATETIME:
+    {
+      if (!requireParams(0, 0, aContext))
+        return NS_ERROR_XPATH_BAD_ARGUMENT_COUNT;
+
+      nsCOMPtr<nsIXFormsUtilityService>xformsService =
+            do_GetService("@mozilla.org/xforms-utility-service;1", &rv);
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      nsAutoString res;
+      xformsService->GetTime(res, PR_FALSE);
    
-      return aContext->recycler()->getStringResult(sTime, aResult);
+      return aContext->recycler()->getStringResult(res, aResult);
+    }
+    case LOCALDATE:
+    {
+      if (!requireParams(0, 0, aContext))
+        return NS_ERROR_XPATH_BAD_ARGUMENT_COUNT;
+
+      nsCOMPtr<nsIXFormsUtilityService>xformsService =
+            do_GetService("@mozilla.org/xforms-utility-service;1", &rv);
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      nsAutoString time, res;
+      xformsService->GetTime(time, PR_FALSE);
+
+      // since we know that the returned string will be in the format of
+      // yyyy-mm-ddThh:mm:ss.ssszzzz, we just need to grab the first 10
+      // characters to represent the date and then strip off the time zone
+      // information from the end and append it to the string to get our answer
+      res = Substring(time, 0, 10);
+      PRInt32 timeSeparator = time.FindChar(PRUnichar('T'));
+      if (timeSeparator == kNotFound) {
+        // though this should probably never happen, if this is the case we
+        // certainly don't have to worry about timezones.  Just return.
+        return NS_ERROR_UNEXPECTED;
+      }
+  
+      // Time zone information can be of the format '-hh:ss', '+hh:ss', or 'Z'
+      // might be no time zone information at all.
+      nsAutoString hms(Substring(time, timeSeparator+1, time.Length()));
+      PRInt32 timeZoneSeparator = hms.FindChar(PRUnichar('-'));
+      if (timeZoneSeparator == kNotFound) {
+        timeZoneSeparator = hms.FindChar(PRUnichar('+'));
+        if (timeZoneSeparator == kNotFound) {
+          timeZoneSeparator = hms.FindChar(PRUnichar('Z'));
+          if (timeZoneSeparator == kNotFound) {
+            // no time zone information available
+            return NS_ERROR_UNEXPECTED;
+          }
+        }
+      }
+  
+      res.Append(Substring(hms, timeZoneSeparator, hms.Length()));
+      return aContext->recycler()->getStringResult(res, aResult);
     }
     case PROPERTY:
     {
@@ -532,6 +580,104 @@ XFormsFunctionCall::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
 
       return NS_OK;
     }
+    case EVENT:
+    {
+      // The Event function returns a nodeset of context info associated with
+      // an event.
+      nsresult rv;
+      if (!requireParams(1, 1, aContext))
+        return NS_ERROR_XPATH_BAD_ARGUMENT_COUNT;
+
+      nsRefPtr<txNodeSet> resultSet;
+      rv = aContext->recycler()->getNodeSet(getter_AddRefs(resultSet));
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      // Get the name of the context info property.
+      nsAutoString contextName;
+      evaluateToString((Expr*)iter.next(), aContext, contextName);
+
+      nsCOMPtr<nsIXFormsUtilityService>xformsService =
+            do_GetService("@mozilla.org/xforms-utility-service;1", &rv);
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      // mNode is the node that contained the Event XPath expression.
+      nsCOMArray<nsIDOMNode> contextInfo;
+      rv = xformsService->GetEventContextInfo(contextName, mNode, &contextInfo);
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      // Add each of the context info nodes to the resultSet.
+      PRInt32 i;
+      for (i = 0; i < contextInfo.Count(); ++i) {
+        nsAutoPtr<txXPathNode> txNode(txXPathNativeNode::createXPathNode(contextInfo[i]));
+        if (txNode) {
+          resultSet->add(*txNode);
+        }
+      }
+
+      *aResult = resultSet;
+      NS_ADDREF(*aResult);
+
+      return NS_OK;
+    }
+    case POWER:
+    {
+      if (!requireParams(2, 2, aContext))
+        return NS_ERROR_XPATH_BAD_ARGUMENT_COUNT;
+
+      double result = 0;
+      double base = evaluateToNumber((Expr*)iter.next(), aContext);
+      double exponent = evaluateToNumber((Expr*)iter.next(), aContext);
+
+      // If base is negative and exponent is not an integral value, or if base
+      // is zero and exponent is negative, a domain error occurs, setting the
+      // global variable errno to the value EDOM.
+      // If the result is too large (ERANGE), we consider the result to be kNaN.
+      result = pow(base, exponent);
+      if (errno == EDOM || errno == ERANGE) {
+        result = Double::NaN;
+      }
+
+      return aContext->recycler()->getNumberResult(result, aResult);
+    }
+    case RANDOM:
+    {
+      if (!requireParams(0, 1, aContext))
+        return NS_ERROR_XPATH_BAD_ARGUMENT_COUNT;
+
+      PRBool useSeed = PR_FALSE;
+      Expr *expr = (Expr*)iter.next();
+      if (expr) {
+        useSeed = evaluateToBoolean(expr, aContext);
+      }
+
+      if (useSeed) {
+        // initialize random seed.
+        PRUint32 seed = 0;
+        PRSize rSize = PR_GetRandomNoise(&seed, sizeof(seed));
+        if (rSize) {
+          srand (seed);
+        }
+      }
+      double result = (rand() / ((double)RAND_MAX + 1.0));
+
+      return aContext->recycler()->getNumberResult(result, aResult);
+    }
+    case COMPARE:
+    {
+      if (!requireParams(2, 2, aContext))
+        return NS_ERROR_XPATH_BAD_ARGUMENT_COUNT;
+
+      nsAutoString string1, string2;
+      evaluateToString((Expr*)iter.next(), aContext, string1);
+      evaluateToString((Expr*)iter.next(), aContext, string2);
+
+      // Using strcmp because Compare is not a member of nsAutoString.
+      double result = 0;
+      result = strcmp(NS_ConvertUTF16toUTF8(string1).get(),
+                      NS_ConvertUTF16toUTF8(string2).get());
+
+      return aContext->recycler()->getNumberResult(result, aResult);
+    }
   } /* switch() */
 
   aContext->receiveError(NS_LITERAL_STRING("Internal error"),
@@ -539,7 +685,7 @@ XFormsFunctionCall::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
   return NS_ERROR_UNEXPECTED;
 }
 
-#ifdef TX_TO_STRING
+  #ifdef TX_TO_STRING
 nsresult
 XFormsFunctionCall::getNameAtom(nsIAtom** aAtom)
 {
@@ -599,6 +745,16 @@ XFormsFunctionCall::getNameAtom(nsIAtom** aAtom)
       *aAtom = txXPathAtoms::now;
       break;
     }
+    case LOCALDATETIME:
+    {
+      *aAtom = txXPathAtoms::localDateTime;
+      break;
+    }
+    case LOCALDATE:
+    {
+      *aAtom = txXPathAtoms::localDate;
+      break;
+    }
     case PROPERTY:
     {
       *aAtom = txXPathAtoms::property;
@@ -617,6 +773,26 @@ XFormsFunctionCall::getNameAtom(nsIAtom** aAtom)
     case CURRENT:
     {
       *aAtom = txXPathAtoms::current;
+      break;
+    }
+    case EVENT:
+    {
+      *aAtom = txXPathAtoms::event;
+      break;
+    }
+    case POWER:
+    {
+      *aAtom = txXPathAtoms::power;
+      break;
+    }
+    case RANDOM:
+    {
+      *aAtom = txXPathAtoms::random;
+      break;
+    }
+    case COMPARE:
+    {
+      *aAtom = txXPathAtoms::compare;
       break;
     }
     default:

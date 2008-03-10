@@ -196,7 +196,7 @@ function onLoad() {
 
 function onAccept() {
     dispose();
-    onCommandSave();
+    onCommandSave(true);
     return true;
 }
 
@@ -253,12 +253,12 @@ function onCommandCancel() {
                                          null,
                                          {});
     switch (choice) {
-        case 0:
-            onCommandSave();
+        case 0: // Save
+            onCommandSave(true);
             return true;
-        case 2:
+        case 2: // Don't save
             return true;
-        default:
+        default: // Cancel
             return false;
     }
 }
@@ -286,101 +286,16 @@ function loadDialog(item) {
 
     loadDateTime(item);
 
-    var isItemSupported;
-    if (isToDo(calendarItem)) {
-        isItemSupported = function isTodoSupported(cal) {
-            return (cal.getProperty("capabilities.tasks.supported") !== false);
-        };
-    } else if (isEvent(calendarItem)) {
-        isItemSupported = function isEventSupported(cal) {
-            return (cal.getProperty("capabilities.events.supported") !== false);
-        };
-    }
-
     // add calendars to the calendar menulist
     var calendarList = document.getElementById("item-calendar");
-    var calendars = getCalendarManager().getCalendars({});
-    var calendarToUse = item.calendar || window.arguments[0].calendar
-    var selectIndex = 0;
-    for (var i = 0; i < calendars.length; ++i) {
-        var calendar = calendars[i];
-        if (calendar == item.calendar ||
-            calendar == window.arguments[0].calendar) {
-            var menuitem = calendarList.appendItem(calendar.name, i);
-            menuitem.calendar = calendar;
-            if (calendarToUse) {
-                if (calendarToUse.id == calendar.id) {
-                    calendarList.selectedIndex = selectIndex;
-                }
-            }
-            selectIndex++;
-        } else if (calendar &&
-                   isCalendarWritable(calendar) &&
-                   isItemSupported(calendar)) {
-            var menuitem = calendarList.appendItem(calendar.name, i);
-            menuitem.calendar = calendar;
-            if (calendarToUse) {
-                if (calendarToUse.id == calendar.id) {
-                    calendarList.selectedIndex = selectIndex;
-                }
-            }
-            selectIndex++;
-        }
-    }
-
-    // no calendar attached to item
-    // select first entry in calendar list as default
-    if (!calendarToUse) {
-        document.getElementById("item-calendar").selectedIndex = 0;
+    var indexToSelect = appendCalendarItems(item, calendarList, window.arguments[0].calendar);
+    if (indexToSelect > -1) {
+        calendarList.selectedIndex = indexToSelect;
     }
 
     // Categories
-    var categoriesString = getLocalizedPref("calendar.categories.names", "");
-
-    // If no categories are configured load a default set from properties file
-    if (!categoriesString || categoriesString == "") {
-        categoriesString = calGetString("categories", "categories");
-        setLocalizedPref("calendar.categories.names", categoriesString);
-    }
-
-    var categoriesList = categoriesString.split(",");
-    
-    // When categoriesString is empty, split returns an array containing one
-    // empty string, rather than an empty array. This results in an empty
-    // menulist item with no corresponding category.
-    if (categoriesList.length == 1 && !categoriesList[0].length) {
-        categoriesList.pop();
-    }
-
-    // insert the category already in the menulist so it doesn't get lost
-    var itemCategory = item.getProperty("CATEGORIES");
-    if (itemCategory) {
-        if (categoriesString.indexOf(itemCategory) == -1) {
-            categoriesList[categoriesList.length] = itemCategory;
-        }
-    }
-    categoriesList.sort();
-
-    var oldMenulist = document.getElementById("item-categories");
-    while (oldMenulist.hasChildNodes()) {
-        oldMenulist.removeChild(oldMenulist.lastChild);
-    }
-
     var categoryMenuList = document.getElementById("item-categories");
-    var indexToSelect = 0;
-
-    // Add a 'none' option to allow users to cancel the category
-    var noneItem = categoryMenuList.appendItem(calGetString("calendar", "None"),
-                                               "NONE");
-
-    for (var i in categoriesList) {
-        var catItem = categoryMenuList.appendItem(categoriesList[i],
-                                                  categoriesList[i]);
-        catItem.value = categoriesList[i];
-        if (itemCategory && categoriesList[i] == itemCategory) {
-            indexToSelect = parseInt(i) + 1;  // Add 1 because of 'None'
-        }
-    }
+    var indexToSelect = appendCategoryItems(item, categoryMenuList);
 
     categoryMenuList.selectedIndex = indexToSelect;
 
@@ -795,6 +710,10 @@ function updateReminder() {
 }
 
 function saveDialog(item) {
+    // Calendar
+    item.calendar = document.getElementById("item-calendar")
+                            .selectedItem.calendar;
+
     setItemProperty(item, "title", getElementValue("item-title"));
     setItemProperty(item, "LOCATION", getElementValue("item-location"));
 
@@ -814,14 +733,7 @@ function saveDialog(item) {
         setItemProperty(item, "PERCENT-COMPLETE", percentCompleteInteger);
     }
 
-    // Category
-    var category = getElementValue("item-categories");
-
-    if (category != "NONE") {
-       setItemProperty(item, "CATEGORIES", category);
-    } else {
-       item.deleteProperty("CATEGORIES");
-    }
+    setCategory(item, "item-categories");
 
     // URL
     setItemProperty(item, "URL", gURL, "attachments");
@@ -1355,6 +1267,7 @@ function updatePriority() {
         priorityHigh.setAttribute("checked",
                                   priorityLevel == "high" ? "true" : "false");
 
+        // Status bar panel
         var priorityPanel = document.getElementById("status-priority");
         if (priorityLevel == "none") {
             // If the priority is none, don't show the status bar panel
@@ -1362,12 +1275,16 @@ function updatePriority() {
         } else {
             priorityPanel.removeAttribute("collapsed");
             var numChilds = priorityPanel.childNodes.length;
+            var foundPriority = false;
             for (var i = 0; i < numChilds; i++) {
                 var node = priorityPanel.childNodes[i];
-                if (node.getAttribute("value") == priorityLevel) {
-                    node.removeAttribute("collapsed");
-                } else {
+                if (foundPriority) {
                     node.setAttribute("collapsed", "true");
+                } else {
+                    node.removeAttribute("collapsed");
+                }
+                if (node.getAttribute("value") == priorityLevel) {
+                    foundPriority = true;
                 }
             }
         }
@@ -1432,70 +1349,6 @@ function editURL() {
             gURL = url;
             updateDocument();
         }
-    }
-}
-
-function setItemProperty(item, propertyName, aValue, aCapability) {
-    var value = (aCapability && !capSupported(aCapability) ? null : aValue);
-
-    switch (propertyName) {
-        case "startDate":
-            if (value.isDate && !item.startDate.isDate ||
-                !value.isDate && item.startDate.isDate ||
-                !compareObjects(value.timezone, item.startDate.timezone) ||
-                value.compare(item.startDate) != 0) {
-                item.startDate = value;
-            }
-            break;
-        case "endDate":
-            if (value.isDate && !item.endDate.isDate ||
-                !value.isDate && item.endDate.isDate ||
-                !compareObjects(value.timezone, item.endDate.timezone) ||
-                value.compare(item.endDate) != 0) {
-                item.endDate = value;
-            }
-            break;
-        case "entryDate":
-            if (value == item.entryDate) {
-                break;
-            }
-            if (value && !item.entryDate ||
-                !value && item.entryDate ||
-                value.isDate != item.entryDate.isDate ||
-                !compareObjects(value.timezone, item.entryDate.timezone) ||
-                value.compare(item.entryDate) != 0) {
-                item.entryDate = value;
-            }
-            break;
-        case "dueDate":
-            if (value == item.dueDate) {
-                break;
-            }
-            if (value && !item.dueDate ||
-                !value && item.dueDate ||
-                value.isDate != item.dueDate.isDate ||
-                !compareObjects(value.timezone, item.dueDate.timezone) ||
-                value.compare(item.dueDate) != 0) {
-                item.dueDate = value;
-            }
-            break;
-        case "isCompleted":
-            if (value != item.isCompleted) {
-                item.isCompleted = value;
-            }
-            break;
-        case "title":
-            if (value != item.title) {
-                item.title = value;
-            }
-            break;
-        default:
-            if (!value || value == "") {
-                item.deleteProperty(propertyName);
-            } else if (item.getProperty(propertyName) != value) {
-                item.setProperty(propertyName, value);
-            }
-            break;
     }
 }
 
@@ -1871,14 +1724,37 @@ function saveItem() {
     return item;
 }
 
-function onCommandSave() {
+function onCommandSave(aIsClosing) {
     var originalItem = window.calendarItem;
     var item = saveItem();
     var calendar = document.getElementById("item-calendar")
                            .selectedItem.calendar;
-    window.onAcceptCallback(item, calendar, originalItem);
+
     item.makeImmutable();
+    // Set the item for now, the callback below will set the full item when the
+    // call succeeded
     window.calendarItem = item;
+
+    // When the call is complete, we need to set the new item, so that the
+    // dialog is up to date.
+
+    // XXX Do we want to disable the dialog or at least the save button until
+    // the call is complete? This might help when the user tries to save twice
+    // before the call is complete. In that case, we do need a progress bar and
+    // the ability to cancel the operation though.
+    var listener = {
+        onOperationComplete: function(aCalendar, aStatus, aOpType, aId, aItem) {
+            if (Components.isSuccessCode(aStatus)) {
+                window.calendarItem = aItem;
+            }
+        }
+    };
+
+    // Let the caller decide how to handle the modified/added item. Only pass
+    // the above item if we are not closing, otherwise the listener will be
+    // missing its window afterwards.
+    window.onAcceptCallback(item, calendar, originalItem, !aIsClosing && listener);
+
 }
 
 function onCommandExit() {
@@ -2114,6 +1990,17 @@ function updateDateTime() {
               setElementValue("todo-has-duedate", hasDueDate, "checked");
               endTime.timezone = floating();
               setElementValue("todo-duedate", endTime.jsDate);
+          } else {
+              // The time for the todo should default to the next full hour
+              startTime = now();
+              startTime.timezone = floating();
+              startTime.minute = 0;
+              startTime.second = 0;
+              startTime.hour++;
+              endTime = startTime.clone();
+
+              setElementValue("todo-entrydate", startTime.jsDate);
+              setElementValue("todo-duedate", endTime.jsDate);
           }
         }
     } else {
@@ -2161,6 +2048,17 @@ function updateDateTime() {
 
                 setElementValue("todo-has-duedate", hasDueDate, "checked");
                 endTime.timezone = floating();
+                setElementValue("todo-duedate", endTime.jsDate);
+            } else {
+                // The time for the todo should default to the next full hour
+                startTime = now();
+                startTime.timezone = floating();
+                startTime.minute = 0;
+                startTime.second = 0;
+                startTime.hour++;
+                endTime = startTime.clone();
+
+                setElementValue("todo-entrydate", startTime.jsDate);
                 setElementValue("todo-duedate", endTime.jsDate);
             }
         }

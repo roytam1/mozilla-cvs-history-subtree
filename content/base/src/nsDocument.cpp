@@ -4000,11 +4000,95 @@ nsDocument::SetDocumentURI(const nsAString& aDocumentURI)
 }
 
 NS_IMETHODIMP
-nsDocument::AdoptNode(nsIDOMNode *source, nsIDOMNode **aReturn)
+nsDocument::AdoptNode(nsIDOMNode *aAdoptedNode, nsIDOMNode **aResult)
 {
-  // Not allowing this yet, need to think about the security ramifications
-  // of giving a node a brand new node info.
-  return NS_ERROR_NOT_IMPLEMENTED;
+  NS_ENSURE_ARG(aAdoptedNode);
+
+  *aResult = nsnull;
+
+  nsresult rv;
+  PRUint16 nodeType;
+  aAdoptedNode->GetNodeType(&nodeType);
+  switch (nodeType) {
+    case nsIDOMNode::ATTRIBUTE_NODE:
+    {
+      // Remove from ownerElement.
+      nsCOMPtr<nsIDOMAttr> adoptedAttr = do_QueryInterface(aAdoptedNode, &rv);
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      nsCOMPtr<nsIDOMElement> ownerElement;
+      rv = adoptedAttr->GetOwnerElement(getter_AddRefs(ownerElement));
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      if (ownerElement) {
+        nsCOMPtr<nsIDOMAttr> newAttr;
+        rv = ownerElement->RemoveAttributeNode(adoptedAttr,
+                                               getter_AddRefs(newAttr));
+        NS_ENSURE_SUCCESS(rv, rv);
+
+        newAttr.swap(adoptedAttr);
+      }
+
+      return CallQueryInterface(adoptedAttr, aResult);
+    }
+    case nsIDOMNode::DOCUMENT_FRAGMENT_NODE:
+    case nsIDOMNode::ELEMENT_NODE:
+    case nsIDOMNode::PROCESSING_INSTRUCTION_NODE:
+    case nsIDOMNode::TEXT_NODE:
+    case nsIDOMNode::CDATA_SECTION_NODE:
+    case nsIDOMNode::COMMENT_NODE:
+    {
+      nsCOMPtr<nsIContent> adoptedNode = do_QueryInterface(aAdoptedNode, &rv);
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      // We don't want to adopt an element into its own contentDocument or into
+      // a descendant contentDocument, so we check if the frameElement of this
+      // document or any of its parents is the adopted node or one of its
+      // descendants.
+      nsIDocument *doc = this;
+      do {
+        nsPIDOMWindow *win = doc->GetWindow();
+        if (win) {
+          nsCOMPtr<nsIContent> node =
+            do_QueryInterface(win->GetFrameElementInternal());
+          if (node &&
+              nsContentUtils::ContentIsDescendantOf(node, adoptedNode)) {
+            return NS_ERROR_DOM_HIERARCHY_REQUEST_ERR;
+          }
+        }
+      } while ((doc = doc->GetParentDocument()));
+
+      // Remove from parent.
+      nsCOMPtr<nsIDOMNode> parent;
+      aAdoptedNode->GetParentNode(getter_AddRefs(parent));
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      if (parent) {
+        return parent->RemoveChild(aAdoptedNode, aResult);
+      }
+
+      NS_ADDREF(*aResult = aAdoptedNode);
+
+      return NS_OK;
+    }
+    case nsIDOMNode::ENTITY_REFERENCE_NODE:
+    {
+      return NS_ERROR_NOT_IMPLEMENTED;
+    }
+    case nsIDOMNode::DOCUMENT_NODE:
+    case nsIDOMNode::DOCUMENT_TYPE_NODE:
+    case nsIDOMNode::ENTITY_NODE:
+    case nsIDOMNode::NOTATION_NODE:
+    {
+      return NS_ERROR_DOM_NOT_SUPPORTED_ERR;
+    }
+    default:
+    {
+      NS_WARNING("Don't know how to adopt this nodetype for adoptNode.");
+
+      return NS_ERROR_DOM_NOT_SUPPORTED_ERR;
+    }
+  }
 }
 
 NS_IMETHODIMP

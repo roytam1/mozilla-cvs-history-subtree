@@ -1,3 +1,4 @@
+/* -*- Mode: IDL; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -11,15 +12,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is Chimera code.
+ * The Original Code is Mozilla XForms support.
  *
  * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 2002
+ * IBM Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 2007
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *
+ *  Merle Sterling <msterlin@us.ibm.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -35,15 +36,19 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#import <AppKit/NSToolbar.h>
+#include "nsIXFormsContextInfo.idl"
+#include "nsIDOMEvent.idl"
 
-@interface NSToolbar (CHToolbarCustomizableAdditions)
-- (BOOL) alwaysCustomizableByDrag;
-- (void) setAlwaysCustomizableByDrag:(BOOL) flag;
+/**
+ * Interface exposing the events of an XForms control.
+ *
+ */
 
-- (BOOL) showsContextMenu;
-- (void) setShowsContextMenu:(BOOL) flag;
-
-- (unsigned int) indexOfFirstMovableItem;
-- (void) setIndexOfFirstMovableItem:(unsigned int) anIndex;
-@end
+[scriptable, uuid(ae6735d5-a8a4-4ac5-9f00-ec653433005c)]
+interface nsIXFormsDOMEvent : nsIDOMEvent
+{
+  /** Get a context property from an nsXFormsDOMEvent.
+   *  @param aName - context property name.
+   */
+  nsIXFormsContextInfo getContextInfo(in DOMString aName);
+};

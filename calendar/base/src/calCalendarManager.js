@@ -61,14 +61,7 @@ function onCalCalendarManagerLoad() {
 
 function calCalendarManager() {
     this.wrappedJSObject = this;
-    this.initDB();
-    this.mCache = null;
-    this.mRefreshTimer = null;
-    this.setUpPrefObservers();
-    this.setUpRefreshTimer();
-    this.mNetworkCalendarCount = 0;
-    this.mReadonlyCalendarCount = 0;
-    this.mCalendarCount = 0;
+    this.setUpStartupObservers();
 }
 
 var calCalendarManagerClassInfo = {
@@ -114,12 +107,55 @@ calCalendarManager.prototype = {
     get calendarCount() {
         return this.mCalendarCount;
     },
+    
+    setUpStartupObservers: function ccm_setUpStartupObservers() {
+        var observerSvc = Components.classes["@mozilla.org/observer-service;1"]
+                          .getService(Components.interfaces.nsIObserverService);
+
+        observerSvc.addObserver(this, "profile-after-change", false);
+        observerSvc.addObserver(this, "profile-before-change", false);
+    },
+    
+    startup: function ccm_startup() {
+        this.initDB();
+        this.mCache = null;
+        this.mCalObservers = null;
+        this.mRefreshTimer = null;
+        this.setUpPrefObservers();
+        this.setUpRefreshTimer();
+        this.setupOfflineObservers();
+        this.mNetworkCalendarCount = 0;
+        this.mReadonlyCalendarCount = 0;
+        this.mCalendarCount = 0;
+    },
+    
+    shutdown: function ccm_shutdown() {
+        for each (var cal in this.mCache) {
+            cal.removeObserver(this.mCalObservers[cal.id]);
+        }
+
+        this.cleanupPrefObservers();
+        this.cleanupOfflineObservers();
+
+        var observerSvc = Components.classes["@mozilla.org/observer-service;1"]
+                          .getService(Components.interfaces.nsIObserverService);
+
+        observerSvc.removeObserver(this, "profile-after-change");
+        observerSvc.removeObserver(this, "profile-before-change");
+    },
 
     setUpPrefObservers: function ccm_setUpPrefObservers() {
         var prefBranch = Components.classes["@mozilla.org/preferences-service;1"]
                                 .getService(Components.interfaces.nsIPrefBranch2);
         prefBranch.addObserver("calendar.autorefresh.enabled", this, false);
         prefBranch.addObserver("calendar.autorefresh.timeout", this, false);
+    },
+    
+    cleanupPrefObservers: function ccm_cleanupPrefObservers() {
+        var prefBranch = Components.classes["@mozilla.org/preferences-service;1"]
+                                .getService(Components.interfaces.nsIPrefBranch2);
+        prefBranch.removeObserver("calendar.autorefresh.enabled", this);
+        prefBranch.removeObserver("calendar.autorefresh.timeout", this);
     },
 
     setUpRefreshTimer: function ccm_setUpRefreshTimer() {
@@ -150,16 +186,27 @@ calCalendarManager.prototype = {
                                    Components.interfaces.nsITimer.TYPE_REPEATING_SLACK);
         }
     },
+
     setupOfflineObservers: function ccm_setupOfflineObservers() {
         var os = Components.classes["@mozilla.org/observer-service;1"]
                            .getService(Components.interfaces.nsIObserverService);
         os.addObserver(this, "network:offline-status-changed", false);
+    },
 
-        // TODO removeObserver
+    cleanupOfflineObservers: function ccm_cleanupOfflineObservers() {
+        var os = Components.classes["@mozilla.org/observer-service;1"]
+                           .getService(Components.interfaces.nsIObserverService);
+        os.removeObserver(this, "network:offline-status-changed");
     },
     
     observe: function ccm_observe(aSubject, aTopic, aData) {
         switch (aTopic) {
+            case "profile-after-change":
+                this.startup();
+                break;
+            case "profile-before-change":
+                this.shutdown();
+                break;
             case "timer-callback":
                 // Refresh all the calendars that can be refreshed.
                 var cals = this.getCalendars({});
@@ -186,8 +233,7 @@ calCalendarManager.prototype = {
 
     },
 
-    
-    DB_SCHEMA_VERSION: 7,
+    DB_SCHEMA_VERSION: 9,
 
     upgradeDB: function (oldVersion) {
         // some common helpers
@@ -195,7 +241,18 @@ calCalendarManager.prototype = {
             db.executeSimpleSQL("ALTER TABLE " + tableName + " ADD COLUMN " + colName + " " + colType);
         }
 
-        if (oldVersion <= 5 && this.DB_SCHEMA_VERSION >= 6) {
+        // xxx todo: needs to be resolved with
+        //           Bug 377845 - Decouple calendar manager from storage provider
+        //
+        //           This code always runs before the update code of calStorageCalendar which
+        //           needs the old schema version to run.
+        //           So this code just updates its schema without updating the version number.
+        //
+        //           We may run into problems if this code has passed successfully, but the code
+        //           in calStorageCalendar hasn't, because on next startup this code will run
+        //           into the same section again...
+
+        if (oldVersion < 6) {
             dump ("**** Upgrading calCalendarManager schema to 6\n");
 
             this.mDB.beginTransaction();
@@ -251,7 +308,7 @@ calCalendarManager.prototype = {
                 }
 
                 this.mDB.commitTransaction();
-                oldVersion = 6;
+                oldVersion = 8;
             } catch (e) {
                 dump ("+++++++++++++++++ DB Error: " + this.mDB.lastErrorString + "\n");
                 Components.utils.reportError("Upgrade failed! DB Error: " +
@@ -259,13 +316,29 @@ calCalendarManager.prototype = {
                 this.mDB.rollbackTransaction();
                 throw e;
             }
-        }
+        } 
+        
+        if (oldVersion < 9) {
+            dump ("**** Upgrading calCalendarManager schema to 9\n");
 
-        if (oldVersion != 6) {
-            dump ("#######!!!!! calCalendarManager Schema Update failed! " +
-                  " db version: " + oldVersion + 
-                  " this version: " + this.DB_SCHEMA_VERSION + "\n");
-            throw Components.results.NS_ERROR_FAILURE;
+            this.mDB.beginTransaction();
+            try {
+                // Schema changes in v9:
+                //
+                // - Decouple schema version from storage calendar
+                // Create the new tables.
+                this.mDB.executeSimpleSQL("CREATE TABLE cal_calmgr_schema_version " +
+                                          "(version INTEGER);");
+                this.mDB.executeSimpleSQL("INSERT INTO cal_calmgr_schema_version VALUES(" + this.DB_SCHEMA_VERSION + ")");
+                this.mDB.commitTransaction();
+                oldVersion = 9;
+            } catch (e) {
+                dump ("+++++++++++++++++ DB Error: " + this.mDB.lastErrorString + "\n");
+                Components.utils.reportError("Upgrade failed! DB Error: " +
+                                             this.mDB.lastErrorString);
+                this.mDB.rollbackTransaction();
+                throw e;
+            }
         }
     },
 
@@ -282,17 +355,22 @@ calCalendarManager.prototype = {
         }
 
         var sqlTables = { cal_calendars: "id INTEGER PRIMARY KEY, type TEXT, uri TEXT",
-                          cal_calendars_prefs: "id INTEGER PRIMARY KEY, calendar INTEGER, name TEXT, value TEXT"
+                          cal_calendars_prefs: "id INTEGER PRIMARY KEY, calendar INTEGER, name TEXT, value TEXT",
+                          cal_calmgr_schema_version: "version INTEGER",
                         };
 
         // Should we check the schema version to see if we need to upgrade?
         var checkSchema = true;
-
-        for (table in sqlTables) {
-            if (!this.mDB.tableExists(table)) {
+        
+        // Check if the tables exists
+        if (!this.mDB.tableExists("cal_calendars")) {
+            // No table. Initialize the DB
+            for (table in sqlTables) {
                 this.mDB.createTable(table, sqlTables[table]);
-                checkSchema = false;
             }
+            // Store the schema version
+            this.mDB.executeSimpleSQL("INSERT INTO cal_calmgr_schema_version VALUES(" + this.DB_SCHEMA_VERSION + ")");
+            checkSchema = false;
         }
 
         if (checkSchema) {
@@ -412,9 +490,17 @@ calCalendarManager.prototype = {
         var stmt;
         var version = null;
 
+        var table;
+        if (this.mDB.tableExists("cal_calmgr_schema_version")) {
+            table = "cal_calmgr_schema_version";
+        } else {
+            // Fall back to the old schema table
+            table = "cal_calendar_schema_version";
+        }
+
         try {
             stmt = createStatement(this.mDB,
-                    "SELECT version FROM cal_calendar_schema_version LIMIT 1");
+                    "SELECT version FROM " + table + " LIMIT 1");
             if (stmt.step()) {
                 version = stmt.row.version;
             }
@@ -436,7 +522,7 @@ calCalendarManager.prototype = {
             throw e;
         }
 
-        throw "cal_calendar_schema_version SELECT returned no results";
+        throw table + " SELECT returned no results";
     },
 
     notifyObservers: function(functionName, args) {
@@ -450,7 +536,7 @@ calCalendarManager.prototype = {
     /**
      * calICalendarManager interface
      */
-    createCalendar: function(type, uri) {
+    createCalendar: function cmgr_createCalendar(type, uri) {
         try {
             var calendar = Components.classes["@mozilla.org/calendar/calendar;1?type=" + type]
                                      .createInstance(Components.interfaces.calICalendar);
@@ -500,6 +586,7 @@ calCalendarManager.prototype = {
         //dump("adding [" + this.mDB.lastInsertRowID + "]\n");
         //this.mCache[this.mDB.lastInsertRowID] = calendar;
         this.mCache[calendar.id] = calendar;
+        this.mCalObservers[calendar.id] = newObserver;
 
         // Set up statistics
         if (calendar.getProperty("requiresNetwork") !== false) {
@@ -522,6 +609,8 @@ calCalendarManager.prototype = {
         }
 
         var calendarID = calendar.id;
+
+        calendar.removeObserver(this.mCalObservers[calendarID]);
 
         var pp = this.mUnregisterCalendar.params;
         pp.id = calendarID;
@@ -586,6 +675,7 @@ calCalendarManager.prototype = {
     assureCache: function cmgr_assureCache() {
         if (!this.mCache) {
             this.mCache = {};
+            this.mCalObservers = {};
 
             var stmt = this.mSelectCalendars;
             stmt.reset();
@@ -604,6 +694,8 @@ calCalendarManager.prototype = {
                     }
                     var newObserver = new calMgrCalendarObserver(cal, this);
                     cal.addObserver(newObserver);
+                    this.mCalObservers[caldata.id] = newObserver;
+
                     this.mCache[caldata.id] = cal;
 
                     // Set up statistics

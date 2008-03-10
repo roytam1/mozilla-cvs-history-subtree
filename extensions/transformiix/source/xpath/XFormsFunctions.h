@@ -64,10 +64,16 @@ public:
         MIN,                  // min()
         MONTHS,               // months()
         NOW,                  // now()
+        LOCALDATETIME,        // local-dateTime()
+        LOCALDATE,            // local-date()
         PROPERTY,             // property()
         SECONDS,              // seconds()
         SECONDSFROMDATETIME,  // seconds-from-dateTime()
-        CURRENT               // current()
+        CURRENT,              // current()
+        EVENT,                // event()
+        POWER,                // power()
+        RANDOM,               // random()
+        COMPARE               // compare()
     };
 
     /*

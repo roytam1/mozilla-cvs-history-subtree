@@ -11,15 +11,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is Chimera code.
+ * The Original Code is Camino code.
  *
  * The Initial Developer of the Original Code is
- * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 2002
+ * Stuart Morgan.
+ * Portions created by the Initial Developer are Copyright (C) 2008
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *
+ *   Stuart Morgan <stuart.morgan@alumni.case.edu>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -35,21 +35,24 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#import <AppKit/NSImage.h>
+#import <Cocoa/Cocoa.h>
 
-@interface NSImage (ImageAdditions)
+//
+// CHGradient
+//
+// A partial implementation of NSGradient, for use pre-10.5. Once
+// Camino is 10.5+, all clients should be able to seamless switch to NSGradient.
+//
+@interface CHGradient : NSObject {
+  NSColor* mStartingColor;  // strong
+  NSColor* mEndingColor;    // strong
+}
 
-- (void) drawFlippedInRect:(NSRect) rect operation:(NSCompositingOperation) op fraction:(float) delta;
-- (void) drawFlippedInRect:(NSRect) rect operation:(NSCompositingOperation) op;
+- (id)initWithStartingColor:(NSColor*)startingColor
+                endingColor:(NSColor*)endingColor;
 
-// the origin is relative to the bottom, left of the window.
-- (void)drawTiledInRect:(NSRect)rect origin:(NSPoint)inOrigin operation:(NSCompositingOperation)inOperation;
-
-- (NSImage*)imageByApplyingBadge:(NSImage*)badge withAlpha:(float)alpha scale:(float)scale;
-
-// Returns a drag image for an icon/title pair. Assumes that the title should
-// be shown to the right of the icon, at small system font size.
-// |aIcon| and |aTitle| must both be non-nil.
-+ (NSImage*)dragImageWithIcon:(NSImage*)aIcon title:(NSString*)aTitle;
+// Like the NSGradient method of the same name, except that CHGradient
+// currently allows only 0, 90, 180, and 270 degree angles.
+- (void)drawInRect:(NSRect)rect angle:(float)angle;
 
 @end

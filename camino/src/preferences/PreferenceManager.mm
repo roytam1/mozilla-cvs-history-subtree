@@ -40,6 +40,7 @@
 
 #import <Sparkle/Sparkle.h>
 
+#import "NSArray+Utils.h"
 #import "NSString+Gecko.h"
 #import "NSWorkspace+Utils.h"
 
@@ -491,19 +492,23 @@ static BOOL gMadePrefManager;
     // directory but causes a (harmless) warning if not defined.
     setenv("MOZILLA_FIVE_HOME", binDirPath, 1);
     
-    const char* profileDirectory;
-    const char* customProfilePath = getenv(CUSTOM_PROFILE_DIR);
-    BOOL isCustomProfile = NO;
+    // Check for a custom profile, first from -profile, then in the environment.
+    NSUserDefaults* defaults = [NSUserDefaults standardUserDefaults];
+    const char* customProfilePath = [[defaults stringForKey:USER_DEFAULTS_PROFILE_KEY] fileSystemRepresentation];
+    if (!customProfilePath)
+      customProfilePath = getenv(CUSTOM_PROFILE_DIR);
     
-    // Based on whether $CAMINO_PROFILE_DIR is set, figure out what the
+    // Based on whether a custom path is set, figure out what the
     // profile path should be.
+    const char* profileDirectory;
+    BOOL isCustomProfile = NO;
     if (!customProfilePath) {
       // If it isn't, we then check the 'mozProfileDirName' key in our Info.plist file
       // and use the regular Application Support/<mozProfileDirName>, and Caches/<mozProfileDirName> 
       // folders.
       NSString* dirString = [[[NSBundle mainBundle] infoDictionary] objectForKey:@"mozProfileDirName"];
       if (dirString)
-        profileDirectory = [dirString UTF8String];
+        profileDirectory = [dirString fileSystemRepresentation];
       else {
         NSLog(@"mozNewProfileDirName key missing from Info.plist file. Using default profile directory");
         profileDirectory = "Camino";
@@ -670,21 +675,42 @@ static BOOL gMadePrefManager;
                               withSuccess:NULL];
   if (![baseURL length])
     baseURL = [self getStringPref:"app.update.url" withSuccess:NULL];
-  NSString* intlUAString = [self getStringPref:"general.useragent.extra.multilang"
-                                   withSuccess:NULL];
-  // Append the parameters we might be interested in.
-  NSString* manifestURL = !baseURL ? @"" : [NSString stringWithFormat:@"%@?os=%@&arch=%@&version=%@&intl=%d",
-    baseURL,
-    [NSWorkspace osVersionString],
+
+  // An empty manifestURL will tell Sparkle not to check for updates.
+  NSString* manifestURL = @"";
+  if ([baseURL length]) {
+    // Append the parameters we might be interested in.
+    NSString* intlUAString = [self getStringPref:"general.useragent.extra.multilang"
+                                     withSuccess:NULL];
+    NSArray* languages = [[NSBundle mainBundle] localizations];
+    NSString* currentLanguage = [[NSBundle preferredLocalizationsFromArray:languages] firstObject];
+    if (currentLanguage) {
+      // Once 10.4+, use +[NSLocale canonicalLocaleIdentifierFromString:]
+      CFStringRef canonicalLanguage =
+        CFLocaleCreateCanonicalLocaleIdentifierFromString(kCFAllocatorDefault,
+                                                          (CFStringRef)currentLanguage);
+      if (canonicalLanguage) {
+        currentLanguage = [NSString stringWithString:(NSString*)canonicalLanguage];
+        CFRelease(canonicalLanguage);
+      }
+    }
+    else {
+      currentLanguage = @"en";
+    }
+    manifestURL = [NSString stringWithFormat:@"%@?os=%@&arch=%@&version=%@&intl=%d&lang=%@",
+                   baseURL,
+                   [NSWorkspace osVersionString],
 #if defined(__ppc__)
-    @"ppc",
+                   @"ppc",
 #elif defined(__i386__)
-    @"x86",
+                   @"x86",
 #else
 #error Unknown Architecture
 #endif
-    [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"],
-    ([intlUAString length] ? 1 : 0)];
+                   [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleShortVersionString"],
+                   ([intlUAString length] ? 1 : 0),
+                   currentLanguage];
+  }
   [defaults setObject:manifestURL forKey:SUFeedURLKey];
 
   // Set the update interval default if none is set. We don't set this in the

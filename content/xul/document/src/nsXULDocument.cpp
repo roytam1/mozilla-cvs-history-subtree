@@ -2883,12 +2883,10 @@ nsXULDocument::LoadOverlayInternal(nsIURI* aURI, PRBool aIsDynamic, PRBool* aSho
     mResolutionPhase = nsForwardReference::eStart;
 
     // Chrome documents are allowed to load overlays from anywhere.
-    // Also, any document may load a chrome:// overlay.
     // In all other cases, the overlay is only allowed to load if
     // the master document and prototype document have the same origin.
 
-    PRBool overlayIsChrome = IsChromeURI(aURI);
-    if (!IsChromeURI(mDocumentURI) && !overlayIsChrome) {
+    if (!IsChromeURI(mDocumentURI)) {
         // Make sure we're allowed to load this overlay.
         rv = secMan->CheckSameOriginURI(mDocumentURI, aURI);
         if (NS_FAILED(rv)) return rv;
@@ -2896,6 +2894,7 @@ nsXULDocument::LoadOverlayInternal(nsIURI* aURI, PRBool aIsDynamic, PRBool* aSho
 
     // Look in the prototype cache for the prototype document with
     // the specified overlay URI.
+    PRBool overlayIsChrome = IsChromeURI(aURI);
     if (overlayIsChrome)
         gXULCache->GetPrototype(aURI, getter_AddRefs(mCurrentPrototype));
     else
@@ -3218,12 +3217,10 @@ nsXULDocument::ResumeWalk()
 #endif
 
         // Chrome documents are allowed to load overlays from anywhere.
-        // Also, any document may load a chrome:// overlay.
         // In all other cases, the overlay is only allowed to load if
         // the master document and prototype document have the same origin.
 
-        PRBool overlayIsChrome = IsChromeURI(uri);
-        if (!IsChromeURI(mDocumentURI) && !overlayIsChrome) {
+        if (!IsChromeURI(mDocumentURI)) {
             // Make sure we're allowed to load this overlay.
             rv = secMan->CheckSameOriginURI(mDocumentURI, uri);
             if (NS_FAILED(rv)) {
@@ -3234,6 +3231,7 @@ nsXULDocument::ResumeWalk()
 
         // Look in the prototype cache for the prototype document with
         // the specified overlay URI.
+        PRBool overlayIsChrome = IsChromeURI(uri);
         if (overlayIsChrome)
             gXULCache->GetPrototype(uri, getter_AddRefs(mCurrentPrototype));
         else

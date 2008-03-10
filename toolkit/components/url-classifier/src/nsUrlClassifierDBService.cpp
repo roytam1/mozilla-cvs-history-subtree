@@ -861,8 +861,10 @@ PR_STATIC_CALLBACK(void) DestroyHandler(PLEvent *ev);
 nsUrlClassifierDBService::~nsUrlClassifierDBService()
 {
   sUrlClassifierDBService = nsnull;
-  PR_DestroyMonitor(gMonitor);
-  gMonitor = nsnull;
+  if (gMonitor) {
+    PR_DestroyMonitor(gMonitor);
+    gMonitor = nsnull;
+  }
 }
 
 nsresult

@@ -21,6 +21,7 @@
  *
  * Contributor(s):
  *  Aaron Reed <aaronr@us.ibm.com>
+ *  Merle Sterling <msterlin@us.ibm.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -237,6 +238,12 @@ nsXFormsXPathEvaluator::XFormsParseContextImpl::resolveFunctionCall(
     else if (aName == txXPathAtoms::now) {
       aFnCall = new XFormsFunctionCall(XFormsFunctionCall::NOW);
     }
+    else if (aName == txXPathAtoms::localDateTime) {
+      aFnCall = new XFormsFunctionCall(XFormsFunctionCall::LOCALDATETIME);
+    }
+    else if (aName == txXPathAtoms::localDate) {
+      aFnCall = new XFormsFunctionCall(XFormsFunctionCall::LOCALDATE);
+    }
     else if (aName == txXPathAtoms::property) {
       aFnCall = new XFormsFunctionCall(XFormsFunctionCall::PROPERTY);
     }
@@ -249,6 +256,19 @@ nsXFormsXPathEvaluator::XFormsParseContextImpl::resolveFunctionCall(
     else if (aName == txXPathAtoms::current) {
       aFnCall = new XFormsFunctionCall(XFormsFunctionCall::CURRENT,
                                        mOriginalContext);
+    }
+    else if (aName == txXPathAtoms::event) {
+      aFnCall = new XFormsFunctionCall(XFormsFunctionCall::EVENT,
+                                       mResolverNode);
+    }
+    else if (aName == txXPathAtoms::power) {
+      aFnCall = new XFormsFunctionCall(XFormsFunctionCall::POWER);
+    }
+    else if (aName == txXPathAtoms::random) {
+      aFnCall = new XFormsFunctionCall(XFormsFunctionCall::RANDOM);
+    }
+    else if (aName == txXPathAtoms::compare) {
+      aFnCall = new XFormsFunctionCall(XFormsFunctionCall::COMPARE);
     }
     else {
       // didn't find functioncall here, aFnCall should be null

@@ -1,4 +1,6 @@
-/* ***** BEGIN LICENSE BLOCK *****
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
+ *
+ * ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
  * The contents of this file are subject to the Mozilla Public License Version
@@ -11,13 +13,14 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is Mozilla Calendar Code.
+ * The Original Code is Camino code.
  *
- * The Initial Developer of the Original Code is OEone Corporation.
- * Portions created by the Initial Developer are Copyright (C) 2001
+ * The Initial Developer of the Original Code is The Mozilla Foundation.
+ * Portions created by the Initial Developer are Copyright (C) 2008
  * the Initial Developer. All Rights Reserved.
  *
- * Contributor(s): Simon Paquet <bugzilla@babylonsounds.com>
+ * Contributor(s):
+ *   Peter Jaros <peter.a.jaros@gmail.com> (Original Author)
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -33,72 +36,10 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+#import <Foundation/Foundation.h>
 
-body { font-size: 11px; }
+@interface MoveCommand : NSMoveCommand {}
 
-table.head {
-    border: 0;
-    width: 100%;
-    font-size: 26px;
-    font-weight: bold;
-}
+- (id)performDefaultImplementation;
 
-table.small {
-     height: 100px;
-     width: 100;
-     font-size:10px;
-}
-
-table.weekdisplay {
-     border: 1px solid black;
-     width: 100%;
-}
-
-tr.height { height: 20px; }
-
-td.weekdisplay {
-    text-align: center;
-    border: 1px solid black;
-    background-color: #e0e0e0;
-    font-size: 12px;
-    font-weight: bold;
-}
-
-td.topcenter  {
-    vertical-align: top;
-    text-align: center;
-}
-
-td.bottomcenter  {
-    vertical-align: bottom;
-    text-align: center;
-}
-
-td.bottomborder { border-bottom:1px solid black; }
-
-td.bordertop {
-    border: 1px solid black;
-    vertical-align: top;
-}
-
-td.normaltop {
-    font-size: 11px;
-    vertical-align: top;
-}
-
-td.big {
-    text-align: center;
-    font-size: 26px;
-    font-weight: bold;
-    border-bottom: 1px solid black;
-}
-
-.top { vertical-align: top; }
-
-.left {text-align: left; }
-
-.right {text-align: right; }
-
-.center {text-align: center; }
-
-.noborder { border: 0; }
+@end

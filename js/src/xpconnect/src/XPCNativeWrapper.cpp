@@ -223,6 +223,47 @@ GetStringByIndex(JSContext *cx, uintN index)
   return ID_TO_VALUE(rt->GetStringID(index));
 }
 
+static inline
+JSBool
+EnsureLegalActivity(JSContext *cx, JSObject *obj)
+{
+  jsval flags;
+
+  ::JS_GetReservedSlot(cx, obj, 0, &flags);
+  if (HAS_FLAGS(flags, FLAG_EXPLICIT)) {
+    // Can't make any assertions about the owner of this wrapper.
+    return JS_TRUE;
+  }
+
+  JSStackFrame *frame = nsnull;
+  uint32 fileFlags = JS_GetTopScriptFilenameFlags(cx, NULL);
+  if (!JS_FrameIterator(cx, &frame) ||
+      fileFlags == JSFILENAME_NULL ||
+      (fileFlags & JSFILENAME_SYSTEM)) {
+    // We expect implicit native wrappers in system files.
+    return JS_TRUE;
+  }
+
+  XPCCallContext ccx(JS_CALLER, cx);
+  nsIXPCSecurityManager *sm = ccx.GetXPCContext()->
+    GetAppropriateSecurityManager(nsIXPCSecurityManager::HOOK_CALL_METHOD);
+  nsCOMPtr<nsIScriptSecurityManager> ssm(do_QueryInterface(sm));
+
+  // A last ditch effort to allow access: if the subject principal is
+  // the system principal, then some XPCNativeWrapper-using code has
+  // passed one into other code. If that other code is chrome, then
+  // allow access.
+  PRBool isSystem;
+  nsresult rv = ssm->SubjectPrincipalIsSystem(&isSystem);
+  if (NS_SUCCEEDED(rv) && isSystem) {
+    return JS_TRUE;
+  }
+
+  // Otherwise, we're looking at a non-system file with a handle on an
+  // implcit wrapper. This is a bug! Deny access.
+  return ThrowException(NS_ERROR_XPC_SECURITY_MANAGER_VETO, cx);
+}
+
 static JSBool
 WrapFunction(JSContext* cx, JSObject* funobj, jsval *rval)
 {
@@ -264,6 +305,25 @@ WrapFunction(JSContext* cx, JSObject* funobj, jsval *rval)
 JS_STATIC_DLL_CALLBACK(JSBool)
 XPC_NW_AddProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 {
+  JSProperty *prop;
+  JSObject *objp;
+  jsid idAsId;
+
+  if (!::JS_ValueToId(cx, id, &idAsId) ||
+      !OBJ_LOOKUP_PROPERTY(cx, obj, idAsId, &objp, &prop)) {
+    return JS_FALSE;
+  }
+
+  // Do not allow scripted getters or setters on XPCNativeWrappers.
+  NS_ASSERTION(prop && objp == obj, "Wasn't this property just added?");
+  JSScopeProperty *sprop = (JSScopeProperty *) prop;
+  if (sprop->attrs & (JSPROP_GETTER | JSPROP_SETTER)) {
+    OBJ_DROP_PROPERTY(cx, objp, prop);
+    return ThrowException(NS_ERROR_ILLEGAL_VALUE, cx);
+  }
+
+  OBJ_DROP_PROPERTY(cx, objp, prop);
+
   jsval flags;
   ::JS_GetReservedSlot(cx, obj, 0, &flags);
   if (!HAS_FLAGS(flags, FLAG_RESOLVING)) {
@@ -272,12 +332,17 @@ XPC_NW_AddProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 
   // Note: no need to protect *vp from GC here, since it's already in the slot
   // on |obj|.
-  return RewrapIfDeepWrapper(cx, obj, *vp, vp);
+  return EnsureLegalActivity(cx, obj) &&
+         RewrapIfDeepWrapper(cx, obj, *vp, vp);
 }
 
 JS_STATIC_DLL_CALLBACK(JSBool)
 XPC_NW_DelProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
 {
+  if (!EnsureLegalActivity(cx, obj)) {
+    return JS_FALSE;
+  }
+
   XPC_NW_BYPASS_BASE(cx, obj,
     // We're being notified of a delete operation on id in this
     // XPCNativeWrapper, so forward to the right high-level hook,
@@ -419,6 +484,10 @@ XPC_NW_GetOrSetProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp,
     if (!obj) {
       return ThrowException(NS_ERROR_UNEXPECTED, cx);
     }
+  }
+
+  if (!EnsureLegalActivity(cx, obj)) {
+    return JS_FALSE;
   }
 
   XPCWrappedNative *wrappedNative =
@@ -630,6 +699,10 @@ XPC_NW_Enumerate(JSContext *cx, JSObject *obj)
   // JS_Enumerate API.  Then reflect properties named by the enumerated
   // identifiers from the wrapped native to the native wrapper.
 
+  if (!EnsureLegalActivity(cx, obj)) {
+    return JS_FALSE;
+  }
+
   XPCWrappedNative *wn = XPCNativeWrapper::GetWrappedNative(cx, obj);
   if (!wn) {
     return JS_TRUE;
@@ -686,6 +759,10 @@ XPC_NW_NewResolve(JSContext *cx, JSObject *obj, jsval id, uintN flags,
   // need to mess with our flags yet.
   if (id == GetStringByIndex(cx, XPCJSRuntime::IDX_WRAPPED_JSOBJECT)) {
     return JS_TRUE;
+  }
+
+  if (!EnsureLegalActivity(cx, obj)) {
+    return JS_FALSE;
   }
 
   if (id == GetStringByIndex(cx, XPCJSRuntime::IDX_TO_STRING)) {
@@ -903,8 +980,11 @@ XPC_NW_NewResolve(JSContext *cx, JSObject *obj, jsval id, uintN flags,
 JS_STATIC_DLL_CALLBACK(JSBool)
 XPC_NW_Convert(JSContext *cx, JSObject *obj, JSType type, jsval *vp)
 {
-  XPC_NW_BYPASS(cx, obj, convert, (cx, obj, type, vp));
+  if (!EnsureLegalActivity(cx, obj)) {
+    return JS_FALSE;
+  }
 
+  XPC_NW_BYPASS(cx, obj, convert, (cx, obj, type, vp));
   return JS_TRUE;
 }
 
@@ -1259,6 +1339,10 @@ XPC_NW_toString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
     if (!obj) {
       return ThrowException(NS_ERROR_UNEXPECTED, cx);
     }
+  }
+
+  if (!EnsureLegalActivity(cx, obj)) {
+    return JS_FALSE;
   }
 
   // Check whether toString was overridden in any object along

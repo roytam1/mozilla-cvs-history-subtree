@@ -1,4 +1,3 @@
-
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -36,32 +35,18 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#import "ToolbarAdditions.h"
-#import <Foundation/Foundation.h>
+#import <AppKit/NSImage.h>
 
-@implementation NSToolbar (CHToolbarCustomizableAdditions)
+@interface NSImage (CaminoImageUtils)
 
-- (BOOL) alwaysCustomizableByDrag {
-    return (BOOL) _tbFlags.clickAndDragPerformsCustomization;
-}
+// the origin is relative to the bottom, left of the window.
+- (void)drawTiledInRect:(NSRect)rect origin:(NSPoint)inOrigin operation:(NSCompositingOperation)inOperation;
 
-- (void) setAlwaysCustomizableByDrag:(BOOL) flag {
-	_tbFlags.clickAndDragPerformsCustomization = (unsigned int) flag & 1;
-}
+- (NSImage*)imageByApplyingBadge:(NSImage*)badge withAlpha:(float)alpha scale:(float)scale;
 
-- (BOOL) showsContextMenu {
-	return (BOOL) ! _tbFlags.showsNoContextMenu;
-}
+// Returns a drag image for an icon/title pair. Assumes that the title should
+// be shown to the right of the icon, at small system font size.
+// |aIcon| and |aTitle| must both be non-nil.
++ (NSImage*)dragImageWithIcon:(NSImage*)aIcon title:(NSString*)aTitle;
 
-- (void) setShowsContextMenu:(BOOL) flag {
-	_tbFlags.showsNoContextMenu = (unsigned int) ! flag & 1;
-}
-
-- (unsigned int) indexOfFirstMovableItem {
-	return (unsigned int) _tbFlags.firstMoveableItemIndex;
-}
-
-- (void) setIndexOfFirstMovableItem:(unsigned int) anIndex {
-	_tbFlags.firstMoveableItemIndex = (unsigned int) anIndex & 0x3F;
-}
 @end

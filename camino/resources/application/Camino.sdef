@@ -45,10 +45,9 @@
 			<property name="id" code="ID  " description="The unique identifier of the window." type="number" access="r">
 				<cocoa key="uniqueID"/>
 			</property>
-			<!-- Rectangles do not appear to be properly supported by AS at this time and only cause Console warnings.
 			<property name="bounds" code="pbnd" description="The bounding rectangle of the window." type="rectangle">
 				<cocoa key="boundsAsQDRect"/>
-			</property> -->
+			</property>
 			<property name="closeable" code="hclb" description="Whether the window has a close box." type="boolean" access="r">
 				<cocoa key="hasCloseBox"/>
 			</property>
@@ -171,7 +170,7 @@
 			<result description="to the new object" type="specifier"/>
 		</command>
 		<command name="move" code="coremove" description="Move object(s) to a new location.">
-			<cocoa class="NSMoveCommand"/>
+			<cocoa class="MoveCommand"/>
 			<direct-parameter description="the object(s) to move" type="specifier"/>
 			<!-- "move" is supposed to return the relocated objects.
 				<result type="object" description="to the object(s) after they have been moved"/>
@@ -258,6 +257,9 @@
 			<property name="URL" code="pURL" description="The tab&apos;s current URL" type="text">
 				<cocoa key="currentURI"/>
 			</property>
+			<responds-to name="close">
+				<cocoa method="close:"/>
+			</responds-to>
 		</class>
 		<class name="bookmark item" code="BMIt" plural="bookmark items">
 			<cocoa class="BookmarkItem"/>

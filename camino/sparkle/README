@@ -10,3 +10,4 @@ with the following changes:
 - Bug 405901: fix an XML attribute handling bug
 - Bug 412857: don't show CFBundleVersion
 - Bug 412837: keep updates out of the quarantine
+- In support of bug 413709: let an empty value for SUFeedURLKey disable updates

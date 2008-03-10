@@ -356,9 +356,21 @@ calGoogleRequest.prototype = {
      * @see nsIInterfaceRequestor
      */
     getInterface: function cGR_getInterface(aIID) {
+        // Support Auth Prompt Interfaces
+        if (aIID.equals(Components.interfaces.nsIAuthPrompt) ||
+            (Components.interfaces.nsIAuthPrompt2 &&
+             aIID.equals(Components.interfaces.nsIAuthPrompt2))) {
+            return new calAuthPrompt();
+        } else if (aIID.equals(Components.interfaces.nsIAuthPromptProvider)) {
+            return Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
+                             .getService(Components.interfaces.nsIWindowWatcher)
+                             .getNewPrompter(null);
+        }
+
         try {
             return this.QueryInterface(aIID);
         } catch (e) {
+            WARN("nsIInterfaceRequestor requesting invalid interface " + aIID);
             throw Components.results.NS_NOINTERFACE;
         }
     },
@@ -421,6 +433,18 @@ calGoogleRequest.prototype = {
                       "Could not convert bytestream to Unicode: " + e);
             return;
         }
+
+        // Calculate Google Clock Skew
+        var serverDate = new Date(httpChannel.getResponseHeader("Date"));
+        var curDate = new Date();
+
+        // The utility function getCorrectedDate in calGoogleUtils.js recieves
+        // its clock skew seconds from here. The clock skew is updated on each
+        // request and is therefore quite accurate.
+        getCorrectedDate.mClockSkew = curDate.getTime() - serverDate.getTime();
+
+        // Remember when this request happened
+        this.requestDate = jsDateToDateTime(serverDate);
 
         // Handle all (documented) error codes
         switch (httpChannel.responseStatus) {

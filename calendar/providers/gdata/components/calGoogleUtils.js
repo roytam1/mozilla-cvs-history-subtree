@@ -254,6 +254,23 @@ var gdataTimezoneProvider = {
 };
 
 /**
+ * Gets the date and time that Google's http server last sent us. Note the
+ * passed argument is modified. This might not be the exact server time (i.e it
+ * may be off by network latency), but it does give a good guess when syncing.
+ *
+ * @param aDate     The date to modify
+ */
+function getCorrectedDate(aDate) {
+
+    if (!getCorrectedDate.mClockSkew) {
+        return aDate;
+    }
+
+    aDate.second += getCorrectedDate.mClockSkew;
+    return aDate;
+}
+
+/**
  * fromRFC3339
  * Convert a RFC3339 compliant Date string to a calIDateTime.
  *
@@ -660,12 +677,6 @@ function ItemToXMLEntry(aItem, aAuthorEmail, aAuthorName) {
     // gd:when
     var duration = aItem.endDate.subtractDate(aItem.startDate);
     entry.gd::when.@startTime = toRFC3339(aItem.startDate);
-
-    // Google's documentation says that zero length events should be defined by
-    // omitting the end time. This currently does not work though. Workaround is
-    // to always pass an end time. See
-    // http://code.google.com/p/gdata-issues/issues/detail?id=198
-    // for more details.
     entry.gd::when.@endTime = toRFC3339(aItem.endDate);
 
     // gd:reminder
@@ -949,12 +960,6 @@ function XMLEntryToItem(aXMLEntry, aTimezone, aCalendar, aReferenceItem) {
         // gd:eventStatus
         item.status = aXMLEntry.gd::eventStatus.@value.toString()
                                .substring(39).toUpperCase();
-        if (item.status == "CANCELED") {
-            // Google uses the canceled state for deleted events. I
-            // don't think this is a good solution, but we need to
-            // wait what google says about that.
-            return null;
-        }
 
         // gd:when
         var recurrenceInfo = aXMLEntry.gd::recurrence.toString();
@@ -1038,8 +1043,13 @@ function XMLEntryToItem(aXMLEntry, aTimezone, aCalendar, aReferenceItem) {
             // We don't really care about google's timezone info for
             // now. This may change when bug 314339 is fixed. Split out
             // the timezone information so we only have the first bit
+            var vevent = recurrenceInfo;
             var splitpos = recurrenceInfo.indexOf("BEGIN:VTIMEZONE");
-            var vevent = recurrenceInfo.substring(0, splitpos);
+            if (splitpos > -1) {
+                // Sometimes (i.e if only DATE values are specified), no
+                // timezone info is contained. Only remove it if it shows up.
+                vevent = recurrenceInfo.substring(0, splitpos);
+            }
 
             vevent = "BEGIN:VEVENT\n" + vevent + "END:VEVENT";
             var icsService = getIcsService();
@@ -1047,6 +1057,7 @@ function XMLEntryToItem(aXMLEntry, aTimezone, aCalendar, aReferenceItem) {
             var rootComp = icsService.parseICS(vevent, gdataTimezoneProvider);
             var prop = rootComp.getFirstProperty("ANY");
             var i = 0;
+            var hasRecurringRules = false;
             while (prop) {
                switch (prop.propertyName) {
                     case "EXDATE":
@@ -1055,6 +1066,7 @@ function XMLEntryToItem(aXMLEntry, aTimezone, aCalendar, aReferenceItem) {
                         try {
                             recItem.icalProperty = prop;
                             item.recurrenceInfo.appendRecurrenceItem(recItem);
+                            hasRecurringRules = true;
                         } catch (e) {
                             Components.utils.reportError(e);
                         }
@@ -1064,6 +1076,7 @@ function XMLEntryToItem(aXMLEntry, aTimezone, aCalendar, aReferenceItem) {
                         try {
                             recRule.icalProperty = prop;
                             item.recurrenceInfo.appendRecurrenceItem(recRule);
+                            hasRecurringRules = true;
                         } catch (e) {
                             Components.utils.reportError(e);
                         }
@@ -1076,6 +1089,13 @@ function XMLEntryToItem(aXMLEntry, aTimezone, aCalendar, aReferenceItem) {
                         break;
                 }
                 prop = rootComp.getNextProperty("ANY");
+            }
+
+            if (!hasRecurringRules) {
+                // Sometimes Google gives us events that have <gd:recurrence>
+                // but contain no recurrence rules. Treat the event as a normal
+                // event. See gdata issue 353.
+                item.recurrenceInfo = null;
             }
         }
 

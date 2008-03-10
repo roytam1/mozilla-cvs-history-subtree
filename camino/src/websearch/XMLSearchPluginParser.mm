@@ -51,6 +51,7 @@ NSString *const kOpenSearchMIMEType = @"application/opensearchdescription+xml";
 
 - (BOOL)parseSearchPluginData:(NSData *)pluginData;
 - (BOOL)searchEngineInformationWasFound;
+- (NSString *)simplifiedNameForElement:(NSString *)fullElementName;
 
 @end
 
@@ -148,6 +149,8 @@ didStartElement:(NSString *)elementName
   qualifiedName:(NSString *)qualifiedName
      attributes:(NSDictionary *)attributeDict
 {
+  elementName = [self simplifiedNameForElement:elementName];
+
   if ([self shouldParseAttributesOfElement:elementName])
     [self foundAttributes:attributeDict forElement:elementName];
 
@@ -171,11 +174,28 @@ didStartElement:(NSString *)elementName
  qualifiedName:(NSString *)qName
 {
   if (mShouldParseContentsOfCurrentElement) {
+    elementName = [self simplifiedNameForElement:elementName];
     [self foundContents:mCurrentElementBuffer forElement:elementName];
 
     [mCurrentElementBuffer release];
     mCurrentElementBuffer = nil;
   }
+}
+
+// Strips down the full XML element name, removing anything we do not support.
+- (NSString *)simplifiedNameForElement:(NSString *)fullElementName
+{
+  NSString *simplifiedElementName = fullElementName;
+
+  // If there is a namespace prefix, simply chop it off and ignore it.
+  NSRange startOfNamespacePrefix = [fullElementName rangeOfString:@":"];
+  if ((startOfNamespacePrefix.location != NSNotFound) &&
+      ((startOfNamespacePrefix.location + 1) < [fullElementName length]))
+  {
+    simplifiedElementName = [fullElementName substringFromIndex:(startOfNamespacePrefix.location + 1)];
+  }
+
+  return simplifiedElementName;
 }
 
 #pragma mark -

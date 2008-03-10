@@ -29,6 +29,7 @@
    -   Mark Swaffer <swaff@fudo.org>
    -   Michael Buettner <michael.buettner@sun.com>
    -   Philipp Kewisch <mozilla@kewis.ch>
+   -   Lars Wohlfahrt <thetux.moz@googlemail.com>
    -
    - Alternatively, the contents of this file may be used under the terms of
    - either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -66,7 +67,8 @@
         <xul:treecols anonid="calendar-task-tree-cols">
           <xul:treecol anonid="calendar-task-tree-col-completed"
                        class="calendar-task-tree-col-completed" 
-                       width="18"
+                       minwidth="19"
+                       fixed="true"
                        cycler="true"
                        label="&calendar.unifinder.tree.done.label;">
             <xul:image anonid="checkboximg" />
@@ -74,7 +76,8 @@
           <xul:splitter class="tree-splitter"/>
           <xul:treecol anonid="calendar-task-tree-col-priority"
                        class="calendar-task-tree-col-priority"
-                       width="18" 
+                       minwidth="17"
+                       fixed="true"
                        label="&calendar.unifinder.tree.priority.label;">
             <xul:image anonid="priorityimg"/>
           </xul:treecol>
@@ -261,6 +264,7 @@
                   this.treebox.rowCountChanged(index, 1);
                   this.tree.view.selection.select(index);
               }
+              this.treebox.ensureRowIsVisible(this.rowCount - 1);
           },
 
           removeItem: function tTV_removeItem(aItem) {
@@ -573,14 +577,8 @@
                 this.binding, "anonid", "calendar-task-tree");
             var treechildren = tree.getElementsByTagName("treechildren")[0];
             
-            if (this._getItemFromEvent(event)) {
-                // TODO HACK notifiers should be rewritten to integrate events and todos
-                document.getElementById("calendar_delete_todo_command").removeAttribute("disabled");
-            } else {
+            if (!this._getItemFromEvent(event)) {
                 tree.view.selection.clearSelection();
-
-                // TODO HACK notifiers should be rewritten to integrate events and todos
-                document.getElementById("calendar_delete_todo_command").setAttribute("disabled", "true");
             }
           },
           

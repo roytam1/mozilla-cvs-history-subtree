@@ -458,7 +458,7 @@ protected:
 
   nsCOMPtr<nsILoadGroup> mLoadGroup;
 
-  nsIHTMLContentSink* mSink; // Weak reference
+  nsWeakPtr mSink; // Weak reference
 
 public:
   static nsresult
@@ -668,7 +668,7 @@ DummyParserRequest::DummyParserRequest(nsIHTMLContentSink* aSink)
                  "unable to create about:parser-dummy-request");
   }
 
-  mSink = aSink;
+  mSink = do_GetWeakReference(aSink);
 }
 
 
@@ -684,9 +684,13 @@ DummyParserRequest::Cancel(nsresult status)
 {
   // Cancel parser
   nsresult rv = NS_OK;
-  HTMLContentSink* sink = NS_STATIC_CAST(HTMLContentSink*, mSink);
-  if ((sink) && (sink->mParser)) {
-    sink->mParser->CancelParsingEvents();
+  nsCOMPtr<nsIHTMLContentSink> sink = do_QueryReferent(mSink);
+  if (sink) {
+    nsIHTMLContentSink* actualSink = sink;
+    HTMLContentSink* htmlContentSink = NS_STATIC_CAST(HTMLContentSink*, actualSink);
+    if (htmlContentSink->mParser) {
+      htmlContentSink->mParser->CancelParsingEvents();
+    }
   }
   return rv;
 }

@@ -1,3 +1,4 @@
+/* -*- Mode: IDL; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -11,14 +12,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is Mozilla Calendar code.
+ * The Original Code is Mozilla XForms support.
  *
  * The Initial Developer of the Original Code is
- * Jussi Kukkonen (jussi.kukkonen@welho.com).
- * Portions created by the Initial Developer are Copyright (C) 2004
+ * IBM Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 2007
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ *  Merle Sterling <msterlin@us.ibm.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -34,42 +36,41 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/**
-*   Window variables
-*/
-
-var args;
-  
-/**
-*   Called when the dialog is loaded (which is done by Outlook-CSV parser when
-*   Outlook CSV data.is not in english or it is otherwise impossible to 
-*   decipher without user input.
-*/
-function loadOutlookImportBooleanDialog()
-{  
-  args = window.arguments[0];
-  
-  var boolLabel = document.getElementById( "bool-label" );  
-  boolLabel.setAttribute( "value", args.boolStr + "  =" );
-
-  opener.setCursor( "auto" );
-}
+#include "nsISupports.idl"
+#include "nsIDOMNode.idl"
+#include "nsIDOMXPathResult.idl"
 
 /**
-*   Called when the OK button is clicked.
-*/
-function onOKCommand()
+ * Interface exposing the event context info of an XForms control.
+ *
+ * Context info is accessed by name using nsIXFormsDOMEvent::GetContextInfo
+ * or the XPath function event().
+ *
+ */
+
+[scriptable, uuid(b012a3e5-7dbc-42b4-99da-5e94c37dc44e)]
+interface nsIXFormsContextInfo : nsISupports
 {
-  args.boolIsTrue       = ( document.getElementById( "bool-list" ).selectedIndex == 1 );
-  args.cancelled        = false;
-  return true;
-}
+  // Name of the event property; eg. 'resource-uri'
+  readonly attribute DOMString name;
 
-/**
-*   Called when the Cancel button is clicked.
-*/
-function onCancelCommand()
-{
-  args.cancelled = true;
-  return true;
-}
+  // Type of the property: String, Number, Node, Nodeset
+  const unsigned short STRING_TYPE  = 1;
+  const unsigned short NUMBER_TYPE  = 2;
+  const unsigned short NODE_TYPE    = 3;
+  const unsigned short NODESET_TYPE = 4;
+  readonly attribute long type;
+
+  /** Get the value of a STRING_TYPE context info property.
+   */
+  readonly attribute DOMString stringValue;
+  /** Get the value of a NUMBER_TYPE context info property.
+   */
+  readonly attribute long numberValue;
+  /** Get the value of a NODE_TYPE context info property.
+   */
+  readonly attribute nsIDOMNode nodeValue;
+  /** Get the value of a NODESET_TYPE context info property.
+   */
+  readonly attribute nsIDOMXPathResult nodesetValue;
+};

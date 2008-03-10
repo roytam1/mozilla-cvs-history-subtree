@@ -1,3 +1,5 @@
+#!perl
+#
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
 #
@@ -11,14 +13,15 @@
 # for the specific language governing rights and limitations under the
 # License.
 #
-# The Original Code is the Mozilla Lightning + WCAP code
+# The Original Code is Sun Microsystems code.
 #
-# The Initial Developer of the Original Code is the Mozilla Corporation.
-# Portions created by the Initial Developer are Copyright (C) 2006
+# The Initial Developer of the Original Code is
+# Sun Microsystems, Inc.
+# Portions created by the Initial Developer are Copyright (C) 2008
 # the Initial Developer. All Rights Reserved.
 #
 # Contributor(s):
-#   Matthew Willis <lilmatt@mozilla.com>
+#   ause <ause@sun.com>
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -34,27 +37,46 @@
 #
 # ***** END LICENSE BLOCK *****
 
-DEPTH       = ../../../..
-topsrcdir   = @top_srcdir@
-srcdir      = @srcdir@
-VPATH       = @srcdir@
+usage() if $#ARGV != 1;
 
-include $(DEPTH)/config/autoconf.mk
+# files to check but ignore...
+my @exceptions = ( "components/autocomplete.xpt" );
 
-MODULE = wcap-enabler
+my $filelist = $ARGV[0];
+open FILELIST,"$filelist" or die "can not open $filelist\n";
+my @rmfiles = <FILELIST>;
+close FILELIST or die "can not close $filelist\n";
+chomp @rmfilelist;
 
-export XPI_NAME = wcap-enabler
-DIST_FILES = install.rdf
-XPI_PKGNAME = wcap-enabler
+my $startdir = $ARGV[1];
 
-DEFINES += -DTHUNDERBIRD_VERSION=$(THUNDERBIRD_VERSION)
-DEFINES += -DFIREFOX_VERSION=$(FIREFOX_VERSION)
+die "no such directory: $startdir\n" if ! -d $startdir;
 
-DEFINES += -DTARGET_PLATFORM=$(OS_TARGET)_$(TARGET_XPCOM_ABI)
+my $probsfound = 0;
+my @foundlist = ();
 
-LIGHTNING_VERSION := $(shell cat $(srcdir)/../../../sunbird/config/version.txt)
-DEFINES += -DLIGHTNING_VERSION=$(LIGHTNING_VERSION)
+foreach my $onefile ( @rmfiles ) {
+    my $ignore = 0;
+	chomp $onefile;
+    foreach my $ignoreme ( @exceptions ) {
+        $ignore = 1 if "$onefile" eq "$ignoreme";
+    }
+    next if $ignore;
+	if ( -f "$startdir/$onefile" ) {
+#		print "found $startdir/$onefile\n";
+		push @foundlist, "$startdir/$onefile\n";
+		$probsfound = 1;
+	}
+}
 
-PREF_JS_EXPORTS = $(srcdir)/wcap-enabler.js
+if ( $probsfound ) {
+	print STDERR "ERROR: files found that are listed in \"$filelist\" but exist in \"$startdir\":\n";
+	print STDERR "@foundlist\n";
+	exit 2;
+}
 
-include $(topsrcdir)/config/rules.mk
+sub usage
+{
+	print STDERR "\nusage: $0 <remove-files list> <lookup dir>\n\n";
+	exit 1;
+}

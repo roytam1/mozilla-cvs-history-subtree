@@ -11,17 +11,18 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the Mozilla Lightning + WCAP code
+ * The Original Code is Chimera code.
  *
- * The Initial Developer of the Original Code is the Mozilla Corporation.
- * Portions created by the Initial Developer are Copyright (C) 2006
+ * The Initial Developer of the Original Code is
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 2002
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Matthew Willis <lilmatt@mozilla.com>
+ *
  *
  * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or 
+ * either the GNU General Public License Version 2 or later (the "GPL"), or
  * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
  * in which case the provisions of the GPL or the LGPL are applicable instead
  * of those above. If you wish to allow use of your version of this file only
@@ -34,10 +35,15 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-// This file contains the preferences to enable WCAP support in Lightning
+#import <AppKit/NSToolbar.h>
 
-// enables the prototype WCAP UI:
-pref("calendar.prototypes.wcap", true);
+@interface NSToolbar (CHToolbarCustomizableAdditions)
+- (BOOL)alwaysCustomizableByDrag;
+- (void)setAlwaysCustomizableByDrag:(BOOL)flag;
 
-// enables the WCAP provider in the new calendar wizard:
-pref("calendar.wcap.enabled", true);
+- (BOOL)showsContextMenu;
+- (void)setShowsContextMenu:(BOOL)flag;
+
+- (unsigned int)indexOfFirstMovableItem;
+- (void)setIndexOfFirstMovableItem:(unsigned int)anIndex;
+@end

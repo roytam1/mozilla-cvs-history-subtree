@@ -108,7 +108,7 @@ __attribute__((used)) NSString* const CHPermissionTypePopup = @"popup";
   return self;
 }
 
-- (void)delloc
+- (void)dealloc
 {
   [mHost release];
   [mType release];

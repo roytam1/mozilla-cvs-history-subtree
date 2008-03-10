@@ -38,8 +38,9 @@
 #import <Cocoa/Cocoa.h>
 #import "FindBarController.h"
 
-#import "BrowserContentViews.h"
+#import "BrowserWrapper.h"
 #import "RolloverImageButton.h"
+#import "NSWorkspace+Utils.h"
 
 
 @interface FindBarController(Private)
@@ -58,7 +59,7 @@
 // - hookup status text for wraparound (need to use FastFind?)
 // - find all (requires converting Ff's custom JS to C++, there's no API)
 
-- (id)initWithContent:(BrowserContentView*)inContentView finder:(id<Find>)inFinder
+- (id)initWithContent:(BrowserWrapper*)inContentView finder:(id<Find>)inFinder
 {
   if ((self = [super init])) {
     mContentView = inContentView;
@@ -66,6 +67,14 @@
     // lazily load the nibs
   }
   return self;
+}
+
+- (void)dealloc
+{
+  // Balance the implicit retain from being a top-level nib object.
+  [mFindBar release];
+
+  [super dealloc];
 }
 
 //
@@ -77,7 +86,13 @@
 //
 - (void)lazyLoad
 {
-  BOOL success = [NSBundle loadNibNamed:@"FindBar" owner:self];
+  NSString* nibName;
+  BOOL isLeopardOrHigher = [NSWorkspace isLeopardOrHigher];
+  if (isLeopardOrHigher)
+    nibName = @"FindBarTextured";
+  else
+    nibName = @"FindBar";
+  BOOL success = [NSBundle loadNibNamed:nibName owner:self];
   if (!success) {
     NSLog(@"Error, couldn't load find bar. Find won't work");
     return;
@@ -85,6 +100,17 @@
   
   [self setupCloseBox:mCloseBox];
   [mStatusText setStringValue:@""];
+  if (isLeopardOrHigher) {
+    // The textured buttons at regular size use a larger font size than the
+    // status text that's right next to it, which looks bad. To work around it,
+    // we use a smaller control in the nib (so that localizers are sizing the
+    // button width based on the font size that will actually be used), then we
+    // fix up the controlSize and height of the button as we load it.
+    [[mMatchCase cell] setControlSize:NSRegularControlSize];
+    NSSize buttonSize = [mMatchCase frame].size;
+    buttonSize.height = [[mMatchCase cell] cellSize].height;
+    [mMatchCase setFrameSize:buttonSize];
+  }
 }
 
 //
@@ -99,21 +125,17 @@
 
   [mStatusText setStringValue:@""];
   [mSearchField setStringValue:[self findPasteboardString]];
-  [mContentView showFindBar:mFindBar];
+  [mContentView showFindBarView:mFindBar];
   [[mFindBar window] makeFirstResponder:mSearchField];
 }
 
 //
 // -hideFindBar:
 //
-// Makes the find bar go away and posts the |kFindBarDidHideNotification| 
-// notification.
+// Makes the find bar go away.
 //
 - (IBAction)hideFindBar:(id)sender {
-  [mContentView showFindBar:nil];
-  
-  [[NSNotificationCenter defaultCenter] postNotificationName:kFindBarDidHideNotification
-                                                      object:self];
+  [mContentView showFindBarView:nil];
 }
 
 //
@@ -125,11 +147,42 @@
 - (IBAction)findNext:(id)sender
 {
   [self doFindForwards:YES];
+  // Return/enter ends editing and unfocuses the search field, which we don't
+  // want. Rather than setting up a custom field editor, just force focus back
+  // if it's not focused.
+  if (![mSearchField currentEditor] ||
+      [[mSearchField window] firstResponder] != [mSearchField currentEditor])
+  {
+    [[mSearchField window] makeFirstResponder:mSearchField];
+  }
 }
 
 - (IBAction)findPrevious:(id)sender
 {
   [self doFindForwards:NO];
+}
+
+//
+// -findPreviousNextClicked:
+//
+// Action for the segmented previous/next button for 10.5+.
+//
+- (IBAction)findPreviousNextClicked:(id)sender
+{
+  if ([sender selectedSegment] == 0)
+    [self doFindForwards:NO];
+  else
+    [self doFindForwards:YES];
+}
+
+//
+// -toggleCaseSensitivity:
+//
+// Action for the case sensitivity button.
+//
+- (IBAction)toggleCaseSensitivity:(id)sender
+{
+  [self doFindForwards:YES];
 }
 
 //

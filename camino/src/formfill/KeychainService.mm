@@ -606,7 +606,8 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
   [neverStore setKeyEquivalent:@"n"];
   [neverStore setKeyEquivalentModifierMask:NSCommandKeyMask];
 
-  [[alert window] setInitialFirstResponder:dontStore];
+  if ([dontStore canBecomeKeyView])
+    [[alert window] makeFirstResponder:dontStore];
   [alert beginSheetModalForWindow:window
                     modalDelegate:self
                    didEndSelector:@selector(storeSheetDidEnd:returnCode:contextInfo:)
@@ -818,7 +819,7 @@ KeychainPrompt::ExtractRealmComponents(NSString* inRealmBlob, NSString** outHost
     return;
   *outHost = nil;
   *outRealm = nil;
-  *outPort = -1;
+  *outPort = kAnyPort;
 
   // first check for an ftp url and pull out the server from the realm
   if ([inRealmBlob rangeOfString:@"ftp://"].location != NSNotFound) {

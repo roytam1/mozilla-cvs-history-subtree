@@ -83,7 +83,6 @@
 #include "nsIWebBrowserChrome.h"
 #include "nsIServiceManager.h"
 #include "nsIIOService.h"
-#include "nsIPref.h"
 #include "nsIChromeRegistry.h"
 #include "nsIObserverService.h"
 #include "nsIGenericFactory.h"
@@ -114,6 +113,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 - (void)setupStartpage;
 - (void)setupRendezvous;
 - (void)checkDefaultBrowser;
+- (void)checkForProblemAddOns;
 - (BOOL)bookmarksItemsEnabled;
 - (void)adjustBookmarkMenuItems;
 - (void)updateDockMenuBookmarkFolder;
@@ -359,6 +359,8 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 {
   [self ensureInitializationCompleted];
 
+  [self checkForProblemAddOns];
+
   // open a new browser window if we don't already have one or we have a specific
   // start URL we need to show
   NSWindow* browserWindow = [self frontmostBrowserWindow];
@@ -411,7 +413,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
                                          title:quitAlertMsg
                                            text:quitAlertExpl
                                         button1:NSLocalizedString(@"QuitButtonText", @"")
-                                        button2:NSLocalizedString(@"CancelButtonText", @"")
+                                        button2:NSLocalizedString(@"DontQuitButtonText", @"")
                                         button3:nil
                                        checkMsg:NSLocalizedString(@"DontShowWarningAgainCheckboxLabel", @"")
                                      checkValue:&dontShowAgain];
@@ -575,6 +577,52 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
   }
 }
 
+- (void)checkForProblemAddOns
+{
+  // See if we need to show the once-per-release warning about problem add-ons.
+  PreferenceManager* prefManager = [PreferenceManager sharedInstance];
+  NSString* vendorSubString = [prefManager getStringPref:"general.useragent.vendorSub" withSuccess:NULL];
+  if ([vendorSubString rangeOfString:@"pre"].location == NSNotFound) {
+    NSString* lastWarningVersion = [prefManager getStringPref:"camino.last_addon_check_version"
+                                                 withSuccess:NULL];
+    if (![vendorSubString isEqualToString:lastWarningVersion]) {
+      // Check by class for each of the add-ons that are known to have
+      // problematic versions in the wild.
+      NSDictionary* problemAddOns = [NSDictionary dictionaryWithObjectsAndKeys:
+                                      @"CaminoSession", @"CaminoSession",
+                                          @"1Password", @"InputManager", // Yes, that's really the class name
+                                        @"GrowlCamino", @"GrowlCamino",
+                                        @"UnifyCamino", @"UnifyCamino",
+                                                        nil];
+      NSMutableArray* addOnsPresent = [NSMutableArray array];
+      NSEnumerator* classNameEnumerator = [[problemAddOns allKeys] objectEnumerator];
+      NSString* className;
+      while ((className = [classNameEnumerator nextObject])) {
+        if (NSClassFromString(className))
+          [addOnsPresent addObject:[problemAddOns objectForKey:className]];
+      }
+      if ([addOnsPresent count] > 0) {
+        NSString* warningText =
+          [NSString stringWithFormat:NSLocalizedString(@"ProblematicAddOnWarningMessage", nil),
+            [addOnsPresent componentsJoinedByString:@"\n\t"],
+            vendorSubString];
+        NSAlert* addOnAlert = [[[NSAlert alloc] init] autorelease];
+        [addOnAlert addButtonWithTitle:NSLocalizedString(@"OKButtonText", nil)];
+        [addOnAlert setMessageText:NSLocalizedString(@"ProblematicAddOnWarningTitle", nil)];
+        [addOnAlert setInformativeText:warningText];
+        [addOnAlert setAlertStyle:NSWarningAlertStyle];
+        
+        // It should be impossible for a menu to be open so soon, but this
+        // should be called before displaying any modal dialogs.
+        [NSMenu cancelAllTracking];
+        [addOnAlert runModal];
+      }
+
+      [prefManager setPref:"camino.last_addon_check_version" toString:vendorSubString];
+    }
+  }
+}
+
 //
 // bookmarkLoadingCompleted:
 //
@@ -705,14 +753,7 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 // opening a new window or tab (observing the user's pref) if it's not already open
 - (void)showURL:(NSString*)aURL
 {
-  // make sure we're initted
-  [PreferenceManager sharedInstance];
-
-  PRInt32 reuseWindow = 0;
-
-  nsCOMPtr<nsIPref> prefService(do_GetService(NS_PREF_CONTRACTID));
-  if (prefService)
-    prefService->GetIntPref("browser.reuse_window", &reuseWindow);
+  int reuseWindow = [[PreferenceManager sharedInstance] getIntPref:"browser.reuse_window" withSuccess:NULL];
 
   // Check to see if we already have the URL somewhere, and just show it if we do.
   NSEnumerator* windowEnumerator = [[NSApp orderedWindows] objectEnumerator];
@@ -957,6 +998,14 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
     [self loadApplicationPage:pageToLoad];
 }
 
+- (IBAction)checkForUpdates:(id)sender
+{
+  // MainController is the target of the "Check for Updates..." menu item
+  // instead of SUUpdater solely to allow MainController to participate in
+  // NSMenuValidation for the menu item.
+  [mAutoUpdater checkForUpdates:sender];
+}
+
 - (IBAction)displayPreferencesWindow:(id)sender
 {
   [[MVPreferencesController sharedInstance] showPreferences:nil];
@@ -973,13 +1022,18 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 //
 - (IBAction)resetBrowser:(id)sender
 {
-  if (NSRunCriticalAlertPanel(NSLocalizedString(@"Reset Camino Title", nil),
-                              NSLocalizedString(@"Reset Warning Message", nil),
-                              NSLocalizedString(@"Reset Camino", nil),
-                              NSLocalizedString(@"CancelButtonText", nil),
-                              nil) == NSAlertDefaultReturn)
-  {
+  NSAlert* resetBrowserAlert = [[[NSAlert alloc] init] autorelease];
+  [resetBrowserAlert setMessageText:NSLocalizedString(@"Reset Camino Title", nil)];
+  [resetBrowserAlert setInformativeText:NSLocalizedString(@"Reset Warning Message", nil)];
+  [resetBrowserAlert addButtonWithTitle:NSLocalizedString(@"Reset Camino", nil)];
+  NSButton* dontResetButton = [resetBrowserAlert addButtonWithTitle:NSLocalizedString(@"DontResetButtonText", nil)];
+  [dontResetButton setKeyEquivalent:@"\e"]; // escape
 
+  [resetBrowserAlert setAlertStyle:NSCriticalAlertStyle];
+
+  [NSMenu cancelAllTracking];
+
+  if ([resetBrowserAlert runModal] == NSAlertFirstButtonReturn) {
     // close all windows
     NSArray* openWindows = [[NSApp orderedWindows] copy];
     NSEnumerator* windowEnum = [openWindows objectEnumerator];
@@ -1039,11 +1093,18 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 //
 - (IBAction)emptyCache:(id)sender
 {
-  if (NSRunCriticalAlertPanel(NSLocalizedString(@"EmptyCacheTitle", nil),
-                              NSLocalizedString(@"EmptyCacheMessage", nil),
-                              NSLocalizedString(@"EmptyButton", nil),
-                              NSLocalizedString(@"CancelButtonText", nil), nil) == NSAlertDefaultReturn)
-  {
+  NSAlert* emptyCacheAlert = [[[NSAlert alloc] init] autorelease];
+  [emptyCacheAlert setMessageText:NSLocalizedString(@"EmptyCacheTitle", nil)];
+  [emptyCacheAlert setInformativeText:NSLocalizedString(@"EmptyCacheMessage", nil)];
+  [emptyCacheAlert addButtonWithTitle:NSLocalizedString(@"EmptyCacheButtonText", nil)];
+  NSButton* dontEmptyButton = [emptyCacheAlert addButtonWithTitle:NSLocalizedString(@"DontEmptyButtonText", nil)];
+  [dontEmptyButton setKeyEquivalent:@"\e"]; // escape
+
+  [emptyCacheAlert setAlertStyle:NSCriticalAlertStyle];
+
+  [NSMenu cancelAllTracking];
+
+  if ([emptyCacheAlert runModal] == NSAlertFirstButtonReturn) {
     // remove cache
     nsCOMPtr<nsICacheService> cacheServ (do_GetService("@mozilla.org/network/cache-service;1"));
     if (cacheServ)
@@ -1227,8 +1288,8 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
         doCloseWindows = [controller confirmCheckEx:nil
                                               title:closeAlertMsg
                                                text:closeAlertExpl
-                                            button1:NSLocalizedString(@"OKButtonText", @"")
-                                            button2:NSLocalizedString(@"CancelButtonText", @"")
+                                            button1:NSLocalizedString(@"CloseWindowsButtonText", @"")
+                                            button2:NSLocalizedString(@"DontCloseButtonText", @"")
                                             button3:nil
                                            checkMsg:NSLocalizedString(@"DontShowWarningAgainCheckboxLabel", @"")
                                          checkValue:&dontShowAgain];
@@ -1469,12 +1530,18 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 //
 - (IBAction)clearHistory:(id)aSender
 {
-  if (NSRunCriticalAlertPanel(NSLocalizedString(@"ClearHistoryTitle", nil),
-                              NSLocalizedString(@"ClearHistoryMessage", nil),
-                              NSLocalizedString(@"ClearHistoryButton", nil),
-                              NSLocalizedString(@"CancelButtonText", nil),
-                              nil) == NSAlertDefaultReturn)
-  {
+  NSAlert* clearHistoryAlert = [[[NSAlert alloc] init] autorelease];
+  [clearHistoryAlert setMessageText:NSLocalizedString(@"ClearHistoryTitle", nil)];
+  [clearHistoryAlert setInformativeText:NSLocalizedString(@"ClearHistoryMessage", nil)];
+  [clearHistoryAlert addButtonWithTitle:NSLocalizedString(@"ClearHistoryButtonText", nil)];
+  NSButton* dontClearButton = [clearHistoryAlert addButtonWithTitle:NSLocalizedString(@"DontClearButtonText", nil)];
+  [dontClearButton setKeyEquivalent:@"\e"]; // escape
+
+  [clearHistoryAlert setAlertStyle:NSCriticalAlertStyle];
+
+  [NSMenu cancelAllTracking];
+
+  if ([clearHistoryAlert runModal] == NSAlertFirstButtonReturn) {
     // clear history
     nsCOMPtr<nsIBrowserHistory> hist = do_GetService("@mozilla.org/browser/global-history;2");
     if (hist)
@@ -1707,6 +1774,13 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
     if (browserController && [[browserController window] attachedSheet])
       return NO;
     return (browserController && [browserController validateActionBySelector:action]);
+  }
+
+  if (action == @selector(checkForUpdates:) &&
+      [[[NSUserDefaults standardUserDefaults] stringForKey:SUFeedURLKey] length] == 0) {
+    // Disable update checking if there's no feed to check.
+    [aMenuItem setToolTip:NSLocalizedString(@"AutoUpdateDisabledToolTip", @"")];
+    return NO;
   }
 
   // default return

@@ -45,6 +45,7 @@ VPATH		= @srcdir@
 include $(DEPTH)/config/autoconf.mk
 
 DIRS = \
+	feedhandlers \
 	flashblock \
 	idl \
 	striptease \
@@ -64,6 +65,10 @@ PLATFORM_VERSION_FILE = $(topsrcdir)/config/milestone.txt
 PLATFORM_VERSION := $(shell egrep "^[^\#]+" $(PLATFORM_VERSION_FILE))
 PLATFORM_BUILD_ID_FILE = $(DEPTH)/config/build_number
 PLATFORM_BUILD_ID := $(shell cat $(PLATFORM_BUILD_ID_FILE))
+
+ifdef MOZILLA_OFFICIAL
+APP_UPDATE_URL = https://caminobrowser.org/update-check
+endif
 
 # For Launch Services compatibility, CFBundleVersion can be at most three
 # .-separated integers, aaaaaa.bb.cc, with a maximum of 429496.99.99.  Use
@@ -180,19 +185,16 @@ ifneq ($(ABS_topsrcdir),$(MOZ_BUILD_ROOT))
 	$(RSYNC_ALL) $(ABS_topsrcdir)/camino/sparkle/*.xcodeproj sparkle
 endif
 
-generated:
-	mkdir -p $@
-
 # Generate files which need to pull version numbers or dates from other files
 # in the tree
 generated/resources/application/all-camino.js: \
   $(srcdir)/resources/application/all-camino.js.in \
   $(FOX_APP_VERSION_FILE) \
-  $(CM_APP_VERSION_FILE) \
-  generated
+  $(CM_APP_VERSION_FILE)
 	mkdir -p $(dir $@)
 	sed -e "s/%FOX_APP_VERSION%/$(FOX_APP_VERSION)/" \
-	    -e "s/%CM_APP_VERSION%/$(CM_APP_VERSION)/" $< > $@
+	    -e "s/%CM_APP_VERSION%/$(CM_APP_VERSION)/" \
+	    -e "s@%APP_UPDATE_URL%@$(APP_UPDATE_URL)@" $< > $@
 
 generated/Info-Camino.plist: \
   $(srcdir)/Info-Camino.plist.in \
@@ -201,8 +203,7 @@ generated/Info-Camino.plist: \
   $(PLATFORM_BUILD_ID_FILE) \
   $(PLATFORM_VERSION_FILE) \
   $(CVS_TAG_FILE) \
-  $(CVS_TIME_FILE) \
-  generated
+  $(CVS_TIME_FILE)
 	mkdir -p $(dir $@)
 	sed -e "s/%CM_APP_VERSION%/$(CM_APP_VERSION)/" \
 	    -e "s/%CM_APP_VERSION_CFBUNDLE%/$(CM_APP_VERSION_CFBUNDLE)/" \
@@ -215,8 +216,7 @@ generated/Info-Camino.plist: \
 generated/resources/localized/English.lproj/InfoPlist.strings: \
   $(srcdir)/resources/localized/English.lproj/InfoPlist.strings.in \
   $(CM_APP_VERSION_FILE) \
-  $(CM_COPYRIGHT_YEAR_FILE) \
-  generated
+  $(CM_COPYRIGHT_YEAR_FILE)
 	mkdir -p $(dir $@)
 	sed -e "s/%CM_APP_VERSION%/$(CM_APP_VERSION)/" \
 	    -e "s/%CM_COPYRIGHT_YEAR%/$(CM_COPYRIGHT_YEAR)/" $< | \
@@ -226,8 +226,7 @@ generated/resources/localized/English.lproj/InfoPlist.strings: \
 # OS X, iconv seems always to output big-endian when asked for UTF-16 with a
 # BOM, which is what AppleGlot seems to require.
 $(GENERATED_STRINGS_FILES): \
-  generated/%.strings: $(srcdir)/%.strings.in \
-  generated
+  generated/%.strings: $(srcdir)/%.strings.in
 	mkdir -p $(dir $@)
 	iconv -f UTF-8 -t UTF-16 $< > $@
 
@@ -235,13 +234,13 @@ $(GENERATED_STRINGS_FILES): \
 # contents are changing.  The file's timestamp will be preserved when the
 # contents aren't changing, reducing unnecessary build activity.
 
-$(CVS_TIME_FILE): FORCE generated
+$(CVS_TIME_FILE): FORCE
 	grep -lFx "$(CVS_TIME)" $@ >& /dev/null || \
-	  echo $(CVS_TIME) > $@
+	  (mkdir -p $(dir $@) && echo "$(CVS_TIME)" > $@)
 
-$(CVS_TAG_FILE): FORCE generated
+$(CVS_TAG_FILE): FORCE
 	grep -lFx "$(CVS_TAG)" $@ >& /dev/null || \
-	  echo $(CVS_TAG) > $@
+	  (mkdir -p $(dir $@) && echo "$(CVS_TAG)" > $@)
 
 # The embed-replacements rsync is done for both srcdir and objdir builds
 # to avoid adding CVS stuff to embed.jar.

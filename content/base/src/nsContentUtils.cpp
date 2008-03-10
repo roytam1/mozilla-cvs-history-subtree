@@ -114,6 +114,7 @@ static NS_DEFINE_CID(kXTFServiceCID, NS_XTFSERVICE_CID);
 #include "jsdbgapi.h"
 #include "nsIJSRuntimeService.h"
 #include "nsIFragmentContentSink.h"
+#include "nsIScriptObjectPrincipal.h"
 
 // for ReportToConsole
 #include "nsIStringBundle.h"
@@ -700,6 +701,58 @@ nsContentUtils::CanCallerAccess(nsIDOMNode *aNode)
   }
 
   PRBool enabled = PR_FALSE;
+  if (principal == systemPrincipal) {
+    // we know subjectPrincipal != systemPrincipal so we can only
+    // access the object if UniversalXPConnect is enabled. We can
+    // avoid wasting time in CheckSameOriginPrincipal
+
+    rv = sSecurityManager->IsCapabilityEnabled("UniversalXPConnect", &enabled);
+    return NS_SUCCEEDED(rv) && enabled;
+  }
+
+  rv = sSecurityManager->CheckSameOriginPrincipal(subjectPrincipal, principal);
+  if (NS_SUCCEEDED(rv)) {
+    return PR_TRUE;
+  }
+
+  // see if the caller has otherwise been given the ability to touch
+  // input args to DOM methods
+
+  rv = sSecurityManager->IsCapabilityEnabled("UniversalBrowserRead", &enabled);
+  return NS_SUCCEEDED(rv) && enabled;
+}
+
+// static
+PRBool
+nsContentUtils::CanCallerAccess(nsPIDOMWindow* aWindow)
+{
+  nsCOMPtr<nsIPrincipal> subjectPrincipal;
+  sSecurityManager->GetSubjectPrincipal(getter_AddRefs(subjectPrincipal));
+
+  if (!subjectPrincipal) {
+    // we're running as system, grant access to the node.
+
+    return PR_TRUE;
+  }
+
+  nsCOMPtr<nsIPrincipal> systemPrincipal;
+  sSecurityManager->GetSystemPrincipal(getter_AddRefs(systemPrincipal));
+
+  if (subjectPrincipal == systemPrincipal) {
+    // we're running as system, grant access to the node.
+
+    return PR_TRUE;
+  }
+
+  nsCOMPtr<nsIScriptObjectPrincipal> scriptObject =
+    do_QueryInterface(aWindow->IsOuterWindow() ?
+                      aWindow->GetCurrentInnerWindow() : aWindow);
+  NS_ENSURE_TRUE(scriptObject, PR_FALSE);
+  nsIPrincipal* principal = scriptObject->GetPrincipal();
+  NS_ENSURE_TRUE(principal, PR_FALSE);
+
+  PRBool enabled = PR_FALSE;
+  nsresult rv;
   if (principal == systemPrincipal) {
     // we know subjectPrincipal != systemPrincipal so we can only
     // access the object if UniversalXPConnect is enabled. We can

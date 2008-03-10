@@ -6525,8 +6525,21 @@ nsGlobalWindow::SetTimeoutOrInterval(PRBool aIsInterval, PRInt32 *aReturn)
     }
   }
 
+  nsCOMPtr<nsIPrincipal> ourPrincipal = GetPrincipal();
+  JSPrincipals *jsprins;
+  rv = ourPrincipal->GetJSPrincipals(cx, &jsprins);
+  if (NS_FAILED(rv)) {
+    timeout->Release(scx);
+
+    return rv;
+  }
+
+  // We know that ourPrincipal holds a strong ref to jsprins.
+  JSPRINCIPALS_DROP(cx, jsprins);
+
   const char *filename;
-  if (nsJSUtils::GetCallingLocation(cx, &filename, &timeout->mLineNo)) {
+  if (nsJSUtils::GetCallingLocation(cx, &filename, &timeout->mLineNo,
+                                    jsprins)) {
     timeout->mFileName = PL_strdup(filename);
 
     if (!timeout->mFileName) {
@@ -6552,7 +6565,6 @@ nsGlobalWindow::SetTimeoutOrInterval(PRBool aIsInterval, PRInt32 *aReturn)
   }
 
   PRBool subsumes = PR_FALSE;
-  nsCOMPtr<nsIPrincipal> ourPrincipal = GetPrincipal();
 
   // Note the direction of this test: We don't allow chrome setTimeouts on
   // content windows, but we do allow content setTimeouts on chrome windows.

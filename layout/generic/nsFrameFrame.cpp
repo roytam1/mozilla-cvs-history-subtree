@@ -523,6 +523,20 @@ nsSubDocumentFrame::AttributeChanged(nsIContent* aChild,
 
       PRBool is_primary = value.LowerCaseEqualsLiteral("content-primary");
 
+      // when a content panel is no longer primary, hide any open popups it may have
+      if (!is_primary) {
+        nsCOMPtr<nsIDocShell> docShell;
+        GetDocShell(getter_AddRefs(docShell));
+        if (docShell) {
+          nsCOMPtr<nsIPresShell> presShell;
+          docShell->GetPresShell(getter_AddRefs(presShell));
+
+          nsCOMPtr<nsIPresShell_MOZILLA_1_8_BRANCH> presShell18 = do_QueryInterface(presShell);
+          if (presShell18)
+            presShell18->HidePopups();
+        }
+      }
+
       nsCOMPtr<nsIDocShellTreeOwner_MOZILLA_1_8_BRANCH> owner2 =
         do_QueryInterface(parentTreeOwner);
 

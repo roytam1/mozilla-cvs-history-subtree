@@ -66,6 +66,7 @@
 #include "nsStreamUtils.h"
 #include "nsNetCID.h"
 #include "nsContentUtils.h"
+#include "nsPIDOMWindow.h"
 
 static NS_DEFINE_IID(kEventQueueServiceCID, NS_EVENTQUEUESERVICE_CID);
 
@@ -348,6 +349,7 @@ NS_INTERFACE_MAP_BEGIN(nsDOMParser)
   NS_INTERFACE_MAP_ENTRY(nsIDOMParser)
   NS_INTERFACE_MAP_ENTRY(nsIDOMLoadListener)
   NS_INTERFACE_MAP_ENTRY(nsISupportsWeakReference)
+  NS_INTERFACE_MAP_ENTRY(nsIJSNativeInitializer_MOZILLA_1_8_BRANCH)
   NS_INTERFACE_MAP_ENTRY_CONTENT_CLASSINFO(DOMParser)
 NS_INTERFACE_MAP_END
 
@@ -503,33 +505,43 @@ nsDOMParser::ParseFromStream(nsIInputStream *stream,
 
   // Try to find a base URI for the document we're creating.
   nsCOMPtr<nsIURI> baseURI;
-
-  nsCOMPtr<nsIXPCNativeCallContext> cc;
-  nsCOMPtr<nsIXPConnect> xpc(do_GetService(nsIXPConnect::GetCID(), &rv));
-  if(NS_SUCCEEDED(rv)) {
-    rv = xpc->GetCurrentNativeCallContext(getter_AddRefs(cc));
-  }
-
   nsCOMPtr<nsIDOMDocument> contextDoc;
-  if (NS_SUCCEEDED(rv) && cc) {
-    JSContext* cx;
-    rv = cc->GetJSContext(&cx);
-    if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
+  if (mOwner) {
+    nsCOMPtr<nsPIDOMWindow> win = do_QueryReferent(mOwner);
+    NS_ENSURE_STATE(win);
+    nsPIDOMWindow* outer = win->GetOuterWindow();
+    NS_ENSURE_STATE(outer && outer->GetCurrentInnerWindow() == win);
+    nsCOMPtr<nsIDOMWindow> window = do_QueryInterface(win);
+    if (window) {
+      window->GetDocument(getter_AddRefs(contextDoc));
+    }
+  } else {
+    nsCOMPtr<nsIXPCNativeCallContext> cc;
+    nsCOMPtr<nsIXPConnect> xpc(do_GetService(nsIXPConnect::GetCID(), &rv));
+    if(NS_SUCCEEDED(rv)) {
+      rv = xpc->GetCurrentNativeCallContext(getter_AddRefs(cc));
+    }
 
-    nsIScriptContext *scriptContext = GetScriptContextFromJSContext(cx);
-    if (scriptContext) {
-      nsCOMPtr<nsIDOMWindow> window =
-        do_QueryInterface(scriptContext->GetGlobalObject());
+    if (NS_SUCCEEDED(rv) && cc) {
+      JSContext* cx;
+      rv = cc->GetJSContext(&cx);
+      if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
 
-      if (window) {
-        window->GetDocument(getter_AddRefs(contextDoc));
+      nsIScriptContext *scriptContext = GetScriptContextFromJSContext(cx);
+      if (scriptContext) {
+        nsCOMPtr<nsIDOMWindow> window =
+          do_QueryInterface(scriptContext->GetGlobalObject());
 
-        nsCOMPtr<nsIDocument> doc = do_QueryInterface(contextDoc);
-        if (doc) {
-          baseURI = doc->GetBaseURI();
+        if (window) {
+          window->GetDocument(getter_AddRefs(contextDoc));
         }
       }
     }
+  }
+
+  nsCOMPtr<nsIDocument> doc = do_QueryInterface(contextDoc);
+  if (doc) {
+    baseURI = doc->GetBaseURI();
   }
 
   if (!baseURI) {
@@ -686,5 +698,13 @@ nsDOMParser::SetBaseURI(nsIURI *aBaseURI)
 {
   mBaseURI = aBaseURI;
 
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDOMParser::Initialize(nsISupports* aOwner, JSContext* cx, JSObject* obj,
+                        PRUint32 argc, jsval *argv)
+{
+  mOwner = do_GetWeakReference(aOwner);
   return NS_OK;
 }

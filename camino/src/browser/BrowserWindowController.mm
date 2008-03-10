@@ -139,10 +139,27 @@
 
 #include "nsAppDirectoryServiceDefs.h"
 
-#if MAC_OS_X_VERSION_MIN_REQUIRED <= MAC_OS_X_VERSION_10_4
+#if MAC_OS_X_VERSION_MAX_ALLOWED <= MAC_OS_X_VERSION_10_4
 @interface NSWindow(LeopardSDKDeclarations)
 - (void)setContentBorderThickness:(float)borderThickness forEdge:(NSRectEdge)edge;
 @end
+
+@interface NSSpellChecker(LeopardSDKDeclarations)
+- (NSArray *)availableLanguages;
+@end
+
+@interface NSCell(LeopardSDKDeclarations)
+- (void)setBackgroundStyle:(int)backgroundStyle;
+@end
+static const int NSBackgroundStyleRaised = 2;
+#endif
+
+#if MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_4
+@interface NSObject(NSLocaleMethods)
++ (id)currentLocale;
+- (NSString *)displayNameForKey:(id)key value:(id)value;
+@end
+static NSString* const NSLocaleIdentifier = @"locale:id";
 #endif
 
 static NSString* const BrowserToolbarIdentifier         = @"Browser Window Toolbar Combined";
@@ -570,6 +587,8 @@ public:
 
 - (void)insertForceAlternatesIntoMenu:(NSMenu *)inMenu;
 - (BOOL)prepareSpellingSuggestionMenu:(NSMenu*)inMenu tag:(int)inTag;
+- (void)addSpellingControlsToMenu:(NSMenu*)inMenu;
+- (NSMenuItem*)spellingLanguageMenu;
 
 - (void)setZoomState:(NSRect)newFrame defaultFrame:(NSRect)defaultFrame;
 
@@ -742,7 +761,7 @@ public:
                                       title:NSLocalizedString(@"CloseWindowWithMultipleTabsMsg", @"")
                                        text:[NSString stringWithFormat:closeMultipleTabWarning, numberOfTabs]
                                     button1:NSLocalizedString(@"CloseWindowWithMultipleTabsButton", @"")
-                                    button2:NSLocalizedString(@"CancelButtonText", @"")
+                                    button2:NSLocalizedString(@"DontCloseButtonText", @"")
                                     button3:nil
                                    checkMsg:NSLocalizedString(@"DontShowWarningAgainCheckboxLabel", @"")
                                  checkValue:&dontShowAgain];
@@ -785,11 +804,6 @@ public:
   nsCOMPtr<nsIPref> pref(do_GetService(NS_PREF_CONTRACTID));
   if (pref)
     pref->UnregisterCallback(gTabBarVisiblePref, TabBarVisiblePrefChangedCallback, self);
-  
-  // make sure the find bar goes away early enough since it holds
-  // weak refs to things.
-  [mFindController hideFindBar:self];
-  [mFindController release];
       
   // Tell the BrowserTabView the window is closed
   [mTabBrowser windowClosed];
@@ -878,6 +892,8 @@ public:
       mustResizeChrome = YES;
     }
     if ([NSWorkspace isLeopardOrHigher]) {
+      // On 10.5+, give the text an etched look for the textured status bar.
+      [[mStatus cell] setBackgroundStyle:NSBackgroundStyleRaised];
       if (![mStatusBar isHidden])
         [[self window] setContentBorderThickness:NSHeight([mStatusBar bounds]) forEdge:NSMinYEdge];
     }
@@ -1025,14 +1041,6 @@ public:
       // actually move the window
       [[self window] setFrameOrigin: testBrowserFrame.origin];
     }
-    
-    // configure the find bar controller and register for notifications on when the
-    // find bar gets hidden so we can do things like reset focus.
-    mFindController = [[FindBarController alloc] initWithContent:mContentView finder:self];
-    [[NSNotificationCenter defaultCenter] addObserver:self 
-                                             selector:@selector(findBarHidden:)
-                                                 name:kFindBarDidHideNotification 
-                                               object:mFindController];
     
     // cache the original window frame, we may need this for correct zooming
     mLastFrameSize = [[self window] frame];
@@ -1703,7 +1711,9 @@ public:
 
   // Always allow the search engine menu to work
   if (action == @selector(searchEngineChanged:) ||
-      action == @selector(manageSearchEngines:))
+      action == @selector(installSearchPlugin:) ||
+      action == @selector(manageSearchEngines:) ||
+      action == @selector(findSearchEngines:))
   {
     return YES;
   }
@@ -1736,7 +1746,7 @@ public:
       return NO;    
     long tag = [aMenuItem tag];
     if (tag == NSFindPanelActionNext || tag == NSFindPanelActionPrevious)
-      return ([[self lastFindText] length] > 0);
+      return ([[[mBrowserView browserView] lastFindText] length] > 0);
     return YES;
   }
 
@@ -1779,6 +1789,10 @@ public:
     return [self canMakeTextSmaller];
   if (action == @selector(makeTextDefaultSize:))
     return [self canMakeTextDefaultSize];
+  if (action == @selector(find:)) {
+    return ([self bookmarkManagerIsVisible] ||
+            [[[self browserWrapper] browserView] isTextBasedContent]);
+  }
   if (action == @selector(sendURL:))
     return ![[self browserWrapper] isInternalURI];
   if (action == @selector(viewSource:) ||
@@ -1898,22 +1912,7 @@ public:
   if ([[mStatus stringValue] isEqualToString:status])
     return;
 
-  if ([NSWorkspace isLeopardOrHigher]) {
-    // On 10.5+, give the text an etched look for the textured status bar.
-    static NSDictionary* shadowAttributes = nil;
-    if (!shadowAttributes) {
-      NSShadow* shadow = [[[NSShadow alloc] init] autorelease];
-      [shadow setShadowOffset:NSMakeSize(0.0, -2.0)];
-      [shadow setShadowColor:[NSColor colorWithCalibratedWhite:1.0 alpha:0.6]];
-      shadowAttributes = [[NSDictionary dictionaryWithObject:shadow forKey:NSShadowAttributeName] retain];
-    }
-    NSAttributedString* shadowedStatus = [[[NSAttributedString alloc] initWithString:status
-                                                                          attributes:shadowAttributes] autorelease];
-    [mStatus setAttributedStringValue:shadowedStatus];
-  }
-  else {
-    [mStatus setStringValue:status];
-  }
+  [mStatus setStringValue:status];
 }
 
 - (void)updateLocationFields:(NSString*)url ignoreTyping:(BOOL)ignoreTyping
@@ -2340,7 +2339,6 @@ public:
       [[[self browserWrapper] browserView] goToSessionHistoryIndex:previousPage];
   }
   else {
-    [mFindController hideFindBar:self];
     [self loadURL:@"about:bookmarks"];
   }
 }
@@ -2363,9 +2361,6 @@ public:
 //
 -(IBAction)manageHistory: (id)aSender
 {
-  if ([self bookmarkManagerIsVisible])
-    [mFindController hideFindBar:self];
-  
   [self loadURL:@"about:history"];
 
   // aSender could be a history menu item with a represented object of
@@ -2856,19 +2851,8 @@ public:
     [[self bookmarkViewControllerForCurrentTab] focusSearchField];
   }
   else {
-    [mFindController showFindBar];
+    [mBrowserView showFindBar];
   }
-}
-
-//
-// - findBarHidden:
-//
-// Called when the find bar has been hidden in this window. Do things like
-// reset the focus to gecko.
-//
-- (void)findBarHidden:(NSNotification*)inNotify
-{
-  [[self window] makeFirstResponder:[mBrowserView browserView]];
 }
 
 //
@@ -2883,30 +2867,13 @@ public:
 {
   switch ([inSender tag]) {
     case NSFindPanelActionNext:
-      [mFindController findNext:self];
+      [[mBrowserView browserView] findInPage:NO];
       break;
     
     case NSFindPanelActionPrevious:
-      [mFindController findPrevious:self];
+      [[mBrowserView browserView] findInPage:YES];
       break;
   }
-}
-
-- (BOOL)findInPageWithPattern:(NSString*)text caseSensitive:(BOOL)inCaseSensitive
-    wrap:(BOOL)inWrap backwards:(BOOL)inBackwards
-{
-  return [[mBrowserView browserView] findInPageWithPattern:text caseSensitive:inCaseSensitive
-                                                      wrap:inWrap backwards:inBackwards];
-}
-
-- (BOOL)findInPage:(BOOL)inBackwards
-{
-  return [[mBrowserView browserView] findInPage:inBackwards];
-}
-
-- (NSString*)lastFindText
-{
-  return [[mBrowserView browserView] lastFindText];
 }
 
 - (void)stopThrobber
@@ -4064,7 +4031,7 @@ public:
     return nil;
 
   BOOL showFrameItems = NO;
-  BOOL showSpellingItems = NO;
+  BOOL isTextField = NO;
   BOOL needsAlternates = NO;
   BOOL isUnsafeLink = NO;
 
@@ -4166,7 +4133,7 @@ public:
     }
     
     menuPrototype = mInputMenu;
-    showSpellingItems = YES;
+    isTextField = YES;
   }
   else if ((contextMenuFlags & nsIContextMenuListener::CONTEXT_IMAGE) != 0) {
     menuPrototype = mImageMenu;
@@ -4202,15 +4169,20 @@ public:
   // validate 'Bookmark This Page'
   [[result itemWithTarget:self andAction:@selector(addBookmark:)] setEnabled:[[self browserWrapper] isBookmarkable]];
 
-  if (showSpellingItems)
-    showSpellingItems = [self prepareSpellingSuggestionMenu:result tag:kSpellingRelatedItemsTag];
+  BOOL showMisspelledWordItems = NO;
+  if (isTextField)
+    showMisspelledWordItems = [self prepareSpellingSuggestionMenu:result tag:kSpellingRelatedItemsTag];
 
-  if (!showSpellingItems) {
+  if (!showMisspelledWordItems) {
     // word spelled correctly or not applicable, remove all traces of spelling items
     NSMenuItem* selectionItem;
     while ((selectionItem = [result itemWithTag:kSpellingRelatedItemsTag]) != nil)
       [result removeItem:selectionItem];
   }
+
+  // Add the persistent spelling items
+  if (isTextField)
+    [self addSpellingControlsToMenu:result];
 
   // if there's no selection or no search bar in the toolbar, hide the search item.
   // We need a search item to know what the user's preferred search is.
@@ -4423,6 +4395,89 @@ public:
   return YES;
 }
 
+- (void)addSpellingControlsToMenu:(NSMenu*)inMenu
+{
+  nsCOMPtr<nsIEditor> editor;
+  [self currentEditor:getter_AddRefs(editor)];
+  if (!editor)
+    return;
+  nsCOMPtr<nsIInlineSpellChecker> inlineChecker;
+  editor->GetInlineSpellChecker(getter_AddRefs(inlineChecker));
+  if (!inlineChecker)
+    return;
+
+  PRBool checkingIsEnabled = NO;
+  inlineChecker->GetEnableRealTimeSpell(&checkingIsEnabled);
+
+  [inMenu addItem:[NSMenuItem separatorItem]];
+  NSString* enableTitle;
+  if ([NSWorkspace isLeopardOrHigher])
+    enableTitle = NSLocalizedString(@"CheckSpellingWhileTyping", nil);
+  else
+    enableTitle = NSLocalizedString(@"CheckSpellingAsYouType", nil);
+  NSMenuItem* enableItem = [inMenu addItemWithTitle:enableTitle
+                                             action:@selector(toggleSpellingEnabled:)
+                                      keyEquivalent:@""];
+  [enableItem setTarget:self];
+  if (checkingIsEnabled) {
+    [enableItem setState:NSOnState];
+
+    NSMenuItem* languageMenu = [self spellingLanguageMenu];
+    if (languageMenu)
+      [inMenu addItem:languageMenu];
+  }
+}
+
+- (NSMenuItem*)spellingLanguageMenu
+{
+  // We need the 10.5+ -[NSSpellChecker availableLanguages] to build this menu.
+  if (![NSWorkspace isLeopardOrHigher])
+    return nil;
+  NSMenu* submenu = [[[NSMenu alloc] init] autorelease];
+
+  Class NSLocaleClass = NSClassFromString(@"NSLocale");
+  id currentLocale = nil;
+  if (NSLocaleClass)
+    currentLocale = [NSLocaleClass currentLocale];
+  else
+    return nil;
+
+  NSMenuItem* multilingualEntry = nil;
+  NSSpellChecker* spellChecker = [NSSpellChecker sharedSpellChecker];
+  NSString* currentSpellingLanguage = [spellChecker language];
+  NSEnumerator* languageEnumerator = [[spellChecker availableLanguages] objectEnumerator];
+  NSString* languageCode;
+  while ((languageCode = [languageEnumerator nextObject])) {
+    NSMenuItem* languageItem = [[[NSMenuItem alloc] init] autorelease];
+    [languageItem setRepresentedObject:languageCode];
+    [languageItem setTarget:self];
+    [languageItem setAction:@selector(setSpellingLanguage:)];
+    if ([languageCode isEqualToString:currentSpellingLanguage])
+      [languageItem setState:NSOnState];
+    NSString *languageName = [currentLocale displayNameForKey:NSLocaleIdentifier
+                                                        value:languageCode];
+    if (!languageName)
+      languageName = languageCode;
+    [languageItem setTitle:languageName];
+    // Separate out the magic "Multilingual" entry.
+    if ([languageCode isEqualToString:@"Multilingual"])
+      multilingualEntry = languageItem;
+    else 
+      [submenu addItem:languageItem];
+  }
+  // Add Multilingual at the end
+  if (multilingualEntry) {
+    [submenu addItem:[NSMenuItem separatorItem]];
+    [submenu addItem:multilingualEntry];
+  }
+
+  NSMenuItem* languageMenu =  [[[NSMenuItem alloc] initWithTitle:NSLocalizedString(@"SpellingLanguage", nil)
+                                                          action:NULL
+                                                   keyEquivalent:@""] autorelease];
+  [languageMenu setSubmenu:submenu];
+  return languageMenu;
+}
+
 // Context menu methods
 
 //
@@ -4496,6 +4551,37 @@ public:
   [[NSSpellChecker sharedSpellChecker] learnWord:[NSString stringWith_nsAString:misspelledWord]];
   // check the range again to remove the misspelled word indication
   inlineChecker->SpellCheckRange(misspelledRange);
+}
+
+//
+// -setSpellingLanguage:
+//
+// Context menu action for toggling spellcheck of the current field.
+//
+- (IBAction)toggleSpellingEnabled:(id)inSender {
+  PRBool enableSpelling = ([inSender state] == NSOffState) ? PR_TRUE : PR_FALSE;
+
+  nsCOMPtr<nsIEditor> editor;
+  [self currentEditor:getter_AddRefs(editor)];
+  nsCOMPtr<nsIEditor_MOZILLA_1_8_BRANCH> editor18(do_QueryInterface(editor));
+  if (editor18)
+    editor18->SetSpellcheckUserOverride(enableSpelling);
+}
+
+//
+// -setSpellingLanguage:
+//
+// Context menu action for changing the current spell check language.
+//
+- (IBAction)setSpellingLanguage:(id)inSender {
+  [[NSSpellChecker sharedSpellChecker] setLanguage:[inSender representedObject]];
+
+  // re-sync the spell checker to pick up the new language
+  nsCOMPtr<nsIEditor> editor;
+  [self currentEditor:getter_AddRefs(editor)];
+  nsCOMPtr<nsIEditor_MOZILLA_1_8_BRANCH> editor18(do_QueryInterface(editor));
+  if (editor18)
+    editor18->SyncRealTimeSpell();
 }
 
 - (IBAction)openLinkInNewWindow:(id)aSender
@@ -4754,33 +4840,22 @@ public:
 
 - (void)showSearchPluginDetected:(BOOL)pluginsAreDetected
 {
-  if (pluginsAreDetected)
-    [mSearchBar setDetectedSearchPlugins:[[self browserWrapper] detectedSearchPlugins]];
-  else
+  if (pluginsAreDetected) {
+    NSArray* detectedPlugins = [[self browserWrapper] detectedSearchPlugins];
+    [mSearchBar setDetectedSearchPlugins:detectedPlugins];
+    [mSearchSheetTextField setDetectedSearchPlugins:detectedPlugins];
+  }
+  else {
     [mSearchBar setDetectedSearchPlugins:nil];
+    [mSearchSheetTextField setDetectedSearchPlugins:nil];
+  }
 }
 
 - (BOOL)webSearchField:(WebSearchField*)searchField shouldListDetectedSearchPlugin:(NSDictionary *)searchPluginInfoDict
 {
-  // Exclude search plugins which are already installed. 
-  // Without actually parsing the plugin, all we can really compare is the name listed in
-  // |searchPluginInfoDict| (which is what was supplied on the page's autodiscovery link).
-  // It's tough to be perfect here though, because sometimes this name isn't identical to the
-  // actual installed engine name.
-
-  NSString* pluginName = [searchPluginInfoDict objectForKey:kWebSearchPluginNameKey];
-  if (!pluginName)
-    return NO;
-
-  NSEnumerator* installedEngineEnumerator = [[[SearchEngineManager sharedSearchEngineManager] installedSearchEngines] objectEnumerator];
-  NSDictionary* installedSearchEngine;
-  while ((installedSearchEngine = [installedEngineEnumerator nextObject])) {  
-    NSString* installedEngineName = [installedSearchEngine valueForKey:kWebSearchEngineNameKey];
-    if ([pluginName isEqualToString:installedEngineName])
-      return NO;
-  }
-
-  return YES;
+  // Exclude search plugins which are already installed.
+  NSString *searchPluginURL = [[searchPluginInfoDict objectForKey:kWebSearchPluginURLKey] absoluteString];
+  return (![[SearchEngineManager sharedSearchEngineManager] hasSearchEngineFromPluginURL:searchPluginURL]);
 }
 
 - (IBAction)installSearchPlugin:(id)sender
@@ -4794,6 +4869,7 @@ public:
     // Because of this, select the last engine.
     NSString* installedPluginName = [[[SearchEngineManager sharedSearchEngineManager] installedSearchEngineNames] lastObject];
     [mSearchBar setCurrentSearchEngine:installedPluginName];
+    [mSearchSheetTextField setCurrentSearchEngine:installedPluginName];
   }
   else {
     NSString* searchPluginName = [searchPlugin valueForKey:kWebSearchPluginNameKey];
@@ -4802,16 +4878,28 @@ public:
     [alert setMessageText:NSLocalizedString(@"SearchPluginInstallationErrorTitle", nil)];
     [alert setInformativeText:[NSString stringWithFormat:NSLocalizedString(@"SearchPluginInstallationErrorMessage", nil), searchPluginName]];
     [alert setAlertStyle:NSWarningAlertStyle];
-    [alert beginSheetModalForWindow:[self window] 
-                      modalDelegate:self 
-                     didEndSelector:NULL
-                        contextInfo:NULL];
+    if ([[self window] attachedSheet]) {
+      [alert runModal];
+    }
+    else {
+      [alert beginSheetModalForWindow:[self window] 
+                        modalDelegate:self 
+                       didEndSelector:NULL
+                          contextInfo:NULL];
+    }
   }
 }
 
 - (IBAction)manageSearchEngines:(id)sender
 {
   [[SearchEngineEditor sharedSearchEngineEditor] showSearchEngineEditor:self];
+}
+
+- (IBAction)findSearchEngines:(id)sender
+{
+  NSString* findEnginesPage = NSLocalizedStringFromTable(@"FindEnginesPage", @"WebsiteDefaults", nil);
+  if (![findEnginesPage isEqualToString:@"FindEnginesPage"])
+    [[NSApp delegate] showURL:findEnginesPage];
 }
 
 - (void) focusChangedFrom:(NSResponder*) oldResponder to:(NSResponder*) newResponder

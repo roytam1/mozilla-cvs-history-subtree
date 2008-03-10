@@ -37,18 +37,57 @@
  * ***** END LICENSE BLOCK ***** */
 
 #import "FindBarView.h"
+#import "NSWorkspace+Utils.h"
+#import "CHGradient.h"
 
 @implementation FindBarView
 
-//
-// -drawRect:
-//
-// Override to draw the top header of the find bar
-//
+- (void)dealloc
+{
+  [[NSNotificationCenter defaultCenter] removeObserver:self];
+  [super dealloc];
+}
+
+- (void)viewDidMoveToWindow
+{
+  if ([self window] && [NSWorkspace isLeopardOrHigher]) {
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(windowKeyStatusChanged:)
+                                                 name:NSWindowDidBecomeKeyNotification
+                                               object:[self window]];
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(windowKeyStatusChanged:)
+                                                 name:NSWindowDidResignKeyNotification
+                                               object:[self window]];
+  }
+}
+
+- (void)windowKeyStatusChanged:(NSNotification *)aNotification
+{
+  [self setNeedsDisplay:YES];
+}
+
 - (void)drawRect:(NSRect)aRect
 {
+  // Only draw a gradient if the window is main; this isn't the way these bars
+  // ususally work, but it is how the OS draws the status bar, and since the
+  // find bar lives at the bottom of the window it looks better to match that.
+  if ([NSWorkspace isLeopardOrHigher] && [[self window] isMainWindow]) {
+    NSColor* startColor = [NSColor colorWithDeviceWhite:(233.0/255.0) alpha:1.0];
+    NSColor* endColor = [NSColor colorWithDeviceWhite:(207.0/255.0) alpha:1.0];
+    
+    NSRect bounds = [self bounds];
+    NSRect gradientRect = NSMakeRect(aRect.origin.x, 0,
+                                     aRect.size.width, bounds.size.height - 1.0);
+    
+    CHGradient* backgroundGradient =
+    [[[CHGradient alloc] initWithStartingColor:startColor
+                                   endingColor:endColor] autorelease];
+    [backgroundGradient drawInRect:gradientRect angle:270.0];
+  }
+
   [super drawRect:aRect];
-  
+
   // optimize drawing a bit so we're not *always* redrawing our top header. Only
   // draw if the area we're asked to draw overlaps with the top line.
   NSRect bounds = [self bounds];

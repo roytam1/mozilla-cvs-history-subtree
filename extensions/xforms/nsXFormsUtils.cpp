@@ -115,7 +115,7 @@
 #define CANCELABLE 0x01
 #define BUBBLES    0x02
 
-const EventData sXFormsEventsEntries[42] = {
+const EventData sXFormsEventsEntries[43] = {
   { "xforms-model-construct",      PR_FALSE, PR_TRUE  },
   { "xforms-model-construct-done", PR_FALSE, PR_TRUE  },
   { "xforms-ready",                PR_FALSE, PR_TRUE  },
@@ -157,7 +157,8 @@ const EventData sXFormsEventsEntries[42] = {
   { "xforms-link-exception",       PR_FALSE, PR_TRUE  },
   { "xforms-link-error",           PR_FALSE, PR_TRUE  },
   { "xforms-compute-exception",    PR_FALSE, PR_TRUE  },
-  { "xforms-moz-hint-off",         PR_FALSE, PR_TRUE  }
+  { "xforms-moz-hint-off",         PR_FALSE, PR_TRUE  },
+  { "xforms-submit-serialize",     PR_FALSE, PR_TRUE  }
 };
 
 static const EventData sEventDefaultsEntries[] = {
@@ -213,6 +214,7 @@ struct EventItem
   nsXFormsEvent           event;
   nsCOMPtr<nsIDOMNode>    eventTarget;
   nsCOMPtr<nsIDOMElement> srcElement;
+  nsCOMArray<nsIXFormsContextInfo> *contextInfo;
 };
 
 PRInt32 nsXFormsUtils::waitLimit = 10;
@@ -559,7 +561,21 @@ nsXFormsUtils::EvaluateXPath(const nsAString        &aExpression,
     nsCOMPtr<nsIDOMElement> resolverElement = do_QueryInterface(aResolverNode);
     nsCOMPtr<nsIModelElementPrivate> modelPriv = nsXFormsUtils::GetModel(resolverElement);
     nsCOMPtr<nsIDOMNode> model = do_QueryInterface(modelPriv);
-    DispatchEvent(model, eEvent_ComputeException, nsnull, resolverElement);
+
+    // Context Info: 'error-message'
+    // Error message containing the expression being processed.
+    nsAutoString errorMsg;
+    errorMsg.AssignLiteral("Error evaluating expression: ");
+    errorMsg.Append(aExpression);
+
+    nsCOMPtr<nsXFormsContextInfo> contextInfo =
+      new nsXFormsContextInfo(resolverElement);
+    NS_ENSURE_TRUE(contextInfo, NS_ERROR_OUT_OF_MEMORY);
+    contextInfo->SetStringValue("error-message", errorMsg);
+    nsCOMArray<nsIXFormsContextInfo> contextInfoArray;
+    contextInfoArray.AppendObject(contextInfo);
+    DispatchEvent(model, eEvent_ComputeException, nsnull, resolverElement,
+                  &contextInfoArray);
   }
 
   return rv;
@@ -870,7 +886,8 @@ nsXFormsUtils::GetSingleNodeBindingValue(nsIDOMElement* aElement,
 
 nsresult
 DispatchXFormsEvent(nsIDOMNode* aTarget, nsXFormsEvent aEvent,
-                    PRBool *aDefaultActionEnabled)
+                    PRBool *aDefaultActionEnabled,
+                    nsCOMArray<nsIXFormsContextInfo> *aContextInfo)
 {
   nsCOMPtr<nsIDOMDocument> domDoc;
   aTarget->GetOwnerDocument(getter_AddRefs(domDoc));
@@ -890,8 +907,12 @@ DispatchXFormsEvent(nsIDOMNode* aTarget, nsXFormsEvent aEvent,
 
   nsXFormsUtils::SetEventTrusted(event, aTarget);
 
+  // Create an nsXFormsDOMEvent with the context info for the event.
+  nsCOMPtr<nsIXFormsDOMEvent> xfDOMEvent = new nsXFormsDOMEvent(event, aContextInfo);
+  NS_ENSURE_TRUE(xfDOMEvent, NS_ERROR_OUT_OF_MEMORY);
+
   PRBool defaultActionEnabled = PR_TRUE;
-  nsresult rv = target->DispatchEvent(event, &defaultActionEnabled);
+  nsresult rv = target->DispatchEvent(xfDOMEvent, &defaultActionEnabled);
 
   if (NS_SUCCEEDED(rv) && aDefaultActionEnabled)
     *aDefaultActionEnabled = defaultActionEnabled;
@@ -923,6 +944,10 @@ DispatchXFormsEvent(nsIDOMNode* aTarget, nsXFormsEvent aEvent,
     break;
   }
 
+  // Clear the context info array before the next event.
+  if (aContextInfo)
+    aContextInfo->Clear();
+
   return rv;
 }
 
@@ -945,7 +970,8 @@ DeleteVoidArray(void    *aObject,
 
 nsresult
 DeferDispatchEvent(nsIDOMNode* aTarget, nsXFormsEvent aEvent,
-                   nsIDOMElement *aSrcElement)
+                   nsIDOMElement *aSrcElement,
+                   nsCOMArray<nsIXFormsContextInfo> *aContextInfo)
 {
   nsCOMPtr<nsIDOMDocument> domDoc;
   if (aTarget) {
@@ -975,6 +1001,7 @@ DeferDispatchEvent(nsIDOMNode* aTarget, nsXFormsEvent aEvent,
   deferredEvent->event = aEvent;
   deferredEvent->eventTarget = aTarget;
   deferredEvent->srcElement = aSrcElement;
+  deferredEvent->contextInfo = aContextInfo;
   eventList->AppendElement(deferredEvent);
 
   return NS_OK;
@@ -983,7 +1010,8 @@ DeferDispatchEvent(nsIDOMNode* aTarget, nsXFormsEvent aEvent,
 /* static */ nsresult
 nsXFormsUtils::DispatchEvent(nsIDOMNode* aTarget, nsXFormsEvent aEvent,
                              PRBool *aDefaultActionEnabled,
-                             nsIDOMElement *aSrcElement)
+                             nsIDOMElement *aSrcElement,
+                             nsCOMArray<nsIXFormsContextInfo> *aContextInfo)
 {
   // it is valid to have aTarget be null if this is an event that must be
   // targeted at a model per spec and aSrcElement is non-null.  Basically we
@@ -1037,7 +1065,7 @@ nsXFormsUtils::DispatchEvent(nsIDOMNode* aTarget, nsXFormsEvent aEvent,
         // model later when the DOM is finished loading
         if (!aTarget) {
           if (aSrcElement) {
-            DeferDispatchEvent(aTarget, aEvent, aSrcElement);
+            DeferDispatchEvent(aTarget, aEvent, aSrcElement, aContextInfo);
             return NS_OK;
           }
           return NS_ERROR_FAILURE;
@@ -1049,7 +1077,7 @@ nsXFormsUtils::DispatchEvent(nsIDOMNode* aTarget, nsXFormsEvent aEvent,
         PRBool safeToSendEvent = PR_FALSE;
         modelPriv->GetHasDOMContentFired(&safeToSendEvent);
         if (!safeToSendEvent) {
-          DeferDispatchEvent(aTarget, aEvent, nsnull);
+          DeferDispatchEvent(aTarget, aEvent, nsnull, aContextInfo);
           return NS_OK;
         }
       
@@ -1091,7 +1119,7 @@ nsXFormsUtils::DispatchEvent(nsIDOMNode* aTarget, nsXFormsEvent aEvent,
         PRBool safeToSendEvent = PR_FALSE;
         modelPriv->GetHasDOMContentFired(&safeToSendEvent);
         if (!safeToSendEvent) {
-          DeferDispatchEvent(aTarget, aEvent, nsnull);
+          DeferDispatchEvent(aTarget, aEvent, nsnull, aContextInfo);
           return NS_OK;
         }
       
@@ -1101,7 +1129,7 @@ nsXFormsUtils::DispatchEvent(nsIDOMNode* aTarget, nsXFormsEvent aEvent,
       break;
   }
 
-  return DispatchXFormsEvent(aTarget, aEvent, aDefaultActionEnabled);
+  return DispatchXFormsEvent(aTarget, aEvent, aDefaultActionEnabled, aContextInfo);
 
 }
 
@@ -1157,7 +1185,7 @@ nsXFormsUtils::DispatchDeferredEvents(nsIDOMDocument* aDocument)
       NS_ENSURE_STATE(item->eventTarget);
     }
 
-    DispatchXFormsEvent(item->eventTarget, item->event, nsnull);
+    DispatchXFormsEvent(item->eventTarget, item->event, nsnull, item->contextInfo);
   }
 
   doc->DeleteProperty(nsXFormsAtoms::deferredEventListProperty);

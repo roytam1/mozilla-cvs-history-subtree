@@ -3108,7 +3108,7 @@ ToAttributeName(JSContext *cx, jsval v)
     if (!qn)
         return NULL;
 
-    JS_PUSH_TEMP_ROOT_GCTHING(cx, qn, &tvr);
+    JS_PUSH_TEMP_ROOT_QNAME(cx, qn, &tvr);
     obj = js_GetAttributeNameObject(cx, qn);
     JS_POP_TEMP_ROOT(cx, &tvr);
     if (!obj)
@@ -7574,7 +7574,7 @@ js_NewXMLObject(JSContext *cx, JSXMLClass xml_class)
     xml = js_NewXML(cx, xml_class);
     if (!xml)
         return NULL;
-    JS_PUSH_TEMP_ROOT_GCTHING(cx, xml, &tvr);
+    JS_PUSH_TEMP_ROOT_XML(cx, xml, &tvr);
     obj = js_GetXMLObject(cx, xml);
     JS_POP_TEMP_ROOT(cx, &tvr);
     return obj;
@@ -8194,7 +8194,7 @@ js_FilterXMLList(JSContext *cx, JSObject *obj, jsbytecode *pc, jsval *vp)
     JSBool ok, match;
     JSStackFrame *fp;
     uint32 flags;
-    JSObject *scobj, *listobj, *resobj, *withobj, *kidobj;
+    JSObject *scobj, *listobj, *resobj, *withobj, *kidobj, *obj2;
     JSXML *xml, *list, *result, *kid;
     JSXMLArrayCursor cursor;
 
@@ -8245,6 +8245,15 @@ js_FilterXMLList(JSContext *cx, JSObject *obj, jsbytecode *pc, jsval *vp)
             break;
         OBJ_SET_PROTO(cx, withobj, kidobj);
         ok = js_Interpret(cx, pc, vp) && js_ValueToBoolean(cx, *vp, &match);
+        for (obj2 = fp->scopeChain;
+             obj2 != withobj;
+             obj2 = OBJ_GET_PARENT(cx, obj2)) {
+            if (OBJ_GET_CLASS(cx, obj2) == &js_BlockClass) {
+                if (JS_GetPrivate(cx, obj2) != fp)
+                    break;
+                ok &= js_PutBlockObject(cx, obj2);
+            }
+        }
         if (ok && match)
             ok = Append(cx, result, kid);
         if (!ok)

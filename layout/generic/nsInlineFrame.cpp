@@ -339,6 +339,11 @@ nsInlineFrame::ReparentFloatsForInlineChild(nsIFrame* aOurLineContainer,
                aOurLineContainer->GetPrevInFlow(),
                "Don't call this when we have no continuation, it's a waste");
 
+  if (!aFrame) {
+    NS_ASSERTION(aReparentSiblings, "Why did we get called?");
+    return;
+  }
+
   nsIFrame* ancestor = aFrame;
   nsIFrame* ancestorBlockChild;
   do {

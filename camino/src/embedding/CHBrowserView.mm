@@ -87,10 +87,13 @@
 #include "nsISHistory.h"
 #include "nsIHistoryEntry.h"
 #include "nsISHEntry.h"
-#include "nsIWebBrowserFind.h"
 #include "nsNetUtil.h"
 #include "SaveHeaderSniffer.h"
 #include "nsIWebPageDescriptor.h"
+
+// Find in page
+#include "nsIWebBrowserFind.h"
+#include "nsISelection.h"
 
 // Focus accessors
 #include "nsIFocusController.h"
@@ -154,6 +157,7 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
 - (void)ensurePrintSettings;
 - (void)savePrintSettings;
 - (BOOL)isPasswordFieldFocused;
+- (void)collapseSelection;
 
 - (already_AddRefed<nsISecureBrowserUI>)secureBrowserUI;
 
@@ -841,6 +845,17 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
   }
 }
 
+- (void)collapseSelection
+{
+  nsCOMPtr<nsIDOMWindow> domWindow = [self focussedDOMWindow];
+  if (domWindow) {
+    nsCOMPtr<nsISelection> selection;
+    domWindow->GetSelection(getter_AddRefs(selection));
+    if (selection)
+      selection->CollapseToStart();
+  }
+}
+
 - (BOOL)findInPageWithPattern:(NSString*)inText caseSensitive:(BOOL)inCaseSensitive
     wrap:(BOOL)inWrap backwards:(BOOL)inBackwards
 {
@@ -860,15 +875,23 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
       nsCOMPtr<nsIWebBrowserFindInFrames> framesFind(do_QueryInterface(webFind));
       framesFind->SetRootSearchFrame(rootWindow);
       framesFind->SetCurrentSearchFrame(focusedWindow);
-      
-      webFind->SetMatchCase(inCaseSensitive ? PR_TRUE : PR_FALSE);
+
+      // If case sensitivity has been toggled, collapse the selection before
+      // searching (see the comment in findInPage:).
+      PRBool inCaseSensitivePRBool = inCaseSensitive ? PR_TRUE : PR_FALSE;
+      PRBool wasCaseSensitivePRBool;
+      webFind->GetMatchCase(&wasCaseSensitivePRBool);
+      if (inCaseSensitivePRBool != wasCaseSensitivePRBool)
+        [self collapseSelection];
+
+      webFind->SetMatchCase(inCaseSensitivePRBool);
       webFind->SetWrapFind(inWrap ? PR_TRUE : PR_FALSE);
-      webFind->SetFindBackwards(inBackwards ? PR_TRUE : PR_FALSE);
     
       nsAutoString findString;
       [inText assignTo_nsAString:findString];
       webFind->SetSearchString(findString.get());
-      webFind->FindNext(&found);
+
+      return [self findInPage:inBackwards];
     }
     return found;
 }
@@ -879,8 +902,19 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
   if (!webFind)
     return NO;
 
+  // nsIWebBrowserFind searches starting at the *end* of the current selection,
+  // which gives very unexpected results when doing live searching. To work
+  // around that, if the search string and the current selection aren't the same
+  // (which would indicate a find next/previous), collapse the selection before
+  // searching.
+  nsXPIDLString findString;
+  webFind->GetSearchString(getter_Copies(findString));
+  NSString* searchText = [NSString stringWith_nsAString:findString];
+  NSString* selectedText = [self selectedText];
+  if (![searchText caseInsensitiveCompare:selectedText] == NSOrderedSame)
+    [self collapseSelection];
+
   webFind->SetFindBackwards(inBackwards);
-  webFind->SetWrapFind(PR_TRUE);
 
   PRBool found;
   webFind->FindNext(&found);
