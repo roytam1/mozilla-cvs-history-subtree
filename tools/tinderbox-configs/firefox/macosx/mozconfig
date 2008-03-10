@@ -4,8 +4,8 @@
 #
 
 # symbols for breakpad, stabs+ to not get DWARF
-export CFLAGS="-gstabs+ -gfull"
-export CXXFLAGS="-gstabs+ -gfull"
+export CFLAGS="-g -gfull"
+export CXXFLAGS="-g -gfull"
 
 . $topsrcdir/build/macosx/universal/mozconfig
 
