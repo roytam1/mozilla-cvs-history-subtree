@@ -348,7 +348,7 @@ CERT_EncodeGeneralName(CERTGeneralName *genName, SECItem *dest,
 		       PRArenaPool *arena);
 
 extern CERTGeneralName *
-CERT_DecodeGeneralName(PRArenaPool *reqArena, SECItem *encodedName,
+CERT_DecodeGeneralName(PRArenaPool *arena, SECItem *encodedName,
 		       CERTGeneralName  *genName);
 
 
@@ -360,8 +360,7 @@ CERT_DecodeGeneralName(PRArenaPool *reqArena, SECItem *encodedName,
 **	"derCert" the DER encoded certificate
 **	"key" the returned key
 */
-extern SECStatus CERT_KeyFromDERCert(PRArenaPool *reqArena, SECItem *derCert,
-                                     SECItem *key);
+extern SECStatus CERT_KeyFromDERCert(PRArenaPool *arena, SECItem *derCert, SECItem *key);
 
 extern SECStatus CERT_KeyFromIssuerAndSN(PRArenaPool *arena, SECItem *issuer,
 					 SECItem *sn, SECItem *key);
@@ -1149,7 +1148,7 @@ CERTUserNotice *
 CERT_DecodeUserNotice(SECItem *noticeItem);
 
 extern CERTGeneralName *
-CERT_DecodeAltNameExtension(PRArenaPool *reqArena, SECItem *EncodedAltName);
+CERT_DecodeAltNameExtension(PRArenaPool *arena, SECItem *EncodedAltName);
 
 extern CERTNameConstraints *
 CERT_DecodeNameConstraintsExtension(PRArenaPool *arena, 
@@ -1157,7 +1156,7 @@ CERT_DecodeNameConstraintsExtension(PRArenaPool *arena,
 
 /* returns addr of a NULL termainated array of pointers to CERTAuthInfoAccess */
 extern CERTAuthInfoAccess **
-CERT_DecodeAuthInfoAccessExtension(PRArenaPool *reqArena,
+CERT_DecodeAuthInfoAccessExtension(PRArenaPool *arena,
 				   SECItem     *encodedExtension);
 
 extern CERTPrivKeyUsagePeriod *

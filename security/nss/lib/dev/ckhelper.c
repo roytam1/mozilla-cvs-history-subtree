@@ -710,11 +710,8 @@ nssCryptokiPrivateKey_SetCertificate (
     } else {
 	NSSSlot *slot = nssToken_GetSlot(token);
 	session = nssSlot_CreateSession(token->slot, NULL, PR_TRUE);
-	nssSlot_Destroy(slot);
-	if (!session) {
-	    return PR_FAILURE;
-	}
 	createdSession = PR_TRUE;
+	nssSlot_Destroy(slot);
     }
 
     ckrv = CKAPI(epv)->C_SetAttributeValue(session->handle,

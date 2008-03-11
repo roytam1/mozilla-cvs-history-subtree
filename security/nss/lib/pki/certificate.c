@@ -493,10 +493,10 @@ nssCertificate_BuildChain (
     PRStatus  st;
     PRStatus  ret = PR_SUCCESS;
 
-    if (!c || !cc ||
-        (!td && (td = NSSCertificate_GetTrustDomain(c)) == NULL)) {
+    if (!td)
+	td = NSSCertificate_GetTrustDomain(c);
+    if (!td || !c || !cc) 
 	goto loser;
-    }
 #ifdef NSS_3_4_CODE
     /* bump the usage up to CA level */
     issuerUsage.nss3lookingForCA = PR_TRUE;
@@ -940,9 +940,6 @@ nssCertificateList_DoCallback (
     NSSCertificate *cert;
     PRStatus nssrv;
     certs = nssList_CreateIterator(certList);
-    if (!certs) {
-        return PR_FAILURE;
-    }
     for (cert  = (NSSCertificate *)nssListIterator_Start(certs);
          cert != (NSSCertificate *)NULL;
          cert  = (NSSCertificate *)nssListIterator_Next(certs))
@@ -1157,7 +1154,7 @@ nssCRL_GetEncoding (
   NSSCRL *crl
 )
 {
-    if (crl && crl->encoding.data != NULL && crl->encoding.size > 0) {
+    if (crl->encoding.data != NULL && crl->encoding.size > 0) {
 	return &crl->encoding;
     } else {
 	return (NSSDER *)NULL;

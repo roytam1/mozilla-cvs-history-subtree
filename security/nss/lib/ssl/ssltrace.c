@@ -262,15 +262,11 @@ void
 ssl_Trace(const char *format, ... )
 {
     char buf[2000]; 
+
     va_list args;
-
-    if (ssl_trace_iob) {
-	va_start(args, format);
-	PR_vsnprintf(buf, sizeof(buf), format, args);
-	va_end(args);
-
-	fputs(buf,  ssl_trace_iob);
-	fputs("\n", ssl_trace_iob);
-    }
+    va_start(args, format);
+    PR_vsnprintf(buf, sizeof(buf), format, args);
+    va_end(args);
+    puts(buf);
 }
 #endif

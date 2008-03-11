@@ -211,7 +211,7 @@ static const char CVS_ID[] = $cvsid;
 EOD
     ;
 
-foreach $b (sort values(%constants)) {
+while(($a,$b) = each(%constants)) {
   print CFILE $b;
 }
 

@@ -446,7 +446,7 @@ wait4msg( LDAP *ld, int msgid, int all, int unlock_permitted,
 				    lc->lconn_sb ) ) {
 					lc->lconn_status = LDAP_CONNST_CONNECTED;
 					LDAPDebug( LDAP_DEBUG_TRACE,
-					"wait4msg: connection 0x%p -"
+					"wait4msg: connection 0x%x -"
 					" LDAP_CONNST_CONNECTING ->"
 					" LDAP_CONNST_CONNECTED\n",
 					lc, 0, 0 );
@@ -547,9 +547,8 @@ read1msg( LDAP *ld, int msgid, int all, Sockbuf *sb, LDAPConn *lc,
 {
 	BerElement	*ber;
 	LDAPMessage	*new, *l, *prev, *chainprev, *tmp;
-	ber_int_t	id;
-	ber_tag_t	tag;
-	ber_len_t	len;
+	long		id;
+	unsigned long	tag, len;
 	int		terrno, lderr, foundit = 0;
 	LDAPRequest	*lr;
 	int		rc, has_parent, message_can_be_returned;
@@ -613,7 +612,7 @@ read1msg( LDAP *ld, int msgid, int all, Sockbuf *sb, LDAPConn *lc,
 		lr = NULL;
 	} else if (( lr = nsldapi_find_request_by_msgid( ld, id )) == NULL ) {
 		LDAPDebug( LDAP_DEBUG_ANY,
-		    "no request for response with msgid %d (tossing)\n",
+		    "no request for response with msgid %ld (tossing)\n",
 		    id, 0, 0 );
 		ber_free( ber, 1 );
 		return( NSLDAPI_RESULT_NOT_FOUND );	/* continue looking */
@@ -625,7 +624,7 @@ read1msg( LDAP *ld, int msgid, int all, Sockbuf *sb, LDAPConn *lc,
 		LDAP_SET_LDERRNO( ld, LDAP_DECODING_ERROR, NULL, NULL );
 		return( NSLDAPI_RESULT_ERROR );
 	}
-	LDAPDebug( LDAP_DEBUG_TRACE, "got %s msgid %d, original id %d\n",
+	LDAPDebug( LDAP_DEBUG_TRACE, "got %s msgid %ld, original id %d\n",
 	    ( tag == LDAP_RES_SEARCH_ENTRY ) ? "ENTRY" :
 	    ( tag == LDAP_RES_SEARCH_REFERENCE ) ? "REFERENCE" : "RESULT", id,
 	    ( lr == NULL ) ? id : lr->lr_origid );
@@ -720,7 +719,7 @@ read1msg( LDAP *ld, int msgid, int all, Sockbuf *sb, LDAPConn *lc,
 				id = lr->lr_msgid;
 				tag = lr->lr_res_msgtype;
 				LDAPDebug( LDAP_DEBUG_TRACE,
-				    "request %d done\n", id, 0, 0 );
+				    "request %ld done\n", id, 0, 0 );
 LDAPDebug( LDAP_DEBUG_TRACE,
 "res_errno: %d, res_error: <%s>, res_matched: <%s>\n",
 lr->lr_res_errno, lr->lr_res_error ? lr->lr_res_error : "",
@@ -823,7 +822,7 @@ lr->lr_res_matched ? lr->lr_res_matched : "" );
 	}
 
 	LDAPDebug( LDAP_DEBUG_TRACE,
-            "adding response 0x%p - id %d type %d",
+            "adding response 0x%x - id %d type %d",
             new, new->lm_msgid, new->lm_msgtype );
         LDAPDebug( LDAP_DEBUG_TRACE, " (looking for id %d)\n", msgid, 0, 0 );
 
@@ -1038,8 +1037,8 @@ check_for_refs( LDAP *ld, LDAPRequest *lr, BerElement *ber,
 static int
 build_result_ber( LDAP *ld, BerElement **berp, LDAPRequest *lr )
 {
-	ber_len_t	len;
-	ber_int_t	along;
+	unsigned long	len;
+	long		along;
 	BerElement	*ber;
 	int		err;
 
@@ -1049,7 +1048,7 @@ build_result_ber( LDAP *ld, BerElement **berp, LDAPRequest *lr )
 	}
 	*berp = ber;
 	if ( ber_printf( ber, "{it{ess}}", lr->lr_msgid,
-	    lr->lr_res_msgtype, lr->lr_res_errno,
+	    (long)lr->lr_res_msgtype, lr->lr_res_errno,
 	    lr->lr_res_matched ? lr->lr_res_matched : "",
 	    lr->lr_res_error ? lr->lr_res_error : "" ) == -1 ) {
 		return( LDAP_ENCODING_ERROR );
@@ -1324,8 +1323,7 @@ int
 cldap_getmsg( LDAP *ld, struct timeval *timeout, BerElement **ber )
 {
 	int		rc;
-	ber_tag_t	tag;
-	ber_len_t len;
+	unsigned long	tag, len;
 
 	if ( ld->ld_sbp->sb_ber.ber_ptr >= ld->ld_sbp->sb_ber.ber_end ) {
 		rc = cldap_select1( ld, timeout );
@@ -1354,7 +1352,7 @@ nsldapi_post_result( LDAP *ld, int msgid, LDAPMessage *result )
 	LDAPPend	*lp;
 
 	LDAPDebug( LDAP_DEBUG_TRACE,
-	    "nsldapi_post_result(ld=0x%p, msgid=%d, result=0x%p)\n",
+	    "nsldapi_post_result(ld=0x%x, msgid=%d, result=0x%x)\n",
 	    ld, msgid, result );
 	LDAP_MUTEX_LOCK( ld, LDAP_PEND_LOCK );
 	if( msgid == LDAP_RES_ANY ) {
