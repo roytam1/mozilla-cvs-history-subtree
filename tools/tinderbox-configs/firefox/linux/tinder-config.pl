@@ -73,7 +73,7 @@ $StartupPerformanceTest   = 1;  # Ts
 
 $TestsPhoneHome           = 1;  # Should test report back to server?
 $TestOnlyTinderbox = 1;
-$DownloadBuildFile = 'firefox-2.0.0.13pre.en-US.linux-i686.tar.gz';
+$DownloadBuildFile = 'firefox-2.0.0.14pre.en-US.linux-i686.tar.gz';
 $DownloadBuildURL = 'http://stage.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds/production-prometheus-vm-mozilla1.8';
 $DownloadBuildDir = 'firefox';
 
