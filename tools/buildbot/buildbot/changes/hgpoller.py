@@ -35,8 +35,7 @@ class HgPoller(base.ChangeSource):
         self.hgURL = hgURL
         self.branch = branch
         self.pollInterval = pollInterval
-        self.lastChange = time.time()
-        self.lastPoll = time.time()
+        self.lastChange = None
 
     def startService(self):
         self.loop = LoopingCall(self.poll)
@@ -79,38 +78,38 @@ class HgPoller(base.ChangeSource):
         url = self._make_url()
         log.msg("Polling Hg server at %s" % url)
         
-        self.lastPoll = time.time()
         return defer.maybeDeferred(urlopen, url)
 
     def _parse_changes(self, query):
         dom = minidom.parseString(query.read())
         items = dom.getElementsByTagName("item")
         changes = []
+        # Items come in reverse chronological order
         for i in items:
-            d = dict()
+            d = {}
             for k in ["description", "link", "author", "pubDate"]:
                 d[k] = i.getElementsByTagName(k)[0].firstChild.wholeText
+            if d["link"] == self.lastChange:
+                break  # no more new changes
             # strip out HTML newlines
             d["description"] = d["description"].replace("<br/>","")
             # need to parse date with timezone, and turn into a UTC timestamp
             d["pubDate"] = rfc822.mktime_tz(rfc822.parsedate_tz(d["pubDate"]) )
             changes.append(d)
-        changes = [c for c in changes if c["pubDate"] > self.lastChange]
-        changes.reverse() # want t hem in reverse chronological order
+        changes.reverse() # want them in chronological order
         return changes
     
     def _process_changes(self, query):
         change_list = self._parse_changes(query)
-        for change in change_list:
-            c = changes.Change(who = change["author"],
-                               files = [], # sucks
-                               comments = change["description"],
-                               when = change["pubDate"],
-                               branch = self.branch)
-            self.parent.addChange(c)
-        if len(change_list) > 0:
-            self.lastChange = max(self.lastPoll, *[c["pubDate"] for c in
-                                                       change_list])
-        else:
-            self.lastChange = self.lastPoll
 
+        # Skip calling addChange() if this is the first successful poll.
+        if self.lastChange is not None:
+            for change in change_list:
+                c = changes.Change(who = change["author"],
+                                   files = [], # sucks
+                                   comments = change["description"],
+                                   when = change["pubDate"],
+                                   branch = self.branch)
+                self.parent.addChange(c)
+        if change_list:
+            self.lastChange = change_list[-1]["link"]
