@@ -142,7 +142,7 @@ $BuildNameExtra = 'Fx-Release';
 $ConfigureOnly = 1;
 %WGetFiles = (
 # CONFIG: 	      "http://%stagingServer%/pub/mozilla.org/firefox/nightly/%version%-candidates/rc%rc%/firefox-%version%.en-US.linux-i686.tar.gz" => 
-"http://production-1.8-master.build.mozilla.org/pub/mozilla.org/firefox/nightly/2.0.0.12-candidates/rc4/firefox-2.0.0.12.en-US.linux-i686.tar.gz" => 
+"http://production-1.8-master.build.mozilla.org/pub/mozilla.org/firefox/nightly/2.0.0.13-candidates/rc1/firefox-2.0.0.13.en-US.linux-i686.tar.gz" => 
 # CONFIG:	      "/%l10n_buildDir%/%l10n_buildPlatform%/firefox.tar.gz"
 "//builds/tinderbox/Fx-Mozilla1.8-l10n-Release/Linux_2.4.21-27.0.4.EL_Depend/firefox.tar.gz"
 	      );
@@ -164,7 +164,7 @@ $BuildTree  = 'MozillaRelease';
 
 #$BuildName = '';
 # CONFIG: $BuildTag = '%productTag%_RELEASE';
-$BuildTag = 'FIREFOX_2_0_0_12_RELEASE';
+$BuildTag = 'FIREFOX_2_0_0_13_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -204,7 +204,7 @@ $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
 # CONFIG: $milestone     = "firefox%version%-l10n";
-$milestone     = "firefox2.0.0.12-l10n";
+$milestone     = "firefox2.0.0.13-l10n";
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 1;
