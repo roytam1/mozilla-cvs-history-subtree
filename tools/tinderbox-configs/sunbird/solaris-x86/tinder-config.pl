@@ -195,6 +195,7 @@ $ObjDir = 'sunbird-obj';
 # Extra build name, if needed.
 #$BuildNameExtra = '';
 $BuildNameExtra = 'Sunbird-1.8-Testrelease';
+#$BuildNameExtra = 'Sb-Release';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -253,7 +254,7 @@ $shiptalkback  = 0;
 #$OfficialBuildMachinery = 1; # Allow official clobber nightlies.  When false, $cachebuild in post-mozilla-rel.pl can never be true.
 #$ReleaseGroup = ''; # group to set uploaded files to (if non-empty)
 #$build_hour    = "3";
-$build_hour    = "8";
+$build_hour    = "3";
 #$package_creation_path = "/xpinstall/packager";
 # path to make in to recreate mac bundle, needed for mac + talkback:
 # $mac_bundle_path = "/browser/app";
@@ -348,7 +349,7 @@ $update_aus_host = 'aus2-community.mozilla.org';
 # config options. Wildcards can be used. These variables are mainly used by
 # post-mozilla-rel.pl
 @ReleaseExtensions = ();
-$ReleaseExtensionSubdir = "Solaris-i686"; # set to e.g. "xpi"; if not specified, <os>-xpi will be used.
+$ReleaseExtensionSubdir = "solaris-i386-xpi"; # set to e.g. "xpi"; if not specified, <os>-xpi will be used.
 #$ReleaseExtensionSubdir = "" # set to e.g. "xpi"; if not specified, <os>-xpi will be used.
 
 # Build Mac OS X universal binaries (must be used with an objdir and

@@ -197,6 +197,7 @@ $ObjDir = 'lightning-obj';
 # Extra build name, if needed.
 #$BuildNameExtra = '';
 $BuildNameExtra = 'Lightning-1.8-Testrelease';
+#$BuildNameExtra = 'Lt-Release';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -253,7 +254,7 @@ $shiptalkback  = 0;
 #$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
 #$OfficialBuildMachinery = 1; # Allow official clobber nightlies.  When false, $cachebuild in post-mozilla-rel.pl can never be true.
 #$ReleaseGroup = ''; # group to set uploaded files to (if non-empty)
-#$build_hour    = "3";
+$build_hour    = "3";
 #$package_creation_path = "/xpinstall/packager";
 # path to make in to recreate mac bundle, needed for mac + talkback:
 # $mac_bundle_path = "/browser/app";
@@ -332,7 +333,7 @@ $archive       = 1;
 # config options. Wildcards can be used. These variables are mainly used by
 # post-mozilla-rel.pl
 @ReleaseExtensions = ('lightning.xpi');
-$ReleaseExtensionSubdir = "Solaris-i686"; # set to e.g. "xpi"; if not specified, <os>-xpi will be used.
+$ReleaseExtensionSubdir = "solaris-i386-xpi"; # set to e.g. "xpi"; if not specified, <os>-xpi will be used.
 #$ReleaseExtensionSubdir = "" # set to e.g. "xpi"; if not specified, <os>-xpi will be used.
 
 # Build Mac OS X universal binaries (must be used with an objdir and
