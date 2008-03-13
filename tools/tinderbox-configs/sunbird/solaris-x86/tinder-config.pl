@@ -207,6 +207,7 @@ $moz_cvsroot   = ":pserver:anonymous\@cvs-mirror.mozilla.org:/cvsroot";
 # Extra build name, if needed.
 #$BuildNameExtra = '';
 $BuildNameExtra = 'Sunbird-1.8-l10n-Testrelease';
+#$BuildNameExtra = 'Sb-Moz1.8-l10n';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -281,7 +282,7 @@ $shiptalkback  = 0;
 #$ReleaseGroup = ''; # group to set uploaded files to (if non-empty)
 $ReleaseGroup = 'calendar'; # group to set uploaded files to (if non-empty)
 #$build_hour    = "23";
-$build_hour    = "13";
+$build_hour    = "8";
 #$package_creation_path = "/xpinstall/packager";
 # path to make in to recreate mac bundle, needed for mac + talkback:
 # $mac_bundle_path = "/browser/app";
@@ -402,7 +403,7 @@ $update_aus_host = 'aus2-community.mozilla.org';
 # config options. Wildcards can be used. These variables are mainly used by
 # post-mozilla-rel.pl
 @ReleaseExtensions = ();
-$ReleaseExtensionSubdir = "Solaris-i386"; # set to e.g. "xpi"; if not specified, <os>-xpi will be used.
+$ReleaseExtensionSubdir = "solaris-i386-xpi"; # set to e.g. "xpi"; if not specified, <os>-xpi will be used.
 #$ReleaseExtensionSubdir = "" # set to e.g. "xpi"; if not specified, <os>-xpi will be used.
 
 # Build Mac OS X universal binaries (must be used with an objdir and
