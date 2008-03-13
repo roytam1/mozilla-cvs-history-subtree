@@ -323,7 +323,7 @@ nsHelperAppDialog.prototype = {
          const nsITimer = Components.interfaces.nsITimer;
          this._timer = Components.classes["@mozilla.org/timer;1"]
                                  .createInstance(nsITimer);
-         this._timer.initWithCallback(this, 250, nsITimer.TYPE_ONE_SHOT);
+         this._timer.initWithCallback(this, 1000, nsITimer.TYPE_ONE_SHOT);
     },
 
     // initIntro:
@@ -405,7 +405,7 @@ nsHelperAppDialog.prototype = {
         if (!this._timer) {
           // Don't enable the button if the initial timer is running
           var script = "document.documentElement.getButton('accept').disabled = false";
-          this.mDialog.setTimeout(script, 250);
+          this.mDialog.setTimeout(script, 1000);
         }
     },
 
