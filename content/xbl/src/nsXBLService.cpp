@@ -173,7 +173,10 @@ public:
 
         if (!sc) {
           nsCOMPtr<nsIDocumentObserver> obs(do_QueryInterface(shell));
+          nsCOMPtr<nsIDocument> doc = shell->GetDocument();
+          obs->BeginUpdate(doc, UPDATE_CONTENT_MODEL);
           obs->ContentInserted(doc, parent, mBoundElement, index);
+          obs->EndUpdate(doc, UPDATE_CONTENT_MODEL);
         }
       }
     }
