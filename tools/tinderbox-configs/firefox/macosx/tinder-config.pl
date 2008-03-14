@@ -141,7 +141,7 @@ $ConfigureOnly = 1;
 
 $LocalizationVersionFile = 'browser/config/version.txt';
 %WGetFiles = (
-	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/latest-mozilla1.8/firefox-%version%.en-US.mac.dmg" =>
+	      "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/latest-mozilla1.8/firefox-%version%.en-US.mac.dmg" =>
 	      "/builds/tinderbox/Fx-Mozilla1.8-l10n/Darwin_8.7.0_Depend/firefox.dmg"
 	      );
 
@@ -193,7 +193,7 @@ $package_creation_path = "/browser/installer";
 $mac_bundle_path = "/browser/app";
 $ssh_user      = "ffxbld";
 $ssh_key       = "'$ENV{HOME}/.ssh/ffxbld_dsa'";
-$ssh_server    = "stage.mozilla.org";
+$ssh_server    = "stage-old.mozilla.org";
 $ftp_path      = "/home/ftp/pub/firefox/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";

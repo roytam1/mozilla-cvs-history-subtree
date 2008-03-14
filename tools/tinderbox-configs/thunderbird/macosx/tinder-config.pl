@@ -142,7 +142,7 @@ $ConfigureOnly = 1;
 
 $LocalizationVersionFile = 'mail/config/version.txt';
 %WGetFiles = (
-	     "http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/latest-mozilla1.8/thunderbird-%version%.en-US.mac.dmg" =>
+	     "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly/latest-mozilla1.8/thunderbird-%version%.en-US.mac.dmg" =>
 	     "/builds/tinderbox/Tb-Mozilla1.8-l10n/Darwin_8.7.0_Depend/thunderbird.dmg"
 	     );
 
@@ -197,7 +197,7 @@ $package_creation_path = "/mail/installer";
 $mac_bundle_path = "/mail/app";
 $ssh_user      = "tbirdbld";
 $ssh_key       = "'$ENV{HOME}/.ssh/tbirdbld_dsa'";
-$ssh_server    = "stage.mozilla.org";
+$ssh_server    = "stage-old.mozilla.org";
 $ftp_path      = "/home/ftp/pub/thunderbird/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly";
 $tbox_ftp_path = "/home/ftp/pub/thunderbird/tinderbox-builds";
