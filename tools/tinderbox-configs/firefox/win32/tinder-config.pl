@@ -239,5 +239,5 @@ $BinaryName = 'firefox.exe';
 # the latest build and unpack it rather than building it.
 $TestOnlyTinderbox = 1;
 $DownloadBuildFile = 'firefox-2.0.0.14pre.en-US.win32.zip';
-$DownloadBuildURL = 'http://stage.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds/prod-pacifica-vm-mozilla1.8';
+$DownloadBuildURL = 'http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds/prod-pacifica-vm-mozilla1.8';
 $DownloadBuildDir = 'firefox';
