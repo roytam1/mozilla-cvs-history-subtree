@@ -1,0 +1,26 @@
+mk_add_options MOZ_CO_PROJECT="calendar"
+mk_add_options MOZ_CO_MODULE="mozilla/tools/update-packaging"
+mk_add_options JS_READLINE=1
+
+ac_add_options --enable-application="calendar"
+ac_add_options --enable-update-packaging
+ac_add_options --disable-debug
+# currently doesn't work on solaris
+#ac_add_options --enable-tests
+ac_add_options --disable-tests
+# explicit setting this causes problems with image decoder "icon"
+# 1.8 branch got this still as default anyway
+#ac_add_options --enable-default-toolkit=gtk2
+ac_add_options --disable-installer
+
+ac_add_options --enable-static
+ac_add_options --disable-shared
+
+# for release mode
+ac_add_options --enable-official-branding
+
+# custom settings
+#ac_add_options --enable-extensions=default,lightning,inspector
+ac_add_options --x-includes=$SYSBASE/usr/include/X11
+ac_add_options --x-libraries=$SYSBASE/usr/lib
+ac_add_options --x-libraries=$SYSBASE/usr/sfw/lib
