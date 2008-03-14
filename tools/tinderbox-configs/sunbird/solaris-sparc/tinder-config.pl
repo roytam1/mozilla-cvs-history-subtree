@@ -219,7 +219,7 @@ $ConfigureOnly = 1;
 $LocalizationVersionFile = 'calendar/sunbird/config/version.txt';
 
 %WGetFiles = (
-          "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/experimental/nightly/latest-mozilla1.8/sunbird-%version%.en-US.solaris2.10-sparc.tar.bz2" =>
+          "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/experimental/nightly/latest-mozilla1.8/sunbird-%version%.en-US.solaris2.10-sparc.tar.bz2" =>
           "/home/calbld/tb-lightning-sols/Sunbird1.8-l10n/SunOS_5.10_Clobber/sunbird.tar.bz2"
           );
 
@@ -343,7 +343,7 @@ $package_creation_path = "/calendar/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
 $ssh_version   = "2";
 #$ssh_user      = "calbld";
-$ssh_server    = "stage.mozilla.org";
+$ssh_server    = "stage-old.mozilla.org";
 #$ftp_path      = "/home/ftp/pub/calendar/sunbird/nightly";
 #$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly";
 #$tbox_ftp_path = "/home/ftp/pub/calendar/sunbird/tinderbox-builds";
