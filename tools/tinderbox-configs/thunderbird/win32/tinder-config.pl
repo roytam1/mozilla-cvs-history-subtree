@@ -140,9 +140,9 @@ $ConfigureOnly = 1;
 
 # On windows
 $LocalizationVersionFile = 'mail/config/version.txt';
-%WGetFiles = ("http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/latest-trunk/thunderbird-%version%.en-US.win32.installer.exe" =>
+%WGetFiles = ("http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly/latest-trunk/thunderbird-%version%.en-US.win32.installer.exe" =>
 	      "/e/builds/tinderbox/Tb-Trunk-l10n/WINNT_5.2_Depend/thunderbird-installer.exe",
-	      "http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/latest-trunk/thunderbird-%version%.en-US.win32.zip" =>
+	      "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly/latest-trunk/thunderbird-%version%.en-US.win32.zip" =>
 	      "/e/builds/tinderbox/Tb-Trunk-l10n/WINNT_5.2_Depend/thunderbird.zip");
 
 $BuildLocalesArgs = "ZIP_IN=/e/builds/tinderbox/Tb-Trunk-l10n/WINNT_5.2_Depend/thunderbird.zip WIN32_INSTALLER_IN=/e/builds/tinderbox/Tb-Trunk-l10n/WINNT_5.2_Depend/thunderbird-installer.exe";
@@ -195,7 +195,7 @@ $package_creation_path = "/mail/installer";
 $ssh_version   = "2";
 $ssh_user      = "tbirdbld";
 $ssh_key       = "'$ENV{HOME}/.ssh/tbirdbld_dsa'";
-$ssh_server    = "stage.mozilla.org";
+$ssh_server    = "stage-old.mozilla.org";
 $ReleaseGroup  = "thunderbird";
 $ftp_path      = "/home/ftp/pub/thunderbird/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly";

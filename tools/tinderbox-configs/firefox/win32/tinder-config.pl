@@ -161,9 +161,9 @@ $ConfigureOnly = 1;             # Configure only, don't build.
 $LocaleProduct = "browser";
 $LocalizationVersionFile = 'browser/config/version.txt';
 %WGetFiles = (
-	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/latest-trunk/firefox-%version%.en-US.win32.installer.exe" =>
+	      "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/latest-trunk/firefox-%version%.en-US.win32.installer.exe" =>
 	      "/e/builds/tinderbox/Fx-Trunk-l10n/WINNT_5.2_Depend/firefox-installer.exe",
-	      "http://stage.mozilla.org/pub/mozilla.org/firefox/nightly/latest-trunk/firefox-%version%.en-US.win32.zip" =>
+	      "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/latest-trunk/firefox-%version%.en-US.win32.zip" =>
 	      "/e/builds/tinderbox/Fx-Trunk-l10n/WINNT_5.2_Depend/firefox.zip"
 	      );
 
@@ -220,7 +220,7 @@ $package_creation_path = "/browser/installer";
 $ssh_version   = "2";
 $ssh_user      = "ffxbld";
 $ssh_key       = "'$ENV{HOME}/.ssh/ffxbld_dsa'";
-$ssh_server    = "stage.mozilla.org";
+$ssh_server    = "stage-old.mozilla.org";
 $ReleaseGroup  = "firefox";
 $ftp_path      = "/home/ftp/pub/firefox/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";

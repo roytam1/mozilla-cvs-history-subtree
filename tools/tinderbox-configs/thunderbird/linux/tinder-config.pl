@@ -148,7 +148,7 @@ $ConfigureOnly = 1;
 
 $LocalizationVersionFile = 'mail/config/version.txt';
 %WGetFiles = (
-	      "http://stage.mozilla.org/pub/mozilla.org/thunderbird/nightly/latest-trunk/thunderbird-%version%.en-US.linux-i686.tar.bz2" =>
+	      "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly/latest-trunk/thunderbird-%version%.en-US.linux-i686.tar.bz2" =>
 	      "/builds/tinderbox/Tb-Trunk-l10n/Linux_2.6.18-8.el5_Depend/thunderbird.tar.bz2"
 	      );
 
@@ -202,7 +202,7 @@ $package_creation_path = "/mail/installer";
 $ssh_version   = "2";
 $ssh_user      = "tbirdbld";
 $ssh_key       = "'$ENV{HOME}/.ssh/tbirdbld_dsa'";
-$ssh_server    = "stage.mozilla.org";
+$ssh_server    = "stage-old.mozilla.org";
 $ReleaseGroup  = "thunderbird";
 $ftp_path      = "/home/ftp/pub/thunderbird/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly";
