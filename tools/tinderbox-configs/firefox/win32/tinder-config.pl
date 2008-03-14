@@ -247,6 +247,6 @@ $BinaryName = 'firefox.exe';
 # the latest build and unpack it rather than building it.
 $TestOnlyTinderbox = 1;
 $DownloadBuildFile = 'firefox-3.0b5pre.en-US.win32.zip';
-$DownloadBuildURL = 'http://stage.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds/FX-WIN32-TBOX-trunk';
+$DownloadBuildURL = 'http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds/FX-WIN32-TBOX-trunk';
 $DownloadBuildDir = 'firefox';
 
