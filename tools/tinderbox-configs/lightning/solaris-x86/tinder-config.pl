@@ -332,7 +332,7 @@ $archive       = 1;
 # Any extensions that are built can be uploaded to the stage server using these
 # config options. Wildcards can be used. These variables are mainly used by
 # post-mozilla-rel.pl
-@ReleaseExtensions = ('lightning.xpi');
+@ReleaseExtensions = ('lightning.xpi', 'gdata-provider.xpi');
 $ReleaseExtensionSubdir = "solaris-i386-xpi"; # set to e.g. "xpi"; if not specified, <os>-xpi will be used.
 #$ReleaseExtensionSubdir = "" # set to e.g. "xpi"; if not specified, <os>-xpi will be used.
 
