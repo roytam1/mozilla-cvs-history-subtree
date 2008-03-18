@@ -81,7 +81,7 @@ $DHTMLPerformanceTest     = 0;  # Tdhtml
 #$XULWindowOpenTest        = 0;  # Txul
 $StartupPerformanceTest   = 0;  # Ts
 
-$TestsPhoneHome           = 1;  # Should test report back to server?
+$TestsPhoneHome           = 0;  # Should test report back to server?
 $GraphNameOverride        = 'fx-linux-tbox';
 
 # $results_server
@@ -201,7 +201,7 @@ $ReleaseBuild  = 1;
 $shiptalkback  = 0;
 $ReleaseToLatest = 1; # Push the release to latest-<milestone>?
 $ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
-$build_hour    = 4;
+$build_hour    = 14;
 $package_creation_path = "/browser/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
 $ssh_version   = "2";
@@ -211,8 +211,8 @@ $ssh_key       = "'$ENV{HOME}/.ssh/ffxbld_dsa'";
 # CONFIG: $ssh_server    = "%sshServer%";
 $ssh_server    = "stage-old.mozilla.org";
 $ReleaseGroup  = "firefox";
-$ftp_path      = "/home/ftp/pub/firefox/nightly";
-$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
+$ftp_path      = "/home/ftp/pub/firefox/nightly/experimental";
+$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/experimental";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
 $milestone     = "trunk";
@@ -223,7 +223,7 @@ $archive       = 1;
 $push_raw_xpis = 0;
 # CONFIG: $update_aus_host = '%ausServer%';
 $update_aus_host = 'aus2-staging.mozilla.org';
-$update_pushinfo = 1;
+$update_pushinfo = 0;
 $update_package = 1;
 $update_product = "Firefox";
 $update_version = "trunk";
