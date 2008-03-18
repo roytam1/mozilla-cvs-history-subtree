@@ -62,7 +62,7 @@ $ProductName              = "Firefox";
 $VendorName               = 'Mozilla';
 
 # CONFIG: $RunMozillaTests          = %runMozillaTests%;
-$RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
+$RunMozillaTests          = 1;
 $RegxpcomTest             = 1;
 $AliveTest                = 1;
 #$JavaTest                 = 0;
@@ -146,7 +146,7 @@ $pageload_server      = "pageload.build.mozilla.org";
 
 #$moz_cvsroot   = $ENV{CVSROOT};
 # CONFIG: $moz_cvsroot   = '%mozillaCvsroot%';
-$moz_cvsroot   = ":ext:ffxbld\@cvs.mozilla.org:/cvsroot";
+$moz_cvsroot   = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 
 #- Set these proper values for your tinderbox server
 #$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
@@ -174,7 +174,7 @@ $BuildNameExtra = 'Nightly';
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
 # CONFIG: $BuildTree  = '%buildTree%';
-$BuildTree  = 'Firefox';
+$BuildTree  = 'MozillaTest';
 
 #$BuildName = '';
 #$BuildTag = '';
@@ -235,13 +235,13 @@ $update_ver_file = 'browser/config/version.txt';
 $crashreporter_buildsymbols = 1;
 $crashreporter_pushsymbols = 1;
 # CONFIG: $ENV{'SYMBOL_SERVER_HOST'}    = '%symbolServer%';
-$ENV{'SYMBOL_SERVER_HOST'} = 'dm-symbolpush01.mozilla.org';
+$ENV{'SYMBOL_SERVER_HOST'}    = 'dm-symbolpush01.mozilla.org';
 # CONFIG: $ENV{'SYMBOL_SERVER_USER'}    = '%symbolServerUser%';
-$ENV{'SYMBOL_SERVER_USER'}   = 'ffxbld';
+$ENV{'SYMBOL_SERVER_USER'}    = 'ffxbld';
 # CONFIG: $ENV{'SYMBOL_SERVER_PATH'}    = '%symbolServerPath%';
-$ENV{'SYMBOL_SERVER_PATH'}   = '/mnt/netapp/breakpad/symbols_ffx/';
+$ENV{'SYMBOL_SERVER_PATH'}    = '/mnt/netapp/breakpad/symbols_ffx';
 # CONFIG: $ENV{'SYMBOL_SERVER_SSH_KEY'} = '%symbolServerKey%';
-$ENV{'SYMBOL_SERVER_SSH_KEY'}   = "$ENV{'HOME'}/.ssh/ffxbld_dsa";
+$ENV{'SYMBOL_SERVER_SSH_KEY'} = '/home/cltbld/.ssh/ffxbld_dsa';
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
