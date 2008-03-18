@@ -145,7 +145,7 @@ $DHTMLPerformanceTestTimeout      = 180;  # entire test, seconds
 # :pserver:$ENV{USER}%netscape.com@cvs.mozilla.org:/cvsroot
 
 # CONFIG: $moz_cvsroot = '%mozillaCvsroot%';
-$moz_cvsroot   = ":ext:ffxbld\@cvs.mozilla.org:/cvsroot";
+$moz_cvsroot = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 
 #- Set these proper values for your tinderbox server
 #$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
@@ -173,7 +173,7 @@ $BuildNameExtra = 'Universal Nightly';
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
 # CONFIG: $BuildTree  = '%buildTree%';
-$BuildTree  = 'Firefox';
+$BuildTree  = 'MozillaTest';
 
 #$BuildName = '';
 #$BuildTag = '';
@@ -229,19 +229,19 @@ $update_version = "trunk";
 $update_platform = "Darwin_Universal-gcc3";
 $update_hash = "md5";
 # CONFIG: $update_filehost = '%externalStagingServer%';
-$update_filehost = "ftp.mozilla.org";
+$update_filehost = 'ftp.mozilla.org';
 $update_ver_file = 'browser/config/version.txt';
 $update_pushinfo = 0;
 $crashreporter_buildsymbols = 1;
 $crashreporter_pushsymbols = 1;
 # CONFIG: $ENV{'SYMBOL_SERVER_HOST'}    = '%symbolServer%';
-$ENV{SYMBOL_SERVER_HOST} = 'dm-symbolpush01.mozilla.org';
+$ENV{'SYMBOL_SERVER_HOST'}    = 'dm-symbolpush01.mozilla.org';
 # CONFIG: $ENV{'SYMBOL_SERVER_USER'}    = '%symbolServerUser%';
-$ENV{SYMBOL_SERVER_USER}   = 'ffxbld';
+$ENV{'SYMBOL_SERVER_USER'}    = 'ffxbld';
 # CONFIG: $ENV{'SYMBOL_SERVER_PATH'}    = '%symbolServerPath%';
-$ENV{SYMBOL_SERVER_PATH}   = '/mnt/netapp/breakpad/symbols_ffx/';
+$ENV{'SYMBOL_SERVER_PATH'}    = '/mnt/netapp/breakpad/symbols_ffx';
 # CONFIG: $ENV{'SYMBOL_SERVER_SSH_KEY'} = '%symbolServerKey%';
-$ENV{SYMBOL_SERVER_SSH_KEY}   = "$ENV{HOME}/.ssh/ffxbld_dsa";
+$ENV{'SYMBOL_SERVER_SSH_KEY'} = '/Users/cltbld/.ssh/ffxbld_dsa';
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
