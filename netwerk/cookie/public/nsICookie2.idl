@@ -72,3 +72,12 @@ interface nsICookie2 : nsICookie
     readonly attribute PRInt64 expiry;
 
 };
+
+[scriptable, uuid(40712890-6c9e-45fc-b77c-c8ea344f690e)]
+interface nsICookie2_MOZILLA_1_8_BRANCH : nsICookie2
+{
+    /**
+     * true if the cookie is an http only cookie
+     */
+    readonly attribute boolean isHttpOnly;
+};
