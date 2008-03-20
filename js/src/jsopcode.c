@@ -356,15 +356,19 @@ typedef struct Sprinter {
 static JSBool
 SprintAlloc(Sprinter *sp, size_t nb)
 {
-    if (!sp->base) {
-        JS_ARENA_ALLOCATE_CAST(sp->base, char *, sp->pool, nb);
+    char *base;
+
+    base = sp->base;
+    if (!base) {
+        JS_ARENA_ALLOCATE_CAST(base, char *, sp->pool, nb);
     } else {
-        JS_ARENA_GROW_CAST(sp->base, char *, sp->pool, sp->size, nb);
+        JS_ARENA_GROW_CAST(base, char *, sp->pool, sp->size, nb);
     }
-    if (!sp->base) {
+    if (!base) {
         JS_ReportOutOfMemory(sp->context);
         return JS_FALSE;
     }
+    sp->base = base;
     sp->size += nb;
     return JS_TRUE;
 }
