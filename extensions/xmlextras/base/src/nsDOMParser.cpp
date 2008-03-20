@@ -517,6 +517,7 @@ nsDOMParser::ParseFromStream(nsIInputStream *stream,
     rv = xpc->GetCurrentNativeCallContext(getter_AddRefs(cc));
   }
 
+  nsCOMPtr<nsIDOMDocument> contextDoc;
   if (NS_SUCCEEDED(rv) && cc) {
     JSContext* cx;
     rv = cc->GetJSContext(&cx);
@@ -528,10 +529,9 @@ nsDOMParser::ParseFromStream(nsIInputStream *stream,
         do_QueryInterface(scriptContext->GetGlobalObject());
 
       if (window) {
-        nsCOMPtr<nsIDOMDocument> domdoc;
-        window->GetDocument(getter_AddRefs(domdoc));
+        window->GetDocument(getter_AddRefs(contextDoc));
 
-        nsCOMPtr<nsIDocument> doc = do_QueryInterface(domdoc);
+        nsCOMPtr<nsIDocument> doc = do_QueryInterface(contextDoc);
         if (doc) {
           baseURI = doc->GetBaseURI();
         }
@@ -553,13 +553,20 @@ nsDOMParser::ParseFromStream(nsIInputStream *stream,
   }
 
   // Get and initialize a DOMImplementation
-  nsCOMPtr<nsIDOMDOMImplementation> implementation(do_CreateInstance(kIDOMDOMImplementationCID, &rv));
-  if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
-  
-  if (baseURI) {
-    nsCOMPtr<nsIPrivateDOMImplementation> privImpl(do_QueryInterface(implementation));
-    if (privImpl) {
-      privImpl->Init(baseURI);
+  nsCOMPtr<nsIDOMDOMImplementation> implementation;
+  if (contextDoc) {
+    rv = contextDoc->GetImplementation(getter_AddRefs(implementation));
+    NS_ENSURE_SUCCESS(rv, rv);
+  } else {
+    implementation = do_CreateInstance(kIDOMDOMImplementationCID, &rv);
+    if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
+
+    if (baseURI) {
+      nsCOMPtr<nsIPrivateDOMImplementation> privImpl =
+        do_QueryInterface(implementation);
+      if (privImpl) {
+        privImpl->Init(baseURI);
+      }
     }
   }
 

@@ -1213,15 +1213,24 @@ nsXMLHttpRequest::OnStartRequest(nsIRequest *request, nsISupports *ctxt)
   ChangeState(XML_HTTP_REQUEST_LOADED);
 
   nsresult rv;
+  nsCOMPtr<nsIDocument> contextDoc = 
+    GetDocumentFromScriptContext(mScriptContext);
   // Get and initialize a DOMImplementation
-  nsCOMPtr<nsIDOMDOMImplementation> implementation =
-    do_CreateInstance(kIDOMDOMImplementationCID, &rv);
-  if (NS_FAILED(rv)) return rv;
+  nsCOMPtr<nsIDOMDOMImplementation> implementation;
+  if (contextDoc) {
+    nsCOMPtr<nsIDOMDocument> domContext = do_QueryInterface(contextDoc);
+    rv = domContext->GetImplementation(getter_AddRefs(implementation));
+    NS_ENSURE_SUCCESS(rv, rv);
+  } else {
+    implementation =
+      do_CreateInstance(kIDOMDOMImplementationCID, &rv);
+    if (NS_FAILED(rv)) return rv;
 
-  nsCOMPtr<nsIPrivateDOMImplementation> privImpl =
-    do_QueryInterface(implementation);
-  if (privImpl) {
-    privImpl->Init(GetBaseURI());
+    nsCOMPtr<nsIPrivateDOMImplementation> privImpl =
+      do_QueryInterface(implementation);
+    if (privImpl) {
+      privImpl->Init(GetBaseURI());
+    }
   }
 
   // Create an empty document from it (resets current document as well)

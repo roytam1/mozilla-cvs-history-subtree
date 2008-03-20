@@ -910,6 +910,30 @@ protected:
   PRBool mIsInitialDocumentInWindow;
 };
 
+#define NS_IDOCUMENT_MOZILLA_1_8_BRANCH3_IID      \
+{ 0x23da8ffb, 0x095d, 0x4215, \
+  { 0x9a, 0x93, 0x3e, 0x0f, 0xe4, 0x10, 0x89, 0x0b } }
+
+class nsIDocument_MOZILLA_1_8_BRANCH3 : public nsISupports
+{
+public:
+  NS_DEFINE_STATIC_IID_ACCESSOR(NS_IDOCUMENT_MOZILLA_1_8_BRANCH3_IID)
+  /**
+   * Get/set the object from which the context for the event/script handling can
+   * be got. Normally GetScriptHandlingObject() returns the same object as
+   * GetScriptGlobalObject(), but if the document is loaded as data,
+   * non-null may be returned, even if GetScriptGlobalObject() returns null.
+   * aHasHadScriptHandlingObject is set PR_TRUE if document has had the object
+   * for event/script handling. Do not process any events/script if the method
+   * returns null, but aHasHadScriptHandlingObject is true.
+   */
+  virtual nsIScriptGlobalObject*
+    GetScriptHandlingObject(PRBool& aHasHadScriptHandlingObject) const = 0;
+  virtual void SetScriptHandlingObject(nsIScriptGlobalObject* aScriptObject) = 0;
+protected:
+
+};
+
 /**
  * Helper class to automatically handle batching of document updates.  This
  * class will call BeginUpdate on construction and EndUpdate on destruction on
@@ -961,11 +985,21 @@ nsresult
 NS_NewDocumentFragment(nsIDOMDocumentFragment** aInstancePtrResult,
                        nsNodeInfoManager *aNodeInfoManager);
 nsresult
+NS_NewDOMDocument_MOZILLA_1_8_BRANCH(nsIDOMDocument** aInstancePtrResult,
+                                     const nsAString& aNamespaceURI,
+                                     const nsAString& aQualifiedName,
+                                     nsIDOMDocumentType* aDoctype,
+                                     nsIURI* aBaseURI,
+                                     nsIScriptGlobalObject* aScriptHandler,
+                                     PRBool aLoadedAsData);
+
+nsresult
 NS_NewDOMDocument(nsIDOMDocument** aInstancePtrResult,
                   const nsAString& aNamespaceURI, 
                   const nsAString& aQualifiedName, 
                   nsIDOMDocumentType* aDoctype,
                   nsIURI* aBaseURI);
+
 nsresult
 NS_NewPluginDocument(nsIDocument** aInstancePtrResult);
 

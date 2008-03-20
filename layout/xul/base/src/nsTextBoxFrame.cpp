@@ -255,9 +255,11 @@ nsTextBoxFrame::UpdateAccesskey(nsWeakFrame& aWeakThis)
     nsCOMPtr<nsIDOMXULLabelElement> labelElement = do_QueryInterface(mContent);
     if (labelElement) {
         // Accesskey may be stored on control.
-        nsCxPusher cx(mContent);
-        labelElement->GetAccessKey(accesskey);
-        NS_ENSURE_TRUE(aWeakThis.IsAlive(), PR_FALSE);
+        nsCxPusher cx;
+        if (cx.Push(mContent)) {
+          labelElement->GetAccessKey(accesskey);
+          NS_ENSURE_TRUE(aWeakThis.IsAlive(), PR_FALSE);
+        }
     }
     else {
         mContent->GetAttr(kNameSpaceID_None, nsXULAtoms::accesskey, accesskey);

@@ -95,6 +95,8 @@ public:
 
   virtual nsresult Init();
 
+  void SetLoadedAsData(PRBool aLoadedAsData) { mLoadedAsData = aLoadedAsData; }
+
 protected:
   virtual nsresult GetLoadGroup(nsILoadGroup **aLoadGroup);
 

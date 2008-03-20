@@ -112,6 +112,24 @@ NS_NewDOMDocument(nsIDOMDocument** aInstancePtrResult,
                   nsIDOMDocumentType* aDoctype,
                   nsIURI* aBaseURI)
 {
+  return NS_NewDOMDocument_MOZILLA_1_8_BRANCH(aInstancePtrResult,
+                                              aNamespaceURI,
+                                              aQualifiedName,
+                                              aDoctype,
+                                              aBaseURI,
+                                              nsnull,
+                                              PR_FALSE);
+}
+
+nsresult
+NS_NewDOMDocument_MOZILLA_1_8_BRANCH(nsIDOMDocument** aInstancePtrResult,
+                                     const nsAString& aNamespaceURI,
+                                     const nsAString& aQualifiedName,
+                                     nsIDOMDocumentType* aDoctype,
+                                     nsIURI* aBaseURI,
+                                     nsIScriptGlobalObject* aScriptHandler,
+                                     PRBool aLoadedAsData)
+{
   nsresult rv;
 
   *aInstancePtrResult = nsnull;
@@ -126,6 +144,8 @@ NS_NewDOMDocument(nsIDOMDocument** aInstancePtrResult,
     return rv;
   }
 
+  doc->SetScriptHandlingObject(aScriptHandler);
+  doc->SetLoadedAsData(aLoadedAsData);
   doc->nsIDocument::SetDocumentURI(aBaseURI);
   doc->SetBaseURI(aBaseURI);
 
@@ -650,9 +670,10 @@ nsXMLDocument::EndLoad()
       sgo = container->GetScriptGlobalObject();
     }
 
-    nsCxPusher pusher(sgo);
-
-    HandleDOMEvent(nsnull, &event, nsnull, NS_EVENT_FLAG_INIT, &status);
+    nsCxPusher pusher;
+    if (pusher.Push(sgo)) {
+      HandleDOMEvent(nsnull, &event, nsnull, NS_EVENT_FLAG_INIT, &status);
+    }
   }    
   nsDocument::EndLoad();  
 }
@@ -687,11 +708,17 @@ nsXMLDocument::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
     newDocType = do_QueryInterface(newDocTypeNode);
   }
 
+  PRBool hasHadScriptObject = PR_TRUE;
+  nsIScriptGlobalObject* scriptObject =
+    GetScriptHandlingObject(hasHadScriptObject);
+  NS_ENSURE_STATE(scriptObject || !hasHadScriptObject);
+
   // Create an empty document
   nsAutoString emptyStr;
   emptyStr.Truncate();
-  rv = NS_NewDOMDocument(getter_AddRefs(newDoc), emptyStr, emptyStr,
-                         newDocType, mDocumentURI);
+  rv = NS_NewDOMDocument_MOZILLA_1_8_BRANCH(getter_AddRefs(newDoc), emptyStr,
+                                            emptyStr, newDocType, mDocumentURI,
+                                            scriptObject, PR_TRUE);
   if (NS_FAILED(rv)) return rv;
 
   if (aDeep) {
