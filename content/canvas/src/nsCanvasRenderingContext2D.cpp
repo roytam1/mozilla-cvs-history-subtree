@@ -1611,6 +1611,11 @@ nsCanvasRenderingContext2D::CairoSurfaceFromElement(nsIDOMElement *imgElt,
         NS_ENSURE_SUCCESS(rv, rv);
         if (!imgRequest)
             return NS_ERROR_NOT_AVAILABLE;
+
+        PRUint32 status;
+        imgRequest->GetImageStatus(&status);
+        if ((status & imgIRequest::STATUS_LOAD_COMPLETE) == 0)
+            return NS_ERROR_NOT_AVAILABLE;
         
         rv = imgRequest->GetImage(getter_AddRefs(imgContainer));
         NS_ENSURE_SUCCESS(rv, rv);
