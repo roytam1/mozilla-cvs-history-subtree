@@ -177,6 +177,7 @@ MimeExternalBody_make_url(const char *ct,
 						  const char *svr, const char *subj, const char *body)
 {
   char *s;
+  PRUint32 slen;
   if (!at)
     {
 	  return 0;
@@ -185,16 +186,16 @@ MimeExternalBody_make_url(const char *ct,
 	{
 	  if (!site || !name)
 		return 0;
-	  s = (char *) PR_MALLOC(strlen(name) + strlen(site) +
-							(dir  ? strlen(dir) : 0) + 20);
+      slen = strlen(name) + strlen(site) + (dir ? strlen(dir) : 0) + 20;
+	  s = (char *) PR_MALLOC(slen);
 	  if (!s) return 0;
-	  PL_strcpy(s, "ftp://");
-	  PL_strcat(s, site);
-	  PL_strcat(s, "/");
-	  if (dir) PL_strcat(s, (dir[0] == '/' ? dir+1 : dir));
+	  PL_strncpyz(s, "ftp://", slen);
+	  PL_strcatn(s, slen, site);
+	  PL_strcatn(s, slen, "/");
+	  if (dir) PL_strcatn(s, slen, (dir[0] == '/' ? dir+1 : dir));
 	  if (s[strlen(s)-1] != '/')
-		PL_strcat(s, "/");
-	  PL_strcat(s, name);
+		PL_strcatn(s, slen, "/");
+	  PL_strcatn(s, slen, name);
 	  return s;
 	}
   else if (!nsCRT::strcasecmp(at, "local-file") || !nsCRT::strcasecmp(at, "afs"))
@@ -215,14 +216,15 @@ MimeExternalBody_make_url(const char *ct,
 	  return 0;						/* never, if not Unix. */
 #endif /* !XP_UNIX */
 
-	  s = (char *) PR_MALLOC(strlen(name)*3 + 20);
+      slen = strlen(name)*3 + 20;
+	  s = (char *) PR_MALLOC(slen);
 	  if (!s) return 0;
-	  PL_strcpy(s, "file:");
+	  PL_strncpyz(s, "file:", slen);
 
 	  s2 = nsEscape(name, url_Path);
 	  if (s2)
 	  {
-	      PL_strcat(s, s2);
+	      PL_strcatn(s, slen, s2);
 	      nsCRT::free(s2);
 	  }
 	  return s;
@@ -232,36 +234,38 @@ MimeExternalBody_make_url(const char *ct,
 	  char *s2;
 	  if (!svr)
 		return 0;
-	  s = (char *) PR_MALLOC(strlen(svr)*4 +
+      slen = strlen(svr)*4 +
 							(subj ? strlen(subj)*4 : 0) +
-							(body ? strlen(body)*4 : 0) + 20);
+             (body? strlen(body)*4 : 0) + 25;
+             // dpv xxx: why 4x? %xx escaping should be 3x
+	  s = (char *) PR_MALLOC(slen);
 	  if (!s) return 0;
-	  PL_strcpy(s, "mailto:");
+	  PL_strncpyz(s, "mailto:", slen);
 
 	  s2 = nsEscape(svr, url_XAlphas);
 	  if (s2)
 	  {
-	      PL_strcat(s, s2);
+	      PL_strcatn(s, slen, s2);
 	      nsCRT::free(s2);
 	  }
 
 	  if (subj)
 		{
 		  s2 = nsEscape(subj, url_XAlphas);
-		  PL_strcat(s, "?subject=");
+		  PL_strcatn(s, slen, "?subject=");
 		  if (s2)
 		  {
-		      PL_strcat(s, s2);
+		      PL_strcatn(s, slen, s2);
 		      nsCRT::free(s2);
 		  }
 		}
 	  if (body)
 		{
 		  s2 = nsEscape(body, url_XAlphas);
-		  PL_strcat(s, (subj ? "&body=" : "?body="));
+		  PL_strcatn(s, slen, (subj ? "&body=" : "?body="));
 		  if (s2)
 		  {
-		      PL_strcat(s, s2);
+		      PL_strcatn(s, slen, s2);
 		      nsCRT::free(s2);
 		  }
 		}
@@ -337,7 +341,7 @@ MimeExternalBody_parse_eof (MimeObject *obj, PRBool abort_p)
 	  ct = MimeHeaders_get(bod->hdrs, HEADER_CONTENT_TYPE,
 						   PR_TRUE, PR_FALSE);
 
-	  h = (char *) PR_MALLOC((at ? strlen(at) : 0) +
+      PRUint32 hlen = ((at ? strlen(at) : 0) +
 							(lexp ? strlen(lexp) : 0) +
 							(size ? strlen(size) : 0) +
 							(perm ? strlen(perm) : 0) +
@@ -349,6 +353,7 @@ MimeExternalBody_parse_eof (MimeObject *obj, PRBool abort_p)
 							(subj ? strlen(subj) : 0) +
                                                         (ct ? strlen(ct) : 0) +
 							(url ? strlen(url) : 0) + 100);
+      h = (char *) PR_MALLOC(hlen);
 	  if (!h)
 		{
 		  status = MIME_OUT_OF_MEMORY;
@@ -380,9 +385,9 @@ MimeExternalBody_parse_eof (MimeObject *obj, PRBool abort_p)
 # define FROB(STR,VAR) \
 	  if (VAR) \
 		{ \
-		  PL_strcpy(h, STR ": "); \
-		  PL_strcat(h, VAR); \
-		  PL_strcat(h, MSG_LINEBREAK); \
+		  PL_strncpyz(h, STR ": ", hlen); \
+		  PL_strcatn(h, hlen, VAR); \
+		  PL_strcatn(h, hlen, MSG_LINEBREAK); \
 		  status = MimeHeaders_parse_line(h, strlen(h), hdrs); \
 		  if (status < 0) goto FAIL; \
 		}
@@ -399,7 +404,7 @@ MimeExternalBody_parse_eof (MimeObject *obj, PRBool abort_p)
 	  FROB("Expiration",	lexp);
 	  FROB("Subject",		subj);
 # undef FROB
-	  PL_strcpy(h, MSG_LINEBREAK);
+	  PL_strncpyz(h, MSG_LINEBREAK, hlen);
 	  status = MimeHeaders_parse_line(h, strlen(h), hdrs);
 	  if (status < 0) goto FAIL;
 
