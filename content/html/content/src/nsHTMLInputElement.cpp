@@ -323,6 +323,9 @@ protected:
    * and submits the form if either is present.
    */
   nsresult MaybeSubmitForm(nsPresContext* aPresContext);
+
+  void FocusFileInputButton(nsIFormControlFrame* aFormControlFrame,
+                            nsPresContext* aPresContext);
   
   nsCOMPtr<nsIControllers> mControllers;
 
@@ -1136,6 +1139,26 @@ nsHTMLInputElement::Focus()
 }
 
 void
+nsHTMLInputElement::FocusFileInputButton(nsIFormControlFrame* aFormControlFrame,
+                                         nsPresContext* aPresContext)
+{
+  NS_ASSERTION(mType == NS_FORM_INPUT_FILE, "Wrong type of input element!");
+  nsIFrame* frame = nsnull;
+  CallQueryInterface(aFormControlFrame, &frame);
+  if (frame) {
+    for (frame = frame->GetFirstChild(nsnull);
+         frame;
+         frame = frame->GetNextSibling()) {
+      nsCOMPtr<nsIFormControl> control = do_QueryInterface(frame->GetContent());
+      if (control && control->GetType() == NS_FORM_INPUT_BUTTON) {
+        frame->GetContent()->SetFocus(aPresContext);
+        return;
+      }
+    }
+  }
+}
+
+void
 nsHTMLInputElement::SetFocus(nsPresContext* aPresContext)
 {
   if (!aPresContext)
@@ -1180,20 +1203,7 @@ nsHTMLInputElement::SetFocus(nsPresContext* aPresContext)
   if (formControlFrame) {
     if (mType == NS_FORM_INPUT_FILE &&
         GET_BOOLBIT(mBitField, BF_SETTING_FILE_FOCUS)) {
-      nsIFrame* frame = nsnull;
-      CallQueryInterface(formControlFrame, &frame);
-      if (frame) {
-        for (frame = frame->GetFirstChild(nsnull);
-             frame;
-             frame = frame->GetNextSibling()) {
-          nsCOMPtr<nsIFormControl> control = do_QueryInterface(frame->GetContent());
-          if (control && control->GetType() == NS_FORM_INPUT_BUTTON) {
-            frame->GetContent()->SetFocus(aPresContext);
-            return;
-          }
-        }
-      }
-      NS_WARNING("Could not focus file input!");
+      FocusFileInputButton(formControlFrame, aPresContext);
       return;
     }
     formControlFrame->SetFocus(PR_TRUE, PR_TRUE);
@@ -1592,8 +1602,15 @@ nsHTMLInputElement::HandleDOMEvent(nsPresContext* aPresContext,
           // this parent file control -- leave focus on the child.
           nsIFormControlFrame* formControlFrame = GetFormControlFrame(PR_FALSE);
           if (formControlFrame && !(aFlags & NS_EVENT_FLAG_BUBBLE) &&
-              ShouldFocus(this))
-            formControlFrame->SetFocus(PR_TRUE, PR_TRUE);
+              ShouldFocus(this)) {
+            // This is ugly, but if untrusted focus event is dispatched, set
+            // focus to the 'Browse...' button, not to the text field.
+            if (mType == NS_FORM_INPUT_FILE && !NS_IS_TRUSTED_EVENT(aEvent)) {
+              FocusFileInputButton(formControlFrame, aPresContext);
+            } else {
+              formControlFrame->SetFocus(PR_TRUE, PR_TRUE);
+            }
+          }
         }                                                                         
         break; // NS_FOCUS_CONTENT
 
