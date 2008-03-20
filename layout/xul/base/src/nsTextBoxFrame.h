@@ -90,6 +90,10 @@ public:
 
   virtual ~nsTextBoxFrame();
 protected:
+  friend class nsAsyncAccesskeyUpdate;
+  // Should be called only by nsAsyncAccesskeyUpdate.
+  // Returns PR_TRUE if accesskey was updated.
+  PRBool UpdateAccesskey(nsWeakFrame& aWeakThis);
 
   void UpdateAccessTitle();
   void UpdateAccessIndex();
@@ -133,7 +137,8 @@ private:
   nsString mAccessKey;
   nscoord mTitleWidth;
   nsAccessKeyInfo* mAccessKeyInfo;
-  PRBool mNeedsRecalc;
+  PRPackedBool mNeedsRecalc;
+  PRPackedBool mNeedsReflowCallback;
   nsSize mTextSize;
   nscoord mAscent;
 
