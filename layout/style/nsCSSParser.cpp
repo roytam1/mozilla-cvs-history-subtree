@@ -660,7 +660,9 @@ CSSParserImpl::Parse(nsIUnicharInputStream* aInput,
     NS_NewCSSStyleSheet(getter_AddRefs(mSheet));
     NS_ENSURE_TRUE(mSheet, NS_ERROR_OUT_OF_MEMORY);
 
-    mSheet->SetURIs(aSheetURI, aBaseURI);
+    nsCOMPtr<nsICSSStyleSheet_MOZILLA_1_8_BRANCH> sheet =
+      do_QueryInterface(mSheet);
+    sheet->SetURIs18(aSheetURI, aSheetURI, aBaseURI);
     mNameSpaceMap = nsnull;
   }
 #ifdef DEBUG

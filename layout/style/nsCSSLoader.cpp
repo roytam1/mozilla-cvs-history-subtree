@@ -721,17 +721,22 @@ SheetLoadData::OnStreamComplete(nsIUnicharStreamLoader* aLoader,
   if (NS_FAILED(result))
     channel = nsnull;
   
+  nsCOMPtr<nsIURI> originalURI;
   nsCOMPtr<nsIURI> channelURI;
   if (channel) {
+    channel->GetOriginalURI(getter_AddRefs(originalURI));
+  
     // If the channel's original URI is "chrome:", we want that, since
     // the observer code in nsXULPrototypeCache depends on chrome stylesheets
     // having a chrome URI.  (Whether or not chrome stylesheets come through
     // this codepath seems nondeterministic.)
     // Otherwise we want the potentially-HTTP-redirected URI.
-    channel->GetOriginalURI(getter_AddRefs(channelURI));
     PRBool isChrome;
-    if (NS_FAILED(channelURI->SchemeIs("chrome", &isChrome)) || !isChrome)
+    if (NS_FAILED(originalURI->SchemeIs("chrome", &isChrome)) || !isChrome) {
       channel->GetURI(getter_AddRefs(channelURI));
+    } else {
+      channelURI = originalURI;
+    }
   }
   
 #ifdef MOZ_TIMELINE
@@ -802,9 +807,11 @@ SheetLoadData::OnStreamComplete(nsIUnicharStreamLoader* aLoader,
   }
 
   if (channelURI) {
-    // Enough to set the URI on mSheet, since any sibling datas we have share
+    // Enough to set the URIs on mSheet, since any sibling datas we have share
     // the same mInner as mSheet and will thus get the same URI.
-    mSheet->SetURIs(channelURI, channelURI);
+    nsCOMPtr<nsICSSStyleSheet_MOZILLA_1_8_BRANCH> sheet =
+      do_QueryInterface(mSheet);
+    sheet->SetURIs18(channelURI, originalURI, channelURI);
   }
   
   PRBool completed;
@@ -967,19 +974,28 @@ CSSLoaderImpl::CreateSheet(nsIURI* aURI,
 
   if (!*aSheet) {
     aSheetState = eSheetNeedsParser;
-    nsIURI *sheetURI = aURI;
-    nsCOMPtr<nsIURI> baseURI = aURI;
+    nsIURI *sheetURI;
+    nsCOMPtr<nsIURI> baseURI;
+    nsIURI* originalURI;
     if (!aURI) {
       // Inline style.  Use the document's base URL so that @import in
       // the inline sheet picks up the right base.
       NS_ASSERTION(aLinkingContent, "Inline stylesheet without linking content?");
       baseURI = aLinkingContent->GetBaseURI();
       sheetURI = aLinkingContent->GetDocument()->GetDocumentURI();
-    }
+      originalURI = sheetURI;
+    } else {
+      baseURI = aURI;
+      sheetURI = aURI;
+      originalURI = aURI;
+    }      
 
     rv = NS_NewCSSStyleSheet(aSheet);
     NS_ENSURE_SUCCESS(rv, rv);
-    (*aSheet)->SetURIs(sheetURI, baseURI);
+
+    nsCOMPtr<nsICSSStyleSheet_MOZILLA_1_8_BRANCH> sheet =
+      do_QueryInterface(*aSheet);
+    sheet->SetURIs18(sheetURI, originalURI, baseURI);
   }
 
   NS_ASSERTION(*aSheet, "We should have a sheet by now!");
