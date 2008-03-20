@@ -58,6 +58,7 @@ class nsJARInputThunk;
 //-----------------------------------------------------------------------------
 
 class nsJARChannel : public nsIJARChannel
+                   , public nsIJARChannel_MOZILLA_1_8_BRANCH
                    , public nsIDownloadObserver
                    , public nsIStreamListener
 {
@@ -66,6 +67,7 @@ public:
     NS_DECL_NSIREQUEST
     NS_DECL_NSICHANNEL
     NS_DECL_NSIJARCHANNEL
+    NS_DECL_NSIJARCHANNEL_MOZILLA_1_8_BRANCH
     NS_DECL_NSIDOWNLOADOBSERVER
     NS_DECL_NSIREQUESTOBSERVER
     NS_DECL_NSISTREAMLISTENER
@@ -97,7 +99,8 @@ private:
     PRInt32                         mContentLength;
     PRUint32                        mLoadFlags;
     nsresult                        mStatus;
-    PRBool                          mIsPending;
+    PRPackedBool                    mIsPending;
+    PRPackedBool                    mIsUnsafe;
 
     nsJARInputThunk                *mJarInput;
     nsCOMPtr<nsIStreamListener>     mDownloader;

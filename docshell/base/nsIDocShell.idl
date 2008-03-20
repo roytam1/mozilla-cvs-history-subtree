@@ -415,3 +415,15 @@ interface nsIDocShell_MOZILLA_1_8_BRANCH2 : nsISupports
    */
   readonly attribute boolean isInUnload;
 };
+
+[scriptable, uuid(833fdff8-e0ca-4987-bf13-e10e631e504d)]
+interface nsIDocShell_MOZILLA_1_8_BRANCH3 : nsISupports
+{
+  /**
+   * Find out if the currently loaded document came from a suspicious channel
+   * (such as a JAR channel where the server-returned content type isn't a
+   * known JAR type).
+   */
+  readonly attribute boolean channelIsUnsafe;
+};
+

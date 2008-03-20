@@ -846,7 +846,8 @@ nsresult nsWebShell::EndPageLoad(nsIWebProgress *aProgress,
              aStatus == NS_ERROR_REDIRECT_LOOP ||
              aStatus == NS_ERROR_UNKNOWN_SOCKET_TYPE ||
              aStatus == NS_ERROR_NET_INTERRUPT ||
-             aStatus == NS_ERROR_NET_RESET) {
+             aStatus == NS_ERROR_NET_RESET ||
+             aStatus == NS_ERROR_UNSAFE_CONTENT_TYPE) {
       DisplayLoadError(aStatus, url, nsnull, channel);
     }
     else if (aStatus == NS_ERROR_DOCUMENT_NOT_CACHED) {

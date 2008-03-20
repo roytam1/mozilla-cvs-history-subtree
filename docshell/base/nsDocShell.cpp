@@ -148,6 +148,8 @@
 
 #include "nsITextToSubURI.h"
 
+#include "nsIJARChannel.h"
+
 #include "prlog.h"
 #include "prmem.h"
 
@@ -372,6 +374,7 @@ NS_IMPL_RELEASE_INHERITED(nsDocShell, nsDocLoader)
 NS_INTERFACE_MAP_BEGIN(nsDocShell)
     NS_INTERFACE_MAP_ENTRY(nsIDocShell)
     NS_INTERFACE_MAP_ENTRY(nsIDocShell_MOZILLA_1_8_BRANCH2)
+    NS_INTERFACE_MAP_ENTRY(nsIDocShell_MOZILLA_1_8_BRANCH3)
     NS_INTERFACE_MAP_ENTRY(nsIDocShellTreeItem)
     NS_INTERFACE_MAP_ENTRY(nsIDocShellTreeNode)
     NS_INTERFACE_MAP_ENTRY(nsIDocShellHistory)
@@ -1522,11 +1525,50 @@ nsDocShell::SetDocumentCharsetInfo(nsIDocumentCharsetInfo *
 }
 
 NS_IMETHODIMP
+nsDocShell::GetChannelIsUnsafe(PRBool *aUnsafe)
+{
+    *aUnsafe = PR_FALSE;
+
+    nsCOMPtr<nsIChannel> channel;
+    if (!mContentViewer) {
+        return NS_OK;
+    }
+
+    nsCOMPtr<nsIDOMDocument> domDoc;
+    nsresult rv = mContentViewer->GetDOMDocument(getter_AddRefs(domDoc));
+    if (NS_FAILED(rv)) {
+        return NS_OK;
+    }
+
+    nsCOMPtr<nsIDocument> doc(do_QueryInterface(domDoc));
+    if (doc) {
+        channel = doc->GetChannel();
+    }
+
+    if (!channel) {
+        return NS_OK;
+    }
+
+    nsCOMPtr<nsIJARChannel_MOZILLA_1_8_BRANCH> jarChannel = do_QueryInterface(channel);
+    if (!jarChannel) {
+        return NS_OK;
+    }
+
+    return jarChannel->GetIsUnsafe(aUnsafe);
+}
+
+NS_IMETHODIMP
 nsDocShell::GetAllowPlugins(PRBool * aAllowPlugins)
 {
     NS_ENSURE_ARG_POINTER(aAllowPlugins);
 
     *aAllowPlugins = mAllowPlugins;
+    if (!mAllowPlugins) {
+        return NS_OK;
+    }
+
+    PRBool unsafe;
+    *aAllowPlugins = NS_SUCCEEDED(GetChannelIsUnsafe(&unsafe)) && !unsafe;
     return NS_OK;
 }
 
@@ -1544,6 +1586,12 @@ nsDocShell::GetAllowJavascript(PRBool * aAllowJavascript)
     NS_ENSURE_ARG_POINTER(aAllowJavascript);
 
     *aAllowJavascript = mAllowJavascript;
+    if (!mAllowJavascript) {
+        return NS_OK;
+    }
+
+    PRBool unsafe;
+    *aAllowJavascript = NS_SUCCEEDED(GetChannelIsUnsafe(&unsafe)) && !unsafe;
     return NS_OK;
 }
 
@@ -1559,6 +1607,12 @@ NS_IMETHODIMP nsDocShell::GetAllowMetaRedirects(PRBool * aReturn)
     NS_ENSURE_ARG_POINTER(aReturn);
 
     *aReturn = mAllowMetaRedirects;
+    if (!mAllowMetaRedirects) {
+        return NS_OK;
+    }
+
+    PRBool unsafe;
+    *aReturn = NS_SUCCEEDED(GetChannelIsUnsafe(&unsafe)) && !unsafe;
     return NS_OK;
 }
 
@@ -3078,6 +3132,11 @@ nsDocShell::DisplayLoadError(nsresult aError, nsIURI *aURI,
         case NS_ERROR_PROXY_CONNECTION_REFUSED:
             // Proxy connection was refused.
             error.AssignLiteral("proxyConnectFailure");
+            break;
+        case NS_ERROR_UNSAFE_CONTENT_TYPE:
+            // XXX: We can't add new strings on the branch, abuse
+            // malformedURI
+            error.AssignLiteral("malformedURI");
             break;
         }
     }
@@ -6387,6 +6446,24 @@ nsDocShell::InternalLoad(nsIURI * aURI,
             (NS_SUCCEEDED(aURI->SchemeIs("data", &isScheme)) &&
              isScheme);
         if (inherits) {
+            // Don't allow loads that would inherit our security context
+            // if this document came from an unsafe channel.
+            nsCOMPtr<nsIDocShellTreeItem> treeItem = this;
+            do {
+                nsCOMPtr<nsIDocShell_MOZILLA_1_8_BRANCH3> itemDocShell =
+                    do_QueryInterface(treeItem);
+                PRBool isUnsafe;
+                if (itemDocShell &&
+                    NS_SUCCEEDED(itemDocShell->GetChannelIsUnsafe(&isUnsafe)) &&
+                    isUnsafe) {
+                    return NS_ERROR_DOM_SECURITY_ERR;
+                }
+
+                nsCOMPtr<nsIDocShellTreeItem> parent;
+                treeItem->GetSameTypeParent(getter_AddRefs(parent));
+                parent.swap(treeItem);
+            } while (treeItem);
+
             owner = GetInheritedPrincipal(PR_TRUE);
         }
     }
