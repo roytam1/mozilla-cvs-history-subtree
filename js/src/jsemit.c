@@ -537,81 +537,84 @@ AddSpanDep(JSContext *cx, JSCodeGenerator *cg, jsbytecode *pc, jsbytecode *pc2,
     return JS_TRUE;
 }
 
+#ifndef GET_UINT16
+#define GET_UINT16(pc)          ((uintN)(((pc)[1] << 8) | (pc)[2]))
+#endif
+
+#if JS_HAS_SWITCH_STATEMENT
+static jsbytecode *
+AddSwitchSpanDeps(JSContext *cx, JSCodeGenerator *cg, jsbytecode *pc)
+{
+    JSOp op;
+    jsbytecode *pc2;
+    ptrdiff_t off;
+    jsint low, high;
+    uintN njumps, indexlen;
+
+    op = (JSOp) *pc;
+    JS_ASSERT(op == JSOP_TABLESWITCH || op == JSOP_LOOKUPSWITCH);
+    pc2 = pc;
+    off = GET_JUMP_OFFSET(pc2);
+    if (!AddSpanDep(cx, cg, pc, pc2, off))
+        return NULL;
+    pc2 += JUMP_OFFSET_LEN;
+    if (op == JSOP_TABLESWITCH) {
+        low = GET_JUMP_OFFSET(pc2);
+        pc2 += JUMP_OFFSET_LEN;
+        high = GET_JUMP_OFFSET(pc2);
+        pc2 += JUMP_OFFSET_LEN;
+        njumps = (uintN) (high - low + 1);
+        indexlen = 0;
+    } else {
+        njumps = GET_UINT16(pc2);
+        pc2 += JUMP_OFFSET_LEN;
+        indexlen = ATOM_INDEX_LEN;
+    }
+    while (njumps) {
+        --njumps;
+        pc2 += indexlen;
+        off = GET_JUMP_OFFSET(pc2);
+        if (!AddSpanDep(cx, cg, pc, pc2, off))
+            return NULL;
+        pc2 += JUMP_OFFSET_LEN;
+    }
+    return 1 + pc2;
+}
+#endif /* JS_HAS_SWITCH_STATEMENT */
+
 static JSBool
 BuildSpanDepTable(JSContext *cx, JSCodeGenerator *cg)
 {
     jsbytecode *pc, *end;
     JSOp op;
     const JSCodeSpec *cs;
-    ptrdiff_t len, off;
+    ptrdiff_t off;
 
     pc = CG_BASE(cg) + cg->spanDepTodo;
     end = CG_NEXT(cg);
-    while (pc < end) {
+    while (pc != end) {
+        JS_ASSERT(pc < end);
         op = (JSOp)*pc;
         cs = &js_CodeSpec[op];
-        len = (ptrdiff_t)cs->length;
 
         switch (cs->format & JOF_TYPEMASK) {
+#if JS_HAS_SWITCH_STATEMENT
+          case JOF_TABLESWITCH:
+          case JOF_LOOKUPSWITCH:
+            pc = AddSwitchSpanDeps(cx, cg, pc);
+            if (!pc)
+                return JS_FALSE;
+            break;
+#endif /* JS_HAS_SWITCH_STATEMENT */
           case JOF_JUMP:
             off = GET_JUMP_OFFSET(pc);
             if (!AddSpanDep(cx, cg, pc, pc, off))
                 return JS_FALSE;
+            /* FALL THROUGH */
+          default:
+            pc += cs->length;
             break;
-
-#if JS_HAS_SWITCH_STATEMENT
-          case JOF_TABLESWITCH:
-          {
-            jsbytecode *pc2;
-            jsint i, low, high;
-
-            pc2 = pc;
-            off = GET_JUMP_OFFSET(pc2);
-            if (!AddSpanDep(cx, cg, pc, pc2, off))
-                return JS_FALSE;
-            pc2 += JUMP_OFFSET_LEN;
-            low = GET_JUMP_OFFSET(pc2);
-            pc2 += JUMP_OFFSET_LEN;
-            high = GET_JUMP_OFFSET(pc2);
-            pc2 += JUMP_OFFSET_LEN;
-            for (i = low; i <= high; i++) {
-                off = GET_JUMP_OFFSET(pc2);
-                if (!AddSpanDep(cx, cg, pc, pc2, off))
-                    return JS_FALSE;
-                pc2 += JUMP_OFFSET_LEN;
-            }
-            len = 1 + pc2 - pc;
-            break;
-          }
-
-          case JOF_LOOKUPSWITCH:
-          {
-            jsbytecode *pc2;
-            jsint npairs;
-
-            pc2 = pc;
-            off = GET_JUMP_OFFSET(pc2);
-            if (!AddSpanDep(cx, cg, pc, pc2, off))
-                return JS_FALSE;
-            pc2 += JUMP_OFFSET_LEN;
-            npairs = (jsint) GET_ATOM_INDEX(pc2);
-            pc2 += ATOM_INDEX_LEN;
-            while (npairs) {
-                pc2 += ATOM_INDEX_LEN;
-                off = GET_JUMP_OFFSET(pc2);
-                if (!AddSpanDep(cx, cg, pc, pc2, off))
-                    return JS_FALSE;
-                pc2 += JUMP_OFFSET_LEN;
-                npairs--;
-            }
-            len = 1 + pc2 - pc;
-            break;
-          }
-#endif /* JS_HAS_SWITCH_STATEMENT */
         }
-
-        JS_ASSERT(len > 0);
-        pc += len;
     }
 
     return JS_TRUE;
@@ -2647,6 +2650,17 @@ EmitSwitch(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn,
          * must set ok and goto out to exit this function.  To keep things
          * simple, all switchOp cases exit that way.
          */
+        if (cg->spanDeps) {
+            /*
+             * We have already generated at least one big jump so we must
+             * explicitly add span dependencies for the switch jumps. When
+             * called below, js_SetJumpOffset can only do it when patching
+             * the first big jump or when cg->spanDeps is null.
+             */
+            if (!AddSwitchSpanDeps(cx, cg, CG_CODE(cg, top)))
+                goto bad;
+        }
+
         if (constPropagated) {
             /*
              * Skip switchOp, as we are not setting jump offsets in the two
