@@ -1169,6 +1169,7 @@ nsCSSStyleSheetInner::nsCSSStyleSheetInner(nsCSSStyleSheetInner& aCopy,
                                        nsICSSStyleSheet* aParentSheet)
   : mSheets(),
     mSheetURI(aCopy.mSheetURI),
+    mOriginalSheetURI(aCopy.mOriginalSheetURI),
     mBaseURI(aCopy.mBaseURI),
     mComplete(aCopy.mComplete)
 {
