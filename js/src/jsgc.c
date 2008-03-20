@@ -1772,7 +1772,7 @@ restart:
                             nslots = fp->fun->nargs;
                         nslots += fp->fun->extra;
                     }
-                    GC_MARK_JSVALS(cx, nslots, fp->argv, "arg");
+                    GC_MARK_JSVALS(cx, nslots + 2, fp->argv - 2, "arg");
                 }
                 if (JSVAL_IS_GCTHING(fp->rval))
                     GC_MARK(cx, JSVAL_TO_GCTHING(fp->rval), "rval", NULL);
