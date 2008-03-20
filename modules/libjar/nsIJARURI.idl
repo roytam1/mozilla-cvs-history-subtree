@@ -62,3 +62,13 @@ interface nsIJARURI : nsIURL {
      */
     attribute AUTF8String JAREntry;
 };
+
+[scriptable, uuid(66072817-f872-42ee-a0a1-cdedd59eb8cb)]
+interface nsIJARURI_MOZILLA_1_8_BRANCH : nsISupports
+{
+    /**
+     * Create a clone of the JAR URI with a new root URI (the URI for the
+     * actual JAR file).
+     */
+    nsIJARURI cloneWithJARFile(in nsIURI jarFile);
+};
