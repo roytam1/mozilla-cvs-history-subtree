@@ -81,7 +81,7 @@ class nsZPlaceholderView;
 // set if this view has positioned its widget at least once
 #define NS_VIEW_FLAG_HAS_POSITIONED_WIDGET 0x2000
 
-class nsView : public nsIView
+class nsView : public nsIView_MOZILLA_1_8_BRANCH
 {
 public:
   nsView(nsViewManager* aViewManager = nsnull,

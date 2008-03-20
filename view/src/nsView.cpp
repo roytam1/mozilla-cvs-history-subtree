@@ -190,6 +190,7 @@ nsView::nsView(nsViewManager* aViewManager, nsViewVisibility aVisibility)
   mViewManager = aViewManager;
   mChildRemoved = PR_FALSE;
   mDirtyRegion = nsnull;
+  mDeletionObserver = nsnull;
 }
 
 void nsView::DropMouseGrabbing() {
@@ -268,6 +269,10 @@ nsView::~nsView()
   }
   delete mDirtyRegion;
   delete mClipRect;
+
+  if (mDeletionObserver) {
+    mDeletionObserver->Clear();
+  }
 }
 
 nsresult nsView::QueryInterface(const nsIID& aIID, void** aInstancePtr)
@@ -911,6 +916,15 @@ PRBool nsIView::IsRoot() const
 PRBool nsIView::ExternalIsRoot() const
 {
   return nsIView::IsRoot();
+}
+
+void
+nsIView_MOZILLA_1_8_BRANCH::SetDeletionObserver(nsWeakView* aDeletionObserver)
+{
+  if (mDeletionObserver && aDeletionObserver) {
+    aDeletionObserver->SetPrevious(mDeletionObserver);
+  }
+  mDeletionObserver = aDeletionObserver;
 }
 
 /**

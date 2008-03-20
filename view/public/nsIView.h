@@ -48,6 +48,7 @@ class nsIViewManager;
 class nsIScrollableView;
 class nsViewManager;
 class nsView;
+class nsWeakView;
 struct nsRect;
 
 // Enumerated type to indicate the visibility of a layer.
@@ -376,6 +377,60 @@ protected:
   PRUint32          mVFlags;
 
   virtual ~nsIView() {}
+};
+
+// This is not a real interface! Used only by nsWeakView.
+class nsIView_MOZILLA_1_8_BRANCH : public nsIView
+{
+public:
+  void SetDeletionObserver(nsWeakView* aDeletionObserver);
+protected:
+  friend class nsWeakView;
+  nsWeakView* mDeletionObserver;
+};
+
+// nsWeakViews must *not* be used in heap!
+class nsWeakView
+{
+public:
+  nsWeakView(nsIView* aView)
+  : mPrev(nsnull), mView(NS_STATIC_CAST(nsIView_MOZILLA_1_8_BRANCH*, aView))
+  {
+    if (mView) {
+      mView->SetDeletionObserver(this);
+    }
+  }
+
+  ~nsWeakView()
+  {
+    if (mView) {
+      NS_ASSERTION(mView->mDeletionObserver == this,
+                   "nsWeakViews deleted in wrong order!");
+      // Clear deletion observer temporarily.
+      mView->SetDeletionObserver(nsnull);
+      // Put back the previous deletion observer.
+      mView->SetDeletionObserver(mPrev);
+    }
+  }
+
+  PRBool IsAlive() { return !!mView; }
+
+  nsIView* GetView() { return mView; }
+
+  void SetPrevious(nsWeakView* aWeakView) { mPrev = aWeakView; }
+
+  void Clear()
+  {
+    if (mPrev) {
+      mPrev->Clear();
+    }
+    mView = nsnull;
+  }
+private:
+  static void* operator new(size_t) CPP_THROW_NEW { return 0; }
+  static void operator delete(void*, size_t) {}
+  nsWeakView*                    mPrev;
+  nsIView_MOZILLA_1_8_BRANCH*    mView;
 };
 
 #endif
