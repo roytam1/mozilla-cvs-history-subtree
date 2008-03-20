@@ -313,6 +313,8 @@ protected:
 
   PRPackedBool mIsFrameset;
 
+  PRPackedBool mTooDeepWriteRecursion;
+
   PLDHashTable mIdAndNameHashTable;
 
   nsCOMPtr<nsIWyciwygChannel> mWyciwygChannel;

@@ -131,6 +131,8 @@
 #include "nsIEditingSession.h"
 #include "nsNodeInfoManager.h"
 
+#define NS_MAX_DOCUMENT_WRITE_DEPTH 20
+
 #define DETECTOR_CONTRACTID_MAX 127
 static char g_detector_contractid[DETECTOR_CONTRACTID_MAX + 1];
 static PRBool gInitDetector = PR_FALSE;
@@ -2308,6 +2310,10 @@ nsresult
 nsHTMLDocument::WriteCommon(const nsAString& aText,
                             PRBool aNewlineTerminate)
 {
+  mTooDeepWriteRecursion =
+    (mWriteLevel > NS_MAX_DOCUMENT_WRITE_DEPTH || mTooDeepWriteRecursion);
+  NS_ENSURE_STATE(!mTooDeepWriteRecursion);
+
   if (IsXHTML()) {
     // No calling document.write*() on XHTML!
 
@@ -2359,6 +2365,8 @@ nsHTMLDocument::WriteCommon(const nsAString& aText,
   }
 
   --mWriteLevel;
+
+  mTooDeepWriteRecursion = (mWriteLevel != 0 && mTooDeepWriteRecursion);
 
   return rv;
 }
