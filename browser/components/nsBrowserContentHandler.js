@@ -49,6 +49,7 @@ const nsIDOMChromeWindow     = Components.interfaces.nsIDOMChromeWindow;
 const nsIDOMWindow           = Components.interfaces.nsIDOMWindow;
 const nsIFactory             = Components.interfaces.nsIFactory;
 const nsIFileURL             = Components.interfaces.nsIFileURL;
+const nsIJARURI              = Components.interfaces.nsIJARURI;
 const nsIHttpProtocolHandler = Components.interfaces.nsIHttpProtocolHandler;
 const nsIInterfaceRequestor  = Components.interfaces.nsIInterfaceRequestor;
 const nsIPrefBranch          = Components.interfaces.nsIPrefBranch;
@@ -350,12 +351,28 @@ var nsBrowserContentHandler = {
       // Handle the old preference dialog URL separately (bug 285416)
       if (chromeParam == "chrome://browser/content/pref/pref.xul") {
         openPreferences();
-      } else {
-        var features = "chrome,dialog=no,all" + this.getFeatures(cmdLine);
-        openWindow(null, chromeParam, "_blank", features, "");
-      }
+        cmdLine.preventDefault = true;
+      } else try {
+        // only load URIs which do not inherit chrome privs.
 
-      cmdLine.preventDefault = true;
+        // normally would call checkLoadURI(..., DISALLOW_SCRIPT_OR_DATA)
+        // for this, but in this context we crash when the security manager
+        // tries to throw an exception (no window object here). On the branch
+        // we need to simulate the important bits
+        var uri = resolveURIInternal(cmdLine, chromeParam);
+        while (uri instanceof nsIJARURI) {
+          // unpack to find the real scheme
+          uri = uri.JARFile;
+        }
+        if (!uri.schemeIs("javascript") && !uri.schemeIs("data")) {
+          var features = "chrome,dialog=no,all" + this.getFeatures(cmdLine);
+          openWindow(null, uri.spec, "_blank", features, "");
+          cmdLine.preventDefault = true;
+        }
+      }
+      catch (e) {
+        Components.utils.reportError(e);
+      }
     }
     if (cmdLine.handleFlag("preferences", false)) {
       openPreferences();

@@ -42,6 +42,7 @@ const nsICommandLineHandler    = Components.interfaces.nsICommandLineHandler;
 const nsICommandLineValidator  = Components.interfaces.nsICommandLineValidator;
 const nsIDOMWindowInternal     = Components.interfaces.nsIDOMWindowInternal;
 const nsIFactory               = Components.interfaces.nsIFactory;
+const nsIJARURI                = Components.interfaces.nsIJARURI;
 const nsISupportsString        = Components.interfaces.nsISupportsString;
 const nsIWindowMediator        = Components.interfaces.nsIWindowMediator;
 const nsIWindowWatcher         = Components.interfaces.nsIWindowWatcher;
@@ -188,11 +189,31 @@ var nsMailDefaultHandler = {
                              .getService(nsIWindowWatcher);
       var argstring = Components.classes["@mozilla.org/supports-string;1"]
                                 .createInstance(nsISupportsString);
-      wwatch.openWindow(null, chromeParam, "_blank",
-                        "chrome,dialog=no,all", argstring);
-      cmdLine.preventDefault = true;
+
+      try {
+        // only load URIs which do not inherit chrome privs.
+
+        // normally would call checkLoadURI( ,DISALLOW_SCRIPT_OR_DATA)
+        // for this, but in this context we crash when the security manager
+        // tries to throw an exception (no window object here). On the branch
+        // we need to simulate the important bits
+        var uri = resolveURIInternal(cmdLine, chromeParam);
+        while (uri instanceof nsIJARURI) {
+          // unpack to find the real scheme
+          uri = uri.JARFile;
+        }
+        if (!uri.schemeIs("javascript") && !uri.schemeIs("data")) {
+          wwatch.openWindow(null, uri.spec, "_blank",
+                            "chrome,dialog=no,all", argstring);
+          cmdLine.preventDefault = true;
+        }
+      }
+      catch (e) {
+        dump(e);
+        throw Components.results.NS_ERROR_ABORT;
+      }
     }
-    
+
     var count = cmdLine.length;
     if (count) {
       var i = 0;

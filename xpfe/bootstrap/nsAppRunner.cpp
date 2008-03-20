@@ -92,6 +92,9 @@
 #include "nsILocalFile.h"
 #include "nsILookAndFeel.h"
 #include "nsIProcess.h"
+#include "nsIIOService.h"
+#include "nsIJARURI.h"
+#include "nsNetCID.h"
 
 #ifdef MOZ_XPINSTALL
 #include "InstallCleanupDefines.h"
@@ -583,6 +586,24 @@ LaunchApplicationWithArgs(const char *commandLineArg,
           rv = OpenWindow(chromeUrlForTask, cmdArgs);
         }
         else {
+          // We need to emulate checkLoadURI because we don't have a window yet
+          nsCOMPtr<nsIIOService> ioService = do_GetService(NS_IOSERVICE_CONTRACTID, &rv);
+          if (NS_FAILED(rv)) return rv;
+          nsCOMPtr<nsIURI> baseURI;
+          rv = ioService->NewURI(cmdResult, nsnull, nsnull, getter_AddRefs(baseURI));
+          if (NS_FAILED(rv)) return rv;
+          nsCOMPtr<nsIJARURI> jarURI(do_QueryInterface(baseURI));
+          while (jarURI) {
+            rv = jarURI->GetJARFile(getter_AddRefs(baseURI));
+            if (NS_FAILED(rv)) return rv;
+            jarURI = do_QueryInterface(baseURI);
+          }
+          PRBool scriptOrData = PR_FALSE;
+          baseURI->SchemeIs("javascript", &scriptOrData);
+          if (!scriptOrData)
+            baseURI->SchemeIs("data", &scriptOrData);
+          if (scriptOrData)
+            return NS_ERROR_FAILURE;
 #ifdef DEBUG_CMD_LINE
           printf("opening %s with %s\n", cmdResult.get(), "OpenWindow");
 #endif /* DEBUG_CMD_LINE */
