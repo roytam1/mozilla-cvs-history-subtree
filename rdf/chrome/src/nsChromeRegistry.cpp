@@ -411,7 +411,8 @@ SplitURL(nsIURI *aChromeURI, nsCString& aPackage, nsCString& aProvider, nsCStrin
             return NS_ERROR_FAILURE;
           break;
         case '?':
-          // leave any query section alone
+        case '#':
+          // leave any query or ref section alone
           pos = end;
           continue;
       }
