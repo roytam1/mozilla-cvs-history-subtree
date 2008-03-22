@@ -260,7 +260,7 @@ js_DumpGCStats(JSRuntime *rt, FILE *fp);
 
 #endif /* JS_GCMETER */
 
-typedef struct JSWeakRoots {
+struct JSWeakRoots {
     /* Most recently created things by type, members of the GC's root set. */
     JSGCThing           *newborn[GCX_NTYPES];
 
@@ -269,7 +269,7 @@ typedef struct JSWeakRoots {
 
     /* Root for the result of the most recent js_InternalInvoke call. */
     jsval               lastInternalResult;
-} JSWeakRoots;
+};
 
 #if 0
 JS_STATIC_ASSERT(JSVAL_NULL == 0);

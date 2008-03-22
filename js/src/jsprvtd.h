@@ -96,12 +96,14 @@ typedef struct JSGCRootHashEntry    JSGCRootHashEntry;
 typedef struct JSGCThing            JSGCThing;
 typedef struct JSParseNode          JSParseNode;
 typedef struct JSSharpObjectMap     JSSharpObjectMap;
+typedef struct JSTempValueRooter    JSTempValueRooter;
 typedef struct JSToken              JSToken;
 typedef struct JSTokenPos           JSTokenPos;
 typedef struct JSTokenPtr           JSTokenPtr;
 typedef struct JSTokenStream        JSTokenStream;
 typedef struct JSTreeContext        JSTreeContext;
 typedef struct JSTryNote            JSTryNote;
+typedef struct JSWeakRoots          JSWeakRoots;
 
 /* Friend "Advanced API" typedefs. */
 typedef struct JSAtom               JSAtom;
@@ -198,5 +200,30 @@ typedef void
 typedef JSBool
 (* JS_DLL_CALLBACK JSDebugErrorHook)(JSContext *cx, const char *message,
                                      JSErrorReport *report, void *closure);
+
+/*
+ * Type definitions for temporary GC roots that register with GC local C
+ * variables. See jscntxt.h for details.
+ */
+typedef void
+(* JS_DLL_CALLBACK JSTempValueMarker)(JSContext *cx, JSTempValueRooter *tvr);
+
+typedef union JSTempValueUnion {
+    jsval               value;
+    JSObject            *object;
+    JSString            *string;
+    void                *gcthing;
+    JSTempValueMarker   marker;
+    JSScopeProperty     *sprop;
+    JSWeakRoots         *weakRoots;
+    JSScript            *script;
+    jsval               *array;
+} JSTempValueUnion;
+
+struct JSTempValueRooter {
+    JSTempValueRooter   *down;
+    ptrdiff_t           count;
+    JSTempValueUnion    u;
+};
 
 #endif /* jsprvtd_h___ */

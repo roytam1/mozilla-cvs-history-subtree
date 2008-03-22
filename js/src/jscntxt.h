@@ -381,28 +381,31 @@ typedef struct JSLocalRootStack {
 
 #define JSLRS_NULL_MARK ((uint32) -1)
 
-typedef struct JSTempValueRooter JSTempValueRooter;
-typedef void
-(* JS_DLL_CALLBACK JSTempValueMarker)(JSContext *cx, JSTempValueRooter *tvr);
-
-typedef union JSTempValueUnion {
-    jsval               value;
-    JSObject            *object;
-    JSTempValueMarker   marker;
-    JSScopeProperty     *sprop;
-    JSWeakRoots         *weakRoots;
-    jsval               *array;
-} JSTempValueUnion;
+/*
+ * Macros to push/pop JSTempValueRooter instances to context-linked stack of
+ * temporary GC roots. If you need to protect a result value that flows out of
+ * a C function across several layers of other functions, use the
+ * js_LeaveLocalRootScopeWithResult internal API (see further below) instead.
+ *
+ * JSTempValueRooter.count defines the type of the rooted value referenced by
+ * JSTempValueRooter.u union of type JSTempValueUnion according to the
+ * following table:
+ *
+ *     count                description
+ * JSTVU_SINGLE         u.value contains the single value or GC-thing to root.
+ * JSTVU_MARKER         u.marker holds a hook that GC calls to mark the values.
+ * JSTVU_SPROP          u.sprop points to the property tree node to mark.
+ * JSTVU_WEAK_ROOTS     u.weakRoots points to saved weak roots.
+ * JSTVU_SCRIPT         u.script roots a pointer to JSScript.
+ *   >= 0               u.array points to a stack-allocated vector of jsvals.
+ */
+#define JSTVU_SINGLE        (-1)
+#define JSTVU_MARKER        (-2)
+#define JSTVU_SPROP         (-3)
+#define JSTVU_WEAK_ROOTS    (-4)
+#define JSTVU_SCRIPT        (-5)
 
 /*
- * Context-linked stack of temporary GC roots.
- *
- * If count is -1, then u.value contains the single value or GC-thing to root.
- * If count is -2, then u.marker holds a mark hook called to mark the values.
- * If count is -3, then u.sprop points to the property tree node to mark.
- * If count is -4, then u.weakRoots points to saved weak roots.
- * If count >= 0, then u.array points to a stack-allocated vector of jsvals.
- *
  * To root a single GC-thing pointer, which need not be tagged and stored as a
  * jsval, use JS_PUSH_TEMP_ROOT_GCTHING. The macro reinterprets an arbitrary
  * GC-thing as jsval. It works because a GC-thing is aligned on a 0 mod 8
@@ -420,20 +423,8 @@ typedef union JSTempValueUnion {
  * tvr.u.value safely because JSObject * and JSString * are GC-things and, as
  * such, their tag bits are all zeroes.
  *
- * If you need to protect a result value that flows out of a C function across
- * several layers of other functions, use the js_LeaveLocalRootScopeWithResult
- * internal API (see further below) instead.
+ * The following checks that this type-punning is possible.
  */
-struct JSTempValueRooter {
-    JSTempValueRooter   *down;
-    ptrdiff_t           count;
-    JSTempValueUnion    u;
-};
-
-#define JSTVU_SINGLE        (-1)
-#define JSTVU_MARKER        (-2)
-#define JSTVU_SPROP         (-3)
-#define JSTVU_WEAK_ROOTS    (-4)
 
 #define JS_PUSH_TEMP_ROOT_COMMON(cx,tvr)                                      \
     JS_BEGIN_MACRO                                                            \
@@ -511,6 +502,13 @@ struct JSTempValueRooter {
     JS_BEGIN_MACRO                                                            \
         (tvr)->count = JSTVU_WEAK_ROOTS;                                      \
         (tvr)->u.weakRoots = (weakRoots_);                                    \
+        JS_PUSH_TEMP_ROOT_COMMON(cx, tvr);                                    \
+    JS_END_MACRO
+
+#define JS_PUSH_TEMP_ROOT_SCRIPT(cx,script_,tvr)                              \
+    JS_BEGIN_MACRO                                                            \
+        (tvr)->count = JSTVU_SCRIPT;                                          \
+        (tvr)->u.script = (script_);                                          \
         JS_PUSH_TEMP_ROOT_COMMON(cx, tvr);                                    \
     JS_END_MACRO
 
