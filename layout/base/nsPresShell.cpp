@@ -1070,6 +1070,8 @@ class PresShell : public nsIPresShell_MOZILLA_1_8_BRANCH, public nsIViewObserver
                   public nsSupportsWeakReference
 {
 public:
+  friend class nsIPresShell;
+
   PresShell();
 
   NS_DECL_AND_IMPL_ZEROING_OPERATOR_NEW
@@ -5621,6 +5623,9 @@ PresShell::ReconstructFrames(void)
 void
 nsIPresShell::ReconstructStyleDataInternal()
 {
+  if (NS_UNLIKELY(NS_STATIC_CAST(PresShell*, this)->mIsDestroying))
+    return;
+
   mStylesHaveChanged = PR_FALSE;
 
   if (!mDidInitialReflow) {
@@ -5644,6 +5649,9 @@ nsIPresShell::ReconstructStyleDataInternal()
 void
 nsIPresShell::ReconstructStyleDataExternal()
 {
+  if (NS_UNLIKELY(NS_STATIC_CAST(PresShell*, this)->mIsDestroying))
+    return;
+
   ReconstructStyleDataInternal();
   FlushPendingNotifications(Flush_Style);
 }
