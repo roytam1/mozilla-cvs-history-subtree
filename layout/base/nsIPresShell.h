@@ -210,7 +210,14 @@ public:
   /*
    * Called when stylesheets are added/removed/enabled/disabled to rebuild
    * all style data for a given pres shell without necessarily reconstructing
-   * all of the frames.
+   * all of the frames.  ReconstructStyleDataInternal() will not reconstruct
+   * style synchronously; if you need to do that, call
+   * FlushPendingNotifications to flush out style reresolves.
+   * ReconstructStyleDataExternal() will handle calling
+   * FlushPendingNotifications for backwards-compatibility reasons.
+   * // XXXbz why do we have this on the interface anyway?  The only consumer
+   * is calling AddOverrideStyleSheet/RemoveOverrideStyleSheet, and I think
+   * those should just handle reconstructing style data...
    */
   virtual NS_HIDDEN_(void) ReconstructStyleDataExternal();
   NS_HIDDEN_(void) ReconstructStyleDataInternal();
@@ -743,6 +750,9 @@ protected:
   // Set to true when the accessibility service is being used to mirror
   // the dom/layout trees
   PRPackedBool mIsAccessibilityActive;
+
+  // Last so it won't change any other offsets
+  PRPackedBool              mDidInitialReflow;
 };
 
 #define NS_IPRESSHELL_MOZILLA_1_8_BRANCH_IID \

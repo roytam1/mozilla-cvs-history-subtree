@@ -1416,7 +1416,6 @@ protected:
   PRPackedBool mIsDestroying;
   PRPackedBool mIsReleasingAnonymousContent;
 
-  PRPackedBool mDidInitialReflow;
   PRPackedBool mIgnoreFrameDestruction;
   PRPackedBool mHaveShutDown;
 
@@ -5624,20 +5623,18 @@ nsIPresShell::ReconstructStyleDataInternal()
 {
   mStylesHaveChanged = PR_FALSE;
 
-  nsIFrame* rootFrame = FrameManager()->GetRootFrame();
-  if (!rootFrame)
+  if (!mDidInitialReflow) {
+    // Nothing to do here, since we have no frames yet
     return;
+  }
 
-  nsStyleChangeList changeList;
-  FrameManager()->ComputeStyleChangeFor(rootFrame, &changeList,
-                                       NS_STYLE_HINT_NONE);
+  nsIContent* root = mDocument->GetRootContent();
+  if (!root) {
+    // No content to restyle
+    return;
+  }
 
-  NS_ASSERTION(mViewManager, "Should have view manager");
-  mViewManager->BeginUpdateViewBatch();
-  mFrameConstructor->ProcessRestyledFrames(changeList);
-  mViewManager->EndUpdateViewBatch(NS_VMREFRESH_NO_SYNC);
-
-  VERIFY_STYLE_TREE;
+  mFrameConstructor->PostRestyleEvent(root, eReStyle_Self, NS_STYLE_HINT_NONE);
 
 #ifdef ACCESSIBILITY
   InvalidateAccessibleSubtree(nsnull);
@@ -5648,6 +5645,7 @@ void
 nsIPresShell::ReconstructStyleDataExternal()
 {
   ReconstructStyleDataInternal();
+  FlushPendingNotifications(Flush_Style);
 }
 
 void
