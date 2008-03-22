@@ -198,11 +198,6 @@ JS_STATIC_DLL_CALLBACK(JSBool)
 XPC_NW_toString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
                 jsval *rval);
 
-static JSFunctionSpec sXPC_NW_JSClass_methods[] = {
-  {"toString", XPC_NW_toString, 0, 0, 0},
-  {0, 0, 0, 0, 0}
-};
-
 JS_STATIC_DLL_CALLBACK(JSBool)
 XPCNativeWrapperCtor(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
                      jsval *rval);
@@ -689,9 +684,14 @@ XPC_NW_NewResolve(JSContext *cx, JSObject *obj, jsval id, uintN flags,
   // couldn't get at those values anyway.  Also, we always deal with
   // wrappedJSObject and toString before looking at our scriptable hooks, so no
   // need to mess with our flags yet.
-  if (id == GetStringByIndex(cx, XPCJSRuntime::IDX_WRAPPED_JSOBJECT) ||
-      id == GetStringByIndex(cx, XPCJSRuntime::IDX_TO_STRING)) {
+  if (id == GetStringByIndex(cx, XPCJSRuntime::IDX_WRAPPED_JSOBJECT)) {
     return JS_TRUE;
+  }
+
+  if (id == GetStringByIndex(cx, XPCJSRuntime::IDX_TO_STRING)) {
+    *objp = obj;
+    return JS_DefineFunction(cx, obj, "toString",
+                             XPC_NW_toString, 0, 0) != nsnull;
   }
 
   // We can't use XPC_NW_BYPASS here, because we need to do a full
@@ -1081,9 +1081,12 @@ XPCNativeWrapperCtor(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
   printf("Creating new JSObject\n");
 #endif
   wrapperObj = ::JS_NewObject(cx, XPCNativeWrapper::GetJSClass(), nsnull,
-                              wrappedNative->GetScope()->GetGlobalJSObject());
+                              nsnull);
 
-  if (!wrapperObj) {
+  if (!wrapperObj ||
+      !::JS_SetParent(cx, wrapperObj,
+                      wrappedNative->GetScope()->GetGlobalJSObject()) ||
+      !::JS_SetPrototype(cx, wrapperObj, nsnull)) {
     // JS_NewObject already threw (or reported OOM).
     return JS_FALSE;
   }
@@ -1361,7 +1364,7 @@ XPCNativeWrapper::AttachNewConstructorObject(XPCCallContext &ccx,
 {
   JSObject *class_obj =
     ::JS_InitClass(ccx, aGlobalObject, nsnull, &sXPC_NW_JSClass.base,
-                   XPCNativeWrapperCtor, 0, nsnull, sXPC_NW_JSClass_methods,
+                   XPCNativeWrapperCtor, 0, nsnull, nsnull,
                    nsnull, nsnull);
   if (!class_obj) {
     NS_WARNING("can't initialize the XPCNativeWrapper class");
@@ -1413,14 +1416,16 @@ XPCNativeWrapper::GetNewOrUsed(JSContext *cx, XPCWrappedNative *wrapper)
     ::JS_LockGCThing(cx, nw_parent);
   }
 
-  obj = ::JS_NewObject(cx, GetJSClass(), nsnull, nw_parent);
+  obj = ::JS_NewObject(cx, GetJSClass(), nsnull, nsnull);
 
   if (lock) {
     ::JS_UnlockGCThing(cx, nw_parent);
   }
 
   if (!obj ||
+      !::JS_SetParent(cx, obj, nw_parent) ||
       !::JS_SetPrivate(cx, obj, wrapper) ||
+      !::JS_SetPrototype(cx, obj, nsnull) ||
       !::JS_SetReservedSlot(cx, obj, 0, INT_TO_JSVAL(FLAG_DEEP))) {
     return nsnull;
   }
