@@ -7414,6 +7414,8 @@ nsBlockFrame::RenumberListsFor(nsPresContext* aPresContext,
 
   // drill down through any wrappers to the real frame
   kid = kid->GetContentInsertionFrame();
+  if (!kid)
+    return PR_FALSE;
 
   // If the frame is a list-item and the frame implements our
   // block frame API then get its bullet and set the list item
