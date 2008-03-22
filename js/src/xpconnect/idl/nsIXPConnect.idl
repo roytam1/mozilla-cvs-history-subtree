@@ -674,8 +674,8 @@ interface nsIXPConnect_MOZILLA_1_8_BRANCH : nsIXPConnect
     * @param principal The principal (or NULL to use the null principal)
     *                  to use when evaluating code in this sandbox.
     */
-   [noscript] nsIXPConnectJSObjectHolder createSandbox(in JSContextPtr cx,
-                                                       in nsIPrincipal principal);
+   nsIXPConnectJSObjectHolder createSandbox(in JSContextPtr cx,
+                                            in nsIPrincipal principal);
 
    /**
     * Evaluate script in a sandbox, completely isolated from all
@@ -691,6 +691,32 @@ interface nsIXPConnect_MOZILLA_1_8_BRANCH : nsIXPConnect
     *         is responsible for rooting the jsval before making a call
     *         to this method.
     */
-   [noscript] JSVal evalInSandboxObject(in AString source, in JSContextPtr cx,
-                                        in nsIXPConnectJSObjectHolder sandbox);
+   JSVal evalInSandboxObject(in AString source, in JSContextPtr cx,
+                             in nsIXPConnectJSObjectHolder sandbox);
+};
+
+[uuid(f4bec7f9-256b-4acd-b32c-2c3d37615190)]
+interface nsIXPConnect_MOZILLA_1_8_BRANCH2 : nsIXPConnect_MOZILLA_1_8_BRANCH
+{
+   /**
+    * Evaluate script in a sandbox, completely isolated from all
+    * other running scripts.
+    *
+    * @param source The source of the script to evaluate.
+    * @param cx The context to use when setting up the evaluation of
+    *           the script. The actual evaluation will happen on a new
+    *           temporary context.
+    * @param sandbox The sandbox object to evaluate the script in.
+    * @param returnStringOnly The only results to come out of the
+    *                         computation (including exceptions) will
+    *                         be coerced into strings created in the
+    *                         sandbox.
+    * @return The result of the evaluation as a jsval. If the caller
+    *         intends to use the return value from this call the caller
+    *         is responsible for rooting the jsval before making a call
+    *         to this method.
+    */
+   JSVal evalInSandboxObject2(in AString source, in JSContextPtr cx,
+                              in nsIXPConnectJSObjectHolder sandbox,
+                              in PRBool returnStringOnly);
 };

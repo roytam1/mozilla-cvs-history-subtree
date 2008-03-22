@@ -45,9 +45,10 @@
 #include "xpcprivate.h"
 #include "XPCNativeWrapper.h"
 
-NS_IMPL_THREADSAFE_ISUPPORTS4(nsXPConnect,
+NS_IMPL_THREADSAFE_ISUPPORTS5(nsXPConnect,
                               nsIXPConnect,
                               nsIXPConnect_MOZILLA_1_8_BRANCH,
+                              nsIXPConnect_MOZILLA_1_8_BRANCH2,
                               nsISupportsWeakReference,
                               nsIEventQueueListener)
 
@@ -1230,10 +1231,20 @@ nsXPConnect::CreateSandbox(JSContext *cx, nsIPrincipal *principal,
 #endif /* XPCONNECT_STANDALONE */
 }
 
+// nsIXPConnect_MOZILLA_1_8_BRANCH version.
 NS_IMETHODIMP
 nsXPConnect::EvalInSandboxObject(const nsAString& source, JSContext *cx,
                                  nsIXPConnectJSObjectHolder *sandbox,
                                  jsval *rval)
+{
+    return EvalInSandboxObject2(source, cx, sandbox, PR_FALSE, rval);
+}
+
+// nsIXPConnect_MOZILLA_1_8_BRANCH2 version.
+NS_IMETHODIMP
+nsXPConnect::EvalInSandboxObject2(const nsAString& source, JSContext *cx,
+                                  nsIXPConnectJSObjectHolder *sandbox,
+                                  PRBool returnStringOnly, jsval *rval)
 {
 #ifdef XPCONNECT_STANDALONE
     return NS_ERROR_NOT_AVAILABLE;
@@ -1246,7 +1257,8 @@ nsXPConnect::EvalInSandboxObject(const nsAString& source, JSContext *cx,
     NS_ENSURE_SUCCESS(rv, rv);
 
     return xpc_EvalInSandbox(cx, obj, source,
-                             NS_ConvertUTF16toUTF8(source).get(), 1, rval);
+                             NS_ConvertUTF16toUTF8(source).get(), 1,
+                             returnStringOnly, rval);
 #endif /* XPCONNECT_STANDALONE */
 }
 
