@@ -1000,10 +1000,6 @@ nsScriptSecurityManager::LookupPolicy(nsIPrincipal* aPrincipal,
         const char *colon = nsnull;
         char *p = start;
 
-        //-- skip (nested) jar schemes to reach the "real" URI
-        while (*p == 'j' && *(++p) == 'a' && *(++p) == 'r' && *(++p) == ':')
-            start = ++p;
-        
         //-- search domain (stop at the end of the string or at the 3rd slash)
         for (PRUint32 slashes=0; *p; p++)
         {
