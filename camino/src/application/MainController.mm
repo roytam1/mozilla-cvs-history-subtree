@@ -126,7 +126,6 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 - (void)showCertificatesNotification:(NSNotification*)inNotification;
 - (void)openPanelDidEnd:(NSOpenPanel*)inOpenPanel returnCode:(int)inReturnCode contextInfo:(void*)inContextInfo;
 - (void)loadApplicationPage:(NSString*)pageURL;
-- (NSArray*)browserWindows;
 
 @end
 
