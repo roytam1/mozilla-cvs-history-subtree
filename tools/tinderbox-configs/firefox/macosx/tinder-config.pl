@@ -167,7 +167,7 @@ $LocaleProduct = "browser";
 $LocalizationVersionFile = 'browser/config/version.txt';
 %WGetFiles = (
 # CONFIG:             "http://%stagingServer%/pub/mozilla.org/firefox/nightly/%version%-candidates/rc%rc%/firefox-%version%.en-US.mac.dmg" => 
-"http://production-1.9-master.build.mozilla.org/pub/mozilla.org/firefox/nightly/3.0b4-candidates/rc1/firefox-3.0b4.en-US.mac.dmg" => 
+"http://production-1.9-master.build.mozilla.org/pub/mozilla.org/firefox/nightly/3.0b5-candidates/rc1/firefox-3.0b5.en-US.mac.dmg" => 
 # CONFIG:             "%l10n_buildDir%/%l10n_buildPlatform%/firefox.dmg"
 "/builds/tinderbox/Fx-Mozilla1.9-l10n-Release/Darwin_8.8.4_Depend/firefox.dmg"
 	      );
@@ -199,7 +199,7 @@ $BuildTree  = 'MozillaRelease';
 
 #$BuildName = '';
 # CONFIG: $BuildTag = '%productTag%_RELEASE';
-$BuildTag = 'FIREFOX_3_0b4_RELEASE';
+$BuildTag = 'FIREFOX_3_0b5_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -239,7 +239,7 @@ $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
 # CONFIG: $milestone     = "firefox%version%-l10n";
-$milestone     = "firefox3.0b4-l10n";
+$milestone     = "firefox3.0b5-l10n";
 $notify_list   = "build-announce\@mozilla.org";
 $stub_installer = 0;
 $sea_installer = 0;
