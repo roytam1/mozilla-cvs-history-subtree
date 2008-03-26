@@ -172,7 +172,7 @@ $BuildTree  = 'MozillaRelease';
 
 #$BuildName = '';
 # CONFIG: $BuildTag = '%productTag%_RELEASE';
-$BuildTag = 'FIREFOX_3_0b4_RELEASE';
+$BuildTag = 'FIREFOX_3_0b5_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -210,7 +210,7 @@ $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
 # CONFIG: $milestone     = 'firefox%version%';
-$milestone     = 'firefox3.0b4';
+$milestone     = 'firefox3.0b5';
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 1;
@@ -227,7 +227,7 @@ $update_pushinfo = 0;
 $crashreporter_buildsymbols = 1;
 $crashreporter_pushsymbols = 1;
 # CONFIG: $ENV{'SYMBOL_SERVER_HOST'}    = '%symbolServer%';
-$ENV{'SYMBOL_SERVER_HOST'}    = 'stage.mozilla.org';
+$ENV{'SYMBOL_SERVER_HOST'}    = 'stage-old.mozilla.org';
 # CONFIG: $ENV{'SYMBOL_SERVER_USER'}    = '%symbolServerUser%';
 $ENV{'SYMBOL_SERVER_USER'}    = 'ffxbld';
 # CONFIG: $ENV{'SYMBOL_SERVER_PATH'}    = '%symbolServerPath%';
