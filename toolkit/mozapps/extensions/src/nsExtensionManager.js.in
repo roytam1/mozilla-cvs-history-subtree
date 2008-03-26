@@ -6136,12 +6136,15 @@ RDFItemUpdater.prototype = {
     this._versionUpdateOnly = aVersionUpdateOnly;
     this._item = aItem;
   
-    var itemStatus;
+    var itemStatus = "userEnabled";
     if (emDS.getItemProperty(aItem.id, "userDisabled") == "true" ||
         emDS.getItemProperty(aItem.id, "userDisabled") == OP_NEEDS_ENABLE)
       itemStatus = "userDisabled";
-    else
-      itemStatus = "userEnabled";
+    else if (emDS.getItemProperty(aItem.id, "type") == nsIUpdateItem.TYPE_THEME) {
+      var currentSkin = gPref.getCharPref(PREF_GENERAL_SKINS_SELECTEDSKIN);
+      if (emDS.getItemProperty(aItem.id, "internalName") != currentSkin)
+        itemStatus = "userDisabled";
+    }
     
     if (emDS.getItemProperty(aItem.id, "compatible") == "false")
       itemStatus += ",incompatible";
