@@ -2522,7 +2522,7 @@ dump_performance_info(bltestCipherInfo *infoList, double totalTimeInt,
         cxreps += info->cxreps;
         cxtime += info->cxtime;
         optime += info->optime;
-        totalIn += (PRInt64) info->input.buf.len * (PRInt64) info->repetitions;
+        totalIn += info->input.buf.len * info->repetitions;
         
         info = info->next;
     }

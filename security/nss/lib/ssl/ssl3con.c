@@ -782,7 +782,7 @@ ssl3_NegotiateVersion(sslSocket *ss, SSL3ProtocolVersion peerVersion)
 static SECStatus
 ssl3_GetNewRandom(SSL3Random *random)
 {
-    PRUint32 gmt = ssl_Time();
+    PRIntervalTime gmt = PR_IntervalToSeconds(PR_IntervalNow());
     SECStatus rv;
 
     random->rand[0] = (unsigned char)(gmt >> 24);
