@@ -81,15 +81,16 @@ class TinderboxMailNotifier(mail.MailNotifier):
                           (ie. http://www.myproject.org/nightly/08-08-2006.tgz)
                           It will be posted to the Tinderbox.
 
+        @type  logCompression: string
+        @param logCompression: The type of compression to use on the log.
+                               Valid options are"bzip2" and "gzip". gzip is
+                               only known to work on Python 2.4 and above.
 
         @type  errorparser: string
         @param errorparser: The error parser that the Tinderbox server
                             should use when scanning the log file.
                             Default is "unix".
-        @type  logCompression: string
-        @param logCompression: The type of compression to use on the log.
-                               Valid options are"bzip2" and "gzip". gzip is
-                               only known to work on Python 2.4 and above.
+
         @type  columnName: string
         @param columnName: When columnName is None, use the buildername as
                            the Tinderbox column name. When columnName is a
@@ -109,10 +110,10 @@ class TinderboxMailNotifier(mail.MailNotifier):
                                    subject=subject,
                                    extraRecipients=extraRecipients,
                                    sendToInterestedUsers=False)
-        self.errorparser = errorparser
         self.tree = tree
         self.binaryURL = binaryURL
         self.logCompression = logCompression
+        self.errorparser = errorparser
         self.useChangeTime = useChangeTime
         assert columnName is None or type(columnName) is str \
             or isinstance(columnName, WithProperties), \
