@@ -1310,7 +1310,10 @@ nsTableRowGroupFrame::Reflow(nsPresContext*          aPresContext,
     // calculate the height based on the rect of the last row
     aDesiredSize.height = GetHeightOfRows();
   }
-
+  // if we have a nextinflow we are not complete
+  if (GetNextInFlow()) {
+    aStatus |= NS_FRAME_NOT_COMPLETE;
+  }
   aDesiredSize.mOverflowArea.UnionRect(aDesiredSize.mOverflowArea, nsRect(0, 0, aDesiredSize.width,
 	                                                                      aDesiredSize.height)); 
   FinishAndStoreOverflow(&aDesiredSize);
@@ -1503,10 +1506,6 @@ nsTableRowGroupFrame::IR_TargetIsMe(nsPresContext*        aPresContext,
       break;
   }
 
-  // XXX If we have a next-in-flow, then we're not complete
-  if (mNextInFlow) {
-    aStatus = NS_FRAME_NOT_COMPLETE;
-  }
   return rv;
 }
 
@@ -1738,10 +1737,6 @@ nsTableRowGroupFrame::IR_TargetIsChild(nsPresContext*        aPresContext,
   
   // Return our desired width
   //aDesiredSize.width = aReflowState.reflowState.availableWidth;
-
-  if (mNextInFlow) {
-    aStatus = NS_FRAME_NOT_COMPLETE;
-  }
 
   return rv;
 }
