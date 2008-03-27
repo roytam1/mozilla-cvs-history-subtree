@@ -169,10 +169,6 @@ nssCKFWObject_Create
   }
 #endif /* NSSDEBUG */
 
-  if( (NSSCKFWToken *)NULL == fwToken ) {
-    *pError = CKR_ARGUMENTS_BAD;
-    return fwObject;
-  }
   mdObjectHash = nssCKFWToken_GetMDObjectHash(fwToken);
   if( (nssCKFWHash *)NULL == mdObjectHash ) {
     *pError = CKR_GENERAL_ERROR;
@@ -199,7 +195,11 @@ nssCKFWObject_Create
   }
 
   fwObject->fwToken = fwToken;
-  fwObject->mdToken = nssCKFWToken_GetMDToken(fwToken);
+
+  if( (NSSCKFWToken *)NULL != fwToken ) {
+    fwObject->mdToken = nssCKFWToken_GetMDToken(fwToken);
+  }
+
   fwObject->fwInstance = fwInstance;
   fwObject->mdInstance = nssCKFWInstance_GetMDInstance(fwInstance);
   fwObject->mutex = nssCKFWInstance_CreateMutex(fwInstance, arena, pError);
@@ -260,9 +260,7 @@ nssCKFWObject_Finalize
     nssCKFWHash_Remove(mdObjectHash, fwObject->mdObject);
   }
 
-  if (fwObject->fwSession) {
-    nssCKFWSession_DeregisterSessionObject(fwObject->fwSession, fwObject);
-  }
+  nssCKFWSession_DeregisterSessionObject(fwObject->fwSession, fwObject);
   nss_ZFreeIf(fwObject);
 
 #ifdef DEBUG
@@ -303,9 +301,7 @@ nssCKFWObject_Destroy
     nssCKFWHash_Remove(mdObjectHash, fwObject->mdObject);
   }
 
-  if (fwObject->fwSession) {
-    nssCKFWSession_DeregisterSessionObject(fwObject->fwSession, fwObject);
-  }
+  nssCKFWSession_DeregisterSessionObject(fwObject->fwSession, fwObject);
   nss_ZFreeIf(fwObject);
 
 #ifdef DEBUG
@@ -696,7 +692,6 @@ NSS_IMPLEMENT CK_RV
 nssCKFWObject_SetAttribute
 (
   NSSCKFWObject *fwObject,
-  NSSCKFWSession *fwSession,
   CK_ATTRIBUTE_TYPE attribute,
   NSSItem *value
 )
@@ -724,7 +719,7 @@ nssCKFWObject_SetAttribute
     a.pValue = value->data;
     a.ulValueLen = value->size;
 
-    newFwObject = nssCKFWSession_CopyObject(fwSession, fwObject,
+    newFwObject = nssCKFWSession_CopyObject(fwObject->fwSession, fwObject,
                     &a, 1, &error);
     if( (NSSCKFWObject *)NULL == newFwObject ) {
       if( CKR_OK == error ) {
@@ -775,15 +770,13 @@ nssCKFWObject_SetAttribute
        * New one is a session object, except since we "stole" the fwObject, it's
        * not in the list.  Add it.
        */
-      nssCKFWSession_RegisterSessionObject(fwSession, fwObject);
+      nssCKFWSession_RegisterSessionObject(fwObject->fwSession, fwObject);
     } else {
       /*
        * New one is a token object, except since we "stole" the fwObject, it's
        * in the list.  Remove it.
        */
-      if (fwObject->fwSession) {
-        nssCKFWSession_DeregisterSessionObject(fwObject->fwSession, fwObject);
-      }
+      nssCKFWSession_DeregisterSessionObject(fwObject->fwSession, fwObject);
     }
 
     /*
