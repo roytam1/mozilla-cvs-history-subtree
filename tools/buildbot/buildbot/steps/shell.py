@@ -111,8 +111,7 @@ class ShellCommand(LoggingBuildStep):
         self.addFactoryArguments(workdir=workdir,
                                  description=description,
                                  descriptionDone=descriptionDone,
-                                 command=command,
-                                 **kwargs)
+                                 command=command)
 
         # everything left over goes to the RemoteShellCommand
         kwargs['workdir'] = workdir # including a copy of 'workdir'
