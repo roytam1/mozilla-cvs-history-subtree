@@ -396,10 +396,10 @@ PRInt32 UTF8InputStream::Fill(nsresult * aErrorCode)
   NS_ASSERTION(converter.Length() == dstLen, "length mismatch");
                
   mUnicharDataOffset = 0;
-  mUnicharDataLength = dstLen;
+  mUnicharDataLength = converter.Length();
   mByteDataOffset = srcLen;
   
-  return dstLen;
+  return mUnicharDataLength;
 }
 
 void

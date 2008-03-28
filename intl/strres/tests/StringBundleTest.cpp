@@ -53,6 +53,7 @@
 #include "nsIComponentManager.h"
 //
 #define TEST_URL "resource://gre/res/strres.properties"
+#define TEST_397093_URL "resource://gre/res/397093.properties"
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -157,6 +158,52 @@ main(int argc, char *argv[])
   v = ptrv;
   value = ToNewCString(v);
   printf("file=\"%s\"\n", value);
+
+  // Test for bug 397093
+  nsIStringBundle* bundle397093 = nsnull;
+
+  ret = service->CreateBundle(TEST_397093_URL, &bundle397093);
+
+  if (NS_FAILED(ret)) {
+    printf("cannot create bundle for 397093\n");
+    return 1;
+  }
+
+  nsXPIDLString valueASCII, valueUTF8, valueLatin1;
+  
+  ret = bundle397093->GetStringFromName(NS_LITERAL_STRING("asciiProperty").get(),
+                                  getter_Copies(valueASCII));
+  if (NS_FAILED(ret)) {
+    printf("failed to get string for asciiProperty\n");
+    return 1;
+  }
+  if (!valueASCII.Equals(NS_LITERAL_STRING("Foo"))) {
+    printf("incorrect value for asciiProperty\n");
+    return 1;
+  }
+  
+  ret = bundle397093->GetStringFromName(NS_LITERAL_STRING("utf8Property").get(),
+                                  getter_Copies(valueUTF8));
+  if (NS_FAILED(ret)) {
+    printf("failed to get string for utf8Property\n");
+    return 1;
+  }
+  if (!valueUTF8.Equals(NS_LITERAL_STRING("Fòò"))) {
+    printf("incorrect value for utf8Property\n");
+    return 1;
+  }
+
+  ret = bundle397093->GetStringFromName(NS_LITERAL_STRING("latin1Property").get(),
+                                  getter_Copies(valueLatin1));
+  if (NS_FAILED(ret)) {
+    printf("failed to get string for latin1Property\n");
+    return 1;
+  }
+  if (!valueLatin1.Equals(NS_LITERAL_STRING("F"))) {
+    printf("incorrect value for latin1Property\n");
+    return 1;
+  }
+  printf("test for bug 397093 passed\n");
 
   return 0;
 }
