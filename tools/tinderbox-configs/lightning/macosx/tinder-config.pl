@@ -7,6 +7,8 @@
 #-    Uncomment the variables you need to set.
 #-    The default values are the same as the commented variables.
 
+$ENV{CVS_RSH} = "ssh";
+
 # $ENV{MOZ_PACKAGE_MSI}
 #-----------------------------------------------------------------------------
 #  Default: 0
