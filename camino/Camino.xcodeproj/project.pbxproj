@@ -1037,12 +1037,12 @@
 		DE74F8CB0AB2711C00FD1D5B /* OpenFeed.nib in Resources */ = {isa = PBXBuildFile; fileRef = DE74F8C80AB2711C00FD1D5B /* OpenFeed.nib */; };
 		DE74F8CD0AB2717F00FD1D5B /* feed.tiff in Resources */ = {isa = PBXBuildFile; fileRef = DE74F8CC0AB2717F00FD1D5B /* feed.tiff */; };
 		DE74F8CE0AB2717F00FD1D5B /* feed.tiff in Resources */ = {isa = PBXBuildFile; fileRef = DE74F8CC0AB2717F00FD1D5B /* feed.tiff */; };
-		DE80DD4F0D4682E6001C33F5 /* GoogleFeedHandler.app in Resources */ = {isa = PBXBuildFile; fileRef = DE80DD4C0D4682E6001C33F5 /* GoogleFeedHandler.app */; };
-		DE80DD500D4682E6001C33F5 /* BloglinesFeedHandler.app in Resources */ = {isa = PBXBuildFile; fileRef = DE80DD4D0D4682E6001C33F5 /* BloglinesFeedHandler.app */; };
-		DE80DD510D4682E6001C33F5 /* MyYahooFeedHandler.app in Resources */ = {isa = PBXBuildFile; fileRef = DE80DD4E0D4682E6001C33F5 /* MyYahooFeedHandler.app */; };
-		DE80DD520D4682E6001C33F5 /* GoogleFeedHandler.app in Resources */ = {isa = PBXBuildFile; fileRef = DE80DD4C0D4682E6001C33F5 /* GoogleFeedHandler.app */; };
-		DE80DD530D4682E6001C33F5 /* BloglinesFeedHandler.app in Resources */ = {isa = PBXBuildFile; fileRef = DE80DD4D0D4682E6001C33F5 /* BloglinesFeedHandler.app */; };
-		DE80DD540D4682E6001C33F5 /* MyYahooFeedHandler.app in Resources */ = {isa = PBXBuildFile; fileRef = DE80DD4E0D4682E6001C33F5 /* MyYahooFeedHandler.app */; };
+		DE80DD4F0D4682E6001C33F5 /* GoogleFeedHandler.app in Copy Feed Handlers */ = {isa = PBXBuildFile; fileRef = DE80DD4C0D4682E6001C33F5 /* GoogleFeedHandler.app */; };
+		DE80DD500D4682E6001C33F5 /* BloglinesFeedHandler.app in Copy Feed Handlers */ = {isa = PBXBuildFile; fileRef = DE80DD4D0D4682E6001C33F5 /* BloglinesFeedHandler.app */; };
+		DE80DD510D4682E6001C33F5 /* MyYahooFeedHandler.app in Copy Feed Handlers */ = {isa = PBXBuildFile; fileRef = DE80DD4E0D4682E6001C33F5 /* MyYahooFeedHandler.app */; };
+		DE80DD520D4682E6001C33F5 /* GoogleFeedHandler.app in Copy Feed Handlers */ = {isa = PBXBuildFile; fileRef = DE80DD4C0D4682E6001C33F5 /* GoogleFeedHandler.app */; };
+		DE80DD530D4682E6001C33F5 /* BloglinesFeedHandler.app in Copy Feed Handlers */ = {isa = PBXBuildFile; fileRef = DE80DD4D0D4682E6001C33F5 /* BloglinesFeedHandler.app */; };
+		DE80DD540D4682E6001C33F5 /* MyYahooFeedHandler.app in Copy Feed Handlers */ = {isa = PBXBuildFile; fileRef = DE80DD4E0D4682E6001C33F5 /* MyYahooFeedHandler.app */; };
 		DE8AD7400ADB4F67009D44F6 /* bm_horizontal_separator.tiff in Resources */ = {isa = PBXBuildFile; fileRef = DE8AD73F0ADB4F67009D44F6 /* bm_horizontal_separator.tiff */; };
 		DE8AD7410ADB4F67009D44F6 /* bm_horizontal_separator.tiff in Resources */ = {isa = PBXBuildFile; fileRef = DE8AD73F0ADB4F67009D44F6 /* bm_horizontal_separator.tiff */; };
 		DE8C629F0AB67E8A00078871 /* hidemanager.tiff in Resources */ = {isa = PBXBuildFile; fileRef = DE8C629E0AB67E8A00078871 /* hidemanager.tiff */; };
@@ -1383,6 +1383,32 @@
 				0F518833088592020091F3FB /* libpermissions.dylib in Copy Gecko Components */,
 			);
 			name = "Copy Gecko Components";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		33819A610D91893900CA9F52 /* Copy Feed Handlers */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = FeedHandlers;
+			dstSubfolderSpec = 7;
+			files = (
+				DE80DD500D4682E6001C33F5 /* BloglinesFeedHandler.app in Copy Feed Handlers */,
+				DE80DD4F0D4682E6001C33F5 /* GoogleFeedHandler.app in Copy Feed Handlers */,
+				DE80DD510D4682E6001C33F5 /* MyYahooFeedHandler.app in Copy Feed Handlers */,
+			);
+			name = "Copy Feed Handlers";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		33819A620D91893900CA9F52 /* Copy Feed Handlers */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = FeedHandlers;
+			dstSubfolderSpec = 7;
+			files = (
+				DE80DD530D4682E6001C33F5 /* BloglinesFeedHandler.app in Copy Feed Handlers */,
+				DE80DD520D4682E6001C33F5 /* GoogleFeedHandler.app in Copy Feed Handlers */,
+				DE80DD540D4682E6001C33F5 /* MyYahooFeedHandler.app in Copy Feed Handlers */,
+			);
+			name = "Copy Feed Handlers";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		3F44ACCF05BDFB9E00CB4B08 /* Copy Component XPTs */ = {
@@ -4536,6 +4562,7 @@
 				3F44AD6005BDFB9F00CB4B08 /* Copy Libraries */,
 				3F44AD6A05BDFB9F00CB4B08 /* Copy Security Components */,
 				3F44AD6F05BDFB9F00CB4B08 /* Copy Security Chrome */,
+				33819A610D91893900CA9F52 /* Copy Feed Handlers */,
 				3F44AD7705BDFB9F00CB4B08 /* Copy Frameworks */,
 				3365CA1F0D073ECA00ACBF18 /* Scrub Sparkle Languages */,
 				3F44AD7A05BDFB9F00CB4B08 /* Copy Plugins */,
@@ -4666,6 +4693,7 @@
 				3F44AF7B05BDFBA000CB4B08 /* Copy Security Components */,
 				3F44AF7E05BDFBA000CB4B08 /* Copy Security Chrome */,
 				3F44AF8605BDFBA000CB4B08 /* Copy Libraries */,
+				33819A620D91893900CA9F52 /* Copy Feed Handlers */,
 				3F44AF9005BDFBA000CB4B08 /* Copy Frameworks */,
 				3365CA0F0D07197E00ACBF18 /* Scrub Sparkle Languages */,
 				3F44AF9205BDFBA000CB4B08 /* Copy Plugins */,
@@ -4938,9 +4966,6 @@
 				DE137BAA0D35845400A0A9BB /* search_editor_bottom_background.png in Resources */,
 				DE137BAB0D35845400A0A9BB /* search_editor_action.png in Resources */,
 				DE137BBB0D3584CB00A0A9BB /* SearchEngineEditor.nib in Resources */,
-				DE80DD500D4682E6001C33F5 /* BloglinesFeedHandler.app in Resources */,
-				DE80DD4F0D4682E6001C33F5 /* GoogleFeedHandler.app in Resources */,
-				DE80DD510D4682E6001C33F5 /* MyYahooFeedHandler.app in Resources */,
 				33C165C60D63A052007D1EAD /* FindBarTextured.nib in Resources */,
 				00BBC0010D70A8F200C2D916 /* tab_loading.tiff in Resources */,
 			);
@@ -5151,9 +5176,6 @@
 				DE137BA80D35845400A0A9BB /* search_editor_bottom_background.png in Resources */,
 				DE137BA90D35845400A0A9BB /* search_editor_action.png in Resources */,
 				DE137BBA0D3584CB00A0A9BB /* SearchEngineEditor.nib in Resources */,
-				DE80DD530D4682E6001C33F5 /* BloglinesFeedHandler.app in Resources */,
-				DE80DD520D4682E6001C33F5 /* GoogleFeedHandler.app in Resources */,
-				DE80DD540D4682E6001C33F5 /* MyYahooFeedHandler.app in Resources */,
 				33C165C70D63A052007D1EAD /* FindBarTextured.nib in Resources */,
 				00BBC0020D70A8F200C2D916 /* tab_loading.tiff in Resources */,
 			);
