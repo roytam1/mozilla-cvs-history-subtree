@@ -60,7 +60,7 @@ $ProductName              = 'Minefield';
 $VendorName               = "";
 
 # CONFIG: $RunMozillaTests          = %runMozillaTests%;
-$RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
+$RunMozillaTests          = 1;
 $RegxpcomTest             = 1;
 $AliveTest                = 1;
 #$JavaTest                 = 0;
