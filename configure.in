@@ -117,7 +117,7 @@ LIBART_VERSION=2.3.4
 CAIRO_VERSION=1.5.2
 GLITZ_VERSION=0.4.0
 PANGO_VERSION=1.10.0
-GTK2_VERSION=1.8.0
+GTK2_VERSION=2.10.0
 MAKE_VERSION=3.78
 WINDRES_VERSION=2.14.90
 W32API_VERSION=3.8
@@ -375,6 +375,20 @@ if test "$GNU_CC"; then
     fi
 fi
 
+INTEL_CC=
+INTEL_CXX=
+if test "$GCC" = yes; then
+   if test "`$CC -help 2>&1 | grep -c 'Intel(R) C Compiler'`" != "0"; then
+     INTEL_CC=1
+   fi
+fi
+
+if test "$GXX" = yes; then
+   if test "`$CXX -help 2>&1 | grep -c 'Intel(R) C++ Compiler'`" != "0"; then
+     INTEL_CXX=1
+   fi
+fi
+
 dnl Special win32 checks
 dnl ========================================================
 case "$target" in
@@ -431,16 +445,18 @@ case "$target" in
         AC_LANG_RESTORE
         
         changequote(,)
-        _MSVC_VER_FILTER='s|.* \([0-9][0-9]*\.[0-9][0-9]*\.[0-9][0-9]*\).*|\1|p'
+        _MSVC_VER_FILTER='s|.* ([0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?).*|\1|p'
         changequote([,])
         
         # Determine compiler version
-        CC_VERSION=`"${CC}" -v 2>&1 | sed -ne "$_MSVC_VER_FILTER"`
+        CC_VERSION=`"${CC}" -v 2>&1 | sed -nre "$_MSVC_VER_FILTER"`
         _CC_MAJOR_VERSION=`echo ${CC_VERSION} | $AWK -F\. '{ print $1 }'`
         _CC_MINOR_VERSION=`echo ${CC_VERSION} | $AWK -F\. '{ print $2 }'`
+        _CC_RELEASE=`echo ${CC_VERSION} | $AWK -F\. '{ print $3 }'`
+        _CC_BUILD=`echo ${CC_VERSION} | $AWK -F\. '{ print $4 }'`
         _MSC_VER=${_CC_MAJOR_VERSION}${_CC_MINOR_VERSION}
 
-        CXX_VERSION=`"${CXX}" -v 2>&1 | sed -ne "$_MSVC_VER_FILTER"`
+        CXX_VERSION=`"${CXX}" -v 2>&1 | sed -nre "$_MSVC_VER_FILTER"`
         _CXX_MAJOR_VERSION=`echo ${CXX_VERSION} | $AWK -F\. '{ print $1 }'`
 
         if test "$_CC_MAJOR_VERSION" != "$_CXX_MAJOR_VERSION"; then
@@ -453,11 +469,20 @@ case "$target" in
         elif test "$_CC_MAJOR_VERSION" = "14"; then
             _CC_SUITE=8
             CXXFLAGS="$CXXFLAGS -Zc:wchar_t-"
+            dnl -DYNAMICBASE is only supported on VC8SP1 or newer,
+            dnl so be very specific here!
+            dnl VC8 is 14.00.50727.42, VC8SP1 is 14.00.50727.762
+            if test $_CC_RELEASE -gt 50727; then
+               _USE_DYNAMICBASE=1
+            elif test $_CC_BUILD -ge 762; then
+               _USE_DYNAMICBASE=1
+            fi
             AC_DEFINE(_CRT_SECURE_NO_DEPRECATE)
             AC_DEFINE(_CRT_NONSTDC_NO_DEPRECATE)
         elif test "$_CC_MAJOR_VERSION" = "15"; then
             _CC_SUITE=9
             CXXFLAGS="$CXXFLAGS -Zc:wchar_t-"
+            _USE_DYNAMICBASE=1
             AC_DEFINE(_CRT_SECURE_NO_WARNINGS)
             AC_DEFINE(_CRT_NONSTDC_NO_WARNINGS)
         else
@@ -494,7 +519,7 @@ case "$target" in
         fi
 
         # Check linker version
-        _LD_FULL_VERSION=`"${LD}" -v 2>&1 | sed -ne "$_MSVC_VER_FILTER"`
+        _LD_FULL_VERSION=`"${LD}" -v 2>&1 | sed -nre "$_MSVC_VER_FILTER"`
         _LD_MAJOR_VERSION=`echo ${_LD_FULL_VERSION} | $AWK -F\. '{ print $1 }'`
         if test "$_LD_MAJOR_VERSION" != "$_CC_SUITE"; then
             AC_MSG_ERROR([The linker major version, $_LD_FULL_VERSION,  does not match the compiler suite version, $_CC_SUITE.])
@@ -502,7 +527,7 @@ case "$target" in
         INCREMENTAL_LINKER=1
 
         # Check midl version
-        _MIDL_FULL_VERSION=`"${MIDL}" -v 2>&1 | sed -ne "$_MSVC_VER_FILTER"`
+        _MIDL_FULL_VERSION=`"${MIDL}" -v 2>&1 | sed -nre "$_MSVC_VER_FILTER"`
         _MIDL_MAJOR_VERSION=`echo ${_MIDL_FULL_VERSION} | $AWK -F\. '{ print $1 }'`
         _MIDL_MINOR_VERSION=`echo ${_MIDL_FULL_VERSION} | $AWK -F\. '{ print $2 }'`
         _MIDL_REV_VERSION=`echo ${_MIDL_FULL_VERSION} | $AWK -F\. '{ print $3 }'`
@@ -599,6 +624,8 @@ AC_SUBST(GNU_AS)
 AC_SUBST(GNU_LD)
 AC_SUBST(GNU_CC)
 AC_SUBST(GNU_CXX)
+AC_SUBST(INTEL_CC)
+AC_SUBST(INTEL_CXX)
 
 dnl ========================================================
 dnl Checks for programs.
@@ -696,7 +723,7 @@ from building Mozilla. Upgrade to Xcode 2.1 or later.])
     case "$PBBUILD" in
       *xcodebuild*)
         changequote(,)
-        XCODEBUILD_VERSION=`$PBBUILD -version 2>/dev/null | sed -e 's/.*DevToolsCore-\([0-9]*\).*/\1/'`
+        XCODEBUILD_VERSION=`$PBBUILD -version 2>/dev/null | xargs | sed -e 's/.*DevToolsCore-\([0-9]*\).*/\1/'`
         changequote([,])
         if test -n "$XCODEBUILD_VERSION" && test "$XCODEBUILD_VERSION" -ge 620 ; then
           HAS_XCODE_2_1=1;
@@ -732,6 +759,7 @@ case "$target" in
     if test -n "$_MACOSX_DEPLOYMENT_TARGET" ; then
         dnl Use the specified value
         export MACOSX_DEPLOYMENT_TARGET=$_MACOSX_DEPLOYMENT_TARGET
+        AC_DEFINE_UNQUOTED(__ENVIRONMENT_MAC_OS_X_VERION_MIN_REQUIRED__,$_MACOSX_DEPLOYMENT_TARGET)
     elif test -z "$MACOSX_DEPLOYMENT_TARGET" ; then
         dnl No value specified on the command line or in the environment,
         dnl use the lesser of the application's minimum or the architecture's
@@ -909,6 +937,8 @@ MOZ_JPEG_CFLAGS=
 MOZ_JPEG_LIBS='$(call EXPAND_LIBNAME_PATH,mozjpeg,$(DEPTH)/jpeg)'
 MOZ_ZLIB_CFLAGS=
 MOZ_ZLIB_LIBS='$(call EXPAND_LIBNAME_PATH,mozz,$(DEPTH)/modules/zlib/src)'
+MOZ_BZ2_CFLAGS=
+MOZ_BZ2_LIBS='$(call EXPAND_LIBNAME_PATH,bz2,$(DEPTH)/modules/libbz2/src)'
 MOZ_PNG_CFLAGS=
 MOZ_PNG_LIBS='$(call EXPAND_LIBNAME_PATH,mozpng,$(DEPTH)/modules/libimg/png)'
 
@@ -936,6 +966,7 @@ if test -n "$CROSS_COMPILE"; then
     OS_RELEASE=
     case "${target_os}" in
         linux*)       OS_ARCH=Linux OS_TARGET=Linux ;;
+        kfreebsd*-gnu) OS_ARCH=GNU_kFreeBSD OS_TARGET=GNU_kFreeBSD ;;
         solaris*)     OS_ARCH=SunOS OS_RELEASE=5 ;;
         mingw*)       OS_ARCH=WINNT ;;
         wince*)       OS_ARCH=WINCE ;;
@@ -1260,14 +1291,23 @@ if test "$GNU_CC"; then
     # -Wconversion - complained when char's or short's were used a function args
     # -Wshadow - removed because it generates more noise than help --pete
     _WARNINGS_CFLAGS="${_WARNINGS_CFLAGS} -Wall -W -Wno-unused -Wpointer-arith"
-    if test "$CPU_ARCH" != "ia64"; then
-        # only use -Wcast-align for non-ia64, it's noisy on that platform
+    if test "$CPU_ARCH" != "ia64" && test "$CPU_ARCH" != "sparc" \
+       && test -z "$INTEL_CC"; then
+        # don't use -Wcast-align on ia64 or sparc, it's noisy on those platforms
+        # icc doesn't support this flag.
         _WARNINGS_CFLAGS="${_WARNINGS_CFLAGS} -Wcast-align"
     fi
 
     dnl Turn pedantic on but disable the warnings for long long
     _PEDANTIC=1
-    _IGNORE_LONG_LONG_WARNINGS=1
+
+    if test -z "$INTEL_CC"; then
+      _IGNORE_LONG_LONG_WARNINGS=1
+      _WARNINGS_CFLAGS="${_WARNINGS_CFLAGS} -W"
+    else
+      _IGNORE_LONG_LONG_WARNINGS=
+    fi
+
 
     _DEFINES_CFLAGS='-include $(DEPTH)/mozilla-config.h -DMOZILLA_CLIENT'
     _USE_CPP_INCLUDE_FLAG=1
@@ -1291,8 +1331,10 @@ if test "$GNU_CXX"; then
     CXXFLAGS="$CXXFLAGS -fno-strict-aliasing"
     # Turn on GNU specific features
     _WARNINGS_CXXFLAGS="${_WARNINGS_CXXFLAGS} -Wall -Wconversion -Wpointer-arith -Woverloaded-virtual -Wsynth -Wno-ctor-dtor-privacy -Wno-non-virtual-dtor"
-    if test "$CPU_ARCH" != "ia64"; then
-        # only use -Wcast-align for non-ia64, it's noisy on that platform
+    if test "$CPU_ARCH" != "ia64" && test "$CPU_ARCH" != "sparc" \
+       && test -z "$INTEL_CC"; then
+        # don't use -Wcast-align on ia64 or sparc, it's noisy on those platforms
+        # icc doesn't support this flag.
         _WARNINGS_CXXFLAGS="${_WARNINGS_CXXFLAGS} -Wcast-align"
     fi
 
@@ -1466,7 +1508,7 @@ case "$host" in
     LIBXUL_LIBS='$(XPCOM_FROZEN_LDOPTS) $(LIBXUL_DIST)/bin/XUL -lobjc'
     ;;
 
-*-linux*)
+*-linux*|*-kfreebsd*-gnu)
     HOST_CFLAGS="$HOST_CFLAGS -DXP_UNIX"
     HOST_NSPR_MDCPUCFG='\"md/_linux.cfg\"'
     HOST_OPTIMIZE_FLAGS="${HOST_OPTIMIZE_FLAGS=-O3}"
@@ -1729,8 +1771,17 @@ case "$target" in
     ;;
 
 *-*linux*)
+    if test "$GNU_CC"; then
+        GCC_VERSION=`$CC -v 2>&1 | awk '/^gcc version/ { print $3 }'`
+        case $GCC_VERSION in
+        4.1.*|4.2.*)
+            # -Os is broken on gcc 4.1.x and 4.2.x, we need to tweak it to get good results.
+            MOZ_OPTIMIZE_SIZE_TWEAK="-finline-limit=50"
+        esac
+    fi
+
     TARGET_NSPR_MDCPUCFG='\"md/_linux.cfg\"'
-    MOZ_OPTIMIZE_FLAGS="-Os -freorder-blocks -fno-reorder-functions"
+    MOZ_OPTIMIZE_FLAGS="-Os -freorder-blocks -fno-reorder-functions $MOZ_OPTIMIZE_SIZE_TWEAK"
     MOZ_DEBUG_FLAGS="-g -fno-inline"  # most people on linux use gcc/gdb,
                                       # and that combo is not yet good at
                                       # debugging inlined functions (even
@@ -1907,12 +1958,15 @@ case "$target" in
         MOZ_XPCOM_OBSOLETE_LIBS='$(LIBXUL_DIST)/lib/xpcom_compat.lib'
         if test $_MSC_VER -ge 1400; then
             LDFLAGS="$LDFLAGS -NXCOMPAT -SAFESEH"
-            # For profile-guided optimization
+            dnl For profile-guided optimization
             PROFILE_GEN_CFLAGS="-GL"
             PROFILE_GEN_LDFLAGS="-LTCG:PGINSTRUMENT"
             PROFILE_USE_CFLAGS="-GL"
-            #XXX: should be -LTCG:PGOPTIMIZE, but that fails on libxul
+            dnl XXX: should be -LTCG:PGOPTIMIZE, but that fails on libxul
             PROFILE_USE_LDFLAGS="-LTCG:PGUPDATE"
+            if test -n "$_USE_DYNAMICBASE"; then
+               LDFLAGS="$LDFLAGS -DYNAMICBASE"
+            fi
         fi
     fi
     MOZ_JPEG_LIBS='$(call EXPAND_LIBNAME_PATH,jpeg$(MOZ_BITS)$(VERSION_NUMBER),$(DEPTH)/jpeg)'
@@ -2323,8 +2377,16 @@ dnl the qsort routine under solaris is faulty
        NS_USE_NATIVE=1
        MOZ_FIX_LINK_PATHS='-R $(LIBXUL_DIST)/bin'
        AC_DEFINE(NSCAP_DISABLE_DEBUG_PTR_TYPES)
-       CFLAGS="$CFLAGS -xstrconst -xbuiltin=%all"
-       CXXFLAGS="$CXXFLAGS -xbuiltin=%all -features=tmplife -norunpath"
+
+       if test "$CPU_ARCH" != "sparc"; then
+          CFLAGS="$CFLAGS -xstrconst -xbuiltin=%all"
+          CXXFLAGS="$CXXFLAGS -xbuiltin=%all -features=tmplife -norunpath"
+       else
+          # Do not use -xbuiltin on SPARC to get around a bug of compiler
+          CFLAGS="$CFLAGS -xstrconst -xbuiltin=%none"
+          CXXFLAGS="$CXXFLAGS -xbuiltin=%none -features=tmplife -norunpath"
+       fi
+
        LDFLAGS="-xildoff -z lazyload -z combreloc $LDFLAGS"
        if test -z "$CROSS_COMPILE" && test -f /usr/lib/ld/map.noexstk; then
            _SAVE_LDFLAGS=$LDFLAGS
@@ -2455,7 +2517,7 @@ dnl ========================================================
 dnl = Flags to strip unused symbols from .so components
 dnl ========================================================
 case "$target" in
-    *-linux*)
+    *-linux*|*-kfreebsd*-gnu)
         MOZ_COMPONENTS_VERSION_SCRIPT_LDFLAGS='-Wl,--version-script -Wl,$(BUILD_TOOLS)/gnu-ld-scripts/components-version-script'
         ;;
     *-solaris*)
@@ -3129,7 +3191,7 @@ then
 			fi
 			;;
 
-	    *-*-linux*) 
+	    *-*-linux*|*-*-kfreebsd*-gnu)
 			AC_DEFINE(_REENTRANT) 
 			;;
 
@@ -3943,22 +4005,22 @@ if test -n "$MOZ_NATIVE_NSS"; then
    NSS_LIBS="$NSS_LIBS -lcrmf"
 else
    NSS_CFLAGS='-I$(LIBXUL_DIST)/include/nss'
-   NSS_DEP_LIBS='\\\
-        $(LIBXUL_DIST)/lib/$(LIB_PREFIX)crmf.$(LIB_SUFFIX) \\\
-        $(LIBXUL_DIST)/lib/$(DLL_PREFIX)smime'$NSS_VERSION'$(DLL_SUFFIX) \\\
-        $(LIBXUL_DIST)/lib/$(DLL_PREFIX)ssl'$NSS_VERSION'$(DLL_SUFFIX) \\\
-        $(LIBXUL_DIST)/lib/$(DLL_PREFIX)nss'$NSS_VERSION'$(DLL_SUFFIX) \\\
-        $(LIBXUL_DIST)/lib/$(DLL_PREFIX)nssutil'$NSS_VERSION'$(DLL_SUFFIX) \\\
-        $(LIBXUL_DIST)/lib/$(DLL_PREFIX)softokn'$NSS_VERSION'$(DLL_SUFFIX)'
+   NSS_DEP_LIBS="\
+        \$(LIBXUL_DIST)/lib/\$(LIB_PREFIX)crmf.\$(LIB_SUFFIX) \
+        \$(LIBXUL_DIST)/lib/\$(DLL_PREFIX)smime$NSS_VERSION\$(DLL_SUFFIX) \
+        \$(LIBXUL_DIST)/lib/\$(DLL_PREFIX)ssl$NSS_VERSION\$(DLL_SUFFIX) \
+        \$(LIBXUL_DIST)/lib/\$(DLL_PREFIX)nss$NSS_VERSION\$(DLL_SUFFIX) \
+        \$(LIBXUL_DIST)/lib/\$(DLL_PREFIX)nssutil$NSS_VERSION\$(DLL_SUFFIX) \
+        \$(LIBXUL_DIST)/lib/\$(DLL_PREFIX)softokn$NSS_VERSION\$(DLL_SUFFIX)"
 
    if test -z "$GNU_CC" && test "$OS_ARCH" = "WINNT" -o "$OS_ARCH" = "WINCE" -o "$OS_ARCH" = "OS2"; then
-       NSS_LIBS='\\\
-        $(LIBXUL_DIST)/lib/$(LIB_PREFIX)crmf.$(LIB_SUFFIX) \\\
-        $(LIBXUL_DIST)/lib/$(LIB_PREFIX)smime'$NSS_VERSION'.$(IMPORT_LIB_SUFFIX) \\\
-        $(LIBXUL_DIST)/lib/$(LIB_PREFIX)ssl'$NSS_VERSION'.$(IMPORT_LIB_SUFFIX) \\\
-        $(LIBXUL_DIST)/lib/$(LIB_PREFIX)nss'$NSS_VERSION'.$(IMPORT_LIB_SUFFIX) \\\
-        $(LIBXUL_DIST)/lib/$(LIB_PREFIX)nssutil'$NSS_VERSION'.$(IMPORT_LIB_SUFFIX) \\\
-        $(LIBXUL_DIST)/lib/$(LIB_PREFIX)softokn'$NSS_VERSION'.$(IMPORT_LIB_SUFFIX)'
+       NSS_LIBS="\
+        \$(LIBXUL_DIST)/lib/\$(LIB_PREFIX)crmf.\$(LIB_SUFFIX) \
+        \$(LIBXUL_DIST)/lib/\$(LIB_PREFIX)smime$NSS_VERSION.\$(IMPORT_LIB_SUFFIX) \
+        \$(LIBXUL_DIST)/lib/\$(LIB_PREFIX)ssl$NSS_VERSION.\$(IMPORT_LIB_SUFFIX) \
+        \$(LIBXUL_DIST)/lib/\$(LIB_PREFIX)nss$NSS_VERSION.\$(IMPORT_LIB_SUFFIX) \
+        \$(LIBXUL_DIST)/lib/\$(LIB_PREFIX)nssutil$NSS_VERSION.\$(IMPORT_LIB_SUFFIX) \
+        \$(LIBXUL_DIST)/lib/\$(LIB_PREFIX)softokn$NSS_VERSION.\$(IMPORT_LIB_SUFFIX)"
    else
        NSS_LIBS='$(LIBS_DIR)'" -lcrmf -lsmime$NSS_VERSION -lssl$NSS_VERSION -lnss$NSS_VERSION -lnssutil$NSS_VERSION -lsoftokn$NSS_VERSION"
    fi
@@ -4043,6 +4105,35 @@ LIBS=$_SAVE_LIBS
 if test "${ZLIB_DIR}" -a -d "${ZLIB_DIR}" -a "$SYSTEM_ZLIB" = 1; then
     ZLIB_CFLAGS="-I${ZLIB_DIR}/include"
     ZLIB_LIBS="-L${ZLIB_DIR}/lib ${ZLIB_LIBS}"
+fi
+
+dnl system BZIP2 Support
+dnl ========================================================
+MOZ_ARG_WITH_STRING(system-bz2,
+[  --with-system-bz2[=PFX]
+                          Use system libbz2 [installed at prefix PFX]],
+    BZ2_DIR=$withval)
+
+_SAVE_CFLAGS=$CFLAGS
+_SAVE_LDFLAGS=$LDFLAGS
+_SAVE_LIBS=$LIBS
+if test -n "${BZ2_DIR}" -a "${BZ2_DIR}" != "yes"; then
+    CFLAGS="-I${BZ2_DIR}/include $CFLAGS"
+    LDFLAGS="-L${BZ2_DIR}/lib $LDFLAGS"
+fi
+if test -z "$BZ2_DIR" -o "$BZ2_DIR" = no; then
+    SYSTEM_BZ2=
+else
+    AC_CHECK_LIB(bz2, BZ2_bzread, [SYSTEM_BZ2=1 BZ2_LIBS="-lbz2"],
+	[SYSTEM_BZ2= BZ2_CFLAGS= BZ2_LIBS=], $BZ2_LIBS)
+fi
+CFLAGS=$_SAVE_CFLAGS
+LDFLAGS=$_SAVE_LDFLAGS
+LIBS=$_SAVE_LIBS
+
+if test "${BZ2_DIR}" -a -d "${BZ2_DIR}" -a "$SYSTEM_BZ2" = 1; then
+    BZ2_CFLAGS="-I${BZ2_DIR}/include"
+    BZ2_LIBS="-L${BZ2_DIR}/lib ${MOZ_BZ2_LIBS}"
 fi
 
 dnl system PNG Support
@@ -5282,7 +5373,8 @@ dnl ========================================================
 
 if (test "$OS_ARCH" = "WINNT" -a -z "$GNU_CC" \
     || test "$OS_ARCH" = "Darwin" \
-    || test "$OS_ARCH" = "Linux" -a "$CPU_ARCH" = "x86") \
+    || test "$OS_ARCH" = "Linux" -a "$CPU_ARCH" = "x86" \
+    || test "$OS_ARCH" = "SunOS") \
    && test -z "$HAVE_64BIT_OS"; then
    MOZ_CRASHREPORTER=1
 fi
@@ -5295,7 +5387,7 @@ MOZ_ARG_DISABLE_BOOL(crashreporter,
 if test -n "$MOZ_CRASHREPORTER"; then
    AC_DEFINE(MOZ_CRASHREPORTER)
 
-  if test "$OS_ARCH" = "Linux" && \
+  if (test "$OS_ARCH" = "Linux" || test "$OS_ARCH" = "SunOS") && \
     test -z "$SKIP_LIBRARY_CHECKS"; then
     PKG_CHECK_MODULES(MOZ_GTHREAD, gthread-2.0)
     AC_SUBST(MOZ_GTHREAD_CFLAGS)
@@ -5962,6 +6054,7 @@ fi # COMPILE_ENVIRONMENT
 AC_SUBST(MOZ_OPTIMIZE)
 AC_SUBST(MOZ_OPTIMIZE_FLAGS)
 AC_SUBST(MOZ_OPTIMIZE_LDFLAGS)
+AC_SUBST(MOZ_OPTIMIZE_SIZE_TWEAK)
 
 dnl ========================================================
 dnl = Enable/disable debug for specific modules only
@@ -6558,6 +6651,15 @@ dnl Test for profiling options
 dnl Under gcc 3.3, use -fprofile-arcs/-fbranch-probabilities
 dnl Under gcc 3.4+, use -fprofile-generate/-fprofile-use
 
+dnl Provide a switch to disable PGO even when called via profiledbuild.
+MOZ_ARG_DISABLE_BOOL(profile-guided-optimization,
+[  --disable-profile-guided-optimization
+                           Don't build with PGO even if called via make profiledbuild],
+MOZ_PROFILE_GUIDED_OPTIMIZE_DISABLE=1,
+MOZ_PROFILE_GUIDED_OPTIMIZE_DISABLE=)
+
+AC_SUBST(MOZ_PROFILE_GUIDED_OPTIMIZE_DISABLE)
+
 _SAVE_CFLAGS="$CFLAGS"
 CFLAGS="$CFLAGS -fprofile-generate"
 
@@ -6587,6 +6689,13 @@ else
 fi
 
 CFLAGS="$_SAVE_CFLAGS"
+
+if test -n "$INTEL_CC"; then
+  PROFILE_GEN_CFLAGS="-prof-gen -prof-dir ."
+  PROFILE_GEN_LDFLAGS=
+  PROFILE_USE_CFLAGS="-prof-use -prof-dir ."
+  PROFILE_USE_LDFLAGS=
+fi
 
 AC_SUBST(PROFILE_GEN_CFLAGS)
 AC_SUBST(PROFILE_GEN_LDFLAGS)
@@ -7081,6 +7190,7 @@ if test "$MOZ_TREE_CAIRO"; then
     fi
     if test "$MOZ_WIDGET_TOOLKIT" = "mac" -o "$MOZ_WIDGET_TOOLKIT" = "cocoa"; then
         QUARTZ_SURFACE_FEATURE="#define CAIRO_HAS_QUARTZ_SURFACE 1"
+        QUARTZ_IMAGE_SURFACE_FEATURE="#define CAIRO_HAS_QUARTZ_IMAGE_SURFACE 1"
         ATSUI_FONT_FEATURE="#define CAIRO_HAS_ATSUI_FONT 1"
     fi
     if test "$MOZ_WIDGET_TOOLKIT" = "windows"; then
@@ -7122,7 +7232,7 @@ if test "$MOZ_TREE_CAIRO"; then
     AC_SUBST(XLIB_SURFACE_FEATURE)
     AC_SUBST(XLIB_XRENDER_SURFACE_FEATURE)
     AC_SUBST(QUARTZ_SURFACE_FEATURE)
-    AC_SUBST(NQUARTZ_SURFACE_FEATURE)
+    AC_SUBST(QUARTZ_IMAGE_SURFACE_FEATURE)
     AC_SUBST(XCB_SURFACE_FEATURE)
     AC_SUBST(WIN32_SURFACE_FEATURE)
     AC_SUBST(OS2_SURFACE_FEATURE)
@@ -7265,6 +7375,8 @@ if test `echo "$MOZ_EXTENSIONS" | grep -c python` -ne 0; then
         dnl - Fixes to the above by Python/*nix knowledgable people welcome!
         if test -f "$MOZ_PYTHON_PREFIX/lib/libpython$MOZ_PYTHON_VER_DOTTED.so.1.0"; then
             MOZ_PYTHON_LIBS="-L$MOZ_PYTHON_PREFIX/lib -lpython$MOZ_PYTHON_VER_DOTTED"
+        elif test -f "$MOZ_PYTHON_PREFIX/lib64/libpython$MOZ_PYTHON_VER_DOTTED.so.1.0"; then
+            MOZ_PYTHON_LIBS="-L$MOZ_PYTHON_PREFIX/lib64 -lpython$MOZ_PYTHON_VER_DOTTED"
         elif test -f "$MOZ_PYTHON_PREFIX/lib/libpython$MOZ_PYTHON_VER_DOTTED.so"; then
             MOZ_PYTHON_LIBS="-L$MOZ_PYTHON_PREFIX/lib -lpython$MOZ_PYTHON_VER_DOTTED"
         elif test -f "$MOZ_PYTHON_PREFIX/libpython$MOZ_PYTHON_VER_DOTTED.so"; then
@@ -7684,11 +7796,14 @@ AC_SUBST(SYSTEM_MAKEDEPEND)
 AC_SUBST(SYSTEM_JPEG)
 AC_SUBST(SYSTEM_PNG)
 AC_SUBST(SYSTEM_ZLIB)
+AC_SUBST(SYSTEM_BZ2)
 
 AC_SUBST(JPEG_CFLAGS)
 AC_SUBST(JPEG_LIBS)
 AC_SUBST(ZLIB_CFLAGS)
 AC_SUBST(ZLIB_LIBS)
+AC_SUBST(BZ2_CFLAGS)
+AC_SUBST(BZ2_LIBS)
 AC_SUBST(PNG_CFLAGS)
 AC_SUBST(PNG_LIBS)
 
@@ -7696,6 +7811,8 @@ AC_SUBST(MOZ_JPEG_CFLAGS)
 AC_SUBST(MOZ_JPEG_LIBS)
 AC_SUBST(MOZ_ZLIB_CFLAGS)
 AC_SUBST(MOZ_ZLIB_LIBS)
+AC_SUBST(MOZ_BZ2_CFLAGS)
+AC_SUBST(MOZ_BZ2_LIBS)
 AC_SUBST(MOZ_PNG_CFLAGS)
 AC_SUBST(MOZ_PNG_LIBS)
 

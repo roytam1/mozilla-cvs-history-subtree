@@ -435,8 +435,8 @@ MODULES_all :=                                  \
 # adding '-f' everywhere that we pull with the checkout tag, we force
 # the head revision if a file is not tagged
 MOZ_CO_TAG           = ZAP_20050610_BRANCH
-NSPR_CO_TAG          = NSPR_4_7_1_BETA1
-NSS_CO_TAG           = NSS_3_12_BETA2
+NSPR_CO_TAG          = NSPR_4_7_1_BETA2
+NSS_CO_TAG           = NSS_3_12_BETA3
 LDAPCSDK_CO_TAG      = LDAPCSDK_6_0_3_CLIENT_BRANCH
 LOCALES_CO_TAG       =
 
@@ -836,7 +836,7 @@ real_checkout:
 # update the NSS checkout timestamp, if we checked PSM out
 	@if test -d $(TOPSRCDIR)/security/manager -a \
 		 `egrep -c '^(U|C) mozilla/security/(nss|coreconf)' $(CVSCO_LOGFILE) 2>/dev/null` != 0; then \
-		touch $(TOPSRCDIR)/security/manager/.nss.checkout; \
+		echo `date` > $(TOPSRCDIR)/security/manager/.nss.checkout; \
 	fi
 ifdef RUN_AUTOCONF_LOCALLY
 	cd $(ROOTDIR) && \
@@ -955,6 +955,30 @@ real_l10n-checkout:
 	else true; \
 	fi
 
+####################################
+# Profile-Guided Optimization
+#  To use this, you should set the following variables in your mozconfig
+#    mk_add_options PROFILE_GEN_SCRIPT=/path/to/profile-script
+#
+#  The profile script should exercise the functionality to be included
+#  in the profile feedback.
+#
+#  This is up here, outside of the MOZ_CURRENT_PROJECT logic so that this
+#  is usable in multi-pass builds, where you might not have a runnable
+#  application until all the build passes and postflight scripts have run.
+ifdef MOZ_OBJDIR
+  PGO_OBJDIR = $(MOZ_OBJDIR)
+else
+  PGO_OBJDIR := $(TOPSRCDIR)
+endif
+
+profiledbuild::
+	$(MAKE) -f $(TOPSRCDIR)/client.mk build MOZ_PROFILE_GENERATE=1
+	OBJDIR=${PGO_OBJDIR} $(PROFILE_GEN_SCRIPT)
+	$(MAKE) -f $(TOPSRCDIR)/client.mk maybe_clobber_profiledbuild
+	$(MAKE) -f $(TOPSRCDIR)/client.mk build MOZ_PROFILE_USE=1
+
+
 #####################################################
 # First Checkout
 
@@ -982,7 +1006,7 @@ endif
 #####################################################
 # Preflight, before building any project
 
-build profiledbuild alldep preflight_all::
+build alldep preflight_all::
 ifeq (,$(MOZ_CURRENT_PROJECT)$(if $(MOZ_PREFLIGHT_ALL),,1))
 # Don't run preflight_all for individual projects in multi-project builds
 # (when MOZ_CURRENT_PROJECT is set.)
@@ -1006,7 +1030,7 @@ endif
 # loop through them.
 
 ifeq (,$(MOZ_CURRENT_PROJECT)$(if $(MOZ_BUILD_PROJECTS),,1))
-configure depend build profiledbuild install export libs clean realclean distclean alldep preflight postflight::
+configure depend build install export libs clean realclean distclean alldep preflight postflight maybe_clobber_profiledbuild::
 	set -e; \
 	for app in $(MOZ_BUILD_PROJECTS); do \
 	  $(MAKE) -f $(TOPSRCDIR)/client.mk $@ MOZ_CURRENT_PROJECT=$$app; \
@@ -1096,7 +1120,7 @@ depend:: $(OBJDIR)/Makefile $(OBJDIR)/config.status
 ####################################
 # Preflight
 
-build profiledbuild alldep preflight::
+build alldep preflight::
 ifdef MOZ_PREFLIGHT
 	set -e; \
 	for mkfile in $(MOZ_PREFLIGHT); do \
@@ -1111,30 +1135,16 @@ build::  $(OBJDIR)/Makefile $(OBJDIR)/config.status
 	$(MOZ_MAKE)
 
 ####################################
-# Profile-feedback build (gcc only)
-#  To use this, you should set the following variables in your mozconfig
-#    mk_add_options PROFILE_GEN_SCRIPT=/path/to/profile-script
-#
-#  The profile script should exercise the functionality to be included
-#  in the profile feedback.
-
-profiledbuild:: $(OBJDIR)/Makefile $(OBJDIR)/config.status
-	$(MOZ_MAKE) MOZ_PROFILE_GENERATE=1
-	OBJDIR=${OBJDIR} $(PROFILE_GEN_SCRIPT)
-	$(MOZ_MAKE) maybe_clobber_profiledbuild
-	$(MOZ_MAKE) MOZ_PROFILE_USE=1
-
-####################################
 # Other targets
 
 # Pass these target onto the real build system
-install export libs clean realclean distclean alldep:: $(OBJDIR)/Makefile $(OBJDIR)/config.status
+install export libs clean realclean distclean alldep maybe_clobber_profiledbuild:: $(OBJDIR)/Makefile $(OBJDIR)/config.status
 	$(MOZ_MAKE) $@
 
 ####################################
 # Postflight
 
-build profiledbuild alldep postflight::
+build alldep postflight::
 ifdef MOZ_POSTFLIGHT
 	set -e; \
 	for mkfile in $(MOZ_POSTFLIGHT); do \
@@ -1147,7 +1157,7 @@ endif # MOZ_CURRENT_PROJECT
 ####################################
 # Postflight, after building all projects
 
-build profiledbuild alldep postflight_all::
+build alldep postflight_all::
 ifeq (,$(MOZ_CURRENT_PROJECT)$(if $(MOZ_POSTFLIGHT_ALL),,1))
 # Don't run postflight_all for individual projects in multi-project builds
 # (when MOZ_CURRENT_PROJECT is set.)
@@ -1318,4 +1328,5 @@ branchtag_zap:
 diff_zap:
 	cvs -z3 diff $(ZAP_BRANCH_MODIFIED_FILES) $(ZAP_BRANCH_NEW_FILES)
 
-.PHONY: checkout real_checkout depend build profiledbuild export libs alldep install clean realclean distclean cleansrcdir pull_all build_all clobber clobber_all pull_and_build_all everything configure preflight_all preflight postflight postflight_all
+.PHONY: checkout real_checkout depend build profiledbuild maybe_clobber_profiledbuild export libs alldep install clean realclean distclean cleansrcdir pull_all build_all clobber clobber_all pull_and_build_all everything configure preflight_all preflight postflight postflight_all
+
