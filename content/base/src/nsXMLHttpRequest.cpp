@@ -930,6 +930,18 @@ nsXMLHttpRequest::GetCurrentHttpChannel()
   return httpChannel;
 }
 
+inline PRBool
+IsSystemPrincipal(nsIPrincipal* aPrincipal)
+{
+  nsCOMPtr<nsIPrincipal> systemPrincipal;
+  nsresult rv = nsContentUtils::GetSecurityManager()->
+                  GetSystemPrincipal(getter_AddRefs(systemPrincipal));
+  if (NS_FAILED(rv))
+    return PR_FALSE;
+
+  return (aPrincipal == systemPrincipal);
+}
+
 
 /* noscript void openRequest (in AUTF8String method, in AUTF8String url, in boolean async, in AString user, in AString password); */
 NS_IMETHODIMP
@@ -1535,7 +1547,7 @@ nsXMLHttpRequest::Send(nsIVariant *aBody)
   if (httpChannel) {
     httpChannel->GetRequestMethod(method); // If GET, method name will be uppercase
 
-    if (mPrincipal) {
+    if (mPrincipal && !IsSystemPrincipal(mPrincipal)) {
       nsCOMPtr<nsIURI> codebase;
       mPrincipal->GetURI(getter_AddRefs(codebase));
 
