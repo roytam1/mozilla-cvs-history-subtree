@@ -212,7 +212,7 @@ $update_package = 1;
 $update_product = "Thunderbird";
 $update_version = "2.0";
 $update_platform = "Darwin_ppc-gcc3";
-$update_hash = "md5";
+$update_hash = "sha1";
 $update_filehost = "ftp.mozilla.org";
 $update_ver_file = "mail/config/version.txt";
 
