@@ -308,14 +308,7 @@ static FeedServiceController* sInstance = nil;
 {
   NSSet* feedApps = [[NSWorkspace sharedWorkspace] installedFeedViewerIdentifiers];
 
-  if (feedApps) {
-    if ([feedApps count] == 0 || ([feedApps count] == 1 && [feedApps containsObject:@"com.apple.safari"]))
-      return NO;
-    else
-      return YES;
-  }
-  
-  return NO;
+  return ([feedApps count] > 0);
 }
 
 //
