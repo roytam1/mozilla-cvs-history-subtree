@@ -220,7 +220,7 @@ $update_product = "Firefox";
 $update_version = "1.5.0.x";
 $update_ver_file = "browser/config/version.txt";
 $update_platform = "Darwin_Universal-gcc3";
-$update_hash = "md5";
+$update_hash = "sha1";
 $update_filehost = "ftp.mozilla.org";
 $update_pushinfo = 1;
 

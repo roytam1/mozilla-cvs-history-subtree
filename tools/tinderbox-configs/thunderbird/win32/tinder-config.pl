@@ -179,7 +179,7 @@ $update_product = "Thunderbird";
 $update_version = "1.5.0.x";
 $update_ver_file = "mail/config/version.txt";
 $update_platform = "WINNT_x86-msvc";
-$update_hash = "md5";
+$update_hash = "sha1";
 $update_filehost = "ftp.mozilla.org";
 $update_pushinfo = 1;
 
