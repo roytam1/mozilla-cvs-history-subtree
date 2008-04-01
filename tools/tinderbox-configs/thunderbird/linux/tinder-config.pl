@@ -105,7 +105,7 @@ $RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
 # :pserver:$ENV{USER}%netscape.com@cvs.mozilla.org:/cvsroot
 
 # CONFIG: $moz_cvsroot   = '%mozillaCvsroot%';
-$moz_cvsroot   = ':ext:tbirdbld@cvs.mozilla.org:/cvsroot';
+$moz_cvsroot   = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 
 #- Set these proper values for your tinderbox server
 #$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
@@ -137,7 +137,7 @@ $BuildTree  = 'MozillaRelease';
 
 #$BuildName = '';
 # CONFIG: $BuildTag = '%productTag%_RELEASE';
-$BuildTag = 'THUNDERBIRD_2_0_0_12_RELEASE';
+$BuildTag = 'THUNDERBIRD_2_0_0_13_RELEASE';
 
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
@@ -170,7 +170,7 @@ $build_hour    = "3";
 $package_creation_path = "/mail/installer";
 $ssh_version   = "2";
 # CONFIG: $ssh_user      = "%sshUser%";
-$ssh_user      = "tbirdbld";
+$ssh_user      = "cltbld";
 $ssh_key       = "'$ENV{HOME}/.ssh/tbirdbld_dsa'";
 # CONFIG: $ssh_server    = "%sshServer%";
 $ssh_server    = "production-1.8-master.build.mozilla.org";
@@ -179,7 +179,7 @@ $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly";
 $tbox_ftp_path = "/home/ftp/pub/thunderbird/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/tinderbox-builds";
 # CONFIG: $milestone     = 'thunderbird%version%';
-$milestone     = 'thunderbird2.0.0.12';
+$milestone     = 'thunderbird2.0.0.13';
 $notify_list   = "build-announce\@mozilla.org";
 $stub_installer = 0;
 $sea_installer = 0;
