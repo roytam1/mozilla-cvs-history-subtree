@@ -212,7 +212,6 @@ typedef union JSTempValueUnion {
     jsval               value;
     JSObject            *object;
     JSString            *string;
-    JSFunction          *function;
     JSXML               *xml;
     JSXMLQName          *qname;
     JSTempValueMarker   marker;
