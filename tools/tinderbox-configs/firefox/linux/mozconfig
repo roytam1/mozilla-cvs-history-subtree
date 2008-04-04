@@ -9,7 +9,7 @@ mk_add_options MOZ_CO_LOCALES="all"
 # CONFIG: mk_add_options LOCALES_CVSROOT=%l10nCvsroot%
 mk_add_options LOCALES_CVSROOT=cltbld@cvs.mozilla.org:/l10n
 # CONFIG: mk_add_options LOCALES_CO_TAG=%productTag%_RELEASE
-mk_add_options LOCALES_CO_TAG=FIREFOX_2_0_0_13_RELEASE
+mk_add_options LOCALES_CO_TAG=FIREFOX_2_0_0_14_RELEASE
 mk_add_options MOZ_CO_MODULE="mozilla/tools/update-packaging"
  
 ac_add_options --disable-debug
