@@ -149,12 +149,6 @@ nsBrowserStatusHandler.prototype =
       var browser = getBrowser();
       if (browser.userTypedValue === null)
         gProxyFavIcon.setAttribute("src", aHref);
-
-      // update any bookmarks with new icon reference
-      if (!gBookmarksService)
-        gBookmarksService = Components.classes["@mozilla.org/browser/bookmarks-service;1"]
-                                      .getService(Components.interfaces.nsIBookmarksService);
-      gBookmarksService.updateBookmarkIcon(browser.currentURI.spec, aHref);
     }
   },
 
