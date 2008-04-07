@@ -31,8 +31,8 @@ ac_add_options --x-libraries=$SYSBASE/usr/sfw/lib
 #mk_add_options MOZ_CO_MODULE="mozilla/tools/update-packaging"
 
 # for release mode
-ac_add_options --enable-update-channel="release"
-ac_add_options --enable-official-branding
-ac_add_options --enable-update-packaging
-mk_add_options MOZ_CO_MODULE="mozilla/tools/update-packaging"
+#ac_add_options --enable-update-channel="release"
+#ac_add_options --enable-official-branding
+#ac_add_options --enable-update-packaging
+#mk_add_options MOZ_CO_MODULE="mozilla/tools/update-packaging"
 

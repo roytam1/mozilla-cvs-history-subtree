@@ -214,14 +214,13 @@ $BuildNameExtra = 'Sunbird-1.8-l10n-Testrelease';
 #$UserComment = 0;
 
 
-# TODO: enable and fix once we have the first uploads!
 # Configure only, don't build.
 $ConfigureOnly = 1;
 
 $LocalizationVersionFile = 'calendar/sunbird/config/version.txt';
 
 %WGetFiles = (
-          "http://stage.mozilla.org/pub/mozilla.org/calendar/sunbird/experimental/nightly/latest-mozilla1.8/sunbird-%version%.en-US.solaris2.10-i386.tar.bz2" =>
+          "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/experimental/nightly/latest-mozilla1.8/sunbird-%version%.en-US.solaris2.10-i386.tar.bz2" =>
           "/home/calbld/tb-lightning-soli/Sunbird1.8-l10n/SunOS_5.10_Clobber/sunbird.tar.bz2"
           );
 
@@ -240,8 +239,8 @@ $BuildLocalesArgs = "ZIP_IN=/home/calbld/tb-lightning-soli/Sunbird1.8-l10n/SunOS
 $BuildTree  = 'MozillaTest';
 
 #$BuildName = '';
-#$BuildTag = 'MOZILLA_1_8_BRANCH';
-$BuildTag = 'SUNBIRD_0_8_BRANCH';
+$BuildTag = 'MOZILLA_1_8_BRANCH';
+#$BuildTag = 'SUNBIRD_0_8_BRANCH';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -289,7 +288,7 @@ $build_hour    = "8";
 #$ssh_version   = "2";
 #$ssh_user      = "cltbld";
 $ssh_user      = "kzenker";
-#$ssh_server    = "stage.mozilla.org";
+$ssh_server    = "stage-old.mozilla.org";
 #$ftp_path      = "/home/ftp/pub/mozilla/nightly/experimental";
 $ftp_path      = "/home/ftp/pub/calendar/sunbird/experimental/nightly";
 #$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/mozilla/nightly/experimental";
@@ -324,14 +323,16 @@ $archive       = 1;
 #$update_pushinfo = 0;
 #$update_aus_host = 'aus2-staging.mozilla.org';
 
-$update_package = 1;
-$update_product = "Sunbird";
-$update_version = "branch";
-#TODO: need a better string before going public
-$update_platform = "Solaris_i386-ss12";
-$update_hash = "sha1";
-$update_filehost = "ftp.mozilla.org";
-$update_ver_file = "calendar/sunbird/config/version.txt";
+# updates for l10n in release mode
+# no pushing for l10n
+#$update_package = 1;
+#$update_product = "Sunbird";
+#$update_version = "branch";
+##TODO: need a better string before going public
+#$update_platform = "Solaris_i386-ss12";
+#$update_hash = "sha1";
+#$update_filehost = "ftp.mozilla.org";
+#$update_ver_file = "calendar/sunbird/config/version.txt";
 
 # fetched from linux l10n box
 $ReleaseBuild  = 1;

@@ -198,8 +198,8 @@ $BuildLocalesArgs = "ZIP_IN=/cygdrive/c/builds/tinderbox/Sb-Mozilla1.8-l10n/WINN
 $BuildTree  = 'Mozilla1.8-l10n';
 
 #$BuildName = '';
-#$BuildTag = 'MOZILLA_1_8_BRANCH';
-$BuildTag = 'SUNBIRD_0_8_BRANCH';
+$BuildTag = 'MOZILLA_1_8_BRANCH';
+#$BuildTag = 'SUNBIRD_0_8_BRANCH';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -244,14 +244,14 @@ $push_raw_xpis = 0;
 
 # updates for l10n in release mode
 # no pushing for l10n
-$update_package = 1;
-$update_product = "Sunbird";
-$update_version = "branch";
-$update_platform = "WINNT_x86-msvc";
-$update_hash = "sha1";
-$update_filehost = "ftp.mozilla.org";
-$update_ver_file = "calendar/sunbird/config/version.txt";
-$update_pushinfo = 0;
+#$update_package = 1;
+#$update_product = "Sunbird";
+#$update_version = "branch";
+#$update_platform = "WINNT_x86-msvc";
+#$update_hash = "sha1";
+#$update_filehost = "ftp.mozilla.org";
+#$update_ver_file = "calendar/sunbird/config/version.txt";
+#$update_pushinfo = 0;
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before

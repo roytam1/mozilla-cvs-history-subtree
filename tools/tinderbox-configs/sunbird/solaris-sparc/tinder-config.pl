@@ -238,8 +238,8 @@ $BuildLocalesArgs = "ZIP_IN=/home/calbld/tb-lightning-sols/Sunbird1.8-l10n/SunOS
 $BuildTree  = 'MozillaTest';
 
 #$BuildName = '';
-#$BuildTag = 'MOZILLA_1_8_BRANCH';
-$BuildTag = 'SUNBIRD_0_8_BRANCH';
+$BuildTag = 'MOZILLA_1_8_BRANCH';
+#$BuildTag = 'SUNBIRD_0_8_BRANCH';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -322,14 +322,16 @@ $archive       = 1;
 #$update_pushinfo = 0;
 #$update_aus_host = 'aus2-staging.mozilla.org';
 
-$update_package = 1;
-$update_product = "Sunbird";
-$update_version = "branch";
-#TODO: need a better string before going public
-$update_platform = "Solaris_sparc-ss12";
-$update_hash = "sha1";
-$update_filehost = "ftp.mozilla.org";
-$update_ver_file = "calendar/sunbird/config/version.txt";
+# updates for l10n in release mode
+# no pushing for l10n
+#$update_package = 1;
+#$update_product = "Sunbird";
+#$update_version = "branch";
+##TODO: need a better string before going public
+#$update_platform = "Solaris_sparc-ss12";
+#$update_hash = "sha1";
+#$update_filehost = "ftp.mozilla.org";
+#$update_ver_file = "calendar/sunbird/config/version.txt";
 
 # fetched from linux l10n box
 $ReleaseBuild  = 1;
