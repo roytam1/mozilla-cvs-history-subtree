@@ -191,8 +191,8 @@ $BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Sb-Branch/Linux_2.4.21-32.0.1.EL_D
 $BuildTree  = 'Sunbird-Mozilla1.8';
 
 #$BuildName = '';
-#$BuildTag = 'MOZILLA_1_8_BRANCH';
-$BuildTag = 'SUNBIRD_0_8_BRANCH';
+$BuildTag = 'MOZILLA_1_8_BRANCH';
+#$BuildTag = 'SUNBIRD_0_8_BRANCH';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 

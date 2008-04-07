@@ -52,10 +52,10 @@ $BuildAdministrator = 'build@mozilla.org';
 # Tests
 $CleanProfile             = 1;
 #$ResetHomeDirForTests     = 1;
-#$ProductName              = 'Calendar';
-#$MacOSProductName         = 'Calendar';
-$ProductName              = 'Sunbird';
-$MacOSProductName         = 'Sunbird';
+$ProductName              = 'Calendar';
+$MacOSProductName         = 'Calendar';
+#$ProductName              = 'Sunbird';
+#$MacOSProductName         = 'Sunbird';
 $VendorName               = "";
 
 $RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
@@ -188,8 +188,8 @@ $BuildTree  = 'Sunbird-Mozilla1.8';
 #$BuildTree  = 'MozillaTest';
 
 #$BuildName = '';
-#$BuildTag = 'MOZILLA_1_8_BRANCH';
-$BuildTag = 'SUNBIRD_0_8_BRANCH';
+$BuildTag = 'MOZILLA_1_8_BRANCH';
+#$BuildTag = 'SUNBIRD_0_8_BRANCH';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 

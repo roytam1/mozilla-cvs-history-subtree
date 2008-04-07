@@ -198,8 +198,8 @@ $BuildLocalesArgs = "ZIP_IN=/cygdrive/d/builds/tinderbox/Sunbird-Branch/WINNT_5.
 $BuildTree  = 'Sunbird-Mozilla1.8';
 
 #$BuildName = '';
-#$BuildTag = 'MOZILLA_1_8_BRANCH';
-$BuildTag = 'SUNBIRD_0_8_BRANCH';
+$BuildTag = 'MOZILLA_1_8_BRANCH';
+#$BuildTag = 'SUNBIRD_0_8_BRANCH';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 

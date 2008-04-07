@@ -24,6 +24,12 @@ ac_add_options --x-includes=$SYSBASE/usr/include/X11
 ac_add_options --x-libraries=$SYSBASE/usr/lib
 ac_add_options --x-libraries=$SYSBASE/usr/sfw/lib
 
+# for nightly mode
+# no update for tinderboxes outside mozilla.org possible atm
+#ac_add_options --enable-update-channel="nightly"
+
 # for release mode
-ac_add_options --enable-update-channel="release"
-ac_add_options --enable-official-branding
+# no update for tinderboxes outside mozilla.org possible atm
+#ac_add_options --enable-update-channel="release"
+#ac_add_options --enable-official-branding
+
