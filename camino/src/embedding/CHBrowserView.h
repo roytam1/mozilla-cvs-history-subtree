@@ -140,6 +140,9 @@ typedef enum {
 // behavior.
 - (void)closeBrowserWindow;
 
+// Handle window.blur; send the window to the back and resign focus.
+- (void)sendBrowserWindowToBack;
+
 // Called before and after a prompt is shown for the contained view
 - (void)willShowPrompt;
 - (void)didDismissPrompt;
@@ -264,6 +267,9 @@ typedef enum {
 - (BOOL)canMakeTextBigger;
 - (BOOL)canMakeTextSmaller;
 - (BOOL)isTextDefaultSize;
+
+- (void)pageUp;
+- (void)pageDown;
 
 // Verifies that the browser view can be unloaded (e.g., validates
 // onbeforeunload handlers). Should be called before any action that would

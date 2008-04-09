@@ -93,6 +93,11 @@ OSStatus _LSSaveAndRefresh();
     if (tmpBundleID)
       [feedApps addObject:tmpBundleID];
   }
+
+  // Safari on 10.3 claims to be a feed reader, but isn't really.
+  NSString* safariID = @"com.apple.Safari";
+  if (![NSWorkspace isTigerOrHigher] && [feedApps containsObject:safariID])
+    [feedApps removeObject:safariID];
   
   return feedApps;
 }
