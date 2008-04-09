@@ -1,6 +1,6 @@
 #
-## hostname: cg-xserve03
-## uname: Darwin cg-xserve03.mozilla.com 8.8.1 Darwin Kernel Version 8.8.1: Mon Sep 25 19:45:30 PDT 2006; root:xnu-792.13.8.obj~1/RELEASE_PPC Power Macintosh powerpc
+## hostname: cb-xserve03
+## uname: Darwin cb-xserve03 8.7.0 Darwin Kernel Version 8.7.0: Fri May 26 15:20:53 PDT 2006; root:xnu-792.6.76.obj~1/RELEASE_PPC Power Macintosh powerpc
 #
 
 #- tinder-config.pl - Tinderbox configuration file.
@@ -171,10 +171,10 @@ $LocalizationVersionFile = 'calendar/sunbird/config/version.txt';
 
 %WGetFiles = (
 	      "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly/latest-mozilla1.8/sunbird-%version%.en-US.mac.dmg" =>
-	      "/builds/tinderbox/Sunbird-Mozilla1.8-l10n/Darwin_8.11.0_Clobber/sunbird.dmg"
+	      "/builds/tinderbox/Sb-Mozilla1.8-l10n/Darwin_8.7.0_Clobber/sunbird.dmg"
 	      );
 
-$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Sunbird-Mozilla1.8-l10n/Darwin_8.11.0_Clobber/sunbird.dmg";
+$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Sb-Mozilla1.8-l10n/Darwin_8.7.0_Clobber/sunbird.dmg";
 
 #-
 #- The rest should not need to be changed
