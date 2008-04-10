@@ -9,8 +9,6 @@ mk_add_options MOZ_POSTFLIGHT_ALL+=calendar/lightning/build/universal.mk
 mk_add_options MOZ_POSTFLIGHT_ALL+=calendar/providers/gdata/universal.mk
 
 mk_add_options MOZ_CO_PROJECT=mail,calendar
-# see Bug 419614 for details about MOZ_CO_LOCALES
-mk_add_options MOZ_CO_LOCALES=all
 mk_add_options MOZ_MAKE_FLAGS="-j6"
 mk_add_options JS_READLINE=1
 
@@ -25,3 +23,8 @@ ac_add_options --disable-debug
 
 #CC=gcc-3.3
 #CCX=g++-3.3
+
+# in release mode only
+# see Bug 419614 for details about MOZ_CO_LOCALES
+#mk_add_options MOZ_CO_LOCALES=all
+

@@ -1,5 +1,3 @@
-# see Bug 419614 for details about MOZ_CO_LOCALES
-mk_add_options MOZ_CO_LOCALES=all
 ac_add_options --enable-extensions=default,lightning,inspector
 ac_add_options --x-includes=$SYSBASE/usr/include/X11
 ac_add_options --x-libraries=$SYSBASE/usr/lib
@@ -21,4 +19,7 @@ ac_add_options --disable-gnomeui
 # currently doesn't work on solaris
 ac_add_options --disable-tests
 
-# remove comments for debug build:
+# in release mode only
+# see Bug 419614 for details about MOZ_CO_LOCALES
+#mk_add_options MOZ_CO_LOCALES=all
+

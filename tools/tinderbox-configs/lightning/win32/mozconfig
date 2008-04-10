@@ -1,7 +1,5 @@
 mk_add_options MOZ_DEBUG_SYMBOLS=1
 mk_add_options MOZ_CO_PROJECT=mail,calendar
-# see Bug 419614 for details about MOZ_CO_LOCALES
-mk_add_options MOZ_CO_LOCALES=all
 # mk_add_options MOZ_MAKE_FLAGS="-j6" # lightning -> c-sdk doesn't support
                                       # parallel make yet
 mk_add_options JS_READLINE=1
@@ -13,4 +11,8 @@ ac_add_options --enable-shared
 ac_add_options --disable-tests
 ac_add_options --disable-debug
 ac_add_options --disable-installer
+
+# in release mode only
+# see Bug 419614 for details about MOZ_CO_LOCALES
+#mk_add_options MOZ_CO_LOCALES=all
 
