@@ -436,7 +436,7 @@ MODULES_all :=                                  \
 # the head revision if a file is not tagged
 MOZ_CO_TAG           = ZAP_20050610_BRANCH
 NSPR_CO_TAG          = NSPR_4_7_1_BETA2
-NSS_CO_TAG           = NSS_3_12_BETA3
+NSS_CO_TAG           = NSS_3_12_RC2
 LDAPCSDK_CO_TAG      = LDAPCSDK_6_0_3_CLIENT_BRANCH
 LOCALES_CO_TAG       =
 
