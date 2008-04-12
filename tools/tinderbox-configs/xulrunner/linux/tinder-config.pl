@@ -1,14 +1,12 @@
 #
-## hostname: l10n-win32-tbox
-## uname: MINGW32_NT-5.2 L10N-WIN32-TBOX 1.0.11(0.46/3/2) 2007-01-12 12:05 i686 Msys
+## hostname: xr-linux-tbox
+## uname: Linux xr-linux-tbox.build.mozilla.org 2.6.18-8.el5 #1 SMP Thu Mar 15 19:57:35 EDT 2007 i686 i686 i386 GNU/Linux
 #
 
 #- tinder-config.pl - Tinderbox configuration file.
 #-    Uncomment the variables you need to set.
 #-    The default values are the same as the commented variables.
 
-$ENV{NO_EM_RESTART} = '1';
-$ENV{CVS_RSH} = "ssh";
 $ENV{MOZ_CRASHREPORTER_NO_REPORT} = '1';
 
 # $ENV{MOZ_PACKAGE_MSI}
@@ -29,9 +27,9 @@ $ENV{MOZ_CRASHREPORTER_NO_REPORT} = '1';
 #$ENV{MOZ_SYMBOLS_TRANSFER_TYPE} = "scp";
 
 #- PLEASE FILL THIS IN WITH YOUR PROPER EMAIL ADDRESS
-$BuildAdministrator = 'build@mozilla.org';
 #$BuildAdministrator = "$ENV{USER}\@$ENV{HOST}";
 #$BuildAdministrator = ($ENV{USER} || "cltbld") . "\@" . ($ENV{HOST} || "dhcp");
+$BuildAdministrator = "build\@mozilla.org";
 
 #- You'll need to change these to suit your machine's needs
 #$DisplayServer = ':0.0';
@@ -44,40 +42,49 @@ $BuildAdministrator = 'build@mozilla.org';
 #$ReportFinalStatus = 1;      # Finer control over $ReportStatus.
 $UseTimeStamp      = 0;      # Use the CVS 'pull-by-timestamp' option, or not
 #$BuildOnce         = 0;      # Build once, don't send results to server
+#$ConfigureOnly     = 0;      # Configure, but do not build.
 #$TestOnly          = 0;      # Only run tests, don't pull/build
 #$BuildEmbed        = 0;      # After building seamonkey, go build embed app.
 #$SkipMozilla       = 0;      # Use to debug post-mozilla.pl scripts.
-$BuildLocales      = 1;      # Do l10n packaging?
+#$BuildLocales      = 0;      # Do l10n packaging?
+
+# Only used when $BuildLocales = 1
+%WGetFiles         = ();  # Pull files from the web, URL => Location
+#$WGetTimeout       = 360; # Wget timeout, in seconds
+#$BuildLocalesArgs  = "";  # Extra attributes to add to the makefile command
+                          # which builds the "installers-<locale>" target.
+                          # Typically used to set ZIP_IN and WIN32_INSTALLER_IN
 
 # Tests
 $CleanProfile             = 1;
 #$ResetHomeDirForTests     = 1;
-$ProductName              = "Firefox";
-$VendorName               = "Mozilla";
+$ProductName              = "XULRunner";
+$VendorName               = 'Mozilla';
 
 $RunMozillaTests          = 0;  # Allow turning off of all tests if needed.
-$RegxpcomTest             = 1;
-$AliveTest                = 1;
-$JavaTest                 = 0;
-$ViewerTest               = 0;
-$BloatTest                = 0;  # warren memory bloat test
-$BloatTest2               = 0;  # dbaron memory bloat test, require tracemalloc
-$DomToTextConversionTest  = 0;  
-$XpcomGlueTest            = 0;
-$CodesizeTest             = 0;  # Z,  require mozilla/tools/codesighs
-$EmbedCodesizeTest        = 0;  # mZ, require mozilla/tools/codesigns
-$MailBloatTest            = 0;
-$EmbedTest                = 0;  # Assumes you wanted $BuildEmbed=1
-$LayoutPerformanceTest    = 0;  # Tp
-$DHTMLPerformanceTest     = 0;  # Tdhtml
-$QATest                   = 0;  
-$XULWindowOpenTest        = 0;  # Txul
-$StartupPerformanceTest   = 0;  # Ts
-$NeckoUnitTest            = 0;
-$RenderPerformanceTest    = 0;  # Tgfx
+#$RegxpcomTest             = 1;
+#$AliveTest                = 1;
+#$JavaTest                 = 0;
+#$ViewerTest               = 0;
+#$BloatTest                = 0;  # warren memory bloat test
+#$BloatTest2               = 0;  # dbaron memory bloat test, require tracemalloc
+#$DomToTextConversionTest  = 0;  
+#$XpcomGlueTest            = 0;
+#$CodesizeTest             = 0;  # Z,  require mozilla/tools/codesighs
+#$EmbedCodesizeTest        = 0;  # mZ, require mozilla/tools/codesigns
+#$MailBloatTest            = 0;
+#$EmbedTest                = 0;  # Assumes you wanted $BuildEmbed=1
+#$LayoutPerformanceTest    = 0;  # Tp
+#$DHTMLPerformanceTest     = 0;  # Tdhtml
+#$QATest                   = 0;  
+#$XULWindowOpenTest        = 0;  # Txul
+#$StartupPerformanceTest   = 0;  # Ts
+#@CompareLocaleDirs        = (); # Run compare-locales test on these directories
+# ("network","dom","toolkit","security/manager");
+#$CompareLocalesAviary     = 0;  # Should the compare-locales commands use the
+                                # aviary directory structure?
 
-$TestsPhoneHome           = 0;  # Should test report back to server?
-$GraphNameOverride        = 'fx-win32-tbox';
+#$TestsPhoneHome           = 0;  # Should test report back to server?
 
 # $results_server
 #----------------------------------------------------------------------------
@@ -87,7 +94,7 @@ $GraphNameOverride        = 'fx-win32-tbox';
 # - cmp@mozilla.org
 #$results_server           = "build-graphs.mozilla.org";
 
-$pageload_server          = "pageload.build.mozilla.org";  # localhost
+#$pageload_server          = "spider";  # localhost
 
 #
 # Timeouts, values are in seconds.
@@ -96,7 +103,7 @@ $pageload_server          = "pageload.build.mozilla.org";  # localhost
 #$CreateProfileTimeout             = 45;
 #$RegxpcomTestTimeout              = 120;
 
-#$AliveTestTimeout                 = 30;
+#$AliveTestTimeout                 = 45;
 #$ViewerTestTimeout                = 45;
 #$EmbedTestTimeout                 = 45;
 #$BloatTestTimeout                 = 120;   # seconds
@@ -106,14 +113,13 @@ $pageload_server          = "pageload.build.mozilla.org";  # localhost
 #$XpcomGlueTestTimeout             = 15;
 #$CodesizeTestTimeout              = 900;     # seconds
 #$CodesizeTestType                 = "auto";  # {"auto"|"base"}
-$LayoutPerformanceTestTimeout     = 800;  # entire test, seconds
+#$LayoutPerformanceTestTimeout     = 1200;  # entire test, seconds
 #$DHTMLPerformanceTestTimeout      = 1200;  # entire test, seconds
 #$QATestTimeout                    = 1200;   # entire test, seconds
 #$LayoutPerformanceTestPageTimeout = 30000; # each page, ms
-#$StartupPerformanceTestTimeout    = 20;    # seconds
-#$XULWindowOpenTestTimeout	      = 90;   # seconds
-#$NeckoUnitTestTimeout             = 30;    # seconds
-$RenderPerformanceTestTimeout     = 1800;  # seconds
+#$StartupPerformanceTestTimeout    = 15;    # seconds
+#$XULWindowOpenTestTimeout	      = 150;   # seconds
+
 
 #$MozConfigFileName = 'mozconfig';
 
@@ -121,15 +127,15 @@ $RenderPerformanceTestTimeout     = 1800;  # seconds
 #$MozProfileName = 'default';
 
 #- Set these to what makes sense for your system
-$Make          = 'make';       # Must be GNU make
+#$Make          = 'gmake';       # Must be GNU make
 #$MakeOverrides = '';
 #$mail          = '/bin/mail';
 #$CVS           = 'cvs -q';
 #$CVSCO         = 'checkout -P';
 
 # win32 usually doesn't have /bin/mail
-$blat           = '/d/mozilla-build/blat261/full/blat';
-#$use_blat       = 1;
+#$blat           = 'c:/nstools/bin/blat';
+#$use_blat       = 0;
 
 # Set moz_cvsroot to something like:
 # :pserver:$ENV{USER}%netscape.com\@cvs.mozilla.org:/cvsroot
@@ -138,6 +144,7 @@ $blat           = '/d/mozilla-build/blat261/full/blat';
 # Note that win32 may not need \@, depends on ' or ".
 # :pserver:$ENV{USER}%netscape.com@cvs.mozilla.org:/cvsroot
 
+#$moz_cvsroot   = $ENV{CVSROOT};
 # CONFIG: $moz_cvsroot   = '%mozillaCvsroot%';
 $moz_cvsroot   = 'cltbld@cvs.mozilla.org:/cvsroot';
 
@@ -148,41 +155,14 @@ $moz_cvsroot   = 'cltbld@cvs.mozilla.org:/cvsroot';
 #$moz_client_mk = 'client.mk';
 
 #- Set if you want to build in a separate object tree
-#$ObjDir = '';
+$ObjDir = 'obj-xulrunner';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'Fx-Trunk-l10n-Release';
+$BuildNameExtra = 'Release';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
 #$UserComment = 0;
-
-# l10n settings
-$ConfigureOnly = 1;             # Configure only, don't build.                          
-$LocaleProduct = "browser";
-$LocalizationVersionFile = 'browser/config/version.txt';
-%WGetFiles = (
-# CONFIG:             'http://%stagingServer%/pub/mozilla.org/firefox/nightly/%version%-candidates/rc%rc%/unsigned/firefox-%version%.en-US.win32.installer.exe' =>
-'http://production-1.9-master.build.mozilla.org/pub/mozilla.org/firefox/nightly/3.0b4-candidates/rc2/unsigned/firefox-3.0b4.en-US.win32.installer.exe' =>
-# CONFIG:             "%l10n_buildDir%/%l10n_buildPlatform%/firefox-installer.exe",
-"/e/fx19l10nrel/WINNT_5.2_Depend/firefox-installer.exe",
-# CONFIG:             'http://%stagingServer%/pub/mozilla.org/firefox/nightly/%version%-candidates/rc%rc%/unsigned/firefox-%version%.en-US.win32.zip' =>
-'http://production-1.9-master.build.mozilla.org/pub/mozilla.org/firefox/nightly/3.0b4-candidates/rc2/unsigned/firefox-3.0b4.en-US.win32.zip' =>
-# CONFIG:             "%l10n_buildDir%/%l10n_buildPlatform%/firefox.zip"
-"/e/fx19l10nrel/WINNT_5.2_Depend/firefox.zip"
-	      );
-
-# CONFIG: $BuildLocalesArgs = "ZIP_IN=%l10n_buildDir%/%l10n_buildPlatform%/firefox.zip WIN32_INSTALLER_IN=%l10n_buildDir%/%l10n_buildPlatform%/firefox-installer.exe";
-$BuildLocalesArgs = "ZIP_IN=/e/fx19l10nrel/WINNT_5.2_Depend/firefox.zip WIN32_INSTALLER_IN=/e/fx19l10nrel/WINNT_5.2_Depend/firefox-installer.exe";
-@CompareLocaleDirs = (
-  "netwerk",
-  "dom",
-  "toolkit",
-  "security/manager",
-  "browser",
-  "other-licenses/branding/firefox",
-  "extensions/reporter",
-);
 
 #-
 #- The rest should not need to be changed
@@ -202,7 +182,7 @@ $BuildTag = 'FIREFOX_3_0b4_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
-$BinaryName = 'firefox.exe';
+$BinaryName = 'xulrunner-bin';
 
 #
 # For embedding app, use:
@@ -219,45 +199,41 @@ $BinaryName = 'firefox.exe';
 
 # Release build options
 $ReleaseBuild  = 1;
+#$LocaleProduct = "browser";
 $shiptalkback  = 0;
 $ReleaseToLatest = 0; # Push the release to latest-<milestone>?
 $ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
-$build_hour    = "9";
-$package_creation_path = "/browser/installer";
+#$build_hour    = "8";
+$package_creation_path = "/xulrunner/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
 $ssh_version   = "2";
 # CONFIG: $ssh_user      = "%sshUser%";
 $ssh_user      = "cltbld";
-# CONFIG: $ssh_key       = "'$ENV{HOME}/.ssh/%sshUser%_dsa'";
-$ssh_key       = "'$ENV{HOME}/.ssh/cltbld_dsa'";
+#$ssh_key       = "$ENV{HOME}/.ssh/xrbld_dsa";
 # CONFIG: $ssh_server    = "%sshServer%";
-$ssh_server    = "production-1.9-master.build.mozilla.org";
-$ReleaseGroup  = "firefox";
-$ftp_path      = "/home/ftp/pub/firefox/nightly";
-$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
-$tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
-$tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
-# CONFIG: $milestone     = 'firefox%version%-l10n';
-$milestone     = 'firefox3.0b4-l10n';
-$notify_list   = 'build-announce@mozilla.org';
+$ssh_server    = "stage-old.mozilla.org";
+$ReleaseGroup  = "xulrunner";
+$ftp_path      = "/home/ftp/pub/xulrunner/nightly";
+$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/xulrunner/nightly";
+$tbox_ftp_path = "/home/ftp/pub/xulrunner/tinderbox-builds";
+$tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/xulrunner/tinderbox-builds";
+# CONFIG: $milestone     = "xulrunner%version%"
+$milestone     = "xulrunner3.0b4"
+$notify_list   = "build-announce\@mozilla.org";
 $stub_installer = 0;
-$sea_installer = 1;
+$sea_installer = 0;
 $archive       = 1;
 $push_raw_xpis = 0;
-$update_package = 1;
-$update_product = "Firefox";
-$update_version = "trunk";
-$update_platform = "WINNT_x86-msvc";
-$update_hash = "sha1";
-$update_filehost = "ftp.mozilla.org";
-$update_ver_file = 'browser/config/version.txt';
-$update_pushinfo = 0;
 $crashreporter_buildsymbols = 0;
 $crashreporter_pushsymbols = 0;
-$ENV{'SYMBOL_SERVER_HOST'} = 'stage.mozilla.org';
-$ENV{'SYMBOL_SERVER_USER'}   = 'ffxbld';
-$ENV{'SYMBOL_SERVER_PATH'}   = '/mnt/netapp/breakpad/symbols_ffx/';
-$ENV{'SYMBOL_SERVER_SSH_KEY'}   = "$ENV{HOME}/.ssh/ffxbld_dsa";
+# CONFIG: $ENV{'SYMBOL_SERVER_HOST'}    = '%symbolServer%';
+$ENV{'SYMBOL_SERVER_HOST'}    = 'stage-old.mozilla.org';
+# CONFIG: $ENV{'SYMBOL_SERVER_USER'}    = '%symbolServerUser%';
+$ENV{'SYMBOL_SERVER_USER'}    = 'xrbld';
+# CONFIG: $ENV{'SYMBOL_SERVER_PATH'}    = '%symbolServerPath%';
+$ENV{'SYMBOL_SERVER_PATH'}    = '/mnt/netapp/breakpad/symbols_xr';
+# CONFIG: $ENV{'SYMBOL_SERVER_SSH_KEY'} = '%symbolServerKey%';
+$ENV{'SYMBOL_SERVER_SSH_KEY'} = '/home/cltbld/.ssh/xrbld_dsa';
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
