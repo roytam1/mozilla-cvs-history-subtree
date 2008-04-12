@@ -137,7 +137,7 @@ $use_blat       = 1;
 
 #$moz_cvsroot   = $ENV{CVSROOT};
 # CONFIG: $moz_cvsroot = '%mozillaCvsroot%';
-$moz_cvsroot   = ":ext:xrbld\@cvs.mozilla.org:/cvsroot";
+$moz_cvsroot = 'cltbld@cvs.mozilla.org:/cvsroot';
 
 #- Set these proper values for your tinderbox server
 #$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
@@ -165,11 +165,11 @@ $BuildNameExtra = 'Release';
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
 # CONFIG: $BuildTree  = '%buildTree%';
-$BuildTree  = 'XULRunner';
+$BuildTree  = 'MozillaRelease';
 
 #$BuildName = '';
 # CONFIG: $BuildTag = '%productTag%_RELEASE';
-#$BuildTag = '';
+$BuildTag = 'FIREFOX_3_0b4_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -198,17 +198,17 @@ $package_creation_path = "/xulrunner/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
 $ssh_version   = "2";
 # CONFIG: $ssh_user      = "%sshUser%";
-$ssh_user      = "xrbld";
+$ssh_user      = "cltbld";
 #$ssh_key       = "'$ENV{HOME}/.ssh/xrbld_dsa'";
 # CONFIG: $ssh_server    = "%sshServer%";
-$ssh_server    = "stage.mozilla.org";
+$ssh_server    = "stage-old.mozilla.org";
 $ReleaseGroup  = "xulrunner";
 $ftp_path      = "/home/ftp/pub/xulrunner/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/xulrunner/nightly";
 $tbox_ftp_path = "/home/ftp/pub/xulrunner/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/xulrunner/tinderbox-builds";
 # CONFIG: $milestone     = 'xulrunner%version%';
-$milestone     = "trunk";
+$milestone     = 'xulrunner3.0b4';
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 0;
@@ -217,13 +217,13 @@ $push_raw_xpis = 0;
 $crashreporter_buildsymbols = 0;
 $crashreporter_pushsymbols = 0;
 # CONFIG: $ENV{'SYMBOL_SERVER_HOST'}    = '%symbolServer%';
-$ENV{'SYMBOL_SERVER_HOST'} = 'stage.mozilla.org';
+$ENV{'SYMBOL_SERVER_HOST'}    = 'stage-old.mozilla.org';
 # CONFIG: $ENV{'SYMBOL_SERVER_USER'}    = '%symbolServerUser%';
-$ENV{'SYMBOL_SERVER_USER'}   = 'xrbld';
+$ENV{'SYMBOL_SERVER_USER'}    = 'xrbld';
 # CONFIG: $ENV{'SYMBOL_SERVER_PATH'}    = '%symbolServerPath%';
-$ENV{'SYMBOL_SERVER_PATH'}   = '/mnt/netapp/breakpad/symbols_xr/';
+$ENV{'SYMBOL_SERVER_PATH'}    = '/mnt/netapp/breakpad/symbols_xr';
 # CONFIG: $ENV{'SYMBOL_SERVER_SSH_KEY'} = '%symbolServerKey%';
-$ENV{'SYMBOL_SERVER_SSH_KEY'}   = "$ENV{HOME}/.ssh/xrbld_dsa";
+$ENV{'SYMBOL_SERVER_SSH_KEY'} = '/c/Documents and Settings/cltbld/.ssh/xrbld_dsa';
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
