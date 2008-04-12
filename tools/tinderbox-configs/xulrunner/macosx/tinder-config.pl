@@ -151,7 +151,7 @@ $RunMozillaTests          = 0;  # Allow turning off of all tests if needed.
 
 # sharing bm-xserve09 with T'bird build, do all CVS pulls with that key
 # CONFIG: $moz_cvsroot   = '%mozillaCvsroot%';
-$moz_cvsroot   = ":ext:tbirdbld\@cvs.mozilla.org:/cvsroot";
+$moz_cvsroot   = 'cltbld@cvs.mozilla.org:/cvsroot';
 
 #- Set these proper values for your tinderbox server
 #$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
@@ -179,11 +179,11 @@ $BuildNameExtra = 'Release';
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
 # CONFIG: $BuildTree  = '%buildTree%';
-$BuildTree  = 'XULRunner';
+$BuildTree  = 'MozillaRelease';
 
 #$BuildName = '';
 # CONFIG: $BuildTag = '%productTag%_RELEASE';
-#$BuildTag = '';
+$BuildTag = 'FIREFOX_3_0b4_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -214,17 +214,17 @@ $package_creation_path = "/xulrunner/installer";
 $mac_bundle_path = "/browser/app";
 $ssh_version   = "2";
 # CONFIG: $ssh_user      = "%sshUser%";
-$ssh_user      = "xrbld";
+$ssh_user      = "cltbld";
 #$ssh_key       = "$ENV{HOME}/.ssh/xrbld_dsa";
 # CONFIG: $ssh_server    = "%sshServer%";
-$ssh_server    = "stage.mozilla.org";
+$ssh_server    = "stage-old.mozilla.org";
 $ReleaseGroup  = "xulrunner";
 $ftp_path      = "/home/ftp/pub/xulrunner/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/xulrunner/nightly";
 $tbox_ftp_path = "/home/ftp/pub/xulrunner/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/xulrunner/tinderbox-builds";
 # CONFIG: $milestone     = 'xulrunner%version%';
-#$milestone     = "trunk";
+$milestone     = 'xulrunner3.0b4';
 $notify_list   = "build-announce\@mozilla.org";
 $stub_installer = 0;
 $sea_installer = 0;
@@ -233,7 +233,7 @@ $push_raw_xpis = 0;
 $crashreporter_buildsymbols = 0;
 $crashreporter_pushsymbols = 0;
 # CONFIG: $ENV{'SYMBOL_SERVER_HOST'}    = '%symbolServer%';
-$ENV{'SYMBOL_SERVER_HOST'}    = 'stage.mozilla.org';
+$ENV{'SYMBOL_SERVER_HOST'}    = 'stage-old.mozilla.org';
 # CONFIG: $ENV{'SYMBOL_SERVER_USER'}    = '%symbolServerUser%';
 $ENV{'SYMBOL_SERVER_USER'}    = 'xrbld';
 # CONFIG: $ENV{'SYMBOL_SERVER_PATH'}    = '%symbolServerPath%';
