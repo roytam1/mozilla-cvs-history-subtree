@@ -168,6 +168,7 @@ $ReleaseBuild  = 1;
 $ReleaseToLatest = 0; # Push the release to latest-<milestone>?
 $ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
 $shiptalkback  = 1;
+# CONFIG: $UsePrebuiltTalkback = "%buildDir%/../talkback-thunderbird-1.8-win32.tar.bz2";
 $UsePrebuiltTalkback = "/cygdrive/e/builds/tinderbox/talkback-thunderbird-1.8-win32.tar.bz2";
 $build_hour    = "3";
 $package_creation_path = "/mail/installer";
