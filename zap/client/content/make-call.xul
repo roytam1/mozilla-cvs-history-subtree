@@ -60,7 +60,7 @@
           address = "sip:"+address;
         wRemoteAddress = parent.wSipStack.syntaxFactory.deserializeAddress(address);
       } catch(e) {
-        dump("initialization failure make-call.xul:"+address+"\n");
+        dump("initialization failure make-call.xul: "+e+"\n");
         // by default the deck displays the error page, 
         // so let's just fall through:
         return;
