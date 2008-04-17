@@ -103,7 +103,7 @@
 <!ENTITY sipURI.label "SIP URI:">
 <!ENTITY sipURI.description "SIP address for this contact. Example: <html:br/><html:i>sip:username@the_sip_service_provider.com</html:i>">
 <!ENTITY associatedIdentity.label "Associated identity:">
-<!ENTITY associatedIdentity.description "The identity to use10508 to call this contact.">
+<!ENTITY associatedIdentity.description "The identity to use to call this contact.">
 <!ENTITY notes.label "Notes:">
 <!ENTITY notes.description "Use this field for any additional information you would like to record for this contact.">
 <!ENTITY apply.button "Apply changes">
