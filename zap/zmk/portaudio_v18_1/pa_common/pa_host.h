@@ -51,7 +51,7 @@ extern "C"
 #ifndef int32
     typedef long int32;
 #endif
-#ifndef uint32
+#if !defined(uint32) && !defined(_UINT32)
     typedef unsigned long uint32;
 #endif
 #ifndef int16

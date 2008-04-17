@@ -1001,6 +1001,12 @@ static OSStatus PaOSX_HandleOutput( internalPortAudioStream   *past,
         return noErr;
     }
 
+    if( !outOutputData->mNumberBuffers )
+    {
+        DBUG(("PaOSX_HandleOutput: outOutputData->mNumberBuffers == 0\n"));
+        return noErr;
+    }
+
     deinterleavingNeeded = past->past_NumOutputChannels != outOutputData->mBuffers[0].mNumberChannels;
     
 	numFramesInOutputBuffer = outOutputData->mBuffers[0].mDataByteSize /
