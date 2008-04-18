@@ -50,6 +50,7 @@ $BuildLocales      = 1;      # Do l10n packaging?
 # Only used when $BuildLocales = 1
 #%WGetFiles         = ();  # Pull files from the web, URL => Location
 #$WGetTimeout       = 360; # Wget timeout, in seconds
+$WGetTimeout       = 600; # Wget timeout, in seconds
 #$BuildLocalesArgs  = "";  # Extra attributes to add to the makefile command
                           # which builds the "installers-<locale>" target.
                           # Typically used to set ZIP_IN and WIN32_INSTALLER_IN
@@ -206,8 +207,7 @@ $moz_cvsroot   = ":pserver:anonymous\@cvs-mirror.mozilla.org:/cvsroot";
 
 # Extra build name, if needed.
 #$BuildNameExtra = '';
-$BuildNameExtra = 'Sunbird-1.8-l10n-Testrelease';
-#$BuildNameExtra = 'Sb-Moz1.8-l10n';
+$BuildNameExtra = 'Sb-Moz1.8-l10n';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -298,7 +298,7 @@ $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/experi
 $tbox_ftp_path      = "/home/ftp/pub/calendar/sunbird/experimental/tinderbox-builds";
 $tbox_url_path      = "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/experimental/tinderbox-builds";
 #$milestone     = "trunk";
-$milestone     = "mozilla1.8";
+$milestone     = "mozilla1.8-l10n";
 #$notify_list   = 'build-announce@mozilla.org';
 #$stub_installer = 1;
 $stub_installer = 0;
@@ -346,12 +346,11 @@ $package_creation_path = "/calendar/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
 $ssh_version   = "2";
 #$ssh_user      = "calbld";
-$ssh_server    = "stage.mozilla.org";
+$ssh_server    = "stage-old.mozilla.org";
 #$ftp_path      = "/home/ftp/pub/calendar/sunbird/nightly";
 #$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly";
 #$tbox_ftp_path = "/home/ftp/pub/calendar/sunbird/tinderbox-builds";
 #$tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/tinderbox-builds";
-$milestone     = "mozilla1.8-l10n";
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 0;
