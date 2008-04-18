@@ -48,6 +48,7 @@ $DisplayServer = ':99';
 # Only used when $BuildLocales = 1
 %WGetFiles         = ();  # Pull files from the web, URL => Location
 #$WGetTimeout       = 360; # Wget timeout, in seconds
+$WGetTimeout       = 600; # Wget timeout, in seconds
 #$BuildLocalesArgs  = "";  # Extra attributes to add to the makefile command
                           # which builds the "installers-<locale>" target.
                           # Typically used to set ZIP_IN and WIN32_INSTALLER_IN
@@ -194,8 +195,7 @@ $ObjDir = 'sunbird-obj';
 
 # Extra build name, if needed.
 #$BuildNameExtra = '';
-$BuildNameExtra = 'Sunbird-1.8-Testrelease';
-#$BuildNameExtra = 'Sb-Release';
+$BuildNameExtra = 'Sb-Release';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
