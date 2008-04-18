@@ -196,8 +196,7 @@ $ObjDir = 'lightning-obj';
 
 # Extra build name, if needed.
 #$BuildNameExtra = '';
-$BuildNameExtra = 'Lightning-1.8-Testrelease';
-#$BuildNameExtra = 'Lt-Release';
+$BuildNameExtra = 'Lt-Release';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
