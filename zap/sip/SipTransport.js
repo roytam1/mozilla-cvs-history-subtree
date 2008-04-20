@@ -1179,9 +1179,15 @@ SipTransport.fun(
 SipTransport.fun(
   function _getMyFQDN() {
     if (!this._fqdn) {
-      // XXX getDNSService().myHostName might not be a FQDN, so we
-      // better resolve it:
-      this._fqdn = getDNSService().resolve(getDNSService().myHostName,0).getNextAddrAsString();
+      // try to get a proper FQDN:
+      try { 
+        this._fqdn = getDNSService().resolve(getDNSService().myHostName,0).getNextAddrAsString();
+      }
+      catch(e) {
+        this._warning("Error resolving FQDN. Will use just hostname instead."+
+                      "Error was: "+e);
+        this._fqdn = getDNSService().myHostName;
+      }
     }
     return this._fqdn;
   });
