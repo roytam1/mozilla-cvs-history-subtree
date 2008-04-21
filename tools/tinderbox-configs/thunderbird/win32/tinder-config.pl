@@ -144,7 +144,7 @@ $BuildTree  = 'MozillaRelease';
 
 #$BuildName = '';
 # CONFIG: $BuildTag = '%productTag%_RELEASE';
-$BuildTag = 'THUNDERBIRD_2_0_0_13_RELEASE';
+$BuildTag = 'THUNDERBIRD_2_0_0_14_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -169,7 +169,7 @@ $ReleaseToLatest = 0; # Push the release to latest-<milestone>?
 $ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
 $shiptalkback  = 1;
 # CONFIG: $UsePrebuiltTalkback = "%buildDir%/../talkback-thunderbird-1.8-win32.tar.bz2";
-$UsePrebuiltTalkback = "/cygdrive/e/builds/tinderbox/talkback-thunderbird-1.8-win32.tar.bz2";
+$UsePrebuiltTalkback = "/cygdrive/e/builds/tinderbox/Tb-Mozilla1.8-Release/../talkback-thunderbird-1.8-win32.tar.bz2";
 $build_hour    = "3";
 $package_creation_path = "/mail/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
@@ -184,7 +184,7 @@ $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly";
 $tbox_ftp_path      = "/home/ftp/pub/thunderbird/tinderbox-builds";
 $tbox_url_path      = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/tinderbox-builds";
 # CONFIG: $milestone     = 'thunderbird%version%';
-$milestone     = 'thunderbird2.0.0.13';
+$milestone     = 'thunderbird2.0.0.14';
 $notify_list   = "build-announce\@mozilla.org";
 $stub_installer = 0;
 $sea_installer = 1;
