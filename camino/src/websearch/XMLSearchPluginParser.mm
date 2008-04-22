@@ -108,6 +108,15 @@ static NSDictionary const *sSubclassToPluginTypeMap = nil;
   return nil;
 }
 
+- (void)dealloc
+{
+  [mElementsToParseContentsFor release];
+  [mElementsToParseAttributesFor release];
+  [mSearchEngineName release];
+  [mSearchEngineURL release];
+  [super dealloc];
+}
+
 #pragma mark -
 
 - (BOOL)parseSearchPluginAtURL:(NSURL *)searchPluginURL
