@@ -199,6 +199,7 @@ $ReleaseBuild  = 1;
 $shiptalkback  = 0;
 $ReleaseToLatest = 1; # Push the release to latest-<milestone>?
 $ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
+$DependToDated = 1; # Keep every hourly
 #$ReleaseGroup = 'firefox'; # group to set uploaded files to
 $build_hour    = "4";
 $package_creation_path = "/browser/installer";
