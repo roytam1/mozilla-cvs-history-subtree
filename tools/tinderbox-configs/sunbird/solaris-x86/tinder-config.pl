@@ -210,7 +210,7 @@ $BuildNameExtra = 'Sb-Release';
 
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
-$BuildTree  = 'MozillaTest';
+$BuildTree  = 'Sunbird-Mozilla1.8';
 
 #$BuildName = '';
 $BuildTag = 'MOZILLA_1_8_BRANCH';
@@ -263,11 +263,11 @@ $build_hour    = "3";
 $ssh_user      = "kzenker";
 #$ssh_server    = "stage.mozilla.org";
 #$ftp_path      = "/home/ftp/pub/mozilla/nightly/experimental";
-$ftp_path      = "/home/ftp/pub/calendar/sunbird/experimental/nightly";
+$ftp_path      = "/home/ftp/pub/calendar/sunbird/nightly";
 #$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/mozilla/nightly/experimental";
-$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/experimental/nightly";
-$tbox_ftp_path = "/home/ftp/pub/calendar/sunbird/experimental/tinderbox-builds";
-$tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/experimental/tinderbox-builds";
+$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly";
+$tbox_ftp_path = "/home/ftp/pub/calendar/sunbird/tinderbox-builds";
+$tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/tinderbox-builds";
 #$milestone     = "trunk";
 $milestone     = "mozilla1.8";
 #$notify_list   = 'build-announce@mozilla.org';
