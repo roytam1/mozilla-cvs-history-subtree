@@ -26,7 +26,7 @@ $BuildAdministrator = "Kurt.Zenker\@sun.com";
 
 #- You'll need to change these to suit your machine's needs
 #$DisplayServer = ':0.0';
-#$DisplayServer = ':99';
+$DisplayServer = ':99';
 
 #- Default values of command-line opts
 #-
@@ -220,7 +220,7 @@ $ConfigureOnly = 1;
 $LocalizationVersionFile = 'calendar/sunbird/config/version.txt';
 
 %WGetFiles = (
-          "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/experimental/nightly/latest-mozilla1.8/sunbird-%version%.en-US.solaris2.10-i386.tar.bz2" =>
+          "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly/latest-mozilla1.8/sunbird-%version%.en-US.solaris2.10-i386.tar.bz2" =>
           "/home/calbld/tb-lightning-soli/Sunbird1.8-l10n/SunOS_5.10_Clobber/sunbird.tar.bz2"
           );
 
@@ -236,7 +236,7 @@ $BuildLocalesArgs = "ZIP_IN=/home/calbld/tb-lightning-soli/Sunbird1.8-l10n/SunOS
 
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
-$BuildTree  = 'MozillaTest';
+$BuildTree  = 'Mozilla1.8-l10n';
 
 #$BuildName = '';
 $BuildTag = 'MOZILLA_1_8_BRANCH';
@@ -290,13 +290,13 @@ $build_hour    = "8";
 $ssh_user      = "kzenker";
 $ssh_server    = "stage-old.mozilla.org";
 #$ftp_path      = "/home/ftp/pub/mozilla/nightly/experimental";
-$ftp_path      = "/home/ftp/pub/calendar/sunbird/experimental/nightly";
+$ftp_path      = "/home/ftp/pub/calendar/sunbird/nightly";
 #$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/mozilla/nightly/experimental";
-$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/experimental/nightly";
+$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly";
 #$tbox_ftp_path = $ftp_path;
 #$tbox_url_path = $url_path;
-$tbox_ftp_path      = "/home/ftp/pub/calendar/sunbird/experimental/tinderbox-builds";
-$tbox_url_path      = "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/experimental/tinderbox-builds";
+$tbox_ftp_path      = "/home/ftp/pub/calendar/sunbird/tinderbox-builds";
+$tbox_url_path      = "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/tinderbox-builds";
 #$milestone     = "trunk";
 $milestone     = "mozilla1.8-l10n";
 #$notify_list   = 'build-announce@mozilla.org';
