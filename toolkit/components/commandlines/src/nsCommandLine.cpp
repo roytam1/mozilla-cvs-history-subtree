@@ -94,6 +94,7 @@ protected:
 					void *aClosure);
 
   void appendArg(const char* arg);
+  void resolveShortcutURL(nsILocalFile* aFile, nsACString& outURL);
   nsresult EnumerateHandlers(EnumerateHandlersCallback aCallback, void *aClosure);
   nsresult EnumerateValidators(EnumerateValidatorsCallback aCallback, void *aClosure);
 
@@ -444,16 +445,25 @@ nsCommandLine::ResolveURI(const nsAString& aArgument, nsIURI* *aResult)
   nsCOMPtr<nsIIOService> io = do_GetIOService();
   NS_ENSURE_TRUE(io, NS_ERROR_OUT_OF_MEMORY);
 
+  nsCOMPtr<nsIURI> workingDirURI;
+  if (mWorkingDir) {
+    io->NewFileURI(mWorkingDir, getter_AddRefs(workingDirURI));
+  }
+
   nsCOMPtr<nsILocalFile> lf (do_CreateInstance(NS_LOCAL_FILE_CONTRACTID));
   rv = lf->InitWithPath(aArgument);
   if (NS_SUCCEEDED(rv)) {
     lf->Normalize();
+    nsCAutoString url;
+    // Try to resolve the url for .url files.
+    resolveShortcutURL(lf, url);
+    if (!url.IsEmpty()) {
+      return io->NewURI(url,
+                        nsnull,
+                        workingDirURI,
+                        aResult);
+    }
     return io->NewFileURI(lf, aResult);
-  }
-
-  nsCOMPtr<nsIURI> workingDirURI;
-  if (mWorkingDir) {
-    io->NewFileURI(mWorkingDir, getter_AddRefs(workingDirURI));
   }
 
   return io->NewURI(NS_ConvertUTF16toUTF8(aArgument),
@@ -473,6 +483,22 @@ nsCommandLine::appendArg(const char* arg)
   NS_CopyNativeToUnicode(nsDependentCString(arg), warg);
 
   mArgs.AppendString(warg);
+}
+
+void
+nsCommandLine::resolveShortcutURL(nsILocalFile* aFile, nsACString& outURL)
+{
+  nsCOMPtr<nsIFileProtocolHandler> fph;
+  nsresult rv = NS_GetFileProtocolHandler(getter_AddRefs(fph));
+  if (NS_FAILED(rv))
+    return;
+
+  nsCOMPtr<nsIURI> uri;
+  rv = fph->ReadURLFile(aFile, getter_AddRefs(uri));
+  if (NS_FAILED(rv))
+    return;
+
+  uri->GetSpec(outURL);
 }
 
 NS_IMETHODIMP
