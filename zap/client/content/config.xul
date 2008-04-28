@@ -55,6 +55,8 @@
 
   <script type="application/x-javascript">
   <![CDATA[
+    var widgetStateChanged;
+
     function initPage() {
       widgetStateChanged = formWidgetStateChanged;
       parent.wConfig.fillDocument(document);

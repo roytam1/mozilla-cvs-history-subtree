@@ -52,7 +52,9 @@
 
   <script type="application/x-javascript">
   <![CDATA[
+    var widgetStateChanged;
     var wIdentity;
+
     function initPage() {
       widgetStateChanged = formWidgetStateChanged;
       initIdentityForm();
