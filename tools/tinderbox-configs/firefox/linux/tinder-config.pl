@@ -168,7 +168,7 @@ $ConfigureOnly = 1;             # Configure only, don't build.
 $LocaleProduct = "browser";
 $LocalizationVersionFile = 'browser/config/version.txt';
 %WGetFiles = (
-# CONFIG:             "http://%stagingServer%/pub/mozilla.org/firefox/nightly/%version%-candidates/rc%rc%/firefox-%version%.en-US.linux-i686.tar.bz2" => 
+# CONFIG:             "http://%stagingServer%/pub/mozilla.org/firefox/nightly/%version%-candidates/build%build%/firefox-%appVersion%.en-US.linux-i686.tar.bz2" => 
 "http://production-1.9-master.build.mozilla.org/pub/mozilla.org/firefox/nightly/3.0b5-candidates/rc2/firefox-3.0b5.en-US.linux-i686.tar.bz2" => 
 # CONFIG:             "/%l10n_buildDir%/%l10n_buildPlatform%/firefox.tar.bz2"
 "//builds/tinderbox/Fx-Mozilla1.9-l10n-Release/Linux_2.6.18-53.1.13.el5_Depend/firefox.tar.bz2"
