@@ -346,6 +346,7 @@ SipUAStack.getter(
   });
 
 //  readonly attribute ACString hostAddress;
+// XXX this field is problematic (there is no one host address) and should really go away
 SipUAStack.getter(
   "hostAddress",
   function get_hostAddress() {
@@ -663,21 +664,6 @@ SipUAStack.fun(
 
 //----------------------------------------------------------------------
 // Implementation helpers:
-
-// // get the address to use for an Contact header for a
-// // dialog-establishing message:
-// // XXX this should be user configurable in some form or another
-// // XXX get fqdn from elsewhere?
-// // XXX should this also be the contact set for non-dialog establising requests?
-// // XXX distinguish between sip and sips
-// SipUAStack.fun(
-//   function getContactAddress() {
-//     var address = "sip:" + (this.FromAddress.uri).QueryInterface(Components.interfaces.zapISipSIPURI).user;
-//     address += "@" + this.hostAddress;
-//     if (this.listeningPort != 5060)
-//       address += ":" + this.listeningPort;
-//     return gSyntaxFactory.deserializeAddress(address);
-//   });
 
 // Send a response to the given request via a server invite or
 // non-invite transaction, as appropriate for the request method.
