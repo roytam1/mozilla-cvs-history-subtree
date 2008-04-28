@@ -33,7 +33,7 @@
                    zap:domain="fwd.pulver.com"
                    zap:ua_contact_address_type="local"
                    zap:elide_destination_route_header="false"
-                   zap:route1="&lt;sip:fwdnat.pulver.com:5082;lr&gt;"/>
+                   zap:route1="&lt;sip:fwdnat2.pulver.com:5060;lr&gt;"/>
   <rdf:Description rdf:about="rdf:#$xmowo"
                    NC:Name="Freedom2surf"
                    zap:domain="f2s.com"
