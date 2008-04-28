@@ -200,13 +200,10 @@ private:
     nsProxyEventObject         *mNext;
 };
 
-#define NS_PROXYEVENT_IID                             \
-{ /* 9a24dc5e-2b42-4a5a-aeca-37b8c8fd8ccd */          \
-    0x9a24dc5e,                                       \
-    0x2b42,                                           \
-    0x4a5a,                                           \
-    {0xae, 0xca, 0x37, 0xb8, 0xc8, 0xfd, 0x8c, 0xcd}  \
-}
+// bb7900ef-1cd0-4807-a29d-040034af1115
+#define NS_PROXYEVENT_IID \
+{ 0xbb7900ef, 0x1cd0, 0x4807, \
+  { 0xa2, 0x9d, 0x04, 0x00, 0x34, 0xaf, 0x11, 0x15 } }
 
 /**
  * A class representing a particular proxied method call.
@@ -240,8 +237,8 @@ public:
 
     void                SetResult(nsresult rv) { mResult = rv; }
     
-    nsIEventTarget*     GetCallersTarget();
-    void                SetCallersTarget(nsIEventTarget* target);
+    PRMonitor*          GetMonitor();
+    void                SetMonitor(PRMonitor *monitor);
     PRBool              IsSync() const
     {
         return !!(mOwner->GetProxyType() & NS_PROXY_SYNC);
@@ -255,10 +252,9 @@ private:
     nsXPTCVariant   *mParameterList;             /* marshalled in parameter buffer */
     PRUint32         mParameterCount;            /* number of params */
     PRInt32          mCompleted;                 /* is true when the method has been called. */
-       
-    nsCOMPtr<nsIEventTarget> mCallersTarget;     /* this is the dispatch target that we must post a message back to 
-                                                    when we are done invoking the method (only NS_PROXY_SYNC). */
 
+    PRMonitor       *mMonitor;                   /* this is the monitor to Notify when complete */
+       
     nsRefPtr<nsProxyEventObject>   mOwner;       /* this is the strong referenced nsProxyObject */
    
     void RefCountInInterfacePointers(PRBool addRef);

@@ -154,7 +154,8 @@ nsProxyEventObject::convertMiniVariantToVariant(const XPTMethodDescriptor *metho
     for (int i = 0; i < paramCount; i++)
     {
         const nsXPTParamInfo& paramInfo = methodInfo->params[i];
-        if ((GetProxyType() & NS_PROXY_ASYNC) && paramInfo.IsDipper())
+        if ((GetProxyType() & NS_PROXY_ASYNC) &&
+            (paramInfo.IsOut() || paramInfo.IsDipper()))
         {
             NS_WARNING("Async proxying of out parameters is not supported"); 
             free(*fullParam);
@@ -250,21 +251,31 @@ nsProxyEventObject::CallMethod(PRUint16 methodIndex,
         return NS_ERROR_OUT_OF_MEMORY;
     threadInt->PushEventQueue(filter);
 
-    proxyInfo->SetCallersTarget(thread);
+    PRMonitor *mon = PR_NewMonitor();
+    if (!mon)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    PR_EnterMonitor(mon);
+    proxyInfo->SetMonitor(mon);
     
     // Dispatch can fail if the thread is shutting down
     rv = GetTarget()->Dispatch(proxyInfo, NS_DISPATCH_NORMAL);
     if (NS_SUCCEEDED(rv)) {
         while (!proxyInfo->GetCompleted()) {
-            if (!NS_ProcessNextEvent(thread)) {
-                rv = NS_ERROR_UNEXPECTED;
-                break;
+            // Process re-entrant proxy requests, if any, but don't block.
+            if (!NS_ProcessNextEvent(thread, PR_FALSE)) {
+                // If we didn't, then sleep for a while so we don't peg the CPU
+                // waiting for the proxy call to be completed.
+                PR_Wait(mon, PR_MillisecondsToInterval(20));
             }
         }
         rv = proxyInfo->GetResult();
     } else {
         NS_WARNING("Failed to dispatch nsProxyCallEvent");
     }
+
+    PR_ExitMonitor(mon);
+    PR_DestroyMonitor(mon);
 
     threadInt->PopEventQueue();
 

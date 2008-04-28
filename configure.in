@@ -114,7 +114,7 @@ GLIB_VERSION=1.2.0
 LIBIDL_VERSION=0.6.3
 PERL_VERSION=5.006
 LIBART_VERSION=2.3.4
-CAIRO_VERSION=1.5.2
+CAIRO_VERSION=1.6.0
 GLITZ_VERSION=0.4.0
 PANGO_VERSION=1.10.0
 GTK2_VERSION=2.10.0
@@ -128,7 +128,7 @@ LIBGNOME_VERSION=2.0
 STARTUP_NOTIFICATION_VERSION=0.8
 DBUS_VERSION=0.60
 LCMS_VERSION=1.17
-SQLITE_VERSION=3.5
+SQLITE_VERSION=3.5.4
 
 MSMANIFEST_TOOL=
 
@@ -186,7 +186,8 @@ case "$target" in
     MAKE_VERSION=3.79
     if test -z "$CC"; then CC=cl; fi
     if test -z "$CXX"; then CXX=cl; fi
-    if test -z "$CPP"; then CPP=cl; fi
+    if test -z "$CPP"; then CPP="cl -E -nologo"; fi
+    if test -z "$CXXCPP"; then CXXCPP="cl -TP -E -nologo"; ac_cv_prog_CXXCPP="$CXXCPP"; fi
     if test -z "$LD"; then LD=link; fi
     if test -z "$AS"; then AS=ml; fi
     if test -z "$MIDL"; then MIDL=midl; fi
@@ -593,13 +594,6 @@ case "$target" in
     ;;
 esac
 
-if test -n "$_WIN32_MSVC"; then
-    SKIP_PATH_CHECKS=1
-    SKIP_COMPILER_CHECKS=1
-    SKIP_LIBRARY_CHECKS=1
-    AC_CHECK_HEADERS(mmintrin.h)
-fi
-
 dnl Test breaks icc on OS/2 && MSVC
 if test "$CC" != "icc" -a -z "$_WIN32_MSVC"; then
     AC_PROG_CC_C_O
@@ -614,6 +608,12 @@ fi
 
 AC_PROG_CPP
 AC_PROG_CXXCPP
+
+if test -n "$_WIN32_MSVC"; then
+    SKIP_PATH_CHECKS=1
+    SKIP_COMPILER_CHECKS=1
+    SKIP_LIBRARY_CHECKS=1
+fi
 
 fi # COMPILE_ENVIRONMENT
 
@@ -1659,6 +1659,10 @@ case "$target" in
     MOZ_ENABLE_POSTSCRIPT=
     TARGET_NSPR_MDCPUCFG='\"md/_darwin.cfg\"'
     LDFLAGS="$LDFLAGS -framework Cocoa"
+    # The ExceptionHandling framework is needed for Objective-C exception
+    # logging code in nsObjCExceptions.h. Currently we only use that in debug
+    # builds.
+    MOZ_DEBUG_LDFLAGS="$MOZ_DEBUG_LDFLAGS -framework ExceptionHandling"
     # set MACOSX to generate lib/mac/MoreFiles/Makefile
     MACOSX=1
 
@@ -1961,8 +1965,16 @@ case "$target" in
             dnl For profile-guided optimization
             PROFILE_GEN_CFLAGS="-GL"
             PROFILE_GEN_LDFLAGS="-LTCG:PGINSTRUMENT"
-            PROFILE_USE_CFLAGS="-GL"
-            dnl XXX: should be -LTCG:PGOPTIMIZE, but that fails on libxul
+            dnl XXX: PGO builds can fail with warnings treated as errors,
+            dnl specifically "no profile data available" appears to be
+            dnl treated as an error sometimes. This might be a consequence
+            dnl of using WARNINGS_AS_ERRORS in some modules, combined
+            dnl with the linker doing most of the work in the whole-program
+            dnl optimization/PGO case. I think it's probably a compiler bug,
+            dnl but we work around it here.
+            PROFILE_USE_CFLAGS="-GL -wd4624 -wd4952"
+            dnl XXX: should be -LTCG:PGOPTIMIZE, but that fails on libxul.
+            dnl Probably also a compiler bug, but what can you do?
             PROFILE_USE_LDFLAGS="-LTCG:PGUPDATE"
             if test -n "$_USE_DYNAMICBASE"; then
                LDFLAGS="$LDFLAGS -DYNAMICBASE"
@@ -2102,6 +2114,22 @@ case "$target" in
         LIBIDL_LIBS="${LIBIDL_LIBS} ${GLIB_LIBS}"
         ;;
     esac 
+
+
+    case "$host_os" in
+    cygwin*)
+        AC_MSG_WARN([Using a cygwin build environment is unsupported. Configure cannot check for the presence of necessary headers. Please upgrade to MozillaBuild; see http://developer.mozilla.org/en/docs/Windows_Build_Prerequisites])
+        ;;
+
+    *)
+        AC_CHECK_HEADERS(mmintrin.h oleacc.idl)
+
+        AC_LANG_SAVE
+        AC_LANG_CPLUSPLUS
+        AC_CHECK_HEADERS(atlbase.h wpcapi.h)
+        AC_LANG_RESTORE
+        ;;
+    esac
 
     case "$target" in
     i*86-*)
@@ -5129,6 +5157,19 @@ if test "$ACCESSIBILITY"; then
     AC_DEFINE(ACCESSIBILITY)
 fi
 
+if test -n "$ACCESSIBILITY"; then
+case "$target" in
+*-mingw*|*-cygwin*|*-msvc*|*-mks*)
+    if test "$ac_cv_header_atlbase_h" = "no"; then
+        AC_MSG_ERROR([System header atlbase.h is not available. See http://developer.mozilla.org/en/docs/atlbase.h for details on fixing this problem.])
+    fi
+    if test "$ac_cv_header_oleacc_idl" = "no"; then
+        AC_MSG_ERROR([System header oleacc.idl is not available. See http://developer.mozilla.org/en/docs/oleacc.idl for details on fixing this problem.])
+    fi
+    ;;
+esac
+fi
+
 dnl ========================================================
 dnl xpfe/components on by default
 dnl ========================================================
@@ -5778,6 +5819,16 @@ then
     AC_MSG_ERROR([Cannot enable ActiveX scripting support when ActiveX support is disabled.])
 fi
 
+if test -n "$XPC_IDISPATCH_SUPPORT" -o -n "$MOZ_ACTIVEX_SCRIPTING_SUPPORT" -o -z "$MOZ_NO_ACTIVEX_SUPPORT"; then
+case "$target" in
+*-mingw*|*-cygwin*|*-msvc*|*-mks*)
+    if test "$ac_cv_header_atlbase_h" = "no"; then
+        AC_MSG_ERROR([System header atlbase.h is not available. See http://developer.mozilla.org/en/docs/atlbase.h for details on fixing this problem.])
+    fi
+    ;;
+esac
+fi
+
 dnl ========================================================
 dnl leaky
 dnl ========================================================
@@ -5815,7 +5866,33 @@ MOZ_ARG_DISABLE_BOOL(parental-controls,
 if test -n "$MOZ_DISABLE_PARENTAL_CONTROLS"; then
     AC_DEFINE(MOZ_DISABLE_PARENTAL_CONTROLS)
 fi
+
+dnl ========================================================
+dnl Vista SDK specific api
+dnl ========================================================
+MOZ_ARG_DISABLE_BOOL(vista-sdk-requirements,
+[  --disable-vista-sdk-requirements
+                           Do not build Vista SDK specific code],
+   MOZ_DISABLE_VISTA_SDK_REQUIREMENTS=1,
+   MOZ_DISABLE_VISTA_SDK_REQUIREMENTS=)
+if test -n "$MOZ_DISABLE_VISTA_SDK_REQUIREMENTS"; then
+    AC_MSG_WARN([Resulting builds will not be compatible with Windows Vista. (bug 428970)])
+    AC_DEFINE(MOZ_DISABLE_VISTA_SDK_REQUIREMENTS)
+    if test -z "$MOZ_DISABLE_PARENTAL_CONTROLS"; then
+        AC_DEFINE(MOZ_DISABLE_PARENTAL_CONTROLS)
+    fi
+    MOZ_DISABLE_PARENTAL_CONTROLS=1
+else
+case "$target" in
+*-mingw*|*-cygwin*|*-msvc*|*-mks*)
+    if test "$ac_cv_header_wpcapi_h" = "no"; then
+        AC_MSG_ERROR([System header wpcapi.h is not available. See updated http://developer.mozilla.org/en/docs/wpcapi.h for details on fixing this problem.])
+    fi
+    ;;
+esac
+fi
 AC_SUBST(MOZ_DISABLE_PARENTAL_CONTROLS)
+AC_SUBST(MOZ_DISABLE_VISTA_SDK_REQUIREMENTS)
 
 dnl ========================================================
 dnl =

@@ -75,45 +75,7 @@
 #define nsAUTF8String nsACString
 #define nsUTF8String nsCString
 
-class nsProxyCallCompletedEvent : public nsRunnable
-{
-public:
-    nsProxyCallCompletedEvent(nsProxyObjectCallInfo *info)
-        : mInfo(info)
-    {}
-
-    NS_DECL_NSIRUNNABLE
-
-    NS_IMETHOD QueryInterface(REFNSIID aIID, void **aResult);
-
-private:
-    nsProxyObjectCallInfo *mInfo;
-};
-
-NS_IMETHODIMP
-nsProxyCallCompletedEvent::Run()
-{
-    NS_ASSERTION(mInfo, "no info");
-    mInfo->SetCompleted();
-    return NS_OK;
-}
-
 NS_DEFINE_IID(kFilterIID, NS_PROXYEVENT_FILTER_IID);
-
-NS_IMETHODIMP
-nsProxyCallCompletedEvent::QueryInterface(REFNSIID aIID, void **aResult)
-{
-    // We are explicitly breaking XPCOM rules here by returning a different
-    // object from QueryInterface. We do this so that
-    // nsProxyThreadFilter::AcceptEvent can know whether we are an event that
-    // needs to be allowed through during a synchronous proxy call.
-    if (aIID.Equals(kFilterIID)) {
-        *aResult = mInfo;
-        mInfo->AddRef();
-        return NS_OK;
-    }
-    return nsRunnable::QueryInterface(aIID, aResult);
-}
 
 //-----------------------------------------------------------------------------
 
@@ -300,6 +262,13 @@ void
 nsProxyObjectCallInfo::SetCompleted()
 {
     PROXY_LOG(("PROXY(%p): SetCompleted\n", this));
+    if (mMonitor) {
+        PR_EnterMonitor(mMonitor);
+        mCompleted = 1;
+        PR_Notify(mMonitor);
+        PR_ExitMonitor(mMonitor);
+        return;
+    }
     PR_AtomicSet(&mCompleted, 1);
 }
 
@@ -308,29 +277,20 @@ nsProxyObjectCallInfo::PostCompleted()
 {
     PROXY_LOG(("PROXY(%p): PostCompleted\n", this));
 
-    if (mCallersTarget) {
-        nsCOMPtr<nsIRunnable> event =
-                new nsProxyCallCompletedEvent(this);
-        if (event &&
-            NS_SUCCEEDED(mCallersTarget->Dispatch(event, NS_DISPATCH_NORMAL)))
-            return;
-    }
-
-    // OOM?  caller does not have a target?  This is an error!
-    NS_WARNING("Failed to dispatch nsProxyCallCompletedEvent");
+    NS_ASSERTION(IsSync(), "Don't call PostCompleted() for async events");
     SetCompleted();
 }
   
-nsIEventTarget*      
-nsProxyObjectCallInfo::GetCallersTarget() 
+PRMonitor*      
+nsProxyObjectCallInfo::GetMonitor() 
 { 
-    return mCallersTarget;
+    return mMonitor;
 }
 
 void
-nsProxyObjectCallInfo::SetCallersTarget(nsIEventTarget* target)
+nsProxyObjectCallInfo::SetMonitor(PRMonitor* monitor)
 {
-    mCallersTarget = target;
+    mMonitor = monitor;
 }   
 
 nsProxyObject::nsProxyObject(nsIEventTarget *target, PRInt32 proxyType,
