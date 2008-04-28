@@ -76,7 +76,7 @@
     }
 
     function cancel() {
-      parent.selectSidebarNode("urn:mozilla:zap:identities");
+      parent.selectSidebarNode("urn:mozilla:zap:home");
     }
 
   ]]>

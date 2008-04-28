@@ -76,7 +76,7 @@
       if (ok) {
         parent.unregisterIdentity(wIdentity);
         wIdentity.remove();
-        parent.selectSidebarNode("urn:mozilla:zap:identities");
+        parent.selectSidebarNode("urn:mozilla:zap:home");
       }
     }
     
