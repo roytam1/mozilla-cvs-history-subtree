@@ -3064,18 +3064,6 @@ var InboundCallHandler = makeClass("InboundCallHandler",
 InboundCallHandler.addInterfaces(Components.interfaces.zapISipInviteRSListener,
                                  Components.interfaces.zapIMediaSessionListener);
 
-
-// helper returning a routing info structure to use for incoming calls that
-// can't be matched up with an identity:
-function getDirectRoutingInfo() {
-  var contactAddr = wSipStack.syntaxFactory.deserializeAddress("<sip:"+wSipStack.hostAddress+">");
-  return {
-    contact : contactAddr,
-    directContact: contactAddr,
-    routeset: []
-  };
-}
-
 InboundCallHandler.fun(
   function handleCall(call, rs) {
     this.call = call;
@@ -3113,9 +3101,15 @@ InboundCallHandler.fun(
       }
     }
     else {
-      // XXX maybe resolve_by_OPTIONS
       this._warning("Call doesn't match any identity");
-      this.routingInfo = getDirectRoutingInfo();
+      // synthesize from request's To address; that's where the caller
+      // managed to find us in the first place.
+      var to = rs.request.getToHeader().address;
+      this.routingInfo = {
+        contact: to,
+        directContact: to,
+        routeset: []
+      };
     }
       
     // reject based on busy settings:
