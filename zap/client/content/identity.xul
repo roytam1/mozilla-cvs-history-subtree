@@ -121,25 +121,6 @@
           flags="dont-buid-content"
           ref="urn:mozilla:zap:root">
       <template>
-        <rule><!-- NON-REGISTERED IDENTITY -->
-          <conditions>
-            <content uri="?dummy"/>
-            <member container="?dummy" child="?node"/>
-            <triple subject="?node"
-                    predicate="urn:mozilla:zap:registration_status"
-                    object=""/>                
-          </conditions>
-          <action>
-            <groupbox flex="1" uri="?node">
-              <caption><label value="Status"/></caption>
-              <hbox flex="1">
-                <label value="&notRegistered.label;"/>
-                <spacer flex="1"/>
-                <button label="&register.button;" oncommand="registerNow()"/>
-              </hbox>
-            </groupbox>
-          </action>
-        </rule>
         <rule><!-- REGISTERED IDENTITY -->
           <conditions>
             <content uri="?dummy"/>
@@ -174,6 +155,25 @@
                 <label value="&registering.label;"/>
                 <spacer flex="1"/>
                 <button label="&noregister.button;" oncommand="unregisterNow()"/>
+              </hbox>
+            </groupbox>
+          </action>
+        </rule>
+        <rule><!-- NON-REGISTERED IDENTITY -->
+          <conditions>
+            <content uri="?dummy"/>
+            <member container="?dummy" child="?node"/>
+            <triple subject="?node"
+                    predicate="urn:mozilla:zap:registration_status"
+                    object=""/>                
+          </conditions>
+          <action>
+            <groupbox flex="1" uri="?node">
+              <caption><label value="Status"/></caption>
+              <hbox flex="1">
+                <label value="&notRegistered.label;"/>
+                <spacer flex="1"/>
+                <button label="&register.button;" oncommand="registerNow()"/>
               </hbox>
             </groupbox>
           </action>
