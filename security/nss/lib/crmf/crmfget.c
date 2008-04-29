@@ -347,7 +347,6 @@ crmf_copy_cert_request(PRArenaPool *poolp, CRMFCertRequest *srcReq)
  loser:
     if (newReq != NULL && poolp == NULL) {
         CRMF_DestroyCertRequest(newReq);
-        PORT_Free(newReq);
     }
     return NULL;
 }

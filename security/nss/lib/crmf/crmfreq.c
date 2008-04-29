@@ -611,7 +611,7 @@ CRMF_CreateCertExtension(SECOidTag id,
     return crmf_create_cert_extension(NULL, id, isCritical, data);
 }
 
-static SECStatus
+SECStatus
 crmf_destroy_cert_extension(CRMFCertExtension *inExtension, PRBool freeit)
 {
     if (inExtension != NULL) {
