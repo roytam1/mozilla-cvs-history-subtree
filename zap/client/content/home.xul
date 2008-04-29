@@ -85,7 +85,7 @@
         <html:li><label sip="sip:613@fwd.pulver.com" value="sip:613@fwd.pulver.com"/>: 
           The ubiquitous callback test at FWD.
         </html:li>
-        <html:li><label sip="sip:411@fwd.pulver.com" value="sip:411@fwd.pulver.com"/>:
+        <html:li><label sip="sip:411@fwd.pulver.com" value="sip:*8508355@sipbroker.com"/>:
           1-800-555-TELL service. Honestly, you will want to try this!
         </html:li>
         <html:li><label sip="sip:*266300@sipbroker.com" value="sip:*266300@sipbroker.com"/>: Monkey sounds from blueface.ie.
