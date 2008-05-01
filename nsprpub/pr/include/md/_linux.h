@@ -1,4 +1,4 @@
-/* -*- Mode: C++; tab-width: 8; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -207,50 +207,6 @@ extern PRInt32 _PR_ppc_AtomicSet(PRInt32 *val, PRInt32 newval);
 })
 #endif
 
-#if defined(__arm__) && defined(_PR_ARM_KUSER)
-#define _PR_HAVE_ATOMIC_OPS
-#define _MD_INIT_ATOMIC()
-
-/*
- * The kernel provides this helper function at a fixed address with a fixed
- * ABI signature, directly callable from user space.
- *
- * Definition:
- * Atomically store newval in *ptr if *ptr is equal to oldval.
- * Return zero if *ptr was changed or non-zero if no exchange happened.
- */
-typedef int (__kernel_cmpxchg_t)(int oldval, int newval, volatile int *ptr);
-#define __kernel_cmpxchg (*(__kernel_cmpxchg_t *)0xffff0fc0)
-
-#define _MD_ATOMIC_INCREMENT(ptr) _MD_ATOMIC_ADD(ptr, 1)
-#define _MD_ATOMIC_DECREMENT(ptr) _MD_ATOMIC_ADD(ptr, -1)
-
-static inline PRInt32 _MD_ATOMIC_ADD(PRInt32 *ptr, PRInt32 n)
-{
-    PRInt32 ov, nv;
-    volatile PRInt32 *vp = ptr;
-
-    do {
-        ov = *vp;
-        nv = ov + n;
-    } while (__kernel_cmpxchg(ov, nv, vp));
-
-    return nv;
-}
-
-static inline PRInt32 _MD_ATOMIC_SET(PRInt32 *ptr, PRInt32 nv)
-{
-    PRInt32 ov;
-    volatile PRInt32 *vp = ptr;
-
-    do {
-        ov = *vp;
-    } while (__kernel_cmpxchg(ov, nv, vp));
-
-    return ov;
-}
-#endif
-
 #define USE_SETJMP
 #if defined(__GLIBC__) && __GLIBC__ >= 2
 #define _PR_POLL_AVAILABLE
@@ -442,8 +398,8 @@ extern void _MD_CleanupBeforeExit(void);
         _main();  \
     }  \
     _MD_GET_SP(_thread) = (unsigned char*) ((_sp) - 128); \
-    _thread->md.sp = _MD_GET_SP_PTR(_thread); \
-    _thread->md.fp = _MD_GET_FP_PTR(_thread); \
+	_thread->md.sp = _MD_GET_SP_PTR(_thread); \
+	_thread->md.fp = _MD_GET_FP_PTR(_thread); \
     _MD_SET_FP(_thread, 0); \
 }
 
@@ -469,8 +425,8 @@ extern void _MD_CleanupBeforeExit(void);
         _main();  \
     }  \
     _MD_GET_SP(_thread) = (_MD_SP_TYPE) ((_sp) - 64); \
-    _thread->md.sp = _MD_GET_SP_PTR(_thread); \
-    _thread->md.fp = _MD_GET_FP_PTR(_thread); \
+	_thread->md.sp = _MD_GET_SP_PTR(_thread); \
+	_thread->md.fp = _MD_GET_FP_PTR(_thread); \
     _MD_SET_FP(_thread, 0); \
 }
 
@@ -496,8 +452,8 @@ extern void _MD_CleanupBeforeExit(void);
 
 struct _MDThread {
     PR_CONTEXT_TYPE context;
-    void *sp;
-    void *fp;
+	void *sp;
+	void *fp;
     int id;
     int errcode;
 };
@@ -536,10 +492,10 @@ struct _MDCPU_Unix {
 #ifndef _PR_USE_POLL
     fd_set fd_read_set, fd_write_set, fd_exception_set;
     PRInt16 fd_read_cnt[_PR_MD_MAX_OSFD],fd_write_cnt[_PR_MD_MAX_OSFD],
-            fd_exception_cnt[_PR_MD_MAX_OSFD];
+				fd_exception_cnt[_PR_MD_MAX_OSFD];
 #else
-    struct pollfd *ioq_pollfds;
-    int ioq_pollfds_size;
+	struct pollfd *ioq_pollfds;
+	int ioq_pollfds_size;
 #endif	/* _PR_USE_POLL */
 };
 
@@ -560,7 +516,7 @@ struct _MDCPU_Unix {
 #define _PR_IOQ_MIN_POLLFDS_SIZE(_cpu)	32
 
 struct _MDCPU {
-    struct _MDCPU_Unix md_unix;
+	struct _MDCPU_Unix md_unix;
 };
 
 #define _MD_INIT_LOCKS()
@@ -600,7 +556,7 @@ extern PRIntervalTime _PR_UNIX_GetInterval(void);
 extern PRIntervalTime _PR_UNIX_TicksPerSecond(void);
 
 #define _MD_EARLY_INIT                  _MD_EarlyInit
-#define _MD_FINAL_INIT                  _PR_UnixInit
+#define _MD_FINAL_INIT					_PR_UnixInit
 #define _MD_GET_INTERVAL                _PR_UNIX_GetInterval
 #define _MD_INTERVAL_PER_SEC            _PR_UNIX_TicksPerSecond
 

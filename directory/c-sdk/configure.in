@@ -2169,7 +2169,7 @@ dnl ========================================================
 dnl Checks for library functions.
 dnl ========================================================
 AC_PROG_GCC_TRADITIONAL
-AC_CHECK_FUNCS(lchown strerror getaddrinfo getnameinfo)
+AC_CHECK_FUNCS(lchown strerror)
 
 dnl AC_FUNC_MEMCMP
 dnl AC_FUNC_MMAP
@@ -2643,7 +2643,5 @@ dnl since configure won't handle 2 levels of directory
 dnl structure for us..
 mkdir ldap > /dev/null 2>&1
 mkdir ldap/clients > /dev/null 2>&1
-
-echo $MAKEFILES > unallmakefiles
 
 AC_OUTPUT([$MAKEFILES])

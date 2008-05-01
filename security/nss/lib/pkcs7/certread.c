@@ -172,12 +172,10 @@ CERT_ConvertAndDecodeCertificate(char *certstr)
     return cert;
 }
 
-static const char NS_CERT_HEADER[]  = "-----BEGIN CERTIFICATE-----";
-static const char NS_CERT_TRAILER[] = "-----END CERTIFICATE-----";
-#define NS_CERT_HEADER_LEN  ((sizeof NS_CERT_HEADER) - 1)
-#define NS_CERT_TRAILER_LEN ((sizeof NS_CERT_TRAILER) - 1)
+#define NS_CERT_HEADER "-----BEGIN CERTIFICATE-----"
+#define NS_CERT_TRAILER "-----END CERTIFICATE-----"
 
-static const char CERTIFICATE_TYPE_STRING[] = "certificate";
+#define CERTIFICATE_TYPE_STRING "certificate"
 #define CERTIFICATE_TYPE_LEN (sizeof(CERTIFICATE_TYPE_STRING)-1)
 
 CERTPackageType
@@ -438,11 +436,10 @@ notder:
     cl = certlen;
 
     /* find the beginning marker */
-    while ( cl > NS_CERT_HEADER_LEN ) {
+    while ( cl > sizeof(NS_CERT_HEADER) ) {
 	if ( !PORT_Strncasecmp((char *)cp, NS_CERT_HEADER,
-			        NS_CERT_HEADER_LEN) ) {
-	    cl -= NS_CERT_HEADER_LEN;
-	    cp += NS_CERT_HEADER_LEN;
+			     sizeof(NS_CERT_HEADER)-1) ) {
+	    cp = cp + sizeof(NS_CERT_HEADER);
 	    certbegin = cp;
 	    break;
 	}
@@ -462,9 +459,9 @@ notder:
 
     if ( certbegin ) {
 	/* find the ending marker */
-	while ( cl > NS_CERT_TRAILER_LEN ) {
+	while ( cl > sizeof(NS_CERT_TRAILER) ) {
 	    if ( !PORT_Strncasecmp((char *)cp, NS_CERT_TRAILER,
-				   NS_CERT_TRAILER_LEN) ) {
+				 sizeof(NS_CERT_TRAILER)-1) ) {
 		certend = (unsigned char *)cp;
 		break;
 	    }

@@ -85,8 +85,6 @@ pkix_pl_lifecycle_ObjectTableUpdate(int *objCountTable);
 
 PRInt32 parallelFnInvocationCount;
 
-PRInt32 stackErrorCodes[MAX_STACK_DEPTH]; 
-
 #endif /* PKIX_OBJECT_LEAK_TEST */
 
 
@@ -843,23 +841,17 @@ cert_PkixErrorToNssCode(
     /* Loop until we find at least one error with non-null
      * plErr code, that is going to be nss error code. */
     while (errPtr) {
-#ifdef PKIX_OBJECT_LEAK_TEST
-        stackErrorCodes[errLevel] = errPtr->errCode;
-#endif
         if (errPtr->plErr && !nssErr) {
             nssErr = errPtr->plErr;
             if (!pkixLog) break;
         }
         if (pkixLog) {
-            PR_LOG(pkixLog, 2, ("Error at level %d: %s\n", errLevel,
+            PR_LOG(pkixLog, 1, ("Error at level %d: %s\n", errLevel,
                                 PKIX_ErrorText[errPtr->errCode]));
         }
         errPtr = errPtr->cause;
         errLevel += 1; 
     }
-#ifdef PKIX_OBJECT_LEAK_TEST
-    stackErrorCodes[errLevel] = -1;
-#endif
     PORT_Assert(nssErr);
     if (!nssErr) {
         *pNssErr = SEC_ERROR_LIBPKIX_INTERNAL;
@@ -1028,6 +1020,9 @@ cert_GetBuildResults(
         fprintf(stderr, "BUILD ERROR:\n%s\n", temp);
         PKIX_PL_Free(temp, NULL);
 #endif /* DEBUG */
+        cert_PkixErrorToNssCode(error, &nssErrorCode, plContext);
+        PORT_SetError(nssErrorCode);
+        
         if (verifyNode) {
             PKIX_Error *tmpError =
                 cert_GetLogFromVerifyNode(log, verifyNode, plContext);
@@ -1035,8 +1030,6 @@ cert_GetBuildResults(
                 PKIX_PL_Object_DecRef((PKIX_PL_Object *)tmpError, plContext);
             }
         }
-        cert_PkixErrorToNssCode(error, &nssErrorCode, plContext);
-        PORT_SetError(nssErrorCode);
         goto cleanup;
     }
 
@@ -1207,7 +1200,7 @@ do {
         pkix_pl_lifecycle_ObjectTableUpdate(objCountTable); 
     }
 
-    PR_LOG(pkixLog, 1, ("Memory leak test: Loop %d\n", memLeakLoopCount++));
+    PR_LOG(pkixLog, 1, ("Memory leak test: Loop %d\n", memLeakLoopCount));
 #endif /* PKIX_OBJECT_LEAK_TEST */
 
     error =
@@ -1283,14 +1276,6 @@ cleanup:
     leakedObjNum =
         pkix_pl_lifecycle_ObjectLeakCheck(leakedObjNum ? objCountTable : NULL);
     
-    if (pkixLog && leakedObjNum) {
-        int level = 0;
-        PR_LOG(pkixLog, 1, ("The following error caused object leaks:\n"));
-        for(;level < MAX_STACK_DEPTH && stackErrorCodes[level] != -1;level++) {
-            PR_LOG(pkixLog, 1, ("Error at level %d: %s\n", level,
-                                PKIX_ErrorText[stackErrorCodes[level]]));
-        }
-    }
     if (abortOnLeak) {
         PORT_Assert(leakedObjNum == 0);
     }
@@ -1754,13 +1739,6 @@ cert_pkixSetParam(PKIX_ProcessingParams *procParams,
                                                       plContext);
             break;
 
-        case cert_pi_useAIACertFetch:
-            error =
-                PKIX_ProcessingParams_SetUseAIAForCertFetching(procParams,
-                                     (PRBool)(param->value.scalar.b != 0),
-                                                               plContext);
-            break;
-            
         default:
             PORT_SetError(errCode);
             r = SECFailure;
@@ -2094,7 +2072,7 @@ do {
         pkix_pl_lifecycle_ObjectTableUpdate(objCountTable);
     }
 
-    PR_LOG(pkixLog, 1, ("Memory leak test: Loop %d\n", memLeakLoopCount++));
+    PR_LOG(pkixLog, 1, ("Memory leak test: Loop %d\n", memLeakLoopCount));
 #endif /* PKIX_OBJECT_LEAK_TEST */
 
     error = PKIX_PL_NssContext_Create(
@@ -2256,15 +2234,6 @@ cleanup:
     leakedObjNum =
         pkix_pl_lifecycle_ObjectLeakCheck(leakedObjNum ? objCountTable : NULL);
 
-    if (pkixLog && leakedObjNum) {
-        int level = 0;
-
-        PR_LOG(pkixLog, 1, ("The following error caused object leaks:\n"));
-        for(;level < MAX_STACK_DEPTH && stackErrorCodes[level] != -1;level++) {
-            PR_LOG(pkixLog, 1, ("Error at level %d: %s\n", level,
-                                PKIX_ErrorText[stackErrorCodes[level]]));
-        }
-    }
     if (abortOnLeak) {
         PORT_Assert(leakedObjNum == 0);
     }
@@ -2277,3 +2246,4 @@ cleanup:
 
     return r;
 }
+
