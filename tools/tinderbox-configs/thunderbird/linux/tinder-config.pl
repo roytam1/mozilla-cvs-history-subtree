@@ -175,7 +175,7 @@ $stub_installer = 0;
 $sea_installer = 0;
 $archive       = 1;
 
-$update_package = 1;
+$update_package = 0;
 $update_product = "Thunderbird";
 $update_version = "1.5.0.x";
 $update_ver_file = "mail/config/version.txt";

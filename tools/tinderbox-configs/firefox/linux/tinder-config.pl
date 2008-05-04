@@ -248,7 +248,7 @@ $push_raw_xpis = 0;
 ## Stolen from the tinder-config on prometheus. 
 ##
 
-$update_package = 1;
+$update_package = 0;
 $update_product = "Firefox";
 $update_version = "1.5.0.x";
 $update_ver_file = "browser/config/version.txt";
