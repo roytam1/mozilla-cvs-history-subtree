@@ -1236,10 +1236,14 @@ char* nsNSSCertificate::defaultServerNickname(CERTCertificate* cert)
   return nickname;
 }
 
+#ifndef INET6_ADDRSTRLEN
+#define INET6_ADDRSTRLEN 46
+#endif
+
 // returns TRUE if SAN was used to produce names
 // return FALSE if nothing was produced
 // names => a single name or a list of names
-// multipleNames => whether multiple names were delivered
+// nameCount => the number of names returned
 static PRBool
 GetSubjectAltNames(CERTCertificate *nssCert,
                    nsAString &allNames,
