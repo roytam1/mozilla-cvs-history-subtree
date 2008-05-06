@@ -91,8 +91,9 @@ static NS_DEFINE_CID(kNSSComponentCID, NS_NSSCOMPONENT_CID);
 
 /* nsNSSCertificate */
 
-NS_IMPL_THREADSAFE_ISUPPORTS3(nsNSSCertificate, nsIX509Cert,
+NS_IMPL_THREADSAFE_ISUPPORTS4(nsNSSCertificate, nsIX509Cert,
                                                 nsIX509Cert3,
+                                                nsIX509Cert18Branch,
                                                 nsISMimeCert)
 
 nsNSSCertificate*
@@ -1235,3 +1236,122 @@ char* nsNSSCertificate::defaultServerNickname(CERTCertificate* cert)
   return nickname;
 }
 
+// returns TRUE if SAN was used to produce names
+// return FALSE if nothing was produced
+// names => a single name or a list of names
+// multipleNames => whether multiple names were delivered
+static PRBool
+GetSubjectAltNames(CERTCertificate *nssCert,
+                   nsAString &allNames,
+                   PRUint32 &nameCount)
+{
+  allNames.Truncate();
+  nameCount = 0;
+
+  PRArenaPool *san_arena = nsnull;
+  SECItem altNameExtension = {siBuffer, NULL, 0 };
+  CERTGeneralName *sanNameList = nsnull;
+
+  nsresult rv;
+  rv = CERT_FindCertExtension(nssCert, SEC_OID_X509_SUBJECT_ALT_NAME,
+                              &altNameExtension);
+  if (rv != SECSuccess)
+    return PR_FALSE;
+
+  san_arena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
+  if (!san_arena)
+    return PR_FALSE;
+
+  sanNameList = CERT_DecodeAltNameExtension(san_arena, &altNameExtension);
+  if (!sanNameList)
+    return PR_FALSE;
+
+  SECITEM_FreeItem(&altNameExtension, PR_FALSE);
+
+  CERTGeneralName *current = sanNameList;
+  do {
+    nsAutoString name;
+    switch (current->type) {
+      case certDNSName:
+        name.AssignASCII((char*)current->name.other.data, current->name.other.len);
+        if (!allNames.IsEmpty()) {
+          allNames.Append(NS_LITERAL_STRING(" , "));
+        }
+        ++nameCount;
+        allNames.Append(name);
+        break;
+
+      case certIPAddress:
+        {
+          char buf[INET6_ADDRSTRLEN];
+          PRNetAddr addr;
+          if (current->name.other.len == 4) {
+            addr.inet.family = PR_AF_INET;
+            memcpy(&addr.inet.ip, current->name.other.data, current->name.other.len);
+            PR_NetAddrToString(&addr, buf, sizeof(buf));
+            name.AssignASCII(buf);
+          } else if (current->name.other.len == 16) {
+            addr.ipv6.family = PR_AF_INET6;
+            memcpy(&addr.ipv6.ip, current->name.other.data, current->name.other.len);
+            PR_NetAddrToString(&addr, buf, sizeof(buf));
+            name.AssignASCII(buf);
+          } else {
+            /* invalid IP address */
+          }
+          if (!name.IsEmpty()) {
+            if (!allNames.IsEmpty()) {
+              allNames.Append(NS_LITERAL_STRING(" , "));
+            }
+            ++nameCount;
+            allNames.Append(name);
+          }
+          break;
+        }
+
+      default: // all other types of names are ignored
+        break;
+    }
+    current = CERT_GetNextGeneralName(current);
+  } while (current != sanNameList); // double linked
+
+  PORT_FreeArena(san_arena, PR_FALSE);
+  return PR_TRUE;
+}
+
+NS_IMETHODIMP
+nsNSSCertificate::GetValidNames(PRUnichar **aNames, PRUint32 *aCount)
+{
+  NS_ENSURE_ARG_POINTER(aNames);
+  NS_ENSURE_ARG_POINTER(aCount);
+
+  nsNSSShutDownPreventionLock locker;
+  if (isAlreadyShutDown())
+    return NS_ERROR_NOT_AVAILABLE;
+
+  if (!mCert)
+    return NS_ERROR_NOT_AVAILABLE;
+
+  nsString names;
+  PRUint32 nameCount = 0;
+  PRBool useSAN = PR_FALSE;
+  useSAN = GetSubjectAltNames(mCert, names, nameCount);
+
+  if (!useSAN) {
+    char *certName = nsnull;
+    // currently CERT_FindNSStringExtension is not being exported by NSS.
+    // If it gets exported, enable the following line.
+    //   certName = CERT_FindNSStringExtension(mCert, SEC_OID_NS_CERT_EXT_SSL_SERVER_NAME);
+    // However, it has been discussed to treat the extension as obsolete and ignore it.
+    if (!certName)
+      certName = CERT_GetCommonName(&mCert->subject);
+    if (certName) {
+      ++nameCount;
+      names.AssignASCII(certName);
+      PORT_Free(certName);
+    }
+  }
+
+  *aNames = ToNewUnicode(names);
+  *aCount = nameCount;
+  return NS_OK;
+}

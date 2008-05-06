@@ -41,6 +41,7 @@
 const nsIPKIParamBlock    = Components.interfaces.nsIPKIParamBlock;
 const nsIDialogParamBlock = Components.interfaces.nsIDialogParamBlock;
 const nsIX509Cert         = Components.interfaces.nsIX509Cert;
+const nsIX509Cert18Branch = Components.interfaces.nsIX509Cert18Branch;
 
 var pkiParams;
 var dialogParams;
@@ -54,10 +55,26 @@ function onLoad()
   dialogParams = pkiParams.QueryInterface(nsIDialogParamBlock);
   var connectURL = dialogParams.GetString(1); 
 
+  var validNames;
+  var cert18 = cert.QueryInterface(nsIX509Cert18Branch);
+  if (cert18) {
+    var tmp = new Object;
+    var nameCount = cert18.getValidNames(tmp);
+    if (nameCount > 1) {
+      validNames = "(" + tmp.value + ")";
+    }
+    else {
+      validNames = tmp.value;
+    }
+  }
+  else {
+    validNames = cert.commonName;
+  }
+
   var bundle = srGetStrBundle("chrome://pippki/locale/pippki.properties");
 
   var message1 = bundle.formatStringFromName("mismatchDomainMsg1", 
-                                             [ connectURL, cert.commonName ],
+                                             [ connectURL, validNames ],
                                              2);
   var message2 = bundle.formatStringFromName("mismatchDomainMsg2", 
                                              [ connectURL ],
