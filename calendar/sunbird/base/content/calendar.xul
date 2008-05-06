@@ -111,7 +111,7 @@
 
 <toolbox id="calendar-toolbox" class="toolbox-top">
   <!-- Menu -->
-  <toolbar type="menubar" id="main-menubar" class="chromeclass-menubar" customizable="true"
+  <toolbar type="menubar" id="main-toolbar" class="chromeclass-menubar" customizable="true"
            defaultset="menubar-items"
            mode="full" iconsize="small" context="toolbar-context-menu">
     <toolbaritem id="menubar-items" align="center">
