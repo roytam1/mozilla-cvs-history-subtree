@@ -410,12 +410,11 @@ MODULES_all :=                                  \
 #
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
-#MOZ_CO_TAG          = <tag>
-NSPR_CO_TAG          = NSPR_4_7_1_BETA2
-NSS_CO_TAG           = NSS_3_12_RC2
-LDAPCSDK_CO_TAG      = LDAPCSDK_6_0_3_CLIENT_BRANCH
-LOCALES_CO_TAG       =
-
+MOZ_CO_TAG           = THUNDERBIRD_3_0a1_RELEASE
+NSPR_CO_TAG          = THUNDERBIRD_3_0a1_RELEASE
+NSS_CO_TAG           = THUNDERBIRD_3_0a1_RELEASE
+LDAPCSDK_CO_TAG      = THUNDERBIRD_3_0a1_RELEASE
+LOCALES_CO_TAG       = THUNDERBIRD_3_0a1_RELEASE
 #######################################################################
 # Defines
 #
