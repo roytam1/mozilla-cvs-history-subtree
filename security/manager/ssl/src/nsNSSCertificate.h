@@ -40,6 +40,7 @@
 #define _NS_NSSCERTIFICATE_H_
 
 #include "nsIX509Cert.h"
+#include "nsIX509Cert18Branch.h"
 #include "nsIX509CertDB.h"
 #include "nsIASN1Object.h"
 #include "nsISMimeCert.h"
@@ -52,12 +53,14 @@ class nsIASN1Sequence;
 
 /* Certificate */
 class nsNSSCertificate : public nsIX509Cert,
+                         public nsIX509Cert18Branch,
                          public nsISMimeCert,
                          public nsNSSShutDownObject
 {
 public:
   NS_DECL_ISUPPORTS
   NS_DECL_NSIX509CERT
+  NS_DECL_NSIX509CERT18BRANCH
   NS_DECL_NSISMIMECERT
 
   nsNSSCertificate(CERTCertificate *cert);

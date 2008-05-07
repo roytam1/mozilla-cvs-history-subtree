@@ -55,6 +55,7 @@ SDK_XPIDLSRCS = \
     nsICertificateDialogs.idl \
     nsICRLInfo.idl \
     nsIX509Cert.idl \
+    nsIX509Cert18Branch.idl \
     nsIX509CertDB.idl \
     nsIX509CertValidity.idl \
     $(NULL)
