@@ -1,6 +1,6 @@
 #
-## hostname: bm-xserve09.build.mozilla.org
-## uname: Darwin bm-xserve09.build.mozilla.org 8.8.4 Darwin Kernel Version 8.8.4: Sun Oct 29 15:26:54 PST 2006; root:xnu-792.16.4.obj~1/RELEASE_I386 i386 i386
+## hostname: bm-xserve07.build.mozilla.org
+## uname: Darwin bm-xserve07.build.mozilla.org 8.8.4 Darwin Kernel Version 8.8.4: Sun Oct 29 15:26:54 PST 2006; root:xnu-792.16.4.obj~1/RELEASE_I386 i386 i386
 #
 
 #- tinder-config.pl - Tinderbox configuration file.
@@ -45,7 +45,7 @@ $BuildAdministrator = 'build@mozilla.org';
 #$BuildDebug        = 0;      # Debug or Opt (Darwin)
 #$ReportStatus      = 1;      # Send results to server, or not
 #$ReportFinalStatus = 1;      # Finer control over $ReportStatus.
-#$UseTimeStamp      = 1;      # Use the CVS 'pull-by-timestamp' option, or not
+$UseTimeStamp      = 0;      # Use the CVS 'pull-by-timestamp' option, or not
 #$BuildOnce         = 0;      # Build once, don't send results to server
 #$TestOnly          = 0;      # Only run tests, don't pull/build
 #$BuildEmbed        = 0;      # After building seamonkey, go build embed app.
@@ -67,7 +67,7 @@ $AliveTest                = 1;
 #$BloatTest2               = 0;  # dbaron memory bloat test, require tracemalloc
 #$DomToTextConversionTest  = 0;  
 #$XpcomGlueTest            = 0;
-$CodesizeTest             = 1;  # Z,  require mozilla/tools/codesighs
+$CodesizeTest             = 0;  # Z,  require mozilla/tools/codesighs
 $EmbedCodesizeTest        = 0;  # mZ, require mozilla/tools/codesigns
 #$MailBloatTest            = 0;
 #$EmbedTest                = 0;  # Assumes you wanted $BuildEmbed=1
@@ -77,7 +77,7 @@ $EmbedCodesizeTest        = 0;  # mZ, require mozilla/tools/codesigns
 #$XULWindowOpenTest        = 0;  # Txul
 #$StartupPerformanceTest   = 0;  # Ts
 
-$TestsPhoneHome           = 1;  # Should test report back to server?
+$TestsPhoneHome           = 0;  # Should test report back to server?
 
 # $results_server
 #----------------------------------------------------------------------------
@@ -138,9 +138,8 @@ $TestsPhoneHome           = 1;  # Should test report back to server?
 # :pserver:$ENV{USER}%netscape.com@cvs.mozilla.org:/cvsroot
 
 #$moz_cvsroot   = $ENV{CVSROOT};
+# CONFIG: $moz_cvsroot   = '%mozillaCvsroot%';
 $moz_cvsroot   = ":ext:tbirdbld\@cvs.mozilla.org:/cvsroot";
-
-# $MofoRoot   = ":ext:cltbld\@cvs.mozilla.org:/mofo";
 
 #- Set these proper values for your tinderbox server
 #$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
@@ -152,7 +151,7 @@ $moz_cvsroot   = ":ext:tbirdbld\@cvs.mozilla.org:/cvsroot";
 $ObjDir = '../build/universal';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'Universal Nightly';
+$BuildNameExtra = 'Release';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -168,9 +167,11 @@ $BuildNameExtra = 'Universal Nightly';
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
 #$BuildTree  = 'MozillaTest';
+# CONFIG: $BuildTree  = '%buildTree%';
 $BuildTree  = 'Thunderbird';
 
 #$BuildName = '';
+# CONFIG: $BuildTag = '%productTag%_RELEASE';
 #$BuildTag = 'AVIARY_1_0_1_20050124_BRANCH';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
@@ -193,21 +194,23 @@ $BinaryName = 'thunderbird-bin';
 # Release build options
 $ReleaseBuild  = 1;
 $shiptalkback  = 0;
-#$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
-#$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
+$ReleaseToLatest = 0; # Push the release to latest-<milestone>?
+$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
 $build_hour    = "3";
 $package_creation_path = "/mail/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
 $mac_bundle_path = "/mail/app";
 $ssh_version   = "2";
+# CONFIG: $ssh_user      = "%sshUser%";
 $ssh_user      = "tbirdbld";
-$ssh_key       = "$ENV{HOME}/.ssh/tbirdbld_dsa";
+# CONFIG: $ssh_server    = "%sshServer%";
 $ssh_server    = "stage.mozilla.org";
 #$ReleaseGroup  = "thunderbird";
 $ftp_path      = "/home/ftp/pub/thunderbird/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly";
 $tbox_ftp_path = "/home/ftp/pub/thunderbird/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/tinderbox-builds";
+# CONFIG: $milestone     = "thunderbird%version%';
 $milestone     = "trunk";
 $notify_list   = "build-announce\@mozilla.org";
 $stub_installer = 0;
@@ -221,12 +224,16 @@ $update_platform = "Darwin_Universal-gcc3";
 $update_hash = "sha1";
 $update_filehost = "ftp.mozilla.org";
 $update_ver_file = "mail/config/version.txt";
-$update_pushinfo = 1;
+$update_pushinfo = 0;
 $crashreporter_buildsymbols = 1;
 $crashreporter_pushsymbols = 1;
+# CONFIG: $ENV{'SYMBOL_SERVER_HOST'}    = '%symbolServer%';
 $ENV{SYMBOL_SERVER_HOST} = 'dm-symbolpush01.mozilla.org';
+# CONFIG: $ENV{'SYMBOL_SERVER_USER'}    = '%symbolServerUser%';
 $ENV{SYMBOL_SERVER_USER}   = 'tbirdbld';
+# CONFIG: $ENV{'SYMBOL_SERVER_PATH'}    = '%symbolServerPath%';
 $ENV{SYMBOL_SERVER_PATH}   = '/mnt/netapp/breakpad/symbols_tbrd/';
+# CONFIG: $ENV{'SYMBOL_SERVER_SSH_KEY'} = '%symbolServerKey%';
 $ENV{SYMBOL_SERVER_SSH_KEY}   = "$ENV{HOME}/.ssh/tbirdbld_dsa";
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
