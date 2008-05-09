@@ -1,4 +1,0 @@
-product=js
-branch=1.8.0
-sourcepath=${BUILDDIR}/1.8.0/mozilla/js/src
-buildtype=debug
