@@ -104,7 +104,6 @@ Usage(const char *progName)
 	"\t-a\t\t Following certfile is base64 encoded\n"
 	"\t-b YYMMDDHHMMZ\t Validate date (default: now)\n"
 	"\t-d directory\t Database directory\n"
-	"\t-f \t\tenable cert ferching from AIA URL\n"
 	"\t-o oid\t\t Set policy OID for cert validation(Format OID.1.2.3)\n"
 	"\t-p \t\t Use PKIX Library to validate certificate by calling:\n"
 	"\t\t\t   * CERT_VerifyCertificate if specified once,\n"
@@ -306,13 +305,12 @@ main(int argc, char *argv[], char *envp[])
     CERTVerifyLog        log;
     CERTCertList        *builtChain = NULL;
     char *               revConfig    = NULL;
-    PRBool               certFetching = PR_FALSE;
 
     PR_Init( PR_SYSTEM_THREAD, PR_PRIORITY_NORMAL, 1);
 
     progName = PL_strdup(argv[0]);
 
-    optstate = PL_CreateOptState(argc, argv, "ab:d:fo:prs:tu:w:v");
+    optstate = PL_CreateOptState(argc, argv, "ab:d:o:prs:tu:w:v");
     while ((status = PL_GetNextOpt(optstate)) == PL_OPT_OK) {
 	switch(optstate->option) {
 	case  0  : /* positional parameter */  goto breakout;
@@ -320,11 +318,10 @@ main(int argc, char *argv[], char *envp[])
 	case 'b' : secStatus = DER_AsciiToTime(&time, optstate->value);
 	           if (secStatus != SECSuccess) Usage(progName); break;
 	case 'd' : certDir  = PL_strdup(optstate->value);     break;
-	case 'f' : certFetching = PR_TRUE;                   break;
 	case 'o' : oidStr = PL_strdup(optstate->value);       break;
 	case 'p' : usePkix += 1;                              break;
 	case 'r' : isAscii  = PR_FALSE;                       break;
-	case 's' : revConfig  = PL_strdup(optstate->value);   break;
+        case 's' : revConfig  = PL_strdup(optstate->value);   break;
 	case 'u' : usage    = PORT_Atoi(optstate->value);
 	           if (usage < 0 || usage > 62) Usage(progName);
 		   certUsage = ((SECCertificateUsage)1) << usage; 
@@ -409,12 +406,12 @@ breakout:
                                            &log, /* error log */
                                            NULL);/* returned usages */
     } else do {
-        static CERTValOutParam cvout[4];
-        static CERTValInParam cvin[6];
+        CERTValOutParam cvout[4];
+        CERTValInParam cvin[5];
         SECOidTag oidTag;
         int inParamIndex = 0;
-        static CERTRevocationFlags rev;
-        static PRUint64 revFlags[2];
+        CERTRevocationFlags rev;
+        PRUint64 revFlags[2];
 
         if (oidStr) {
             PRArenaPool *arena;
@@ -462,13 +459,9 @@ breakout:
             inParamIndex++;
         }
 
-        cvin[inParamIndex].type = cert_pi_useAIACertFetch;
-        cvin[inParamIndex].value.scalar.b = certFetching;
-        inParamIndex++;
-
-        cvin[inParamIndex].type = cert_pi_date;
-        cvin[inParamIndex].value.scalar.time = time;
-        inParamIndex++;
+	cvin[inParamIndex].type = cert_pi_date;
+	cvin[inParamIndex].value.scalar.time = time;
+	inParamIndex++;
 
         revFlags[cert_revocation_method_crl] = 
             CERT_REV_M_TEST_USING_THIS_METHOD;
@@ -503,9 +496,7 @@ breakout:
         cvin[inParamIndex].type = cert_pi_end;
         
         cvout[0].type = cert_po_trustAnchor;
-        cvout[0].value.pointer.cert = NULL;
         cvout[1].type = cert_po_certList;
-        cvout[1].value.pointer.chain = NULL;
 
         /* setting pointer to CERTVerifyLog. Initialized structure
          * will be used CERT_PKIXVerifyCert */
@@ -578,11 +569,6 @@ punt:
 	SECU_PrintError(progName, "NSS_Shutdown");
 	rv = 1;
     }
-    PORT_Free(progName);
-    PORT_Free(certDir);
-    PORT_Free(oidStr);
-    PORT_Free(revConfig);
-    PORT_Free(password);
     PR_Cleanup();
     return rv;
 }

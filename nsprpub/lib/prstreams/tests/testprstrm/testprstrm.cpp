@@ -40,7 +40,7 @@
 #include "prio.h"
 #include <string.h>
 #include <stdio.h>
-#if defined(XP_UNIX) || defined(XP_OS2)
+#if defined(XP_UNIX) || defined(XP_OS2_EMX)
 #include <sys/types.h>
 #include <sys/stat.h>
 #endif
@@ -55,6 +55,9 @@ typedef struct threadarg {
 } threadarg;
 
 void 
+#ifdef XP_OS2_VACPP
+_Optlink
+#endif
 threadmain(void *mytag)
 {
     threadarg arg;

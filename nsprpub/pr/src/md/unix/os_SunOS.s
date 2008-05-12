@@ -1,7 +1,5 @@
-/*
- * Softoken version numbers
- *
- * ***** BEGIN LICENSE BLOCK *****
+/* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
  * The contents of this file are subject to the Mozilla Public License Version
@@ -14,11 +12,11 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is the Netscape security libraries.
+ * The Original Code is the Netscape Portable Runtime (NSPR).
  *
  * The Initial Developer of the Original Code is
  * Netscape Communications Corporation.
- * Portions created by the Initial Developer are Copyright (C) 1994-2000
+ * Portions created by the Initial Developer are Copyright (C) 1998-2000
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -37,30 +35,37 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef _SOFTKVER_H_
-#define _SOFTKVER_H_
-
-#ifdef NSS_ENABLE_ECC
-#ifdef NSS_ECC_MORE_THAN_SUITE_B
-#define SOFTOKEN_ECC_STRING " Extended ECC"
-#else
-#define SOFTOKEN_ECC_STRING " Basic ECC"
-#endif
-#else
-#define SOFTOKEN_ECC_STRING ""
-#endif
+	.text
 
 /*
- * Softoken's major version, minor version, patch level, and whether
- * this is a beta release.
+ * sol_getsp()
  *
- * The format of the version string should be
- *     "<major version>.<minor version>[.<patch level>][ <ECC>][ <Beta>]"
+ * Return the current sp (for debugging)
  */
-#define SOFTOKEN_VERSION  "3.12.0.2" SOFTOKEN_ECC_STRING
-#define SOFTOKEN_VMAJOR   3
-#define SOFTOKEN_VMINOR   12
-#define SOFTOKEN_VPATCH   0
-#define SOFTOKEN_BETA     PR_FALSE
+	.global sol_getsp
+sol_getsp:
+	retl
+   	mov     %sp, %o0
 
-#endif /* _SOFTKVER_H_ */
+
+/*
+ * sol_curthread()
+ *
+ * Return a unique identifier for the currently active thread.
+ */
+	.global sol_curthread
+sol_curthread:
+    retl
+    mov %g7, %o0
+                  
+
+	.global __MD_FlushRegisterWindows
+	.global _MD_FlushRegisterWindows
+
+__MD_FlushRegisterWindows:
+_MD_FlushRegisterWindows:
+
+	ta	3
+	ret
+	restore
+
