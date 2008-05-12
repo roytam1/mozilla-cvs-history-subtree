@@ -145,6 +145,9 @@ defun(
     return timer;
   });
 
+////////////////////////////////////////////////////////////////////////
+// Asynchronous method calls
+
 // helper for callAsync:
 function event(fct) {
   this.run = fct;
