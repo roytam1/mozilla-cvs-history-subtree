@@ -163,11 +163,11 @@ $LocaleProduct = "browser";
 $LocalizationVersionFile = 'browser/config/version.txt';
 %WGetFiles = (
 # CONFIG:             'http://%stagingServer%/pub/mozilla.org/firefox/nightly/%version%-candidates/build%build%/unsigned/firefox-%appVersion%.en-US.win32.installer.exe' =>
-'http://production-1.9-master.build.mozilla.org/pub/mozilla.org/firefox/nightly/3.0b5-candidates/rc2/unsigned/firefox-3.0b5.en-US.win32.installer.exe' =>
+'http://stage-old.mozilla.org/pub/mozilla.org/firefox/nightly/3.0rc1-candidates/build1/unsigned/firefox-3.0.en-US.win32.installer.exe' =>
 # CONFIG:             "%l10n_buildDir%/%l10n_buildPlatform%/firefox-installer.exe",
 "/e/fx19l10nrel/WINNT_5.2_Depend/firefox-installer.exe",
 # CONFIG:             'http://%stagingServer%/pub/mozilla.org/firefox/nightly/%version%-candidates/build%build%/unsigned/firefox-%appVersion%.en-US.win32.zip' =>
-'http://production-1.9-master.build.mozilla.org/pub/mozilla.org/firefox/nightly/3.0b5-candidates/rc2/unsigned/firefox-3.0b5.en-US.win32.zip' =>
+'http://stage-old.mozilla.org/pub/mozilla.org/firefox/nightly/3.0rc1-candidates/build1/unsigned/firefox-3.0.en-US.win32.zip' =>
 # CONFIG:             "%l10n_buildDir%/%l10n_buildPlatform%/firefox.zip"
 "/e/fx19l10nrel/WINNT_5.2_Depend/firefox.zip"
 	      );
@@ -198,7 +198,7 @@ $BuildTree  = 'MozillaRelease';
 
 #$BuildName = '';
 # CONFIG: $BuildTag = '%productTag%_RELEASE';
-$BuildTag = 'FIREFOX_3_0b5_RELEASE';
+$BuildTag = 'FIREFOX_3_0rc1_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -230,14 +230,14 @@ $ssh_version   = "2";
 $ssh_user      = "cltbld";
 #$ssh_key       = "'$ENV{HOME}/.ssh/cltbld_dsa'";
 # CONFIG: $ssh_server    = "%sshServer%";
-$ssh_server    = "production-1.9-master.build.mozilla.org";
+$ssh_server    = "stage-old.mozilla.org";
 $ReleaseGroup  = "firefox";
 $ftp_path      = "/home/ftp/pub/firefox/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
 # CONFIG: $milestone     = 'firefox%version%-l10n';
-$milestone     = 'firefox3.0b5-l10n';
+$milestone     = 'firefox3.0rc1-l10n';
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 1;
