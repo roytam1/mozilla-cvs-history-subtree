@@ -201,6 +201,7 @@ $shiptalkback  = 1;
 $UsePrebuiltTalkback = "/builds/tinderbox/talkback-firefox-1.8-macosx.tar.bz2";
 #$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
 $ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
+$DependToDated = 1; # Push the hourly to <host>-<milestone>/<build_start_time>?
 $build_hour    = "3";
 $package_creation_path = "/browser/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
