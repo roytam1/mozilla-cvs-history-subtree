@@ -115,17 +115,21 @@ static NSString *const kDefaultLanguage = @"*"; // '*' is defined in OS spec to 
     if (!method || [method isEqualToString:@""])
       method = @"GET";
 
-    if ([self browserSupportsSearchQueryURLWithMIMEType:mimeType requestMethod:method]) {
+    // The spec alows multiple <Url> elements, so we can't just abort parsing if this one isn't supported.
+    if ([self browserSupportsSearchQueryURLWithMIMEType:mimeType] &&
+        [attributeDict objectForKey:@"template"])
+    {
       NSMutableString *searchURLTemplate = [NSMutableString stringWithString:[attributeDict objectForKey:@"template"]];
       [self insertValuesForParametersInURLTemplate:searchURLTemplate];
       [self setSearchEngineURL:searchURLTemplate];
+      [self setSearchEngineURLRequestMethod:method];
     }
   }
   else if ([elementName isEqualToString:kSearchEngineURLParameterElement]) {
     // Older drafts of the OpenSearch spec allow "<Param>" elements inside "<Url>".  When used, only
     // a base search URL template is specified, requiring us to manually append each query parameter.
 
-    NSMutableString *searchURL = [NSMutableString stringWithString:[self searchEngineURL]];
+    NSMutableString *searchURL = [[[self searchEngineURL] mutableCopy] autorelease];
     if (!searchURL)
       return;
 

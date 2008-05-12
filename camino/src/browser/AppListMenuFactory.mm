@@ -121,10 +121,6 @@ static AppListMenuFactory* sAppListMenuFactoryInstance = nil;
   NSEnumerator* feedAppsEnum = [feedApps objectEnumerator];
   NSString* curBundleID = nil;
   while ((curBundleID = [feedAppsEnum nextObject])) {
-    // Don't add Safari.
-    if ([curBundleID isEqualToString:@"com.apple.Safari"])
-      continue;
-    
     NSURL* appURL = [[NSWorkspace sharedWorkspace] urlOfApplicationWithIdentifier:curBundleID];
     if (!appURL)
       continue;

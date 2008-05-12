@@ -716,6 +716,23 @@ public:
   mMoveReentrant = NO;
 }
 
+// Undocumented method for handling multi-touch swipe events in 10.5.
+// The worst that's likely to happen is that this would just stop being
+// called if the gesture system changes in a future version.
+- (void)swipeWithEvent:(NSEvent*)event
+{
+  // Map forward and back to history; left is positive, right is negative (!)
+  if ([event deltaX] > 0.5)
+    [self back:nil];
+  else if ([event deltaX] < -0.5)
+    [self forward:nil];
+  // Map up and down to page up/down
+  else if ([event deltaY] > 0.5)
+    [[mBrowserView browserView] pageUp];
+  else if ([event deltaY] < -0.5)
+    [[mBrowserView browserView] pageDown];
+}
+
 -(void)autosaveWindowFrame
 {
   if (mShouldAutosave) {
@@ -3401,6 +3418,11 @@ public:
   [[SessionManager sharedInstance] windowStateChanged];
 }
 
+- (void)sendBrowserWindowToBack:(BrowserWrapper*)inBrowser
+{
+  [(BrowserWindow*)[self window] resignKeyAndOrderBack];
+}
+
 - (void)willShowPromptForBrowser:(BrowserWrapper*)inBrowser
 {
   // Remember where the user was, so we can come back.
@@ -4861,7 +4883,8 @@ public:
 - (IBAction)installSearchPlugin:(id)sender
 {
   id searchPlugin = [sender representedObject];
-  BOOL addedOK = [[SearchEngineManager sharedSearchEngineManager] addSearchEngineFromPlugin:searchPlugin];
+  NSError *parsingError;
+  BOOL addedOK = [[SearchEngineManager sharedSearchEngineManager] addSearchEngineFromPlugin:searchPlugin error:&parsingError];
 
   if (addedOK) {
     // Start using the installed engine.
@@ -4873,10 +4896,15 @@ public:
   }
   else {
     NSString* searchPluginName = [searchPlugin valueForKey:kWebSearchPluginNameKey];
+    if (!searchPluginName)
+      searchPluginName = NSLocalizedString(@"UnknownSearchPluginName", nil);
     NSAlert* alert = [[[NSAlert alloc] init] autorelease];
     [alert addButtonWithTitle:NSLocalizedString(@"OKButtonText", nil)];
     [alert setMessageText:NSLocalizedString(@"SearchPluginInstallationErrorTitle", nil)];
-    [alert setInformativeText:[NSString stringWithFormat:NSLocalizedString(@"SearchPluginInstallationErrorMessage", nil), searchPluginName]];
+    NSString* explanatoryText = [NSString stringWithFormat:NSLocalizedString(@"SearchPluginInstallationErrorMessage", nil),
+                                                           searchPluginName,
+                                                           [parsingError localizedDescription]];
+    [alert setInformativeText:explanatoryText];
     [alert setAlertStyle:NSWarningAlertStyle];
     if ([[self window] attachedSheet]) {
       [alert runModal];
