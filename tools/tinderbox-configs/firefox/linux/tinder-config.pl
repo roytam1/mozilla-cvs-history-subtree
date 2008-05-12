@@ -169,7 +169,7 @@ $LocaleProduct = "browser";
 $LocalizationVersionFile = 'browser/config/version.txt';
 %WGetFiles = (
 # CONFIG:             "http://%stagingServer%/pub/mozilla.org/firefox/nightly/%version%-candidates/build%build%/firefox-%appVersion%.en-US.linux-i686.tar.bz2" => 
-"http://production-1.9-master.build.mozilla.org/pub/mozilla.org/firefox/nightly/3.0b5-candidates/rc2/firefox-3.0b5.en-US.linux-i686.tar.bz2" => 
+"http://stage-old.mozilla.org/pub/mozilla.org/firefox/nightly/3.0rc1-candidates/build1/firefox-3.0.en-US.linux-i686.tar.bz2" => 
 # CONFIG:             "/%l10n_buildDir%/%l10n_buildPlatform%/firefox.tar.bz2"
 "//builds/tinderbox/Fx-Mozilla1.9-l10n-Release/Linux_2.6.18-53.1.13.el5_Depend/firefox.tar.bz2"
 	      );
@@ -201,7 +201,7 @@ $BuildTree  = 'MozillaRelease';
 
 #$BuildName = '';
 # CONFIG: $BuildTag = '%productTag%_RELEASE';
-$BuildTag = 'FIREFOX_3_0b5_RELEASE';
+$BuildTag = 'FIREFOX_3_0rc1_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -233,14 +233,14 @@ $ssh_version   = "2";
 $ssh_user      = "cltbld";
 #$ssh_key       = "'$ENV{HOME}/.ssh/cltbld_dsa'";
 # CONFIG: $ssh_server    = "%sshServer%";
-$ssh_server    = "production-1.9-master.build.mozilla.org";
+$ssh_server    = "stage-old.mozilla.org";
 $ReleaseGroup  = "firefox";
 $ftp_path      = "/home/ftp/pub/firefox/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
 # CONFIG: $milestone     = "firefox%version%-l10n";
-$milestone     = "firefox3.0b5-l10n";
+$milestone     = "firefox3.0rc1-l10n";
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 1;
