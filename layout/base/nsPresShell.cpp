@@ -22,7 +22,7 @@
  *
  * Contributor(s):
  *   Steve Clark <buster@netscape.com>
- *   HÃ¥kan Waara <hwaara@chello.se>
+ *   Håkan Waara <hwaara@chello.se>
  *   Dan Rosen <dr@netscape.com>
  *   Daniel Glazman <glazman@netscape.com>
  *   Mats Palmgren <mats.palmgren@bredband.net>
@@ -4501,9 +4501,14 @@ PresShell::IsSafeToFlush(PRBool& aIsSafeToFlush)
     }
   }
 
+#ifndef MOZ_ZAP
+  // Zap hits this assertion frequently and the warnings clutter up
+  // the console.  Let's turn it off until the underlying bugs are
+  // fixed (429962 + possibly others)
   NS_ASSERTION(aIsSafeToFlush == nsContentUtils::IsSafeToRunScript(),
                "Someone forgot to block scripts");
-
+#endif
+  
   return NS_OK;
 }
 

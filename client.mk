@@ -1244,47 +1244,12 @@ echo-variable-%:
 # js/src/xpconnect/loader/ComponentUtils.jsm 
 
 ZAP_BRANCH_MODIFIED_FILES = \
-	js/src/xpconnect/Makefile.in \
-	js/src/xpconnect/src/xpcmodule.cpp \
-	js/src/xpconnect/src/xpcprivate.h \
 	allmakefiles.sh \
 	client.mk \
-	config/autoconf.mk.in \
 	configure \
 	configure.in \
 	Makefile.in \
-	js/src/xpconnect/idl/Makefile.in \
-	js/src/xpconnect/idl/xpccomponents.idl \
-	js/src/xpconnect/idl/xpcIJSModuleLoader.idl \
-	js/src/xpconnect/loader/Makefile.in \
-	js/src/xpconnect/loader/mozJSComponentLoader.cpp \
-	js/src/xpconnect/loader/mozJSComponentLoader.h \
-	js/src/xpconnect/src/Makefile.in \
-	js/src/xpconnect/src/xpccomponents.cpp \
-	netwerk/base/public/Makefile.in \
-	netwerk/base/src/Makefile.in \
-	netwerk/build/nsNetCID.h \
-	netwerk/build/nsNetModule.cpp \
-	toolkit/content/widgets/checkbox.xml \
-	toolkit/library/libxul-config.mk \
-	toolkit/library/Makefile.in \
-	toolkit/library/nsStaticXULComponents.cpp \
-	xpcom/ds/nsHashPropertyBag.cpp \
-	xpcom/ds/nsHashPropertyBag.h \
-	xpcom/ds/nsIPropertyBag2.idl \
-	xpcom/ds/nsIWritablePropertyBag2.idl \
-	xpcom/io/Makefile.in \
-	xpcom/io/nsScriptableInputStream.cpp \
-	xpcom/io/nsScriptableInputStream.h \
-	xpcom/proxy/public/nsIProxyObjectManager.idl \
-	xpcom/proxy/src/nsProxyEvent.cpp \
-	xpcom/proxy/src/nsProxyEventClass.cpp \
-	xpcom/proxy/src/nsProxyEventObject.cpp \
-	xpcom/proxy/src/nsProxyEventPrivate.h \
-	xpcom/proxy/src/nsProxyObjectManager.cpp \
-	xpcom/threads/nsEventQueue.cpp \
-	xpcom/threads/nsEventQueue.h \
-	xpcom/reflect/xptcall/public/xptcall.h \
+	config/autoconf.mk.in \
 	extensions/jssh/ChangeLog \
 	extensions/jssh/Makefile.in \
 	extensions/jssh/install.js \
@@ -1301,7 +1266,43 @@ ZAP_BRANCH_MODIFIED_FILES = \
 	extensions/jssh/resources/content/contents.rdf \
 	extensions/jssh/resources/content/jssh-debug.js \
 	extensions/jssh/resources/content/tasksOverlay.xul \
-	extensions/jssh/xemacs/moz-jssh.el
+	extensions/jssh/xemacs/moz-jssh.el \
+	js/src/xpconnect/Makefile.in \
+	js/src/xpconnect/idl/Makefile.in \
+	js/src/xpconnect/idl/xpcIJSModuleLoader.idl \
+	js/src/xpconnect/idl/xpccomponents.idl \
+	js/src/xpconnect/loader/Makefile.in \
+	js/src/xpconnect/loader/mozJSComponentLoader.cpp \
+	js/src/xpconnect/loader/mozJSComponentLoader.h \
+	js/src/xpconnect/src/Makefile.in \
+	js/src/xpconnect/src/xpccomponents.cpp \
+	js/src/xpconnect/src/xpcmodule.cpp \
+	js/src/xpconnect/src/xpcprivate.h \
+	layout/base/nsPresShell.cpp \
+	netwerk/base/public/Makefile.in \
+	netwerk/base/src/Makefile.in \
+	netwerk/build/nsNetCID.h \
+	netwerk/build/nsNetModule.cpp \
+	toolkit/content/widgets/checkbox.xml \
+	toolkit/library/Makefile.in \
+	toolkit/library/libxul-config.mk \
+	toolkit/library/nsStaticXULComponents.cpp \
+	xpcom/ds/nsHashPropertyBag.cpp \
+	xpcom/ds/nsHashPropertyBag.h \
+	xpcom/ds/nsIPropertyBag2.idl \
+	xpcom/ds/nsIWritablePropertyBag2.idl \
+	xpcom/io/Makefile.in \
+	xpcom/io/nsScriptableInputStream.cpp \
+	xpcom/io/nsScriptableInputStream.h \
+	xpcom/proxy/public/nsIProxyObjectManager.idl \
+	xpcom/proxy/src/nsProxyEvent.cpp \
+	xpcom/proxy/src/nsProxyEventClass.cpp \
+	xpcom/proxy/src/nsProxyEventObject.cpp \
+	xpcom/proxy/src/nsProxyEventPrivate.h \
+	xpcom/proxy/src/nsProxyObjectManager.cpp \
+	xpcom/reflect/xptcall/public/xptcall.h \
+	xpcom/threads/nsEventQueue.cpp \
+	xpcom/threads/nsEventQueue.h
 
 
 ZAP_BRANCH_NEW_FILES = \
