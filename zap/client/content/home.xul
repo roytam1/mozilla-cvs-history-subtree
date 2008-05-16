@@ -140,6 +140,9 @@
 
       <html:h4>Improving Zap!</html:h4>
         <html:p>
+          WARNING: The bounty program is currently unavailable.
+        </html:p>
+        <html:p>
           We are now offering cash bounties for new features and improvements. Visit 
           <html:a href="http://www.croczilla.com/zap/bounties">www.croczilla.com/zap/bounties</html:a>
           for the list of available bounties and the rules to claims them.
