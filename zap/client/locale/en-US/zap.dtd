@@ -53,10 +53,12 @@
 <!ENTITY errorTone.label "Error Tone:">
 <!ENTITY errorTone.description "Error tone played when making outgoing calls. XXX Describe format">
 <!ENTITY audioSettings.title "Audio Settings">
+<!ENTITY audioIoInterface.caption "Audio I/O Interface">
 <!ENTITY synchronousAudio.label "Synchronous audio i/o interface">
 <!ENTITY synchronousAudio.description "Selects between a synchronous or asynchronous audio interface.  A synchronous audio interface attempts to write and read from the audio hardware simultaneously. This can e.g. provide better echo cancellation performance, but might lead to choppy audio under some circumstances (e.g. on Windows XP when other applications are using the audio hardware).<html:br/>Changes to this field will take effect after a restart.">
 <!ENTITY audioLatency.label "Audio IO latency (ms):">
 <!ENTITY audioLatency.description "Size of buffer mediating between zap and the audio hardware. Must be between 20ms and 10000ms.  Set to a higher value if you experience choppy audio that can't be traced to network problems.<html:br/>For a synchronous audio i/o interface, this value will likely need to be higher (maybe 2x) as for an asynchronous one. <html:br/>This setting should be coordinated with the acoustic echo cancellation window offset setting.<html:br/>Changes to this field will take effect after a restart.">
+<!ENTITY aec.caption "Acoustic Echo Cancellation">
 <!ENTITY aec.label "Use acoustic echo cancellation">
 <!ENTITY aec.description "Turns on the acoustic echo canceller.">
 <!ENTITY aec2Stage.label "2-stage acoustic echo cancellation">
@@ -65,6 +67,7 @@
 <!ENTITY aecOffset.description "Delay after which echo is expected at the earliest. Should be set to at least the audio IO latency.">
 <!ENTITY aecLength.label "AEC window length (ms):">
 <!ENTITY aecLength.description "Temporal length of window over which echo cancellation is performed. The recommended length is approximately a third of the room reverberation time. E.g. for a small room the reverberation time is in the order of 300ms, so a tail length of 100ms would be appropriate.">
+<!ENTITY microphone.caption "Microphone">
 <!ENTITY denoise.label "Denoise microphone input">
 <!ENTITY denoise.description "Reduces the amount of background noise present in the input signal.">
 <!ENTITY agc.label "Automatic microphone gain control">
@@ -73,6 +76,7 @@
 <!ENTITY agcLevel.description "...">
 <!ENTITY vad.label "Use voice activity detection">
 <!ENTITY vad.description "Silences the input signal when no voice is being detected.">
+<!ENTITY dereverb.caption "Dereverb">
 <!ENTITY dereverb.label "Dereverb">
 <!ENTITY dereverb.description "">
 <!ENTITY dereverbLevel.label "Dereverb level:">

@@ -115,19 +115,17 @@
     <label class="zap-form-title" value="&configuration.title;"/>
     <cgroup title="&uiPreferences.title;" id="cgroup-uiprefs" 
             closed="true" persist="closed">
-      <grid>
-        <columns><column/><column flex="1"/><column/></columns>
-        <rows>
-          <igroup>
-            <checkbox type="zap-formwidget" 
-                      label="&uiAnimations.label;"
-                      id="urn:mozilla:zap:ui_animations"/>
-            <info>
-              <description>&uiAnimations.description;</description>
-            </info>
-          </igroup>
-        </rows>
-      </grid>
+      <groupbox flex="1">
+        <caption><label value="&uiAnimations.label;"/></caption>
+        <igroup>
+          <checkbox type="zap-formwidget" 
+                    label="&uiAnimations.label;"
+                    id="urn:mozilla:zap:ui_animations"/>
+          <info>
+            <description>&uiAnimations.description;</description>
+          </info>
+        </igroup>
+      </groupbox>
     </cgroup>
 
     <cgroup title="&notifications.title;" id="cgroup-notifications"
@@ -176,123 +174,152 @@
 
     <cgroup title="&audioSettings.title;" id="cgroup-audio"
             closed="true" persist="closed">
-      <grid>
-        <columns><column/><column flex="1"/></columns>
-        <rows>
-          <igroup>
-            <checkbox type="zap-formwidget" 
-                      label="&synchronousAudio.label;"
-                      id="urn:mozilla:zap:sync_audio_interface"/>
-            <info>
-              <description>&synchronousAudio.description;</description>
-            </info>
-          </igroup>
-          <irow>
-            <label control="urn:mozilla:zap:audioio_latency" value="&audioLatency.label;"/>
-            <textbox type="zap-formwidget" id="urn:mozilla:zap:audioio_latency"
-                     validator="makeNumberValidator(20, 10000)"/>
-            <info>
-              <description>&audioLatency.description;</description>
-            </info>
-          </irow>
-          <igroup>
-            <checkbox type="zap-formwidget" 
-                      label="&aec.label;"
-                      id="urn:mozilla:zap:aec"/>
-            <info>
-              <description>&aec.description;</description>
-            </info>
-          </igroup>
-          <igroup>
-            <checkbox type="zap-formwidget" 
-                      label="&aec2Stage.label;"
-                      id="urn:mozilla:zap:aec_2_stage"/>
-            <info>
-              <description>&aec2Stage.description;</description>
-            </info>
-          </igroup>
-          <irow>
-            <label control="urn:mozilla:zap:aec_window_offset" 
-                   value="&aecOffset.label;"/>
-            <textbox type="zap-formwidget" 
-                     id="urn:mozilla:zap:aec_window_offset"/>
-            <info>
-              <description>&aecOffset.description;</description>
-            </info>
-          </irow>
-          <irow>
-            <label control="urn:mozilla:zap:aec_window_length" 
-                   value="&aecLength.label;"/>
-            <textbox type="zap-formwidget" 
-                     id="urn:mozilla:zap:aec_window_length"/>
-            <info>
-              <description>&aecLength.description;</description>
-            </info>
-          </irow>
-          <igroup>
-            <checkbox type="zap-formwidget" 
-                      label="&denoise.label;"
-                      id="urn:mozilla:zap:denoise"/>
-            <info>
-              <description>&denoise.description;</description>
-            </info>
-          </igroup>
-          <igroup>
-            <checkbox type="zap-formwidget" 
-                      label="&agc.label;"
-                      id="urn:mozilla:zap:agc"/>
-            <info>
-              <description>&agc.description;</description>
-            </info>
-          </igroup>
-          <irow>
-            <label control="urn:mozilla:zap:agc_level" 
-                   value="&agcLevel.label;"/>
-            <textbox type="zap-formwidget" 
-                     id="urn:mozilla:zap:agc_level"/>
-            <info>
-              <description>&agcLevel.description;</description>
-            </info>
-          </irow>
-          <igroup>
-            <checkbox type="zap-formwidget" 
-                      label="&vad.label;"
-                      id="urn:mozilla:zap:vad"/>
-            <info>
-              <description>&vad.description;</description>
-            </info>
-          </igroup>
-          <igroup>
-            <checkbox type="zap-formwidget" 
-                      label="&dereverb.label;"
-                      id="urn:mozilla:zap:dereverb"/>
-            <info>
-              <description>&dereverb.description;
-              </description>
-            </info>
-          </igroup>
-          <irow>
-            <label control="urn:mozilla:zap:dereverb_level" 
-                   value="&dereverbLevel.label;"/>
-            <textbox type="zap-formwidget" 
-                     id="urn:mozilla:zap:dereverb_level"/>
-            <info>
-              <description>&dereverbLevel.description;</description>
-            </info>
-          </irow>
-          <irow>
-            <label control="urn:mozilla:zap:dereverb_decay" 
-                   value="&dereverbDecay.label;"/>
-            <textbox type="zap-formwidget" 
-                     id="urn:mozilla:zap:dereverb_decay"/>
-            <info>
-              <description>&dereverbDecay.description;</description>
-            </info>
-          </irow>
-          <button label="&resetAudio.button;" 
-                  oncommand="parent.wMediaPipeline.dspCtl.reset()"/>
-        </rows>
-      </grid>
+      <groupbox flex="1">
+        <caption><label value="&audioIoInterface.caption;"/></caption>
+        <igroup>
+          <checkbox type="zap-formwidget" 
+                    label="&synchronousAudio.label;"
+                    id="urn:mozilla:zap:sync_audio_interface"/>
+          <info>
+            <description>&synchronousAudio.description;</description>
+          </info>
+        </igroup>
+        <grid>
+          <columns><column/><column flex="1"/></columns>
+          <rows>
+            <irow>
+              <label control="urn:mozilla:zap:audioio_latency" value="&audioLatency.label;"/>
+              <textbox type="zap-formwidget" id="urn:mozilla:zap:audioio_latency"
+                       validator="makeNumberValidator(20, 10000)"/>
+              <info>
+                <description>&audioLatency.description;</description>
+              </info>
+            </irow>
+          </rows>
+        </grid>
+      </groupbox>
+      <groupbox flex="1">
+        <caption><label value="&aec.caption;"/></caption>
+        <igroup>
+          <checkbox type="zap-formwidget" 
+                    label="&aec.label;"
+                    id="urn:mozilla:zap:aec"/>
+          <info>
+            <description>&aec.description;</description>
+          </info>
+        </igroup>
+        <igroup>
+          <checkbox type="zap-formwidget" 
+                    label="&aec2Stage.label;"
+                    id="urn:mozilla:zap:aec_2_stage"/>
+          <info>
+            <description>&aec2Stage.description;</description>
+          </info>
+        </igroup>
+        <grid>
+          <columns><column/><column flex="1"/></columns>
+          <rows>
+            <irow>
+              <label control="urn:mozilla:zap:aec_window_offset" 
+                     value="&aecOffset.label;"/>
+              <textbox type="zap-formwidget" 
+                       id="urn:mozilla:zap:aec_window_offset"/>
+              <info>
+                <description>&aecOffset.description;</description>
+              </info>
+            </irow>
+            <irow>
+              <label control="urn:mozilla:zap:aec_window_length" 
+                     value="&aecLength.label;"/>
+              <textbox type="zap-formwidget" 
+                       id="urn:mozilla:zap:aec_window_length"/>
+              <info>
+                <description>&aecLength.description;</description>
+              </info>
+            </irow>
+          </rows>
+        </grid>
+      </groupbox>
+
+      <groupbox flex="1">
+        <caption><label value="&microphone.caption;"/></caption>
+        <igroup>
+          <checkbox type="zap-formwidget" 
+                    label="&denoise.label;"
+                    id="urn:mozilla:zap:denoise"/>
+          <info>
+            <description>&denoise.description;</description>
+          </info>
+        </igroup>
+        <igroup>
+          <checkbox type="zap-formwidget" 
+                    label="&agc.label;"
+                    id="urn:mozilla:zap:agc"/>
+          <info>
+            <description>&agc.description;</description>
+          </info>
+        </igroup>
+        <grid>
+          <columns><column/><column flex="1"/></columns>
+          <rows>
+            <irow>
+              <label control="urn:mozilla:zap:agc_level" 
+                     value="&agcLevel.label;"/>
+              <textbox type="zap-formwidget" 
+                       id="urn:mozilla:zap:agc_level"/>
+              <info>
+                <description>&agcLevel.description;</description>
+              </info>
+            </irow>
+          </rows>
+        </grid>
+        <igroup>
+          <checkbox type="zap-formwidget" 
+                    label="&vad.label;"
+                    id="urn:mozilla:zap:vad"/>
+          <info>
+            <description>&vad.description;</description>
+          </info>
+        </igroup>
+      </groupbox>
+
+      <groupbox>
+        <caption><label value="&dereverb.caption;"/></caption>
+        <igroup>
+          <checkbox type="zap-formwidget" 
+                    label="&dereverb.label;"
+                    id="urn:mozilla:zap:dereverb"/>
+          <info>
+            <description>&dereverb.description;
+            </description>
+          </info>
+        </igroup>
+        <grid>
+          <columns><column/><column flex="1"/></columns>
+          <rows>
+            <irow>
+              <label control="urn:mozilla:zap:dereverb_level" 
+                     value="&dereverbLevel.label;"/>
+              <textbox type="zap-formwidget" 
+                       id="urn:mozilla:zap:dereverb_level"/>
+              <info>
+                <description>&dereverbLevel.description;</description>
+              </info>
+            </irow>
+            <irow>
+              <label control="urn:mozilla:zap:dereverb_decay" 
+                     value="&dereverbDecay.label;"/>
+              <textbox type="zap-formwidget" 
+                       id="urn:mozilla:zap:dereverb_decay"/>
+              <info>
+                <description>&dereverbDecay.description;</description>
+              </info>
+            </irow>
+          </rows>
+        </grid>
+      </groupbox>
+      <button label="&resetAudio.button;" 
+              oncommand="parent.wMediaPipeline.dspCtl.reset()"/>
     </cgroup>
 
 
