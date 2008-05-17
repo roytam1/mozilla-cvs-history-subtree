@@ -125,19 +125,32 @@ JSShStarter.prototype = {
   handle : function(commandline) {
     debug("JSShStarter: checking for -jssh startup option\n");
     if (commandline.handleFlag("jssh", false)) { 
+      var prefs = Components.classes["@mozilla.org/preferences-service;1"].
+        getService(Components.interfaces.nsIPrefBranch);
+      var port = 9997;
+      if (prefs.getPrefType("jssh.port") == prefs.PREF_INT){
+        port = prefs.getIntPref("jssh.port");
+      }
+      var startupURI = "chrome://jssh/content/jssh-debug.js";
+      if (prefs.getPrefType("jssh.startupURI") == prefs.PREF_STRING){
+        startupURI = prefs.getCharPref("jssh.startupURI");
+      }
+      var loopbackOnly = true;
+      if (prefs.getPrefType("jssh.loopbackOnly") == prefs.PREF_BOOL){
+        loopbackOnly = prefs.getBoolPref("jssh.loopbackOnly");
+      }
       // start a jssh server with startupURI
       // "chrome://jssh/content/jssh-debug.js". We use 'getService'
       // instead of 'createInstance' to get a well-known, globally
       // accessible instance of a jssh-server.
-      // XXX Todo: get port, startupURI and loopbackOnly from prefs.
       Components.classes["@mozilla.org/jssh-server;1"]
         .getService(Components.interfaces.nsIJSShServer)
-        .startServerSocket(9997, "chrome://jssh/content/jssh-debug.js", true);
-      debug("JSShStarter: JSSh server started on port 9997\n");
+        .startServerSocket(port, startupURI, loopbackOnly);
+      debug("JSShStarter: JSSh server started on port " + port + "\n");
     }
   },
   
-  helpInfo : "  -jssh                Start a JSSh server on port 9997.\n",
+  helpInfo : "  -jssh                Start a JSSh server (default: port 9997).\n",
 
 };
 
