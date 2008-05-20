@@ -155,7 +155,7 @@ $moz_cvsroot   = ":ext:ffxbld\@cvs.mozilla.org:/cvsroot";
 #$ObjDir = '';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'Fx-Trunk-l10n';
+$BuildNameExtra = 'Fx-Moz1.9.0-l10n';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -166,7 +166,7 @@ $ConfigureOnly = 1;             # Configure only, don't build.
 $LocaleProduct = "browser";
 $LocalizationVersionFile = 'browser/config/version.txt';
 %WGetFiles = (
-	      "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/latest-trunk/firefox-%version%.en-US.mac.dmg" =>
+	      "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/latest-mozilla1.9.0/firefox-%version%.en-US.mac.dmg" =>
 	      "/builds/tinderbox/Fx-Trunk-l10n/Darwin_8.8.4_Depend/firefox.dmg"
 	      );
 
@@ -230,7 +230,7 @@ $ftp_path      = "/home/ftp/pub/firefox/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
-$milestone     = "trunk-l10n";
+$milestone     = "mozilla1.9.0-l10n";
 $notify_list   = "build-announce\@mozilla.org";
 $stub_installer = 0;
 $sea_installer = 0;
