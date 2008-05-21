@@ -1250,6 +1250,7 @@ ZAP_BRANCH_MODIFIED_FILES = \
 	configure.in \
 	Makefile.in \
 	config/autoconf.mk.in \
+	config/system-headers \
 	extensions/jssh/ChangeLog \
 	extensions/jssh/Makefile.in \
 	extensions/jssh/install.js \
