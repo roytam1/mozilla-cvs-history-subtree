@@ -91,6 +91,13 @@ endif
 
 EXTRA_DSO_LDOPTS += $(MOZ_CAIRO_LIBS)
 
+# necko dependencies
+ifeq ($(OS_ARCH),WINNT)
+EXTRA_DSO_LDOPTS += $(call EXPAND_LIBNAME,dnsapi)
+else
+EXTRA_DSO_LDOPTS += -lresolv
+endif
+
 ifdef MOZ_ZAP
 ifeq ($(OS_ARCH),WINNT)
 EXTRA_DSO_LDOPTS += $(call EXPAND_LIBNAME,dsound)
