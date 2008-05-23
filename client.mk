@@ -1239,6 +1239,7 @@ echo-variable-%:
 # extensions/jssh/resources/content/jssh-debug.js
 # extensions/jssh/resources/content/tasksOverlay.xul
 # extensions/jssh/xemacs/moz-jssh.el
+# toolkit/library/Makefile.in
 
 # deleted from branch:
 # js/src/xpconnect/loader/ComponentUtils.jsm 
@@ -1289,8 +1290,8 @@ ZAP_BRANCH_MODIFIED_FILES = \
 	netwerk/dns/public/nsIDNSService.idl \
 	netwerk/dns/src/nsDNSService2.cpp \
 	toolkit/content/widgets/checkbox.xml \
-	toolkit/library/Makefile.in \
 	toolkit/library/libxul-config.mk \
+	toolkit/library/libxul-rules.mk \
 	toolkit/library/nsStaticXULComponents.cpp \
 	xpcom/ds/nsHashPropertyBag.cpp \
 	xpcom/ds/nsHashPropertyBag.h \

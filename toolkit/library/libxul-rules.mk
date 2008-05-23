@@ -91,6 +91,12 @@ endif
 
 EXTRA_DSO_LDOPTS += $(MOZ_CAIRO_LIBS)
 
+ifdef MOZ_ZAP
+ifeq ($(OS_ARCH),WINNT)
+EXTRA_DSO_LDOPTS += $(call EXPAND_LIBNAME,dsound)
+endif
+endif
+
 export:: dlldeps.cpp
 
 dlldeps.cpp: $(topsrcdir)/xpcom/build/dlldeps.cpp
