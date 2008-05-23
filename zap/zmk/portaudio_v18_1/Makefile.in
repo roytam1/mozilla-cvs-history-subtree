@@ -48,6 +48,10 @@ endif
 
 
 ifdef ENABLE_TESTS
+
+# Parallel compilation of the tests is broken
+.NOTPARALLEL::
+
 SIMPLE_PROGRAMS = \
 pa_tests/debug_convert$(BIN_SUFFIX) \
 pa_tests/debug_dither_calc$(BIN_SUFFIX) \
@@ -90,6 +94,7 @@ pa_tests/patest_sync$(BIN_SUFFIX) \
 pa_tests/patest_toomanysines$(BIN_SUFFIX) \
 pa_tests/patest_underflow$(BIN_SUFFIX) \
 pa_tests/patest_wire$(BIN_SUFFIX)
+
 endif
 
 include $(topsrcdir)/config/rules.mk
