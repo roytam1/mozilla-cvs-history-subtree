@@ -21,6 +21,7 @@
  * Contributor(s):
  *   Gordon Sheridan <gordon@netscape.com>
  *   IBM Corp.
+ *   8x8, Inc.
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -42,13 +43,25 @@ interface nsICancelable;
 interface nsIEventTarget;
 interface nsIDNSRecord;
 interface nsIDNSListener;
+interface nsIDNSIterListener;
+interface nsISimpleEnumerator;
 
 /**
  * nsIDNSService
  */
-[scriptable, uuid(3ac9e611-e6b6-44b5-b312-c040e65b2929)]
+[scriptable, uuid(827B7489-0560-44e1-9276-CDCE03195BF2)]
 interface nsIDNSService : nsISupports
 {
+    nsISimpleEnumerator resolveWithType(in AUTF8String   aName,
+                                        in unsigned long aRecordType,
+                                        in unsigned long aFlags);
+                                 
+    nsICancelable asyncResolveWithType(in AUTF8String        aName,
+                                       in unsigned long      aRecordType,
+                                       in unsigned long      aFlags,
+                                       in nsIDNSIterListener aListener,
+                                       in nsIEventTarget     aListenerTarget);
+    
     /**
      * kicks off an asynchronous host lookup.
      *
@@ -107,4 +120,31 @@ interface nsIDNSService : nsISupports
      * if set, the canonical name of the specified host will be queried.
      */
     const unsigned long RESOLVE_CANONICAL_NAME = (1 << 1);
+    
+    /*************************************************************************
+     * Listed below are the various record types that may used with the
+     * resolveWithType() and asyncResolveWithType() api
+     */
+
+    /**
+     * ADDRESS record
+     *
+     * when using this flag the api returns an enumerator to a single 
+     * nsIDNSRecord element that holds the address records
+     */
+    const unsigned long DNS_RECORD_ADDRESS = 1;
+
+    /**
+     * SRV record
+     *
+     * when using this flag the api returns a nsIDNSSRVRecord records enumerator
+     */
+    const unsigned long DNS_RECORD_SRV = 2;
+
+    /**
+     * NAPTR record
+     *
+     * when using this flag the api returns a nsIDNSNAPTRRecord records enumerator
+     */
+    const unsigned long DNS_RECORD_NAPTR = 3;
 };

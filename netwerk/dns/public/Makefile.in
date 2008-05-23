@@ -51,7 +51,10 @@ XPIDLSRCS	= \
 		nsPIDNSService.idl \
 		nsIDNSService.idl \
 		nsIDNSListener.idl \
+		nsIDNSIterListener.idl \
 		nsIDNSRecord.idl \
+		nsIDNSNAPTRRecord.idl \
+		nsIDNSSRVRecord.idl \
 		nsIIDNService.idl \
 		nsIEffectiveTLDService.idl \
 		$(NULL)

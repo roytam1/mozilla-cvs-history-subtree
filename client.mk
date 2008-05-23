@@ -1282,8 +1282,12 @@ ZAP_BRANCH_MODIFIED_FILES = \
 	layout/base/nsPresShell.cpp \
 	netwerk/base/public/Makefile.in \
 	netwerk/base/src/Makefile.in \
+	netwerk/build/Makefile.in \
 	netwerk/build/nsNetCID.h \
 	netwerk/build/nsNetModule.cpp \
+	netwerk/dns/public/Makefile.in \
+	netwerk/dns/public/nsIDNSService.idl \
+	netwerk/dns/src/nsDNSService2.cpp \
 	toolkit/content/widgets/checkbox.xml \
 	toolkit/library/Makefile.in \
 	toolkit/library/libxul-config.mk \
@@ -1310,6 +1314,9 @@ ZAP_BRANCH_NEW_FILES = \
 	netwerk/base/public/nsIUDPSocket.idl \
 	netwerk/base/src/nsUDPSocket.cpp \
 	netwerk/base/src/nsUDPSocket.h \
+	netwerk/dns/public/nsIDNSIterListener.idl \
+	netwerk/dns/public/nsIDNSSRVRecord.idl \
+	netwerk/dns/public/nsIDNSNAPTRRecord.idl \
 	xpcom/io/nsIScriptableInputStreamEx.idl \
 	zap
 

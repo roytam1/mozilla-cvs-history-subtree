@@ -124,7 +124,15 @@ EXTRA_DSO_LDOPTS = \
 ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
 EXTRA_DSO_LDOPTS += \
 		$(TK_LIBS) \
-	$(NULL)
+		$(NULL)
+endif
+
+ifeq ($(OS_ARCH),Darwin)
+EXTRA_DSO_LDOPTS += -lresolv
+endif
+
+ifeq ($(OS_ARCH),Linux)
+EXTRA_DSO_LDOPTS += -lresolv
 endif
 
 ifeq ($(OS_ARCH),AIX)
@@ -134,6 +142,7 @@ endif
 include $(topsrcdir)/config/rules.mk
 
 ifeq ($(OS_ARCH),WINNT)
+EXTRA_DSO_LDOPTS += $(call EXPAND_LIBNAME,dnsapi)
 OS_LIBS	+= $(call EXPAND_LIBNAME,ole32 shell32)
 endif
 
