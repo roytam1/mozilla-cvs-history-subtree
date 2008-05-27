@@ -40,18 +40,22 @@ add_makefiles "
   zap/Makefile
   zap/base/Makefile
   zap/base/idl/Makefile
+  zap/client/Makefile
+  zap/client/components/Makefile
+  zap/client/profile/Makefile
+  zap/client/src/Makefile
+  zap/netutils/Makefile
+  zap/netutils/src/Makefile
   zap/sdp/Makefile
   zap/sdp/idl/Makefile
   zap/sip/Makefile
   zap/sip/idl/Makefile
   zap/sip/idl/syntax/Makefile
-  zap/client/Makefile
-  zap/client/profile/Makefile
-  zap/client/src/Makefile
   zap/zmk/Makefile
+  zap/zmk/base/Makefile
+  zap/zmk/ccitt-adpcm/Makefile
   zap/zmk/portaudio_v18_1/Makefile
   zap/zmk/speex-1.1.10/Makefile
   zap/zmk/speex-1.1.10/libspeex/Makefile
-  zap/zmk/base/Makefile
   zap/zmk/src/Makefile
 "
