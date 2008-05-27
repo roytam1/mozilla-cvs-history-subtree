@@ -86,6 +86,7 @@ CPPSRCS		= \
 		nsStreamListenerTee.cpp \
 		nsStreamLoader.cpp \
 		nsSyncStreamListener.cpp \
+		nsUDPSocket.cpp \
 		nsUnicharStreamLoader.cpp \
 		nsURIChecker.cpp \
 		nsURLHelper.cpp \
@@ -94,10 +95,6 @@ CPPSRCS		= \
 		nsBase64Encoder.cpp \
 		nsSerializationHelper.cpp \
 		$(NULL)
-
-ifdef MOZ_ZAP
-CPPSRCS      += nsUDPSocket.cpp
-endif
 
 ifeq ($(MOZ_WIDGET_TOOLKIT),os2)
 	CPPSRCS += nsURLHelperOS2.cpp
