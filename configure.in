@@ -5702,17 +5702,6 @@ if test "$MOZ_SVG_FOREIGNOBJECT"; then
 fi
 
 dnl ========================================================
-dnl Zap-as-app means building zap outside libxul
-dnl ========================================================
-MOZ_ARG_ENABLE_BOOL(zap-as-app,
-   [  --enable-zap-as-app    Build zap as a XULRunner app, separate from libxul ],
-   ZAP_AS_APP=1,
-   ZAP_AS_APP= )
-if test -n "$ZAP_AS_APP"; then
-  AC_DEFINE(ZAP_AS_APP)
-fi
-
-dnl ========================================================
 dnl Installer
 dnl ========================================================
 case "$target_os" in
@@ -7781,7 +7770,6 @@ AC_SUBST(MOZ_WEBSERVICES)
 AC_SUBST(MOZ_PREF_EXTENSIONS)
 AC_SUBST(MOZ_SVG)
 AC_SUBST(MOZ_SVG_FOREIGNOBJECT)
-AC_SUBST(ZAP_AS_APP)
 AC_SUBST(MOZ_XSLT_STANDALONE)
 AC_SUBST(MOZ_JS_LIBS)
 AC_SUBST(MOZ_PSM)
