@@ -35,7 +35,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "zapTimestamper.h"
-#include "nsString.h"
+#include "nsStringAPI.h"
 #include "nsIPropertyBag2.h"
 #include "nsHashPropertyBag.h"
 #include "zapMediaUtils.h"

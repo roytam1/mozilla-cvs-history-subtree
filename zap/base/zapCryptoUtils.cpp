@@ -35,9 +35,10 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "zapCryptoUtils.h"
-#include "nsIServiceManager.h"
+#include "nsComponentManagerUtils.h"
 #include "nsICryptoHash.h"
-#include "nsString.h"
+#include "nsStringAPI.h"
+#include "nsCOMPtr.h"
 
 ////////////////////////////////////////////////////////////////////////
 // zapCryptoUtils

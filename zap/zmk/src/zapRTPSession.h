@@ -39,7 +39,7 @@
 
 #include "zapIMediaNode.h"
 #include "nsAutoPtr.h"
-#include "nsString.h"
+#include "nsStringAPI.h"
 #include "zapIMediaFrame.h"
 
 class zapRTPSessionFilter;

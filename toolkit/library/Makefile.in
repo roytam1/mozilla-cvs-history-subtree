@@ -245,12 +245,6 @@ ifdef MOZ_JPROF
 EXTRA_DSO_LDOPTS += -ljprof
 endif
 
-ifdef MOZ_ZAP
-ifeq ($(OS_ARCH),WINNT)
-EXTRA_DSO_LDOPTS += $(call EXPAND_LIBNAME,dsound)
-endif
-endif
-
 ifdef MOZ_JAVAXPCOM
 dlldeps-javaxpcom.cpp: $(topsrcdir)/extensions/java/xpcom/src/dlldeps-javaxpcom.cpp
 	$(INSTALL) $^ .

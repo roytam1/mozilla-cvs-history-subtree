@@ -41,7 +41,7 @@
 #include "zapIMediaSource.h"
 #include "zapIMediaSink.h"
 #include "zapAudioStreamUtils.h"
-#include "nsString.h"
+#include "nsStringAPI.h"
 
 ////////////////////////////////////////////////////////////////////////
 // zapPCMPing

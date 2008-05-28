@@ -38,7 +38,7 @@
 #include "nsHashPropertyBag.h"
 #include "nsAutoPtr.h"
 #include "math.h"
-#include "nsIServiceManager.h"
+#include "nsServiceManagerUtils.h"
 #include "zapMediaUtils.h"
 #include "nsIUDPSocket.h"
 #include "zapStunFrame.h"

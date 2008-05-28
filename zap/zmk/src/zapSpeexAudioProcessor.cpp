@@ -40,7 +40,7 @@
 #include "zapMediaFrame.h"
 #include "prmem.h"
 #include "nsAutoPtr.h"
-#include "nsString.h"
+#include "nsStringAPI.h"
 #include "nsIComponentManager.h"
 #include "float.h"
 
@@ -196,16 +196,16 @@ zapSpeexAudioProcessor::InsertedIntoContainer(zapIMediaNodeContainer *container,
   if (node_pars) {
     node_pars->GetPropertyAsBool(NS_LITERAL_STRING("aec"), &mAEC);
     node_pars->GetPropertyAsBool(NS_LITERAL_STRING("aec_2_stage"), &mAEC2Stage);
-    node_pars->GetPropertyAsFloat(NS_LITERAL_STRING("aec_tail"), &mAECTail);
+    node_pars->GetPropertyAsDouble(NS_LITERAL_STRING("aec_tail"), &mAECTail);
     node_pars->GetPropertyAsBool(NS_LITERAL_STRING("denoise"), &mDenoise);
     node_pars->GetPropertyAsBool(NS_LITERAL_STRING("agc"), &mAGC);
-    node_pars->GetPropertyAsFloat(NS_LITERAL_STRING("agc_level"), &mAGCLevel);
+    node_pars->GetPropertyAsDouble(NS_LITERAL_STRING("agc_level"), &mAGCLevel);
     node_pars->GetPropertyAsBool(NS_LITERAL_STRING("vad"), &mVAD);
     node_pars->GetPropertyAsBool(NS_LITERAL_STRING("dereverb"), &mDereverb);
-    node_pars->GetPropertyAsFloat(NS_LITERAL_STRING("dereverb_level"),
-                                  &mDereverbLevel);
-    node_pars->GetPropertyAsFloat(NS_LITERAL_STRING("dereverb_decay"),
-                                  &mDereverbDecay);
+    node_pars->GetPropertyAsDouble(NS_LITERAL_STRING("dereverb_level"),
+                                   &mDereverbLevel);
+    node_pars->GetPropertyAsDouble(NS_LITERAL_STRING("dereverb_decay"),
+                                   &mDereverbDecay);
   }
 
   // XXX 20ms frame size, 8000Hz sampling rate hardcoded atm

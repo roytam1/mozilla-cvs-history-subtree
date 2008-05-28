@@ -36,9 +36,9 @@
 
 #include "zapTToneGenerator.h"
 #include "stdio.h"
-#include "nsString.h"
+#include "nsStringAPI.h"
 #include "zapAudioToneFrame.h"
-#include "zapStreamUtils.h"
+#include "zapMediaUtils.h"
 #include "stdlib.h"
 
 ////////////////////////////////////////////////////////////////////////
@@ -112,7 +112,7 @@ zapTToneGenerator::InsertedIntoContainer(zapIMediaNodeContainer *container,
   mMaxSamplesPerFrame = (PRUint16)max_frame_duration;
   
   // create a new stream info:
-  mStreamInfo = CreateStreamInfo(NS_LITERAL_CSTRING("audio/tone"));
+  ZMK_CREATE_STREAM_INFO(mStreamInfo, "audio/tone");
   
   return NS_OK;
 }

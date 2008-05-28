@@ -38,7 +38,7 @@
 #define __ZAP_STUNMESSAGE_H__
 
 #include "zapIStunMessage.h"
-#include "nsString.h"
+#include "nsStringAPI.h"
 #include "prio.h"
 #include "nsAgg.h"
 

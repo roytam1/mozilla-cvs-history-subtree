@@ -42,13 +42,11 @@
 [scriptable, uuid(9cfd1587-360e-4957-a58f-4c2b1c5e7ed9)]
 interface nsIWritablePropertyBag2 : nsIPropertyBag2
 {
-  void        setPropertyAsUint16      (in AString prop, in PRUint16 value);
   void        setPropertyAsInt32       (in AString prop, in PRInt32 value);
   void        setPropertyAsUint32      (in AString prop, in PRUint32 value);
   void        setPropertyAsInt64       (in AString prop, in PRInt64 value);
   void        setPropertyAsUint64      (in AString prop, in PRUint64 value);
   void        setPropertyAsDouble      (in AString prop, in double value);
-  void        setPropertyAsFloat       (in AString prop, in float value);
   void        setPropertyAsAString     (in AString prop, in AString value);
   void        setPropertyAsACString    (in AString prop, in ACString value);
   void        setPropertyAsAUTF8String (in AString prop, in AUTF8String value);

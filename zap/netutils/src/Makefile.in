@@ -10,13 +10,10 @@ XPIDL_MODULE    = zap_netutils
 LIBRARY_NAME	= zap_netutils
 EXPORT_LIBRARY	= 1
 IS_COMPONENT	= 1
-MODULE_NAME	= zap_netutils
-MOZILLA_INTERNAL_API = 1
-LIBXUL_LIBRARY  = 1
+MODULE_NAME	= zapNetUtils
 
 REQUIRES	= \
 		xpcom \
-		string \
 		necko \
 		zap_base \
 		$(NULL)
@@ -40,4 +37,8 @@ EXTRA_PP_COMPONENTS = \
 
 include $(topsrcdir)/config/rules.mk
 
-EXTRA_DSO_LDOPTS += $(MOZ_COMPONENT_LIBS)
+EXTRA_DSO_LDOPTS += \
+		$(XPCOM_GLUE_LDOPTS) \
+		$(NSPR_LIBS) \
+		$(NULL)
+

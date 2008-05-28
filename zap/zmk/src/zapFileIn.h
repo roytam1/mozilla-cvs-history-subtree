@@ -43,7 +43,7 @@
 #include "zapIMediaNodeContainer.h"
 #include "nsCOMPtr.h"
 #include "nsIWritablePropertyBag2.h"
-#include "nsString.h"
+#include "nsStringAPI.h"
 #include "prio.h"
 #include "zapIFileIn.h"
 

@@ -36,11 +36,10 @@
 
 #include "zapSpeexEncoder.h"
 #include "zapIMediaFrame.h"
-#include "nsIPropertyBag2.h"
 #include "zapIAudioIn.h"
 #include "zapMediaFrame.h"
+#include "zapMediaUtils.h"
 #include "stdio.h"
-#include "nsHashPropertyBag.h"
 #include "zapAudioStreamUtils.h"
 
 ////////////////////////////////////////////////////////////////////////
@@ -313,11 +312,7 @@ zapSpeexEncoder::ValidateNewStream(nsIPropertyBag2* streamInfo)
   mInputBufferLength = 4 * encoderFrameSize; // float32 samples
 
   // Create a new streaminfo:
-  nsCOMPtr<nsIWritablePropertyBag> bag;
-  NS_NewHashPropertyBag(getter_AddRefs(bag));
-  mStreamInfo = do_QueryInterface(bag);
-  mStreamInfo->SetPropertyAsACString(NS_LITERAL_STRING("type"),
-                                     NS_LITERAL_CSTRING("audio/speex"));
+  ZMK_CREATE_STREAM_INFO(mStreamInfo, "audio/speex");
   
   return NS_OK;
 }

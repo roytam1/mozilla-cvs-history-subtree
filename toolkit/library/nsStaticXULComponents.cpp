@@ -245,15 +245,6 @@
 #define XMLEXTRAS_MODULE
 #endif
 
-#ifdef MOZ_ZAP
-#define ZAP_MODULES                          \
-    MODULE(zapNetUtilsModule)                \
-    MODULE(zapBaseModule)                    \
-    MODULE(zapMediaModule)
-#else
-#define ZAP_MODULES
-#endif
-
 #ifdef MOZ_XUL
 #ifdef MOZ_ENABLE_GTK2
 #define UNIXPROXY_MODULE MODULE(nsUnixProxyModule)
@@ -315,7 +306,6 @@
     SPELLCHECK_MODULE                        \
     XMLEXTRAS_MODULE                         \
     LAYOUT_DEBUG_MODULE                      \
-    ZAP_MODULES                              \
     UNIXPROXY_MODULE                         \
     /* end of list */
 

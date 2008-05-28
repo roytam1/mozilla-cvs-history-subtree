@@ -37,11 +37,10 @@
 #include "zapG711RTPDepacketizer.h"
 #include "zapRTPFrame.h"
 #include "zapIMediaNodeContainer.h"
-#include "nsString.h"
-#include "nsIPropertyBag2.h"
+#include "nsStringAPI.h"
+#include "zapMediaUtils.h"
 #include "zapMediaFrame.h"
 #include "stdio.h"
-#include "nsHashPropertyBag.h"
 
 ////////////////////////////////////////////////////////////////////////
 // zapG711RTPDepacketizer
@@ -108,13 +107,12 @@ zapG711RTPDepacketizer::ValidateNewStream(nsIPropertyBag2* streamInfo)
   // Stream parameters are ok. 
   
   // Create a new streaminfo:
-  nsCOMPtr<nsIWritablePropertyBag> bag;
-  NS_NewHashPropertyBag(getter_AddRefs(bag));
-  mStreamInfo = do_QueryInterface(bag);
-  mStreamInfo->SetPropertyAsACString(NS_LITERAL_STRING("type"),
-                                     mType == pcmu ?
-                                     NS_LITERAL_CSTRING("audio/pcmu") :
-                                     NS_LITERAL_CSTRING("audio/pcma"));
+  if (mType == pcmu) {
+    ZMK_CREATE_STREAM_INFO(mStreamInfo, "audio/pcmu");
+  } else {
+    ZMK_CREATE_STREAM_INFO(mStreamInfo, "audio/pcma");
+  }
+  
   return NS_OK;
 }
 

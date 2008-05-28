@@ -43,7 +43,7 @@
 #include "nsIPropertyBag2.h"
 #include "nsAutoPtr.h"
 #include "nsComponentManagerUtils.h"
-#include "nsString.h"
+#include "nsStringAPI.h"
 
 ////////////////////////////////////////////////////////////////////////
 // zapMediaNodeHolder<T>: Helper class taking care of calling

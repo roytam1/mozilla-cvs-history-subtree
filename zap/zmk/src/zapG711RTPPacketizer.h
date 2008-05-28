@@ -63,7 +63,7 @@ public:
 
 private:
   nsCOMPtr<nsIWritablePropertyBag2> mStreamInfo;
-  PRUint16 mPayloadType;
+  PRUint32 mPayloadType;
 };
 
 #endif // __ZAP_G711RTPPACKETIZER_H__

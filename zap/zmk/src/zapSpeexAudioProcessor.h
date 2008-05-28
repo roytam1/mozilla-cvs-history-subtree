@@ -78,14 +78,14 @@ private:
   
   PRBool mAEC;
   PRBool mAEC2Stage;
-  float mAECTail;
+  double mAECTail;
   PRBool mDenoise;
   PRBool mAGC;
-  float mAGCLevel;
+  double mAGCLevel;
   PRBool mVAD;
   PRBool mDereverb;
-  float mDereverbLevel;
-  float mDereverbDecay;
+  double mDereverbLevel;
+  double mDereverbDecay;
   
   SpeexEchoState* mEchoState;
   SpeexPreprocessState* mPreprocessState;

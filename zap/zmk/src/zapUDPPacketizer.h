@@ -39,7 +39,7 @@
 
 #include "zapFilterNode.h"
 #include "nsIWritablePropertyBag2.h"
-#include "nsString.h"
+#include "nsStringAPI.h"
 
 ////////////////////////////////////////////////////////////////////////
 // zapUDPPacketizer
@@ -65,7 +65,7 @@ public:
 private:
   nsCOMPtr<nsIWritablePropertyBag2> mStreamInfo;
   nsCString mAddress;
-  PRUint16 mPort;
+  PRUint32 mPort;
   nsCString mHeader;
 };
 

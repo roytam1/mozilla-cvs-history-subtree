@@ -36,11 +36,10 @@
 
 #include "zapTEventRTPPacketizer.h"
 #include "zapRTPFrame.h"
-#include "nsString.h"
-#include "nsIPropertyBag2.h"
+#include "nsStringAPI.h"
+#include "zapMediaUtils.h"
 #include "zapMediaFrame.h"
 #include "stdio.h"
-#include "nsHashPropertyBag.h"
 #include "zapITelephoneEventFrame.h"
 
 ////////////////////////////////////////////////////////////////////////
@@ -63,8 +62,9 @@ zapTEventRTPPacketizer::InsertedIntoContainer(zapIMediaNodeContainer *container,
   
   // extract node parameters:
   if (node_pars) {
-    node_pars->GetPropertyAsUint16(NS_LITERAL_STRING("payload_type"),
+    node_pars->GetPropertyAsUint32(NS_LITERAL_STRING("payload_type"),
                                    &mPayloadType);
+    // xxx verify payload type range
   }
   
   return NS_OK;
@@ -95,11 +95,8 @@ zapTEventRTPPacketizer::ValidateNewStream(nsIPropertyBag2* streamInfo)
   // Stream parameters are ok. 
   
   // Create a new streaminfo:
-  nsCOMPtr<nsIWritablePropertyBag> bag;
-  NS_NewHashPropertyBag(getter_AddRefs(bag));
-  mStreamInfo = do_QueryInterface(bag);
-  mStreamInfo->SetPropertyAsACString(NS_LITERAL_STRING("type"),
-                                     NS_LITERAL_CSTRING("rtp"));
+  ZMK_CREATE_STREAM_INFO(mStreamInfo, "rtp");
+  
   return NS_OK;
 }
 
@@ -120,7 +117,7 @@ zapTEventRTPPacketizer::Filter(zapIMediaFrame* input, zapIMediaFrame** output)
   input->GetData(data);
 
   frame->SetPayload(data);
-  frame->SetPayloadType(mPayloadType);
+  frame->SetPayloadType((PRUint16)mPayloadType);
 
   PRBool M;
   teframe->GetM(&M);

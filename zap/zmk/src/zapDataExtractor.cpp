@@ -36,9 +36,8 @@
 
 #include "zapDataExtractor.h"
 #include "zapIMediaNodeContainer.h"
-#include "nsString.h"
+#include "nsStringAPI.h"
 #include "nsIPropertyBag2.h"
-#include "nsHashPropertyBag.h"
 #include "zapMediaUtils.h"
 #include "zapMediaFrame.h"
 

@@ -38,7 +38,7 @@
 #define __ZAP_MEDIAFRAME_H__
 
 #include "zapIMediaFrame.h"
-#include "nsString.h"
+#include "nsStringAPI.h"
 #include "nsIPropertyBag2.h"
 #include "nsCOMPtr.h"
 

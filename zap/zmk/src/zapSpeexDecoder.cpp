@@ -36,12 +36,11 @@
 
 #include "zapSpeexDecoder.h"
 #include "zapIMediaFrame.h"
-#include "nsString.h"
-#include "nsIPropertyBag2.h"
+#include "nsStringAPI.h"
+#include "zapMediaUtils.h"
 #include "zapIAudioIn.h"
 #include "zapMediaFrame.h"
 #include "stdio.h"
-#include "nsHashPropertyBag.h"
 
 ////////////////////////////////////////////////////////////////////////
 // zapSpeexDecoder
@@ -168,11 +167,7 @@ zapSpeexDecoder::ValidateNewStream(nsIPropertyBag2* streamInfo)
   mOutputBufferLength = 4 * frameSize; // float32 samples
   
   // Create a new streaminfo:
-  nsCOMPtr<nsIWritablePropertyBag> bag;
-  NS_NewHashPropertyBag(getter_AddRefs(bag));
-  mStreamInfo = do_QueryInterface(bag);
-  mStreamInfo->SetPropertyAsACString(NS_LITERAL_STRING("type"),
-                                     NS_LITERAL_CSTRING("audio/pcm"));
+  ZMK_CREATE_STREAM_INFO(mStreamInfo, "audio/pcm");
   mStreamInfo->SetPropertyAsUint32(NS_LITERAL_STRING("sample_rate"),
                                    mSampleRate);
   mStreamInfo->SetPropertyAsUint32(NS_LITERAL_STRING("samples"),

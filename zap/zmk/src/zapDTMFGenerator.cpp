@@ -36,9 +36,9 @@
 
 #include "zapDTMFGenerator.h"
 #include "stdio.h"
-#include "nsString.h"
+#include "nsStringAPI.h"
 #include "zapTelephoneEventFrame.h"
-#include "zapStreamUtils.h"
+#include "zapMediaUtils.h"
 
 ////////////////////////////////////////////////////////////////////////
 // structure to hold an individual event
@@ -204,7 +204,7 @@ zapDTMFGenerator::ProduceFrame(zapIMediaFrame ** _retval)
 
   if (!mStreamInfo) {
     // create a new stream info:
-    mStreamInfo = CreateStreamInfo(NS_LITERAL_CSTRING("audio/telephone-event"));
+    ZMK_CREATE_STREAM_INFO(mStreamInfo, "audio/telephone-event");
     // rebase our clock:
     mSampleClock = 0;
   }

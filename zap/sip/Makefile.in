@@ -8,7 +8,6 @@ include $(DEPTH)/config/autoconf.mk
 DIRS            = idl
 
 MODULE          = zap_sip
-LIBXUL_LIBRARY  = 1 
 
 EXTRA_PP_COMPONENTS = \
 	SipSyntaxFactory.js \

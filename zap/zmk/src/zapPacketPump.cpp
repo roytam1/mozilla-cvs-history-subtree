@@ -40,7 +40,7 @@
 #include "zapIMediaFrame.h"
 #include "prmem.h"
 #include "nsAutoPtr.h"
-#include "nsString.h"
+#include "nsStringAPI.h"
 #include "nsIComponentManager.h"
 
 ////////////////////////////////////////////////////////////////////////

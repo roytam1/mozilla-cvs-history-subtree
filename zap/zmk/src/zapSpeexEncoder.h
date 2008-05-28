@@ -41,7 +41,7 @@
 #include "speex/speex.h"
 #include "nsIWritablePropertyBag2.h"
 #include "zapISpeexEncoder.h"
-#include "nsString.h"
+#include "nsStringAPI.h"
 
 ////////////////////////////////////////////////////////////////////////
 // zapSpeexEncoder

@@ -39,7 +39,7 @@
 
 #include "zapFilterNode.h"
 #include "nsIWritablePropertyBag2.h"
-#include "nsString.h"
+#include "nsStringAPI.h"
 
 ////////////////////////////////////////////////////////////////////////
 // zapRTPReceiver

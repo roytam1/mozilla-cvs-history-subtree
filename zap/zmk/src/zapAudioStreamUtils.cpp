@@ -35,7 +35,8 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "zapAudioStreamUtils.h"
-#include "nsHashPropertyBag.h"
+#include "nsXPCOMCIDInternal.h"
+#include "nsComponentManagerUtils.h"
 
 //----------------------------------------------------------------------
 
@@ -175,7 +176,9 @@ already_AddRefed<nsIWritablePropertyBag2>
 zapAudioStreamParameters::CreateStreamInfo()
 {
   nsIWritablePropertyBag2 *bag;
-  NS_NewHashPropertyBag2(&bag);
+  CallCreateInstance(NS_HASH_PROPERTY_BAG_CONTRACTID, nsnull,
+                     NS_GET_IID(nsIWritablePropertyBag2),
+                     (void**)&bag);
 
   bag->SetPropertyAsACString(NS_LITERAL_STRING("type"),
                              NS_LITERAL_CSTRING("audio/pcm"));

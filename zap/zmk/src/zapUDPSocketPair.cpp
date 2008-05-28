@@ -35,12 +35,12 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "zapUDPSocketPair.h"
-#include "nsHashPropertyBag.h"
+#include "nsXPCOMCIDInternal.h"
 #include "zapUDPSocket.h"
 #include "nsIUDPSocket.h"
 #include "nsNetCID.h"
 #include "nsComponentManagerUtils.h"
-#include "nsString.h"
+#include "nsStringAPI.h"
 
 ////////////////////////////////////////////////////////////////////////
 // zapUDPSocketPair
@@ -76,13 +76,13 @@ zapUDPSocketPair::InsertedIntoContainer(zapIMediaNodeContainer *container,
 {
   mContainer = container;
   
-  PRUint16 portbase = 49152;
+  PRUint32 portbase = 49152;
   // unpack node parameters:
   if (node_pars) {
-    node_pars->GetPropertyAsUint16(NS_LITERAL_STRING("portbase"), &portbase);
+    node_pars->GetPropertyAsUint32(NS_LITERAL_STRING("portbase"), &portbase);
   }
 
-  if (portbase == 0 || portbase == 65535) {
+  if (portbase == 0 || portbase >= 65535) {
     NS_ERROR("portbase must be between 1 and 65534");
     return NS_ERROR_FAILURE;
   }
@@ -118,8 +118,7 @@ zapUDPSocketPair::InsertedIntoContainer(zapIMediaNodeContainer *container,
   }
 
   // create a propertybag for initializing our socket nodes:
-  nsCOMPtr<nsIWritablePropertyBag2> props;
-  NS_NewHashPropertyBag2(getter_AddRefs(props));
+  nsCOMPtr<nsIWritablePropertyBag2> props = do_CreateInstance(NS_HASH_PROPERTY_BAG_CONTRACTID);
 
   // create socket nodes:
   mSocketA = new zapUDPSocket();

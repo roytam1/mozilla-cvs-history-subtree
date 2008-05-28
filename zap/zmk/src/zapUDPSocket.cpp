@@ -35,12 +35,12 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "zapUDPSocket.h"
-#include "nsIComponentManager.h"
-#include "nsHashPropertyBag.h"
-#include "nsString.h"
+#include "nsComponentManagerUtils.h"
+#include "nsStringAPI.h"
 #include "zapDatagramFrame.h"
 #include "nsNetCID.h"
 #include "nsAutoPtr.h"
+#include "zapMediaUtils.h"
 
 ////////////////////////////////////////////////////////////////////////
 // zapUDPSocket
@@ -84,14 +84,14 @@ zapUDPSocket::InsertedIntoContainer(zapIMediaNodeContainer *container,
                                                   NS_GET_IID(nsIUDPSocket),
                                                   getter_AddRefs(mSocket))) ||
       !mSocket) {
-    PRUint16 port = 0;
+    PRUint32 port = 0;
     PRUint32 max_port = 0;
     if (node_pars &&
-        NS_SUCCEEDED(node_pars->GetPropertyAsUint16(NS_LITERAL_STRING("port"), &port))) {
+        NS_SUCCEEDED(node_pars->GetPropertyAsUint32(NS_LITERAL_STRING("port"), &port))) {
       max_port = port;
     }
     else if (node_pars &&
-             NS_SUCCEEDED(node_pars->GetPropertyAsUint16(NS_LITERAL_STRING("portbase"), &port))) {
+             NS_SUCCEEDED(node_pars->GetPropertyAsUint32(NS_LITERAL_STRING("portbase"), &port))) {
       max_port = 65535;
     }
       
@@ -101,10 +101,9 @@ zapUDPSocket::InsertedIntoContainer(zapIMediaNodeContainer *container,
       return NS_ERROR_FAILURE;
     }
 
-    PRUint32 p = port;
     PRBool success = PR_FALSE;
-    for (/**/; p <= max_port; ++p) {
-      if (NS_SUCCEEDED(mSocket->Init(p))) {
+    for (/**/; port <= max_port; ++port) {
+      if (NS_SUCCEEDED(mSocket->Init(port))) {
         success = PR_TRUE;
         break;
       }
@@ -119,12 +118,7 @@ zapUDPSocket::InsertedIntoContainer(zapIMediaNodeContainer *container,
   mSocket->SetReceiver(this);
 
   // create a new streaminfo:
-  nsCOMPtr<nsIWritablePropertyBag> bag;
-  NS_NewHashPropertyBag(getter_AddRefs(bag));
-  mStreamInfo = do_QueryInterface(bag);
-
-  mStreamInfo->SetPropertyAsACString(NS_LITERAL_STRING("type"),
-                                     NS_LITERAL_CSTRING("datagram"));
+  ZMK_CREATE_STREAM_INFO(mStreamInfo, "datagram");
   
   return NS_OK;
 }

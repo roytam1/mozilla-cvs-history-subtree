@@ -36,7 +36,7 @@
 
 #include "zapAudioDevice.h"
 #include "stdio.h"
-#include "nsString.h"
+#include "nsStringAPI.h"
 
 ////////////////////////////////////////////////////////////////////////
 // zapAudioDevice

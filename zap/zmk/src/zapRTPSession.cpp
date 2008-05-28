@@ -214,11 +214,11 @@ zapRTPSession::InsertedIntoContainer(zapIMediaNodeContainer *container,
 //                                                      address),
 //                     NS_ERROR_FAILURE);
   
-//   PRUint16 rtpPort, rtcpPort;
-//   NS_ENSURE_SUCCESS(node_pars->GetPropertyAsUint16(NS_LITERAL_STRING("rtp_port"),
+//   PRUint32 rtpPort, rtcpPort;
+//   NS_ENSURE_SUCCESS(node_pars->GetPropertyAsUint32(NS_LITERAL_STRING("rtp_port"),
 //                                                    &rtpPort),
 //                     NS_ERROR_FAILURE);
-//   NS_ENSURE_SUCCESS(node_pars->GetPropertyAsUint16(NS_LITERAL_STRING("rtcp_port"),
+//   NS_ENSURE_SUCCESS(node_pars->GetPropertyAsUint32(NS_LITERAL_STRING("rtcp_port"),
 //                                                    &rtcpPort),
 //                     NS_ERROR_FAILURE);
   

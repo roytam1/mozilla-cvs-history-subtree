@@ -35,7 +35,8 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "zapStunClient.h"
-#include "nsIServiceManager.h"
+#include "nsServiceManagerUtils.h"
+#include "nsComponentManagerUtils.h"
 #include "nsIDNSService.h"
 #include "nsIDNSRecord.h"
 #include "nsIEventTarget.h"
@@ -131,7 +132,7 @@ zapStunBindingRequest::Init(zapStunClient* stunClient,
   PRInt32 colon = stunServer.FindChar(':');
   if (colon != -1) {
     mStunServerAddress = Substring(stunServer, 0, colon);
-    PRInt32 error;
+    nsresult error;
     nsCString port(Substring(stunServer, colon));
     mStunServerPort = port.ToInteger(&error);
     if (error != NS_OK) {

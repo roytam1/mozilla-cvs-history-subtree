@@ -41,7 +41,7 @@
 #include "zapIMediaSource.h"
 #include "zapIMediaSink.h"
 #include "nsCOMPtr.h"
-#include "nsString.h"
+#include "nsStringAPI.h"
 #include "nsVoidArray.h"
 #include "nsIWritablePropertyBag2.h"
 #include "zapAudioStreamUtils.h"

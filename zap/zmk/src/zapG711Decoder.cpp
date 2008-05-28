@@ -37,11 +37,10 @@
 #include "zapG711Decoder.h"
 #include "zapIMediaFrame.h"
 #include "zapIMediaNodeContainer.h"
-#include "nsString.h"
-#include "nsIPropertyBag2.h"
+#include "nsStringAPI.h"
+#include "zapMediaUtils.h"
 #include "zapMediaFrame.h"
 #include "stdio.h"
-#include "nsHashPropertyBag.h"
 #include "g711.h"
 
 ////////////////////////////////////////////////////////////////////////
@@ -103,11 +102,7 @@ zapG711Decoder::ValidateNewStream(nsIPropertyBag2* streamInfo)
   // Stream parameters are ok. 
 
   // Create a new streaminfo:
-  nsCOMPtr<nsIWritablePropertyBag> bag;
-  NS_NewHashPropertyBag(getter_AddRefs(bag));
-  mStreamInfo = do_QueryInterface(bag);
-  mStreamInfo->SetPropertyAsACString(NS_LITERAL_STRING("type"),
-                                     NS_LITERAL_CSTRING("audio/pcm"));
+  ZMK_CREATE_STREAM_INFO(mStreamInfo, "audio/pcm");
   mStreamInfo->SetPropertyAsUint32(NS_LITERAL_STRING("sample_rate"),
                                    8000);
   mStreamInfo->SetPropertyAsUint32(NS_LITERAL_STRING("samples"),

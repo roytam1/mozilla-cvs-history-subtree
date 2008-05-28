@@ -38,7 +38,7 @@
 #define __ZAP_AUDIOTONEFRAME_H__
 
 #include "zapIAudioToneFrame.h"
-#include "nsString.h"
+#include "nsStringAPI.h"
 #include "nsCOMPtr.h"
 #include "nsIPropertyBag2.h"
 

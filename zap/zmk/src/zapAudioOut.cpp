@@ -37,8 +37,9 @@
 
 #include "zapAudioOut.h"
 #include "stdio.h"
-#include "nsString.h"
+#include "nsStringAPI.h"
 #include "zapMediaFrame.h"
+#include "zapMediaUtils.h"
 #include "zapAudioDevice.h"
 #include "nsIProxyObjectManager.h"
 #include "nsThreadUtils.h"
@@ -136,7 +137,7 @@ zapAudioOut::InsertedIntoContainer(zapIMediaNodeContainer *container,
   nsresult rv =  mStreamParameters.InitWithProperties(node_pars);
   if (NS_FAILED(rv)) return rv;
 
-  mClockStreamInfo = CreateStreamInfo(NS_LITERAL_CSTRING("clock"));
+  ZMK_CREATE_STREAM_INFO(mClockStreamInfo, "clock");
   mClockStreamInfo->SetPropertyAsDouble(NS_LITERAL_STRING("clock_cycle"),
                                         mStreamParameters.GetFrameDuration() );
   

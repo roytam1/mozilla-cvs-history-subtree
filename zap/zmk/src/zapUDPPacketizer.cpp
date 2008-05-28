@@ -36,7 +36,7 @@
 
 #include "zapUDPPacketizer.h"
 #include "zapIMediaFrame.h"
-#include "nsString.h"
+#include "nsStringAPI.h"
 #include "nsIPropertyBag2.h"
 #include "zapDatagramFrame.h"
 #include "nsHashPropertyBag.h"
@@ -66,12 +66,17 @@ zapUDPPacketizer::InsertedIntoContainer(zapIMediaNodeContainer *container,
   NS_ENSURE_SUCCESS(node_pars->GetPropertyAsACString(
                       NS_LITERAL_STRING("address"), mAddress),
                     NS_ERROR_FAILURE);
-  NS_ENSURE_SUCCESS(node_pars->GetPropertyAsUint16(
+  NS_ENSURE_SUCCESS(node_pars->GetPropertyAsUint32(
                       NS_LITERAL_STRING("port"), &mPort),
                     NS_ERROR_FAILURE);
   node_pars->GetPropertyAsACString(NS_LITERAL_STRING("header"),
                                    mHeader);
-    
+
+  if (mPort > 65535) {
+    NS_ERROR("port out of range");
+    return NS_ERROR_FAILURE;
+  }
+  
   return NS_OK;
 }
 
@@ -100,9 +105,10 @@ zapUDPPacketizer::Filter(zapIMediaFrame* input, zapIMediaFrame** output)
   frame->mStreamInfo = mStreamInfo;
   nsCString data;
   input->GetData(data);
-  frame->mData = mHeader + data;
+  frame->mData = mHeader;
+  frame->mData.Append(data);
   frame->mAddress = mAddress;
-  frame->mPort = mPort;
+  frame->mPort = (PRUint16)mPort;
   *output = frame;
   return NS_OK;
 }

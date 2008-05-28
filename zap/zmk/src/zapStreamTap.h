@@ -42,7 +42,7 @@
 #include "zapIMediaSink.h"
 #include "zapIMediaNodeContainer.h"
 #include "nsCOMPtr.h"
-#include "nsString.h"
+#include "nsStringAPI.h"
 #include "nsVoidArray.h"
 #include "zapIMediaFrame.h"
 

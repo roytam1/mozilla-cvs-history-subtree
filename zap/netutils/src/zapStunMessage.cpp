@@ -39,7 +39,8 @@
 #include "prprf.h"
 #include <stdlib.h>
 #include "zapICryptoUtils.h"
-#include "nsIServiceManager.h"
+#include "nsServiceManagerUtils.h"
+#include "nsCOMPtr.h"
 
 ////////////////////////////////////////////////////////////////////////
 // helpers
@@ -146,7 +147,7 @@ nsresult AppendAddressAttrib(nsCString& buf, PRUint16 type, const PRNetAddr& add
 }
 
 // Deserialize an address attrib into a PRNetAddr structure:
-nsresult ParseAddressAttrib(PRNetAddr& addr, PRUint16* p, PRUint16 length)
+nsresult ParseAddressAttrib(PRNetAddr& addr, const PRUint16* p, PRUint16 length)
 {
   PRUint16 family = 0x00FF & PR_ntohs(p[0]);
   NS_ASSERTION(&addr.inet.port == &addr.ipv6.port,
@@ -222,7 +223,6 @@ NS_IMETHODIMP
 zapStunMessage::Serialize(nsACString & _retval)
 {
   nsCString message;
-  message.SetCapacity(200);
   
   // allocate header; we write it later when we know the total message
   // length:
@@ -366,11 +366,8 @@ zapStunMessage::Deserialize(const nsACString& packet,
     return NS_ERROR_FAILURE;
   }
   
-  nsACString::const_iterator iter;
-  packet.BeginReading(iter);
-  PRUint16* p = (PRUint16*)iter.get();
-  packet.EndReading(iter);
-  PRUint16* endp = (PRUint16*)iter.get();
+  const PRUint16* p = (const PRUint16*)packet.BeginReading();
+  const PRUint16* endp = p + packet.Length();
 
   nsresult rv = NS_OK;
   
@@ -545,9 +542,7 @@ zapStunMessage::SetTransactionID(const nsACString & aTransactionID)
 {
   if (aTransactionID.Length() != 16)
     return NS_ERROR_FAILURE;
-  nsACString::const_iterator p;
-  aTransactionID.BeginReading(p);
-  memcpy(mTransactionID, p.get(), 16);
+  memcpy(mTransactionID, aTransactionID.BeginReading(), 16);
   return NS_OK;
 }
 
@@ -655,9 +650,7 @@ zapStunMessage::SetMessageIntegrity(const nsACString & aMessageIntegrity)
 {
   if (aMessageIntegrity.Length() != 20)
     return NS_ERROR_FAILURE;
-  nsACString::const_iterator p;
-  aMessageIntegrity.BeginReading(p);
-  memcpy(mMessageIntegrity, p.get(), 20);
+  memcpy(mMessageIntegrity, aMessageIntegrity.BeginReading(), 20);
   return NS_OK;
 }
 

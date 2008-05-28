@@ -36,10 +36,11 @@
 
 #include "zapRtttlPlayer.h"
 #include "stdio.h"
-#include "nsString.h"
+#include "nsStringAPI.h"
 #include "zapMediaFrame.h"
 #include "nsHashPropertyBag.h"
 #include <math.h>
+#include <ctype.h>
 
 ////////////////////////////////////////////////////////////////////////
 // zapRtttlPlayer

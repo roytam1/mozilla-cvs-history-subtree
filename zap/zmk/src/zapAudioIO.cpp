@@ -36,7 +36,7 @@
 
 #include "zapAudioIO.h"
 #include "stdio.h"
-#include "nsString.h"
+#include "nsStringAPI.h"
 #include "zapMediaFrame.h"
 #include "zapAudioDevice.h"
 #include "nsIProxyObjectManager.h"

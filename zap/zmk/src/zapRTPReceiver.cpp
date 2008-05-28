@@ -36,7 +36,7 @@
 
 #include "zapRTPReceiver.h"
 #include "zapRTPFrame.h"
-#include "nsString.h"
+#include "nsStringAPI.h"
 #include "nsIPropertyBag2.h"
 #include "zapDatagramFrame.h"
 #include "stdio.h"

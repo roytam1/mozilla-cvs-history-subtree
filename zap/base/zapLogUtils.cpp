@@ -35,8 +35,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "zapLogUtils.h"
-#include "nsIServiceManager.h"
-#include "nsString.h"
+#include "nsStringAPI.h"
 
 #ifdef PR_LOGGING
   PRLogModuleInfo *gLogUtilsLog = PR_NewLogModule("logutils");

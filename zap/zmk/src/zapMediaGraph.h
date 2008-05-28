@@ -45,7 +45,7 @@
 #include "nsCOMPtr.h"
 #include "nsAutoPtr.h"
 #include "zapIMediaNode.h"
-#include "nsString.h"
+#include "nsStringAPI.h"
 #include "nsISupportsPriority.h"
 
 class zapMediaGraph : public zapIMediaGraph,

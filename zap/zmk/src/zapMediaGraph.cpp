@@ -36,7 +36,9 @@
 
 #include "zapMediaGraph.h"
 #include "nsIProxyObjectManager.h"
-#include "nsIServiceManager.h"
+#include "nsXPCOMCIDInternal.h"
+#include "nsServiceManagerUtils.h"
+#include "nsComponentManagerUtils.h"
 #include "prmem.h"
 #include "stdio.h"
 #include "zapIMediaSource.h"
@@ -108,12 +110,13 @@ zapMediaGraph::Release()
 #ifndef SAME_THREAD_MEDIA_GRAPH
     // shutdown the media thread from the main thread:
     if (mMediaThread) {
+      nsCOMPtr<nsIProxyObjectManager> pom = do_GetService(NS_XPCOMPROXY_CONTRACTID);
       nsCOMPtr<nsIThread> proxiedThread;
-      NS_GetProxyForObject(NS_PROXY_TO_MAIN_THREAD,
-                           NS_GET_IID(nsIThread),
-                           mMediaThread.get(),
-                           NS_PROXY_ASYNC,
-                           getter_AddRefs(proxiedThread));
+      pom->GetProxyForObject(NS_PROXY_TO_MAIN_THREAD,
+                             NS_GET_IID(nsIThread),
+                             mMediaThread.get(),
+                             NS_PROXY_ASYNC,
+                             getter_AddRefs(proxiedThread));
       if (proxiedThread)
         proxiedThread->Shutdown();
     }
@@ -274,7 +277,8 @@ zapMediaGraph::AddNode(const nsACString & type,
                        nsACString & _retval)
 {
   // create a new instance of the given type:
-  nsCString clazz = NS_LITERAL_CSTRING(ZAP_MEDIANODE_CONTRACTID_PREFIX)+type;
+  nsCString clazz = NS_LITERAL_CSTRING(ZAP_MEDIANODE_CONTRACTID_PREFIX);
+  clazz.Append(type);
   nsCOMPtr<zapIMediaNode> node = do_CreateInstance(clazz.get());
   if (!node) return NS_ERROR_FAILURE;
 
@@ -360,9 +364,10 @@ zapMediaGraph::GetNode(const nsACString & id_or_alias,
   else
     proxyType |= NS_PROXY_ASYNC;
 
-  return NS_GetProxyForObject(mMediaThread, uuid, nd->node,
-                              proxyType,
-                              result);
+  nsCOMPtr<nsIProxyObjectManager> pom = do_GetService(NS_XPCOMPROXY_CONTRACTID);
+  return pom->GetProxyForObject(mMediaThread, uuid, nd->node,
+                                proxyType,
+                                result);
 }
 
 /* void setAlias (in ACString alias, in ACString id_or_alias); */
@@ -375,9 +380,7 @@ zapMediaGraph::SetAlias(const nsACString & alias, const nsACString & id_or_alias
 
   // check if alias name is allowed:
   if (!alias.IsEmpty()) {
-    nsACString::const_iterator p;
-    alias.BeginReading(p);
-    if (*p == '#') {
+    if (alias[0] == '#') {
       NS_ERROR("Disallowed alias name");
       return NS_ERROR_FAILURE;
     }
@@ -618,12 +621,13 @@ NS_IMETHODIMP ConstructMediaGraph(nsISupports *aOuter, REFNSIID aIID,
 #endif
 
   // Return a proxy for the media graph:
-  rv = NS_GetProxyForObject(mediaThread, aIID, mediaGraph,
-                            NS_PROXY_SYNC
-                            /* | NS_PROXY_ALWAYS */
-                            /* | NS_PROXY_AUTOPROXIFY */
-                            /* | NS_PROXY_ISUPPORTS */,
-                            result);
+  nsCOMPtr<nsIProxyObjectManager> pom = do_GetService(NS_XPCOMPROXY_CONTRACTID);
+  rv = pom->GetProxyForObject(mediaThread, aIID, mediaGraph,
+                              NS_PROXY_SYNC
+                              /* | NS_PROXY_ALWAYS */
+                              /* | NS_PROXY_AUTOPROXIFY */
+                              /* | NS_PROXY_ISUPPORTS */,
+                              result);
   
   return rv;
 }

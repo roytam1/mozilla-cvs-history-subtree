@@ -36,7 +36,7 @@
 
 #include "zapTimestampTrigger.h"
 #include "zapIMediaFrame.h"
-#include "nsString.h"
+#include "nsStringAPI.h"
 
 ////////////////////////////////////////////////////////////////////////
 // zapTimestampTriggerNode

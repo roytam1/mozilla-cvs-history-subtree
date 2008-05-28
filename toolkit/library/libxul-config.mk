@@ -329,14 +329,6 @@ DEFINES += -DMOZ_SPELLCHECK
 COMPONENT_LIBS += spellchecker
 endif
 
-ifdef MOZ_ZAP
-COMPONENT_LIBS += \
-	zap_base \
-	zap_netutils \
-	zmk \
-	$(NULL)
-endif
-
 ifdef MOZ_ZIPWRITER
 DEFINES += -DMOZ_ZIPWRITER
 COMPONENT_LIBS += zipwriter

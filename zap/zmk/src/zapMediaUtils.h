@@ -40,7 +40,8 @@
 #include "zapIMediaNode.h"
 #include "zapIMediaNodeContainer.h"
 #include "nsCOMPtr.h"
-#include "nsHashPropertyBag.h"
+#include "nsComponentManagerUtils.h"
+#include "nsXPCOMCIDInternal.h"
 
 #define ZMK_VERIFY_STREAM_TYPE(streamInfo, type)      \
   if (!streamInfo) {                                  \
@@ -59,9 +60,9 @@
   }
 
 
-#define ZMK_CREATE_STREAM_INFO(streamInfo, type)                  \
-  NS_NewHashPropertyBag2(getter_AddRefs(streamInfo));             \
-  streamInfo->SetPropertyAsACString(NS_LITERAL_STRING("type"),    \
+#define ZMK_CREATE_STREAM_INFO(streamInfo, type)                    \
+  streamInfo = do_CreateInstance(NS_HASH_PROPERTY_BAG_CONTRACTID);  \
+  streamInfo->SetPropertyAsACString(NS_LITERAL_STRING("type"),      \
                                     NS_LITERAL_CSTRING(type));
 
 

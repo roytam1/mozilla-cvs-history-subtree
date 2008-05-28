@@ -36,11 +36,11 @@
 
 #include "zapFileIn.h"
 #include "zapMediaFrame.h"
-#include "zapStreamUtils.h"
+#include "zapMediaUtils.h"
 #include "nsAutoPtr.h"
 #include "stdio.h"
 #include "nsIIOService.h"
-#include "nsIServiceManager.h"
+#include "nsServiceManagerUtils.h"
 #include "nsIURI.h"
 #include "nsIFile.h"
 #include "nsIFileURL.h"
@@ -124,7 +124,7 @@ zapFileIn::InsertedIntoContainer(zapIMediaNodeContainer *container,
   mOffset = 0;
   
   // create a new stream info:
-  mStreamInfo = CreateStreamInfo(NS_LITERAL_CSTRING("raw"));
+  ZMK_CREATE_STREAM_INFO(mStreamInfo, "raw");
   
   return NS_OK;
 }
@@ -202,7 +202,7 @@ zapFileIn::ProduceFrame(zapIMediaFrame ** _retval)
   if (mLoop && PR_Available(mFile) <= 0) {
     // Create a new stream info, so that downstream nodes get the
     // stream break.
-    mStreamInfo = CreateStreamInfo(NS_LITERAL_CSTRING("raw"));
+    ZMK_CREATE_STREAM_INFO(mStreamInfo, "raw");
     PR_Seek(mFile, 0, PR_SEEK_SET); // rewind
     mOffset = 0;
     if (mGenerateEOF)
@@ -222,7 +222,7 @@ zapFileIn::ProduceFrame(zapIMediaFrame ** _retval)
     if (bytesRead == -1)
       printf("PR_Read returned error %d\n", PR_GetError());
 #endif
-    mStreamInfo = CreateStreamInfo(NS_LITERAL_CSTRING("raw"));
+    ZMK_CREATE_STREAM_INFO(mStreamInfo, "raw");
     if (!mGenerateEOF)
       return NS_ERROR_FAILURE;
     // ... else fall through to emit the frame.
@@ -251,7 +251,7 @@ zapFileIn::Seek(PRInt64 offset, PRInt16 origin, PRInt64 *_retval)
   if (origin<0 || origin>2) return NS_ERROR_FAILURE;
   
   if (mGenerateEOF)
-    mStreamInfo = CreateStreamInfo(NS_LITERAL_CSTRING("raw"));
+    ZMK_CREATE_STREAM_INFO(mStreamInfo, "raw");
   *_retval = PR_Seek64(mFile, offset, (PRSeekWhence)origin);
   if (*_retval != -1)
     mOffset = offset;

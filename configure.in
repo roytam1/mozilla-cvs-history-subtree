@@ -845,6 +845,7 @@ tools are selected during the Xcode/Developer Tools installation.])
     fi
   fi
 
+  AC_LANG_SAVE
   AC_MSG_CHECKING([for valid compiler/Mac OS X SDK combination])
   AC_LANG_CPLUSPLUS
   AC_TRY_COMPILE([#include <new>
@@ -4607,7 +4608,7 @@ zap)
   AC_DEFINE(MOZ_ZAP)
   
   if test "$LIBXUL_SDK"; then
-    AC_MSG_ERROR([Building zap/XULRunner --with-libxul-sdk doesn't make sense])
+    AC_MSG_ERROR([Can't currently build zap with --with-libxul-sdk])
   fi
   ;;
 

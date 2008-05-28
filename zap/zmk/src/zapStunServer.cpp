@@ -35,7 +35,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "zapStunServer.h"
-#include "nsIServiceManager.h"
+#include "nsServiceManagerUtils.h"
 #include "nsIDNSService.h"
 #include "nsIDNSRecord.h"
 #include "nsIEventTarget.h"

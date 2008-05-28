@@ -86,7 +86,4 @@ protected:
 extern "C" NS_COM nsresult
 NS_NewHashPropertyBag(nsIWritablePropertyBag* *_retval);
 
-extern "C" NS_COM nsresult
-NS_NewHashPropertyBag2(nsIWritablePropertyBag2* *_retval);
-
 #endif /* nsHashPropertyBag_h___ */

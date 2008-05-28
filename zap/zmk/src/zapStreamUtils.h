@@ -37,12 +37,9 @@
 #ifndef __ZAP_STREAMUTILS_H__
 #define __ZAP_STREAMUTILS_H__
 
-#include "nsString.h"
-#include "nsIWritablePropertyBag2.h"
+#include "nsStringAPI.h"
 #include "nsCOMPtr.h"
-
-already_AddRefed<nsIWritablePropertyBag2>
-CreateStreamInfo(const nsACString& type);
+#include "nsIPropertyBag2.h"
 
 inline PRBool
 CHECK_STREAM_CSTRING(nsIPropertyBag2* streamInfo,

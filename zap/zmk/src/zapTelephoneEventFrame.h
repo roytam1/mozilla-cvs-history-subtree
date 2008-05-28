@@ -38,7 +38,7 @@
 #define __ZAP_TELEPHONEEVENTFRAME_H__
 
 #include "zapITelephoneEventFrame.h"
-#include "nsString.h"
+#include "nsStringAPI.h"
 #include "nsCOMPtr.h"
 #include "nsIPropertyBag2.h"
 

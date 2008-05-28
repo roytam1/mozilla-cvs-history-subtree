@@ -37,7 +37,7 @@
 #ifndef __ZAP_AUDIOSTREAMUTILS_H__
 #define __ZAP_AUDIOSTREAMUTILS_H__
 
-#include "nsString.h"
+#include "nsStringAPI.h"
 #include "portaudio.h"
 #include "zapStreamUtils.h"
 #include "nsIWritablePropertyBag2.h"

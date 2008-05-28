@@ -8,7 +8,8 @@ include $(DEPTH)/config/autoconf.mk
 MODULE		= zmk
 XPIDL_MODULE    = zmk_base
 LIBRARY_NAME	= zmk_base_s
-LIBXUL_LIBRARY	= 1
+
+FORCE_STATIC_LIB = 1
 
 REQUIRES	= \
 		xpcom \
@@ -34,8 +35,6 @@ EXPORTS 	= \
 		zapMediaNodeConnectionHolder.h \
 		zapMediaNodeHolder.h \
 		$(NULL)
-
-FORCE_STATIC_LIB = 1
 
 include $(topsrcdir)/config/rules.mk
 

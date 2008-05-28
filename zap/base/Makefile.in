@@ -12,12 +12,9 @@ LIBRARY_NAME	= zap_base
 EXPORT_LIBRARY	= 1
 IS_COMPONENT	= 1
 MODULE_NAME	= zapBaseModule
-MOZILLA_INTERNAL_API = 1
-LIBXUL_LIBRARY  = 1
 
 REQUIRES     	= \
 		xpcom \
-		string \
 		necko \
 		$(NULL)
 
@@ -45,4 +42,7 @@ EXTRA_PP_COMPONENTS = \
 
 include $(topsrcdir)/config/rules.mk
 
-EXTRA_DSO_LDOPTS += $(MOZ_COMPONENT_LIBS)
+EXTRA_DSO_LDOPTS += \
+		$(XPCOM_GLUE_LDOPTS) \
+		$(NSPR_LIBS) \
+		$(NULL)

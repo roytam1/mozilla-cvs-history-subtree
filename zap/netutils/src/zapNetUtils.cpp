@@ -39,7 +39,8 @@
 #include "prnetdb.h"
 #include "zapIStunResolver.h"
 #include "nsCOMPtr.h"
-#include "nsIServiceManager.h"
+#include "nsServiceManagerUtils.h"
+#include "nsComponentManagerUtils.h"
 #include "nsIDNSService.h"
 #include "nsIDNSRecord.h"
 
@@ -117,18 +118,14 @@ zapNetUtils::SnoopStunPacket(const nsACString & buffer, PRInt32 *_retval)
     *_retval = -1;
   }
   else if (l == 1) {
-    nsACString::const_iterator iter;
-    buffer.BeginReading(iter);
-    PRUint8* p = (PRUint8*)iter.get();
+    const PRUint8* p = (const PRUint8*)buffer.BeginReading();
     if (p[0] == 1 || p[0] == 0)
       *_retval = -1;
     else
       *_retval = -2;
   }
   else {
-    nsACString::const_iterator iter;
-    buffer.BeginReading(iter);
-    PRUint16* p = (PRUint16*)iter.get();
+    const PRUint16* p = (const PRUint16*)buffer.BeginReading();
     
     // check message type:
     PRUint16 type = PR_ntohs(p[0]);

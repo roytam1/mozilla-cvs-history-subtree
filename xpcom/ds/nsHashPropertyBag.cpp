@@ -64,26 +64,6 @@ NS_NewHashPropertyBag(nsIWritablePropertyBag* *_retval)
     return NS_OK;
 }
 
-nsresult
-NS_NewHashPropertyBag2(nsIWritablePropertyBag2* *_retval)
-{
-    nsHashPropertyBag *hpb = new nsHashPropertyBag();
-    if (!hpb)
-        return NS_ERROR_OUT_OF_MEMORY;
-
-    NS_ADDREF(hpb);
-
-    nsresult rv = hpb->Init();
-    if (NS_FAILED(rv)) {
-        NS_RELEASE(hpb);
-        return rv;
-    }
-
-    *_retval = hpb;
-    return NS_OK;
-}
-
-
 /*
  * nsHashPropertyBag impl
  */
@@ -243,13 +223,11 @@ nsHashPropertyBag::SetPropertyAs ## Name (const nsAString & prop, Type value) \
     return SetProperty(prop, var); \
 }
 
-IMPL_GETSETPROPERTY_AS(Uint16, PRUint16)
 IMPL_GETSETPROPERTY_AS(Int32, PRInt32)
 IMPL_GETSETPROPERTY_AS(Uint32, PRUint32)
 IMPL_GETSETPROPERTY_AS(Int64, PRInt64)
 IMPL_GETSETPROPERTY_AS(Uint64, PRUint64)
 IMPL_GETSETPROPERTY_AS(Double, double)
-IMPL_GETSETPROPERTY_AS(Float, float)
 IMPL_GETSETPROPERTY_AS(Bool, PRBool)
 
 

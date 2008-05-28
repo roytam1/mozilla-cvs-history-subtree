@@ -36,7 +36,7 @@
 
 #include "zapRTPTransmitter.h"
 #include "zapRTPFrame.h"
-#include "nsString.h"
+#include "nsStringAPI.h"
 #include "nsIPropertyBag2.h"
 #include "zapDatagramFrame.h"
 #include "nsHashPropertyBag.h"
@@ -66,9 +66,13 @@ zapRTPTransmitter::InsertedIntoContainer(zapIMediaNodeContainer *container,
   NS_ENSURE_SUCCESS(node_pars->GetPropertyAsACString(
                       NS_LITERAL_STRING("address"), mAddress),
                     NS_ERROR_FAILURE);
-  NS_ENSURE_SUCCESS(node_pars->GetPropertyAsUint16(
+  NS_ENSURE_SUCCESS(node_pars->GetPropertyAsUint32(
                       NS_LITERAL_STRING("port"), &mPort),
                     NS_ERROR_FAILURE);
+  if (mPort > 65535) {
+    NS_ERROR("Port out of range");
+    return NS_ERROR_FAILURE;
+  }
   
   return NS_OK;
 }
@@ -104,7 +108,7 @@ zapRTPTransmitter::Filter(zapIMediaFrame* input, zapIMediaFrame** output)
   frame->mStreamInfo = mStreamInfo;
   input->GetData(frame->mData);
   frame->mAddress = mAddress;
-  frame->mPort = mPort;
+  frame->mPort = (PRUint16)mPort;
   *output = frame;
   return NS_OK;
 }

@@ -36,7 +36,7 @@
 
 #include "zapAudioIn.h"
 #include "stdio.h"
-#include "nsString.h"
+#include "nsStringAPI.h"
 #include "zapMediaFrame.h"
 #include "zapAudioDevice.h"
 #include "nsIProxyObjectManager.h"
@@ -324,10 +324,8 @@ void zapAudioIn::CreateFrame(const nsACString& data, double timestamp)
     PRUint32 samplesPerFrame = mStreamParameters.samples * mStreamParameters.channels;
     frame->mData.SetLength( samplesPerFrame * GetZapAudioSampleSize(mStreamParameters.sample_format));
     float* d = (float*)frame->mData.BeginWriting();
-    nsACString::const_iterator p;
-    data.BeginReading(p);
-    PRInt16* s = (PRInt16*)p.get();
-    for (int i=0; i<samplesPerFrame; ++i)
+    const PRInt16* s = (const PRInt16*)data.BeginReading();
+    for (PRUint32 i=0; i<samplesPerFrame; ++i)
       *d++ = (float)*s++;
   }
   else {

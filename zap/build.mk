@@ -1,7 +1,14 @@
+# We build a modified version of xulrunner with the patches mentioned
+# on bug #317491. In future, when zap works with stock xulrunner
+# versions, we can separate xulrunner and zap builds, as e.g. described here:
+# http://developer.mozilla.org/en/docs/Creating_XULRunner_Apps_with_the_Mozilla_Build_System
+
 include $(topsrcdir)/xulrunner/build.mk
 
-tier_gecko_dirs += zap/base zap/netutils zap/zmk
+# zap api ('zapi') buid:
+tier_app_dirs += zap/base zap/netutils zap/zmk zap/sdp zap/sip 
+# xxx might want to split zap/base, zap/netutils and zap/zmk into
+# tier_gecko_dirs, if we end up using them in mozilla code.
 
-tier_app_dirs += zap/sdp zap/sip zap/client
-
-
+# zap sip client build:
+tier_app_dirs += zap/client

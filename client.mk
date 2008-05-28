@@ -1198,119 +1198,6 @@ echo-variable-%:
 #######################################################################
 # Branch maintenance
 
-# These files are now identical to the trunk, but we keep them tagged
-# for posterity (deleting branch tags is not a good idea):
-# Makefile.in
-# js/src/xpconnect/Makefile.in
-# js/src/xpconnect/idl/xpcIJSModuleLoader.idl
-# js/src/xpconnect/loader/Makefile.in
-# js/src/xpconnect/loader/mozJSComponentLoader.h
-# js/src/xpconnect/src/xpcmodule.cpp
-# js/src/xpconnect/src/xpcprivate.h
-# xpcom/threads/nsEventQueue.cpp
-# xpcom/threads/nsEventQueue.h
-# xpcom/threads/nsPIEventQueueChain.h (removed)
-# xpcom/threads/nsIEventQueue.idl (removed)
-# xpcom/threads/plevent.c (removed)
-# xpcom/threads/plevent.h (removed)
-# xpcom/reflect/xptcall/public/xptcall.h
-# xpcom/proxy/public/nsIProxyObjectManager.idl
-# xpcom/proxy/public/nsProxyEvent.h (moved to ../src/)
-# xpcom/proxy/src/nsProxyEvent.cpp 
-# xpcom/proxy/src/nsProxyEvent.h (removed)
-# xpcom/proxy/src/nsProxyEventClass.cpp 
-# xpcom/proxy/src/nsProxyObjectManager.cpp
-# xpcom/proxy/src/nsProxyEventObject.cpp
-# xpcom/proxy/src/nsProxyEventPrivate.h
-# extensions/jssh/ChangeLog
-# extensions/jssh/Makefile.in
-# extensions/jssh/install.js
-# extensions/jssh/jar.mn
-# extensions/jssh/nsIJSSh.idl
-# extensions/jssh/nsIJSShServer.idl
-# extensions/jssh/nsJSSh.cpp
-# extensions/jssh/nsJSSh.h
-# extensions/jssh/nsJSShModule.cpp
-# extensions/jssh/nsJSShServer.cpp
-# extensions/jssh/nsJSShServer.h
-# extensions/jssh/nsJSShStarter.js
-# extensions/jssh/resources/content/configure.xul
-# extensions/jssh/resources/content/contents.rdf
-# extensions/jssh/resources/content/jssh-debug.js
-# extensions/jssh/resources/content/tasksOverlay.xul
-# extensions/jssh/xemacs/moz-jssh.el
-# toolkit/library/Makefile.in
-
-# deleted from branch:
-# js/src/xpconnect/loader/ComponentUtils.jsm 
-
-ZAP_BRANCH_MODIFIED_FILES = \
-	allmakefiles.sh \
-	client.mk \
-	configure \
-	configure.in \
-	Makefile.in \
-	config/autoconf.mk.in \
-	config/system-headers \
-	extensions/jssh/ChangeLog \
-	extensions/jssh/Makefile.in \
-	extensions/jssh/install.js \
-	extensions/jssh/jar.mn \
-	extensions/jssh/nsIJSSh.idl \
-	extensions/jssh/nsIJSShServer.idl \
-	extensions/jssh/nsJSSh.cpp \
-	extensions/jssh/nsJSSh.h \
-	extensions/jssh/nsJSShModule.cpp \
-	extensions/jssh/nsJSShServer.cpp \
-	extensions/jssh/nsJSShServer.h \
-	extensions/jssh/nsJSShStarter.js \
-	extensions/jssh/resources/content/configure.xul \
-	extensions/jssh/resources/content/contents.rdf \
-	extensions/jssh/resources/content/jssh-debug.js \
-	extensions/jssh/resources/content/tasksOverlay.xul \
-	extensions/jssh/xemacs/moz-jssh.el \
-	js/src/xpconnect/Makefile.in \
-	js/src/xpconnect/idl/Makefile.in \
-	js/src/xpconnect/idl/xpcIJSModuleLoader.idl \
-	js/src/xpconnect/idl/xpccomponents.idl \
-	js/src/xpconnect/loader/Makefile.in \
-	js/src/xpconnect/loader/mozJSComponentLoader.cpp \
-	js/src/xpconnect/loader/mozJSComponentLoader.h \
-	js/src/xpconnect/src/Makefile.in \
-	js/src/xpconnect/src/xpccomponents.cpp \
-	js/src/xpconnect/src/xpcmodule.cpp \
-	js/src/xpconnect/src/xpcprivate.h \
-	layout/base/nsPresShell.cpp \
-	netwerk/base/public/Makefile.in \
-	netwerk/base/src/Makefile.in \
-	netwerk/build/Makefile.in \
-	netwerk/build/nsNetCID.h \
-	netwerk/build/nsNetModule.cpp \
-	netwerk/dns/public/Makefile.in \
-	netwerk/dns/public/nsIDNSService.idl \
-	netwerk/dns/src/nsDNSService2.cpp \
-	toolkit/content/widgets/checkbox.xml \
-	toolkit/library/libxul-config.mk \
-	toolkit/library/libxul-rules.mk \
-	toolkit/library/nsStaticXULComponents.cpp \
-	xpcom/ds/nsHashPropertyBag.cpp \
-	xpcom/ds/nsHashPropertyBag.h \
-	xpcom/ds/nsIPropertyBag2.idl \
-	xpcom/ds/nsIWritablePropertyBag2.idl \
-	xpcom/io/Makefile.in \
-	xpcom/io/nsScriptableInputStream.cpp \
-	xpcom/io/nsScriptableInputStream.h \
-	xpcom/proxy/public/nsIProxyObjectManager.idl \
-	xpcom/proxy/src/nsProxyEvent.cpp \
-	xpcom/proxy/src/nsProxyEventClass.cpp \
-	xpcom/proxy/src/nsProxyEventObject.cpp \
-	xpcom/proxy/src/nsProxyEventPrivate.h \
-	xpcom/proxy/src/nsProxyObjectManager.cpp \
-	xpcom/reflect/xptcall/public/xptcall.h \
-	xpcom/threads/nsEventQueue.cpp \
-	xpcom/threads/nsEventQueue.h
-
-
 ZAP_BRANCH_NEW_FILES = \
 	netwerk/base/public/nsIUDPSocket.idl \
 	netwerk/base/src/nsUDPSocket.cpp \
@@ -1322,21 +1209,108 @@ ZAP_BRANCH_NEW_FILES = \
 	zap
 
 
+ZAP_BRANCH_MODIFIED_FILES = \
+	client.mk \
+	configure \
+	configure.in \
+	config/autoconf.mk.in \
+	config/system-headers \
+	extensions/jssh/nsJSShStarter.js \
+	js/src/xpconnect/idl/xpccomponents.idl \
+	js/src/xpconnect/src/xpccomponents.cpp \
+	layout/base/nsPresShell.cpp \
+	netwerk/base/public/Makefile.in \
+	netwerk/base/src/Makefile.in \
+	netwerk/build/Makefile.in \
+	netwerk/build/nsNetCID.h \
+	netwerk/build/nsNetModule.cpp \
+	netwerk/dns/public/Makefile.in \
+	netwerk/dns/public/nsIDNSService.idl \
+	netwerk/dns/src/nsDNSService2.cpp \
+	toolkit/content/widgets/checkbox.xml \
+	toolkit/library/libxul-rules.mk \
+	xpcom/io/Makefile.in \
+	xpcom/io/nsScriptableInputStream.cpp \
+	xpcom/io/nsScriptableInputStream.h \
+	xpcom/proxy/src/nsProxyEvent.cpp \
+	xpcom/proxy/src/nsProxyEventObject.cpp \
+	xpcom/proxy/src/nsProxyEventPrivate.h
+
+
+# These files are now identical to the trunk, but we keep them tagged
+# for posterity (deleting branch tags is not a good idea):
+ZAP_BRANCH_TRACKED_FILES = \
+	allmakefiles.sh \
+	Makefile.in \
+	extensions/jssh/ChangeLog \
+	extensions/jssh/Makefile.in \
+	extensions/jssh/install.js \
+	extensions/jssh/jar.mn \
+	extensions/jssh/nsIJSSh.idl \
+	extensions/jssh/nsIJSShServer.idl \
+	extensions/jssh/nsJSSh.cpp \
+	extensions/jssh/nsJSSh.h \
+	extensions/jssh/nsJSShModule.cpp \
+	extensions/jssh/nsJSShServer.cpp \
+	extensions/jssh/nsJSShServer.h \
+	extensions/jssh/resources/content/configure.xul \
+	extensions/jssh/resources/content/contents.rdf \
+	extensions/jssh/resources/content/jssh-debug.js \
+	extensions/jssh/resources/content/tasksOverlay.xul \
+	extensions/jssh/xemacs/moz-jssh.el \
+	js/src/xpconnect/Makefile.in \
+	js/src/xpconnect/idl/Makefile.in \
+	js/src/xpconnect/idl/xpcIJSModuleLoader.idl \
+	js/src/xpconnect/loader/Makefile.in \
+	js/src/xpconnect/loader/mozJSComponentLoader.cpp \
+	js/src/xpconnect/loader/mozJSComponentLoader.h \
+	js/src/xpconnect/src/Makefile.in \
+	js/src/xpconnect/src/xpcmodule.cpp \
+	js/src/xpconnect/src/xpcprivate.h \
+	toolkit/library/Makefile.in \
+	toolkit/library/libxul-config.mk \
+	toolkit/library/nsStaticXULComponents.cpp \
+	xpcom/ds/nsHashPropertyBag.cpp \
+	xpcom/ds/nsHashPropertyBag.h \
+	xpcom/ds/nsIPropertyBag2.idl \
+	xpcom/ds/nsIWritablePropertyBag2.idl \
+	xpcom/proxy/public/nsIProxyObjectManager.idl \
+	xpcom/proxy/src/nsProxyEventClass.cpp \
+	xpcom/proxy/src/nsProxyObjectManager.cpp \
+	xpcom/reflect/xptcall/public/xptcall.h \
+	xpcom/threads/nsEventQueue.cpp \
+	xpcom/threads/nsEventQueue.h
+
+
+# moved around since start of branch:
+# xpcom/proxy/public/nsProxyEvent.h (moved to ../src/)
+
+# deleted from branch:
+# js/src/xpconnect/loader/ComponentUtils.jsm 
+# xpcom/threads/nsPIEventQueueChain.h
+# xpcom/threads/nsIEventQueue.idl
+# xpcom/threads/plevent.c
+# xpcom/threads/plevent.h
+# xpcom/proxy/src/nsProxyEvent.h
 
 commit_zap:
-	cvs -z3 ci -r ZAP_20050610_BRANCH $(ZAP_BRANCH_MODIFIED_FILES) $(ZAP_BRANCH_NEW_FILES)
+	cvs -z3 ci -r ZAP_20050610_BRANCH $(ZAP_BRANCH_TRACKED_FILES) $(ZAP_BRANCH_MODIFIED_FILES) $(ZAP_BRANCH_NEW_FILES)
 
 merge_zap:
-	cvs -z3 up -dP -jZAP_20050610_BASE -jHEAD $(ZAP_BRANCH_MODIFIED_FILES)
+	cvs -z3 up -dP -jZAP_20050610_BASE -jHEAD $(ZAP_BRANCH_TRACKED_FILES) $(ZAP_BRANCH_MODIFIED_FILES)
 
 statictag_zap:
-	cvs -z3 tag -F -rHEAD ZAP_20050610_BASE $(ZAP_BRANCH_MODIFIED_FILES)
+	cvs -z3 tag -F -rHEAD ZAP_20050610_BASE $(ZAP_BRANCH_TRACKED_FILES) $(ZAP_BRANCH_MODIFIED_FILES)
 
 branchtag_zap:
-	cvs -z3 tag -b ZAP_20050610_BRANCH $(ZAP_BRANCH_MODIFIED_FILES)
+	cvs -z3 tag -b ZAP_20050610_BRANCH $(ZAP_BRANCH_TRACKED_FILES) $(ZAP_BRANCH_MODIFIED_FILES)
 
 diff_zap:
-	cvs -z3 diff $(ZAP_BRANCH_MODIFIED_FILES) $(ZAP_BRANCH_NEW_FILES)
+	cvs -z3 diff $(ZAP_BRANCH_TRACKED_FILES) $(ZAP_BRANCH_MODIFIED_FILES) $(ZAP_BRANCH_NEW_FILES)
+
+
+mozdiff_zap:
+	cvs -z3 diff -rZAP_20050610_BASE $(ZAP_BRANCH_MODIFIED_FILES)
 
 .PHONY: checkout real_checkout depend build profiledbuild maybe_clobber_profiledbuild export libs alldep install clean realclean distclean cleansrcdir pull_all build_all clobber clobber_all pull_and_build_all everything configure preflight_all preflight postflight postflight_all
 

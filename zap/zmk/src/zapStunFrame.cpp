@@ -35,7 +35,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include "zapStunFrame.h"
-#include "nsIServiceManager.h"
+#include "nsComponentManagerUtils.h"
 
 ////////////////////////////////////////////////////////////////////////
 // zapStunFrame

@@ -772,9 +772,6 @@ PropertyBag.fun(
 // XXX these methods will not perform type conversion when called
 // directly from JS
 
-/* PRUint16    getPropertyAsUint16      (in AString prop); */
-PropertyBag.obj("getPropertyAsUint16", PropertyBag.prototype.getProperty);
-
 /* PRInt32     getPropertyAsInt32       (in AString prop); */
 PropertyBag.obj("getPropertyAsInt32", PropertyBag.prototype.getProperty);
 
@@ -789,9 +786,6 @@ PropertyBag.obj("getPropertyAsUint64", PropertyBag.prototype.getProperty);
 
 /* double      getPropertyAsDouble      (in AString prop); */
 PropertyBag.obj("getPropertyAsDouble", PropertyBag.prototype.getProperty);
-
-/* float       getPropertyAsFloat       (in AString prop); */
-PropertyBag.obj("getPropertyAsFloat", PropertyBag.prototype.getProperty);
 
 /* AString     getPropertyAsAString     (in AString prop); */
 PropertyBag.obj("getPropertyAsAString", PropertyBag.prototype.getProperty);

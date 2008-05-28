@@ -38,7 +38,7 @@
 #define __ZAP_RTPFRAME_H__
 
 #include "zapIRTPFrame.h"
-#include "nsString.h"
+#include "nsStringAPI.h"
 #include "nsCOMPtr.h"
 #include "nsIPropertyBag2.h"
 

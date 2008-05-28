@@ -22,7 +22,7 @@
  *
  * Contributor(s):
  *   Steve Clark <buster@netscape.com>
- *   Håkan Waara <hwaara@chello.se>
+ *   HÃ¥kan Waara <hwaara@chello.se>
  *   Dan Rosen <dr@netscape.com>
  *   Daniel Glazman <glazman@netscape.com>
  *   Mats Palmgren <mats.palmgren@bredband.net>

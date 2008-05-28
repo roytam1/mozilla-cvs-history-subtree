@@ -36,7 +36,7 @@
 
 #include "zapAudioToneFrame.h"
 #include "stdio.h"
-#include "nsString.h"
+#include "nsStringAPI.h"
 #include "prnetdb.h"
 
 ////////////////////////////////////////////////////////////////////////

@@ -36,8 +36,8 @@
 
 #include "zapTEventToTToneConverter.h"
 #include "zapITelephoneEventFrame.h"
-#include "nsString.h"
-#include "zapStreamUtils.h"
+#include "nsStringAPI.h"
+#include "zapMediaUtils.h"
 #include "stdio.h"
 
 ////////////////////////////////////////////////////////////////////////
@@ -67,16 +67,10 @@ zapTEventToTToneConverter::RemovedFromContainer()
 nsresult
 zapTEventToTToneConverter::ValidateNewStream(nsIPropertyBag2* streamInfo)
 {
-  if (!streamInfo) {
-    NS_ERROR("stream without info");
-    return NS_ERROR_FAILURE;
-  }
-
-  if (!CHECK_STREAM_TYPE(streamInfo, NS_LITERAL_CSTRING("audio/telephone-event")))
-    return NS_ERROR_FAILURE;
+  ZMK_VERIFY_STREAM_TYPE(streamInfo, "audio/telephone-event");
 
   // Create a new streaminfo:
-  mStreamInfo = CreateStreamInfo(NS_LITERAL_CSTRING("audio/tone"));
+  ZMK_CREATE_STREAM_INFO(mStreamInfo, "audio/tone");
 
   // Reset state:
   mCurrentFrameTimestamp = 0;
