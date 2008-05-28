@@ -319,7 +319,7 @@ NS_IMETHODIMP
 zapMediaGraph::RemoveNode(const nsACString & id_or_alias)
 {
   LOG(("zapMediaGraph::RemoveNode(%s)",
-       nsPromiseFlatCString(id_or_alias).get()));
+       PromiseFlatCString(id_or_alias).get()));
 
   if (mLockCount) {
     NS_ERROR("Can't modify locked mediagraph");
@@ -345,7 +345,7 @@ zapMediaGraph::GetNode(const nsACString & id_or_alias,
                        const nsIID & uuid, PRBool synchronous, 
                        void * *result)
 {
-  LOG(("zapMediaGraph::GetNode(%s)", nsPromiseFlatCString(id_or_alias).get()));
+  LOG(("zapMediaGraph::GetNode(%s)", PromiseFlatCString(id_or_alias).get()));
 
   NodeDescriptor* nd = ResolveNodeDescriptor(id_or_alias);
   if (!nd) {
@@ -375,8 +375,8 @@ NS_IMETHODIMP
 zapMediaGraph::SetAlias(const nsACString & alias, const nsACString & id_or_alias)
 {
   LOG(("zapMediaGraph::SetAlias(%s -> %s)",
-       nsPromiseFlatCString(alias).get(),
-       nsPromiseFlatCString(id_or_alias).get()));
+       PromiseFlatCString(alias).get(),
+       PromiseFlatCString(id_or_alias).get()));
 
   // check if alias name is allowed:
   if (!alias.IsEmpty()) {
@@ -431,8 +431,8 @@ zapMediaGraph::Connect(const nsACString & source_node_id, nsIPropertyBag2 *sourc
                        nsACString & _retval)
 {
   LOG(("zapMediaGraph::Connect(%s -> %s)",
-       nsPromiseFlatCString(source_node_id).get(),
-       nsPromiseFlatCString(sink_node_id).get()));
+       PromiseFlatCString(source_node_id).get(),
+       PromiseFlatCString(sink_node_id).get()));
 
   if (mLockCount) {
     nsCString tmp;
@@ -504,7 +504,7 @@ NS_IMETHODIMP
 zapMediaGraph::Disconnect(const nsACString & connection_id)
 {
   LOG(("zapMediaGraph::Disconnect(%s)",
-       nsPromiseFlatCString(connection_id).get()));
+       PromiseFlatCString(connection_id).get()));
 
   if (mLockCount) {
     NS_ERROR("Can't modify locked mediagraph");

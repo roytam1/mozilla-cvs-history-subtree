@@ -82,7 +82,7 @@ zapLogUtils::LogMessage(const nsACString &aModule,
 
   PRUint32 len = mModules.Length();
   PRLogModuleInfo* mod = nsnull;
-  const char* moduleStr = nsPromiseFlatCString(aModule).get();
+  const char* moduleStr = PromiseFlatCString(aModule).get();
   for (PRUint32 i = 0; i < len; ++i) {
     if (!strcmp(moduleStr, mModules[i]->name)) {
       mod = mModules[i];
@@ -95,7 +95,7 @@ zapLogUtils::LogMessage(const nsACString &aModule,
     NS_ENSURE_TRUE(mod, NS_ERROR_OUT_OF_MEMORY);
     mModules.AppendElement(mod);
   }
-  PR_LOG(mod, PR_LOG_DEBUG, ("%s", nsPromiseFlatCString(aMessage).get()));
+  PR_LOG(mod, PR_LOG_DEBUG, ("%s", PromiseFlatCString(aMessage).get()));
 #endif
 
   return NS_OK;
