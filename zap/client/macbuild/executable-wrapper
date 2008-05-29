@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# For non-libxul builds we need to set DYLD_LIBRARY_PATH, or the
+# xulrunner stub executable will have trouble loading its XRE_*
+# entrypoints.
+
+# XXX this is maybe a little fragile
+MYDIR=`dirname "$0"`
+
+export DYLD_LIBRARY_PATH=${MYDIR}/../Frameworks/XUL.framework/
+exec ${MYDIR}/xulrunner-inner $*

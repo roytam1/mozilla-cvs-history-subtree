@@ -26,3 +26,30 @@ ifneq (,$(ICONS))
 libs:: $(ICONS)
 	$(INSTALL) $^ $(FINAL_TARGET)/chrome/icons/default
 endif
+
+ifneq (,$(filter mac cocoa,$(MOZ_WIDGET_TOOLKIT)))
+
+clean clobber ::
+	rm -rf $(DIST)/$(APP_NAME).app
+
+CONTENTS_PATH = $(DIST)/zap.app/Contents
+
+libs::
+	mkdir -p $(CONTENTS_PATH)
+	cp $(srcdir)/macbuild/Info.plist $(CONTENTS_PATH)/
+	mkdir -p $(CONTENTS_PATH)/Frameworks/XUL.framework
+	rsync -rl $(DIST)/XUL.framework/Versions/Current/* $(CONTENTS_PATH)/Frameworks/XUL.framework
+	mkdir -p $(CONTENTS_PATH)/Resources
+	rsync -rl $(FINAL_TARGET)/* $(CONTENTS_PATH)/Resources
+	mkdir -p $(CONTENTS_PATH)/MacOS
+
+ifdef MOZ_ENABLE_LIBXUL
+libs::
+	cp $(DIST)/XUL.framework/Versions/Current/xulrunner $(CONTENTS_PATH)/MacOS/
+else
+libs::
+	cp $(DIST)/XUL.framework/Versions/Current/xulrunner $(CONTENTS_PATH)/MacOS/xulrunner-inner
+	cp $(srcdir)/macbuild/executable-wrapper $(CONTENTS_PATH)/MacOS/xulrunner
+endif
+
+endif
