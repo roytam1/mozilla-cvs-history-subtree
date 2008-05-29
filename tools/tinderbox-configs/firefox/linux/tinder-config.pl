@@ -1,6 +1,6 @@
 #
 ## hostname: l10n-linux-tbox
-## uname: Linux l10n-linux-tbox.build.mozilla.org 2.6.18-8.el5 #1 SMP Thu Mar 15 19:57:35 EDT 2007 i686 i686 i386 GNU/Linux
+## uname: Linux l10n-linux-tbox.build.mozilla.org 2.6.18-53.1.19.el5 #1 SMP Wed May 7 08:20:19 EDT 2008 i686 athlon i386 GNU/Linux
 #
 
 #- tinder-config.pl - Tinderbox configuration file.
@@ -168,10 +168,10 @@ $LocaleProduct = "browser";
 $LocalizationVersionFile = 'browser/config/version.txt';
 %WGetFiles = (
 	      "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/latest-mozilla1.9.0/firefox-%version%.en-US.linux-i686.tar.bz2" =>
-	      "/builds/tinderbox/Fx-Trunk-l10n/Linux_2.6.18-8.el5_Depend/firefox.tar.bz2"
+	      "/builds/tinderbox/Fx-Trunk-l10n/Linux_2.6.18-53.1.19.el5_Depend/firefox.tar.bz2"
 	      );
 
-$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Fx-Trunk-l10n/Linux_2.6.18-8.el5_Depend/firefox.tar.bz2";
+$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Fx-Trunk-l10n/Linux_2.6.18-53.1.19.el5_Depend/firefox.tar.bz2";
 #@CompareLocaleDirs        = (); # Run compare-locales test on these directories
 @CompareLocaleDirs = (
   "netwerk",
