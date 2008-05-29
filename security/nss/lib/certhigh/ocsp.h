@@ -100,12 +100,6 @@ extern SECStatus
 CERT_SetOCSPFailureMode(SEC_OcspFailureMode ocspFailureMode);
 
 /*
- * Configure the maximum time NSS will wait for an OCSP response.
- */
-extern SECStatus
-CERT_SetOCSPTimeout(PRUint32 seconds);
-
-/*
  * Removes all items currently stored in the OCSP cache.
  */
 extern SECStatus

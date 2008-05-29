@@ -575,18 +575,6 @@ nss_ClearErrorStack
 );
 
 /*
- * nss_DestroyErrorStack
- *
- * This routine frees the calling thread's error stack.
- */
-
-NSS_EXTERN void
-nss_DestroyErrorStack
-(
-  void
-);
-
-/*
  * NSSItem
  *
  * nssItem_Create

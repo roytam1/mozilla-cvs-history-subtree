@@ -48,10 +48,12 @@
 
 extern PRLogModuleInfo *pkixLog;
 
-#ifdef DEBUG_kaie
+#ifdef PR_LOGGING
 void
 pkix_trace_dump_cert(const char *info, PKIX_PL_Cert *cert, void *plContext)
 {
+        PKIX_ENTER(FORWARDBUILDERSTATE, "pkix_trace_dump_cert");
+
         if (pkixLog && PR_LOG_TEST(pkixLog, PR_LOG_DEBUG)) {
             PKIX_PL_String *unString;
             char *unAscii;
@@ -1553,7 +1555,6 @@ cleanup:
         PKIX_DECREF(policyChecker);
         PKIX_DECREF(userChecker);
         PKIX_DECREF(userCheckersList);
-        PKIX_DECREF(userCheckerExtOIDs);
 
         PKIX_RETURN(BUILD);
 }
@@ -2501,8 +2502,7 @@ pkix_BuildForwardDepthFirstSearch(
                 }
             }
 
-            if (state->status == BUILD_AIAPENDING &&
-                state->buildConstants.aiaMgr) {
+            if (state->status == BUILD_AIAPENDING) {
                 PKIX_CHECK(PKIX_PL_AIAMgr_GetAIACerts
                         (state->buildConstants.aiaMgr,
                         state->prevCert,
@@ -2673,7 +2673,7 @@ pkix_BuildForwardDepthFirstSearch(
                                     PKIX_VERIFYNODECREATEFAILED);
                     }
 
-#ifdef DEBUG_kaie
+#ifdef PR_LOGGING
                     pkix_trace_dump_cert(
                       "pkix_BuildForwardDepthFirstSearch calling pkix_Build_VerifyCertificate",
                       state->candidateCert, plContext);
@@ -4038,12 +4038,8 @@ pkix_Build_InitiateBuildChain(
                     }
             }
     
-            /* Do not initialize AIA manager if we are not going to fetch
-             * cert using aia url. */
-            if (procParams->useAIAForCertFetching) {
-                PKIX_CHECK(PKIX_PL_AIAMgr_Create(&aiaMgr, plContext),
-                           PKIX_AIAMGRCREATEFAILED);
-            }
+            PKIX_CHECK(PKIX_PL_AIAMgr_Create(&aiaMgr, plContext),
+                    PKIX_AIAMGRCREATEFAILED);
 
             /*
              * We initialize all the fields of buildConstants here, in one place,

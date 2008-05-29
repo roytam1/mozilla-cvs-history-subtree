@@ -1517,11 +1517,10 @@ done:
 static SECStatus
 CreateCert(
 	CERTCertDBHandle *handle, 
-	PK11SlotInfo *slot,
 	char *  issuerNickName, 
 	PRFileDesc *inFile,
 	PRFileDesc *outFile, 
-	SECKEYPrivateKey **selfsignprivkey,
+	SECKEYPrivateKey *selfsignprivkey,
 	void 	*pwarg,
 	SECOidTag hashAlgTag,
 	unsigned int serialNumber, 
@@ -1535,6 +1534,7 @@ CreateCert(
 {
     void *	extHandle;
     SECItem *	certDER;
+    PRArenaPool *arena			= NULL;
     CERTCertificate *subjectCert 	= NULL;
     CERTCertificateRequest *certReq	= NULL;
     SECStatus 	rv 			= SECSuccess;
@@ -1543,6 +1543,11 @@ CreateCert(
 
     reqDER.data = NULL;
     do {
+	arena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
+	if (!arena) {
+	    GEN_BREAK (SECFailure);
+	}
+	
 	/* Create a certrequest object from the input cert request der */
 	certReq = GetCertRequest(inFile, ascii);
 	if (certReq == NULL) {
@@ -1582,18 +1587,8 @@ CreateCert(
 
 	CERT_FinishExtensions(extHandle);
 
-	/* self-signing a cert request, find the private key */
-	if (selfsign && *selfsignprivkey == NULL) {
-	    *selfsignprivkey = PK11_FindKeyByDERCert(slot, subjectCert, pwarg);
-	    if (!*selfsignprivkey) {
-		fprintf(stderr, "Failed to locate private key.\n");
-		rv = SECFailure;
-		break;
-	    }
-	}
-
 	certDER = SignCert(handle, subjectCert, selfsign, hashAlgTag,
-	                   *selfsignprivkey, issuerNickName,pwarg);
+	                   selfsignprivkey, issuerNickName,pwarg);
 
 	if (certDER) {
 	   if (ascii) {
@@ -1608,6 +1603,7 @@ CreateCert(
     } while (0);
     CERT_DestroyCertificateRequest (certReq);
     CERT_DestroyCertificate (subjectCert);
+    PORT_FreeArena (arena, PR_FALSE);
     if (rv != SECSuccess) {
 	PRErrorCode  perr = PR_GetError();
         fprintf(stderr, "%s: unable to create cert (%s)\n", progName,
@@ -1732,7 +1728,7 @@ enum {
     cmd_Version,
     cmd_Batch,
     cmd_Merge,
-    cmd_UpgradeMerge /* test only */
+    cmd_UpgradeMerge, /* test only */
 };
 
 /*  Certutil options */
@@ -2180,6 +2176,15 @@ certutil_main(int argc, char **argv, PRBool initialize)
         certutil.options[opt_BinaryDER].activated) {
 	PR_fprintf(PR_STDERR, 
 	           "%s: cannot specify both -r and -a when dumping cert.\n",
+	           progName);
+	return 255;
+    }
+
+    /*  For now, deny -C -x combination */
+    if (certutil.commands[cmd_CreateNewCert].activated &&
+        certutil.options[opt_SelfSign].activated) {
+	PR_fprintf(PR_STDERR,
+	           "%s: self-signing a cert request is not supported.\n",
 	           progName);
 	return 255;
     }
@@ -2728,9 +2733,9 @@ merge_fail:
     /*  Create a certificate (-C or -S).  */
     if (certutil.commands[cmd_CreateAndAddCert].activated ||
          certutil.commands[cmd_CreateNewCert].activated) {
-	rv = CreateCert(certHandle, slot,
+	rv = CreateCert(certHandle, 
 	                certutil.options[opt_IssuerName].arg,
-	                inFile, outFile, &privkey, &pwdata, hashAlgTag,
+	                inFile, outFile, privkey, &pwdata, hashAlgTag,
 	                serialNumber, warpmonths, validityMonths,
 		        certutil.options[opt_ExtendedEmailAddrs].arg,
 		        certutil.options[opt_ExtendedDNSNames].arg,

@@ -39,6 +39,10 @@
 #include <windows.h>
 #endif
 
+#ifdef XP_OS2_VACPP
+#include <io.h>      /* for close() */
+#endif
+
 #ifdef XP_UNIX
 #include <unistd.h>  /* for close() */
 #endif
