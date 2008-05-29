@@ -11,6 +11,9 @@ $ENV{NO_EM_RESTART} = "1";
 $ENV{MOZ_INSTALLER_USE_7ZIP} = "1";
 $ENV{CVS_RSH} = "ssh";
 $ENV{MOZ_CRASHREPORTER_NO_REPORT} = '1';
+# Both these two variables are for source server support
+$ENV{PDBSTR_PATH} = 'C:\\Program Files\\Debugging Tools for Windows\\sdk\\srcsrv\\pdbstr.exe';
+$ENV{SRCSRV_ROOT} = ':pserver:anonymous@cvs-mirror.mozilla.org:/cvsroot';
 
 # $ENV{MOZ_PACKAGE_MSI}
 #-----------------------------------------------------------------------------
@@ -214,8 +217,8 @@ $stub_installer = 0;
 $sea_installer = 0;
 $archive       = 1;
 $push_raw_xpis = 0;
-$crashreporter_buildsymbols = 0;
-$crashreporter_pushsymbols = 0;
+$crashreporter_buildsymbols = 1;
+$crashreporter_pushsymbols = 1;
 # CONFIG: $ENV{'SYMBOL_SERVER_HOST'}    = '%symbolServer%';
 $ENV{'SYMBOL_SERVER_HOST'}    = 'stage-old.mozilla.org';
 # CONFIG: $ENV{'SYMBOL_SERVER_USER'}    = '%symbolServerUser%';
