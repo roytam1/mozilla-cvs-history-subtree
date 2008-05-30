@@ -7,7 +7,7 @@
 	<key>CFBundleExecutable</key>
 	<string>xulrunner</string>
 	<key>CFBundleGetInfoString</key>
-	<string>Mozilla Zap  0.2.3</string>
+	<string>Mozilla Zap SIP Client</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
@@ -15,9 +15,9 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.2.3</string>
+	<string>%ZAP_APP_VERSION%</string>
 	<key>CFBundleVersion</key>
-	<string>0.2.3.200707</string>
+	<string>%ZAP_APP_VERSION%-%ZAP_BUILDID%</string>
 	<key>NSAppleScriptEnabled</key>
 	<true/>
 </dict>

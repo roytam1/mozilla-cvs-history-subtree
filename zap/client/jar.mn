@@ -27,7 +27,7 @@ zap.jar:
   content/services.xul           (content/services.xul)
   content/foreign-registration.xul           (content/foreign-registration.xul)
 % locale zap en-US %locale/
-  locale/zap.dtd                 (locale/en-US/zap.dtd)
+* locale/zap.dtd                 (locale/en-US/zap.dtd)
 % locale branding en-US %chrome/locale/branding/
   locale/branding/brand.dtd    (locale/en-US/brand.dtd)
   locale/branding/brand.properties    (locale/en-US/brand.properties)

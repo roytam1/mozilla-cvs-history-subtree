@@ -1,10 +1,11 @@
-
+#filter substitution
 <!-- about.xul -->
-<!ENTITY zap.title "zap! v0.2.3">
-<!ENTITY zap.description "zap! - The Mozilla-based Universal SIP client">
+<!ENTITY zap.title "zap! @ZAP_APP_VERSION@">
+<!ENTITY zap.description1 "Build ID: @ZAP_BUILDID@ | XULRunner/zapi version: @MOZ_APP_VERSION@">
+<!ENTITY zap.description2 "zap! - The Mozilla-based Universal SIP client">
 <!ENTITY about1.label "An Open-Source Project sponsored by ">
-<!ENTITY about2.label "Mozilla framework: Copyright (c) 2005-2006 Contributors">
-<!ENTITY about3.label "zap! SIP stack, media kit (zmk) and client: Copyright (c) 2005-2006 ">
+<!ENTITY about2.label "Mozilla framework: Copyright (c) 2005-2008 Contributors">
+<!ENTITY about3.label "zap! SIP stack, media kit (zmk) and client: Copyright (c) 2005-2008 ">
 <!ENTITY about4.label "The zap! media kit (zmk) contains 3rd party copyrighted code ">
 
 <!-- call-form.xul -->

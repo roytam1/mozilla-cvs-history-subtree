@@ -36,16 +36,28 @@
 #
 # ***** END LICENSE BLOCK *****
 
+# To facilitate building more than one application based on the zap
+# api, we maintain a loose distinction between xulrunner/zapi on the
+# one hand and zap, the client application, on the other hand.
+# confvars.sh sets the options (app name, etc) for our tweaked version
+# of xulrunner. 
+
+# We basically set the same variables as for a normal XULRunner build...
 MOZ_APP_NAME=xulrunner
-MOZ_APP_DISPLAYNAME=XulRunner
-MOZ_ZAP=1
-MOZ_XUL_APP=1
-MOZ_UPDATER=1
+MOZ_APP_DISPLAYNAME=XULRunner
+# ... but we're not building the updater (yet) ...
+MOZ_UPDATER=0
 MOZ_XULRUNNER=1
 MOZ_ENABLE_LIBXUL=1
-MOZ_APP_VERSION=$MOZILLA_VERSION
+# ... we append "zapi" to the app version (signifying that this
+# version of xulrunner contains zap api extenstions) ...
+MOZ_APP_VERSION=${MOZILLA_VERSION}+zapi
 if test "$MOZ_STORAGE"; then
   MOZ_PLACES=1
 fi
+# ... we add jssh to the list of default extensions ...
 MOZ_EXTENSIONS_DEFAULT=" xml-rpc gnomevfs jssh"
 MOZ_NO_XPCOM_OBSOLETE=1
+# ... and finally, we enable some zap patches into the Mozilla code
+# which are not backed by bugzilla bugs:
+MOZ_ZAP=1

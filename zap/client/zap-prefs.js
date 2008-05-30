@@ -1,6 +1,7 @@
+#filter substitution
 pref("toolkit.defaultChromeURI", "chrome://zap/content/zap.xul");
 pref("toolkit.singletonWindowType", "zap_mainwin");
-pref("general.useragent.extra.zap", "zap/0.2.3");
+pref("general.useragent.extra.zap", "zap/@ZAP_APP_VERSION@");
 pref("signon.SignonFileName", "credentials.txt");
 pref("signon.SignonFileName2", "credentials2.txt");
 pref("signon.rememberSignons", true);

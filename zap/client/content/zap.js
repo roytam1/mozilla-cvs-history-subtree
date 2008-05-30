@@ -48,8 +48,11 @@ Components.utils.import("resource://gre/components/ArrayUtils.jsm");
 ////////////////////////////////////////////////////////////////////////
 // globals
 
-var wUserAgent = "zap/0.2.3"; // String to be sent in User-Agent
-                              // header for SIP requests
+var wPrefService = Components.classes["@mozilla.org/preferences-service;1"].getService(Components.interfaces.nsIPrefBranch);
+
+// String to be sent in User-Agent header for SIP requests:
+var wUserAgent = wPrefService.getCharPref("general.useragent.extra.zap");
+
 var wNetUtils = Components.classes["@mozilla.org/zap/netutils;1"].getService(Components.interfaces.zapINetUtils);
 var wPromptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"].getService(Components.interfaces.nsIPromptService);
 var wRDF = Components.classes["@mozilla.org/rdf/rdf-service;1"].getService(Components.interfaces.nsIRDFService);

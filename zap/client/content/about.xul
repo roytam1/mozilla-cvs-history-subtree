@@ -67,7 +67,8 @@
   <vbox align="center">
     <image src="chrome://zap/skin/splash.jpg" link="http://www.croczilla.com/zap/"/>
     <label class="title" value="&zap.title;"/>
-    <label value="&zap.description;" />
+    <label value="&zap.description1;" />
+    <label value="&zap.description2;" />
     <hbox>
       <label value="&about1.label;"/> 
       <label value="8x8 Inc." link="http://www.8x8.com" />

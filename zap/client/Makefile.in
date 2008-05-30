@@ -22,6 +22,15 @@ endif
 
 include $(topsrcdir)/config/rules.mk
 
+ZAP_APP_VERSION = 0.2.4
+ZAP_BUILDID = $(shell cat $(DEPTH)/config/buildid)
+
+DEFINES += \
+	-DZAP_APP_VERSION=$(ZAP_APP_VERSION) \
+	-DZAP_BUILDID=$(ZAP_BUILDID) \
+	-DMOZ_APP_VERSION=$(MOZ_APP_VERSION) \
+	$(NULL)
+
 ifneq (,$(ICONS))
 libs:: $(ICONS)
 	$(INSTALL) $^ $(FINAL_TARGET)/chrome/icons/default
@@ -36,7 +45,7 @@ CONTENTS_PATH = $(DIST)/zap.app/Contents
 
 libs::
 	mkdir -p $(CONTENTS_PATH)
-	cp $(srcdir)/macbuild/Info.plist $(CONTENTS_PATH)/
+	sed -e "s/%ZAP_APP_VERSION%/$(ZAP_APP_VERSION)/" -e "s/%ZAP_BUILDID%/$(ZAP_BUILDID)/" $(srcdir)/macbuild/Info.plist > $(CONTENTS_PATH)/Info.plist
 	mkdir -p $(CONTENTS_PATH)/Frameworks/XUL.framework
 	rsync -rl $(DIST)/XUL.framework/Versions/Current/* $(CONTENTS_PATH)/Frameworks/XUL.framework
 	mkdir -p $(CONTENTS_PATH)/Resources
