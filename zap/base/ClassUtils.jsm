@@ -772,42 +772,66 @@ PropertyBag.fun(
 // XXX these methods will not perform type conversion when called
 // directly from JS
 
+var NS_ERROR_NOT_AVAILABLE = Components.results.NS_ERROR_NOT_AVAILABLE;
+// implementation helper for getter methods. Note that this differs
+// from getProperty in the error thrown if the property is not found.
+PropertyBag.fun(
+  function _getProperty(key) {
+    var val = hashget(this, key);
+    if (val === undefined) throw(NS_ERROR_NOT_AVAILABLE);
+    return val;
+  });
+
 /* PRInt32     getPropertyAsInt32       (in AString prop); */
-PropertyBag.obj("getPropertyAsInt32", PropertyBag.prototype.getProperty);
+PropertyBag.obj("getPropertyAsInt32", PropertyBag.prototype._getProperty);
 
 /* PRUint32    getPropertyAsUint32      (in AString prop); */
-PropertyBag.obj("getPropertyAsUint32", PropertyBag.prototype.getProperty);
+PropertyBag.obj("getPropertyAsUint32", PropertyBag.prototype._getProperty);
 
 /* PRInt64     getPropertyAsInt64       (in AString prop); */
-PropertyBag.obj("getPropertyAsInt64", PropertyBag.prototype.getProperty);
+PropertyBag.obj("getPropertyAsInt64", PropertyBag.prototype._getProperty);
 
 /* PRUint64    getPropertyAsUint64      (in AString prop); */
-PropertyBag.obj("getPropertyAsUint64", PropertyBag.prototype.getProperty);
+PropertyBag.obj("getPropertyAsUint64", PropertyBag.prototype._getProperty);
 
 /* double      getPropertyAsDouble      (in AString prop); */
-PropertyBag.obj("getPropertyAsDouble", PropertyBag.prototype.getProperty);
+PropertyBag.obj("getPropertyAsDouble", PropertyBag.prototype._getProperty);
 
 /* AString     getPropertyAsAString     (in AString prop); */
-PropertyBag.obj("getPropertyAsAString", PropertyBag.prototype.getProperty);
+PropertyBag.obj("getPropertyAsAString", PropertyBag.prototype._getProperty);
 
 /* ACString    getPropertyAsACString    (in AString prop); */
-PropertyBag.obj("getPropertyAsACString", PropertyBag.prototype.getProperty);
+PropertyBag.obj("getPropertyAsACString", PropertyBag.prototype._getProperty);
 
 /* AUTF8String getPropertyAsAUTF8String (in AString prop); */
-PropertyBag.obj("getPropertyAsAUTF8String", PropertyBag.prototype.getProperty);
+PropertyBag.obj("getPropertyAsAUTF8String", PropertyBag.prototype._getProperty);
 
 /* boolean     getPropertyAsBool        (in AString prop); */
-PropertyBag.obj("getPropertyAsBool", PropertyBag.prototype.getProperty);
+PropertyBag.obj("getPropertyAsBool", PropertyBag.prototype._getProperty);
 
 /*  void       getPropertyAsInterface   (in AString prop,
                                         in nsIIDRef iid,
                                         [iid_is(iid), retval] out nsQIResult result); */
 PropertyBag.fun(
   function getPropertyAsInterface(key, iid) {
-    return this.getProperty(key);
+    return this._getProperty(key);
   });
 
 //PropertyBag.obj("getPropertyAsInterface", PropertyBag.prototype.getProperty);
+
+/* nsIVariant  get                      (in AString prop); */
+PropertyBag.fun(
+  function get(prop) {
+    var val = hashget(this, key);
+    if (val === undefined) val = null;
+    return val;
+  });    
+
+/*  PRBool      hasKey                   (in AString prop); */
+PropertyBag.fun(
+  function hasKey(prop) {
+    return (hashget(this, key) !== undefined);
+  });
 
 //----------------------------------------------------------------------
 // nsIWritablePropertyBag implementation:
