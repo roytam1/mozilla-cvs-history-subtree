@@ -38,7 +38,7 @@
 #include "nsHashPropertyBag.h"
 #include "nsAutoPtr.h"
 #include "math.h"
-#include "zapMediaUtils.h"
+#include "zapZMKImplUtils.h"
 
 ////////////////////////////////////////////////////////////////////////
 // zapStreamTapOutput

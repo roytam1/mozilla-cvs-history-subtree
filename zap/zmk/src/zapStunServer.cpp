@@ -39,7 +39,7 @@
 #include "nsIDNSService.h"
 #include "nsIDNSRecord.h"
 #include "nsIEventTarget.h"
-#include "zapMediaUtils.h"
+#include "zapZMKImplUtils.h"
 #include "zapDatagramFrame.h"
 
 ////////////////////////////////////////////////////////////////////////

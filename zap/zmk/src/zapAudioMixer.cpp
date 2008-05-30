@@ -40,7 +40,7 @@
 #include "zapIMediaFrame.h"
 #include "zapMediaFrame.h"
 #include "math.h"
-#include "zapMediaUtils.h"
+#include "zapZMKImplUtils.h"
 #include "math.h"
 
 ////////////////////////////////////////////////////////////////////////

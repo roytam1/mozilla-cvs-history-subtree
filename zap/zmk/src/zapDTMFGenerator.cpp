@@ -38,7 +38,7 @@
 #include "stdio.h"
 #include "nsStringAPI.h"
 #include "zapTelephoneEventFrame.h"
-#include "zapMediaUtils.h"
+#include "zapZMKImplUtils.h"
 
 ////////////////////////////////////////////////////////////////////////
 // structure to hold an individual event

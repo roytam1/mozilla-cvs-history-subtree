@@ -38,7 +38,7 @@
 #include "zapRTPFrame.h"
 #include "zapIMediaNodeContainer.h"
 #include "nsStringAPI.h"
-#include "zapMediaUtils.h"
+#include "zapZMKImplUtils.h"
 #include "zapMediaFrame.h"
 #include "stdio.h"
 

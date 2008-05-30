@@ -38,7 +38,7 @@
 #include "nsStringAPI.h"
 #include "nsIPropertyBag2.h"
 #include "nsHashPropertyBag.h"
-#include "zapMediaUtils.h"
+#include "zapZMKImplUtils.h"
 #include "zapMediaFrame.h"
 
 ////////////////////////////////////////////////////////////////////////

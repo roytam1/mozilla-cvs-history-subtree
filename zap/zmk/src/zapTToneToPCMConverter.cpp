@@ -342,7 +342,7 @@ zapTToneToPCMConverter::GetNextInputFrame()
   
   if (streamInfo != mCurrentInputStreamInfo) {
     // this is a new stream.
-    if (!CHECK_STREAM_TYPE(streamInfo, NS_LITERAL_CSTRING("audio/tone")))
+    if (!ZMK_VerifyStreamType(streamInfo, NS_LITERAL_CSTRING("audio/tone")))
       return PR_FALSE;
     
     mCurrentInputStreamInfo = streamInfo;

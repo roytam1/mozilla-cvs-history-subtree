@@ -39,7 +39,7 @@
 #include "nsAutoPtr.h"
 #include "math.h"
 #include "nsServiceManagerUtils.h"
-#include "zapMediaUtils.h"
+#include "zapZMKImplUtils.h"
 #include "nsIUDPSocket.h"
 #include "zapStunFrame.h"
 

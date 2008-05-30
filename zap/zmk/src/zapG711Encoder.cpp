@@ -37,7 +37,7 @@
 #include "zapG711Encoder.h"
 #include "zapIMediaFrame.h"
 #include "zapIMediaNodeContainer.h"
-#include "zapMediaUtils.h"
+#include "zapZMKImplUtils.h"
 #include "zapMediaFrame.h"
 #include "stdio.h"
 #include "g711.h"

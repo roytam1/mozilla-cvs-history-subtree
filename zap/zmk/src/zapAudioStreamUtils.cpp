@@ -208,14 +208,14 @@ PRBool CheckAudioStream(nsIPropertyBag2* streamInfo,
   }
   nsCString sample_format_str;
   ZapAudioSampleFormatToStr(pars.sample_format, sample_format_str);  
-  return CHECK_STREAM_TYPE(streamInfo, NS_LITERAL_CSTRING("audio/pcm")) &&
-         CHECK_STREAM_UINT32(streamInfo,
-                             NS_LITERAL_STRING("sample_rate"), pars.sample_rate) &&
-         CHECK_STREAM_UINT32(streamInfo,
-                             NS_LITERAL_STRING("samples"), pars.samples) &&
-         CHECK_STREAM_UINT32(streamInfo,
+  return ZMK_VerifyStreamType(streamInfo, NS_LITERAL_CSTRING("audio/pcm")) &&
+         ZMK_VerifyUint32Property(streamInfo,
+                                  NS_LITERAL_STRING("sample_rate"), pars.sample_rate) &&
+         ZMK_VerifyUint32Property(streamInfo,
+                                  NS_LITERAL_STRING("samples"), pars.samples) &&
+         ZMK_VerifyUint32Property(streamInfo,
                              NS_LITERAL_STRING("channels"), pars.channels) &&
-         CHECK_STREAM_CSTRING(streamInfo,
-                              NS_LITERAL_STRING("sample_format"),
-                              sample_format_str);
+         ZMK_VerifyCStringProperty(streamInfo,
+                                   NS_LITERAL_STRING("sample_format"),
+                                   sample_format_str);
 }

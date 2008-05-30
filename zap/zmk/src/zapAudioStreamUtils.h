@@ -39,7 +39,7 @@
 
 #include "nsStringAPI.h"
 #include "portaudio.h"
-#include "zapStreamUtils.h"
+#include "zapZMKImplUtils.h"
 #include "nsIWritablePropertyBag2.h"
 #include "nsCOMPtr.h"
 

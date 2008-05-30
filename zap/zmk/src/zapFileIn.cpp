@@ -36,7 +36,7 @@
 
 #include "zapFileIn.h"
 #include "zapMediaFrame.h"
-#include "zapMediaUtils.h"
+#include "zapZMKImplUtils.h"
 #include "nsAutoPtr.h"
 #include "stdio.h"
 #include "nsIIOService.h"

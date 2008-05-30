@@ -40,7 +40,7 @@
 #include "zapDatagramFrame.h"
 #include "nsNetCID.h"
 #include "nsAutoPtr.h"
-#include "zapMediaUtils.h"
+#include "zapZMKImplUtils.h"
 
 ////////////////////////////////////////////////////////////////////////
 // zapUDPSocket

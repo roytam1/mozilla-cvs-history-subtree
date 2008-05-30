@@ -38,7 +38,7 @@
 #include "stdio.h"
 #include "nsStringAPI.h"
 #include "zapAudioToneFrame.h"
-#include "zapMediaUtils.h"
+#include "zapZMKImplUtils.h"
 #include "stdlib.h"
 
 ////////////////////////////////////////////////////////////////////////

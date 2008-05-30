@@ -37,7 +37,7 @@
 #include "zapTEventToTToneConverter.h"
 #include "zapITelephoneEventFrame.h"
 #include "nsStringAPI.h"
-#include "zapMediaUtils.h"
+#include "zapZMKImplUtils.h"
 #include "stdio.h"
 
 ////////////////////////////////////////////////////////////////////////

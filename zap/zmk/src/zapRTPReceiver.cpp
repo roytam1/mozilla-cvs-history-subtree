@@ -41,7 +41,7 @@
 #include "zapDatagramFrame.h"
 #include "stdio.h"
 #include "nsHashPropertyBag.h"
-#include "zapMediaUtils.h"
+#include "zapZMKImplUtils.h"
 
 ////////////////////////////////////////////////////////////////////////
 // zapRTPReceiver

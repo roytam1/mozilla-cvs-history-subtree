@@ -14,11 +14,11 @@
  * The Original Code is the Mozilla SIP client project.
  *
  * The Initial Developer of the Original Code is 8x8 Inc.
- * Portions created by the Initial Developer are Copyright (C) 2005
+ * Portions created by the Initial Developer are Copyright (C) 2006-2008
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Alex Fritze <alex@croczilla.com> (original author)
+ *   Alexander Fritze <alex@croczilla.com> (original author)
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -34,14 +34,64 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#ifndef __ZAP_MEDIAUTILS_H__
-#define __ZAP_MEDIAUTILS_H__
+#ifndef __ZAP_ZMKIMPLUTILS_H__
+#define __ZAP_ZMKIMPLUTILS_H__
 
 #include "zapIMediaNode.h"
 #include "zapIMediaNodeContainer.h"
 #include "nsCOMPtr.h"
 #include "nsComponentManagerUtils.h"
 #include "nsXPCOMCIDInternal.h"
+#include "nsStringAPI.h"
+#include "nsIPropertyBag2.h"
+
+////////////////////////////////////////////////////////////////////////
+// Property bag utility functions
+
+inline PRBool
+ZMK_VerifyCStringProperty(nsIPropertyBag2* bag,
+                          const nsAString& name,
+                          const nsACString& val)
+{
+  nsCString v;
+  return (bag &&
+          NS_SUCCEEDED(bag->GetPropertyAsACString(name, v)) &&
+          v == val);
+}
+
+inline PRBool
+ZMK_VerifyDoubleProperty(nsIPropertyBag2* bag,
+                         const nsAString& name,
+                         double val)
+{
+  double v;
+  return (bag &&
+          NS_SUCCEEDED(bag->GetPropertyAsDouble(name, &v)) &&
+          v == val);
+}
+
+inline PRBool
+ZMK_VerifyUint32Property(nsIPropertyBag2* bag,
+                         const nsAString& name,
+                         PRUint32 val)
+{
+  PRUint32 v;
+  return (bag &&
+          NS_SUCCEEDED(bag->GetPropertyAsUint32(name, &v)) &&
+          v == val);
+}
+
+////////////////////////////////////////////////////////////////////////
+// StreamInfo-related implementation functions/macros:
+
+inline PRBool
+ZMK_VerifyStreamType(nsIPropertyBag2* streamInfo,
+                     const nsACString& type)
+{
+  return ZMK_VerifyCStringProperty(streamInfo,
+                                   NS_LITERAL_STRING("type"),
+                                   type);
+}
 
 #define ZMK_VERIFY_STREAM_TYPE(streamInfo, type)      \
   if (!streamInfo) {                                  \
@@ -67,7 +117,7 @@
 
 
 ////////////////////////////////////////////////////////////////////////
-// A simple autolock guarding a node against modifications
+// Simple autolock for guarding a node against modifications
 
 class zapMediaNodeContainerAutoLock
 {
@@ -90,4 +140,4 @@ private:
   nsCOMPtr<zapIMediaNode> mNode;
 };
 
-#endif // __ZAP_MEDIAUTILS_H__
+#endif // __ZAP_ZMKIMPLUTILS_H__

@@ -40,7 +40,7 @@
 #include "nsIPropertyBag2.h"
 #include "zapDatagramFrame.h"
 #include "nsHashPropertyBag.h"
-#include "zapMediaUtils.h"
+#include "zapZMKImplUtils.h"
 
 ////////////////////////////////////////////////////////////////////////
 // zapUDPPacketizer

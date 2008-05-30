@@ -39,7 +39,7 @@
 #include "stdio.h"
 #include "nsStringAPI.h"
 #include "zapMediaFrame.h"
-#include "zapMediaUtils.h"
+#include "zapZMKImplUtils.h"
 #include "zapAudioDevice.h"
 #include "nsIProxyObjectManager.h"
 #include "nsThreadUtils.h"

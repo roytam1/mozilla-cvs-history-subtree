@@ -38,7 +38,7 @@
 #include "zapIMediaFrame.h"
 #include "zapIAudioIn.h"
 #include "zapMediaFrame.h"
-#include "zapMediaUtils.h"
+#include "zapZMKImplUtils.h"
 #include "stdio.h"
 #include "zapAudioStreamUtils.h"
 
