@@ -36,6 +36,7 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
+#include "nsTreeBoxObject.h"
 #include "nsCOMPtr.h"
 #include "nsPresContext.h"
 #include "nsIPresShell.h"
@@ -50,32 +51,6 @@
 #include "nsChildIterator.h"
 #include "nsContentUtils.h"
 #include "nsDOMError.h"
-
-class nsTreeBoxObject : public nsPITreeBoxObject, public nsBoxObject
-{
-public:
-  NS_DECL_ISUPPORTS_INHERITED
-  NS_DECL_NSITREEBOXOBJECT
-
-  nsTreeBoxObject();
-  ~nsTreeBoxObject();
-
-  // Override SetPropertyAsSupports for security check
-  NS_IMETHOD SetPropertyAsSupports(const PRUnichar* aPropertyName, nsISupports* aValue);
-
-  nsITreeBoxObject* GetTreeBody();
-
-  //NS_PIBOXOBJECT interfaces
-  NS_IMETHOD Init(nsIContent* aContent, nsIPresShell* aPresShell);
-  NS_IMETHOD SetDocument(nsIDocument* aDocument);
-  NS_IMETHOD InvalidatePresentationStuff();
-
-  // nsPITreeBoxObject
-  virtual void ClearCachedTreeBody();  
-
-protected:
-  nsITreeBoxObject* mTreeBody;
-};
 
 /* Implementation file */
 NS_IMPL_ISUPPORTS_INHERITED2(nsTreeBoxObject, nsBoxObject, nsITreeBoxObject,

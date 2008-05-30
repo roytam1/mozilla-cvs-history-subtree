@@ -22,7 +22,7 @@
  * Contributor(s):
  *   Dave Hyatt <hyatt@mozilla.org> (Original Author)
  *   Brian Ryner <bryner@brianryner.com>
- *   Nate Nielsen <nielsen@memberwebs.com>
+ *   Daniel Holbert <dholbert@mozilla.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -37,15 +37,13 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
 #ifndef nsTreeBoxObject_h___
 #define nsTreeBoxObject_h___
 
 #include "nsBoxObject.h"
-#include "nsITreeView.h"
-#include "nsITreeBoxObject.h"
+#include "nsPITreeBoxObject.h"
 
-class nsTreeBoxObject : public nsITreeBoxObject, public nsBoxObject
+class nsTreeBoxObject : public nsPITreeBoxObject, public nsBoxObject
 {
 public:
   NS_DECL_ISUPPORTS_INHERITED
@@ -54,16 +52,22 @@ public:
   nsTreeBoxObject();
   ~nsTreeBoxObject();
 
+  // Override SetPropertyAsSupports for security check
+  NS_IMETHOD SetPropertyAsSupports(const PRUnichar* aPropertyName, nsISupports* aValue);
+
   nsITreeBoxObject* GetTreeBody();
   nsITreeBoxObject* GetCachedTreeBody() { return mTreeBody; }
 
   //NS_PIBOXOBJECT interfaces
-  virtual void Clear();
-  virtual void ClearCachedValues();
+  NS_IMETHOD Init(nsIContent* aContent, nsIPresShell* aPresShell);
+  NS_IMETHOD SetDocument(nsIDocument* aDocument);
+  NS_IMETHOD InvalidatePresentationStuff();
+
+  // nsPITreeBoxObject
+  virtual void ClearCachedTreeBody();  
 
 protected:
   nsITreeBoxObject* mTreeBody;
-  nsCOMPtr<nsITreeView> mView;
 };
 
 #endif

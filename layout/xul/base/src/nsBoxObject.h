@@ -35,6 +35,9 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
+#ifndef nsBoxObject_h___
+#define nsBoxObject_h___
+
 #include "nsCOMPtr.h"
 #include "nsIBoxObject.h"
 #include "nsPIBoxObject.h"
@@ -86,3 +89,5 @@ protected:
   nsIContent* mContent; // [WEAK]
   nsWeakPtr mPresShell;
 };
+
+#endif
