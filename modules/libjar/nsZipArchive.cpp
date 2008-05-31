@@ -992,6 +992,14 @@ PRInt32 nsZipArchive::BuildFileList(PRFileDesc* aFd)
     PRUint32 namelen = xtoint(central->filename_len);
     PRUint32 extralen = xtoint(central->extrafield_len);
     PRUint32 commentlen = xtoint(central->commentfield_len);
+
+    //-- sanity check variable sizes and refuse to deal with
+    //-- anything too big: it's likely a corrupt archive
+    if (namelen > BR_BUF_SIZE || extralen > BR_BUF_SIZE || commentlen > 2*BR_BUF_SIZE) {
+      status = ZIP_ERR_CORRUPT;
+      break;
+    }
+
 #ifndef STANDALONE
     // Arena allocate the nsZipItem
     void *mem;
@@ -1010,13 +1018,6 @@ PRInt32 nsZipArchive::BuildFileList(PRFileDesc* aFd)
     item->headerOffset = xtolong(central->localhdr_offset);
     item->dataOffset = 0;
     item->hasDataOffset = PR_FALSE;
-    item->compression = (PRUint8)xtoint(central->method);
-#if defined(DEBUG)
-    /*
-     * Make sure our space optimization is non lossy.
-     */
-    PR_ASSERT(xtoint(central->method) == (PRUint16)item->compression);
-#endif
     item->size = xtolong(central->size);
     item->realsize = xtolong(central->orglen);
     item->crc32 = xtolong(central->crc32);
@@ -1025,6 +1026,10 @@ PRInt32 nsZipArchive::BuildFileList(PRFileDesc* aFd)
     item->isSymlink = IsSymlink(external_attributes);
     item->time = xtoint(central->time);
     item->date = xtoint(central->date);
+
+    PRUint16 compression = xtoint(central->method);
+    item->compression = (compression < UNSUPPORTED) ? (PRUint8)compression
+                                                    : UNSUPPORTED;
 
     pos += ZIPCENTRAL_SIZE;
 
@@ -1043,13 +1048,13 @@ PRInt32 nsZipArchive::BuildFileList(PRFileDesc* aFd)
     }
 #else
     item->name = new char[namelen + 1];
-#endif
     if (!item->name)
     {
       status = ZIP_ERR_MEMORY;
       delete item;
       break;
     }
+#endif
 
     PRUint32 leftover = (PRUint32)(bufsize - pos);
     if (leftover < namelen)
@@ -1088,10 +1093,18 @@ PRInt32 nsZipArchive::BuildFileList(PRFileDesc* aFd)
       memcpy(buf, buf+pos, leftover);
       bufsize = leftover + PR_Read(aFd, buf+leftover, bufsize-leftover);
       pos = 0;
+
+      //-- make sure we were able to read enough
+      if ((PRUint32)bufsize < (extralen + commentlen + sizeof(PRUint32)))
+      {
+        status = ZIP_ERR_CORRUPT;
+        break;
+      }
     }
     //-- set position to start of next ZipCentral record
     pos += extralen + commentlen;
 
+    // verify we're at an expected structure in the file
     PRUint32 sig = xtolong(buf+pos);
     if (sig != CENTRALSIG)
     {
@@ -1371,8 +1384,8 @@ PRInt32 nsZipReadState::ContinueCopy(char* aBuf,
 {
   // we still use the fields of mZs, we just use memcpy rather than inflate
 
-  if (mCurPos + aCount > mItem->realsize)
-    aCount = (mItem->realsize - mCurPos);
+  if (mCurPos + aCount > mItem->size)
+    aCount = (mItem->size - mCurPos);
 
   PR_ASSERT(mFd);
   PRInt32 bytesRead = PR_Read(mFd, aBuf, aCount);
@@ -1380,7 +1393,10 @@ PRInt32 nsZipReadState::ContinueCopy(char* aBuf,
     return ZIP_ERR_DISK;
 
   mCurPos += bytesRead;
-  
+  if (bytesRead != aCount)
+    // either file was truncated or archive lied about size
+    return ZIP_ERR_CORRUPT;
+
   *aBytesRead = bytesRead;
 
   return ZIP_OK;
