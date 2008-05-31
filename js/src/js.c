@@ -690,6 +690,9 @@ Print(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     n++;
     if (n)
         fputc('\n', gOutFile);
+    
+    fflush(gOutFile);
+    
     return JS_TRUE;
 }
 
