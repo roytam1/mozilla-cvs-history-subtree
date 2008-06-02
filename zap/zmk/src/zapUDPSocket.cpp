@@ -79,18 +79,18 @@ zapUDPSocket::InsertedIntoContainer(zapIMediaNodeContainer *container,
                                     nsIPropertyBag2* node_pars)
 {
   // unpack node parameters:
-  if (!node_pars ||
-      NS_FAILED(node_pars->GetPropertyAsInterface(NS_LITERAL_STRING("socket"),
-                                                  NS_GET_IID(nsIUDPSocket),
-                                                  getter_AddRefs(mSocket))) ||
-      !mSocket) {
+  ZMK_GetOptionalInterface<nsIUDPSocket>(node_pars,
+                                         NS_LITERAL_STRING("socket"),
+                                         nsnull,
+                                         getter_AddRefs(mSocket));
+  if (!mSocket) {
     PRUint32 port = 0;
     PRUint32 max_port = 0;
-    if (node_pars &&
+    if (ZMK_HasKey(node_pars, NS_LITERAL_STRING("port")) &&
         NS_SUCCEEDED(node_pars->GetPropertyAsUint32(NS_LITERAL_STRING("port"), &port))) {
       max_port = port;
     }
-    else if (node_pars &&
+    else if (ZMK_HasKey(node_pars, NS_LITERAL_STRING("portbase")) &&
              NS_SUCCEEDED(node_pars->GetPropertyAsUint32(NS_LITERAL_STRING("portbase"), &port))) {
       max_port = 65535;
     }

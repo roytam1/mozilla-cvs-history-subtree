@@ -56,14 +56,9 @@ NS_IMETHODIMP
 zapG711RTPPacketizer::InsertedIntoContainer(zapIMediaNodeContainer *container,
                                             nsIPropertyBag2 *node_pars)
 {
-  // set defaults:
-  mPayloadType = 0;
-  
   // extract node parameters:
-  if (node_pars) {
-    node_pars->GetPropertyAsUint32(NS_LITERAL_STRING("payload_type"),
-                                   &mPayloadType);
-  }
+  mPayloadType = ZMK_GetOptionalUint32(node_pars, NS_LITERAL_STRING("payload_type"), 0);
+  
   // xxx verify payload_type range
   
   return NS_OK;

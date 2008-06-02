@@ -116,22 +116,19 @@ zapAudioOut::InsertedIntoContainer(zapIMediaNodeContainer *container,
   
   container->GetEventTarget(getter_AddRefs(mEventTarget));
 
-  // node parameter defaults:
+   // unpack node parameters:
   mOutputDevice = Pa_GetDefaultOutputDeviceID();
-  mBuffers = 4;
-  // unpack node parameters:
-  if (node_pars) {
-    nsCOMPtr<zapIPortaudioDevice> device;
-    node_pars->GetPropertyAsInterface(NS_LITERAL_STRING("device"),
-                                      NS_GET_IID(zapIPortaudioDevice),
-                                      getter_AddRefs(device));
-    if (device)
-      device->GetDeviceID(&mOutputDevice);
-
-    node_pars->GetPropertyAsUint32(NS_LITERAL_STRING("buffers"),
-                                   &mBuffers);
-  }
-
+  nsCOMPtr<zapIPortaudioDevice> device;
+  ZMK_GetOptionalInterface<zapIPortaudioDevice>(node_pars,
+                                                NS_LITERAL_STRING("device"),
+                                                nsnull,
+                                                getter_AddRefs(device));
+  if (device)
+    device->GetDeviceID(&mOutputDevice);
+  
+  mBuffers = ZMK_GetOptionalUint32(node_pars,
+                                   NS_LITERAL_STRING("buffers"),
+                                   4);
   if (mBuffers < 2) mBuffers = 2;
   
   nsresult rv =  mStreamParameters.InitWithProperties(node_pars);

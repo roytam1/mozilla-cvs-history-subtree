@@ -81,21 +81,23 @@ NS_IMETHODIMP
 zapFileIn::InsertedIntoContainer(zapIMediaNodeContainer *container,
                                  nsIPropertyBag2* node_pars)
 {
-  // node parameter defaults:
-  mBlockSize = 8192;
-  mLoop = PR_FALSE;
-  mGenerateEOF = PR_TRUE;
-  nsCString fileSpec;
-  
   // unpack node parameters:
   if (!node_pars) return NS_ERROR_FAILURE;
   
+  nsCString fileSpec;
   if (NS_FAILED(node_pars->GetPropertyAsAUTF8String(NS_LITERAL_STRING("file_url"),
                                                     fileSpec)))
     return NS_ERROR_FAILURE;
-  node_pars->GetPropertyAsUint32(NS_LITERAL_STRING("block_size"), &mBlockSize);
-  node_pars->GetPropertyAsBool(NS_LITERAL_STRING("loop"), &mLoop);
-  node_pars->GetPropertyAsBool(NS_LITERAL_STRING("generate_eof"), &mGenerateEOF);
+
+  mBlockSize = ZMK_GetOptionalUint32(node_pars,
+                                     NS_LITERAL_STRING("block_size"),
+                                     8192);
+  mLoop = ZMK_GetOptionalBool(node_pars,
+                              NS_LITERAL_STRING("loop"),
+                              PR_FALSE);
+  mGenerateEOF = ZMK_GetOptionalBool(node_pars,
+                                     NS_LITERAL_STRING("generate_eof"),
+                                     PR_TRUE);
   
   // try to open the file:
   nsCOMPtr<nsIIOService> ioService = do_GetService("@mozilla.org/network/io-service;1");

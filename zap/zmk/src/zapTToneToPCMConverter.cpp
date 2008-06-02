@@ -72,12 +72,8 @@ NS_IMETHODIMP
 zapTToneToPCMConverter::InsertedIntoContainer(zapIMediaNodeContainer *container,
                                               nsIPropertyBag2* node_pars)
 {
-  // node parameter defaults:
-  mZtlp = 1.0;
   // unpack node parameters:
-  if (node_pars) {
-    node_pars->GetPropertyAsDouble(NS_LITERAL_STRING("ztlp"), &mZtlp);
-  }
+  mZtlp = ZMK_GetOptionalDouble(node_pars, NS_LITERAL_STRING("ztlp"), 1.0);
   
   if (NS_FAILED(mOutStreamParameters.InitWithProperties(node_pars)))
     return NS_ERROR_FAILURE;

@@ -43,6 +43,7 @@
 #include "nsStringAPI.h"
 #include "nsIComponentManager.h"
 #include "float.h"
+#include "zapZMKImplUtils.h"
 
 ////////////////////////////////////////////////////////////////////////
 // zapSpeexAudioProcessorEcho
@@ -180,34 +181,18 @@ zapSpeexAudioProcessor::InsertedIntoContainer(zapIMediaNodeContainer *container,
   // down.
   mContainer = container;
   
-  // node parameter defaults:
-  mAEC = PR_FALSE;
-  mAEC2Stage = PR_FALSE;
-  mAECTail = 300.0;
-  mDenoise = PR_FALSE;
-  mAGC = PR_FALSE;
-  mAGCLevel = 8000.0;
-  mVAD = PR_FALSE;
-  mDereverb = PR_FALSE;
-  mDereverbLevel = 0.2;
-  mDereverbDecay = 0.5;
-  
   // unpack node parameters:
-  if (node_pars) {
-    node_pars->GetPropertyAsBool(NS_LITERAL_STRING("aec"), &mAEC);
-    node_pars->GetPropertyAsBool(NS_LITERAL_STRING("aec_2_stage"), &mAEC2Stage);
-    node_pars->GetPropertyAsDouble(NS_LITERAL_STRING("aec_tail"), &mAECTail);
-    node_pars->GetPropertyAsBool(NS_LITERAL_STRING("denoise"), &mDenoise);
-    node_pars->GetPropertyAsBool(NS_LITERAL_STRING("agc"), &mAGC);
-    node_pars->GetPropertyAsDouble(NS_LITERAL_STRING("agc_level"), &mAGCLevel);
-    node_pars->GetPropertyAsBool(NS_LITERAL_STRING("vad"), &mVAD);
-    node_pars->GetPropertyAsBool(NS_LITERAL_STRING("dereverb"), &mDereverb);
-    node_pars->GetPropertyAsDouble(NS_LITERAL_STRING("dereverb_level"),
-                                   &mDereverbLevel);
-    node_pars->GetPropertyAsDouble(NS_LITERAL_STRING("dereverb_decay"),
-                                   &mDereverbDecay);
-  }
-
+  mAEC = ZMK_GetOptionalBool(node_pars, NS_LITERAL_STRING("aec"), PR_FALSE);
+  mAEC2Stage = ZMK_GetOptionalBool(node_pars, NS_LITERAL_STRING("aec_2_stage"), PR_FALSE);
+  mAECTail = ZMK_GetOptionalDouble(node_pars, NS_LITERAL_STRING("aec_tail"), 300.0);
+  mDenoise = ZMK_GetOptionalBool(node_pars, NS_LITERAL_STRING("denoise"), PR_FALSE);
+  mAGC = ZMK_GetOptionalBool(node_pars, NS_LITERAL_STRING("agc"), PR_FALSE);
+  mAGCLevel = ZMK_GetOptionalDouble(node_pars, NS_LITERAL_STRING("agc_level"), 8000.0);
+  mVAD = ZMK_GetOptionalBool(node_pars, NS_LITERAL_STRING("vad"), PR_FALSE);
+  mDereverb = ZMK_GetOptionalBool(node_pars, NS_LITERAL_STRING("dereverb"), PR_FALSE);
+  mDereverbLevel = ZMK_GetOptionalDouble(node_pars, NS_LITERAL_STRING("dereverb_level"), 0.2);
+  mDereverbDecay = ZMK_GetOptionalDouble(node_pars, NS_LITERAL_STRING("dereverb_decay"), 0.5);
+  
   // XXX 20ms frame size, 8000Hz sampling rate hardcoded atm
   mResidue = new float[161];
   mEchoState = speex_echo_state_init(160, 160/20 * mAECTail);

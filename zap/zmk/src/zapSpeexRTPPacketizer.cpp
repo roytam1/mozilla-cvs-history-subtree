@@ -56,15 +56,10 @@ NS_IMETHODIMP
 zapSpeexRTPPacketizer::InsertedIntoContainer(zapIMediaNodeContainer *container,
                                              nsIPropertyBag2 *node_pars)
 {
-  // set defaults:
-  mPayloadType = 96;
-  
   // extract node parameters:
-  if (node_pars) {
-    node_pars->GetPropertyAsUint32(NS_LITERAL_STRING("payload_type"),
-                                   &mPayloadType);
-    // xxx verify payload type range
-  }
+  mPayloadType = ZMK_GetOptionalUint32(node_pars, NS_LITERAL_STRING("payload_type"), 96);
+  
+  // xxx verify payload type range
   
   return NS_OK;
 }

@@ -57,21 +57,11 @@ zapTimestamper::InsertedIntoContainer(zapIMediaNodeContainer *container,
                                       nsIPropertyBag2 *node_pars)
 {
   mFrameCount = 0;
-  mOffset = 0;
-  mIncrNum = 1;
-  mIncrDenom = 1;
   
   // unpack node parameters:
-  if (!node_pars) {
-    return NS_OK;
-  }
-
-  node_pars->GetPropertyAsUint64(NS_LITERAL_STRING("offset"),
-                                 &mOffset);
-  node_pars->GetPropertyAsInt32(NS_LITERAL_STRING("incr_num"),
-                                &mIncrNum);
-  node_pars->GetPropertyAsInt32(NS_LITERAL_STRING("incr_denom"),
-                                &mIncrDenom);
+  mOffset = ZMK_GetOptionalUint64(node_pars, NS_LITERAL_STRING("offset"), 0);
+  mIncrNum = ZMK_GetOptionalUint32(node_pars, NS_LITERAL_STRING("incr_num"), 1);
+  mIncrDenom = ZMK_GetOptionalUint32(node_pars, NS_LITERAL_STRING("incr_denom"), 1);
 
   if (mIncrDenom == 0) {
     NS_ERROR("denominator can't be 0");

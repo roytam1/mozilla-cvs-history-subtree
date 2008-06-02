@@ -69,8 +69,9 @@ zapUDPPacketizer::InsertedIntoContainer(zapIMediaNodeContainer *container,
   NS_ENSURE_SUCCESS(node_pars->GetPropertyAsUint32(
                       NS_LITERAL_STRING("port"), &mPort),
                     NS_ERROR_FAILURE);
-  node_pars->GetPropertyAsACString(NS_LITERAL_STRING("header"),
-                                   mHeader);
+  ZMK_GetOptionalCString(node_pars, NS_LITERAL_STRING("header"),
+                         NS_LITERAL_CSTRING(""),
+                         mHeader);
 
   if (mPort > 65535) {
     NS_ERROR("port out of range");

@@ -99,12 +99,9 @@ NS_IMETHODIMP
 zapTToneGenerator::InsertedIntoContainer(zapIMediaNodeContainer *container,
                                          nsIPropertyBag2* node_pars)
 {
-  double max_frame_duration = 0.02;
-  // unpack node parameters:
-  if (node_pars) {
-    node_pars->GetPropertyAsDouble(NS_LITERAL_STRING("max_frame_duration"),
-                                   &max_frame_duration);
-  }
+  double max_frame_duration = ZMK_GetOptionalDouble(node_pars,
+                                                    NS_LITERAL_STRING("max_frame_duration"),
+                                                    0.02);
   max_frame_duration *= 8000.0;
   if (max_frame_duration < 1.0 || max_frame_duration > 0xFFFF)
     return NS_ERROR_FAILURE;

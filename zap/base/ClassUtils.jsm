@@ -830,7 +830,7 @@ PropertyBag.fun(
 /*  PRBool      hasKey                   (in AString prop); */
 PropertyBag.fun(
   function hasKey(prop) {
-    return (hashget(this, key) !== undefined);
+    return (hashget(this, prop) !== undefined);
   });
 
 //----------------------------------------------------------------------

@@ -97,23 +97,20 @@ NS_IMETHODIMP
 zapDTMFGenerator::InsertedIntoContainer(zapIMediaNodeContainer *container,
                                         nsIPropertyBag2* node_pars)
 {
-  // node parameter defaults:
-  double tone_duration = 0.09;
-  double pause_duration = 0.07;
-  double volume = -8.0;
-  double max_frame_duration = 0.02;
   // unpack node parameters:
-  if (node_pars) {
-    node_pars->GetPropertyAsDouble(NS_LITERAL_STRING("tone_duration"),
-                                   &tone_duration);
-    node_pars->GetPropertyAsDouble(NS_LITERAL_STRING("pause_duration"),
-                                   &pause_duration);
-    node_pars->GetPropertyAsDouble(NS_LITERAL_STRING("volume"),
-                                   &volume);
-    node_pars->GetPropertyAsDouble(NS_LITERAL_STRING("max_frame_duration"),
-                                   &max_frame_duration);
-  }
-
+  double tone_duration = ZMK_GetOptionalDouble(node_pars,
+                                               NS_LITERAL_STRING("tone_duration"),
+                                               0.09);
+  double pause_duration = ZMK_GetOptionalDouble(node_pars,
+                                                NS_LITERAL_STRING("pause_duration"),
+                                                0.07);
+  double volume = ZMK_GetOptionalDouble(node_pars,
+                                        NS_LITERAL_STRING("volume"),
+                                        -8.0);
+  double max_frame_duration = ZMK_GetOptionalDouble(node_pars,
+                                                    NS_LITERAL_STRING("max_frame_duration"),
+                                                    0.02);
+  
   max_frame_duration *= 8000.0;
   if (max_frame_duration < 1.0 || max_frame_duration > 0xFFFF)
     return NS_ERROR_FAILURE;  

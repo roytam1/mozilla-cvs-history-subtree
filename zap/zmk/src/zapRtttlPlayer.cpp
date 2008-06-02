@@ -79,17 +79,14 @@ NS_IMETHODIMP
 zapRtttlPlayer::InsertedIntoContainer(zapIMediaNodeContainer *container,
                                       nsIPropertyBag2* node_pars)
 {
-  // node parameter defaults:
-  nsCString rtttl = NS_LITERAL_CSTRING("zap:d=32,o=5,b=140:b4,b4,b4,b4,b4,b4,b4,b4,b4,b4,b4,b4,8p.,f4,f4,8p.,f4,f4,1p");
-  mAmplitude = 0.5;
-  mLoop = PR_TRUE;
   // unpack node parameters:
-  if (node_pars) {
-    node_pars->GetPropertyAsACString(NS_LITERAL_STRING("rtttl"),
-                                     rtttl);
-    node_pars->GetPropertyAsBool(NS_LITERAL_STRING("loop"), &mLoop);
-    node_pars->GetPropertyAsDouble(NS_LITERAL_STRING("amplitude"), &mAmplitude);
-  }
+  nsCString rtttl;
+  ZMK_GetOptionalCString(node_pars,
+                         NS_LITERAL_STRING("rtttl"),
+                         NS_LITERAL_CSTRING("zap:d=32,o=5,b=140:b4,b4,b4,b4,b4,b4,b4,b4,b4,b4,b4,b4,8p.,f4,f4,8p.,f4,f4,1p"),
+                         rtttl);
+  mAmplitude = ZMK_GetOptionalDouble(node_pars, NS_LITERAL_STRING("amplitude"), 0.5);
+  mLoop = ZMK_GetOptionalBool(node_pars, NS_LITERAL_STRING("loop"), PR_TRUE);
 
   nsresult rv;
   // init stream parameters:

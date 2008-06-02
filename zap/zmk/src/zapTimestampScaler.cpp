@@ -48,22 +48,11 @@ NS_IMETHODIMP
 zapTimestampScaler::InsertedIntoContainer(zapIMediaNodeContainer *container,
                                           nsIPropertyBag2 *node_pars)
 {
-  mOffset = 0;
-  mNumerator = 1;
-  mDenominator = 1;
-  
   // unpack node parameters:
-  if (!node_pars) {
-    return NS_OK;
-  }
-
-  node_pars->GetPropertyAsUint64(NS_LITERAL_STRING("offset"),
-                                 &mOffset);
-  node_pars->GetPropertyAsUint32(NS_LITERAL_STRING("numerator"),
-                                 &mNumerator);
-  node_pars->GetPropertyAsUint32(NS_LITERAL_STRING("denominator"),
-                                 &mDenominator);
-
+  mOffset = ZMK_GetOptionalUint64(node_pars, NS_LITERAL_STRING("offset"), 0);
+  mNumerator = ZMK_GetOptionalUint32(node_pars, NS_LITERAL_STRING("numerator"), 1);
+  mDenominator = ZMK_GetOptionalUint32(node_pars, NS_LITERAL_STRING("denominator"), 1);
+  
   if (mDenominator == 0) {
     NS_ERROR("denominator can't be 0");
     return NS_ERROR_FAILURE;

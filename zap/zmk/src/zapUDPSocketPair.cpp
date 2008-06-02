@@ -41,6 +41,7 @@
 #include "nsNetCID.h"
 #include "nsComponentManagerUtils.h"
 #include "nsStringAPI.h"
+#include "zapZMKImplUtils.h"
 
 ////////////////////////////////////////////////////////////////////////
 // zapUDPSocketPair
@@ -76,11 +77,10 @@ zapUDPSocketPair::InsertedIntoContainer(zapIMediaNodeContainer *container,
 {
   mContainer = container;
   
-  PRUint32 portbase = 49152;
   // unpack node parameters:
-  if (node_pars) {
-    node_pars->GetPropertyAsUint32(NS_LITERAL_STRING("portbase"), &portbase);
-  }
+  PRUint32 portbase = ZMK_GetOptionalUint32(node_pars,
+                                            NS_LITERAL_STRING("portbase"),
+                                            49152);
 
   if (portbase == 0 || portbase >= 65535) {
     NS_ERROR("portbase must be between 1 and 65534");

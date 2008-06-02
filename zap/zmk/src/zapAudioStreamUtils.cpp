@@ -142,33 +142,32 @@ PaSampleFormat ZapAudioSampleFormatToPaFormat(zapAudioStreamSampleFormat format)
 
 void zapAudioStreamParameters::InitWithDefaults()
 {
-  sample_rate = 8000;
-  samples = 160;
-  channels = 1;
-  sample_format = sf_float32_32768;
+  InitWithProperties(nsnull);
 }
 
 nsresult
 zapAudioStreamParameters::InitWithProperties(nsIPropertyBag2* properties)
 {
-  InitWithDefaults();
-  if (properties) {
-    properties->GetPropertyAsUint32(NS_LITERAL_STRING("sample_rate"),
-                                    &sample_rate);
-    properties->GetPropertyAsUint32(NS_LITERAL_STRING("samples"),
-                                    &samples);
-    properties->GetPropertyAsUint32(NS_LITERAL_STRING("channels"),
-                                    &channels);
-    nsCString sampleformat_string;
-    if (NS_SUCCEEDED(properties->GetPropertyAsACString(NS_LITERAL_STRING("sample_format"),
-                                                       sampleformat_string))) {
-      sample_format = StrToZapAudioSampleFormat(sampleformat_string);
-      if (sample_format == sf_unknown) {
-        NS_ERROR("unknown sample format");
-        return NS_ERROR_FAILURE;
-      }
-    }
+  sample_rate = ZMK_GetOptionalUint32(properties,
+                                      NS_LITERAL_STRING("sample_rate"),
+                                      8000);
+  samples = ZMK_GetOptionalUint32(properties,
+                                  NS_LITERAL_STRING("samples"),
+                                  160);
+  channels = ZMK_GetOptionalUint32(properties,
+                                   NS_LITERAL_STRING("channels"),
+                                   1);
+  nsCString sampleformat_string;
+  ZMK_GetOptionalCString(properties,
+                         NS_LITERAL_STRING("sample_format"),
+                         NS_LITERAL_CSTRING("float32_32768"),
+                         sampleformat_string);
+  sample_format = StrToZapAudioSampleFormat(sampleformat_string);
+  if (sample_format == sf_unknown) {
+    NS_ERROR("unknown sample format");
+    return NS_ERROR_FAILURE;
   }
+  
   return NS_OK;
 }
 

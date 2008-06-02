@@ -57,28 +57,24 @@ NS_IMETHODIMP
 zapG711RTPDepacketizer::InsertedIntoContainer(zapIMediaNodeContainer *container,
                                               nsIPropertyBag2 *node_pars)
 {
-  // default: pcmu
-  mType = pcmu;
-  
   // extract node parameters:
-
-  if (node_pars) {
-    nsCAutoString type;
-    if (NS_SUCCEEDED(node_pars->GetPropertyAsACString(NS_LITERAL_STRING("type"),
-                                                    type))) {
-      if (type == NS_LITERAL_CSTRING("audio/pcmu")) {
-        mType = pcmu;
-      }
-      else if (type == NS_LITERAL_CSTRING("audio/pcma")) {
-        mType = pcma;
-      }
-      else {
-        NS_ERROR("unsupported type");
-        return NS_ERROR_FAILURE;
-      }
-    }
+  nsCAutoString type;
+  ZMK_GetOptionalCString(node_pars,
+                         NS_LITERAL_STRING("type"),
+                         NS_LITERAL_CSTRING("audio/pcmu"),
+                         type);
+  
+  if (type == NS_LITERAL_CSTRING("audio/pcmu")) {
+    mType = pcmu;
   }
-
+  else if (type == NS_LITERAL_CSTRING("audio/pcma")) {
+    mType = pcma;
+  }
+  else {
+    NS_ERROR("unsupported type");
+    return NS_ERROR_FAILURE;
+  }
+  
   return NS_OK;
 }
 

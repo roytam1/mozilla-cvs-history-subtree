@@ -41,6 +41,7 @@
 #include "prmem.h"
 #include "nsAutoPtr.h"
 #include "nsStringAPI.h"
+#include "zapZMKImplUtils.h"
 
 ////////////////////////////////////////////////////////////////////////
 // PacketDeallocator: helper to clean up packet buffer
@@ -96,32 +97,25 @@ zapPacketBuffer::InsertedIntoContainer(zapIMediaNodeContainer *container,
   // references to us have a message loop:
   mContainer = container;
   
-  // node parameter defaults:
-  mLiftCount = 0;
-  mDropCount = 1;
-  mMaxSize = 10;
-  mMinSize = 1;
   // unpack node parameters:
-  if (node_pars) {
-    node_pars->GetPropertyAsUint32(NS_LITERAL_STRING("lift_count"), &mLiftCount);
-    node_pars->GetPropertyAsUint32(NS_LITERAL_STRING("drop_count"), &mDropCount);
-    node_pars->GetPropertyAsUint32(NS_LITERAL_STRING("max_size"), &mMaxSize);
-    node_pars->GetPropertyAsUint32(NS_LITERAL_STRING("min_size"), &mMinSize);
-
-    if (mMaxSize < 1) return NS_ERROR_FAILURE;
-    if (mMaxSize < 1) return NS_ERROR_FAILURE;
-    if (mMinSize > mMaxSize) {
-      NS_WARNING("adjusting min size");
-      mMinSize = mMaxSize;
-    }
-    if (mLiftCount > mMaxSize) {
-      NS_WARNING("adjusted lift count");
-      mLiftCount = mMaxSize;
-    }
-    if (mDropCount > mMaxSize) {
-      NS_WARNING("adjusting drop count");
-      mDropCount = mMaxSize;
-    }    
+  mLiftCount = ZMK_GetOptionalUint32(node_pars, NS_LITERAL_STRING("lift_count"), 0);
+  mDropCount = ZMK_GetOptionalUint32(node_pars, NS_LITERAL_STRING("drop_count"), 1);
+  mMaxSize = ZMK_GetOptionalUint32(node_pars, NS_LITERAL_STRING("max_size"), 10);
+  mMinSize = ZMK_GetOptionalUint32(node_pars, NS_LITERAL_STRING("min_size"), 1);
+  
+  if (mMaxSize < 1) return NS_ERROR_FAILURE;
+  if (mMaxSize < 1) return NS_ERROR_FAILURE;
+  if (mMinSize > mMaxSize) {
+    NS_WARNING("adjusting min size");
+    mMinSize = mMaxSize;
+  }
+  if (mLiftCount > mMaxSize) {
+    NS_WARNING("adjusted lift count");
+    mLiftCount = mMaxSize;
+  }
+  if (mDropCount > mMaxSize) {
+    NS_WARNING("adjusting drop count");
+    mDropCount = mMaxSize;
   }
 
   return NS_OK;

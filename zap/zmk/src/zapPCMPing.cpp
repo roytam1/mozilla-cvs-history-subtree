@@ -72,13 +72,8 @@ NS_IMETHODIMP
 zapPCMPing::InsertedIntoContainer(zapIMediaNodeContainer *container,
                                   nsIPropertyBag2* node_pars)
 {
-  // node parameter defaults:
-  mPingPitch = 1760.0;
   // unpack node parameters:
-  if (node_pars) {
-    node_pars->GetPropertyAsDouble(NS_LITERAL_STRING("ping_pitch"),
-                                   &mPingPitch);
-  }
+  mPingPitch = ZMK_GetOptionalDouble(node_pars, NS_LITERAL_STRING("ping_pitch"), 1760.0);
 
   nsresult rv = mStreamParameters.InitWithProperties(node_pars);
   NS_ENSURE_SUCCESS(rv, rv);

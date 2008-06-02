@@ -103,29 +103,23 @@ NS_IMETHODIMP
 zapSpeexDecoder::InsertedIntoContainer(zapIMediaNodeContainer *container,
                                        nsIPropertyBag2 *node_pars)
 {
-  // default: nb mode
-  const SpeexMode* speexmode = &speex_nb_mode;
-  mSampleRate = 8000;
-  
   // extract node parameters:
+  // default: 8000Hz (nb mode)
+  mSampleRate = ZMK_GetOptionalUint32(node_pars, NS_LITERAL_STRING("sample_rate"), 8000);
 
-  if (node_pars) {
-    if (NS_SUCCEEDED(node_pars->GetPropertyAsUint32(NS_LITERAL_STRING("sample_rate"),
-                                                    &mSampleRate))) {
-      if (mSampleRate == 8000) {
-        speexmode = &speex_nb_mode;
-      }
-      else if (mSampleRate == 16000) {
-        speexmode = &speex_wb_mode;
-      }
-      else if (mSampleRate == 32000) {
-        speexmode = &speex_uwb_mode;
-      }
-      else {
-        NS_ERROR("unsupported sample rate");
-        return NS_ERROR_FAILURE;
-      }
-    }
+  const SpeexMode* speexmode;
+  if (mSampleRate == 8000) {
+    speexmode = &speex_nb_mode;
+  }
+  else if (mSampleRate == 16000) {
+    speexmode = &speex_wb_mode;
+  }
+  else if (mSampleRate == 32000) {
+    speexmode = &speex_uwb_mode;
+  }
+  else {
+    NS_ERROR("unsupported sample rate");
+    return NS_ERROR_FAILURE;
   }
   
   speex_bits_init(&mDecoderBits);

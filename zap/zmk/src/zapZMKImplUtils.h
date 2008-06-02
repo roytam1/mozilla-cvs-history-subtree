@@ -49,6 +49,85 @@
 // Property bag utility functions
 
 inline PRBool
+ZMK_HasKey(nsIPropertyBag2* bag, const nsAString& name)
+{
+  PRBool exists = PR_FALSE;
+  if (bag)
+    bag->HasKey(name, &exists);
+  return exists;
+}
+
+inline PRUint32
+ZMK_GetOptionalUint32(nsIPropertyBag2* bag,
+                      const nsAString& name,
+                      PRUint32 defaultval)
+{
+  // The reason we use HasKey() is to prevent NS_ERROR_NOT_AVAILABLE
+  // exceptions being logged on the console when calling
+  // GetProperyAs...() on a JS-implemented property bag.  
+  if (ZMK_HasKey(bag, name))
+    bag->GetPropertyAsUint32(name, &defaultval);
+  return defaultval;
+}
+
+inline PRUint64
+ZMK_GetOptionalUint64(nsIPropertyBag2* bag,
+                      const nsAString& name,
+                      PRUint64 defaultval)
+{
+  if (ZMK_HasKey(bag, name))
+    bag->GetPropertyAsUint64(name, &defaultval);
+  return defaultval;
+}
+
+inline double
+ZMK_GetOptionalDouble(nsIPropertyBag2* bag,
+                      const nsAString& name,
+                      double defaultval)
+{
+  if (ZMK_HasKey(bag, name))
+    bag->GetPropertyAsDouble(name, &defaultval);
+  return defaultval;
+}
+
+inline PRBool
+ZMK_GetOptionalBool(nsIPropertyBag2* bag,
+                    const nsAString& name,
+                    PRBool defaultval)
+{
+  if (ZMK_HasKey(bag, name))
+    bag->GetPropertyAsBool(name, &defaultval);
+  return defaultval;
+}
+
+inline void
+ZMK_GetOptionalCString(nsIPropertyBag2* bag,
+                       const nsAString& name,
+                       const nsACString& defaultval,
+                       nsACString& result)
+{
+  result = defaultval;
+  if (ZMK_HasKey(bag, name))
+    bag->GetPropertyAsACString(name, result);
+}
+
+template<class I> inline void
+ZMK_GetOptionalInterface(nsIPropertyBag2* bag,
+                         const nsAString& name,
+                         I* defaultval,
+                         I**result)
+{
+  if (ZMK_HasKey(bag, name) && 
+      NS_SUCCEEDED(bag->GetPropertyAsInterface(name,
+                                               I::GetIID(),
+                                               (void**)result)))
+    return;
+
+  *result = defaultval;
+  NS_IF_ADDREF(*result);
+}
+
+inline PRBool
 ZMK_VerifyCStringProperty(nsIPropertyBag2* bag,
                           const nsAString& name,
                           const nsACString& val)

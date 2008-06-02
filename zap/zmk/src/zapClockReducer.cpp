@@ -38,6 +38,7 @@
 #include "math.h"
 #include "nsAutoPtr.h"
 #include "zapMediaFrame.h"
+#include "zapZMKImplUtils.h"
 
 ////////////////////////////////////////////////////////////////////////
 // zapClockReducer
@@ -73,17 +74,9 @@ NS_IMETHODIMP
 zapClockReducer::InsertedIntoContainer(zapIMediaNodeContainer *container,
                                        nsIPropertyBag2* node_pars)
 {
-  // node parameter defaults:
-  mNumerator = 1;
-  mDenominator = 1;
-  
   // unpack node parameters:
-  if (node_pars) {
-    node_pars->GetPropertyAsInt32(NS_LITERAL_STRING("numerator"),
-                                   &mNumerator);
-    node_pars->GetPropertyAsInt32(NS_LITERAL_STRING("denominator"),
-                                   &mDenominator);
-  }
+  mNumerator = ZMK_GetOptionalUint32(node_pars, NS_LITERAL_STRING("numerator"), 1);
+  mDenominator = ZMK_GetOptionalUint32(node_pars, NS_LITERAL_STRING("denominator"), 1);
 
   if (mNumerator > mDenominator) return NS_ERROR_FAILURE;
 

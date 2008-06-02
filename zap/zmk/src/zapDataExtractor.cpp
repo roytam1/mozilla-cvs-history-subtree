@@ -56,16 +56,7 @@ NS_IMETHODIMP
 zapDataExtractor::InsertedIntoContainer(zapIMediaNodeContainer *container,
                                         nsIPropertyBag2 *node_pars)
 {
-  mStart = 0;
-  
-  // unpack node parameters:
-  if (!node_pars) {
-    return NS_OK;
-  }
-
-  node_pars->GetPropertyAsUint32(NS_LITERAL_STRING("start"),
-                                 &mStart);
-    
+  mStart = ZMK_GetOptionalUint32(node_pars, NS_LITERAL_STRING("start"), 0);
   return NS_OK;
 }
 

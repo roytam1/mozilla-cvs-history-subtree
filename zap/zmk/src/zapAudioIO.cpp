@@ -193,31 +193,30 @@ zapAudioIO::InsertedIntoContainer(zapIMediaNodeContainer *container,
   
   container->GetEventTarget(getter_AddRefs(mEventTarget));
 
-  // node parameter defaults:
-  mInputDevice = Pa_GetDefaultInputDeviceID();
-  mOutputDevice = Pa_GetDefaultOutputDeviceID();
-  mBuffers = 4;
   // unpack node parameters:
-  if (node_pars) {
-    node_pars->GetPropertyAsUint32(NS_LITERAL_STRING("buffers"),
-                                   &mBuffers);
-    if (mBuffers < 2) mBuffers = 2;
+  mBuffers = ZMK_GetOptionalUint32(node_pars,
+                                   NS_LITERAL_STRING("buffers"),
+                                   4);
+  if (mBuffers < 2) mBuffers = 2;
 
-    nsCOMPtr<zapIPortaudioDevice> idevice;
-    node_pars->GetPropertyAsInterface(NS_LITERAL_STRING("input_device"),
-                                      NS_GET_IID(zapIPortaudioDevice),
-                                      getter_AddRefs(idevice));
-    if (idevice)
-      idevice->GetDeviceID(&mInputDevice);
-    
-    nsCOMPtr<zapIPortaudioDevice> odevice;
-    node_pars->GetPropertyAsInterface(NS_LITERAL_STRING("output_device"),
-                                      NS_GET_IID(zapIPortaudioDevice),
-                                      getter_AddRefs(odevice));
-    if (odevice)
-      odevice->GetDeviceID(&mOutputDevice);
-  }
+  mInputDevice = Pa_GetDefaultInputDeviceID();
+  nsCOMPtr<zapIPortaudioDevice> idevice;
+  ZMK_GetOptionalInterface<zapIPortaudioDevice>(node_pars,
+                                                NS_LITERAL_STRING("input_device"),
+                                                nsnull,
+                                                getter_AddRefs(idevice));
+  if (idevice)
+    idevice->GetDeviceID(&mInputDevice);
 
+  mOutputDevice = Pa_GetDefaultOutputDeviceID();
+  nsCOMPtr<zapIPortaudioDevice> odevice;
+  ZMK_GetOptionalInterface<zapIPortaudioDevice>(node_pars,
+                                                NS_LITERAL_STRING("output_device"),
+                                                nsnull,
+                                                getter_AddRefs(odevice));
+  if (odevice)
+    odevice->GetDeviceID(&mOutputDevice);
+  
   if (NS_FAILED(mStreamParameters.InitWithProperties(node_pars)))
     return NS_ERROR_FAILURE;
 
