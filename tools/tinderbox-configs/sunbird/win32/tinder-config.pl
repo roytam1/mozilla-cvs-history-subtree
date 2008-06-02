@@ -187,12 +187,12 @@ $LocalizationVersionFile = 'calendar/sunbird/config/version.txt';
 
 %WGetFiles = (
 	      "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly/latest-trunk/sunbird-%version%.en-US.win32.zip" =>
-	      "/cygdrive/d/builds/tinderbox/Sunbird-Trunk-l10n/WINNT_5.2_Clobber/sunbird.zip",
+	      "e:/builds/tinderbox/Sunbird-Trunk-l10n/WINNT_5.2_Clobber/sunbird.zip",
 	      "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly/latest-trunk/sunbird-%version%.en-US.win32.installer.exe" =>
-	      "/cygdrive/d/builds/tinderbox/Sunbird-Trunk-l10n/WINNT_5.2_Clobber/sunbird-installer.exe"
+	      "e:/builds/tinderbox/Sunbird-Trunk-l10n/WINNT_5.2_Clobber/sunbird-installer.exe"
 	      );
 
-$BuildLocalesArgs = "ZIP_IN=/cygdrive/d/builds/tinderbox/Sunbird-Trunk-l10n/WINNT_5.2_Clobber/sunbird.zip WIN32_INSTALLER_IN=/cygdrive/d/builds/tinderbox/Sunbird-Trunk-l10n/WINNT_5.2_Clobber/sunbird-installer.exe";
+$BuildLocalesArgs = "ZIP_IN=e:/builds/tinderbox/Sunbird-Trunk-l10n/WINNT_5.2_Clobber/sunbird.zip WIN32_INSTALLER_IN=e:/builds/tinderbox/Sunbird-Trunk-l10n/WINNT_5.2_Clobber/sunbird-installer.exe";
 #-
 #- The rest should not need to be changed
 #-
