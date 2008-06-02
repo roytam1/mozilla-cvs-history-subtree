@@ -101,6 +101,55 @@ struct nsSrvRecord
     }
 };
 
+class nsDNSSRVRecord : public nsIDNSSRVRecord
+{
+public:
+    NS_DECL_ISUPPORTS
+    NS_DECL_NSIDNSSRVRECORD
+
+    nsDNSSRVRecord(nsSrvRecord *record)
+        : mRecord(record) {}
+
+protected:
+    virtual ~nsDNSSRVRecord() {}
+
+private:
+    nsSrvRecord *mRecord;
+};
+
+NS_IMPL_THREADSAFE_ISUPPORTS1(nsDNSSRVRecord, nsIDNSSRVRecord)
+
+NS_IMETHODIMP
+nsDNSSRVRecord::GetPriority(PRUint16 *aPriority)
+{
+    NS_ENSURE_ARG(aPriority);
+    *aPriority = mRecord->priority;
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDNSSRVRecord::GetWeight(PRUint16 *aWeight)
+{
+    NS_ENSURE_ARG(aWeight);
+    *aWeight = mRecord->weight;
+    return NS_OK;
+}
+
+NS_IMETHODIMP 
+nsDNSSRVRecord::GetHost(nsACString & aHost)
+{
+    aHost = mRecord->host;      
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDNSSRVRecord::GetPort(PRInt32 *aPort)
+{
+    NS_ENSURE_ARG(aPort);
+    *aPort = mRecord->port;
+    return NS_OK;
+}
+
 PR_STATIC_CALLBACK(PRBool) 
 SrvRecordsEnumFunc(void* aElement, void* aData)
 {
@@ -109,13 +158,11 @@ SrvRecordsEnumFunc(void* aElement, void* aData)
     return PR_TRUE;
 }
 
-class nsDNSSRVIter : public nsISimpleEnumerator,
-                     public nsIDNSSRVRecord
+class nsDNSSRVIter : public nsISimpleEnumerator
 {
 public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSISIMPLEENUMERATOR
-    NS_DECL_NSIDNSSRVRECORD
 
     nsDNSSRVIter(nsVoidArray *srvRecords)
         : mSrvRecords(srvRecords)
@@ -137,7 +184,7 @@ private:
     PRInt16     mPos;
 };
 
-NS_IMPL_THREADSAFE_ISUPPORTS2(nsDNSSRVIter, nsISimpleEnumerator, nsIDNSSRVRecord)
+NS_IMPL_THREADSAFE_ISUPPORTS1(nsDNSSRVIter, nsISimpleEnumerator)
 
 NS_IMETHODIMP
 nsDNSSRVIter::GetNext(nsISupports **_retval)
@@ -146,8 +193,15 @@ nsDNSSRVIter::GetNext(nsISupports **_retval)
     
     if (++mPos > mSrvRecords->Count() - 1)
         return NS_ERROR_NOT_AVAILABLE;
+        
+    nsSrvRecord* record = 
+      static_cast<nsSrvRecord*>(mSrvRecords->ElementAt(mPos));
+        
+    nsCOMPtr<nsIDNSSRVRecord> rec = new nsDNSSRVRecord(record);
+    if (!rec)
+        return NS_ERROR_OUT_OF_MEMORY;
 
-    NS_ADDREF(*_retval = static_cast<nsIDNSSRVRecord*>(this));
+    NS_ADDREF(*_retval = rec);
     return NS_OK;
 }
 
@@ -159,61 +213,6 @@ nsDNSSRVIter::HasMoreElements(PRBool *result)
     *result = mPos + 1 < mSrvRecords->Count();
     return NS_OK;
 }
-
-NS_IMETHODIMP
-nsDNSSRVIter::GetPriority(PRUint16 *aPriority)
-{
-    NS_ENSURE_ARG(aPriority);
-    
-    if (mPos > mSrvRecords->Count() - 1)
-        return NS_ERROR_NOT_AVAILABLE;
-    
-    nsSrvRecord* record = static_cast<nsSrvRecord*>(mSrvRecords->ElementAt(mPos));
-    *aPriority = record->priority;
-       
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsDNSSRVIter::GetWeight(PRUint16 *aWeight)
-{
-    NS_ENSURE_ARG(aWeight);
-    
-    if (mPos > mSrvRecords->Count() - 1)
-        return NS_ERROR_NOT_AVAILABLE;
-    
-    nsSrvRecord* record = static_cast<nsSrvRecord*>(mSrvRecords->ElementAt(mPos));
-    *aWeight = record->weight;
-       
-    return NS_OK;
-}
-
-NS_IMETHODIMP 
-nsDNSSRVIter::GetHost(nsACString & aHost)
-{
-    if (mPos > mSrvRecords->Count() - 1)
-        return NS_ERROR_NOT_AVAILABLE;
-    
-    nsSrvRecord* record = static_cast<nsSrvRecord*>(mSrvRecords->ElementAt(mPos));
-    aHost = record->host;
-       
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsDNSSRVIter::GetPort(PRInt32 *aPort)
-{
-    NS_ENSURE_ARG(aPort);
-    
-    if (mPos > mSrvRecords->Count() - 1)
-        return NS_ERROR_NOT_AVAILABLE;
-    
-    nsSrvRecord* record = static_cast<nsSrvRecord*>(mSrvRecords->ElementAt(mPos));
-    *aPort = record->port;
-       
-    return NS_OK;
-}
-
 
 static int 
 CompareSRV( const void *a, const void *b, void *o)
@@ -420,6 +419,52 @@ struct nsNaptrRecord
     PRUint16 preference;
 };
 
+class nsDNSNAPTRRecord : public nsIDNSNAPTRRecord
+{
+public:
+    NS_DECL_ISUPPORTS
+    NS_DECL_NSIDNSNAPTRRECORD
+
+    nsDNSNAPTRRecord(nsNaptrRecord *record)
+        : mRecord(record) {}
+
+protected:
+    virtual ~nsDNSNAPTRRecord() {}
+
+private:
+    nsNaptrRecord *mRecord;
+};
+    
+NS_IMPL_THREADSAFE_ISUPPORTS1(nsDNSNAPTRRecord, nsIDNSNAPTRRecord)
+
+NS_IMETHODIMP
+nsDNSNAPTRRecord::GetFlag(nsACString &flag)
+{
+    flag.Assign(mRecord->flags);
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDNSNAPTRRecord::GetService(nsACString &service)
+{
+    service.Assign(mRecord->service);
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDNSNAPTRRecord::GetRegexp(nsACString &regexp)
+{
+    regexp.Assign(mRecord->regexp);
+    return NS_OK;
+}
+
+NS_IMETHODIMP
+nsDNSNAPTRRecord::GetReplacement(nsACString &replacement)
+{
+    replacement.Assign(mRecord->replacement);
+    return NS_OK;
+}
+
 PR_STATIC_CALLBACK(PRBool) 
 NaptrRecordsEnumFunc(void* aElement, void* aData)
 {
@@ -427,15 +472,12 @@ NaptrRecordsEnumFunc(void* aElement, void* aData)
     delete rec;
     return PR_TRUE;
 }
-
-    
-class nsDNSNAPTRIter : public nsISimpleEnumerator,
-                       public nsIDNSNAPTRRecord
+   
+class nsDNSNAPTRIter : public nsISimpleEnumerator
 {
 public:
     NS_DECL_ISUPPORTS
     NS_DECL_NSISIMPLEENUMERATOR
-    NS_DECL_NSIDNSNAPTRRECORD
 
     nsDNSNAPTRIter(nsVoidArray *naptrRecords)
         : mNaptrRecords(naptrRecords), mPos(-1) 
@@ -456,7 +498,7 @@ private:
     PRInt16      mPos;
 };
 
-NS_IMPL_THREADSAFE_ISUPPORTS2(nsDNSNAPTRIter, nsISimpleEnumerator, nsIDNSNAPTRRecord)
+NS_IMPL_THREADSAFE_ISUPPORTS1(nsDNSNAPTRIter, nsISimpleEnumerator)
 
 NS_IMETHODIMP
 nsDNSNAPTRIter::GetNext(nsISupports **_retval)
@@ -466,7 +508,14 @@ nsDNSNAPTRIter::GetNext(nsISupports **_retval)
     if (++mPos > mNaptrRecords->Count() - 1)
         return NS_ERROR_NOT_AVAILABLE;
 
-    NS_ADDREF(*_retval = static_cast<nsIDNSNAPTRRecord*>(this));
+    nsNaptrRecord* record = 
+      static_cast<nsNaptrRecord*>(mNaptrRecords->ElementAt(mPos));
+        
+    nsCOMPtr<nsIDNSNAPTRRecord> rec = new nsDNSNAPTRRecord(record);
+    if (!rec)
+        return NS_ERROR_OUT_OF_MEMORY;
+
+    NS_ADDREF(*_retval = rec);
     return NS_OK;
 }
 
@@ -476,54 +525,6 @@ nsDNSNAPTRIter::HasMoreElements(PRBool *result)
     NS_ENSURE_ARG(result);
     
     *result = mPos + 1 < mNaptrRecords->Count();
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsDNSNAPTRIter::GetFlag(nsACString &flag)
-{
-    if (mPos > mNaptrRecords->Count() - 1)
-        return NS_ERROR_NOT_AVAILABLE;
-        
-    nsNaptrRecord* record = 
-        static_cast<nsNaptrRecord*>(mNaptrRecords->ElementAt(mPos));
-    flag.Assign(record->flags);
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsDNSNAPTRIter::GetService(nsACString &service)
-{
-    if (mPos > mNaptrRecords->Count() - 1)
-        return NS_ERROR_NOT_AVAILABLE;
-        
-    nsNaptrRecord* record = 
-        static_cast<nsNaptrRecord*>(mNaptrRecords->ElementAt(mPos));
-    service.Assign(record->service);
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsDNSNAPTRIter::GetRegexp(nsACString &regexp)
-{
-    if (mPos > mNaptrRecords->Count() - 1)
-        return NS_ERROR_NOT_AVAILABLE;
-        
-    nsNaptrRecord* record = 
-        static_cast<nsNaptrRecord*>(mNaptrRecords->ElementAt(mPos));
-    regexp.Assign(record->regexp);
-    return NS_OK;
-}
-
-NS_IMETHODIMP
-nsDNSNAPTRIter::GetReplacement(nsACString &replacement)
-{
-    if (mPos > mNaptrRecords->Count() - 1)
-        return NS_ERROR_NOT_AVAILABLE;
-
-    nsNaptrRecord* record = 
-        static_cast<nsNaptrRecord*>(mNaptrRecords->ElementAt(mPos));
-    replacement.Assign(record->replacement);
     return NS_OK;
 }
 
@@ -803,9 +804,7 @@ public:
     NS_DECL_NSISIMPLEENUMERATOR
 
     nsDNSRecordIter(nsIDNSRecord *record)
-        : mRecord(record)
-    {   
-    }
+        : mRecord(record) {}
 
 protected:
     virtual ~nsDNSRecordIter() {}
