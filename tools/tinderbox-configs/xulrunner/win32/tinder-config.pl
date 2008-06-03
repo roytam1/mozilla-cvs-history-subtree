@@ -52,6 +52,7 @@ $UseTimeStamp      = 0;      # Use the CVS 'pull-by-timestamp' option, or not
 #$BuildEmbed        = 0;      # After building seamonkey, go build embed app.
 #$SkipMozilla       = 0;      # Use to debug post-mozilla.pl scripts.
 #$BuildLocales      = 0;      # Do l10n packaging?
+$BuildSDK           = 1;      # Build the SDK
 
 # Tests
 #$CleanProfile             = 0;
@@ -194,8 +195,8 @@ $BinaryName = 'xulrunner.exe';
 # Release build options
 $ReleaseBuild  = 1;
 $shiptalkback  = 0;
-#$ReleaseToLatest = 0; # Push the release to latest-<milestone>?
-#$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
+$ReleaseToLatest = 0; # Push the release to latest-<milestone>?
+$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
 #$build_hour    = "8";
 $package_creation_path = "/xulrunner/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
