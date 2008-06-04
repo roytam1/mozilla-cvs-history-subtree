@@ -149,7 +149,7 @@ GetCertFingerprintByOidTag(CERTCertificate* nsscert,
   return NS_OK;
 }
 
-NS_IMETHODIMP
+nsresult
 nsClientAuthRememberService::RememberDecision(const nsACString & aHostName, 
                                               CERTCertificate *aServerCert, CERTCertificate *aClientCert)
 {
@@ -178,7 +178,7 @@ nsClientAuthRememberService::RememberDecision(const nsACString & aHostName,
   return NS_OK;
 }
 
-NS_IMETHODIMP
+nsresult
 nsClientAuthRememberService::HasRememberedDecision(const nsACString & aHostName, 
                                                    CERTCertificate *aCert, 
                                                    nsACString & aClientNickname,
