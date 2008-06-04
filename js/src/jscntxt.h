@@ -196,6 +196,10 @@ struct JSRuntime {
     JSPackedBool        gcPoke;
     JSPackedBool        gcRunning;
     uint16              gcPadding;
+#ifdef JS_GC_ZEAL
+    jsrefcount          gcZeal;
+#endif
+
 
     JSGCCallback        gcCallback;
     uint32              gcMallocBytes;

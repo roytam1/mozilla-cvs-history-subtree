@@ -93,10 +93,6 @@
 #include "nsCollationCID.h"
 #include "nsDOMClassInfo.h"
 
-#ifdef NS_DEBUG
-#include "jsgc.h"       // for WAY_TOO_MUCH_GC, if defined for GC debugging
-#endif
-
 #ifdef MOZ_JSDEBUGGER
 #include "jsdIDebuggerService.h"
 #endif
@@ -678,6 +674,10 @@ nsJSContext::DOMBranchCallback(JSContext *cx, JSScript *script)
 static const char js_options_dot_str[]   = JS_OPTIONS_DOT_STR;
 static const char js_strict_option_str[] = JS_OPTIONS_DOT_STR "strict";
 static const char js_werror_option_str[] = JS_OPTIONS_DOT_STR "werror";
+#ifdef JS_GC_ZEAL
+static const char js_zeal_option_str[]   = JS_OPTIONS_DOT_STR "gczeal";
+#endif
+
 
 int PR_CALLBACK
 nsJSContext::JSOptionChangedCallback(const char *pref, void *data)
@@ -707,6 +707,13 @@ nsJSContext::JSOptionChangedCallback(const char *pref, void *data)
     // Save the new defaults for the next page load (InitContext).
     context->mDefaultJSOptions = newDefaultJSOptions;
   }
+
+#ifdef JS_GC_ZEAL
+  PRInt32 zeal = nsContentUtils::GetIntPref(js_zeal_option_str, -1);
+  if (zeal >= 0)
+    ::JS_SetGCZeal(context->mContext, (PRUint8)zeal);
+#endif
+
   return 0;
 }
 
@@ -2127,14 +2134,12 @@ nsJSContext::ScriptEvaluated(PRBool aTerminated)
 
   mNumEvaluations++;
 
-#ifdef WAY_TOO_MUCH_GC
-  ::JS_MaybeGC(mContext);
-#else
-  if (mNumEvaluations > 20) {
+  if (mContext->runtime->gcZeal >= 2) {
+    ::JS_MaybeGC(mContext);
+  } else if (mNumEvaluations > 20) {
     mNumEvaluations = 0;
     ::JS_MaybeGC(mContext);
   }
-#endif
 
   mBranchCallbackCount = 0;
   mBranchCallbackTime = LL_ZERO;
