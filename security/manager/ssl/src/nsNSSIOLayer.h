@@ -53,6 +53,7 @@
 #include "nsISSLStatusProvider.h"
 #include "nsXPIDLString.h"
 #include "nsNSSShutDown.h"
+#include "nsIClientAuthDialogs.h"
 
 class nsIChannel;
 class nsSSLThread;
@@ -123,6 +124,7 @@ class nsNSSSocketInfo : public nsITransportSecurityInfo,
                         public nsISSLSocketControl,
                         public nsIInterfaceRequestor,
                         public nsISSLStatusProvider,
+                        public nsIClientAuthUserDecision,
                         public nsNSSShutDownObject,
                         public nsOnPK11LogoutCancelObject
 {
@@ -135,6 +137,7 @@ public:
   NS_DECL_NSISSLSOCKETCONTROL
   NS_DECL_NSIINTERFACEREQUESTOR
   NS_DECL_NSISSLSTATUSPROVIDER
+  NS_DECL_NSICLIENTAUTHUSERDECISION
 
   nsresult SetSecurityState(PRUint32 aState);
   nsresult SetShortSecurityDescription(const PRUnichar *aText);
@@ -191,6 +194,7 @@ protected:
   PRPackedBool mHasCleartextPhase;
   PRPackedBool mHandshakeInProgress;
   PRPackedBool mAllowTLSIntoleranceTimeout;
+  PRPackedBool mRememberClientAuthCertificate;
   BadCertUIStatusType mBadCertUIStatus;
   PRIntervalTime mHandshakeStartTime;
   PRInt32 mPort;
