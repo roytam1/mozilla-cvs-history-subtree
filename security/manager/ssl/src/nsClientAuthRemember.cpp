@@ -163,11 +163,16 @@ nsClientAuthRememberService::RememberDecision(const nsACString & aHostName,
   if (NS_FAILED(rv))
     return rv;
 
-  nsCString empty;
   {
     nsAutoMonitor lock(monitor);
-    AddEntryToList(aHostName, fpStr, 
-                   (aClientCert ? nsDependentCString(aClientCert->nickname) : empty));
+    if (aClientCert) {
+      AddEntryToList(aHostName, fpStr, 
+                     nsDependentCString(aClientCert->nickname));
+    }
+    else {
+      nsCString empty;
+      AddEntryToList(aHostName, fpStr, empty);
+    }
   }
 
   return NS_OK;
