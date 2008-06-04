@@ -214,6 +214,7 @@ typedef union JSTempValueUnion {
     JSString            *string;
     JSXML               *xml;
     JSXMLQName          *qname;
+    JSXMLNamespace      *nspace;
     JSTempValueMarker   marker;
     JSScopeProperty     *sprop;
     JSWeakRoots         *weakRoots;
