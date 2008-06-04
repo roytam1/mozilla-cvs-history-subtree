@@ -3464,7 +3464,9 @@ nsXULDocument::LoadScript(nsXULPrototypeScript* aScriptProto, PRBool* aBlock)
     // Load a transcluded script
     nsresult rv;
 
-    if (aScriptProto->mJSObject) {
+    PRBool isChromeDoc = IsChromeURI(mDocumentURI);
+
+    if (isChromeDoc && aScriptProto->mJSObject) {
         rv = ExecuteScript(aScriptProto->mJSObject);
 
         // Ignore return value from execution, and don't block
@@ -3478,7 +3480,7 @@ nsXULDocument::LoadScript(nsXULPrototypeScript* aScriptProto, PRBool* aBlock)
     PRBool useXULCache;
     gXULCache->GetEnabled(&useXULCache);
 
-    if (useXULCache) {
+    if (isChromeDoc && useXULCache) {
         gXULCache->GetScript(aScriptProto->mSrcURI,
                              NS_REINTERPRET_CAST(void**, &aScriptProto->mJSObject));
 
