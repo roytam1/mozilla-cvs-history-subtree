@@ -593,9 +593,12 @@ nsXULElement::AddScriptEventListener(nsIAtom* aName, const nsAString& aValue)
 
     nsIContent *root = doc->GetRootContent();
     nsCOMPtr<nsIContent> content(do_QueryInterface(NS_STATIC_CAST(nsIStyledContent*, this)));
-    if ((!root || root == content) && !mNodeInfo->Equals(nsXULAtoms::overlay)) {
-        nsIScriptGlobalObject *global = doc->GetScriptGlobalObject();
 
+    nsIScriptGlobalObject *global = doc->GetScriptGlobalObject();
+    nsCOMPtr<nsPIDOMWindow> window(do_QueryInterface(global));
+
+    if (window && window->IsInnerWindow() && (!root || root == content) &&
+        !mNodeInfo->Equals(nsXULAtoms::overlay)) {
         nsCOMPtr<nsIDOMEventReceiver> receiver = do_QueryInterface(global);
         if (! receiver)
             return NS_ERROR_UNEXPECTED;
