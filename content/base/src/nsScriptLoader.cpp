@@ -52,7 +52,7 @@
 #include "nsIScriptSecurityManager.h"
 #include "nsIPrincipal.h"
 #include "nsContentPolicyUtils.h"
-#include "nsIDOMWindow.h"
+#include "nsPIDOMWindow.h"
 #include "nsIHttpChannel.h"
 #include "nsIScriptElement.h"
 #include "nsIDOMHTMLScriptElement.h"
@@ -763,7 +763,9 @@ nsScriptLoader::EvaluateScript(nsScriptLoadRequest* aRequest,
   }
 
   nsIScriptGlobalObject *globalObject = mDocument->GetScriptGlobalObject();
-  NS_ENSURE_TRUE(globalObject, NS_ERROR_FAILURE);
+
+  nsCOMPtr<nsPIDOMWindow> pwin(do_QueryInterface(globalObject));
+  NS_ENSURE_TRUE(pwin && pwin->IsInnerWindow(), NS_ERROR_FAILURE);
 
   // Make sure context is a strong reference since we access it after
   // we've executed a script, which may cause all other references to
