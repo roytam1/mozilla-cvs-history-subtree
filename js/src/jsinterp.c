@@ -252,7 +252,9 @@ js_EnablePropertyCache(JSContext *cx)
  * Optimized conversion macros that test for the desired type in v before
  * homing sp and calling a conversion function.
  */
-#define VALUE_TO_NUMBER(cx, v, d)                                             \
+#define VALUE_TO_NUMBER(cx, v, d)   VALUE_TO_NUMBER_GOTO(cx, v, d, goto out)
+
+#define VALUE_TO_NUMBER_GOTO(cx, v, d, error_goto)                            \
     JS_BEGIN_MACRO                                                            \
         if (JSVAL_IS_INT(v)) {                                                \
             d = (jsdouble)JSVAL_TO_INT(v);                                    \
@@ -262,7 +264,7 @@ js_EnablePropertyCache(JSContext *cx)
             SAVE_SP_AND_PC(fp);                                               \
             ok = js_ValueToNumber(cx, v, &d);                                 \
             if (!ok)                                                          \
-                goto out;                                                     \
+                error_goto;                                                   \
         }                                                                     \
     JS_END_MACRO
 
@@ -2719,7 +2721,7 @@ interrupt:
              */
             JS_ASSERT(!JSVAL_IS_PRIMITIVE(sp[i]));
             iterobj = JSVAL_TO_OBJECT(sp[i]);
-          
+
             SAVE_SP_AND_PC(fp);
             ok = js_CallIteratorNext(cx, iterobj, &rval);
             if (!ok)
@@ -3505,14 +3507,17 @@ interrupt:
                 STORE_OPND(i, OBJECT_TO_JSVAL(obj));
             CHECK_ELEMENT_ID(obj, id);
 
-            /* The operand must contain a number. */
-            SAVE_SP_AND_PC(fp);
-            CACHED_GET(OBJ_GET_PROPERTY(cx, obj, id, &rval));
-            if (!ok)
-                goto out;
-
             /* Preload for use in the if/else immediately below. */
             cs = &js_CodeSpec[op];
+
+            SAVE_SP_AND_PC(fp);
+            if (cs->format & JOF_ELEM)
+                JS_KEEP_ATOMS(rt);
+
+            /* From this point the control must flow through finish_incop:. */
+            CACHED_GET(OBJ_GET_PROPERTY(cx, obj, id, &rval));
+            if (!ok)
+                goto finish_incop;
 
             /* The expression result goes in rtmp, the updated value in rval. */
             if (JSVAL_IS_INT(rval) &&
@@ -3526,7 +3531,6 @@ interrupt:
                     rtmp = rval;
                 }
             } else {
-
 /*
  * Initially, rval contains the value to increment or decrement, which is not
  * yet converted.  As above, the expression result goes in rtmp, the updated
@@ -3534,15 +3538,15 @@ interrupt:
  * in which we home rtmp, to protect it from GC in case the unconverted rval
  * is not a number.
  */
-#define NONINT_INCREMENT_OP_MIDDLE()                                          \
+#define NONINT_INCREMENT_OP_MIDDLE(error_goto)                                \
     JS_BEGIN_MACRO                                                            \
-        VALUE_TO_NUMBER(cx, rval, d);                                         \
+        VALUE_TO_NUMBER_GOTO(cx, rval, d, error_goto);                        \
         if (cs->format & JOF_POST) {                                          \
             rtmp = rval;                                                      \
             if (!JSVAL_IS_NUMBER(rtmp)) {                                     \
                 ok = js_NewNumberValue(cx, d, &rtmp);                         \
                 if (!ok)                                                      \
-                    goto out;                                                 \
+                    error_goto;                                               \
             }                                                                 \
             *vp = rtmp;                                                       \
             (cs->format & JOF_INC) ? d++ : d--;                               \
@@ -3551,37 +3555,35 @@ interrupt:
             (cs->format & JOF_INC) ? ++d : --d;                               \
             ok = js_NewNumberValue(cx, d, &rval);                             \
             rtmp = rval;                                                      \
+            *vp = rtmp;                                                       \
         }                                                                     \
         if (!ok)                                                              \
-            goto out;                                                         \
+            error_goto;                                                       \
     JS_END_MACRO
 
-                if (cs->format & JOF_POST) {
-                    /*
-                     * We must push early to protect the postfix increment
-                     * or decrement result, if converted to a jsdouble from
-                     * a non-number value, from GC nesting in the setter.
-                     */
-                    vp = sp;
-                    PUSH(JSVAL_VOID);
-                    SAVE_SP(fp);
-                    --i;
-                }
-#ifdef __GNUC__
-                else vp = NULL; /* suppress bogus gcc warnings */
-#endif
-
-                NONINT_INCREMENT_OP_MIDDLE();
+                /*
+                 * We must push early to protect the increment or decrement
+                 * result, if converted to a jsdouble from a non-number value,
+                 * from GC nesting in the setter.
+                 */
+                vp = sp;
+                PUSH(JSVAL_VOID);
+                SAVE_SP(fp);
+                --i;
+                NONINT_INCREMENT_OP_MIDDLE(goto finish_incop);
             }
-
             fp->flags |= JSFRAME_ASSIGNING;
             CACHED_SET(OBJ_SET_PROPERTY(cx, obj, id, &rval));
             fp->flags &= ~JSFRAME_ASSIGNING;
+
+          finish_incop:
+            if (cs->format & JOF_ELEM)
+                JS_UNKEEP_ATOMS(rt);
             if (!ok)
                 goto out;
             sp += i;
             PUSH_OPND(rtmp);
-            len = js_CodeSpec[op].length;
+            len = cs->length;
             DO_NEXT_OP(len);
           }
 
@@ -3627,7 +3629,7 @@ interrupt:
           {
             const JSCodeSpec *cs = &js_CodeSpec[op];
 
-            NONINT_INCREMENT_OP_MIDDLE();
+            NONINT_INCREMENT_OP_MIDDLE(goto out);
             *vp = rval;
             PUSH_OPND(rtmp);
             len = cs->length;
@@ -3676,7 +3678,7 @@ interrupt:
 
             vp = sp++;
             SAVE_SP(fp);
-            NONINT_INCREMENT_OP_MIDDLE();
+            NONINT_INCREMENT_OP_MIDDLE(goto out);
             OBJ_SET_SLOT(cx, obj, slot, rval);
             STORE_OPND(-1, rtmp);
             len = cs->length;
