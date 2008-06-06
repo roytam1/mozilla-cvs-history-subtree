@@ -339,7 +339,10 @@ nsIndexedToHTML::OnStartRequest(nsIRequest* request, nsISupports *aContext) {
         // will prematurely close the string.  Go ahead an
         // add a base href.
         buffer.AppendLiteral("<base href=\"");
-        AppendASCIItoUTF16(baseUri, buffer);
+        NS_ConvertUTF8toUTF16 utf16BaseURI(baseUri);
+        nsString htmlEscapedUri;
+        htmlEscapedUri.Adopt(nsEscapeHTML2(utf16BaseURI.get(), utf16BaseURI.Length()));
+        buffer.Append(htmlEscapedUri);
         buffer.AppendLiteral("\"/>\n");
     }
     else
@@ -377,10 +380,14 @@ nsIndexedToHTML::OnStartRequest(nsIRequest* request, nsISupports *aContext) {
         rv = mBundle->GetStringFromName(NS_LITERAL_STRING("DirGoUp").get(),
                                         getter_Copies(parentText));
         if (NS_FAILED(rv)) return rv;
-        
+
         ConvertNonAsciiToNCR(parentText, strNCR);
         buffer.AppendLiteral("<tr><td colspan=\"3\"><a href=\"");
-        AppendASCIItoUTF16(parentStr, buffer);
+
+        NS_ConvertUTF8toUTF16 utf16ParentStr(parentStr);
+        nsString htmlParentStr;
+        htmlParentStr.Adopt(nsEscapeHTML2(utf16ParentStr.get(), utf16ParentStr.Length()));
+        buffer.Append(htmlParentStr);
         buffer.AppendLiteral("\">");
         buffer.Append(strNCR);
         buffer.AppendLiteral("</a></td></tr>\n");
@@ -555,9 +562,11 @@ nsIndexedToHTML::OnIndexAvailable(nsIRequest *aRequest,
         escFlags = esc_Forced | esc_OnlyASCII | esc_AlwaysCopy | esc_FileBaseName | esc_Colon;
     }
     NS_EscapeURL(utf8UnEscapeSpec.get(), utf8UnEscapeSpec.Length(), escFlags, escapeBuf);
+    NS_ConvertUTF8toUTF16 utf16URI(escapeBuf);
+    nsString htmlEscapedURL;
+    htmlEscapedURL.Adopt(nsEscapeHTML2(utf16URI.get(), utf16URI.Length()));
+    pushBuffer.Append(htmlEscapedURL);
   
-    AppendUTF8toUTF16(escapeBuf, pushBuffer);
-    
     pushBuffer.AppendLiteral("\"><img src=\"");
 
     switch (type) {
