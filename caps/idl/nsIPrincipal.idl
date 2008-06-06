@@ -134,9 +134,9 @@ interface nsIPrincipal : nsISerializable
     attribute nsIURI domain;
 
     /**
-     * The origin of this principal's domain, if non-null, or its
-     * codebase URI otherwise. An origin is defined as:
-     * scheme + host + port.
+     * The origin of this principal's codebase URI.
+     * An origin is defined as: scheme + host + port.
+     * (or the full URI for hostless schemes)
      */
     // XXXcaa this should probably be turned into an nsIURI.
     // The system principal's origin should be some caps namespace

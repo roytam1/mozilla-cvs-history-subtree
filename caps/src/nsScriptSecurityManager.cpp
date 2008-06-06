@@ -976,6 +976,46 @@ nsScriptSecurityManager::CheckSameOriginDOMProp(nsIPrincipal* aSubject,
     return NS_ERROR_DOM_PROP_ACCESS_DENIED;
 }
 
+static
+nsresult
+GetPrincipalDomainOrigin(nsIPrincipal* aPrincipal,
+                         nsACString& aOrigin)
+{
+    aOrigin.Truncate();
+
+    nsCOMPtr<nsIURI> uri;
+    aPrincipal->GetDomain(getter_AddRefs(uri));
+    if (!uri) {
+        aPrincipal->GetURI(getter_AddRefs(uri));
+    }
+
+    // de-nest jar: origins
+    nsCOMPtr<nsIJARURI> jarURI;
+    while((jarURI = do_QueryInterface(uri)))
+    {
+        jarURI->GetJARFile(getter_AddRefs(uri));
+    }
+    NS_ENSURE_TRUE(uri, NS_ERROR_UNEXPECTED);
+
+    nsCAutoString hostPort;
+
+    nsresult rv = uri->GetHostPort(hostPort);
+    if (NS_SUCCEEDED(rv)) {
+        nsCAutoString scheme;
+        rv = uri->GetScheme(scheme);
+        NS_ENSURE_SUCCESS(rv, rv);
+        aOrigin = scheme + NS_LITERAL_CSTRING("://") + hostPort;
+    }
+    else {
+        // Some URIs (e.g., nsSimpleURI) don't support host. Just
+        // get the full spec.
+        rv = uri->GetSpec(aOrigin);
+        NS_ENSURE_SUCCESS(rv, rv);
+    }
+
+    return NS_OK;
+}
+
 nsresult
 nsScriptSecurityManager::LookupPolicy(nsIPrincipal* aPrincipal,
                                      const char* aClassName, jsval aProperty,
@@ -1006,9 +1046,9 @@ nsScriptSecurityManager::LookupPolicy(nsIPrincipal* aPrincipal,
         printf("DomainLookup ");
 #endif
 
-        nsXPIDLCString origin;
-        if (NS_FAILED(rv = aPrincipal->GetOrigin(getter_Copies(origin))))
-            return rv;
+        nsCAutoString origin;
+        rv = GetPrincipalDomainOrigin(aPrincipal, origin);
+        NS_ENSURE_SUCCESS(rv, rv);
  
         char *start = origin.BeginWriting();
         const char *nextToLastDot = nsnull;
@@ -2469,13 +2509,13 @@ nsScriptSecurityManager::CheckConfirmDialog(JSContext* cx, nsIPrincipal* aPrinci
     if (NS_FAILED(rv))
         return PR_FALSE;
 
-    nsXPIDLCString val;
+    nsCAutoString val;
     PRBool hasCert;
     aPrincipal->GetHasCertificate(&hasCert);
     if (hasCert)
         rv = aPrincipal->GetPrettyName(val);
     else
-        rv = aPrincipal->GetOrigin(getter_Copies(val));
+        rv = GetPrincipalDomainOrigin(aPrincipal, val);
 
     if (NS_FAILED(rv))
         return PR_FALSE;
@@ -2590,14 +2630,14 @@ nsScriptSecurityManager::EnableCapability(const char *capability)
 
     if (canEnable != nsIPrincipal::ENABLE_GRANTED)
     {
-        nsXPIDLCString val;
+        nsCAutoString val;
         PRBool hasCert;
         nsresult rv;
         principal->GetHasCertificate(&hasCert);
         if (hasCert)
             rv = principal->GetPrettyName(val);
         else
-            rv = principal->GetOrigin(getter_Copies(val));
+            rv = GetPrincipalDomainOrigin(principal, val);
 
         if (NS_FAILED(rv))
             return rv;

@@ -115,9 +115,6 @@ nsPrincipal::Init(const nsACString& aCertFingerprint,
 
   mCodebase = aCodebase;
 
-  // Invalidate our cached origin
-  mOrigin = nsnull;
-
   nsresult rv;
   if (!aCertFingerprint.IsEmpty()) {
     rv = SetCertificate(aCertFingerprint, aSubjectName, aPrettyName, aCert);
@@ -168,19 +165,17 @@ nsPrincipal::GetOrigin(char **aOrigin)
 {
   *aOrigin = nsnull;
 
-  if (!mOrigin) {
-    mOrigin = mDomain ? mDomain : mCodebase;
-    if (mOrigin) {
-      // If uri is a jar URI, get the base URI
-      nsCOMPtr<nsIJARURI> jarURI;
-      while((jarURI = do_QueryInterface(mOrigin)))
-      {
-        jarURI->GetJARFile(getter_AddRefs(mOrigin));
-      }
+  nsCOMPtr<nsIURI> origin = mCodebase;
+  if (mCodebase) {
+    // If uri is a jar URI, get the base URI
+    nsCOMPtr<nsIJARURI> jarURI;
+    while((jarURI = do_QueryInterface(origin)))
+    {
+      jarURI->GetJARFile(getter_AddRefs(origin));
     }
   }
       
-  if (!mOrigin) {
+  if (!origin) {
       NS_ASSERTION(mCert, "No Domain or Codebase for a non-cert principal");
       return NS_ERROR_FAILURE;
   }
@@ -189,17 +184,15 @@ nsPrincipal::GetOrigin(char **aOrigin)
 
   // chrome: URLs don't have a meaningful origin, so make
   // sure we just get the full spec for them.
-  // XXX this should be removed in favor of the solution in
-  // bug 160042.
   PRBool isChrome;
-  nsresult rv = mOrigin->SchemeIs("chrome", &isChrome);
+  nsresult rv = origin->SchemeIs("chrome", &isChrome);
   if (NS_SUCCEEDED(rv) && !isChrome) {
-    rv = mOrigin->GetHostPort(hostPort);
+    rv = origin->GetHostPort(hostPort);
   }
 
   if (NS_SUCCEEDED(rv) && !isChrome) {
     nsCAutoString scheme;
-    rv = mOrigin->GetScheme(scheme);
+    rv = origin->GetScheme(scheme);
     NS_ENSURE_SUCCESS(rv, rv);
     *aOrigin = ToNewCString(scheme + NS_LITERAL_CSTRING("://") + hostPort);
   }
@@ -207,7 +200,7 @@ nsPrincipal::GetOrigin(char **aOrigin)
     // Some URIs (e.g., nsSimpleURI) don't support host. Just
     // get the full spec.
     nsCAutoString spec;
-    rv = mOrigin->GetSpec(spec);
+    rv = origin->GetSpec(spec);
     NS_ENSURE_SUCCESS(rv, rv);
     *aOrigin = ToNewCString(spec);
   }
@@ -511,9 +504,6 @@ void
 nsPrincipal::SetURI(nsIURI* aURI)
 {
   mCodebase = aURI;
-
-  // Invalidate our cached origin
-  mOrigin = nsnull;
 }
 
 
@@ -612,9 +602,6 @@ nsPrincipal::SetDomain(nsIURI* aDomain)
   // Domain has changed, forget cached security policy
   SetSecurityPolicy(nsnull);
 
-  // Invalidate our cached origin
-  mOrigin = nsnull;
-
   return NS_OK;
 }
 
@@ -653,9 +640,6 @@ nsPrincipal::InitFromPersistent(const char* aPrefName,
     }
 
     mTrusted = aTrusted;
-
-    // Invalidate our cached origin
-    mOrigin = nsnull;
   }
 
   rv = mJSPrincipals.Init(this, aToken.get());
