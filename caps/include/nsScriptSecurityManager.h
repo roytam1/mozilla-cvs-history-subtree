@@ -398,6 +398,18 @@ public:
 
     JSContext* GetSafeJSContext();
 
+    /**
+     * Utility method for comparing two URIs.  For security purposes, two URIs
+     * are equivalent if their schemes, hosts, and ports (if any) match.  This
+     * method returns true if aSubjectURI and aObjectURI have the same origin,
+     * false otherwise.
+     */
+    static PRBool SecurityCompareURIs(nsIURI* aSourceURI, nsIURI* aTargetURI);
+
+    static nsresult
+    CheckSameOriginPrincipal(nsIPrincipal* aSubject,
+                             nsIPrincipal* aObject,
+                             PRBool aIsCheckConnect);
 private:
 
     // GetScriptSecurityManager is the only call that can make one
@@ -437,11 +449,6 @@ private:
                             nsIClassInfo* aClassInfo,
                             const char* aClassName, jsval aProperty,
                             void** aCachedClassPolicy);
-
-    nsresult
-    CheckSameOriginPrincipalInternal(nsIPrincipal* aSubject,
-                                     nsIPrincipal* aObject,
-                                     PRBool aIsCheckConnect);
 
     nsresult
     CheckSameOriginDOMProp(nsIPrincipal* aSubject, 
