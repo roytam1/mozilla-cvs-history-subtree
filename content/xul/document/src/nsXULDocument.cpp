@@ -3587,16 +3587,13 @@ nsXULDocument::OnStreamComplete(nsIStreamLoader* aLoader,
         nsString stringStr;
         rv = nsScriptLoader::ConvertToUTF16(channel, string, stringLen,
                                             EmptyString(), this, stringStr);
-        if (NS_SUCCEEDED(rv)) {
-            rv = scriptProto->Compile(stringStr.get(), stringStr.Length(),
-                                      uri, 1, this, mCurrentPrototype);
-        }
+        if (NS_SUCCEEDED(rv))
+          rv = scriptProto->Compile(stringStr.get(), stringStr.Length(), uri,
+                                    1, this, mCurrentPrototype);
 
         aStatus = rv;
         if (NS_SUCCEEDED(rv) && scriptProto->mJSObject) {
-            if (nsScriptLoader::ShouldExecuteScript(this, channel)) {
-                rv = ExecuteScript(scriptProto->mJSObject);
-            }
+            rv = ExecuteScript(scriptProto->mJSObject);
 
             // If the XUL cache is enabled, save the script object there in
             // case different XUL documents source the same script.
@@ -3677,9 +3674,8 @@ nsXULDocument::OnStreamComplete(nsIStreamLoader* aLoader,
         doc->mNextSrcLoadWaiter = nsnull;
 
         // Execute only if we loaded and compiled successfully, then resume
-        if (NS_SUCCEEDED(aStatus) && scriptProto->mJSObject &&
-            nsScriptLoader::ShouldExecuteScript(doc, channel)) {
-           doc->ExecuteScript(scriptProto->mJSObject);
+        if (NS_SUCCEEDED(aStatus) && scriptProto->mJSObject) {
+            doc->ExecuteScript(scriptProto->mJSObject);
         }
         doc->ResumeWalk();
         NS_RELEASE(doc);

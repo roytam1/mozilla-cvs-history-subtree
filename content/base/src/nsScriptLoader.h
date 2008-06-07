@@ -114,13 +114,6 @@ public:
 
   void ProcessPendingReqests();
 
-  /**
-   * Check whether it's OK to execute a script loaded via aChannel in
-   * aDocument.
-   */
-  static PRBool ShouldExecuteScript(nsIDocument* aDocument,
-                                    nsIChannel* aChannel);
-
 protected:
   PRBool InNonScriptingContainer(nsIScriptElement* aScriptElement);
   PRBool IsScriptEventHandler(nsIScriptElement* aScriptElement);

@@ -67,6 +67,42 @@
 static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
 
 //////////////////////////////////////////////////////////////
+//
+//////////////////////////////////////////////////////////////
+
+static already_AddRefed<nsIPrincipal>
+IntersectPrincipalCerts(nsIPrincipal *aOld, nsIPrincipal *aNew)
+{
+  NS_PRECONDITION(aOld, "Null old principal!");
+  NS_PRECONDITION(aNew, "Null new principal!");
+
+  nsIPrincipal *principal = aOld;
+
+  PRBool hasCert;
+  aOld->GetHasCertificate(&hasCert);
+  if (hasCert) {
+    PRBool equal;
+    aOld->Equals(aNew, &equal);
+    if (!equal) {
+      nsCOMPtr<nsIURI> uri, domain;
+      aOld->GetURI(getter_AddRefs(uri));
+      aOld->GetDomain(getter_AddRefs(domain));
+
+      nsContentUtils::GetSecurityManager()->GetCodebasePrincipal(uri, &principal);
+      if (principal && domain) {
+        principal->SetDomain(domain);
+      }
+
+      return principal;
+    }
+  }
+
+  NS_ADDREF(principal);
+
+  return principal;
+}
+
+//////////////////////////////////////////////////////////////
 // Per-request data structure
 //////////////////////////////////////////////////////////////
 
@@ -1020,8 +1056,26 @@ nsScriptLoader::OnStreamComplete(nsIStreamLoader* aLoader,
       return NS_OK;
     }
 
-    if (!ShouldExecuteScript(mDocument, channel)) {
-      return NS_ERROR_NOT_AVAILABLE;
+    //-- Merge the principal of the script file with that of the document
+    if (channel) {
+      nsCOMPtr<nsISupports> owner;
+      channel->GetOwner(getter_AddRefs(owner));
+      nsCOMPtr<nsIPrincipal> principal = do_QueryInterface(owner);
+
+      if (principal) {
+        nsIPrincipal *docPrincipal = mDocument->GetPrincipal();
+        if (docPrincipal) {
+          nsCOMPtr<nsIPrincipal> newPrincipal =
+              IntersectPrincipalCerts(docPrincipal, principal);
+
+          mDocument->SetPrincipal(newPrincipal);
+        } else {
+          mPendingRequests.RemoveObject(request);
+          FireScriptAvailable(rv, request, EmptyString());
+          ProcessPendingReqests();
+          return NS_OK;
+        }
+      }
     }
   }
 
@@ -1041,81 +1095,6 @@ nsScriptLoader::OnStreamComplete(nsIStreamLoader* aLoader,
   ProcessPendingReqests();
 
   return NS_OK;
-}
-
-/**
- * Get the "final" URI for a channel.  This is either the same as GetURI or
- * GetOriginalURI, depending on whether this channel has
- * nsIChanel::LOAD_REPLACE set.  For channels without that flag set, the final
- * URI is the original URI, while for ones with the flag the final URI is the
- * channel URI.
- */
-static nsresult
-NS_GetFinalChannelURI(nsIChannel* channel, nsIURI** uri)
-{
-    *uri = nsnull;
-    nsLoadFlags loadFlags = 0;
-    nsresult rv = channel->GetLoadFlags(&loadFlags);
-    NS_ENSURE_SUCCESS(rv, rv);
-    
-    if (loadFlags & nsIChannel::LOAD_REPLACE) {
-        return channel->GetURI(uri);
-    }
-    
-    return channel->GetOriginalURI(uri);
-}
-
-static nsresult
-GetChannelPrincipal(nsIChannel* aChannel, nsIPrincipal** aPrincipal)
-{
-  NS_PRECONDITION(aChannel, "Must have channel!");
-  nsCOMPtr<nsISupports> owner;
-  aChannel->GetOwner(getter_AddRefs(owner));
-  if (owner) {
-    CallQueryInterface(owner, aPrincipal);
-    if (*aPrincipal) {
-      return NS_OK;
-    }
-  }
-
-  // OK, get the principal from the URI.  Make sure this does the same thing
-  // as nsDocument::Reset and nsXULDocument::StartDocumentLoad.
-  nsCOMPtr<nsIURI> uri;
-  nsresult rv = NS_GetFinalChannelURI(aChannel, getter_AddRefs(uri));
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  return nsContentUtils::GetSecurityManager()->
-    GetCodebasePrincipal(uri, aPrincipal);
-}
-
-/* static */
-PRBool
-nsScriptLoader::ShouldExecuteScript(nsIDocument* aDocument,
-                                    nsIChannel* aChannel)
-{
-  if (!aChannel) {
-    return PR_FALSE;
-  }
-
-  PRBool hasCert;
-  nsIPrincipal *docPrincipal = aDocument->GetPrincipal();
-  docPrincipal->GetHasCertificate(&hasCert);
-  if (!hasCert) {
-    return PR_TRUE;
-  }
-
-  nsCOMPtr<nsIPrincipal> channelPrincipal;
-  nsresult rv = GetChannelPrincipal(aChannel,
-                                    getter_AddRefs(channelPrincipal));
-  NS_ENSURE_SUCCESS(rv, PR_FALSE);
-
-  NS_ASSERTION(channelPrincipal, "Gotta have a principal here!");
-
-  // If the document principal is a cert principal and is not the same
-  // as the channel principal, then we don't execute the script.
-  PRBool equal;
-  rv = docPrincipal->Equals(channelPrincipal, &equal);
-  return NS_SUCCEEDED(rv) && equal;
 }
 
 NS_IMETHODIMP
