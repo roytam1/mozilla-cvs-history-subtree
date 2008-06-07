@@ -244,14 +244,13 @@ nsPrincipal::Equals(nsIPrincipal *aOther, PRBool *aResult)
   }
 
   if (this != aOther) {
-    PRBool otherHasCert;
-    aOther->GetHasCertificate(&otherHasCert);
-    if (otherHasCert != (mCert != nsnull)) {
-      // One has a cert while the other doesn't.  Not equal.
-      return NS_OK;
-    }
-
     if (mCert) {
+      PRBool otherHasCert;
+      aOther->GetHasCertificate(&otherHasCert);
+      if (!otherHasCert) {
+        return NS_OK;
+      }
+
       nsCAutoString str;
       aOther->GetFingerprint(str);
       *aResult = str.Equals(mCert->fingerprint);
@@ -271,7 +270,7 @@ nsPrincipal::Equals(nsIPrincipal *aOther, PRBool *aResult)
     // Codebases are equal if they have the same origin.
     *aResult =
       NS_SUCCEEDED(nsScriptSecurityManager::GetScriptSecurityManager()
-                   ->CheckSameOriginPrincipal(this, aOther, PR_FALSE));
+                   ->CheckSameOriginPrincipal(this, aOther));
     return NS_OK;
   }
 
