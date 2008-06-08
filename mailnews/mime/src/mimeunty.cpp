@@ -320,11 +320,11 @@ MimeUntypedText_open_subpart (MimeObject *obj,
   uty->open_hdrs = MimeHeaders_new();
   if (!uty->open_hdrs) return MIME_OUT_OF_MEMORY;
 
-  PRUint32 hlen = (strlen(type) +
+  PRUint32 hlen = strlen(type) +
 						(enc ? strlen(enc) : 0) +
 						(desc ? strlen(desc) : 0) +
 						(name ? strlen(name) : 0) +
-						100);
+               100;
   h = (char *) PR_MALLOC(hlen);
   if (!h) return MIME_OUT_OF_MEMORY;
 
