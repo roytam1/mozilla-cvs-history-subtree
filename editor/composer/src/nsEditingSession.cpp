@@ -725,7 +725,8 @@ nsEditingSession::OnStateChange(nsIWebProgress *aWebProgress,
     }
 
     // Document level notification...
-    if (aStateFlags & nsIWebProgressListener::STATE_IS_DOCUMENT) {
+    if (aStateFlags & nsIWebProgressListener::STATE_IS_DOCUMENT &&
+        !(aStateFlags & nsIWebProgressListener::STATE_RESTORING)) {
       PRBool progressIsForTargetDocument =
         IsProgressForTargetDocument(aWebProgress);
 

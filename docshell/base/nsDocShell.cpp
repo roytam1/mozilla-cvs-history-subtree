@@ -951,7 +951,7 @@ nsDocShell::FirePageHideNotification(PRBool aIsUnload)
     }
     // Now make sure our editor, if any, is torn down before we go
     // any farther.
-    if (mEditorData) {
+    if (mEditorData && aIsUnload) {
         mEditorData->TearDownEditor();
     }
 
