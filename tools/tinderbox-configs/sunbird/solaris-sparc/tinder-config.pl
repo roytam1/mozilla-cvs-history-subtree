@@ -26,7 +26,7 @@ $BuildAdministrator = "Kurt.Zenker\@sun.com";
 
 #- You'll need to change these to suit your machine's needs
 #$DisplayServer = ':0.0';
-#$DisplayServer = ':99';
+$DisplayServer = ':99';
 
 #- Default values of command-line opts
 #-
@@ -50,6 +50,7 @@ $BuildLocales      = 1;      # Do l10n packaging?
 # Only used when $BuildLocales = 1
 #%WGetFiles         = ();  # Pull files from the web, URL => Location
 #$WGetTimeout       = 360; # Wget timeout, in seconds
+$WGetTimeout       = 600; # Wget timeout, in seconds
 #$BuildLocalesArgs  = "";  # Extra attributes to add to the makefile command
                           # which builds the "installers-<locale>" target.
                           # Typically used to set ZIP_IN and WIN32_INSTALLER_IN
@@ -62,7 +63,7 @@ $BuildLocales      = 1;      # Do l10n packaging?
 #$CleanProfile             = 0;
 #$ResetHomeDirForTests     = 1;
 #$ProductName              = "Mozilla";
-$ProductName               = "Calendar"; 
+$ProductName               = "Sunbird";
 #$VendorName               = '';
 
 #$RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
@@ -205,7 +206,7 @@ $moz_cvsroot   = ":pserver:anonymous\@cvs-mirror.mozilla.org:/cvsroot";
 
 # Extra build name, if needed.
 #$BuildNameExtra = '';
-$BuildNameExtra = 'Sunbird-1.8-l10n-Testrelease';
+$BuildNameExtra = 'Sb-Moz1.8-l10n';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -219,7 +220,7 @@ $ConfigureOnly = 1;
 $LocalizationVersionFile = 'calendar/sunbird/config/version.txt';
 
 %WGetFiles = (
-          "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/experimental/nightly/latest-mozilla1.8/sunbird-%version%.en-US.solaris2.10-sparc.tar.bz2" =>
+          "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly/latest-mozilla1.8/sunbird-%version%.en-US.solaris2.10-sparc.tar.bz2" =>
           "/home/calbld/tb-lightning-sols/Sunbird1.8-l10n/SunOS_5.10_Clobber/sunbird.tar.bz2"
           );
 
@@ -235,7 +236,7 @@ $BuildLocalesArgs = "ZIP_IN=/home/calbld/tb-lightning-sols/Sunbird1.8-l10n/SunOS
 
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
-$BuildTree  = 'MozillaTest';
+$BuildTree  = 'Mozilla1.8-l10n';
 
 #$BuildName = '';
 $BuildTag = 'MOZILLA_1_8_BRANCH';
@@ -287,17 +288,17 @@ $build_hour    = "8";
 #$ssh_version   = "2";
 #$ssh_user      = "cltbld";
 $ssh_user      = "kzenker";
-#$ssh_server    = "stage.mozilla.org";
+$ssh_server    = "stage-old.mozilla.org";
 #$ftp_path      = "/home/ftp/pub/mozilla/nightly/experimental";
-$ftp_path      = "/home/ftp/pub/calendar/sunbird/experimental/nightly";
+$ftp_path      = "/home/ftp/pub/calendar/sunbird/nightly";
 #$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/mozilla/nightly/experimental";
-$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/experimental/nightly";
+$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly";
 #$tbox_ftp_path = $ftp_path;
 #$tbox_url_path = $url_path;
-$tbox_ftp_path      = "/home/ftp/pub/calendar/sunbird/experimental/tinderbox-builds";
-$tbox_url_path      = "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/experimental/tinderbox-builds";
+$tbox_ftp_path      = "/home/ftp/pub/calendar/sunbird/tinderbox-builds";
+$tbox_url_path      = "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/tinderbox-builds";
 #$milestone     = "trunk";
-$milestone     = "mozilla1.8";
+$milestone     = "mozilla1.8-l10n";
 #$notify_list   = 'build-announce@mozilla.org';
 #$stub_installer = 1;
 $stub_installer = 0;
@@ -350,7 +351,6 @@ $ssh_server    = "stage-old.mozilla.org";
 #$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly";
 #$tbox_ftp_path = "/home/ftp/pub/calendar/sunbird/tinderbox-builds";
 #$tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/tinderbox-builds";
-$milestone     = "mozilla1.8-l10n";
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 0;
