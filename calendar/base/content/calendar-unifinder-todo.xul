@@ -58,8 +58,8 @@
       <label flex="1" crop="end" style="font-weight: bold" value="&calendar.unifinder.todoitems.label;" control="unifinder-todo-tree"/>
     </box>
     <box align="center">
-      <checkbox id="hide-completed-checkbox"
-                label="&calendar.unifinder.hidecompletedtodos.label;"
+      <checkbox id="show-completed-checkbox"
+                label="&calendar.unifinder.showcompletedtodos.label;"
                 flex="1"
                 crop="end"
                 oncommand="toDoUnifinderRefresh();"
@@ -68,14 +68,11 @@
     <calendar-task-tree id="unifinder-todo-tree" flex="1"
                         visible-columns="completed priority title"
                         persist="visible-columns ordinals widths sort-active sort-direction"
-                        context="taskitem-context-menu"
-                        onselect="document.commandDispatcher.updateCommands('calendar_commands');"/>
+                        context="taskitem-context-menu"/>
     <box align="center" class="task-quickadd-box">
       <textbox id="unifinder-task-edit-field"
                class="task-edit-field"
                flex="1"
-               value="&calendar.task.edit.instructions.label;"
-               instructions="&calendar.task.edit.instructions.label;"
                onfocus="taskEdit.onFocus(event)"
                onblur="taskEdit.onBlur(event)"
                onkeypress="taskEdit.onKeyPress(event)"/>

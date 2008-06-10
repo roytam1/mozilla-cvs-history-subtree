@@ -108,8 +108,11 @@ LOCAL_INCLUDES	= \
 		-I$(srcdir)/services \
 		$(NULL)
 
-libs::
+_UNIT_FILES := $(wildcard $(srcdir)/unit/*.js)
+
+libs:: $(_UNIT_FILES)
 	$(INSTALL) $(srcdir)/test.properties $(DIST)/bin/res
+	$(INSTALL) $^ $(DIST)/bin/test_$(MODULE)
 
 install::
 	$(SYSINSTALL) $(IFLAGS1) $(srcdir)/test.properties $(DESTDIR)$(mozappdir)/res
@@ -117,3 +120,4 @@ install::
 check::
 	@echo "Running TestVersionComparator tests"
 	@$(PERL) -w $(srcdir)/TestVersionComparatorRunner.pl "$(RUN_TEST_PROGRAM) $(FINAL_TARGET)/TestVersionComparator$(BIN_SUFFIX)"
+	$(RUN_TEST_PROGRAM) $(DIST)/bin/test_all.sh $(DIST)/bin/test_$(MODULE)

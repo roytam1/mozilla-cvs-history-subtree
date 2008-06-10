@@ -42,39 +42,26 @@ var itemConversion = {
         aItem.calendar = getSelectedCalendar();
         aItem.title = aMessage.mime2DecodedSubject;
 
-        // The time for the event should default to the next full hour
-        if (isEvent(aItem)) {
-            aItem.startDate = now();
-            aItem.startDate.second = 0;
-            aItem.startDate.minute = 0;
-            aItem.startDate.hour++;
-            aItem.endDate = aItem.startDate.clone();
-            aItem.endDate.minute += getPrefSafe("calendar.event.defaultlength", 60);
-        } else if (isToDo(aItem)) {
-            aItem.entryDate = now();
-            aItem.entryDate.second = 0;
-            aItem.entryDate.minute = 0;
-            aItem.entryDate.hour++;
-        }
+        setDefaultStartEndHour(aItem);
         setDefaultAlarmValues(aItem);
 
         function addAttendees(aEmailAddresses) {
-            if (msgHeaderParser) {
-                var addresses = {};
-                var fullNames = {};
-                var names = {};
-                var numAddresses =  0;
-                numAddresses = msgHeaderParser.parseHeadersWithArray(
-                    aEmailAddresses, addresses, names, fullNames);
-                for (var i = 0; i < numAddresses; i++) {
-                    var attendee = createAttendee();
-                    attendee.id = addresses.value[i];
-                    attendee.commonName = names.value[i];
-                    attendee.role = "REQ-PARTICIPANT";
-                    attendee.participationStatus = "NEEDS-ACTION";
-                    attendee.rsvp = true;
-                    aItem.addAttendee(attendee);
-                }
+            var headerParser = Components.classes["@mozilla.org/messenger/headerparser;1"]
+                                         .getService(Components.interfaces.nsIMsgHeaderParser);
+            var addresses = {};
+            var fullNames = {};
+            var names = {};
+            var numAddresses =  0;
+            numAddresses = headerParser.parseHeadersWithArray(
+                aEmailAddresses, addresses, names, fullNames);
+            for (var i = 0; i < numAddresses; i++) {
+                var attendee = createAttendee();
+                attendee.id = addresses.value[i];
+                attendee.commonName = names.value[i];
+                attendee.role = "REQ-PARTICIPANT";
+                attendee.participationStatus = "NEEDS-ACTION";
+                attendee.rsvp = true;
+                aItem.addAttendee(attendee);
             }
         }
 
@@ -182,10 +169,7 @@ var itemConversion = {
         // Dates and alarms
         item.startDate = aTask.entryDate;
         if (!item.startDate) {
-            item.startDate = now();
-            item.startDate.minute = 0;
-            item.startDate.second = 0;
-            item.startDate.hour++;
+            item.startDate = getDefaultStartDate();
         }
 
         item.endDate = aTask.dueDate;
@@ -242,7 +226,13 @@ calDNDBaseObserver.prototype = {
         var bestFlavor = new Object();
         var length = new Object();
         transferable.getAnyTransferData(bestFlavor, data, length);
-        data = data.value.QueryInterface(Components.interfaces.nsISupportsString);
+
+        try {
+            data = data.value.QueryInterface(Components.interfaces.nsISupportsString);
+        } catch (exc) {
+            // we currently only supports strings:
+            return;
+        }
 
         // Treat unicode data with VEVENT in it as text/calendar
         if (bestFlavor.value == "text/unicode" && data.toString().indexOf("VEVENT") != -1) {

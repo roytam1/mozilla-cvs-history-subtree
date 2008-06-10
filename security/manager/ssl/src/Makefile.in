@@ -57,6 +57,7 @@ MOZILLA_INTERNAL_API = 1
 PACKAGE_FILE = pipnss.pkg
 
 CPPSRCS = 				\
+        nsClientAuthRemember.cpp        \
 	nsPSMBackgroundThread.cpp       \
 	nsSSLThread.cpp                 \
 	nsCertVerificationThread.cpp    \

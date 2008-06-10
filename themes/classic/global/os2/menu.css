@@ -50,6 +50,8 @@ menuitem {
   color: MenuText;
   background-color:  Menu;
   font: menu;
+  list-style-image: none;
+  -moz-image-region: auto;
 }
 
 menuitem[default="true"] {

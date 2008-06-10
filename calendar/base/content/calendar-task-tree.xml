@@ -73,7 +73,7 @@
                        label="&calendar.unifinder.tree.done.label;">
             <xul:image anonid="checkboximg" />
           </xul:treecol>
-          <xul:splitter class="tree-splitter"/>
+          <xul:splitter class="tree-splitter" ordinal="2"/>
           <xul:treecol anonid="calendar-task-tree-col-priority"
                        class="calendar-task-tree-col-priority"
                        minwidth="17"
@@ -81,33 +81,36 @@
                        label="&calendar.unifinder.tree.priority.label;">
             <xul:image anonid="priorityimg"/>
           </xul:treecol>
-          <xul:splitter class="tree-splitter"/>
+          <xul:splitter class="tree-splitter" ordinal="4"/>
           <xul:treecol anonid="calendar-task-tree-col-title"
                        flex="1" 
                        label="&calendar.unifinder.tree.title.label;"/>
-          <xul:splitter class="tree-splitter"/>
+          <xul:splitter class="tree-splitter" ordinal="6"/>
           <xul:treecol anonid="calendar-task-tree-col-startdate"
                        flex="1" label="&calendar.unifinder.tree.startdate.label;"/>
-          <xul:splitter class="tree-splitter"/>
+          <xul:splitter class="tree-splitter" ordinal="8"/>
           <xul:treecol anonid="calendar-task-tree-col-duedate"
                        flex="1" label="&calendar.unifinder.tree.duedate.label;"/>
-          <xul:splitter class="tree-splitter"/>
+          <xul:splitter class="tree-splitter" ordinal="10"/>
           <xul:treecol anonid="calendar-task-tree-col-completeddate"
                        flex="1" label="&calendar.unifinder.tree.completeddate.label;"/>
-          <xul:splitter class="tree-splitter"/>
+          <xul:splitter class="tree-splitter" ordinal="12"/>
           <xul:treecol anonid="calendar-task-tree-col-percentcomplete"
-                       flex="1" label="&calendar.unifinder.tree.percentcomplete.label;"/>
-          <xul:splitter class="tree-splitter"/>
+                       flex="1"
+                       type="progressmeter"
+                       minwidth="19"
+                       label="&calendar.unifinder.tree.percentcomplete.label;"/>
+          <xul:splitter class="tree-splitter" ordinal="14"/>
           <xul:treecol anonid="calendar-task-tree-col-categories"
                        flex="1" label="&calendar.unifinder.tree.categories.label;"/>
-          <xul:splitter class="tree-splitter"/>
+          <xul:splitter class="tree-splitter" ordinal="16"/>
           <xul:treecol anonid="calendar-task-tree-col-location"
                        label="&calendar.unifinder.tree.location.label;"/>
-          <xul:splitter class="tree-splitter"/>
+          <xul:splitter class="tree-splitter" ordinal="18"/>
           <xul:treecol anonid="calendar-task-tree-col-status"
                        flex="1"
                        label="&calendar.unifinder.tree.status.label;"/>
-          <xul:splitter class="tree-splitter"/>
+          <xul:splitter class="tree-splitter" ordinal="20"/>
           <xul:treecol anonid="calendar-task-tree-col-calendarname"
                        flex="1"
                        label="&calendar.unifinder.tree.calendarname.label;"/>
@@ -121,10 +124,9 @@
       <field name="mLoadCount">0</field>
       <field name="mTaskArray">[]</field>
       <field name="mHash2Index"><![CDATA[({})]]></field>
-      <field name="mContextTask">null</field>
       <field name="mRefreshQueue">[]</field>
       <field name="mPendingRefresh">null</field>
-      <field name="mHideCompletedTasks">false</field>
+      <field name="mShowCompletedTasks">true</field>
       <field name="mFilterFunction">null</field>
       <field name="mStartDate">null</field>
       <field name="mEndDate">null</field>
@@ -169,12 +171,12 @@
         ]]></getter>
       </property>
 
-      <property name="hideCompleted">
+      <property name="showCompleted">
         <getter><![CDATA[
-          return this.mHideCompletedTasks;
+          return this.mShowCompletedTasks;
         ]]></getter>
         <setter><![CDATA[
-          this.mHideCompletedTasks = val;
+          this.mShowCompletedTasks = val;
           return val;
         ]]></setter>
       </property>
@@ -219,16 +221,6 @@
           return this.mTreeView._getItemFromEvent(aEvent);
         ]]></body>
       </method>
-      
-      <property name="contextTask">
-        <getter><![CDATA[
-          return this.mContextTask;
-        ]]></getter>
-        <setter><![CDATA[
-          this.mContextTask = val;
-          return this.mContextTask;
-        ]]></setter>
-      </property>
             
       <field name="mTreeView"><![CDATA[
       ({
@@ -251,7 +243,7 @@
            */
 
           addItem: function tTV_addItem(aItem) {
-              if (aItem.isCompleted && this.binding.hideCompleted) {
+              if (aItem.isCompleted && !this.binding.showCompleted) {
                   return;
               }
               var index = this.binding.mHash2Index[aItem.hashId];
@@ -299,7 +291,7 @@
                   // same holds true for the completed filter, which is
                   // currently modeled as an explicit boolean.
                   if (aNewItem.isCompleted != aOldItem.isCompleted) {
-                      if (aNewItem.isCompleted && this.binding.hideCompleted) {
+                      if (aNewItem.isCompleted && !this.binding.showCompleted) {
                           this.removeItem(aNewItem);
                           return;
                       }
@@ -337,39 +329,51 @@
               return this.binding.mTaskArray.length;
           },
           
-          // An atomized list of properties for a given cell. Each property, x, that the
-          // view gives back will cause the pseudoclass :moz-tree-cell-x to be matched
-          // on the ::moz-tree-cell pseudoelement. It is use here to color a particular
-          // row with a color given by the progress state of the task.
-          getCellProperties: function mTV_getCellProperties(aRow, aCol, aProps) { 
-              var task = this.binding.mTaskArray[aRow];
-              if (aCol.element.getAttribute("anonid") == "calendar-task-tree-col-priority") {
-                  if(task.priority > 0 && task.priority < 5) {
-                      aProps.AppendElement(getAtomFromService("highpriority"));
-                  }
-                  if(task.priority > 5 && task.priority < 10) {
-                      aProps.AppendElement(getAtomFromService("lowpriority"));
-                  }
-              }
-              aProps.AppendElement(getAtomFromService(this._progressAtom(task)));
+          // TODO this code is currently identical to the unifinder. We should
+          // create an itemTreeView that these tree views can inherit, that
+          // contains this code, and possibly other code related to sorting and
+          // storing items. See bug 432582 for more details.
+          getCellProperties: function mTV_getCellProperties(aRow, aCol, aProps) {
+              this.getRowProperties(aRow, aProps);
+              this.getColumnProperties(aCol, aProps);
+          },
+
+          // Called to get properties to paint a column background.
+          // For shading the sort column, etc.
+          getColumnProperties: function mTV_getColumnProperties(aCol, aProps) {
               if (aCol.element.hasAttribute("anonid")) {
                   aProps.AppendElement(getAtomFromService(aCol.element.getAttribute("anonid")));
               }
           },
-          
-          // Called to get properties to paint a column background.
-          // For shading the sort column, etc.
-          getColumnProperties: function mTV_getColumnProperties() {
-              return false;
-          },
-         
-          // An atomized list of properties for a given row. Each property, x, that the
-          // view gives back will cause the pseudoclass :moz-tree-row-x to be matched
-          // on the pseudoelement ::moz-tree-row. It is used here to color the background
-          // of a selected task with a color given by  the progress state of the task.
+
           getRowProperties: function mTV_getRowProperties(aRow, aProps) {
-              var task = this.binding.mTaskArray[aRow];
-              aProps.AppendElement(getAtomFromService(this._progressAtom(task)));
+              var item = this.binding.mTaskArray[aRow];
+              if (item.priority > 0 && item.priority < 5) {
+                  aProps.AppendElement(getAtomFromService("highpriority"));
+              } else if (item.priority > 5 && item.priority < 10) {
+                  aProps.AppendElement(getAtomFromService("lowpriority"));
+              }
+              aProps.AppendElement(getAtomFromService(getProgressAtom(item)));
+
+              // Add calendar name atom
+              var calendarAtom = "calendar-" + formatStringForCSSRule(item.calendar.name);
+              aProps.AppendElement(getAtomFromService(calendarAtom));
+
+              // Add item status atom
+              if (item.status) {
+                  aProps.AppendElement(getAtomFromService("status-" + item.status.toLowerCase()));
+              }
+
+              // Alarm status atom
+              if (item.alarmOffset) {
+                  aProps.AppendElement(getAtomFromService("alarm"));
+              }
+
+              // Task categories
+              var categories = categoriesStringToArray(item.getProperty("CATEGORIES"));
+              categories.map(formatStringForCSSRule)
+                        .map(getAtomFromService)
+                        .forEach(aProps.AppendElement, aProps);
           },
 
           // Called on the view when a cell in a non-selectable cycling
@@ -397,8 +401,8 @@
 
               var treeCols;
               if (sortActive != "true") {
-                  var treecols = document.getAnonymousNodes(
-                      this.binding)[0].getElementsByTagName("treecol");
+                  var tree = document.getAnonymousNodes(this.binding)[0];
+                  var treecols = tree.getElementsByTagNameNS(tree.namespaceURI, "treecol");
                   for (var i = 0; i < treecols.length; i++) {
                       treecols[i].removeAttribute("sortActive");
                       treecols[i].removeAttribute("sortDirection");
@@ -427,10 +431,10 @@
               var task = this.binding.mTaskArray[aRow];
               if (!task)
                   return false;
-              switch(aCol.element.getAttribute("anonid")) {
+              switch (aCol.element.getAttribute("anonid")) {
                   case "calendar-task-tree-col-title":
                       // return title, or "Untitled" if empty/null
-                      return task.title || gCalendarBundle.getString("eventUntitled");
+                      return task.title || calGetString("calendar", "eventUntitled");
                   case "calendar-task-tree-col-startdate":
                       return this._formatDateTime(task.entryDate);
                   case "calendar-task-tree-col-duedate":
@@ -438,7 +442,7 @@
                   case "calendar-task-tree-col-completeddate":
                       return this._formatDateTime(task.completedDate);
                   case "calendar-task-tree-col-percentcomplete":
-                      return task.percentComplete+"%";
+                      return task.percentComplete + "%";
                   case "calendar-task-tree-col-categories":
                       return task.getProperty("CATEGORIES");
                   case "calendar-task-tree-col-location":
@@ -456,6 +460,14 @@
           
           // This method is only called for columns of type other than text.
           getCellValue: function mTV_getCellValue(aRow, aCol) {
+              var task = this.binding.mTaskArray[aRow];
+              if (!task) {
+                  return null;
+              }
+              switch (aCol.element.getAttribute("anonid")) {
+                  case "calendar-task-tree-col-percentcomplete":
+                      return task.percentComplete;
+              }
               return null;
           },
 
@@ -491,6 +503,12 @@
           isContainer: function mTV_isContainer(aRow) {
               return false;
           },
+          isContainerOpen: function mTV_isContainerOpen(aRow) {
+              return false;
+          },
+          isContainerEmpty: function mTV_isContainerEmpty(aRow) {
+              return false;
+          },
 
           // IsSeparator is used to determine if the row at index is a separator.
           // A value of true will result in the tree drawing a horizontal separator.
@@ -505,14 +523,38 @@
               return false;
           },
 
+          canDrop: function mTV_canDrop() { return false; },
+
+          drop: function mTV_drop(aRow, aOrientation) {},
+
+          getParentIndex: function mTV_getParentIndex(aRow) {
+              return -1;
+          },
+
           // The level is an integer value that represents the level of indentation.
           // It is multiplied by the width specified in the :moz-tree-indentation
           // pseudoelement to compute the exact indendation.
           getLevel: function mTV_getLevel(aRow) {
               return 0;
           },
-          
-          canDrop: function mTV_canDrop() { return false; },
+
+          // The image path for a given cell. For defining an icon for a cell.
+          // If the empty string is returned, the :moz-tree-image pseudoelement
+          // will be used.
+          getImgSrc: function mTV_getImgSrc(aRow, aCol) {
+              return null;
+          },
+
+          // The progress mode for a given cell. This method is only called for
+          // columns of type |progressmeter|.
+          getProgressMode: function mTV_getProgressMode(aRow, aCol) {
+              switch(aCol.element.getAttribute("anonid")) {
+                  case "calendar-task-tree-col-percentcomplete":
+                      return Components.interfaces.nsITreeView.PROGRESS_NORMAL;
+              }
+
+              return Components.interfaces.nsITreeView.PROGRESS_NONE;
+          },
           
           /**
            * Task Tree Events
@@ -530,18 +572,12 @@
                           // so don't call modifyEventWithDialog
                           // to make sure user notices state changed.
                       } else {
-                          modifyEventWithDialog(item);
+                          modifyEventWithDialog(item, null, true);
                       }
                   } else {
                       createTodoWithDialog();
                   }
               }
-          },
-          
-          drop: function tTV_drop(aRow, aOrientation) {},
-          
-          getParentIndex: function tTV_getParentIndex(aRow) {
-              return -1;
           },
           
           onKeyPress: function tTV_onKeyPress(event) {
@@ -564,7 +600,7 @@
                       break;
                   case kKE.DOM_VK_RETURN:
                       var index = this.tree.currentIndex;
-                      if (index > 0) {
+                      if (index > -1) {
                           modifyEventWithDialog(this.binding.mTaskArray[index]);
                       }
                       break;
@@ -573,9 +609,9 @@
       
           // Set the context menu on mousedown to change it before it is opened
           onMouseDown: function tTV_onMouseDown(event) {
-            var tree = document.getAnonymousElementByAttribute(
-                this.binding, "anonid", "calendar-task-tree");
-            var treechildren = tree.getElementsByTagName("treechildren")[0];
+            var tree = document.getAnonymousElementByAttribute(this.binding, 
+                                                               "anonid", 
+                                                               "calendar-task-tree");
             
             if (!this._getItemFromEvent(event)) {
                 tree.view.selection.clearSelection();
@@ -596,31 +632,6 @@
             return aRow && aRow.value > -1 && this.binding.mTaskArray[aRow.value];
           },
           
-          // This function return the progress state of a task :
-          // completed, overdue, duetoday, inprogress, future
-          _progressAtom: function tTV_progressAtom(aTask) {
-              var now = new Date();
-
-              if (aTask.isCompleted)
-                  return "completed";
-
-              if (aTask.dueDate && aTask.dueDate.isValid) {
-                  if (aTask.dueDate.jsDate.getTime() < now.getTime())
-                      return "overdue";
-                  else if (aTask.dueDate.year == now.getFullYear() &&
-                           aTask.dueDate.month == now.getMonth() &&
-                           aTask.dueDate.day == now.getDate())
-                      return "duetoday";
-              }
-
-              if (aTask.entryDate && aTask.entryDate.isValid &&
-                  aTask.entryDate.jsDate.getTime() < now.getTime())
-                  return "inprogress";
-
-              return "future";
-          },
-          
-
           // Helper function to display datetimes
           _formatDateTime: function tTV_formatDateTime(aDateTime) {
               var dateFormatter = Components.classes["@mozilla.org/calendar/datetime-formatter;1"]
@@ -646,11 +657,9 @@
           mInBatch: false,
 
           QueryInterface: function tTO_QueryInterface(aIID) {
-              ensureIID(
-                  [ Components.interfaces.calICompositeObserver,
-                    Components.interfaces.calIObserver,
-                    Components.interfaces.nsISupports], aIID);
-              return this;
+              return doQueryInterface(this, null, aIID,
+                                      [Components.interfaces.calICompositeObserver,
+                                       Components.interfaces.calIObserver]);
           },
 
          /**
@@ -702,21 +711,34 @@
               }
           },
           
-          onError: function tTO_onError(aErrNo, aMessage) {},
-          onPropertyChanged: function tTO_onPropertyChanged(aCalendar, aName, aValue, aOldValue) {},
-          onPropertyDeleting: function tTO_onPropertyDeleting(aCalendar, aName) {},
+          onError: function tTO_onError(aCalendar, aErrNo, aMessage) {},
+          onPropertyChanged: function tTO_onPropertyChanged(aCalendar, aName, aValue, aOldValue) {
+              switch (aName) {
+                  case "disabled":
+                      if (aValue) {
+                          this.binding.onCalendarRemoved(aCalendar);
+                      } else {
+                          this.binding.onCalendarAdded(aCalendar);
+                      }
+                      break;
+              }
+          },
+
+          onPropertyDeleting: function tTO_onPropertyDeleting(aCalendar, aName) {
+              this.onPropertyChanged(aCalendar, aName, null, null);
+          },
 
           /**
            * calICompositeObserver methods and properties
            */
           onCalendarAdded: function tTO_onCalendarAdded(aCalendar) {
-              if (!this.mInBatch) {
+              if (!this.mInBatch && !aCalendar.getProperty("disabled")) {
                   this.binding.onCalendarAdded(aCalendar);
               }
           },
           
           onCalendarRemoved: function tTO_onCalendarRemoved(aCalendar) {
-              if (!this.mInBatch) {
+              if (!this.mInBatch && !aCalendar.getProperty("disabled")) {
                   this.binding.onCalendarRemoved(aCalendar);
               }
           },
@@ -746,8 +768,8 @@
         var widths = this.getAttribute("widths").split(' ');
         var sortActive = this.getAttribute("sort-active");
         var sortDirection = this.getAttribute("sort-direction") || "ascending";
-        var treecols = document.getAnonymousNodes(
-            this)[0].getElementsByTagName("treecol");
+        var tree = document.getAnonymousNodes(this)[0];
+        var treecols = tree.getElementsByTagNameNS(tree.namespaceURI, "treecol");
         for (var i = 0; i < treecols.length; i++) {
             var anonid = treecols[i].getAttribute("anonid");
             if (names.some(
@@ -803,8 +825,8 @@
               var visible = "";
               var sortActive = null;
               var sortDirection = null;
-              var treecols = document.getAnonymousNodes(
-                  this)[0].getElementsByTagName("treecol");
+              var tree = document.getAnonymousNodes(this)[0];
+              var treecols = tree.getElementsByTagNameNS(tree.namespaceURI, "treecol");
               for (var i = 0; i < treecols.length; i++) {
                   if (treecols[i].getAttribute("hidden") != "true") {
                     var anonid = treecols[i].getAttribute("anonid");
@@ -865,7 +887,7 @@
           var refreshJob = {
               execute: function() {
                   var composite = getCompositeCalendar();
-                  var filter = aFilter || savedThis.mHideCompletedTasks ?
+                  var filter = aFilter || !savedThis.mShowCompletedTasks ?
                       composite.ITEM_FILTER_COMPLETED_NO :
                       composite.ITEM_FILTER_COMPLETED_ALL;
                   filter |= composite.ITEM_FILTER_TYPE_TODO;
@@ -903,7 +925,7 @@
           var refreshJob = {
               execute: function() {
                   var composite = getCompositeCalendar();
-                  var filter = aFilter || savedThis.mHideCompletedTasks ?
+                  var filter = aFilter || !savedThis.mShowCompletedTasks ?
                       composite.ITEM_FILTER_COMPLETED_NO :
                       composite.ITEM_FILTER_COMPLETED_ALL;
                   filter |= composite.ITEM_FILTER_TYPE_TODO;
@@ -973,7 +995,8 @@
           this.popRefreshQueue();
         
           this.mTreeView.rowCount = this.mTaskArray.length;
-          var treecols = document.getAnonymousNodes(this)[0].getElementsByTagName("treecol");
+          var tree = document.getAnonymousNodes(this)[0];
+          var treecols = tree.getElementsByTagNameNS(tree.namespaceURI, "treecol");
           for (var i = 0; i < treecols.length; i++) {
             if (treecols[i].getAttribute("sortActive") == "true") {
                this.mTreeView.selectedColumn = treecols[i].getAttribute("anonid");
@@ -1039,10 +1062,10 @@
               var modifier = (sortDirection == "descending") ? -1 : 1;
               switch(selectedColumn) {
                   case "calendar-task-tree-col-priority":  // 0-9
-                      // No priority set (0) sorts before high priority (1).
-                      return compareNumber(a.priority, b.priority) * modifier;
+                      // No priority set (0) should be weighted as "normal" (5).
+                      return compareNumber(a.priority || 5, b.priority || 5) * modifier;
                   case "calendar-task-tree-col-title":
-                      return compareString(a.title.toLowerCase(), b.title.toLowerCase()) * modifier;
+                      return compareString(a.title ? a.title.toLowerCase() : "", b.title ? b.title.toLowerCase() : "") * modifier;
                   case "calendar-task-tree-col-startdate":
                       return compareDate(a.entryDate, b.entryDate) * modifier;
                   case "calendar-task-tree-col-duedate":
@@ -1089,9 +1112,18 @@
     <handlers>
       <handler event="select"><![CDATA[
         this.mTreeView.onSelect(event);
+        calendarController.onSelectionChanged({detail:this.selectedTasks});
       ]]></handler>
       <handler event="dblclick" button="0"><![CDATA[
         this.mTreeView.onDoubleClick(event);
+      ]]></handler>
+      <handler event="focus"><![CDATA[
+        calendarController.onSelectionChanged({detail:this.selectedTasks});
+        calendarController.todo_tasktree_focused = true;
+      ]]></handler>
+      <handler event="blur"><![CDATA[
+        calendarController.onSelectionChanged({detail:[]}); 
+        calendarController.todo_tasktree_focused = false;
       ]]></handler>
       <handler event="keypress"><![CDATA[
         this.mTreeView.onKeyPress(event);

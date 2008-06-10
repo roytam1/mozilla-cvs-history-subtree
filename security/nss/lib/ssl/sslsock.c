@@ -186,6 +186,7 @@ PRBool			ssl_force_locks;  	/* implicitly PR_FALSE */
 int                     ssl_lock_readers	= 1;	/* default true. */
 char                    ssl_debug;
 char                    ssl_trace;
+FILE *                  ssl_trace_iob;
 char lockStatus[] = "Locks are ENABLED.  ";
 #define LOCKSTATUS_OFFSET 10 /* offset of ENABLED */
 
@@ -211,11 +212,22 @@ ssl_GetPrivate(PRFileDesc *fd)
     PORT_Assert(fd->methods->file_type == PR_DESC_LAYERED);
     PORT_Assert(fd->identity == ssl_layer_id);
 
+    if (fd->methods->file_type != PR_DESC_LAYERED ||
+        fd->identity != ssl_layer_id) {
+	PORT_SetError(PR_BAD_DESCRIPTOR_ERROR);
+	return NULL;
+    }
+
     ss = (sslSocket *)fd->secret;
     ss->fd = fd;
     return ss;
 }
 
+/* This function tries to find the SSL layer in the stack. 
+ * It searches for the first SSL layer at or below the argument fd,
+ * and failing that, it searches for the nearest SSL layer above the 
+ * argument fd.  It returns the private sslSocket from the found layer.
+ */
 sslSocket *
 ssl_FindSocket(PRFileDesc *fd)
 {
@@ -1528,29 +1540,6 @@ SSL_SetSockPeerID(PRFileDesc *fd, char *peerID)
     return SECSuccess;
 }
 
-SECStatus PR_CALLBACK
-ssl_SetTimeout(PRFileDesc *fd, PRIntervalTime timeout)
-{
-    sslSocket *ss;
-
-    ss = ssl_GetPrivate(fd);
-    if (!ss) {
-	SSL_DBG(("%d: SSL[%d]: bad socket in SetTimeout", SSL_GETPID(), fd));
-	return SECFailure;
-    }
-    SSL_LOCK_READER(ss);
-    ss->rTimeout = timeout;
-    if (ss->opt.fdx) {
-        SSL_LOCK_WRITER(ss);
-    }
-    ss->wTimeout = timeout;
-    if (ss->opt.fdx) {
-        SSL_UNLOCK_WRITER(ss);
-    }
-    SSL_UNLOCK_READER(ss);
-    return SECSuccess;
-}
-
 #define PR_POLL_RW (PR_POLL_WRITE | PR_POLL_READ)
 
 static PRInt16 PR_CALLBACK
@@ -2080,6 +2069,13 @@ ssl_NewSocket(PRBool makeLocks)
 	char * ev;
 	firsttime = 0;
 #ifdef DEBUG
+	ev = getenv("SSLDEBUGFILE");
+	if (ev && ev[0]) {
+	    ssl_trace_iob = fopen(ev, "w");
+	}
+	if (!ssl_trace_iob) {
+	    ssl_trace_iob = stderr;
+	}
 #ifdef TRACE
 	ev = getenv("SSLTRACE");
 	if (ev && ev[0]) {

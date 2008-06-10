@@ -1621,17 +1621,16 @@ nsresult nsExternalAppHandler::SetUpTempFile(nsIChannel * aChannel)
   NS_ENSURE_SUCCESS(rv, rv);
 
 #if defined(XP_MAC) || defined (XP_MACOSX)
- // Now that the file exists set Mac type and creator
-  if (mMimeInfo)
+  // Now that the file exists set Mac type if the file has no extension
+  // and we can determine a type.
+  if (ext.IsEmpty() && mMimeInfo)
   {
     nsCOMPtr<nsILocalFileMac> macfile = do_QueryInterface(mTempFile);
     if (macfile)
     {
-      PRUint32 type, creator;
+      PRUint32 type;
       mMimeInfo->GetMacType(&type);
-      mMimeInfo->GetMacCreator(&creator);
       macfile->SetFileType(type);
-      macfile->SetFileCreator(creator);
     }
   }
 #endif

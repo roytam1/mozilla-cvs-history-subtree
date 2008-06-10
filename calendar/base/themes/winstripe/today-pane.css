@@ -19,6 +19,7 @@
  *
  * Contributor(s):
  *   Berend Cornelius <berend.cornelius@sun.com>
+ *   Lars Wohlfahrt <thetux.moz@googlemail.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -37,7 +38,7 @@
 .today-subpane {
   padding: 0px;
   border: 1px solid ThreeDShadow;
-  margin: 5px;
+  margin: 3px;
 }
 
 #buttonspacer {
@@ -47,6 +48,10 @@
 #today-pane-panel {
   background-color: -moz-Dialog;
   border-left: 1px solid ThreeDShadow;
+}
+
+#agenda-panel {
+  margin: 3px;
 }
 
 #mini-day-image {
@@ -71,7 +76,7 @@
 }
 
 .monthlabel {
-  margin-right: 0px;
+  -moz-margin-end: 0px;
 }
 
 .dateValue {
@@ -84,7 +89,7 @@
 
 .miniday-nav-buttons {
   margin-top: 2px;
-  list-style-image: url("chrome://calendar/skin/mini-day-nav-buttons.png");
+  list-style-image: url("chrome://calendar/skin/widgets/nav-buttons.png");
 }
 
 #previous-day-button {
@@ -168,47 +173,46 @@
   -moz-user-focus: normal;
 }
 
+#calendar-new-event-button > .toolbarbutton-text {
+ -moz-padding-start: 5px;
+}
+
 #agenda-listbox {
   -moz-user-focus: normal;
 }
 
 agenda-checkbox-richlist-item {
-  -moz-binding: url("chrome://lightning/content/agenda-listbox.xml#agenda-checkbox-richlist-item");
+  -moz-binding: url("chrome://calendar/content/agenda-listbox.xml#agenda-checkbox-richlist-item");
   -moz-user-focus: normal;
   overflow: hidden;
 }
 
 agenda-richlist-item {
-  -moz-binding: url("chrome://lightning/content/agenda-listbox.xml#agenda-richlist-item");
+  -moz-binding: url("chrome://calendar/content/agenda-listbox.xml#agenda-richlist-item");
   -moz-user-focus: normal;
   overflow: hidden;
 }
 
 agenda-allday-richlist-item {
-  -moz-binding: url("chrome://lightning/content/agenda-listbox.xml#agenda-allday-richlist-item");
+  -moz-binding: url("chrome://calendar/content/agenda-listbox.xml#agenda-allday-richlist-item");
   -moz-user-focus: normal;
   overflow: hidden;
 }
 
 .agenda-container-box {
   border-bottom: 1px dotted #C0C0C0;
-  margin-left: 4px;
-  margin-right: 4px;
+  -moz-margin-start: 4px;
+  -moz-margin-end: 4px;
   padding-top: 2px;
   padding-bottom: 2px;
 }
 
 .agenda-allday-container-box {
   border-bottom: 1px dotted #C0C0C0;
-  margin-left: 4px;
-  margin-right: 4px;
+  -moz-margin-start: 4px;
+  -moz-margin-end: 4px;
   padding-top: 4px;
   padding-bottom: 4px;
-}
-
-.agenda-checkbox {
-  margin-left: 4px;
-  margin-right: 4px;
 }
 
 .agenda-container-box[selected="true"],
@@ -258,48 +262,7 @@ agenda-allday-richlist-item {
 .agenda-calendar-image {
   list-style-image: url("chrome://calendar/skin/calendar-overlay.png");
   margin-top: 3px;
-  margin-left: 4px;
+  -moz-margin-start: 4px;
   width: 10px;
   height: 10px;
-}
-
-agenda-checkbox {
-  -moz-binding: url("chrome://lightning/content/agenda-listbox.xml#agenda-checkbox");
-}
-
-agenda-checkbox {
-  -moz-box-align: center;
-  padding: 4px 2px 4px 4px;
-  font-weight: bold;
-  border-bottom: 1px dotted #c0c0c0;
-}
-
-.checkbox-label-box {
-  -moz-margin-start: 4px;
-}
-
-.checkbox-icon {
-  -moz-margin-end: 2px;
-}
-
-.checkbox-label {
-  margin: 0 !important;
-}
-
-agenda-checkbox > .checkbox-label-center-box > .checkbox-label-box > .checkbox-label {
-  font-weight: bold;
-  border-bottom: 1px solid -moz-Dialog;
-}
-
-agenda-checkbox[checked="true"] > .checkbox-check {
-  background-image: url("chrome://global/skin/tree/twisty-open.png");
-}
-
-agenda-checkbox > .checkbox-check {
-  -moz-appearance: none;
-  -moz-box-align: center;
-  border: none;
-  width: 9px; /* The image's width is 9 pixels */
-  height: 9px;
-  background-image: url("chrome://global/skin/tree/twisty-clsd.png");
 }

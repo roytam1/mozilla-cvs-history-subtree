@@ -43,6 +43,7 @@
 #include "prmem.h"
 #include "prerror.h"
 #include "prinit.h"
+#include "prenv.h"
 
 static const char* default_name =
     SHLIB_PREFIX"freebl"SHLIB_VERSION"."SHLIB_SUFFIX;
@@ -86,6 +87,11 @@ getLibName(void)
     buflen = sysinfo(SI_ISALIST, buf, sizeof buf);
     if (buflen <= 0) 
 	return NULL;
+    /* sysinfo output is always supposed to be NUL terminated, but ... */
+    if (buflen < sizeof buf) 
+    	buf[buflen] = '\0';
+    else
+    	buf[(sizeof buf) - 1] = '\0';
     /* The ISA list is a space separated string of names of ISAs and
      * ISA extensions, in order of decreasing performance.
      * There are two different ISAs with which NSS's crypto code can be
@@ -987,13 +993,17 @@ BL_Unload(void)
    * only called from functions that are also defined as not thread-safe,
    * namely C_Finalize in softoken, and the SSL bypass shutdown callback called
    * from NSS_Shutdown. */
+  char *disableUnload = NULL;
   vector = NULL;
   /* If an SSL socket is configured with SSL_BYPASS_PKCS11, but the application
    * never does a handshake on it, BL_Unload will be called even though freebl
    * was never loaded. So, don't assert blLib. */
   if (blLib) {
-      PRStatus status = PR_UnloadLibrary(blLib);
-      PORT_Assert(PR_SUCCESS == status);
+      disableUnload = PR_GetEnv("NSS_DISABLE_UNLOAD");
+      if (!disableUnload) {
+          PRStatus status = PR_UnloadLibrary(blLib);
+          PORT_Assert(PR_SUCCESS == status);
+      }
       blLib = NULL;
   }
   loadFreeBLOnce = pristineCallOnce;

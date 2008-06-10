@@ -3804,7 +3804,9 @@ nsGenericElement::AddScriptEventListener(nsIAtom* aAttribute,
     // XXXbz should we instead use GetCurrentDoc() here, override
     // BindToTree for those classes and munge event listeners there?
     nsIDocument *document = GetOwnerDoc();
-    if (document && (sgo = document->GetScriptGlobalObject())) {
+    nsCOMPtr<nsPIDOMWindow> win;
+    if (document && (sgo = document->GetScriptGlobalObject()) &&
+        (win = do_QueryInterface(sgo)) && win->IsInnerWindow()) {
       nsCOMPtr<nsIDOMEventReceiver> receiver(do_QueryInterface(sgo));
       NS_ENSURE_TRUE(receiver, NS_ERROR_FAILURE);
 

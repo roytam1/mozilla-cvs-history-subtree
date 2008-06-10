@@ -1912,6 +1912,11 @@ nsresult nsRange::InsertNode(nsIDOMNode* aN)
   res = this->GetStartContainer(getter_AddRefs(tStartContainer));
   if(NS_FAILED(res)) return res;
 
+  nsCOMPtr<nsIContent> startContent = do_QueryInterface(tStartContainer);
+  NS_ENSURE_TRUE(!nsContentUtils::IsNativeAnonymous(startContent) ||
+                 nsContentUtils::IsCallerTrustedForCapability("UniversalFileRead"),
+                 NS_ERROR_DOM_SECURITY_ERR);
+
   nsCOMPtr<nsIDOMText> startTextNode(do_QueryInterface(tStartContainer));
   if (startTextNode)
   {

@@ -186,6 +186,18 @@ static NSString* const CacheInfoPaneSeenKey   = @"MVPreferencePaneSeen";    // N
     [[self window] setFrameTopLeftPoint:topLeftPoint];
   else
     [[self window] center];
+
+  // Branch-only fix for bug 415362, since l10n freeze prevents changing
+  // the autosave name in the nib.
+  NSUserDefaults* defaults = [NSUserDefaults standardUserDefaults];
+  NSString* cleanDoneKey = @"Cookie Table Autosaves Cleared";
+  if (![defaults objectForKey:cleanDoneKey]) {
+    [defaults removeObjectForKey:@"NSTableView Columns exceptions_list"];
+    [defaults removeObjectForKey:@"NSTableView Columns cookies_list"];
+    [defaults removeObjectForKey:@"NSTableView Sort Ordering cookies_list"];
+    [defaults removeObjectForKey:@"NSTableView Sort Ordering exceptions_list"];
+    [defaults setObject:[NSNumber numberWithBool:YES] forKey:cleanDoneKey];
+  }
 }
 
 // this gets called when the user hits the Escape key

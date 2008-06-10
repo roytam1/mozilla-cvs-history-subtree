@@ -112,6 +112,7 @@ function InvitationsManager() {
     this.mJobsPending = 0;
     this.mTimer = null;
     this.mUnregisteredCalendars = new Array();
+
     var calendarManagerObserver = {
         mInvitationsManager: this,
         onCalendarRegistered: function(aCalendar) {
@@ -123,6 +124,13 @@ function InvitationsManager() {
         }
     };
     getCalendarManager().addObserver(calendarManagerObserver);
+
+    var self = this;
+    window.addEventListener("unload", function() {
+        // Unload handlers get removed automatically
+        self.cancelInvitationsUpdate();
+        getCalendarManager().removeObserver(calendarManagerObserver);
+    }, false);
 }
 
 InvitationsManager.prototype = {
@@ -136,32 +144,18 @@ InvitationsManager.prototype = {
     scheduleInvitationsUpdate: function IM_scheduleInvitationsUpdate(firstDelay,
                                                                      repeatDelay,
                                                                      operationListener) {
-        if (this.mTimer) {
-            this.mTimer.cancel();
-        } else {
-            this.mTimer = Components.classes["@mozilla.org/timer;1"]
-                          .createInstance(Components.interfaces.nsITimer);
-        }
-        var callback = {
-            mInvitationsManager: this,
-            mRepeatDelay: repeatDelay,
-            mOperationListener: operationListener,
-            notify: function(timer) {
-                if (timer.delay != this.mRepeatDelay) {
-                    timer.delay = this.mRepeatDelay;
-                }
-                this.mInvitationsManager.getInvitations(
-                    true, this.mOperationListener);
-            }
-        };
-        this.mTimer.initWithCallback(callback, firstDelay,
-            this.mTimer.TYPE_REPEATING_SLACK);
+        this.cancelInvitationsUpdate();
+
+        var self = this;
+        this.mTimer = setTimeout(function startInvitationsTimer() {
+            self.mTimer = setInterval(function repeatingInvitationsTimer() {
+                self.getInvitations(true, operationListener);
+            }, repeatDelay);
+        }, firstDelay);
     },
 
     cancelInvitationsUpdate: function IM_cancelInvitationsUpdate() {
-        if (this.mTimer) {
-            this.mTimer.cancel();
-        }
+        clearTimeout(this.mTimer);
     },
 
     getInvitations: function IM_getInvitations(suppressOnError,
@@ -177,6 +171,9 @@ InvitationsManager.prototype = {
         var requestManager = getInvitationsRequestManager();
         var calendars = getCalendarManager().getCalendars({});
         for each (var calendar in calendars) {
+            if (calendar.getProperty("disabled")) {
+                continue;
+            }
             try {
                 // temporary hack unless all group scheduling features are supported
                 // by the caching facade (calCachedCalendar):
@@ -231,13 +228,16 @@ InvitationsManager.prototype = {
                                 });
                             var listener;
                             while ((listener = this.mInvitationsManager.mOperationListeners.shift())) {
-                                listener.onGetResult(
-                                    null,
-                                    Components.results.NS_OK,
-                                    Components.interfaces.calIItemBase,
-                                    null,
-                                    this.mInvitationsManager.mItemList.length,
-                                    this.mInvitationsManager.mItemList);
+                                if (this.mInvitationsManager.mItemList.length) {
+                                    // Only call if there are actually items
+                                    listener.onGetResult(
+                                        null,
+                                        Components.results.NS_OK,
+                                        Components.interfaces.calIItemBase,
+                                        null,
+                                        this.mInvitationsManager.mItemList.length,
+                                        this.mInvitationsManager.mItemList);
+                                }
                                 listener.onOperationComplete(
                                     null,
                                     Components.results.NS_OK,
@@ -285,7 +285,7 @@ InvitationsManager.prototype = {
                         this.mInvitationsManager.deleteItem(aDeletedItem);
                     },
 
-                    onError: function(aErrNo, aMessage) {
+                    onError: function(aCalendar, aErrNo, aMessage) {
                     },
 
                     onPropertyChanged: function(aCalendar, aName, aValue, aOldValue) {

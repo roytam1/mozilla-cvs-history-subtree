@@ -192,16 +192,17 @@ function dateToText(d) {
 function calStorageTimezone(comp) {
     this.wrappedJSObject = this;
     this.provider = null;
-    this.component = comp;
+    this.icalComponent = comp;
     this.tzid = comp.getFirstProperty("TZID").value;
+    this.displayName = null;
     this.isUTC = false;
     this.isFloating = false;
-    this.latitude = "";
-    this.longitude = "";
+    this.latitude = null;
+    this.longitude = null;
 }
 calStorageTimezone.prototype = {
     toString: function() {
-        return this.component.toString();
+        return this.icalComponent.toString();
     }
 };
 var gForeignTimezonesCache = {};
@@ -369,19 +370,12 @@ calStorageCalendar.prototype = {
 
             // open the database
             dbService = Components.classes[kStorageServiceContractID].getService(kStorageServiceIID);
-            this.mDB = dbService.openDatabase (fileURL.file);
-            this.mDBTwo = dbService.openDatabase (fileURL.file);
+            this.mDB = dbService.openDatabase(fileURL.file);
+            this.mDBTwo = dbService.openDatabase(fileURL.file);
         } else if (aUri.scheme == "moz-profile-calendar") {
             dbService = Components.classes[kStorageServiceContractID].getService(kStorageServiceIID);
-            if ("getProfileStorage" in dbService) {
-              // 1.8 branch
-              this.mDB = dbService.getProfileStorage("profile");
-              this.mDBTwo = dbService.getProfileStorage("profile");
-            } else {
-              // trunk
-              this.mDB = dbService.openSpecialDatabase("profile");
-              this.mDBTwo = dbService.openSpecialDatabase("profile");
-            }
+            this.mDB = dbService.openSpecialDatabase("profile");
+            this.mDBTwo = dbService.openSpecialDatabase("profile");
         }
 
         this.initDB();
@@ -416,7 +410,7 @@ calStorageCalendar.prototype = {
         // if we were given an occurrence.  Later we can
         // optimize this.
         if (aItem.parentItem != aItem) {
-            aItem.parentItem.recurrenceInfo.modifyException(aItem);
+            aItem.parentItem.recurrenceInfo.modifyException(aItem, false);
         }
         aItem = aItem.parentItem;
 
@@ -494,10 +488,9 @@ calStorageCalendar.prototype = {
 
         // Ensure that we're looking at the base item if we were given an
         // occurrence.  Later we can optimize this.
-        var modifiedItem = aNewItem.clone();
-        if (modifiedItem.parentItem != modifiedItem) {
-            modifiedItem.parentItem.recurrenceInfo.modifyException(modifiedItem);
-            modifiedItem = modifiedItem.parentItem;
+        var modifiedItem = aNewItem.parentItem.clone();
+        if (aNewItem.parentItem != aNewItem) {
+            modifiedItem.recurrenceInfo.modifyException(aNewItem, false);
         }
 
         if (this.relaxedMode) {
@@ -506,19 +499,22 @@ calStorageCalendar.prototype = {
             }
             aOldItem = aOldItem.parentItem;
         } else {
-            if (!aOldItem || !this.getItemById(aOldItem.id)) {
+            var storedOldItem = (aOldItem ? this.getItemById(aOldItem.id) : null);
+            if (!aOldItem || !storedOldItem) {
                 // no old item found?  should be using addItem, then.
                 return reportError("ID does not already exist for modifyItem");
             }
             aOldItem = aOldItem.parentItem;
 
-            if (aOldItem.generation != aNewItem.generation) {
+            if (aOldItem.generation != storedOldItem.generation) {
                 return reportError("generation too old for for modifyItem");
             }
 
-            // Only take care of incrementing the generation if relaxed mode is
-            // off. Users of relaxed mode need to take care of this themselves.
-            modifiedItem.generation += 1;
+            if (aOldItem.generation == modifiedItem.generation) { // has been cloned and modified
+                // Only take care of incrementing the generation if relaxed mode is
+                // off. Users of relaxed mode need to take care of this themselves.
+                modifiedItem.generation += 1;
+            }
         }
 
         modifiedItem.makeImmutable();
@@ -591,6 +587,7 @@ calStorageCalendar.prototype = {
                                            aListener.GET,
                                            aId,
                                            "ID doesn't exist for getItem");
+            return;
         }
 
         var item_iid = null;
@@ -859,7 +856,7 @@ calStorageCalendar.prototype = {
         this.mDB.executeSimpleSQL("INSERT INTO cal_calendar_schema_version VALUES(" + this.DB_SCHEMA_VERSION + ")");
     },
 
-    DB_SCHEMA_VERSION: 8,
+    DB_SCHEMA_VERSION: 9,
 
     /** 
      * @return      db schema version
@@ -1128,9 +1125,9 @@ calStorageCalendar.prototype = {
             }
         }
 
-        // run TZID updates both on db of version 6 and 7:
-        if (oldVersion == 6 || oldVersion == 7) {
-            dump ("**** Upgrading schema from 6/7 -> 8\n");
+        // run TZID updates both on db of version 6, 7 and 8:
+        if (oldVersion == 6 || oldVersion == 7 || oldVersion == 8) {
+            dump ("**** Upgrading schema from 6/7/8 -> 9\n");
 
             var getTzIds;
             this.mDB.beginTransaction();
@@ -1145,6 +1142,10 @@ calStorageCalendar.prototype = {
                 //
                 // - Migrate all stored mozilla.org timezones from 20070129_1
                 //   to 20071231_1.
+
+                // Schema changes between v8 and v9:
+                //
+                // - Update all stored mozilla.org timezones to pure Olson names.
 
                 // Get a list of the /mozilla.org/* timezones used in the db
                 var tzId;
@@ -1193,9 +1194,9 @@ calStorageCalendar.prototype = {
                     }
                 }
                 // Update the version stamp, and commit.
-                this.mDB.executeSimpleSQL("UPDATE cal_calendar_schema_version SET version = 8;");
+                this.mDB.executeSimpleSQL("UPDATE cal_calendar_schema_version SET version = 9;");
                 this.mDB.commitTransaction();
-                oldVersion = 8;
+                oldVersion = 9;
             } catch (e) {
                 dump ("+++++++++++++++++ DB Error: " + this.mDB.lastErrorString + "\n");
                 Components.utils.reportError("Upgrade failed! DB Error: " +
@@ -1539,10 +1540,10 @@ calStorageCalendar.prototype = {
 
             item.alarmOffset = duration;
             item.alarmRelated = row.alarm_related;
-            if (row.alarm_last_ack) {
-                // alarm acks are always in utc
-                item.alarmLastAck = newDateTime(row.alarm_last_ack, "UTC");
-            }
+        }
+        if (row.alarm_last_ack) {
+            // alarm acks are always in utc
+            item.alarmLastAck = newDateTime(row.alarm_last_ack, "UTC");
         }
 
         if (row.recurrence_id)
@@ -1820,8 +1821,7 @@ calStorageCalendar.prototype = {
                 while (this.mSelectEventExceptions.step()) {
                     var row = this.mSelectEventExceptions.row;
                     var exc = this.getEventFromRow(row, {}, true /*isException*/);
-                    exc.parentItem = item;
-                    rec.modifyException(exc);
+                    rec.modifyException(exc, true);
                 }
                 this.mSelectEventExceptions.reset();
             } else if (item instanceof Components.interfaces.calITodo) {
@@ -1829,8 +1829,7 @@ calStorageCalendar.prototype = {
                 while (this.mSelectTodoExceptions.step()) {
                     var row = this.mSelectTodoExceptions.row;
                     var exc = this.getTodoFromRow(row, {}, true /*isException*/);
-                    exc.parentItem = item;
-                    rec.modifyException(exc);
+                    rec.modifyException(exc, true);
                 }
                 this.mSelectTodoExceptions.reset();
             } else {
@@ -1898,7 +1897,7 @@ calStorageCalendar.prototype = {
             if (compareObjects(tz.provider, getTimezoneService())) {
                 params[entryname + "_tz"] = tz.tzid;
             } else { // foreign one
-                params[entryname + "_tz"] = tz.component.serializeToICS();
+                params[entryname + "_tz"] = tz.icalComponent.serializeToICS();
             }
         } else {
             params[entryname] = null;
@@ -1970,9 +1969,9 @@ calStorageCalendar.prototype = {
 
         this.setDateParamHelper(ip, "todo_entry", item.entryDate);
         this.setDateParamHelper(ip, "todo_due", item.dueDate);
-        this.setDateParamHelper(ip, "todo_completed", item.getUnproxiedProperty("COMPLETED"));
+        this.setDateParamHelper(ip, "todo_completed", item.getProperty("COMPLETED"));
 
-        ip.todo_complete = item.getUnproxiedProperty("PERCENT-COMPLETED");
+        ip.todo_complete = item.getProperty("PERCENT-COMPLETED");
 
         ip.flags = flags;
 
@@ -1988,15 +1987,15 @@ calStorageCalendar.prototype = {
 
         var tmp;
 
-        if ((tmp = item.getUnproxiedProperty("CREATED")))
+        if ((tmp = item.getProperty("CREATED")))
             ip.time_created = tmp.nativeTime;
-        if ((tmp = item.getUnproxiedProperty("LAST-MODIFIED")))
+        if ((tmp = item.getProperty("LAST-MODIFIED")))
             ip.last_modified = tmp.nativeTime;
 
-        ip.title = item.getUnproxiedProperty("SUMMARY");
-        ip.priority = item.getUnproxiedProperty("PRIORITY");
-        ip.privacy = item.getUnproxiedProperty("CLASS");
-        ip.ical_status = item.getUnproxiedProperty("STATUS");
+        ip.title = item.getProperty("SUMMARY");
+        ip.priority = item.getProperty("PRIORITY");
+        ip.privacy = item.getProperty("CLASS");
+        ip.ical_status = item.getProperty("STATUS");
 
         if (!item.parentItem)
             ip.event_stamp = item.stampTime.nativeTime;
@@ -2004,9 +2003,9 @@ calStorageCalendar.prototype = {
         if (item.alarmOffset) {
             ip.alarm_offset = item.alarmOffset.inSeconds;
             ip.alarm_related = item.alarmRelated;
-            if (item.alarmLastAck) {
-                ip.alarm_last_ack = item.alarmLastAck.nativeTime;
-            }
+        }
+        if (item.alarmLastAck) {
+            ip.alarm_last_ack = item.alarmLastAck.nativeTime;
         }
     },
 
@@ -2036,7 +2035,7 @@ calStorageCalendar.prototype = {
 
     writeProperties: function (item, olditem) {
         var ret = 0;
-        var propEnumerator = item.unproxiedPropertyEnumerator;
+        var propEnumerator = item.propertyEnumerator;
         while (propEnumerator.hasMoreElements()) {
             ret = CAL_ITEM_FLAG_HAS_PROPERTIES;
 

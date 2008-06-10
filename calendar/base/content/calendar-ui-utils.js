@@ -111,6 +111,24 @@ function hideElement(aElement) {
 }
 
 /**
+ * Unconditionally show the element (collapsed attribute)
+ *
+ * @param aElement      ID of XUL element to set, or the element node itself
+ */
+function uncollapseElement(aElement) {
+    setElementValue(aElement, false, "collapsed");
+}
+
+/**
+ * Unconditionally hide the element (collapsed attribute)
+ *
+ * @param aElement      ID of XUL element to set, or the element node itself
+ */
+function collapseElement(aElement) {
+    setElementValue(aElement, "true", "collapsed");
+}
+
+/**
  * Unconditionally enable the element (hidden attribute)
  *
  * @param aElement      ID of XUL element to set, or the element node itself
@@ -290,10 +308,10 @@ function addMenuItem(aParent, aLabel, aValue, aCommand) {
         var item = document.createElementNS("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul", "menuitem");
         item.setAttribute("label", aLabel);
         if (aValue) {
-            item.value = aValue;
+            item.setAttribute("value", aValue);
         }
         if (aCommand) {
-          item.command = aCommand;
+            item.command = aCommand;
         }
         aParent.appendChild(item);
     }
@@ -301,6 +319,37 @@ function addMenuItem(aParent, aLabel, aValue, aCommand) {
         item = aParent.appendItem(aLabel, aValue);
     }
     return item;
+}
+
+/**
+ * checks a radio control or a radio-menuitem.
+ *
+ * @param aParent  the parent node of the 'radio controls', either radios
+ *                  or menuitems of the type 'radio'.
+ * @param avalue   the value of the radio control bound to be checked.
+ * @return         true or false depending on if the a 'radio control' with the
+ *                  given value could be checked.
+ */
+function checkRadioControl(aParent, aValue) {
+    for (var i = 0; i < aParent.childNodes.length; i++) {
+        var element = aParent.childNodes[i];
+        if (element.hasAttribute("value")) {
+            var compValue = element.getAttribute("value");
+            if (compValue == aValue) {
+                if (element.localName == "menuitem") {
+                    if (element.getAttribute("type") == "radio") {
+                        element.setAttribute("checked", "true");
+                        return true;
+                    }
+                }
+                else if (element.localName == "radio") {
+                    element.radioGroup.selectedItem = element;
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
 }
 
 function setCategory(aItem, aMenuElement) {
@@ -400,3 +449,62 @@ function menuListIndexOf(menuList, value) {
     }
     return -1; // not found
 }
+
+function createXULElement(el) {
+    return document.createElementNS("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul", el);
+}
+
+
+/**
+ * A helper function to calculate and add up certain css-values of a box.
+ * It is required, that all css values can be converted to integers
+ *
+ * @param aXULElement   The xul element to be inspected.
+ * @param aStyleProps   The css style properties for which values are to be retrieved
+ *                        e.g. 'font-size', 'min-width" etc.
+ * @return              An integer value denoting the optimal minimum width
+ */
+function getSummarizedStyleValues(aXULElement, aStyleProps) {
+    var retValue = 0;
+    var cssStyleDeclares = document.defaultView.getComputedStyle(aXULElement, null);
+    for each (var prop in aStyleProps) {
+        retValue += parseInt(cssStyleDeclares.getPropertyValue(prop), 10);
+    }    
+    return retValue;
+}
+
+/**
+ * Calculates the optimal minimum width based on the set css style-rules
+ * by considering the css rules for the min-width, padding, border, margin 
+ * and border of the box.
+ *
+ * @param aXULElement   The xul element to be inspected.
+ * @return              An integer value denoting the optimal minimum width
+ */
+function getOptimalMinimumWidth(aXULElement) {
+    return getSummarizedStyleValues(aXULElement, ["min-width",
+                                                  "padding-left", "padding-right",
+                                                  "margin-left", "margin-top",
+                                                  "border-left-width", "border-right-width"]);
+}
+
+/**
+ * Calculates the optimal minimum height based on the set css style-rules
+ * by considering the css rules for the font-size, padding, border, margin 
+ * and border of the box. In its current state the line-height is considered
+ * by assuming that it's size is about one third of the size of the font-size
+ *
+ * @param aXULElement   The xul-element to be inspected.
+ * @return              An integer value denoting the optimal minimum height
+ */
+function getOptimalMinimumHeight(aXULElement) {
+    // the following line of code presumes that the line-height is set to "normal" 
+    // which is supposed to be a "reasonable distance" between the lines
+    var firstEntity = parseInt(1.33 * getSummarizedStyleValues(aXULElement, ["font-size"]), 10);
+    var secondEntity = getSummarizedStyleValues(aXULElement,
+                                                ["padding-bottom", "padding-top",
+                                                "margin-bottom", "margin-top",
+                                                "border-bottom-width", "border-top-width"]);
+    return (firstEntity + secondEntity);
+}
+

@@ -92,9 +92,6 @@ calDuration::GetIsMutable(PRBool *aResult)
 NS_IMETHODIMP
 calDuration::MakeImmutable()
 {
-    if (mImmutable)
-        return NS_ERROR_OBJECT_IS_IMMUTABLE;
-
     mImmutable = PR_TRUE;
     return NS_OK;
 }
@@ -330,7 +327,7 @@ calDuration::GetIcalString(nsACString& aResult)
 NS_IMETHODIMP
 calDuration::SetIcalString(const nsACString& aIcalString)
 {
-    mDuration = icaldurationtype_from_string(nsPromiseFlatCString(aIcalString).get());
+    mDuration = icaldurationtype_from_string(PromiseFlatCString(aIcalString).get());
     return NS_OK;
 }
 

@@ -153,7 +153,7 @@ int APIENTRY WinMain(HINSTANCE hInstance,
     {
         ConstructMessage(hInstance, IDS_APP_TITLE_UNINSTALL, appTitle);
         ConstructMessage(hInstance, IDS_CONFIRM_UNINSTALL, msgStr);
-        if (MessageBox(NULL, msgStr, appTitle, MB_YESNO) == IDYES) 
+        if (MessageBox(NULL, msgStr, appTitle, MB_YESNO | MB_TOPMOST) == IDYES) 
         {
             res = UninstallConduit();
             if(!res)

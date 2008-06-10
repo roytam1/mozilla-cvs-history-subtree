@@ -244,7 +244,7 @@ MimeMessage_parse_line (char *aLine, PRInt32 aLength, MimeObject *obj)
 		  char *s = (char *)PR_MALLOC(length + MSG_LINEBREAK_LEN + 1);
 		  if (!s) return MIME_OUT_OF_MEMORY;
 		  memcpy(s, line, length);
-		  PL_strcpy(s + length, MSG_LINEBREAK);
+		  PL_strncpyz(s + length, MSG_LINEBREAK, MSG_LINEBREAK_LEN);
 		  status = kid->clazz->parse_buffer (s, length + MSG_LINEBREAK_LEN, kid);
 		  PR_Free(s);
 		  return status;
@@ -749,6 +749,19 @@ MimeMessage_write_headers_html (MimeObject *obj)
                             (obj->options->headers == MimeHeadersOnly),
                             msgID,
                             mailCharset);
+
+  // Change the default_charset by the charset of the original message
+  // ONLY WHEN THE CHARSET OF THE ORIGINAL MESSAGE IS NOT US-ASCII
+  // ("ISO-8859-1") and defailt_charset and mailCharset are different.
+  if ( (mailCharset) && (PL_strcasecmp(mailCharset, "US-ASCII")) &&
+       (PL_strcasecmp(mailCharset, "ISO-8859-1")) &&
+       (PL_strcasecmp(obj->options->default_charset, mailCharset)) &&
+       !obj->options->override_charset )
+  {
+    PR_Free(obj->options->default_charset);
+    obj->options->default_charset = strdup(mailCharset);
+  }
+
   PR_FREEIF(msgID);
   PR_FREEIF(mailCharset);
 

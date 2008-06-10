@@ -79,6 +79,15 @@ function createAttendee() {
            createInstance(Components.interfaces.calIAttendee);
 }
 
+/* Shortcut to the console service */
+function getConsoleService() {
+    if (getConsoleService.mObject === undefined) {
+        getConsoleService.mObject = Components.classes["@mozilla.org/consoleservice;1"]
+                                              .getService(Components.interfaces.nsIConsoleService);
+    }
+    return getConsoleService.mObject;
+}
+
 /* Shortcut to the io service */
 function getIOService() {
     if (getIOService.mObject === undefined) {
@@ -242,7 +251,7 @@ function guessSystemTimezone() {
     function checkTZ(tzId) {
         var tz = tzSvc.getTimezone(tzId);
 
-        // Have to handle UTC separately because it has no .component.
+        // Have to handle UTC separately because it has no .icalComponent.
         if (tz.isUTC) {
             if (offsetDec == 0 && offsetJun == 0) {
                 if (tzNameJun == "UTC" && tzNameDec == "UTC") {
@@ -254,8 +263,8 @@ function guessSystemTimezone() {
                 return 0;
             }
         }
-        
-        var subComp = tz.component;
+
+        var subComp = tz.icalComponent;
         // find currently applicable time period, not just first,
         // because offsets of timezone may be changed over the years.
         var standard = findCurrentTimePeriod(tz, subComp, "STANDARD");
@@ -278,7 +287,7 @@ function guessSystemTimezone() {
         if (offsetDec == standardTZOffset && offsetJun == daylightTZOffset &&
             daylight) {
             var dateMatchWt = systemTZMatchesTimeShiftDates(tz, subComp);
-            if (dateMatchWt > 0) { 
+            if (dateMatchWt > 0) {
                 if (standardName && standardName == tzNameJun &&
                     daylightName && daylightName == tzNameDec) {
                     return 3;
@@ -301,7 +310,7 @@ function guessSystemTimezone() {
         if (offsetJun == standardTZOffset && offsetDec == daylightTZOffset &&
             daylight) {
             var dateMatchWt = systemTZMatchesTimeShiftDates(tz, subComp);
-            if (dateMatchWt > 0) { 
+            if (dateMatchWt > 0) {
                 if (standardName && standardName == tzNameJun &&
                     daylightName && daylightName == tzNameDec) {
                     return 3;
@@ -339,7 +348,7 @@ function guessSystemTimezone() {
             (beforeSpringShiftJSDate.getTimezoneOffset() >
              afterSpringShiftJSDate.getTimezoneOffset())) {
             return 2;
-        }          
+        }
         // Try with 7 DAYS fuzz in either direction, so if no other tz found,
         // will have a nearby tz that disagrees only on the weekday of shift
         // (sunday vs. friday vs. calendar day), or off by exactly one week,
@@ -368,8 +377,7 @@ function guessSystemTimezone() {
     const untilRegex = /UNTIL=(\d{8}T\d{6}Z)/;
 
     function findCurrentTimePeriod(tz, subComp, standardOrDaylight,
-                                   isForNextTransitionDate) { 
-        periodStartCalDate.timezone = tz;
+                                   isForNextTransitionDate) {
         // Iterate through 'STANDARD' declarations or 'DAYLIGHT' declarations
         // (periods in history with different settings.
         //  e.g., US changes daylight start in 2007 (from April to March).)
@@ -380,6 +388,7 @@ function guessSystemTimezone() {
              period;
              period = subComp.getNextSubcomponent(standardOrDaylight)) {
             periodStartCalDate.icalString = getIcalString(period, "DTSTART");
+            periodStartCalDate.timezone = tz;
             if (oneYrUTC.nativeTime < periodStartCalDate.nativeTime) {
                 continue; // period starts too far in future
             }
@@ -387,7 +396,7 @@ function guessSystemTimezone() {
             // some zones (e.g., Arizona, Hawaii) may stop using daylight
             // time, so there might not be a next daylight start.
             var rrule = period.getFirstProperty("RRULE");
-            if (rrule) { 
+            if (rrule) {
                 var match = untilRegex.exec(rrule.valueAsIcalString);
                 if (match) {
                     periodUntilCalDate.icalString = match[1];
@@ -400,12 +409,12 @@ function guessSystemTimezone() {
             // found period that covers today.
             if (!isForNextTransitionDate) {
                 return period;
-            } else /*isForNextTranstionDate*/ { 
+            } else /*isForNextTranstionDate*/ {
                 if (todayUTC.nativeTime < periodStartCalDate.nativeTime) {
                     // already know periodStartCalDate < oneYr from now,
                     // and transitions are at most once per year, so it is next.
                     return periodStartCalDate.jsDate;
-                } else if (rrule) { 
+                } else if (rrule) {
                     // find next occurrence after today
                     periodCalRule.icalProperty = rrule;
                     var nextTransitionDate =
@@ -418,7 +427,7 @@ function guessSystemTimezone() {
             }
         }
         // no such period found
-        return null; 
+        return null;
     }
 
 
@@ -428,14 +437,10 @@ function guessSystemTimezone() {
     var probableTZScore = 0;
     var probableTZSource = null;
 
-    const sbSvc = 
-        Components.classes["@mozilla.org/intl/stringbundle;1"]
-        .getService(Components.interfaces.nsIStringBundleService);
-    const calProperties =
-        sbSvc.createBundle("chrome://calendar/locale/calendar.properties");
+    const calProperties = calGetStringBundle("chrome://calendar/locale/calendar.properties");
 
     // First, try to detect operating system timezone.
-    try { 
+    try {
         var osUserTimeZone = null;
         var zoneInfoIdFromOSUserTimeZone = null;
 
@@ -449,7 +454,7 @@ function guessSystemTimezone() {
                 // in releases built on Gecko 1.9 or later.
                 regOSName  = "Windows";
                 fileOSName = "Windows98";
-            }                    
+            }
 
             // If on Windows NT (2K/XP/Vista), current timezone only lists its
             // localized name, so to find its registry key name, match localized
@@ -489,9 +494,8 @@ function guessSystemTimezone() {
             if (osUserTimeZone != null) {
                 // Lookup timezone registry key in table of known tz keys
                 // to convert to ZoneInfo timezone id.
-                const regKeyToZoneInfoBundle =
-                    sbSvc.createBundle("chrome://calendar/content/"+
-                                       fileOSName+"ToZoneInfoTZId.properties");
+                const regKeyToZoneInfoBundle = calGetStringBundle("chrome://calendar/content/"+
+                                                                  fileOSName + "ToZoneInfoTZId.properties");
                 zoneInfoIdFromOSUserTimeZone =
                     regKeyToZoneInfoBundle.GetStringFromName(osUserTimeZone);
             }
@@ -503,7 +507,7 @@ function guessSystemTimezone() {
             // - /etc/sysconfig/clock file line content.
             // The timezone is set per user via the TZ environment variable.
             // TZ may contain a path that may start with a colon and ends with
-            // a ZoneInfo timezone identifier, such as ":America/New_York" or 
+            // a ZoneInfo timezone identifier, such as ":America/New_York" or
             // ":/share/lib/zoneinfo/America/New_York".  The others are
             // in the filesystem so they give one timezone for the system;
             // the values are similar (but cannot have a leading colon).
@@ -553,11 +557,11 @@ function guessSystemTimezone() {
                     const PR_RDONLY = 0x1;
                     fileInstream.init(file, PR_RDONLY, 0, 0);
                     fileInstream.QueryInterface(CI.nsILineInputStream);
-                    try { 
+                    try {
                         var line = {}, hasMore = true, MAXLINES = 10;
-                        for (var i = 0; hasMore && i < MAXLINES; i++) { 
+                        for (var i = 0; hasMore && i < MAXLINES; i++) {
                             hasMore = fileInstream.readLine(line);
-                            if (line.value && line.value.match(tzRegex)) { 
+                            if (line.value && line.value.match(tzRegex)) {
                                 return filepath+": "+line.value;
                             }
                         }
@@ -569,7 +573,7 @@ function guessSystemTimezone() {
                     Components.utils.reportError(filepath+": "+ex);
                     return "";
                 }
-              
+
             }
             osUserTimeZone = (environmentVariableValue("TZ") ||
                               symbolicLinkTarget("/etc/localtime") ||
@@ -583,8 +587,8 @@ function guessSystemTimezone() {
         }
 
         // check how well OS tz matches tz defined in our version of zoneinfo db
-        if (zoneInfoIdFromOSUserTimeZone != null) { 
-            var tzId = tzSvc.tzidPrefix + zoneInfoIdFromOSUserTimeZone;
+        if (zoneInfoIdFromOSUserTimeZone != null) {
+            var tzId = zoneInfoIdFromOSUserTimeZone;
             var score = checkTZ(tzId);
             switch(score) {
             case 0:
@@ -593,13 +597,8 @@ function guessSystemTimezone() {
                 // Or maybe user turned off DST in Date/Time control panel.
                 // Will look for a better matching tz, or fallback to floating.
                 // (Match OS so alarms go off at time indicated by OS clock.)
-                const consoleSvc =
-                    (Components.classes["@mozilla.org/consoleservice;1"]
-                     .getService(Components.interfaces.nsIConsoleService));
-                var msg = (calProperties.formatStringFromName
-                           ("WarningOSTZNoMatch",
-                            [osUserTimeZone, zoneInfoIdFromOSUserTimeZone], 2));
-                consoleSvc.logStringMessage(msg);
+                WARN(calProperties.formatStringFromName(
+                         "WarningOSTZNoMatch", [osUserTimeZone, zoneInfoIdFromOSUserTimeZone], 2));
                 break;
             case 1: case 2:
                 // inexact match: OS TZ and our ZoneInfo TZ matched imperfectly.
@@ -622,29 +621,25 @@ function guessSystemTimezone() {
                       ("SkippingOSTimezone",
                        [zoneInfoIdFromOSUserTimeZone || osUserTimeZone], 1));
         Components.utils.reportError(errMsg+" "+ex);
-    } 
+    }
 
     // Second, give priority to "likelyTimezone"s if provided by locale.
     try {
-        // The likelyTimezone property is a comma-separated list of 
+        // The likelyTimezone property is a comma-separated list of
         // ZoneInfo timezone ids.
         const bundleTZString =
             calProperties.GetStringFromName("likelyTimezone");
         const bundleTZIds = bundleTZString.split(/\s*,\s*/);
-        for each (var bareTZId in bundleTZIds) { 
-            var tzId = bareTZId; 
-            if (tzId.indexOf("/mozilla.org/") == -1) {
-                // Convert a ZoneInfo timezone to a mozilla timezone-string
-                tzId = tzSvc.tzidPrefix + tzId;
-            }
-            try { 
+        for each (var bareTZId in bundleTZIds) {
+            var tzId = bareTZId;
+            try {
                 var score = checkTZ(tzId);
 
                 switch (score) {
                 case 0:
                     break;
                 case 1: case 2:
-                    if (score > probableTZScore) { 
+                    if (score > probableTZScore) {
                         probableTZId = tzId;
                         probableTZScore = score;
                         probableTZSource = (calProperties.GetStringFromName
@@ -663,14 +658,14 @@ function guessSystemTimezone() {
     } catch (ex) { // Oh well, this didn't work, next option...
         Components.utils.reportError(ex);
     }
-        
+
     // Third, try all known timezones.
     const tzIDs = tzSvc.timezoneIds;
     while (tzIDs.hasMore()) {
         var tzId = tzIDs.getNext();
         try {
             var score = checkTZ(tzId);
-            switch(score) { 
+            switch(score) {
             case 0: break;
             case 1: case 2:
                 if (score > probableTZScore) {
@@ -691,18 +686,15 @@ function guessSystemTimezone() {
     }
 
     // If reach here, there were no score=3 matches, so Warn in console.
-    try { 
-        const jsConsole = Components.classes["@mozilla.org/consoleservice;1"]
-                           .getService(Components.interfaces.nsIConsoleService);
+    try {
         switch(probableTZScore) {
         case 0:
-            jsConsole.logStringMessage(calProperties.GetStringFromName
-                                       ("warningUsingFloatingTZNoMatch"));
+            WARN(calProperties.GetStringFromName("warningUsingFloatingTZNoMatch"));
             break;
         case 1: case 2:
             var tzId = probableTZId;
             var tz = tzSvc.getTimezone(tzId);
-            var subComp = tz.component;
+            var subComp = tz.icalComponent;
             var standard = findCurrentTimePeriod(tz, subComp, "STANDARD");
             var standardTZOffset = getIcalString(standard, "TZOFFSETTO");
             var daylight = findCurrentTimePeriod(tz, subComp, "DAYLIGHT");
@@ -713,14 +705,14 @@ function guessSystemTimezone() {
                 // but transitions start on different weekday from os timezone.
                 function weekday(icsDate) {
                     var calDate = createDateTime();
-                    calDate.timezone = tz;
                     calDate.icalString = icsDate;
+                    calDate.timezone = tz;
                     return calDate.jsDate.toLocaleFormat("%a");
                 }
                 var standardStart = getIcalString(standard, "DTSTART");
                 var standardStartWeekday = weekday(standardStart);
                 var standardRule  = getIcalString(standard, "RRULE");
-                var standardText = 
+                var standardText =
                     ("  Standard: "+standardStart+" "+standardStartWeekday+"\n"+
                      "            "+standardRule+"\n");
                 var daylightStart = getIcalString(daylight, "DTSTART");
@@ -745,7 +737,7 @@ function guessSystemTimezone() {
                               ("WarningUsingGuessedTZ",
                                [tzId, offsetString, warningDetail,
                                 probableTZSource], 4));
-            jsConsole.logStringMessage(warningMsg);
+            WARN(warningMsg);
             break;
         }
     } catch (ex) { // don't abort if error occurs warning user
@@ -788,9 +780,10 @@ function getCalendarDirectory() {
  * @return              True if the calendar is writable
  */
 function isCalendarWritable(aCalendar) {
-    return (!aCalendar.readOnly &&
-           (!getIOService().offline ||
-            aCalendar.getProperty("requiresNetwork") === false));
+    return (!aCalendar.getProperty("disabled") &&
+            !aCalendar.readOnly &&
+            (!getIOService().offline ||
+             aCalendar.getProperty("requiresNetwork") === false));
 }
 
 /**
@@ -807,12 +800,12 @@ function openCalendarWizard(aCallback) {
  * Opens the calendar properties window for aCalendar
  *
  * @param aCalendar  the calendar whose properties should be displayed
- * @param aCallback  function that should be run when the dialog is accepted
  */
-function openCalendarProperties(aCalendar, aCallback) {
-    openDialog("chrome://calendar/content/calendarProperties.xul",
-               "caEditServer", "chrome,titlebar,modal",
-               {calendar: aCalendar, onOk: aCallback});
+function openCalendarProperties(aCalendar) {
+    openDialog("chrome://calendar/content/calendar-properties-dialog.xul",
+               "calendar-properties-dialog",
+               "chrome,titlebar,modal",
+               {calendar: aCalendar});
 }
 
 /**
@@ -838,6 +831,16 @@ function makeURL(aUriString) {
     var ioSvc = Components.classes["@mozilla.org/network/io-service;1"].
                 getService(Components.interfaces.nsIIOService);
     return ioSvc.newURI(aUriString, null, null);
+}
+
+/**
+ * Returns true if this is MOZILLA_1_8_BRANCH, else false.
+ */
+function isBranch() {
+    if (isBranch.mIsBranch === undefined) {
+        isBranch.mIsBranch = (Components.interfaces.nsIStreamLoader.number == "{31d37360-8e5a-11d3-93ad-00104ba0fd40}");
+    }
+    return isBranch.mIsBranch;
 }
 
 /**
@@ -1048,6 +1051,9 @@ function getPrefCategoriesArray() {
  * @return list of category names
  */
 function categoriesStringToArray(aCategories) {
+    if (!aCategories) {
+        return [];
+    }
     // \u001A is the unicode "SUBSTITUTE" character
     function revertCommas(name) { return name.replace(/\u001A/g, ","); }
     return aCategories.replace(/\\,/g, "\u001A").split(",").map(revertCommas);
@@ -1097,18 +1103,35 @@ function sortArrayByLocaleCollator(aStringArray) {
 }
 
 /**
- * Gets the value of a string in a .properties file
+ * Creates a string bundle.
+ *
+ * @param bundleURL The bundle URL
+ * @return string bundle
+ */
+function calGetStringBundle(bundleURL) {
+    if (calGetStringBundle.mService === undefined) {
+        calGetStringBundle.mService = Components.classes["@mozilla.org/intl/stringbundle;1"]
+                                                .getService(Components.interfaces.nsIStringBundleService);
+    }
+    return calGetStringBundle.mService.createBundle(bundleURL);
+}
+
+/**
+ * Gets the value of a string in a .properties file from the calendar bundle
  *
  * @param aBundleName  the name of the properties file.  It is assumed that the
  *                     file lives in chrome://calendar/locale/
  * @param aStringName  the name of the string within the properties file
  * @param aParams      optional array of parameters to format the string
+ * @param aComponent   optional stringbundle component name
  */
-function calGetString(aBundleName, aStringName, aParams) {
+function calGetString(aBundleName, aStringName, aParams, aComponent) {
     try {
-        var sbs = Components.classes["@mozilla.org/intl/stringbundle;1"]
-                            .getService(Components.interfaces.nsIStringBundleService);
-        var props = sbs.createBundle("chrome://calendar/locale/"+aBundleName+".properties");
+        if (!aComponent) {
+            aComponent = "calendar";
+        }
+        var propName = "chrome://" + aComponent + "/locale/" + aBundleName + ".properties";
+        var props = calGetStringBundle(propName);
 
         if (aParams && aParams.length) {
             return props.formatStringFromName(aStringName, aParams, aParams.length);
@@ -1116,8 +1139,7 @@ function calGetString(aBundleName, aStringName, aParams) {
             return props.GetStringFromName(aStringName);
         }
     } catch (ex) {
-        var s = "Failed to read '" + aStringName + "' from " +
-                "'chrome://calendar/locale/" + aBundleName + ".properties'.";
+        var s = ("Failed to read '" + aStringName + "' from " + propName + ".");
         Components.utils.reportError(s + " Error: " + ex);
         return s;
     }
@@ -1131,7 +1153,7 @@ function getUUID() {
     if ("@mozilla.org/uuid-generator;1" in Components.classes) {
         var uuidGen = Components.classes["@mozilla.org/uuid-generator;1"].
                       getService(Components.interfaces.nsIUUIDGenerator);
-        // generate uuids without braces to avoid problems with 
+        // generate uuids without braces to avoid problems with
         // CalDAV servers that don't support filenames with {}
         return uuidGen.generateUUID().toString().replace(/[{}]/g, '');
     }
@@ -1143,7 +1165,7 @@ function getUUID() {
  * have 2 objects.  Use these functions to force them both to get wrapped
  * the same way, allowing for normal comparison.
  */
- 
+
 /**
  * calIItemBase comparer
  */
@@ -1210,17 +1232,6 @@ function compareArrays(aOne, aTwo, compareFunc) {
 }
 
 /**
- * Ensures the passed IID is in the list, else throws Components.results.NS_ERROR_NO_INTERFACE.
- */
-function ensureIID(aList, aIID) {
-    for each (var iid in aList) {
-        if (aIID.equals(iid))
-            return;
-    }
-    throw Components.results.NS_ERROR_NO_INTERFACE
-}
-
-/**
  * Takes care of all QueryInterface business, including calling the QI of any
  * existing parent prototypes.
  *
@@ -1233,31 +1244,33 @@ function ensureIID(aList, aIID) {
  *                        prototype.
  */
 function doQueryInterface(aSelf, aProto, aIID, aList, aClassInfo) {
-    if (aClassInfo && aIID.equals(Components.interfaces.nsIClassInfo)) {
-        return aClassInfo;
+    if (aClassInfo) {
+        if (aIID.equals(Components.interfaces.nsIClassInfo)) {
+            return aClassInfo;
+        }
+        if (!aList) {
+            aList = aClassInfo.getInterfaces({});
+        }
     }
 
-    var list = aList;
-    if (!list && aClassInfo) {
-        list = aClassInfo.getInterfaces({});
-    }
-
-    var list = aList;
-    if (!list && aClassInfo) {
-        list = aClassInfo.getInterfaces({});
-    }
-
-    for each (var iid in list) {
-        if (aIID.equals(iid))
+    for each (var iid in aList) {
+        if (aIID.equals(iid)) {
             return aSelf;
+        }
     }
 
-    var base = aProto.__proto__;
-
-    if (base && base.QueryInterface) {
-        // Try to QI the base prototype
-        return base.QueryInterface.call(aSelf, aIID);
+    if (aIID.equals(Components.interfaces.nsISupports)) {
+        return aSelf;
     }
+
+    if (aProto) {
+        var base = aProto.__proto__;
+        if (base && base.QueryInterface) {
+            // Try to QI the base prototype
+            return base.QueryInterface.call(aSelf, aIID);
+        }
+    }
+
     throw Components.results.NS_ERROR_NO_INTERFACE;
 }
 
@@ -1277,15 +1290,59 @@ function ensureDateTime(aDate) {
     return newDate;
 }
 
+/**
+ * Get the default event start date. This is the next full hour, or 23:00 if it
+ * is past 23:00.
+ *
+ * @param aReferenceDate    If passed, the time of this date will be modified,
+ *                            keeping the date and timezone intact.
+ */
+function getDefaultStartDate(aReferenceDate) {
+    var startDate = now();
+    if (aReferenceDate) {
+        var savedHour = startDate.hour;
+        startDate = aReferenceDate;
+        if (!startDate.isMutable) {
+            startDate = startDate.clone();
+        }
+        startDate.isDate = false;
+        startDate.hour = savedHour;
+    }
+
+    startDate.second = 0;
+    startDate.minute = 0;
+    if (startDate.hour < 23) {
+        startDate.hour++;
+    }
+    return startDate;
+}
+
+/**
+ * Setup the default start and end hours of the given item. This can be a task
+ * or an event.
+ *
+ * @param aItem             The item to set up the start and end date for.
+ * @param aReferenceDate    If passed, the time of this date will be modified,
+ *                            keeping the date and timezone intact.
+ */
+function setDefaultStartEndHour(aItem, aReferenceDate) {
+    aItem[calGetStartDateProp(aItem)] = getDefaultStartDate(aReferenceDate);
+
+    if (isEvent(aItem)) {
+        aItem.endDate = aItem.startDate.clone();
+        aItem.endDate.minute += getPrefSafe("calendar.event.defaultlength", 60);
+    }
+}
+
 /****
  **** debug code
  ****/
 
 /**
- * Logs a string or an object to both stderr and the js-console only in the case 
+ * Logs a string or an object to both stderr and the js-console only in the case
  * where the calendar.debug.log pref is set to true.
  *
- * @param aArg  either a string to log or an object whose entire set of 
+ * @param aArg  either a string to log or an object whose entire set of
  *              properties should be logged.
  */
 function LOG(aArg) {
@@ -1311,11 +1368,9 @@ function LOG(aArg) {
     } else {
         string = aArg;
     }
- 
+
     dump(string + '\n');
-    var consoleSvc = Components.classes["@mozilla.org/consoleservice;1"].
-                     getService(Components.interfaces.nsIConsoleService);
-    consoleSvc.logStringMessage(string);
+    getConsoleService().logStringMessage(string);
 }
 
 /**
@@ -1330,9 +1385,7 @@ function WARN(aMessage) {
     scriptError.init(aMessage, null, null, 0, 0,
                      Components.interfaces.nsIScriptError.warningFlag,
                      "component javascript");
-    var consoleSvc = Components.classes["@mozilla.org/consoleservice;1"]
-                               .getService(Components.interfaces.nsIConsoleService);
-    consoleSvc.logMessage(scriptError);
+    getConsoleService().logMessage(scriptError);
 }
 
 /**
@@ -1389,135 +1442,8 @@ function showError(aMsg) {
 }
 
 /**
- * Auth prompt implementation - Uses password manager if at all possible.
- */
-function calAuthPrompt() {
-    // use the window watcher service to get a nsIAuthPrompt impl
-    this.mPrompter = Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
-                               .getService(Components.interfaces.nsIWindowWatcher)
-                               .getNewAuthPrompter(null);
-    this.mTriedStoredPassword = false;
-}
-
-calAuthPrompt.prototype = {
-    prompt: function capP(aDialogTitle, aText, aPasswordRealm, aSavePassword,
-                          aDefaultText, aResult) {
-        return this.mPrompter.prompt(aDialogTitle, aText, aPasswordRealm,
-                                     aSavePassword, aDefaultText, aResult);
-    },
-
-    getPasswordInfo: function capGPI(aPasswordRealm) {
-        var username;
-        var password;
-        var found = false;
-
-        if ("@mozilla.org/passwordmanager;1" in Components.classes) {
-            var passwordManager = Components.classes["@mozilla.org/passwordmanager;1"]
-                                            .getService(Components.interfaces.nsIPasswordManager);
-            var passwordRealm = aPasswordRealm.passwordRealm || aPasswordRealm;
-            var pwenum = passwordManager.enumerator;
-            // step through each password in the password manager until we find the one we want:
-            while (pwenum.hasMoreElements()) {
-                try {
-                    var pass = pwenum.getNext().QueryInterface(Components.interfaces.nsIPassword);
-                    if (pass.host == passwordRealm) {
-                         // found it!
-                         username = pass.user;
-                         password = pass.password;
-                         found = true;
-                    }
-                } catch (ex) {
-                         found = true;
-                         break;
-                    // don't do anything here, ignore the password that could not
-                    // be read
-                }
-            }
-        } else {
-            var loginManager = Components.classes["@mozilla.org/login-manager;1"]
-                                         .getService(Components.interfaces
-                                         .nsILoginManager);
-            var logins = loginManager.findLogins({}, aPasswordRealm.prePath, null,
-                                                 aPasswordRealm.realm);
-            if (logins.length) {
-                username = logins[0].username;
-                password = logins[0].password;
-                found = true;
-            }
-        }
-        return {found: found, username: username, password: password};
-    },
-
-    promptUsernameAndPassword: function capPUAP(aDialogTitle, aText,
-                                                aPasswordRealm,aSavePassword,
-                                                aUser, aPwd) {
-        var pw;
-        if (!this.mTriedStoredPassword) {
-            pw = this.getPasswordInfo(aPasswordRealm);
-        }
-
-        if (pw && pw.found) {
-            this.mTriedStoredPassword = true;
-            aUser.value = pw.username;
-            aPwd.value = pw.password;
-            return true;
-        } else {
-            return this.mPrompter.promptUsernameAndPassword(aDialogTitle, aText,
-                                                            aPasswordRealm,
-                                                            aSavePassword,
-                                                            aUser, aPwd);
-        }
-    },
-
-    // promptAuth is needed/used on trunk only
-    promptAuth: function capPA(aChannel, aLevel, aAuthInfo) {
-        var hostRealm = {};
-        hostRealm.prePath = aChannel.URI.prePath;
-        hostRealm.realm = aAuthInfo.realm;
-        hostRealm.passwordRealm = aChannel.URI.host + ":" + aChannel.URI.port +
-                                          " (" + aAuthInfo.realm + ")";
-
-        var pw;
-        if (!this.mTriedStoredPassword) {
-            pw = this.getPasswordInfo(hostRealm);
-        }
-        if (pw && pw.found) {
-            this.mTriedStoredPassword = true;
-            aAuthInfo.username = pw.username;
-            aAuthInfo.password = pw.password;
-            return true;
-        } else {
-            var prompter2 =
-                Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
-                          .getService(Components.interfaces.nsIPromptFactory)
-                          .getPrompt(null, Components.interfaces.nsIAuthPrompt2);
-            return prompter2.promptAuth(aChannel, aLevel, aAuthInfo);
-        }
-    },
-
-    promptPassword: function capPP(aDialogTitle, aText, aPasswordRealm,
-                             aSavePassword, aPwd) {
-        var found = false;
-        var pw;
-        if (!this.mTriedStoredPassword) {
-            pw = this.getPasswordInfo(aPasswordRealm);
-        }
-
-        if (pw && pw.found) {
-            this.mTriedStoredPassword = true;
-            aPwd.value = pw.password;
-            return true;
-        } else {
-            return this.mPrompter.promptPassword(aDialogTitle, aText,
-                                                 aPasswordRealm, aSavePassword,
-                                                 aPwd);
-        }
-    }
-}
-
-/**
  * Pick whichever of "black" or "white" will look better when used as a text
- * color against a background of bgColor. 
+ * color against a background of bgColor.
  *
  * @param bgColor   the background color as a "#RRGGBB" string
  */
@@ -1541,19 +1467,29 @@ function getContrastingTextColor(bgColor)
 }
 
 /**
- * Returns the start date of an item, ie either an event's start date or a task's entry date.
+ * Returns the property name used for the start date of an item, ie either an
+ * event's start date or a task's entry date.
  */
-function calGetStartDate(aItem)
-{
-    return (isEvent(aItem) ? aItem.startDate : aItem.entryDate);
+function calGetStartDateProp(aItem) {
+    if (isEvent(aItem)) {
+        return "startDate";
+    } else if (isToDo(aItem)) {
+        return "entryDate";
+    }
+    throw Components.results.NS_ERROR_NOT_IMPLEMENTED;
 }
 
 /**
- * Returns the end date of an item, ie either an event's end date or a task's due date.
+ * Returns the property name used for the end date of an item, ie either an
+ * event's end date or a task's due date.
  */
-function calGetEndDate(aItem)
-{
-    return (isEvent(aItem) ? aItem.endDate : aItem.dueDate);
+function calGetEndDateProp(aItem) {
+    if (isEvent(aItem)) {
+        return "endDate";
+    } else if (isToDo(aItem)) {
+        return "dueDate";
+    }
+    throw Components.results.NS_ERROR_NOT_IMPLEMENTED;
 }
 
 /**
@@ -1619,18 +1555,48 @@ function checkIfInRange(item, rangeStart, rangeEnd, returnDtstartOrDue)
 }
 
 /**
+ * This function return the progress state of a task:
+ * completed, overdue, duetoday, inprogress, future
+ *
+ * @param aTask     The task to check.
+ * @return          The progress atom.
+ */
+function getProgressAtom(aTask) {
+    var now = new Date();
+
+    if (aTask.isCompleted)
+      return "completed";
+
+    if (aTask.dueDate && aTask.dueDate.isValid) {
+        if (aTask.dueDate.jsDate.getTime() < now.getTime()) {
+            return "overdue";
+        } else if (aTask.dueDate.year == now.getFullYear() &&
+                   aTask.dueDate.month == now.getMonth() &&
+                   aTask.dueDate.day == now.getDate()) {
+            return "duetoday";
+        }
+    }
+
+    if (aTask.entryDate && aTask.entryDate.isValid &&
+        aTask.entryDate.jsDate.getTime() < now.getTime()) {
+        return "inprogress";
+    }
+
+    return "future";
+}
+
+/**
  * Returns true if we are Sunbird (according to our UUID), false otherwise.
  */
 function isSunbird()
 {
-    const kSUNBIRD_UID = "{718e30fb-e89b-41dd-9da7-e25a45638b28}";
-    var appInfo = Components.classes["@mozilla.org/xre/app-info;1"].
-                  getService(Components.interfaces.nsIXULAppInfo);
-
-    return appInfo.ID == kSUNBIRD_UID;
+    if (isSunbird.mIsSunbird === undefined) {
+        var appInfo = Components.classes["@mozilla.org/xre/app-info;1"]
+                                .getService(Components.interfaces.nsIXULAppInfo);
+        isSunbird.mIsSunbird = (appInfo.ID == "{718e30fb-e89b-41dd-9da7-e25a45638b28}");
+    }
+    return isSunbird.mIsSunbird;
 }
-
-
 
 function hasPositiveIntegerValue(elementId)
 {
@@ -1906,7 +1872,7 @@ function calSetProdidVersion(aIcalComponent) {
  * @param
  *      aElement  The XUL element to derive the sibling from
  * @param
- *      aDistance  An integer value denoting how the relative position 
+ *      aDistance  An integer value denoting how the relative position
  *                  of the returned sibling within the parent container
  */
 function getAdjacentSibling(aElement, aDistance) {
@@ -1931,7 +1897,7 @@ function getAdjacentSibling(aElement, aDistance) {
  *
  * @param aMenuPopupId The Id of the popup-menu to be cloned
  * @param aNewPopupId The new id of the cloned popup-menu
- * @param aNewIdPrefix To keep the ids unique the childnodes of the returned 
+ * @param aNewIdPrefix To keep the ids unique the childnodes of the returned
  * popup-menu are prepended with a prefix
  * @return the cloned popup-menu
  */
@@ -1971,15 +1937,15 @@ function applyAttributeToMenuChildren(aElement, aAttributeName, aValue) {
                }
            }
            domObject.setAttribute(aAttributeName, aValue);
-       sibling = sibling.nextSibling;          
+       sibling = sibling.nextSibling;
        }
     } while (sibling);
   }
 
 
 /**
- * compares the value of a property of an array of objects and returns 
- * true or false if it is same or not among all array members 
+ * compares the value of a property of an array of objects and returns
+ * true or false if it is same or not among all array members
  *
  * @param aObjects An Array of Objects to inspect
  * @param aProperty Name the name of the Property of which the value is compared
@@ -1997,9 +1963,9 @@ function isPropertyValueSame(aObjects, aPropertyName) {
     }
     return true;
 }
-  
+
 /**
- * sets the value of a boolean attribute by either setting the value or 
+ * sets the value of a boolean attribute by either setting the value or
  * removing the attribute
  *
  * @param aXulElement The XulElement the attribute is applied to
@@ -2019,17 +1985,50 @@ function setBooleanAttribute(aXulElement, aAttribute, aValue) {
     }
 }
 
-function removeAnonymousElement(aParentNode, aId) {
-    var child = document.getAnonymousElementByAttribute(aParentNode, "anonid", aId);
-    child.parentNode.removeChild(child);
+/**
+ * returns a parentnode - or the overgiven node - with the given localName, 
+ * by "walking up" the DOM-hierarchy.
+ *
+ * @param aChildNode  The childnode.
+ * @param aLocalName  The localName of the to-be-returned parent
+ *                      that is looked for.
+ * @return            The parent with the given localName or the
+ *                      given childNode 'aChildNode'. If no appropriate
+ *                      parent node with aLocalName could be
+ *                      retrieved it is returned 'null'.
+ */
+function getParentNodeOrThis(aChildNode, aLocalName) {
+    var node = aChildNode;
+    while (node && (node.localName != aLocalName)) {
+        node = node.parentNode;
+        if (node.tagName == undefined) {
+            return null;
+        }
+    };
+    return node;
 }
 
-function getParentNode(aNode, aLocalName) {
-  var node = aNode;
-  do {
-      node = node.parentNode;
-  } while (node && (node.localName != aLocalName));
-  return node;
+/**
+ * Returns a parentnode  - or the overgiven node -  with the given attributevalue
+ * for the given attributename by "walking up" the DOM-hierarchy.
+ *
+ * @param aChildNode      The childnode.
+ * @param aAttibuteName   The name of the attribute that is to be compared with
+ * @param aAttibuteValue  The value of the attribute that is to be compared with
+ * @return                The parent with the given attributeName set that has
+ *                          the same value as the given given attributevalue
+ *                          'aAttributeValue'. If no appropriate
+ *                          parent node can be retrieved it is returned 'null'.
+ */
+function getParentNodeOrThisByAttribute(aChildNode, aAttributeName, aAttributeValue) {
+    var node = aChildNode;
+    while (node && (node.getAttribute(aAttributeName) != aAttributeValue)) {
+        node = node.parentNode;
+        if (node.tagName == undefined) {
+            return null;
+        }
+    };
+    return node;
 }
 
 function setItemProperty(item, propertyName, aValue, aCapability) {
@@ -2110,6 +2109,9 @@ calPropertyBag.prototype = {
     setProperty: function cpb_setProperty(aName, aValue) {
         this.mData[aName] = aValue;
     },
+    getProperty_: function cpb_getProperty(aName) {
+        return this.mData[aName];
+    },
     getProperty: function cpb_getProperty(aName) {
         var aValue = this.mData[aName];
         if (aValue === undefined) {
@@ -2148,8 +2150,7 @@ calPropertyBagEnumerator.prototype = {
         var name = this.mKeys[this.mIndex++];
         return { // nsIProperty:
             QueryInterface: function cpb_enum_prop_QueryInterface(aIID) {
-                ensureIID([Components.interfaces.nsIProperty, Components.interfaces.nsISupports], aIID);
-                return this;
+                return doQueryInterface(this, null, aIID, [Components.interfaces.nsIProperty]);
             },
             name: name,
             value: this.mCurrentValue
@@ -2168,37 +2169,39 @@ calPropertyBagEnumerator.prototype = {
 };
 
 // Send iTIP invitation
-function sendItipInvitation(aItem) {
+function sendItipInvitation(aItem, aTypeOfInvitation, aRecipientsList) {
     // XXX Until we rethink attendee support and until such support
     // is worked into the event dialog (which has been done in the prototype
     // dialog to a degree) then we are going to simply hack in some attendee
     // support so that we can round-trip iTIP invitations.
-    // Since there is no way to determine the type of transport an
-    // attendee requires, we default to email
-    var emlSvc = Components.classes["@mozilla.org/calendar/itip-transport;1?type=email"]
-                           .createInstance(Components.interfaces.calIItipTransport);
+    var transportType = aItem.calendar.getProperty("itip.transportType") || "email";
+
+    var transport = Components.classes["@mozilla.org/calendar/itip-transport;1?type=" + transportType]
+                           .getService(Components.interfaces.calIItipTransport);
 
     var itipItem = Components.classes["@mozilla.org/calendar/itip-item;1"]
                              .createInstance(Components.interfaces.calIItipItem);
 
-    var sbs = Components.classes["@mozilla.org/intl/stringbundle;1"]
-                        .getService(Components.interfaces.nsIStringBundleService);
-
-    var sb = sbs.createBundle("chrome://lightning/locale/lightning.properties");
+    var sb = calGetStringBundle("chrome://lightning/locale/lightning.properties");
     var recipients = [];
 
     // We have to modify our item a little, so we clone it.
     var item = aItem.clone();
 
-    // Fix up our attendees for invitations using some good defaults
-    itemAtt = item.getAttendees({}); // reuse cloned attendees
-    item.removeAllAttendees();
-    for each (var attendee in itemAtt) {
-        attendee.role = "REQ-PARTICIPANT";
-        attendee.participationStatus = "NEEDS-ACTION";
-        attendee.rsvp = true;
-        item.addAttendee(attendee);
-        recipients.push(attendee);
+    if (aRecipientsList.length == 0) {
+        // Fix up our attendees for invitations using some good defaults
+        var itemAtt = item.getAttendees({});
+        item.removeAllAttendees();
+        for each (var attendee in itemAtt) {
+            attendee = attendee.clone();
+            attendee.role = "REQ-PARTICIPANT";
+            attendee.participationStatus = "NEEDS-ACTION";
+            attendee.rsvp = true;
+            item.addAttendee(attendee);
+            recipients.push(attendee);
+        }
+    } else {
+        recipients = aRecipientsList;
     }
 
     // XXX The event dialog has no means to set us as the organizer
@@ -2212,7 +2215,7 @@ function sendItipInvitation(aItem) {
     // For this support, we'll need a real invitation manager component.
     var organizer = Components.classes["@mozilla.org/calendar/attendee;1"]
                               .createInstance(Components.interfaces.calIAttendee);
-    organizer.id = "mailto:" + emlSvc.defaultIdentity;
+    organizer.id = transport.scheme + ":" + transport.defaultIdentity;
     organizer.role = "REQ-PARTICIPANT";
     organizer.participationStatus = "ACCEPTED";
     organizer.isOrganizer = true;
@@ -2221,7 +2224,7 @@ function sendItipInvitation(aItem) {
     // have a mechanism for creating an item with a method, so let's add
     // that too while we're at it.  We'll also fake Sequence ID support.
     item.organizer = organizer;
-    item.setProperty("METHOD", "REQUEST");
+    item.setProperty("METHOD", aTypeOfInvitation);
     item.setProperty("SEQUENCE", item.generation);
 
     var summary
@@ -2234,19 +2237,46 @@ function sendItipInvitation(aItem) {
     // Initialize and set our properties on the item
     itipItem.init(item.icalString);
     itipItem.isSend = true;
-    itipItem.receivedMethod = "REQUEST";
-    itipItem.responseMethod = "REQUEST";
+    itipItem.receivedMethod = aTypeOfInvitation;
     itipItem.autoResponse = Components.interfaces.calIItipItem.USER;
 
     // Get ourselves some default text - when we handle organizer properly
     // We'll need a way to configure the Common Name attribute and we should
     // use it here rather than the email address
-    var subject = sb.formatStringFromName("itipRequestSubject",
+    var subjectStringId = "";
+    var bodyStringId = "";
+    switch (aTypeOfInvitation) {
+        case 'REQUEST':
+            subjectStringId = "itipRequestSubject";
+            bodyStringId = "itipRequestBody";
+            break;
+        case 'CANCEL':
+            subjectStringId = "itipCancelSubject";
+            bodyStringId = "itipCancelBody";
+            break;
+    }
+
+    var subject = sb.formatStringFromName(subjectStringId,
                                           [summary], 1);
-    var body = sb.formatStringFromName("itipRequestBody",
-                                       [emlSvc.defaultIdentity, summary],
+    var body = sb.formatStringFromName(bodyStringId,
+                                       [transport.defaultIdentity, summary],
                                        2);
 
     // Send it!
-    emlSvc.sendItems(recipients.length, recipients, subject, body, itipItem);
+    transport.sendItems(recipients.length, recipients, subject, body, itipItem);
 }
+ 
+function compareItemContent(aFirstItem, aSecondItem) {
+    function hashItem(aItem) {
+        var icalString = aItem.icalString;
+        icalString = icalString.replace(/\r\nLAST-MODIFIED:.+/, "");
+        icalString = icalString.replace(/\r\nDTSTAMP:.+/, "");
+        var propStrings = icalString.split("\n");
+        propStrings.sort();
+        return propStrings.join("\n");
+    }
+    var firstIcalString = hashItem(aFirstItem);
+    var secondIcalString = hashItem(aSecondItem);
+    return (firstIcalString == secondIcalString);
+}
+

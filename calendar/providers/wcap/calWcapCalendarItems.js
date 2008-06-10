@@ -1,4 +1,3 @@
-/* -*- Mode: javascript; tab-width: 20; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -15,7 +14,7 @@
  * The Original Code is Sun Microsystems code.
  *
  * The Initial Developer of the Original Code is
- * Sun Microsystems, Inc.
+ *   Sun Microsystems, Inc.
  * Portions created by the Initial Developer are Copyright (C) 2007
  * the Initial Developer. All Rights Reserved.
  *
@@ -37,23 +36,19 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-var calWcapCalendar;
-if (!calWcapCalendar) {
-    calWcapCalendar = {};
-    calWcapCalendar.prototype = {};
-}
-
 calWcapCalendar.prototype.encodeAttendee =
-function calWcapCalendar_encodeAttendee(att)
-{
-    if (LOG_LEVEL > 2)
+function calWcapCalendar_encodeAttendee(att) {
+    if (LOG_LEVEL > 2) {
         log("attendee.icalProperty.icalString=" + att.icalProperty.icalString, this);
+    }
     function encodeAttr(val, attr, params) {
         if (val && val.length > 0) {
-            if (params.length > 0)
+            if (params.length > 0) {
                 params += "^";
-            if (attr)
+            }
+            if (attr) {
                 params += (attr + "=");
+            }
             params += encodeURIComponent(val);
         }
         return params;
@@ -61,13 +56,15 @@ function calWcapCalendar_encodeAttendee(att)
     var params = encodeAttr(att.rsvp ? "TRUE" : "FALSE", "RSVP", "");
     params = encodeAttr(att.participationStatus, "PARTSTAT", params);
     params = encodeAttr(att.role, "ROLE", params);
-    params = encodeAttr(att.commonName.replace(/[;:]/g, " "), "CN", params);
+    var cn = att.commonName;
+    if (cn) {
+        params = encodeAttr(cn.replace(/[;:]/g, " "), "CN", params); // remove ';' and ':' from CN
+    }
     return encodeAttr(att.id, null, params);
 };
 
 calWcapCalendar.prototype.encodeNscpTzid =
-function calWcapCalendar_encodeNscpTzid(dateTime)
-{
+function calWcapCalendar_encodeNscpTzid(dateTime) {
     var params = "X-NSCP-ORIGINAL-OPERATION=X-NSCP-WCAP-PROPERTY-";
     if (!dateTime || !dateTime.isValid || dateTime.timezone.isUTC) {
         params += "DELETE^";
@@ -82,9 +79,7 @@ function calWcapCalendar_encodeNscpTzid(dateTime)
 };
 
 calWcapCalendar.prototype.getRecurrenceParams =
-function calWcapCalendar_getRecurrenceParams(
-    item, out_rrules, out_rdates, out_exrules, out_exdates)
-{
+function calWcapCalendar_getRecurrenceParams(item, out_rrules, out_rdates, out_exrules, out_exdates) {
     // recurrences:
     out_rrules.value = [];
     out_rdates.value = [];
@@ -96,37 +91,45 @@ function calWcapCalendar_getRecurrenceParams(
             var isNeg = rItem.isNegative;
             if (rItem instanceof Components.interfaces.calIRecurrenceRule) {
                 var rule = ("\"" + encodeURIComponent(rItem.icalProperty.valueAsIcalString) + "\"");
-                if (isNeg)
+                if (isNeg) {
                     out_exrules.value.push(rule);
-                else
+                } else {
                     out_rrules.value.push(rule);
-            }
-            else if (rItem instanceof Components.interfaces.calIRecurrenceDateSet) {
+                }
+            } else if (rItem instanceof Components.interfaces.calIRecurrenceDateSet) {
                 var d = rItem.getDates({});
                 for each (var d in rdates) {
-                    if (isNeg)
-                        out_exdates.value.push( getIcalUTC(d.date) );
-                    else
-                        out_rdates.value.push( getIcalUTC(d.date) );
+                    // cs does not accept DATEs here:
+                    if (isNeg) {
+                        out_exdates.value.push(getIcalUTC(ensureDateTime(d.date)));
+                    } else {
+                        out_rdates.value.push(getIcalUTC(ensureDateTime(d.date)));
+                    }
                 }
-            }
-            else if (rItem instanceof Components.interfaces.calIRecurrenceDate) {
-                if (isNeg)
-                    out_exdates.value.push( getIcalUTC(rItem.date) );
-                else
-                    out_rdates.value.push( getIcalUTC(rItem.date) );
-            }
-            else {
-                this.notifyError("don\'t know how to handle this recurrence item: " +
-                                 rItem.valueAsIcalString);
+            } else if (rItem instanceof Components.interfaces.calIRecurrenceDate) {
+                // cs does not accept DATEs here:
+                if (isNeg) {
+                    out_exdates.value.push(getIcalUTC(ensureDateTime(rItem.date)));
+                } else {
+                    out_rdates.value.push(getIcalUTC(ensureDateTime(rItem.date)));
+                }
+            } else {
+                this.notifyError("don\'t know how to handle this recurrence item: " + rItem.valueAsIcalString);
             }
         }
     }
 };
 
+function sameStringSet(list, list_) {
+    return (list.length == list_.length &&
+            list.every( function everyFunc(x) {
+                    return list_.some(
+                        function someFunc(y) { return x == y; } );
+                }));
+}
+
 calWcapCalendar.prototype.encodeRecurrenceParams =
-function calWcapCalendar_encodeRecurrenceParams(item, oldItem)
-{
+    function calWcapCalendar_encodeRecurrenceParams(item, oldItem, excludeExdates) {
     var rrules = {};
     var rdates = {};
     var exrules = {};
@@ -153,43 +156,34 @@ function calWcapCalendar_encodeRecurrenceParams(item, oldItem)
         var exrules_ = {};
         var exdates_ = {};
         this.getRecurrenceParams(oldItem, rrules_, rdates_, exrules_, exdates_);
-        
-        function sameSet(list, list_) {
-            return (list.length == list_.length &&
-                    list.every( function everyFunc(x) {
-                                    return list_.some(
-                                        function someFunc(y) { return x == y; } );
-                                }
-                        ));
-        }
-        if (sameSet(rrules.value, rrules_.value))
+
+        if (sameStringSet(rrules.value, rrules_.value)) {
             rrules.value = null; // don't write
-        if (sameSet(rdates.value, rdates_.value))
-            rdates.value = null; // don't write
-        if (sameSet(exrules.value, exrules.value))
-            exrules.value = null; // don't write
-        if (sameSet(exdates.value, exdates_.value))
-            exdates.value = null; // don't write
-    }
-    
-    function encodeList(list) {
-        var ret = "";
-        for each ( var str in list ) {
-            if (ret.length > 0)
-                ret += ";";
-            ret += str;
         }
-        return ret;
+        if (sameStringSet(rdates.value, rdates_.value)) {
+            rdates.value = null; // don't write
+        }
+        if (sameStringSet(exrules.value, exrules.value)) {
+            exrules.value = null; // don't write
+        }
+        if (excludeExdates || sameStringSet(exdates.value, exdates_.value)) {
+            exdates.value = null; // don't write
+        }
     }
+
     var ret = "";
-    if (rrules.value)
-        ret += ("&rrules=" + encodeList(rrules.value));
-    if (rdates.value)
-        ret += ("&rdates=" + encodeList(rdates.value));
-    if (exrules.value)
-        ret += ("&exrules=" + encodeList(exrules.value));
-    if (exdates.value)
-        ret += ("&exdates=" + encodeList(exdates.value));
+    if (rrules.value) {
+        ret += ("&rrules=" + rrules.value.join(";"));
+    }
+    if (rdates.value) {
+        ret += ("&rdates=" + rdates.value.join(";"));
+    }
+    if (exrules.value) {
+        ret += ("&exrules=" + exrules.value.join(";"));
+    }
+    if (!excludeExdates && exdates.value) {
+        ret += ("&exdates=" + exdates.value.join(";"));
+    }
     return ret;
     // xxx todo:
     // rchange=1: expand recurrences,
@@ -199,8 +193,7 @@ function calWcapCalendar_encodeRecurrenceParams(item, oldItem)
 };
 
 calWcapCalendar.prototype.getAlarmParams =
-function calWcapCalendar_getAlarmParams(item)
-{
+function calWcapCalendar_getAlarmParams(item) {
     var params = null;
     var alarmStart = item.alarmOffset;
     if (alarmStart) {
@@ -215,15 +208,10 @@ function calWcapCalendar_getAlarmParams(item)
         }
         
         var emails = "";
-        if (item.hasProperty("alarmEmailAddress"))
+        if (item.hasProperty("alarmEmailAddress")) {
             emails = encodeURIComponent(item.getProperty("alarmEmailAddress"));
-        else {
-            this.session.getDefaultAlarmEmails({}).forEach(
-                function forEachFunc(email) {
-                    if (emails.length > 0)
-                        emails += ";";
-                    emails += encodeURIComponent(email);
-                });
+        } else {
+            emails = this.session.getDefaultAlarmEmails({}).map(encodeURIComponent).join(";");
         }
         if (emails.length > 0) {
             params = ("&alarmStart=" + alarmStart.icalString);
@@ -231,8 +219,9 @@ function calWcapCalendar_getAlarmParams(item)
         }
         // else popup
     }
-    if (!params) // clear popup, email alarm:
+    if (!params) { // clear popup, email alarm:
         params = "&alarmStart=&alarmPopup=&alarmEmails=";
+    }
     return params;
 };
 
@@ -244,29 +233,31 @@ function getCalId(att) {
 
 function getAttendeeByCalId(atts, calId) {
     for each (var att in atts) {
-        if (getCalId(att) == calId)
+        if (getCalId(att) == calId) {
             return att;
+        }
     }
     return null;
 }
 
 calWcapCalendar.prototype.isInvitation =
-function calWcapCalendar_isInvitation(item)
-{
-    if (!this.session.isLoggedIn)
+function calWcapCalendar_isInvitation(item) {
+    if (!this.session.isLoggedIn) {
         return false; // don't know
+    }
     var orgCalId = getCalId(item.organizer);
-    if (!orgCalId)
+    if (!orgCalId) {
         return false;
+    }
     var calId = this.calId;
-    if (orgCalId == calId)
+    if (orgCalId == calId) {
         return false;
+    }
     return (getAttendeeByCalId(item.getAttendees({}), calId) != null);
 };
 
 calWcapCalendar.prototype.getInvitedAttendee =
-function calWcapCalendar_getInvitedAttendee(item)
-{
+function calWcapCalendar_getInvitedAttendee(item) {
     return getAttendeeByCalId(item.getAttendees({}), this.calId);
 };
 
@@ -290,15 +281,17 @@ function diffProperty(newItem, oldItem, propName) {
     if (val === null) {
         // force being set when - no old item, eg when adding new item
         //                      - property is to be deleted
-        if (!oldItem || oldVal)
+        if (!oldItem || oldVal) {
             val = "";
-    }
-    else {
+        }
+    } else {
         val = val.replace(/(\r\n)|\n/g, "\r\n");
-        if (oldVal)
+        if (oldVal) {
             oldVal = oldVal.replace(/(\r\n)|\n/g, "\r\n");
-        if (val == oldVal)
+        }
+        if (val == oldVal) {
             val = null;
+        }
     }
     return val;
 }
@@ -310,16 +303,15 @@ const METHOD_CANCEL  = 8;
 const METHOD_UPDATE  = 256;
 
 calWcapCalendar.prototype.storeItem =
-function calWcapCalendar_storeItem(bAddItem, item, oldItem, request, netRespFunc)
-{
+function calWcapCalendar_storeItem(bAddItem, item, oldItem, request) {
     var this_ = this;
     var bIsEvent = isEvent(item);
     var bIsParent = isParent(item);
-    
+
     var method = METHOD_PUBLISH;
     var bNoSmtpNotify = false;
     var params = "";
-    
+
     var calId = this.calId;
     if (!bAddItem && this.isInvitation(item)) { // REPLY
         method = METHOD_REPLY;
@@ -327,17 +319,17 @@ function calWcapCalendar_storeItem(bAddItem, item, oldItem, request, netRespFunc
         if (att) {
             log("attendee: " + att.icalProperty.icalString, this);
             var oldAtt = null;
-            if (oldItem)
+            if (oldItem) {
                 oldAtt = getAttendeeByCalId(oldItem.getAttendees({}), calId);
+            }
             if (!oldAtt || (att.participationStatus != oldAtt.participationStatus)) {
                 // REPLY first for just this calendar:
                 params += ("&attendees=PARTSTAT=" + att.participationStatus +
                            "^" + encodeURIComponent(att.id));
             }
         }
-    }
-    else { // PUBLISH, REQUEST
-        
+    } else { // PUBLISH, REQUEST
+
         // workarounds for server bugs concerning recurrences/exceptions:
         // - if first occurrence is an exception
         //   and an EXDATE for that occurrence ought to be written,
@@ -345,7 +337,7 @@ function calWcapCalendar_storeItem(bAddItem, item, oldItem, request, netRespFunc
         // - if start/end date is being written on master, the previously EXDATEd
         //   exception overwrites master, why ever.
         // So in these cases: write all data of master.
-        
+
         var bIsAllDay = false;
         if (bIsEvent) {
             var dtstart = item.startDate;
@@ -358,12 +350,12 @@ function calWcapCalendar_storeItem(bAddItem, item, oldItem, request, netRespFunc
                 params += ("&dtend=" + getIcalUTC(dtend));
                 params += ("&X-NSCP-DTEND-TZID=" + this.encodeNscpTzid(dtend));
                 params += (bIsAllDay ? "&isAllDay=1" : "&isAllDay=0");
-                
-                if (bIsParent && item.recurrenceInfo)
+
+                if (bIsParent && item.recurrenceInfo) {
                     oldItem = null; // recurrence/exceptions hack: write whole master
+                }
             }
-        }
-        else { // calITodo
+        } else { // calITodo
             // xxx todo: dtstart is mandatory for cs, so if this is
             //           undefined, assume an allDay todo???
             var dtstart = item.entryDate;
@@ -373,7 +365,7 @@ function calWcapCalendar_storeItem(bAddItem, item, oldItem, request, netRespFunc
             if (!dtend && item.alarmOffset) {
                 dtend = dtstart;
             }
-            
+
             bIsAllDay = (dtstart && dtstart.isDate);
             if (!oldItem || !identicalDatetimes(dtstart, oldItem.entryDate)
                          || !identicalDatetimes(dtend, oldItem.dueDate)) {
@@ -382,13 +374,14 @@ function calWcapCalendar_storeItem(bAddItem, item, oldItem, request, netRespFunc
                 params += ("&due=" + getIcalUTC(dtend));
                 params += ("&X-NSCP-DUE-TZID=" + this.encodeNscpTzid(dtend));
                 params += (bIsAllDay ? "&isAllDay=1" : "&isAllDay=0");
-                
-                if (bIsParent && item.recurrenceInfo)
+
+                if (bIsParent && item.recurrenceInfo) {
                     oldItem = null; // recurrence/exceptions hack: write whole master
+                }
             }
         }
         if (bIsParent) {
-            var recParams = this.encodeRecurrenceParams(item, oldItem);
+            var recParams = this.encodeRecurrenceParams(item, oldItem, !bAddItem /* exclude EXDATEs */);
             if (recParams.length > 0) {
                 oldItem = null; // recurrence/exceptions hack: write whole master
                 params += recParams;
@@ -402,8 +395,9 @@ function calWcapCalendar_storeItem(bAddItem, item, oldItem, request, netRespFunc
         // xxx todo: mbu initially sets this ownerId:
         if (!orgCalId) {
             var orgId = getOrgId(item);
-            if (!orgId || (orgId == this.ownerId))
+            if (!orgId || (orgId == this.ownerId)) {
                 orgCalId = calId; // patch to this calid
+            }
         }
         
         var attendees = item.getAttendees({});
@@ -413,110 +407,117 @@ function calWcapCalendar_storeItem(bAddItem, item, oldItem, request, netRespFunc
                 function attendeeSort(one, two) {
                     one = one.id;
                     two = two.id;
-                    if (one == two)
+                    if (one == two) {
                         return 0;
+                    }
                     return (one < two ? -1 : 1);
                 }
                 atts = atts.concat([]);
                 atts.sort(attendeeSort);
-                var ret = "";
-                for (var i = 0; i < atts.length; ++i) {
-                    if (ret.length > 0)
-                        ret += ";";
-                    ret += this_.encodeAttendee(atts[i]);
-                }
-                return ret;
+                return atts.map(this_.encodeAttendee, this_).join(";");
             }
             var attParam = encodeAttendees(attendees);
             if (!oldItem || attParam != encodeAttendees(oldItem.getAttendees({}))) {
                 params += ("&attendees=" + attParam);
             }
-            
-            if (orgCalId == calId)
+
+            if (orgCalId == calId) {
                 method = METHOD_REQUEST;
-            else {
+            } else {
                 method = METHOD_UPDATE;
                 bNoSmtpNotify = true;
             }
-        } // else using just PUBLISH
-        else if (oldItem && oldItem.getAttendees({}).length > 0) {
+        } else if (oldItem && oldItem.getAttendees({}).length > 0) {
+            // else using just PUBLISH
             params += "&attendees="; // clear attendees
         }
-        
+
         if (orgCalId) {
-            if (!oldItem || (orgCalId != getCalId(oldItem.organizer)))
+            if (!oldItem || (orgCalId != getCalId(oldItem.organizer))) {
                 params += ("&orgCalid=" + encodeURIComponent(orgCalId));
-        }
-        else { // might be a copy of an iTIP invitation:
+            }
+        } else { // might be a copy of an iTIP invitation:
             var orgEmail = getOrgId(item);
-            if (!oldItem || (getOrgId(oldItem) != orgEmail))
+            if (!oldItem || (getOrgId(oldItem) != orgEmail)) {
                 params += ("&orgEmail=" + encodeURIComponent(orgEmail));
+            }
         }
-        
+
         var val = item.title;
-        if (!oldItem || val != oldItem.title)
+        if (!oldItem || val != oldItem.title) {
             params += ("&summary=" + encodeURIComponent(val));
+        }
         // xxx todo: missing relatedTos= in cal api
         val = diffProperty(item, oldItem, "CATEGORIES");
-        if (val !== null) // xxx todo: check whether ;-separated:
+        if (val !== null) { // xxx todo: check whether ;-separated:
             params += ("&categories=" + encodeURIComponent( val.replace(/,/g, ";") ));
+        }
         val = diffProperty(item, oldItem, "DESCRIPTION");
-        if (val !== null)
+        if (val !== null) {
             params += ("&desc=" + encodeURIComponent(val));
+        }
         val = diffProperty(item, oldItem, "LOCATION");
-        if (val !== null)
+        if (val !== null) {
             params += ("&location=" + encodeURIComponent(val));
+        }
         val = diffProperty(item, oldItem, "URL");
-        if (val !== null)
+        if (val !== null) {
             params += ("&icsUrl=" + encodeURIComponent(val));
+        }
         // xxx todo: default prio is 0 (5 in sjs cs)
         val = item.priority;
-        if (!oldItem || val != oldItem.priority)
+        if (!oldItem || val != oldItem.priority) {
             params += ("&priority=" + encodeURIComponent(val));
-        
+        }
+
         function getPrivacy(item) {
             return ((item.privacy && item.privacy != "") ? item.privacy : "PUBLIC");
         }
         var icsClass = getPrivacy(item);
-        if (!oldItem || icsClass != getPrivacy(oldItem))
+        if (!oldItem || icsClass != getPrivacy(oldItem)) {
             params += ("&icsClass="+ icsClass);
-        
+        }
+
         if (!oldItem || item.status != oldItem.status) {
             switch (item.status) {
-            case "CONFIRMED":    params += "&status=0"; break;
-            case "CANCELLED":    params += "&status=1"; break;
-            case "TENTATIVE":    params += "&status=2"; break;
-            case "NEEDS-ACTION": params += "&status=3"; break;
-            case "COMPLETED":    params += "&status=4"; break;
-            case "IN-PROCESS":   params += "&status=5"; break;
-            case "DRAFT":        params += "&status=6"; break;
-            case "FINAL":        params += "&status=7"; break;
+                case "CONFIRMED":    params += "&status=0"; break;
+                case "CANCELLED":    params += "&status=1"; break;
+                case "TENTATIVE":    params += "&status=2"; break;
+                case "NEEDS-ACTION": params += "&status=3"; break;
+                case "COMPLETED":    params += "&status=4"; break;
+                case "IN-PROCESS":   params += "&status=5"; break;
+                case "DRAFT":        params += "&status=6"; break;
+                case "FINAL":        params += "&status=7"; break;
+                default: // reset to default
+                    params += (bIsEvent ? "&status=0" : "&status=3");
+                    break;
             }
         }
-        
+
         val = diffProperty(item, oldItem, "TRANSP");
         if (val !== null) {
             switch (val) {
-            case "TRANSPARENT":
-                params += "&transparent=1";
-                break;
-            case "OPAQUE":
-                params += "&transparent=0";
-                break;
-            default:
-                params += ("&transparent=" +
-                           (((icsClass == "PRIVATE") || bIsAllDay) ? "1" : "0"));
-                break;
+                case "TRANSPARENT":
+                    params += "&transparent=1";
+                    break;
+                case "OPAQUE":
+                    params += "&transparent=0";
+                    break;
+                default:
+                    params += ("&transparent=" + (((icsClass == "PRIVATE") || bIsAllDay) ? "1" : "0"));
+                    break;
             }
         }
-        
+
         if (!bIsEvent) {
-            if (!oldItem || item.percentComplete != oldItem.percentComplete)
+            if (!oldItem || item.percentComplete != oldItem.percentComplete) {
                 params += ("&percent=" + item.percentComplete.toString(10));
-            if (!oldItem || !equalDatetimes(item.completedDate, oldItem.completedDate))
+            }
+            if (!oldItem || !equalDatetimes(item.completedDate, oldItem.completedDate)) {
                 params += ("&completed=" + getIcalUTC(item.completedDate));
+            }
         }
-        
+
         // attachment urls:
         function getAttachments(item) {
             var ret = "";
@@ -524,25 +525,23 @@ function calWcapCalendar_storeItem(bAddItem, item, oldItem, request, netRespFunc
             if (attachments) {
                 var strings = [];
                 for each (var att in attachements) {
-                    if (typeof(att) == "string")
+                    if (typeof(att) == "string") {
                         strings.push(encodeURIComponent(att));
-                    else if (att instanceof Components.interfaces.calIAttachment)
+                    } else if (att instanceof Components.interfaces.calIAttachment) {
                         strings.push(encodeURIComponent(att.uri.spec));
-                    else // xxx todo
+                    } else { // xxx todo
                         logError("only URLs supported as attachment, not: " + att, this_);
+                    }
                 }
                 strings.sort();
-                for (var i = 0; i < strings.length; ++i) {
-                    if (i > 0)
-                        ret += ";";
-                    ret += strings[i];
-                }
+                ret += strings.join(";");
             }
             return ret;
         }
         var val = getAttachments(item);
-        if (!oldItem || val != getAttachments(oldItem))
-            params += ("&attachments=" + val);        
+        if (!oldItem || val != getAttachments(oldItem)) {
+            params += ("&attachments=" + val);
+        }
     } // PUBLISH, REQUEST
     
     var alarmParams = this.getAlarmParams(item);
@@ -553,15 +552,14 @@ function calWcapCalendar_storeItem(bAddItem, item, oldItem, request, netRespFunc
         }
         params += alarmParams;
     }
-    
+
     if (params.length == 0) {
         log("no change at all.", this);
         if (LOG_LEVEL > 2) {
             log("old item:\n" + oldItem.icalString + "\n\nnew item:\n" + item.icalString, this);
         }
         request.execRespFunc(null, item);
-    }
-    else {
+    } else {
         var someDate = (item.startDate || item.entryDate || item.dueDate);
         if (someDate) {
             someTz = someDate.timezone;
@@ -571,19 +569,20 @@ function calWcapCalendar_storeItem(bAddItem, item, oldItem, request, netRespFunc
             }
         }
 
-        if (item.id)
+        if (item.id) {
             params += ("&uid=" + encodeURIComponent(item.id));
-        
+        }
+
         // be picky about create/modify:
         // WCAP_STORE_TYPE_CREATE, WCAP_STORE_TYPE_MODIFY
         params += (bAddItem ? "&storetype=1" : "&storetype=2");
-        
-        if (bIsParent)
+
+        if (bIsParent) {
             params += "&mod=4"; // THIS AND ALL INSTANCES
-        else {
-            params += ("&mod=1&rid=" + getIcalUTC(item.recurrenceId)); // THIS INSTANCE
+        } else {
+            params += ("&mod=1&rid=" + getIcalUTC(ensureDateTime(item.recurrenceId))); // THIS INSTANCE
         }
-        
+
         params += ("&method=" + method);
         if (bNoSmtpNotify) {
             params += "&smtp=0&smtpNotify=0&notify=0";
@@ -591,7 +590,27 @@ function calWcapCalendar_storeItem(bAddItem, item, oldItem, request, netRespFunc
         params += "&replace=1"; // (update) don't append to any lists    
         params += "&fetch=1&relativealarm=1&compressed=1&recurring=1";
         params += "&emailorcalid=1&fmt-out=text%2Fcalendar";
-        
+
+        function netRespFunc(err, icalRootComp) {
+            if (err) {
+                throw err;
+            }
+            var items = this_.parseItems(icalRootComp, calICalendar.ITEM_FILTER_ALL_ITEMS,
+                                         0, null, null, true /* bLeaveMutable */);
+            if (items.length < 1) {
+                throw new Components.Exception("empty VCALENDAR returned!");
+            }
+            if (items.length > 1) {
+                this_.notifyError("unexpected number of items: " + items.length);
+            }
+            var newItem = items[0];
+            this_.tunnelXProps(newItem, item);
+            newItem.makeImmutable();
+            // invalidate cached results:
+            delete this_.m_cachedResults;
+            // xxx todo: may log request status
+            request.execRespFunc(null, newItem);
+        }
         this.issueNetworkRequest(request, netRespFunc, stringToIcal,
                                  bIsEvent ? "storeevents" : "storetodos", params,
                                  calIWcapCalendar.AC_COMP_READ |
@@ -600,11 +619,11 @@ function calWcapCalendar_storeItem(bAddItem, item, oldItem, request, netRespFunc
 };
 
 calWcapCalendar.prototype.tunnelXProps =
-function calWcapCalendar_tunnelXProps(destItem, srcItem)
-{
+function calWcapCalendar_tunnelXProps(destItem, srcItem) {
     // xxx todo: temp workaround for bug in calItemBase.js
-    if (!isParent(srcItem))
+    if (!isParent(srcItem)) {
         return;
+    }
     // tunnel alarm X-MOZ-SNOOZE only if alarm is still set:
     var alarmOffset = destItem.alarmOffset;
     var enumerator = srcItem.propertyEnumerator;
@@ -614,28 +633,28 @@ function calWcapCalendar_tunnelXProps(destItem, srcItem)
             var name = prop.name;
             if (name.indexOf("X-MOZ-") == 0) {
                 switch (name) {
-                // keep snooze stamps for occurrences only and if alarm is still set:
-                case "X-MOZ-SNOOZE-TIME":
-                    if (!alarmOffset)
-                        break; // alarm has been reset
-                    // fallthru intended:
-                default:
-                    if (LOG_LEVEL > 1)
-                        log("tunneling " + name + "=" + prop.value, this);
-                    destItem.setProperty(name, prop.value);
-                    break;
+                    // keep snooze stamps for occurrences only and if alarm is still set:
+                    case "X-MOZ-SNOOZE-TIME":
+                        if (!alarmOffset) {
+                            break; // alarm has been reset
+                        }
+                        // fallthru intended
+                    default:
+                        if (LOG_LEVEL > 1) {
+                            log("tunneling " + name + "=" + prop.value, this);
+                        }
+                        destItem.setProperty(name, prop.value);
+                        break;
                 }
             }
-        }
-        catch (exc) {
+        } catch (exc) {
             logError(exc, this);
         }
     }
 };
 
 calWcapCalendar.prototype.adoptItem =
-function calWcapCalendar_adoptItem(item, listener)
-{
+function calWcapCalendar_adoptItem(item, listener) {
     var this_ = this;
     var request = new calWcapRequest(
         function adoptItem_resp(request, err, newItem) {
@@ -646,110 +665,117 @@ function calWcapCalendar_adoptItem(item, listener)
                                              err ? item.id : newItem.id,
                                              err ? err : newItem);
             }
-            if (err)
+            if (err) {
                 this_.notifyError(err);
-            else
+            } else {
                 this_.notifyObservers("onAddItem", [newItem]);
+            }
         },
         log("adoptItem() call: " + item.title, this));
-    
+
     try {
         if (!isParent(item)) {
             logError("adoptItem(): unexpected proxy!", this);
         }
-        this.storeItem(true/*bAddItem*/,
-                       item, null, request,
-                       function netResp(err, icalRootComp) {
-                           if (err)
-                               throw err;
-                           var items = this_.parseItems(
-                               icalRootComp, calICalendar.ITEM_FILTER_ALL_ITEMS,
-                               0, null, null, true /* bLeaveMutable */);
-                           if (items.length < 1)
-                               throw new Components.Exception("empty VCALENDAR returned!");
-                           if (items.length > 1)
-                               this_.notifyError("unexpected number of items: " + items.length);
-                           var newItem = items[0];
-                           this_.tunnelXProps(newItem, item);
-                           item.makeImmutable();
-                           // invalidate cached results:
-                           delete this_.m_cachedResults;
-                           log("newItem.id=" + newItem.id, this_);
-                           // xxx todo: may log request status
-                           request.execRespFunc(null, newItem);
-                       });
-    }
-    catch (exc) {
+        this.storeItem(true /* bAddItem */, item, null, request);
+    } catch (exc) {
         request.execRespFunc(exc);
     }
     return request;
 }
 
 calWcapCalendar.prototype.addItem =
-function calWcapCalendar_addItem(item, listener)
-{
+function calWcapCalendar_addItem(item, listener) {
     this.adoptItem(item.clone(), listener);
 };
 
 calWcapCalendar.prototype.modifyItem =
-function calWcapCalendar_modifyItem(newItem, oldItem, listener)
-{
+function calWcapCalendar_modifyItem(newItem, oldItem, listener) {
     var this_ = this;
     var request = new calWcapRequest(
         function modifyItem_resp(request, err, item) {
             if (listener) {
-                listener.onOperationComplete(
-                    this_.superCalendar, getResultCode(err),
-                    calIOperationListener.MODIFY,
-                    newItem.id, err ? err : item);
+                listener.onOperationComplete(this_.superCalendar, getResultCode(err),
+                                             calIOperationListener.MODIFY,
+                                             newItem.id, err ? err : item);
             }
-            if (err)
+            if (err) {
                 this_.notifyError(err);
-            else
+            } else {
                 this_.notifyObservers("onModifyItem", [item, oldItem]);
+            }
         },
         log("modifyItem() call: " + newItem.id, this));
-    
+
     try {
-        if (!newItem.id)
+        if (!newItem.id) {
             throw new Components.Exception("new item has no id!");
+        }
         var oldItem_ = oldItem;
-        if (oldItem && !isParent(newItem) &&
-            !oldItem.parentItem.recurrenceInfo.getExceptionFor(newItem.recurrenceId, false)) {
+        if (isParent(newItem)) {
+            // Due to a cs bug, EXDATEs cannot be passed with store, thus make a two-step delete then store.
+            // First check if EXDATEs are passed or have been modified:
+            var exdates = {};
+            this.getRecurrenceParams(newItem, {}, {}, {}, exdates);
+            if (oldItem) {
+                var exdates_ = {};
+                this.getRecurrenceParams(oldItem_, {}, {}, {}, exdates_);
+                // only use added elements
+                exdates.value = exdates.value.filter(
+                    function(elem) { return !exdates_.value.some(function(elem_) { return elem_ == elem; }); });
+            } // else in case no oldItem is passed, nevertheless try to delete the EXDATEs
+            if (exdates.value.length > 0) {
+                var params = "&uid=";
+                // all deletes on the same item:
+                for (var i = exdates.value.length; i--;) {
+                    params += encodeURIComponent(newItem.id);
+                    if (i > 0) {
+                        params += ";";
+                    }
+                }
+                params += ("&mod=1&rid=" + exdates.value.join(";"));
+
+                var orgCalId = getCalId(newItem.organizer);
+                if (!orgCalId || (orgCalId != this.calId)) {
+                    // item does not belong to this user, so don't notify:
+                    params += "&smtp=0&smtpNotify=0&notify=0";
+                }
+                params += "&fmt-out=text%2Fxml";
+
+                request.lockPending();
+                this.issueNetworkRequest(request,
+                                         function netResp(err, xml) {
+                                             try {
+                                                 // ignore any error and continue storing the item:
+                                                 if (LOG_LEVEL > 0) {
+                                                     log("modifyItem EXDATEs: " +
+                                                         (xml ? getWcapRequestStatusString(xml) : "failed!"), this_);
+                                                 }
+                                                 // invalidate cached results:
+                                                 delete this_.m_cachedResults;
+                                                 this_.storeItem(false /* bAddItem */, newItem, oldItem_, request);
+                                             } finally {
+                                                 request.unlockPending();
+                                             }
+                                         },
+                                         stringToXml, isEvent(newItem) ? "deleteevents_by_id" : "deletetodos_by_id",
+                                         params, calIWcapCalendar.AC_COMP_WRITE);
+                return request;
+            }
+
+        } else if (oldItem && !oldItem.parentItem.recurrenceInfo.getExceptionFor(newItem.recurrenceId, false)) {
             // pass null for oldItem when creating new exceptions, write whole item:
             oldItem_ = null;
         }
-        this.storeItem(false/*bAddItem*/,
-                       newItem, oldItem_, request,
-                       function netResp(err, icalRootComp) {
-                           if (err)
-                               throw err;
-                           var items = this_.parseItems(
-                               icalRootComp,
-                               calICalendar.ITEM_FILTER_ALL_ITEMS,
-                               0, null, null, true /* bLeaveMutable */);
-                           if (items.length < 1)
-                               throw new Components.Exception("empty VCALENDAR returned!");
-                           if (items.length > 1)
-                               this_.notifyError("unexpected number of items: " + items.length);
-                           var item = items[0];
-                           this_.tunnelXProps(item, newItem);
-                           item.makeImmutable();
-                           // invalidate cached results:
-                           delete this_.m_cachedResults;
-                           // xxx todo: maybe log request status
-                           request.execRespFunc(null, item);
-                       });
-    }
-    catch (exc) {
+        this.storeItem(false /* bAddItem */, newItem, oldItem_, request);
+    } catch (exc) {
         request.execRespFunc(exc);
     }
     return request;
 };
 
 calWcapCalendar.prototype.deleteItem =
-function calWcapCalendar_deleteItem(item, listener)
-{
+function calWcapCalendar_deleteItem(item, listener) {
     var this_ = this;
     var request = new calWcapRequest(
         function deleteItem_resp(request, err) {
@@ -760,80 +786,81 @@ function calWcapCalendar_deleteItem(item, listener)
                     calIOperationListener.DELETE,
                     item.id, err ? err : item);
             }
-            if (err)
+            if (err) {
                 this_.notifyError(err);
-            else
+            } else {
                 this_.notifyObservers("onDeleteItem", [item]);
+            }
         },
         log("deleteItem() call: " + item.id, this));
-    
+
     try {
-        if (!item.id)
+        if (!item.id) {
             throw new Components.Exception("no item id!");
-        var params = ("&uid=" + encodeURIComponent(item.id));
-        if (isParent(item)) // delete THIS AND ALL:
-            params += "&mod=4&rid=0";
-        else { // delete THIS INSTANCE:
-            var rid = item.recurrenceId;
-            if (rid.isDate) {
-                // cs does not accept DATE here:
-                rid = rid.clone();
-                rid.isDate = false;
-            }
-            params += ("&mod=1&rid=" + getIcalUTC(rid));
         }
-        
+        var params = ("&uid=" + encodeURIComponent(item.id));
+        if (isParent(item)) { // delete THIS AND ALL:
+            params += "&mod=4&rid=0";
+        } else { // delete THIS INSTANCE:
+            // cs does not accept DATE here:
+            params += ("&mod=1&rid=" + getIcalUTC(ensureDateTime(item.recurrenceId)));
+        }
+
         var orgCalId = getCalId(item.organizer);
         if (!orgCalId || (orgCalId != this.calId)) {
-            // item does not belong to this user, so son't notify:
+            // item does not belong to this user, so don't notify:
             params += "&smtp=0&smtpNotify=0&notify=0";
         }
-        
+
         params += "&fmt-out=text%2Fxml";
-        
-        this.issueNetworkRequest(
-            request,
-            function netResp(err, xml) {
-                if (err)
-                    throw err;
-                // invalidate cached results:
-                delete this_.m_cachedResults;
-                if (LOG_LEVEL > 0)
-                    log("deleteItem(): " + getWcapRequestStatusString(xml), this_);
-            },
-            stringToXml, isEvent(item) ? "deleteevents_by_id" : "deletetodos_by_id",
-            params, calIWcapCalendar.AC_COMP_WRITE);
-    }
-    catch (exc) {
+
+        this.issueNetworkRequest(request,
+                                 function netResp(err, xml) {
+                                     if (err) {
+                                         throw err;
+                                     }
+                                     // invalidate cached results:
+                                     delete this_.m_cachedResults;
+                                     if (LOG_LEVEL > 0) {
+                                         log("deleteItem(): " + getWcapRequestStatusString(xml), this_);
+                                     }
+                                 },
+                                 stringToXml, isEvent(item) ? "deleteevents_by_id" : "deletetodos_by_id",
+                                 params, calIWcapCalendar.AC_COMP_WRITE);
+    } catch (exc) {
         request.execRespFunc(exc);
     }
     return request;
 };
 
 calWcapCalendar.prototype.parseItems = function calWcapCalendar_parseItems(
-    icalRootComp, itemFilter, maxResults, rangeStart, rangeEnd, bLeaveMutable)
-{
+    icalRootComp, itemFilter, maxResults, rangeStart, rangeEnd, bLeaveMutable) {
     var items = [];
     var unexpandedItems = [];
     var uid2parent = {};
     var excItems = [];
-    
+
     var componentType = "ANY";
     switch (itemFilter & calICalendar.ITEM_FILTER_TYPE_ALL) {
-    case calICalendar.ITEM_FILTER_TYPE_TODO:
-        componentType = "VTODO"; break;
-    case calICalendar.ITEM_FILTER_TYPE_EVENT:
-        componentType = "VEVENT"; break;
+        case calICalendar.ITEM_FILTER_TYPE_TODO:
+            componentType = "VTODO";
+            break;
+        case calICalendar.ITEM_FILTER_TYPE_EVENT:
+            componentType = "VEVENT";
+            break;
     }
-    
+
+    var recurrenceBound = this.session.recurrenceBound;
+
     var this_ = this;
     forEachIcalComponent(
         icalRootComp, componentType,
-        function( subComp )
-        {
+        function(subComp) {
+
             function patchTimezone(subComp, attr, xprop) {
                 var dt = subComp[attr];
-                if (dt) {
+                // if TZID parameter present (all-day items), it takes precedence:
+                if (dt && (dt.timezone.isUTC || dt.timezone.isFloating)) {
                     if (LOG_LEVEL > 2) {
                         log(attr + " is " + dt, this_);
                     }
@@ -866,47 +893,47 @@ calWcapCalendar.prototype.parseItems = function calWcapCalendar_parseItems(
 
             var item = null;
             switch (subComp.componentType) {
-            case "VEVENT": {
-                patchTimezone(subComp, "endTime", "X-NSCP-DTEND-TZID");
-                item = new CalEvent();
-                item.icalComponent = subComp;
-                break;
-            }
-            case "VTODO": {
-                patchTimezone(subComp, "dueTime", "X-NSCP-DUE-TZID");
-                item = new CalTodo();
-                item.icalComponent = subComp;
-                switch (itemFilter & calICalendar.ITEM_FILTER_COMPLETED_ALL) {
-                    case calICalendar.ITEM_FILTER_COMPLETED_YES:
-                        if (!item.isCompleted) {
-                            delete item;
-                            item = null;
-                        }
-                    break;
-                    case calICalendar.ITEM_FILTER_COMPLETED_NO:
-                        if (item.isCompleted) {
-                            delete item;
-                            item = null;
-                        }
+                case "VEVENT": {
+                    patchTimezone(subComp, "endTime", "X-NSCP-DTEND-TZID");
+                    item = createEvent();
+                    item.icalComponent = subComp;
                     break;
                 }
-                break;
-            }
+                case "VTODO": {
+                    patchTimezone(subComp, "dueTime", "X-NSCP-DUE-TZID");
+                    item = createTodo();
+                    item.icalComponent = subComp;
+                    switch (itemFilter & calICalendar.ITEM_FILTER_COMPLETED_ALL) {
+                        case calICalendar.ITEM_FILTER_COMPLETED_YES:
+                            if (!item.isCompleted) {
+                                delete item;
+                                item = null;
+                            }
+                            break;
+                        case calICalendar.ITEM_FILTER_COMPLETED_NO:
+                            if (item.isCompleted) {
+                                delete item;
+                                item = null;
+                            }
+                            break;
+                    }
+                    break;
+                }
             }
             if (item) {
                 if (!item.title) {
                     // assumed to look at a subscribed calendar,
                     // so patch title for private items:
                     switch (item.privacy) {
-                    case "PRIVATE":
-                        item.title = g_privateItemTitle;
-                        break;
-                    case "CONFIDENTIAL":
-                        item.title = g_confidentialItemTitle;
-                        break;
+                        case "PRIVATE":
+                            item.title = g_privateItemTitle;
+                            break;
+                        case "CONFIDENTIAL":
+                            item.title = g_confidentialItemTitle;
+                            break;
                     }
                 }
-                
+
                 item.calendar = this_.superCalendar;
                 var rid = item.recurrenceId;
                 if (rid) {
@@ -917,29 +944,27 @@ calWcapCalendar.prototype.parseItems = function calWcapCalendar_parseItems(
                             "\nitem.id=" + item.id, this_);
                     }
                     excItems.push(item);
-                }
-                else if (item.recurrenceInfo) {
+
+                } else if (item.recurrenceInfo) {
                     unexpandedItems.push(item);
                     uid2parent[item.id] = item;
-                }
-                else if (maxResults == 0 || items.length < maxResults) {
+                } else if (maxResults == 0 || items.length < maxResults) {
                     if (LOG_LEVEL > 2) {
-                        log("item: " + item.title + "\n" + item.icalString,
-                            this_);
+                        log("item: " + item.title + "\n" + item.icalString, this_);
                     }
-                    if (!bLeaveMutable)
+                    if (!bLeaveMutable) {
                         item.makeImmutable();
+                    }
                     items.push(item);
                 }
             }
         },
         maxResults);
-    
+
     // tag "exceptions", i.e. items with rid:
     for each (var item in excItems) {
         var parent = uid2parent[item.id];
         if (parent) {
-            item.parentItem = parent;
             var recStartDate = parent.recurrenceStartDate;
             if (recStartDate && recStartDate.isDate && !item.recurrenceId.isDate) {
                 // cs ought to return proper all-day RECURRENCE-ID!
@@ -948,38 +973,61 @@ calWcapCalendar.prototype.parseItems = function calWcapCalendar_parseItems(
                 rid.isDate = true;
                 item.recurrenceId = rid;
             }
-            item.makeImmutable();
-            parent.recurrenceInfo.modifyException(item);
-        }
-        else {
+            parent.recurrenceInfo.modifyException(item, true);
+        } else {
             logError("parseItems(): no parent item for " + item.title +
                      ", rid=" + getIcalUTC(item.recurrenceId) +
                      ", item.id=" + item.id, this);
             // due to a server bug, in some scenarions the returned
             // data is lacking the parent item, leave parentItem open then
-            if ((itemFilter & calICalendar.ITEM_FILTER_CLASS_OCCURRENCES) == 0)
+            if ((itemFilter & calICalendar.ITEM_FILTER_CLASS_OCCURRENCES) == 0) {
                 item.recurrenceId = null;
-            if (!bLeaveMutable)
+            }
+            if (!bLeaveMutable) {
                 item.makeImmutable();
+            }
             items.push(item);
         }
     }
-    
+
     if (itemFilter & calICalendar.ITEM_FILTER_CLASS_OCCURRENCES) {
-        for each ( var item in unexpandedItems ) {
-            if (maxResults != 0 && items.length >= maxResults)
+        for each (var item in unexpandedItems) {
+            if (maxResults != 0 && items.length >= maxResults) {
                 break;
-            if (!bLeaveMutable)
+            }
+
+            var recStartDate = item.recurrenceStartDate;
+            if (recStartDate && !recStartDate.isDate) {
+                recStartDate = null;
+            }
+            var recItems = item.recurrenceInfo.getRecurrenceItems({});
+            for each (var recItem in recItems) {
+                // cs bug: workaround missing COUNT
+                if (recItem instanceof Components.interfaces.calIRecurrenceRule) {
+                    if (!recItem.isFinite && !recItem.isNegative) {
+                        recItem.count = recurrenceBound;
+                    }
+                } else if (recStartDate &&
+                           (recItem instanceof Components.interfaces.calIRecurrenceDate)) {
+                    // cs bug: always uses DATE-TIME even though the master item is all-day DATE:
+                    //         get into startDate's timezone before cutting:
+                    var date = recItem.date.getInTimezone(recStartDate.timezone);
+                    date.isDate = true;
+                    recItem.date = date;
+                }
+            }
+
+            if (!bLeaveMutable) {
                 item.makeImmutable();
-            var occurrences = item.recurrenceInfo.getOccurrences(
-                rangeStart, rangeEnd,
-                maxResults == 0 ? 0 : maxResults - items.length,
-                {} );
+            }
+            var occurrences = item.recurrenceInfo.getOccurrences(rangeStart, rangeEnd,
+                                                                 maxResults == 0 ? 0 : maxResults - items.length,
+                                                                 {});
             if (LOG_LEVEL > 1) {
-                log("item: " + item.title + " has " +
-                    occurrences.length.toString() + " occurrences.", this);
+                log("item: " + item.title + " has " + occurrences.length.toString() + " occurrences.", this);
                 if (LOG_LEVEL > 2) {
-                    for each ( var occ in occurrences ) {
+                    log("master item: " + item.title + "\n" + item.icalString, this);
+                    for each (var occ in occurrences) {
                         log("item: " + occ.title + "\n" + occ.icalString, this);
                     }
                 }
@@ -987,71 +1035,68 @@ calWcapCalendar.prototype.parseItems = function calWcapCalendar_parseItems(
             // only proxies returned:
             items = items.concat(occurrences);
         }
-    }
-    else {
+
+    } else {
         if (maxResults != 0 &&
             (items.length + unexpandedItems.length) > maxResults) {
             unexpandedItems.length = (maxResults - items.length);
         }
         if (!bLeaveMutable) {
-            for each ( var item in unexpandedItems ) {
+            for each (var item in unexpandedItems) {
                 item.makeImmutable();
             }
         }
         if (LOG_LEVEL > 2) {
-            for each ( var item in unexpandedItems ) {
+            for each (var item in unexpandedItems) {
                 log("item: " + item.title + "\n" + item.icalString, this);
             }
         }
         items = items.concat(unexpandedItems);
     }
-    
-    if (LOG_LEVEL > 1)
+
+    if (LOG_LEVEL > 1) {
         log("parseItems(): returning " + items.length + " items", this);
+    }
     return items;
 };
 
 calWcapCalendar.prototype.getItem =
-function calWcapCalendar_getItem(id, listener)
-{
-    // xxx todo: test
-    // xxx todo: howto detect whether to call
-    //           fetchevents_by_id ot fetchtodos_by_id?
-    //           currently drag/drop is implemented for events only,
-    //           try events first, fallback to todos... in the future...
-    
+function calWcapCalendar_getItem(id, listener) {
     var this_ = this;
     var request = new calWcapRequest(
         function getItem_resp(request, err, item) {
             if (listener) {
-                listener.onOperationComplete(
-                    this_.superCalendar, getResultCode(err),
-                    calIOperationListener.GET,
-                    item.id, err ? err : item);
+                listener.onOperationComplete(this_.superCalendar, getResultCode(err),
+                                             calIOperationListener.GET,
+                                             item ? item.id : null,
+                                             err || item);
             }
-            if (err)
+            if (err) {
                 this_.notifyError(err);
+            }
         },
         log("getItem() call: id=" + id, this));
-    
+
     try {
-        if (!id)
+        if (!id) {
             throw new Components.Exception("no item id!");
+        }
         var params = "&relativealarm=1&compressed=1&recurring=1";
         params += "&emailorcalid=1&fmt-out=text%2Fcalendar&uid=";
         params += encodeURIComponent(id);
-        
+
         function notifyResult(icalRootComp) {
             var items = this_.parseItems(icalRootComp, calICalendar.ITEM_FILTER_ALL_ITEMS, 0, null, null);
-            if (items.length < 1)
+            if (items.length < 1) {
                 throw new Components.Exception("no such item!");
-            if (items.length > 1)
+            }
+            if (items.length > 1) {
                 this_.notifyError("unexpected number of items: " + items.length);
+            }
             if (listener) {
-                listener.onGetResult(
-                    this_.superCalendar, NS_OK,
-                    calIItemBase, log("getItem(): success. id=" + id, this_),
-                    items.length, items);
+                listener.onGetResult(this_.superCalendar, NS_OK,
+                                     calIItemBase, log("getItem(): success. id=" + id, this_),
+                                     items.length, items);
             }
             request.execRespFunc(null, items[0]);
         };
@@ -1060,7 +1105,8 @@ function calWcapCalendar_getItem(id, listener)
             request,
             function fetchEventById_resp(err, icalRootComp) {
                 if (err) {
-                    if (!checkErrorCode(err, calIWcapErrors.WCAP_FETCH_EVENTS_BY_ID_FAILED)) {
+                    if (!checkErrorCode(err, calIWcapErrors.WCAP_FETCH_EVENTS_BY_ID_FAILED) &&
+                        !checkErrorCode(err, calIWcapErrors.WCAP_COMPONENT_NOT_FOUND)) {
                         throw err;
                     }
                     // try todos:
@@ -1072,29 +1118,28 @@ function calWcapCalendar_getItem(id, listener)
                             notifyResult(icalRootComp);
                         },
                         stringToIcal, "fetchtodos_by_id", params, calIWcapCalendar.AC_COMP_READ);
-                }
-                else {
+                } else {
                     notifyResult(icalRootComp);
                 }
             },
             stringToIcal, "fetchevents_by_id", params, calIWcapCalendar.AC_COMP_READ);
-    }
-    catch (exc) {
+    } catch (exc) {
         request.execRespFunc(exc);
     }
     return request;
 };
 
-function getItemFilterParams(itemFilter)
-{
+function getItemFilterParams(itemFilter) {
     var params = "";
     switch (itemFilter & calICalendar.ITEM_FILTER_TYPE_ALL) {
-    case calICalendar.ITEM_FILTER_TYPE_TODO:
-        params += "&component-type=todo"; break;
-    case calICalendar.ITEM_FILTER_TYPE_EVENT:
-        params += "&component-type=event"; break;
+        case calICalendar.ITEM_FILTER_TYPE_TODO:
+            params += "&component-type=todo";
+            break;
+        case calICalendar.ITEM_FILTER_TYPE_EVENT:
+            params += "&component-type=event";
+            break;
     }
-    
+
     var compstate = "";
 //     if (itemFilter & calIWcapCalendar.ITEM_FILTER_REPLY_DECLINED)
 //         compstate += ";REPLY-DECLINED";
@@ -1102,31 +1147,26 @@ function getItemFilterParams(itemFilter)
 //         compstate += ";REPLY-ACCEPTED";
 //     if (itemFilter & calIWcapCalendar.ITEM_FILTER_REQUEST_COMPLETED)
 //         compstate += ";REQUEST-COMPLETED";
-    if (itemFilter & calIWcapCalendar.ITEM_FILTER_REQUEST_NEEDS_ACTION)
+    if (itemFilter & calIWcapCalendar.ITEM_FILTER_REQUEST_NEEDS_ACTION) {
         compstate += ";REQUEST-NEEDS-ACTION";
-    if (itemFilter & calIWcapCalendar.ITEM_FILTER_REQUEST_NEEDSNOACTION)
+    }
+    if (itemFilter & calIWcapCalendar.ITEM_FILTER_REQUEST_NEEDSNOACTION) {
         compstate += ";REQUEST-NEEDSNOACTION";
+    }
 //     if (itemFilter & calIWcapCalendar.ITEM_FILTER_REQUEST_PENDING)
 //         compstate += ";REQUEST-PENDING";
 //     if (itemFilter & calIWcapCalendar.ITEM_FILTER_REQUEST_WAITFORREPLY)
 //         compstate += ";REQUEST-WAITFORREPLY";
-    if (compstate.length > 0)
+    if (compstate.length > 0) {
         params += ("&compstate=" + compstate.substr(1));
+    }
     return params;
 }
 
 calWcapCalendar.prototype.getItems =
-function calWcapCalendar_getItems(itemFilter, maxResults, rangeStart, rangeEnd, listener)
-{
-    // assure DATE-TIMEs:
-    if (rangeStart && rangeStart.isDate) {
-        rangeStart = rangeStart.clone();
-        rangeStart.isDate = false;
-    }
-    if (rangeEnd && rangeEnd.isDate) {
-        rangeEnd = rangeEnd.clone();
-        rangeEnd.isDate = false;
-    }
+function calWcapCalendar_getItems(itemFilter, maxResults, rangeStart, rangeEnd, listener) {
+    rangeStart = ensureDateTime(rangeStart);
+    rangeEnd = ensureDateTime(rangeEnd);
     var zRangeStart = getIcalUTC(rangeStart);
     var zRangeEnd = getIcalUTC(rangeEnd);
     
@@ -1137,19 +1177,16 @@ function calWcapCalendar_getItems(itemFilter, maxResults, rangeStart, rangeEnd, 
             var rc = getResultCode(err);
             if (err) {
                 if (listener) {
-                    listener.onOperationComplete(
-                        this_.superCalendar, rc,
-                        calIOperationListener.GET,
-                        null, err);
+                    listener.onOperationComplete(this_.superCalendar, rc,
+                                                 calIOperationListener.GET,
+                                                 null, err);
                 }
                 this_.notifyError(err, request.suppressOnError);
-            }
-            else {
+            } else {
                 if (listener) {
-                    listener.onOperationComplete(
-                        this_.superCalendar, rc,
-                        calIOperationListener.GET,
-                        null, null);
+                    listener.onOperationComplete(this_.superCalendar, rc,
+                                                 calIOperationListener.GET,
+                                                 null, null);
                 }
             }
         },
@@ -1158,16 +1195,17 @@ function calWcapCalendar_getItems(itemFilter, maxResults, rangeStart, rangeEnd, 
             ",\n\trangeStart=" + zRangeStart +
             ",\n\trangeEnd=" + zRangeEnd, this));
     
-    if (itemFilter & calIWcapCalendar.ITEM_FILTER_SUPPRESS_ONERROR)
+    if (itemFilter & calIWcapCalendar.ITEM_FILTER_SUPPRESS_ONERROR) {
         request.suppressOnError = true;
-    
+    }
+
     if (this.aboutToBeUnregistered) {
         // limiting the amount of network traffic while unregistering
         log("being unregistered, no results.", this);
         request.execRespFunc(null, []);
         return request;
     }
-    
+
     // m_cachedResults holds the last data revtrieval. This is expecially useful when
     // switching on multiple subcriptions: the composite calendar multiplexes getItems()
     // calls to all composited calendars over and over again, most often on the same
@@ -1191,17 +1229,17 @@ function calWcapCalendar_getItems(itemFilter, maxResults, rangeStart, rangeEnd, 
             }
         }
     }
-    
+
     try {
-        var params = ("&relativealarm=1&compressed=1&recurring=1" +
-                      "&emailorcalid=1&fmt-out=text%2Fcalendar");
+        var params = ("&relativealarm=1&compressed=1&recurring=1&emailorcalid=1&fmt-out=text%2Fcalendar");
         // setting component-type, compstate filters:
         params += getItemFilterParams(itemFilter);
-        if (maxResults > 0)
+        if (maxResults > 0) {
             params += ("&maxResults=" + maxResults);
+        }
         params += ("&dtstart=" + zRangeStart);
         params += ("&dtend=" + zRangeEnd);
-        
+
         this.issueNetworkRequest(
             request,
             function netResp(err, icalRootComp) {
@@ -1210,17 +1248,17 @@ function calWcapCalendar_getItems(itemFilter, maxResults, rangeStart, rangeEnd, 
                         // try free-busy times:
                         if (listener &&
                             (itemFilter & calICalendar.ITEM_FILTER_TYPE_EVENT) &&
-                            rangeStart && rangeEnd)
-                        {
+                            rangeStart && rangeEnd) {
+
                             var freeBusyListener = { // calIGenericOperationListener:
                                 onResult: function freeBusyListener_onResult(request, result) {
-                                    if (!Components.isSuccessCode(request.status))
+                                    if (!Components.isSuccessCode(request.status)) {
                                         throw request.status;
+                                    }
                                     var items = [];
                                     for each (var entry in result) {
-                                        var item = new CalEvent();
-                                        item.id = (g_busyPhantomItemUuidPrefix +
-                                                   getIcalUTC(entry.interval.start));
+                                        var item = createEvent();
+                                        item.id = (g_busyPhantomItemUuidPrefix + getIcalUTC(entry.interval.start));
                                         item.calendar = this_.superCalendar;
                                         item.title = g_busyItemTitle;
                                         item.startDate = entry.interval.start;
@@ -1228,9 +1266,8 @@ function calWcapCalendar_getItems(itemFilter, maxResults, rangeStart, rangeEnd, 
                                         item.makeImmutable();
                                         items.push(item);
                                     }
-                                    listener.onGetResult(
-                                        this_.superCalendar, NS_OK, calIItemBase,
-                                        "getItems()/free-busy", items.length, items);
+                                    listener.onGetResult(this_.superCalendar, NS_OK, calIItemBase,
+                                                         "getItems()/free-busy", items.length, items);
                                 }
                             };
                             request.attachSubRequest(
@@ -1238,32 +1275,32 @@ function calWcapCalendar_getItems(itemFilter, maxResults, rangeStart, rangeEnd, 
                                     this_.calId, rangeStart, rangeEnd, calIFreeBusyInterval.BUSY_ALL,
                                     freeBusyListener));
                         }
-                    }
-                    else
+                    } else {
                         throw err;
-                }
-                else if (listener) {
+                    }
+                } else if (listener) {
+
                     var items = this_.parseItems(
                         icalRootComp, itemFilter, maxResults,
                         rangeStart, rangeEnd);
-                    
+
                     if (CACHE_LAST_RESULTS > 0) {
                         // auto invalidate after X minutes:
                         if (!this_.m_cachedResultsTimer) {
+
                             var callback = {
                                 notify: function notify(timer) {
-                                    if (!this_.m_cachedResults)
+                                    if (!this_.m_cachedResults) {
                                         return;
+                                    }
                                     var now = (new Date()).getTime();
                                     // sort out old entries:
                                     var entries = [];
                                     for (var i = 0; i < this_.m_cachedResults.length; ++i) {
                                         var entry = this_.m_cachedResults[i];
-                                        if ((now - entry.stamp) <
-                                            (CACHE_LAST_RESULTS_INVALIDATE * 1000)) {
+                                        if ((now - entry.stamp) < (CACHE_LAST_RESULTS_INVALIDATE * 1000)) {
                                             entries.push(entry);
-                                        }
-                                        else {
+                                        } else {
                                             log("invalidating cached entry:\n\trangeStart=" +
                                                 getIcalUTC(entry.rangeStart) + "\n\trangeEnd=" +
                                                 getIcalUTC(entry.rangeEnd), this_);
@@ -1273,17 +1310,17 @@ function calWcapCalendar_getItems(itemFilter, maxResults, rangeStart, rangeEnd, 
                                 }
                             };
                             // sort out freq:
-                            var freq = Math.min(
-                                20, // default: 20secs
-                                Math.max(1, CACHE_LAST_RESULTS_INVALIDATE));
+                            var freq = Math.min(20, // default: 20secs
+                                                Math.max(1, CACHE_LAST_RESULTS_INVALIDATE));
                             log("cached results sort out timer freq: " + freq, this_);
-                            this_.m_cachedResultsTimer = new Timer();
-                            this_.m_cachedResultsTimer.initWithCallback(
-                                callback, freq * 1000,
-                                Components.interfaces.nsITimer.TYPE_REPEATING_SLACK);
+                            this_.m_cachedResultsTimer = Components.classes["@mozilla.org/timer;1"]
+                                                                   .createInstance(Components.interfaces.nsITimer);
+                            this_.m_cachedResultsTimer.initWithCallback(callback, freq * 1000,
+                                                                        Components.interfaces.nsITimer.TYPE_REPEATING_SLACK);
                         }
-                        if (!this_.m_cachedResults)
+                        if (!this_.m_cachedResults) {
                             this_.m_cachedResults = [];
+                        }
                         var entry = {
                             stamp: (new Date()).getTime(),
                             itemFilter: itemFilter,
@@ -1292,40 +1329,37 @@ function calWcapCalendar_getItems(itemFilter, maxResults, rangeStart, rangeEnd, 
                             results: items
                         };
                         this_.m_cachedResults.unshift(entry);
-                        if (this_.m_cachedResults.length > CACHE_LAST_RESULTS)
+                        if (this_.m_cachedResults.length > CACHE_LAST_RESULTS) {
                             this_.m_cachedResults.length = CACHE_LAST_RESULTS;
+                        }
                     }
-                    
-                    listener.onGetResult(this_.superCalendar, NS_OK, calIItemBase,
-                                         "getItems()", items.length, items);
+
+                    listener.onGetResult(this_.superCalendar, NS_OK, calIItemBase, "getItems()", items.length, items);
                 }
             },
             stringToIcal,
             (itemFilter & calIWcapCalendar.ITEM_FILTER_BY_ALARM_RANGE)
             ? "fetchcomponents_by_alarmrange" : "fetchcomponents_by_range",
             params, calIWcapCalendar.AC_COMP_READ);
-    }
-    catch (exc) {
+    } catch (exc) {
         request.execRespFunc(exc);
     }
     return request;
 };
 
 calWcapCalendar.prototype.resetLog =
-function calWcapCalendar_resetLog()
-{
+function calWcapCalendar_resetLog() {
     this.deleteProperty("replay.last_stamp");
 };
 
 calWcapCalendar.prototype.replayChangesOn =
-function calWcapCalendar_replayChangesOn(destCal, listener)
-{
+function calWcapCalendar_replayChangesOn(destCal, listener) {
     var this_ = this;
     var opListener = {
         QueryInterface: function(iid) {
             return doQueryInterface(this, opListener, iid,
                                     [Components.interfaces.calIGenericOperationListener,
-                                     Components.interfaces.nsISupports]);
+                                     nsISupports]);
         },
         onResult: function(op, result) {
             if (!op.isPending) {
@@ -1341,24 +1375,24 @@ function calWcapCalendar_replayChangesOn(destCal, listener)
             }
         }
     };
-    return this.syncChangesTo_(destCal, Components.interfaces.calICalendar.ITEM_FILTER_ALL_ITEMS,
+    return this.syncChangesTo_(destCal, calICalendar.ITEM_FILTER_ALL_ITEMS,
                                getDatetimeFromIcalString(this.getProperty("replay.last_stamp")),
                                opListener);
 };
 
 calWcapCalendar.prototype.syncChangesTo =
-function calWcapCalendar_syncChangesTo(destCal, itemFilter, dtFrom_, listener)
-{
+function calWcapCalendar_syncChangesTo(destCal, itemFilter, dtFrom, listener) {
     // xxx todo: move to Thomas
     // do NOT puke up error box every three minutes!
     itemFilter |= calIWcapCalendar.ITEM_FILTER_SUPPRESS_ONERROR;
-    return this.syncChangesTo_(destCal, itemFilter, dtFrom_, listener);
+    return this.syncChangesTo_(destCal, itemFilter, dtFrom, listener);
 };
 
 calWcapCalendar.prototype.syncChangesTo_ =
-function calWcapCalendar_syncChangesTo_(destCal, itemFilter, dtFrom_, listener)
-{
+function calWcapCalendar_syncChangesTo_(destCal, itemFilter, dtFrom, listener) {
+    dtFrom = ensureDateTime(dtFrom);
     var now = getTime(); // new stamp for this sync
+
     var this_ = this;
     var request_ = new calWcapRequest(
         function syncChangesTo_resp(request, err) {
@@ -1377,8 +1411,8 @@ function calWcapCalendar_syncChangesTo_(destCal, itemFilter, dtFrom_, listener)
                     }
                 }
                 this_.notifyError(err, request.suppressOnError);
-            }
-            else {
+            } else {
+
                 log("SYNC succeeded.", this_);
                 if (listener) {
                     var opListener = null;
@@ -1395,20 +1429,13 @@ function calWcapCalendar_syncChangesTo_(destCal, itemFilter, dtFrom_, listener)
             }
         },
         log("syncChangesTo():\n\titemFilter=0x" + itemFilter.toString(0x10) +
-            "\n\tdtFrom_=" + getIcalUTC(dtFrom_), this));
-    
-    if (itemFilter & calIWcapCalendar.ITEM_FILTER_SUPPRESS_ONERROR)
-        request_.suppressOnError = true;
-    
-    try {
-        var dtFrom = dtFrom_;
-        if (dtFrom) {
-            dtFrom = dtFrom.clone();
-            // assure DATE-TIME:
-            if (dtFrom.isDate)
-                dtFrom.isDate = false;
-        }
+            "\n\tdtFrom=" + getIcalUTC(dtFrom), this));
 
+    if (itemFilter & calIWcapCalendar.ITEM_FILTER_SUPPRESS_ONERROR) {
+        request_.suppressOnError = true;
+    }
+
+    try {
         var calObserver = null;
         if (listener) {
             try {
@@ -1440,8 +1467,7 @@ function calWcapCalendar_syncChangesTo_(destCal, itemFilter, dtFrom_, listener)
                         }
                         if (calObserver)
                             calObserver.onAddItem(item);
-                    }
-                    else {
+                    } else {
                         log("syncChangesTo(): modified item " + item.id, this_);
                         if (destCal) {
                             destCal.modifyItem(item, null, writeListener);
@@ -1452,26 +1478,26 @@ function calWcapCalendar_syncChangesTo_(destCal, itemFilter, dtFrom_, listener)
                 }
                 for each (var item in request.m_deletedItems) {
                     // don't delete anything that has been touched by lastmods:
-                    if (modifiedIds[item.id])
+                    if (modifiedIds[item.id]) {
                         log("syncChangesTo(): skipping deletion of " + item.id, this_);
-                    else if (isParent(item)) {
+                    } else if (isParent(item)) {
                         log("syncChangesTo(): deleted item " + item.id, this_);
                         if (destCal) {
                             destCal.deleteItem(item, writeListener);
                         }
                         if (calObserver)
                             calObserver.onDeleteItem(item);
-                    }
-                    else { // modify parent instead of
-                           // straight-forward deleteItem(). WTF.
+                    } else { // modify parent instead of
+                             // straight-forward deleteItem(). WTF.
                         var parent = item.parentItem.clone();
                         parent.recurrenceInfo.removeOccurrenceAt(item.recurrenceId);
                         log("syncChangesTo(): modified parent "+ parent.id, this_);
                         if (destCal) {
                             destCal.modifyItem(parent, item, writeListener);
                         }
-                        if (calObserver)
+                        if (calObserver) {
                             calObserver.onModifyItem(parent, item);
+                        }
                     }
                 }
             }, "syncChangesTo() netFinishedRespFunc");
@@ -1492,7 +1518,7 @@ function calWcapCalendar_syncChangesTo_(destCal, itemFilter, dtFrom_, listener)
                     }
                     params += ("&dtstart=" + getIcalUTC(dtFrom));
                     params += ("&dtend=" + getIcalUTC(this_.session.getServerTime(now)));
-                    
+
                     log("syncChangesTo(): getting last modifications...", this_);
                     this_.issueNetworkRequest(
                         request,
@@ -1500,12 +1526,13 @@ function calWcapCalendar_syncChangesTo_(destCal, itemFilter, dtFrom_, listener)
                             if (err) {
                                 throw err;
                             }
-                            request.m_modifiedItems = this_.parseItems(
-                                icalRootComp, calICalendar.ITEM_FILTER_ALL_ITEMS, 0, null, null);
+                            request.m_modifiedItems = this_.parseItems(icalRootComp,
+                                                                       calICalendar.ITEM_FILTER_ALL_ITEMS,
+                                                                       0, null, null);
                         },
                         stringToIcal, "fetchcomponents_by_lastmod",
                         params + getItemFilterParams(itemFilter),
-                        calIWcapCalendar.AC_COMP_READ);        
+                        calIWcapCalendar.AC_COMP_READ);
 
                     log("syncChangesTo(): getting deleted items...", this_);
                     this_.issueNetworkRequest(
@@ -1514,20 +1541,19 @@ function calWcapCalendar_syncChangesTo_(destCal, itemFilter, dtFrom_, listener)
                             if (err) {
                                 throw err;
                             }
-                            request.m_deletedItems = this_.parseItems(
-                                icalRootComp, calICalendar.ITEM_FILTER_ALL_ITEMS, 0, null, null);
+                            request.m_deletedItems = this_.parseItems(icalRootComp,
+                                                                      calICalendar.ITEM_FILTER_ALL_ITEMS,
+                                                                      0, null, null);
                         },
                         stringToIcal, "fetch_deletedcomponents",
                         params + getItemFilterParams(itemFilter & // only component types
                                                      calICalendar.ITEM_FILTER_TYPE_ALL),
                         calIWcapCalendar.AC_COMP_READ);
-                }
-                catch (exc) {
+                } catch (exc) {
                     request.execRespFunc(exc);
                 }
             });
-    }
-    catch (exc) {
+    } catch (exc) {
         request_.execRespFunc(exc);
     }
     return request_;

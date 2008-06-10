@@ -135,7 +135,7 @@
         <separator class="thin"/>
       </row>
       <row>
-        <description>&filterHeader.label;</description>
+        <label control="filterTree">&filterHeader.label;</label>
       </row>
       
       

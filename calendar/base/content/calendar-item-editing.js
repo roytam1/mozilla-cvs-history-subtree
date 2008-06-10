@@ -61,7 +61,7 @@ opCompleteListener.prototype = {
 };
 
 /* all params are optional */
-function createEventWithDialog(calendar, startDate, endDate, summary, event) {
+function createEventWithDialog(calendar, startDate, endDate, summary, event, aForceAllday) {
     const kDefaultTimezone = calendarDefaultTimezone();
 
     var onNewEvent = function(item, calendar, originalItem, listener) {
@@ -69,11 +69,7 @@ function createEventWithDialog(calendar, startDate, endDate, summary, event) {
         if (item.id) {
             // If the item already has an id, then this is the result of
             // saving the item without closing, and then saving again.
-            if (!originalItem.calendar || originalItem.calendar.id == calendar.id) {
-                doTransaction('modify', item, calendar, originalItem, innerListener);
-            } else {
-                doTransaction('move', item, calendar, originalItem, innerListener);
-            }
+            doTransaction('modify', item, calendar, originalItem, innerListener);
         } else {
             // Otherwise, this is an addition
             doTransaction('add', item, calendar, null, innerListener);
@@ -81,50 +77,70 @@ function createEventWithDialog(calendar, startDate, endDate, summary, event) {
     };
 
     if (event) {
+        if (!event.isMutable) {
+            event = event.clone();
+        }
         // If the event should be created from a template, then make sure to
         // remove the id so that the item obtains a new id when doing the
         // transaction
-        if (event.id) {
-            event = event.clone();
-            event.id = null;
-        }
+        event.id = null;
 
+        if (aForceAllday) {
+            event.startDate.isDate = true;
+            event.endDate.isDate = true;
+            if (event.startDate.compare(event.endDate) == 0) {
+                // For a one day all day event, the end date must be 00:00:00 of
+                // the next day.
+                event.endDate.day++;
+            }
+        }
     } else {
         event = createEvent();
 
-        if (!startDate) {
-            // Have we shown the calendar view yet? (Lightning)
-            if (currentView().initialized) {
-                startDate = currentView().selectedDay.clone();
+        if (startDate) {
+            event.startDate = startDate.clone();
+            if (startDate.isDate && !aForceAllday) {
+                // This is a special case where the date is specified, but the
+                // time is not. To take care, we setup up the time to our
+                // default event start time.
+                event.startDate = getDefaultStartDate(event.startDate);
+            } else if (aForceAllday) {
+                // If the event should be forced to be allday, then don't set up
+                // any default hours and directly make it allday.
+                event.startDate.isDate = true;
+            }
+        } else {
+            // If no start date was passed, then default to the next full hour
+            // of today, but with the date of the selected day
+            var refDate = currentView().initialized && currentView().selectedDay.clone();
+            event.startDate = getDefaultStartDate(refDate);
+        }
+
+        if (endDate) {
+            event.endDate = endDate.clone();
+            if (aForceAllday) {
+                // XXX it is currently not specified, how callers that force all
+                // day should pass the end date. Right now, they should make
+                // sure that the end date is 00:00:00 of the day after.
+                event.endDate.isDate = true;
+            }
+        } else {
+            event.endDate = event.startDate.clone();
+            if (!aForceAllday) {
+                // If the event is not all day, then add the default event
+                // length.
+                event.endDate.minute += getPrefSafe("calendar.event.defaultlength", 60);
             } else {
-                startDate = jsDateToDateTime(new Date()).getInTimezone(kDefaultTimezone);
+                // All day events need to go to the beginning of the next day.
+                event.endDate.day++;
             }
-            startDate.isDate = true;
         }
-
-        if (startDate.isDate) {
-            if (!startDate.isMutable) {
-                startDate = startDate.clone();
-            }
-            startDate.isDate = false;
-            // The time for the event should default to the next full hour
-            startDate.hour = now().hour + 1;
-            startDate.minute = 0;
-            startDate.second = 0;
-        }
-
-        if (!endDate) {
-            endDate = startDate.clone();
-            endDate.minute += getPrefSafe("calendar.event.defaultlength", 60);
-        }
-
-        event.startDate = startDate.clone();
-        event.endDate = endDate.clone();
 
         event.calendar = calendar || getSelectedCalendar();
 
-        if (summary)
+        if (summary) {
             event.title = summary;
+        }
 
         setDefaultAlarmValues(event);
     }
@@ -139,11 +155,7 @@ function createTodoWithDialog(calendar, dueDate, summary, todo) {
         if (item.id) {
             // If the item already has an id, then this is the result of
             // saving the item without closing, and then saving again.
-            if (!originalItem.calendar || originalItem.calendar.id == calendar.id) {
-                doTransaction('modify', item, calendar, originalItem, innerListener);
-            } else {
-                doTransaction('move', item, calendar, originalItem, innerListener);
-            }
+            doTransaction('modify', item, calendar, originalItem, innerListener);
         } else {
             // Otherwise, this is an addition
             doTransaction('add', item, calendar, null, innerListener);
@@ -175,19 +187,23 @@ function createTodoWithDialog(calendar, dueDate, summary, todo) {
 }
 
 
-function modifyEventWithDialog(item, job) {
+function modifyEventWithDialog(aItem, job, aPromptOccurrence) {
     var onModifyItem = function(item, calendar, originalItem, listener) {
         var innerListener = new opCompleteListener(originalItem, listener);
-
-        if (!originalItem.calendar || originalItem.calendar.id == calendar.id) {
-            doTransaction('modify', item, calendar, originalItem, innerListener);
-        } else {
-            doTransaction('move', item, calendar, originalItem, innerListener);
-        }
+        doTransaction('modify', item, calendar, originalItem, innerListener);
     };
 
-    if (item) {
+    var item = aItem;
+    if (aPromptOccurrence !== false) {
+        var futureItem, response;
+        [item, futureItem, response] = promptOccurrenceModification(aItem, true, "edit");
+    }
+
+    if (item && response) {
         openEventDialog(item, item.calendar, "modify", onModifyItem, job);
+    } else if (job && job.dispose) {
+        // If the action was canceled and there is a job, dispose it directly.
+        job.dispose();
     }
 }
 
@@ -262,50 +278,90 @@ function openEventDialog(calendarItem, calendar, mode, callback, job) {
     openDialog(url, "_blank", "chrome,titlebar,resizable", args);
 }
 
-// When editing a single instance of a recurring event, we need to figure out
-// whether the user wants to edit all instances, or just this one.  This
-// function prompts this question (if the item is actually an instance of a
-// recurring event) and returns the appropriate item that should be modified.
-// Returns null if the prompt was cancelled.
-function getOccurrenceOrParent(occurrence) {
+/**
+ * Prompts the user how the passed item should be modified. If the item is an
+ * exception or already a parent item, the item is returned without prompting.
+ * If "all occurrences" is specified, the parent item is returned. If "this
+ * occurrence only" is specified, then aItem is returned. If "this and following
+ * occurrences" is selected, aItem's parentItem is modified so that the
+ * recurrence rules end (UNTIL) just before the given occurrence. If
+ * aNeedsFuture is specified, a new item is made from the part that was stripped
+ * off the passed item.
+ *
+ * EXDATEs and RDATEs that do not fit into the items recurrence are removed. If
+ * the modified item or the future item only consist of a single occurrence,
+ * they are changed to be single items.
+ *
+ * @param aItem                         The item to check.
+ * @param aNeedsFuture                  If true, the future item is parsed.
+ *                                        This parameter can for example be
+ *                                        false if a deletion is being made.
+ * @param aAction                       Either "edit" or "delete". Sets up
+ *                                          the labels in the occurrence prompt
+ * @return [modifiedItem, futureItem, promptResponse]
+ *                                      If "this and all following" was chosen,
+ *                                        an array containing the item *until*
+ *                                        the given occurrence (modifiedItem),
+ *                                        and the item *after* the given
+ *                                        occurrence (futureItem).
+ *
+ *                                        If any other option was chosen,
+ *                                        futureItem is null  and the
+ *                                        modifiedItem is either the parent item
+ *                                        or the passed occurrence, or null if
+ *                                        the dialog was canceled.
+ *
+ *                                        The promptResponse parameter gives the
+ *                                        response of the dialog as a constant.
+ */
+function promptOccurrenceModification(aItem, aNeedsFuture, aAction) {
+    const CANCEL = 0;
+    const MODIFY_OCCURRENCE = 1;
+    const MODIFY_FOLLOWING = 2;
+    const MODIFY_PARENT = 3;
+
+    var futureItem = false;
+    var pastItem;
+    var type = CANCEL;
+
     // Check if this actually is an instance of a recurring event
-    if (occurrence == occurrence.parentItem) {
-        return occurrence;
+    if (aItem == aItem.parentItem) {
+        type = MODIFY_PARENT;
+    } else if (aItem.parentItem.recurrenceInfo
+                    .getExceptionFor(aItem.recurrenceId, false) != null) {
+        // If the user wants to edit an occurrence which is already an exception
+        // always edit this single item.
+        // XXX  Why? I think its ok to ask also for exceptions.
+        type = MODIFY_OCCURRENCE;
+    } else {
+        // Prompt the user. Setting modal blocks the dialog until it is closed. We
+        // use rv to pass our return value.
+        var rv = { value: CANCEL, item: aItem, action: aAction};
+        window.openDialog("chrome://calendar/content/calendar-occurrence-prompt.xul",
+                          "prompt-occurrence-modification",
+                          "centerscreen,chrome,modal,titlebar",
+                          rv);
+        type = rv.value;
     }
 
-    // if the user wants to edit an occurrence which is already
-    // an exception, always edit this single item.
-    var parentItem = occurrence.parentItem;
-    var rec = parentItem.recurrenceInfo;
-    if (rec) {
-        var exceptions = rec.getExceptionIds({});
-        if (exceptions.some(function (exid) {
-                                return exid.compare(occurrence.recurrenceId) == 0;
-                            })) {
-            return occurrence;
-        }
+    switch (type) {
+        case MODIFY_PARENT:
+            pastItem = aItem.parentItem;
+            break;
+        case MODIFY_FOLLOWING:
+            // TODO tbd in a different bug
+            throw Components.results.NS_ERROR_NOT_IMPLEMENTED;
+            break;
+        case MODIFY_OCCURRENCE:
+            pastItem = aItem;
+            break;
+        case CANCEL:
+            // Since we have not set past or futureItem, the return below will
+            // take care.
+            break;
     }
 
-    var promptService = 
-             Components.classes["@mozilla.org/embedcomp/prompt-service;1"]
-                       .getService(Components.interfaces.nsIPromptService);
-
-    var promptTitle = calGetString("calendar", "editRecurTitle");
-    var promptMessage = calGetString("calendar", "editRecurMessage");
-    var buttonLabel1 = calGetString("calendar", "editRecurAll");
-    var buttonLabel2 = calGetString("calendar", "editRecurSingle");
-
-    var flags = promptService.BUTTON_TITLE_IS_STRING * promptService.BUTTON_POS_0 +
-                promptService.BUTTON_TITLE_CANCEL * promptService.BUTTON_POS_1 +
-                promptService.BUTTON_TITLE_IS_STRING * promptService.BUTTON_POS_2;
-
-    var choice = promptService.confirmEx(null, promptTitle, promptMessage, flags,
-                                         buttonLabel1,null , buttonLabel2, null, {});
-    switch(choice) {
-        case 0: return occurrence.parentItem;
-        case 2: return occurrence;
-        default: return null;
-    }
+    return [pastItem, futureItem, type];
 }
 
 /**
@@ -399,6 +455,14 @@ function canRedo() {
 }
 
 /**
+ * Update the undo and redo menu items
+ */
+function updateUndoRedoMenu() {
+    goUpdateCommand("cmd_undo");
+    goUpdateCommand("cmd_redo");
+}
+
+/**
  * checkForAttendees
  * Checks to see if the attendees were added or changed between the original
  * and new item.  If there is a change, it launches the calIITipTransport
@@ -417,40 +481,45 @@ function checkForAttendees(aItem, aOriginalItem)
     }
 
     // Only send invitations if the user checked the checkbox.
-    if (!aItem.hasProperty("X-MOZ-SEND-INVITATIONS")) {
-        return;
-    } else if (aItem.getProperty("X-MOZ-SEND-INVITATIONS") != "TRUE") {
+    if (aItem.getProperty("X-MOZ-SEND-INVITATIONS") != "TRUE") {
         return;
     }
 
-    var sendInvite = false;
+    var originalAtt = aOriginalItem.getAttendees({});
     var itemAtt = aItem.getAttendees({});
+    var attMap = {};
+    var addedAttendees = [];
+    var canceledAttendees = [];
 
-    if (itemAtt.length > 0) {
-        var originalAtt = aOriginalItem.getAttendees({});
+    if (itemAtt.length > 0 || originalAtt.length > 0) {
 
-        if ( (originalAtt.length > 0) &&
-             (originalAtt.length == itemAtt.length) )
-        {
-            for (var i=0; i < itemAtt.length; i++) {
-                if (originalAtt[i].id != itemAtt[i].id) {
-                    sendInvite = true;
-                    break;
-                }
+        for each (var att in originalAtt) {
+            attMap[att.id] = att;
+        }
+
+        for each (var att in itemAtt) {
+            if (att.id in attMap) {
+                // Attendee was in original item.
+                delete attMap[att.id]
+            } else {
+                // Attendee was not in original item
+                addedAttendees.push(att);
             }
-        } else {
-            // We have attendees on item, not on original, attendees were
-            // added.
-            sendInvite = true;
+        }
+
+        for each (var cancAtt in attMap) {
+            canceledAttendees.push(cancAtt);
         }
     }
 
     // Check to see if some part of the item was updated, if so, re-send invites
-    if (!sendInvite && (aItem.generation != aOriginalItem.generation))
-        sendInvite = true;
+    if (addedAttendees.length > 0 ||
+        (aItem.generation != aOriginalItem.generation)) {
+        sendItipInvitation(aItem, 'REQUEST', []);
+    }
 
-    if (sendInvite) {
-        // Now use calUtils.js to send these
-        sendItipInvitation(aItem);
+    // Cancel the event for all canceled attendees
+    if (canceledAttendees.length > 0) {
+        sendItipInvitation(aItem, 'CANCEL', canceledAttendees);
     }
 }

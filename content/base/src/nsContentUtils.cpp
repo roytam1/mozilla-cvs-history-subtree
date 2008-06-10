@@ -1087,7 +1087,8 @@ nsContentUtils::IsCallerChrome()
   return is_caller_chrome;
 }
 
-static PRBool IsCallerTrustedForCapability(const char* aCapability)
+PRBool
+nsContentUtils::IsCallerTrustedForCapability(const char* aCapability)
 {
   if (nsContentUtils::IsCallerChrome())
     return PR_TRUE;
@@ -2621,4 +2622,21 @@ nsContentUtils::RemoveJSGCRoot(void* aPtr)
   }
 
   return NS_OK;
+}
+/* static */
+PRBool
+nsContentUtils::IsNativeAnonymous(nsIContent* aContent)
+{
+  while (aContent) {
+    nsIContent* bindingParent = aContent->GetBindingParent();
+    if (bindingParent == aContent) {
+      return PR_TRUE;
+    }
+    if (aContent->IsContentOfType(nsIContent::eTEXT)) {
+      aContent = aContent->GetParent();
+    } else {
+      aContent = bindingParent;
+    }
+  }
+  return PR_FALSE;
 }

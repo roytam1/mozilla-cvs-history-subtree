@@ -195,7 +195,8 @@ NS_OpenURI(nsIInputStream       **result,
            nsIIOService          *ioService = nsnull,     // pass in nsIIOService to optimize callers
            nsILoadGroup          *loadGroup = nsnull,
            nsIInterfaceRequestor *callbacks = nsnull,
-           PRUint32               loadFlags = nsIRequest::LOAD_NORMAL)
+           PRUint32               loadFlags = nsIRequest::LOAD_NORMAL,
+           nsIChannel           **channelOut = nsnull)
 {
     nsresult rv;
     nsCOMPtr<nsIChannel> channel;
@@ -204,8 +205,13 @@ NS_OpenURI(nsIInputStream       **result,
     if (NS_SUCCEEDED(rv)) {
         nsIInputStream *stream;
         rv = channel->Open(&stream);
-        if (NS_SUCCEEDED(rv))
+        if (NS_SUCCEEDED(rv)) {
             *result = stream;
+            if (channelOut) {
+                *channelOut = nsnull;
+                channel.swap(*channelOut);
+            }
+        }
     }
     return rv;
 }

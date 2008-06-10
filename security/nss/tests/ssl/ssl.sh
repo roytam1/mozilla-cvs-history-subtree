@@ -22,6 +22,7 @@
 #
 # Contributor(s):
 #   Dr Vipul Gupta <vipul.gupta@sun.com>, Sun Microsystems Laboratories
+#   Slavomir Katuscak <slavomir.katuscak@sun.com>, Sun Microsystems
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -67,6 +68,9 @@ ssl_init()
       cd ../common
       . ./init.sh
   fi
+  if [ -z "${IOPR_SSL_SOURCED}" ]; then
+      . ../iopr/ssl_iopr.sh
+  fi
   if [ ! -r $CERT_LOG_FILE ]; then  # we need certificates here
       cd ../cert
       . ./cert.sh
@@ -74,11 +78,17 @@ ssl_init()
   SCRIPTNAME=ssl.sh
   echo "$SCRIPTNAME: SSL tests ==============================="
 
-  grep "SUCCESS: SSL passed" $CERT_LOG_FILE >/dev/null &&
-  grep "SUCCESS: SSL CRL prep passed" $CERT_LOG_FILE >/dev/null || {
+  grep "SUCCESS: SSL passed" $CERT_LOG_FILE >/dev/null || {
       html_head "SSL Test failure"
-      Exit 8 "Fatal - SSL of cert.sh needs to pass first"
+      Exit 8 "Fatal - cert.sh needs to pass first"
   }
+
+  if [ -z "$NSS_TEST_DISABLE_CRL" ] ; then
+      grep "SUCCESS: SSL CRL prep passed" $CERT_LOG_FILE >/dev/null || {
+          html_head "SSL Test failure"
+          Exit 8 "Fatal - SSL of cert.sh needs to pass first"
+      }
+  fi
 
   PORT=${PORT-8443}
 
@@ -125,7 +135,9 @@ is_selfserv_alive()
           Exit 9 "Fatal - selfserv pid file ${SERVERPID} does not exist"
       fi
   fi
-  if [ "${OS_ARCH}" = "WINNT" -a "$OS_NAME" = "CYGWIN_NT" ]; then
+  
+  if [ "${OS_ARCH}" = "WINNT" ] && \
+     [ "$OS_NAME" = "CYGWIN_NT" -o "$OS_NAME" = "MINGW32_NT" ]; then
       PID=${SHELL_SERVERPID}
   else
       PID=`cat ${SERVERPID}`
@@ -142,19 +154,22 @@ is_selfserv_alive()
 ########################################################################
 wait_for_selfserv()
 {
-  echo "waiting for selfserv at `date`"
+  echo "trying to connect to selfserv at `date`"
   echo "tstclnt -p ${PORT} -h ${HOSTADDR} ${CLIENT_OPTIONS} -q \\"
   echo "        -d ${P_R_CLIENTDIR} < ${REQUEST_FILE}"
   tstclnt -p ${PORT} -h ${HOSTADDR} ${CLIENT_OPTIONS} -q \
           -d ${P_R_CLIENTDIR} < ${REQUEST_FILE}
   if [ $? -ne 0 ]; then
-      html_failed "<TR><TD> Wait for Server "
-      echo "RETRY: tstclnt -p ${PORT} -h ${HOSTADDR} ${CLIENT_OPTIONS} -q \\"
-      echo "               -d ${P_R_CLIENTDIR} < ${REQUEST_FILE}"
+      sleep 5
+      echo "retrying to connect to selfserv at `date`"
+      echo "tstclnt -p ${PORT} -h ${HOSTADDR} ${CLIENT_OPTIONS} -q \\"
+      echo "        -d ${P_R_CLIENTDIR} < ${REQUEST_FILE}"
       tstclnt -p ${PORT} -h ${HOSTADDR} ${CLIENT_OPTIONS} -q \
               -d ${P_R_CLIENTDIR} < ${REQUEST_FILE}
-  elif [ "$sparam" = "$CSHORT" -o "$sparam" = "$CLONG" ] ; then
-      html_passed "<TR><TD> Wait for Server"
+      if [ $? -ne 0 ]; then
+          html_failed "<TR><TD> Waiting for Server"
+          echo "${SCRIPTNAME}: Waiting for Server - FAILED"
+      fi
   fi
   is_selfserv_alive
 }
@@ -164,7 +179,8 @@ wait_for_selfserv()
 ########################################################################
 kill_selfserv()
 {
-  if [ "${OS_ARCH}" = "WINNT" -a "$OS_NAME" = "CYGWIN_NT" ]; then
+  if [ "${OS_ARCH}" = "WINNT" ] && \
+     [ "$OS_NAME" = "CYGWIN_NT" -o "$OS_NAME" = "MINGW32_NT" ]; then
       PID=${SHELL_SERVERPID}
   else
       PID=`cat ${SERVERPID}`
@@ -210,7 +226,8 @@ start_selfserv()
       echo "$SCRIPTNAME: $testname ----"
   fi
   sparam=`echo $sparam | sed -e 's;_; ;g'`
-  if [ -n "$NSS_ENABLE_ECC" ] ; then
+  if [ -n "$NSS_ENABLE_ECC" ] && \
+     [ -z "$NO_ECC_CERTS" -o "$NO_ECC_CERTS" != "1"  ] ; then
       ECC_OPTIONS="-e ${HOSTADDR}-ec"
   else
       ECC_OPTIONS=""
@@ -244,7 +261,8 @@ start_selfserv()
   SHELL_SERVERPID=$!
   wait_for_selfserv
 
-  if [ "${OS_ARCH}" = "WINNT" -a "$OS_NAME" = "CYGWIN_NT" ]; then
+  if [ "${OS_ARCH}" = "WINNT" ] && \
+     [ "$OS_NAME" = "CYGWIN_NT" -o "$OS_NAME" = "MINGW32_NT" ]; then
       PID=${SHELL_SERVERPID}
   else
       PID=`cat ${SERVERPID}`
@@ -274,12 +292,17 @@ ssl_cov()
 
   while read ectype tls param testname
   do
-      p=`echo "$testname" | sed -e "s/ .*//"`   #sonmi, only run extended test on SSL3 and TLS
+      p=`echo "$testname" | sed -e "s/_.*//"`   #sonmi, only run extended test on SSL3 and TLS
+
+      echo "$testname" | grep EXPORT > /dev/null 2>&1 
+      exp=$?
       
       if [ "$p" = "SSL2" -a "$NORM_EXT" = "Extended Test" ] ; then
           echo "$SCRIPTNAME: skipping  $testname for $NORM_EXT"
       elif [ "$ectype" = "ECC" -a  -z "$NSS_ENABLE_ECC" ] ; then
           echo "$SCRIPTNAME: skipping  $testname (ECC only)"
+      elif [ "$p" = "SSL2" -o "$exp" -eq 0 ] && [ "$BYPASS_STRING" = "Server FIPS" ] ; then
+          echo "$SCRIPTNAME: skipping  $testname (non-FIPS only)"
       elif [ "$ectype" != "#" ] ; then
           echo "$SCRIPTNAME: running $testname ----------------------------"
           TLS_FLAG=-T
@@ -387,6 +410,8 @@ ssl_stress()
           echo "$SCRIPTNAME: skipping  $testname for $NORM_EXT"
       elif [ "$ectype" = "ECC" -a  -z "$NSS_ENABLE_ECC" ] ; then
           echo "$SCRIPTNAME: skipping  $testname (ECC only)"
+      elif [ "$p" = "SSL2" -a "$BYPASS_STRING" = "Server FIPS" ] ; then
+          echo "$SCRIPTNAME: skipping  $testname (non-FIPS only)"
       elif [ "$ectype" != "#" ]; then
           cparam=`echo $cparam | sed -e 's;_; ;g' -e "s/TestUser/$USER_NICKNAME/g" `
 
@@ -762,6 +787,39 @@ ssl_run()
     cd ${QADIR}/ssl
 }
 
+############################ ssl_set_fips ##############################
+# local shell function to set FIPS mode on/off
+########################################################################
+ssl_set_fips()
+{
+    DBDIR=$1
+    FIPSMODE=$2
+    TESTNAME=$3
+    MODUTIL="modutil"
+
+    [ "${FIPSMODE}" = "true" ]
+    RET_EXP=$?
+
+    echo "${SCRIPTNAME}: ${TESTNAME}"
+
+    echo "${MODUTIL} -dbdir ${DBDIR} -fips ${FIPSMODE} -force"
+    ${MODUTIL} -dbdir ${DBDIR} -fips ${FIPSMODE} -force 2>&1
+    RET=$?  
+    html_msg "${RET}" "0" "${TESTNAME} (modutil -fips ${FIPSMODE})" \
+             "produced a returncode of ${RET}, expected is 0"
+
+    echo "${MODUTIL} -dbdir ${DBDIR} -list"
+    DBLIST=`${MODUTIL} -dbdir ${DBDIR} -list 2>&1`
+    RET=$?  
+    html_msg "${RET}" "0" "${TESTNAME} (modutil -list)" \
+             "produced a returncode of ${RET}, expected is 0"
+
+    echo "${DBLIST}" | grep "FIPS PKCS #11"
+    RET=$?
+    html_msg "${RET}" "${RET_EXP}" "${TESTNAME} (grep \"FIPS PKCS #11\")" \
+             "produced a returncode of ${RET}, expected is ${RET_EXP}"
+}
+
 ################## main #################################################
 
 #this script may be sourced from the distributed stress test - in this case do nothing...
@@ -781,18 +839,64 @@ if [ -z  "$DO_REM_ST" -a -z  "$DO_DIST_ST" ] ; then
     ORIG_P_R_SERVERDIR=$P_R_SERVERDIR
     ORIG_P_R_CLIENTDIR=$P_R_CLIENTDIR
 
-    ssl_crl_ssl
-    ssl_crl_cache
+    if [ -z "$NSS_TEST_DISABLE_CRL" ] ; then
+        ssl_crl_ssl
+        ssl_crl_cache
+    else
+        echo "$SCRIPTNAME: Skipping CRL Client Tests"
+    fi
 
-    # Test all combinations of server bypass and client bypass
-    CLIENT_OPTIONS="-B -s"
-    SERVER_OPTIONS=""
-    BYPASS_STRING="Client Bypass"
-    ssl_run
-    SERVER_OPTIONS="-B -s"
-    CLIENT_OPTIONS=""
-    BYPASS_STRING="Server Bypass"
-    ssl_run
+    # Test all combinations of client bypass and server bypass
 
+    if [ -z "$NSS_TEST_DISABLE_CIPHERS" ] ; then
+	if [ -n "$NSS_TEST_DISABLE_BYPASS" ] ; then
+            SERVER_OPTIONS=""
+            CLIENT_OPTIONS=""
+            BYPASS_STRING="No Bypass"
+            ssl_run
+	fi
+
+        if [ -z "$NSS_TEST_DISABLE_BYPASS" -a -z "$NSS_TEST_DISABLE_CLIENT_BYPASS" ] ; then
+            CLIENT_OPTIONS="-B -s"
+            SERVER_OPTIONS=""
+            BYPASS_STRING="Client Bypass"
+            ssl_run
+        else
+            echo "$SCRIPTNAME: Skipping Cipher Coverage - Client Bypass Tests"
+        fi
+
+        if [ -z "$NSS_TEST_DISABLE_BYPASS" -a -z "$NSS_TEST_DISABLE_SERVER_BYPASS" ] ; then
+            SERVER_OPTIONS="-B -s"
+            CLIENT_OPTIONS=""
+            BYPASS_STRING="Server Bypass"
+            ssl_run
+        else
+            echo "$SCRIPTNAME: Skipping Cipher Coverage - Server Bypass Tests"
+        fi
+
+        if [ -z "$NSS_TEST_DISABLE_FIPS" ] ; then
+            CLIENT_OPTIONS=""
+            SERVER_OPTIONS=""
+            BYPASS_STRING="Server FIPS"
+
+            html_head "SSL - FIPS mode on"
+            ssl_set_fips "${SERVERDIR}" "true" "Turning FIPS on for the server"
+            ssl_set_fips "${EXT_SERVERDIR}" "true" "Turning FIPS on for the extended server" 
+            html "</TABLE><BR>"
+
+            ssl_run
+
+            html_head "SSL - FIPS mode off"
+            ssl_set_fips "${SERVERDIR}" "false" "Turning FIPS off for the server"
+            ssl_set_fips "${EXT_SERVERDIR}" "false" "Turning FIPS off for the extended server"
+            html "</TABLE><BR>"
+        else
+            echo "$SCRIPTNAME: Skipping Cipher Coverage - FIPS Tests"
+        fi
+    else
+        echo "$SCRIPTNAME: Skipping Cipher Coverage Tests"
+    fi
+
+    ssl_iopr_run
     ssl_cleanup
 fi

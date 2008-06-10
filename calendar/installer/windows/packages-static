@@ -238,6 +238,7 @@ bin\components\calStorageCalendarModule.js
 bin\components\calWcapCalendarModule.js
 bin\components\jsconsole-clhandler.js
 bin\components\pluginGlue.js
+bin\js\calAlarm.js
 bin\js\calAlarmService.js
 bin\js\calAlarmMonitor.js
 bin\js\calAttachment.js
@@ -268,7 +269,9 @@ bin\js\calTodo.js
 bin\js\calTransactionManager.js
 bin\js\calFreeBusyService.js
 bin\js\calCalendarSearchService.js
+bin\js\calTimezoneService.js
 bin\js\calUtils.js
+bin\js\calAuthUtils.js
 bin\js\calWeekPrinter.js
 bin\js\calWeekTitleService.js
 bin\js\calWcapCalendar.js
@@ -296,6 +299,13 @@ bin\chrome\toolkit.jar
 bin\chrome\toolkit.manifest
 ; [Calendar Chrome Icons]
 bin\chrome\icons\default\calendar-alarm-dialog.ico
+
+; [calendar-timezones]
+bin\extensions\calendar-timezones@mozilla.org\install.rdf
+bin\extensions\calendar-timezones@mozilla.org\timezones.sqlite
+bin\extensions\calendar-timezones@mozilla.org\chrome.manifest
+bin\extensions\calendar-timezones@mozilla.org\chrome\*
+bin\extensions\calendar-timezones@mozilla.org\defaults\preferences\preferences.js
 
 ; [Default Preferences]
 ; All the pref files must be part of base to prevent migration bugs

@@ -14,7 +14,7 @@
  * The Original Code is Sun Microsystems code.
  *
  * The Initial Developer of the Original Code is
- * Sun Microsystems, Inc.
+ *   Sun Microsystems, Inc.
  * Portions created by the Initial Developer are Copyright (C) 2007
  * the Initial Developer. All Rights Reserved.
  *
@@ -38,55 +38,8 @@
 
 #include "nsISupports.idl"
 
-interface calIIcalComponent;
 interface nsIUTF8StringEnumerator;
-interface calITimezoneProvider;
-
-[scriptable, uuid(D79161E7-0DB9-427d-A0C3-27E0DB3B030F)]
-interface calITimezone : nsISupports
-{
-    /**
-     * The timezone provider this timezone belongs to, if any.
-     */
-    readonly attribute calITimezoneProvider provider;
-
-    /**
-     * VTIMEZONE ical component, null if floating.
-     */
-    readonly attribute calIIcalComponent component;
-
-    /**
-     * The TZID of this timezone.
-     */
-    readonly attribute AUTF8String tzid;
-
-    /**
-     * Whether this timezone is the "floating" timezone.
-     */
-    readonly attribute boolean isFloating;
-
-    /**
-     * Whether this is the "UTC" timezone.
-     */
-    readonly attribute boolean isUTC;
-
-    /**
-     * Latitude of timezone or empty string if unknown.
-     */
-    readonly attribute AUTF8String latitude;
-
-    /**
-     * Longitude of timezone or empty string if unknown.
-     */
-    readonly attribute AUTF8String longitude;
-
-    /**
-     * For debugging purposes.
-     *
-     * @return "UTC", "floating" or component's ical representation
-     */
-    AUTF8String toString();
-};
+interface calITimezone;
 
 [scriptable, uuid(0E502BF5-4FD3-4090-9122-F1EC3CA701BB)]
 interface calITimezoneProvider : nsISupports
@@ -112,10 +65,4 @@ interface calITimezoneService : calITimezoneProvider
 {
     readonly attribute calITimezone floating;
     readonly attribute calITimezone UTC;
-
-    /**
-     * This is the string that is used to prefix all tzIds that come from our
-     * local tzid database.  This includes a trailing slash character.
-     */
-    readonly attribute AUTF8String tzidPrefix;
 };

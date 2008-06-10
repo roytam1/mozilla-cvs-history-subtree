@@ -55,12 +55,14 @@
   <script type="application/x-javascript" src="chrome://calendar/content/publish.js"/>
 
   <script type="application/x-javascript" src="chrome://calendar/content/calendar-item-editing.js"/>
+  <script type="application/x-javascript" src="chrome://calendar/content/calendar-chrome-startup.js"/>
   <script type="application/x-javascript" src="chrome://calendar/content/calUtils.js"/>
   <script type="application/x-javascript" src="chrome://calendar/content/mouseoverPreviews.js"/>
   <script type="application/x-javascript" src="chrome://calendar/content/calendar-views.js"/>
   <script type="application/x-javascript" src="chrome://calendar/content/calendar-ui-utils.js"/>
   <script type="application/x-javascript" src="chrome://calendar/content/calendar-creation.js"/>
   <script type="application/x-javascript" src="chrome://calendar/content/calendar-dnd-listener.js"/>
+  <script type="application/x-javascript" src="chrome://calendar/content/calendar-statusbar.js"/>
   <script type="application/x-javascript" src="chrome://global/content/nsDragAndDrop.js"/>
 
   <!-- NEEDED FOR MINIMONTH BUSY HIGHLIGHT -->

@@ -76,11 +76,6 @@ calFreeBusyListener.prototype = {
     }
 };
 
-const calFreeBusyService_ifaces = [ Components.interfaces.nsISupports,
-                                    Components.interfaces.calIFreeBusyProvider,
-                                    Components.interfaces.calIFreeBusyService,
-                                    Components.interfaces.nsIClassInfo ];
-
 function calFreeBusyService() {
     this.wrappedJSObject = this;
     this.mProviders = new calInterfaceBag(Components.interfaces.calIFreeBusyProvider);
@@ -89,14 +84,17 @@ calFreeBusyService.prototype = {
     mProviders: null,
 
     QueryInterface: function calFreeBusyService_QueryInterface(aIID) {
-        ensureIID(calFreeBusyService_ifaces, aIID);
-        return this;
+        return doQueryInterface(this, calFreeBusyService.prototype, aIID, null, this);
     },
 
     // nsIClassInfo:
     getInterfaces: function calFreeBusyService_getInterfaces(count) {
-        count.value = calFreeBusyService_ifaces.length;
-        return calFreeBusyService_ifaces;
+        const ifaces = [Components.interfaces.nsISupports,
+                        Components.interfaces.calIFreeBusyProvider,
+                        Components.interfaces.calIFreeBusyService,
+                        Components.interfaces.nsIClassInfo];
+        count.value = ifaces.length;
+        return ifaces;
     },
     getHelperForLanguage: function calFreeBusyService_getHelperForLanguage(language) {
         return null;
@@ -105,7 +103,7 @@ calFreeBusyService.prototype = {
     classDescription: "Calendar FreeBusy Service",
     classID: Components.ID("{29C56CD5-D36E-453a-ACDE-0083BD4FE6D3}"),
     implementationLanguage: Components.interfaces.nsIProgrammingLanguage.JAVASCRIPT,
-    flags: 0,
+    flags: Components.interfaces.nsIClassInfo.SINGLETON,
 
     // calIFreeBusyProvider:
     getFreeBusyIntervals: function calFreeBusyService_getFreeBusyIntervals(aCalId,

@@ -55,6 +55,8 @@ interface calIOperationListener;
 interface calIRange;
 interface calIDateTime;
 interface calIOperation;
+interface calIStatusObserver;
+interface nsIDOMChromeWindow;
 
 [scriptable, uuid(74e685e4-d863-11d9-88f2-000b7d081f44)]
 interface calICalendar : nsISupports
@@ -128,15 +130,18 @@ interface calICalendar : nsISupports
    *                                   e.g. this generally applies to network calendars;
    *                                   default is true (if not present).
    *   [boolean] cache.enabled      If true, the calendar is cached; default is false.
+   *   [string]  itip.transportType If the provider implements a custom calIItipTransport
+   *                                this is the "type" used in the contract id.
    *
    * The following calendar capabilities can be used to inform the UI or backend
    * that certain features are not supported. If not otherwise mentioned, not
    * specifying these capabilities assumes a default value of true
-   *   capabilities.attachments.supported Supports attachments
-   *   capabilities.privacy.supported     Supports a privacy state
-   *   capabilities.priority.supported    Supports the priority field
-   *   capabilities.events.supported      Supports tasks
-   *   capabilities.tasks.supported       Supports events
+   *   capabilities.attachments.supported  Supports attachments
+   *   capabilities.privacy.supported      Supports a privacy state
+   *   capabilities.priority.supported     Supports the priority field
+   *   capabilities.events.supported       Supports tasks
+   *   capabilities.tasks.supported        Supports events
+   *   capabilities.alarms.popup.supported Supports popup alarms
    *
    * The following capabilities are used to restrict the values for specific
    * fields. An array should be specified with the values, the default
@@ -418,7 +423,7 @@ interface calICalendar : nsISupports
    * are caught!
    */
   void startBatch();
-  
+
   /**
    * Turn off batch mode.
    */
@@ -453,10 +458,9 @@ interface calICompositeCalendar : calICalendar
    */
   calICalendar getCalendar( in nsIURI aServer );
 
-  /**
-   * An enumerator of all calICalendars that make up this composite.
-   */
-  readonly attribute nsISimpleEnumerator calendars;
+  /* return a list of all calendars currently registered */
+  void getCalendars(out PRUint32 count,
+                    [array, size_is(count), retval] out calICalendar aCalendars);
 
   /**
    * In order for addItem() to be called on this object, it is first necessary
@@ -471,6 +475,17 @@ interface calICompositeCalendar : calICalendar
    * track changes in calendar membership and default calendar.
    */
   attribute ACString prefPrefix;
+
+  /**
+   * If returns true there is a process running that needs to displayed
+   * by the statusObserver
+   */
+  readonly attribute boolean statusDisplayed;
+  
+  /**
+   * Sets a statusobserver for status notifications like startMeteors() and StopMeteors().
+   */
+   void setStatusObserver( in calIStatusObserver aStatusObserver, in nsIDOMChromeWindow aWindow );
 };
 
 /**
@@ -486,7 +501,7 @@ interface calIObserver : nsISupports
   void onAddItem( in calIItemBase aItem );
   void onModifyItem( in calIItemBase aNewItem, in calIItemBase aOldItem );
   void onDeleteItem( in calIItemBase aDeletedItem );
-  void onError( in nsresult aErrNo, in AUTF8String aMessage );
+  void onError( in calICalendar aCalendar, in nsresult aErrNo, in AUTF8String aMessage );
 
   /// Called after a property is changed.
   void onPropertyChanged(in calICalendar aCalendar,

@@ -48,15 +48,19 @@
     xmlns:xbl="http://www.mozilla.org/xbl">
 
   <binding id="calendar-editable-item">
-    <content>
+    <content tooltip="itemTooltip">
       <xul:vbox flex="1">
         <xul:hbox>
-          <xul:image class="calendar-event-box-shadow-left"/>
-          <xul:box anonid="event-container" flex="1">
+          <xul:image class="calendar-event-box-shadow-left" xbl:inherits="hidden=flat"/>
+          <xul:box anonid="event-container"
+                   class="calendar-color-box"
+                   xbl:inherits="item-calendar"                   
+                   flex="1">
             <xul:box class="calendar-event-selection" orient="horizontal" flex="1">
               <xul:stack anonid="eventbox"
-                         class="calendar-event-box-container"      
-                         flex="1">
+                         class="calendar-event-box-container"
+                         flex="1"
+                         xbl:inherits="readonly,flashing,alarm,allday,priority,progress,status,calendar,categories">
                 <xul:hbox class="calendar-event-details">
                   <xul:vbox align="left"
                             flex="1"
@@ -82,36 +86,19 @@
                 </xul:hbox>
                 <xul:image anonid="gradient"
                            class="calendar-event-box-gradient"
-                           hidden="true" height="1px"/>
+                           height="1px"/>
               </xul:stack>
             </xul:box>
-            <xul:calendar-category-box anonid="category-box"/>
+            <xul:calendar-category-box anonid="category-box" xbl:inherits="categories"/>
           </xul:box>
-          <xul:image class="calendar-event-box-shadow-right"/>
+          <xul:image class="calendar-event-box-shadow-right" xbl:inherits="hidden=flat"/>
         </xul:hbox>
-        <xul:box orient="horizontal">
-          <xul:image class="calendar-event-box-shadow-edge-left"/>
-          <xul:image class="calendar-event-box-shadow-bottom" flex="1"/>
-          <xul:image class="calendar-event-box-shadow-edge-right"/>
-        </xul:box>
+        <calendar-shadow-box xbl:inherits="flat" orient="horizontal"/>
       </xul:vbox>
     </content>
 
     <implementation>
       <constructor><![CDATA[
-         var gradient = document.getAnonymousElementByAttribute(this,
-                                                                "anonid",
-                                                                "gradient");
-         var container = document.getAnonymousElementByAttribute(this,
-                                                                 "anonid",
-                                                                 "event-container");
-         if (gradient) {
-           gradient.removeAttribute("hidden");
-         }
-
-         this.setAttribute("tooltip", "itemTooltip");
-         container.setAttribute("class", "calendar-item");
-
          var self = this;
          this.eventNameInput.onblur = function onBlur() { self.stopEditing(true); };
          this.eventNameInput.onkeypress = function onKeyPress(event) {
@@ -199,43 +186,69 @@
 
       <method name="setCSSClasses">
         <body><![CDATA[
-          var container = document.getAnonymousElementByAttribute(this,
-                                                                  "anonid",
-                                                                  "event-container");
-          var item = this.mOccurrence
-          container.setAttribute("item-calendar", item.calendar.uri.spec);
-
-          var categoriesSelectorList = "";
+          var item = this.mOccurrence;          
+          this.setAttribute("item-calendar", item.calendar.uri.spec);
           var categoriesProperty = item.getProperty("CATEGORIES");
           if (categoriesProperty) {
             var categoriesArray = categoriesStringToArray(categoriesProperty);
             var cssClassesArray = categoriesArray.map(formatStringForCSSRule);
-            categoriesSelectorList = cssClassesArray.join(" ");
+            this.setAttribute("categories", cssClassesArray.join(" "));
           }
 
-          var box = document.
-              getAnonymousElementByAttribute(this,"anonid","category-box");
-          if (box) {
-              box.categories = categoriesSelectorList;
-              box = document.
-                  getAnonymousElementByAttribute(this,"anonid","eventbox");
-              if (box) {
-                if (categoriesSelectorList.length > 0) {
-                  box.setAttribute("has-category","true");
-                } else {
-                  box.removeAttribute("has-category");
-                }
-              }
-          }
-
-          if ((item.alarmOffset || item.parentItem.alarmOffset) &&
-              getPrefSafe("calendar.alarms.indicator.show", true)) {
+          if (item.alarmOffset && getPrefSafe("calendar.alarms.indicator.show", true)) {
               var alarmImage = document.getAnonymousElementByAttribute(this, "anonid", "alarm-image");
-              if (item.calendar.getProperty("suppressAlarms")) {
+              if (item.calendar.getProperty("suppressAlarms") &&
+                  item.calendar.getProperty("capabilities.alarms.popup.supported") !== false) {
+                  // Only show the suppressed icon if alarms are suppressed and
+                  // popup alarms are supported. This keeps us from making the
+                  // alarm look disabled when the server supports only email
+                  // alarms (e.g. currently WCAP).
                   alarmImage.setAttribute("suppressed", "true");
               }
               alarmImage.removeAttribute("hidden");
           }
+
+          // Set up event box attributes for use in css selectors. Note if
+          // something is added here, it should also be xbl:inherited correctly
+          // in the <content> section of this binding, and all that inherit it.
+
+          // Event type specific properties
+          if (isEvent(item)) {
+              if (item.startDate.isDate) {
+                this.setAttribute("allday", "true");
+              }
+          } else if (isToDo(item)) {
+              // progress attribute
+              this.setAttribute("progress", getProgressAtom(item));
+          }
+
+          if (!isCalendarWritable(item.calendar)) {
+              this.setAttribute("readonly", "true");
+          }
+
+          if (this.calendarView &&
+              item.hashId in this.calendarView.mFlashingEvents) {
+              this.setAttribute("flashing", "true");
+          }
+
+          if (item.alarmOffset) {
+              this.setAttribute("alarm", "true")
+          }
+
+          // priority
+          if (item.priority > 0 && item.priority < 5) {
+              this.setAttribute("priority", "high");
+          } else if (item.priority > 5 && item.priority < 10) {
+              this.setAttribute("priority", "low");
+          }
+
+          // status attribute
+          if (item.status) {
+              this.setAttribute("status", item.status.toLowerCase());
+          }
+
+          // calendar name
+          this.setAttribute("calendar", item.calendar.name.toLowerCase());
         ]]></body>
       </method>
 
@@ -250,8 +263,9 @@
 
           this.eventNameTextbox.value = this.mOriginalTextLabel;
           this.eventNameTextbox.removeAttribute("hidden");
-          if (this.calendarView)
+          if (this.calendarView) {
               this.calendarView.activeInPlaceEdit = true;
+          }
           this.eventNameInput.focus();
           this.eventNameInput.select();
         ]]></body>
@@ -259,6 +273,9 @@
       <method name="select">
         <parameter name="event"/>
         <body><![CDATA[
+            if (!this.calendarView) {
+                return;
+            }
             var items;
             if (event.ctrlKey || event.metaKey) {
                 items = this.calendarView.mSelectedItems;
@@ -277,8 +294,9 @@
 
           this.mEditing = false;
 
-          if (this.calendarView)
+          if (this.calendarView) {
             this.calendarView.activeInPlaceEdit = false;
+          }
 
           if (saveChanges && (this.eventNameTextbox.value != this.mOriginalTextLabel)) {
               this.calendarView.controller.modifyOccurrence(this.mOccurrence, 
@@ -333,7 +351,7 @@
             this.editingTimer = null;
         }
 
-        if (this.calendarView.controller) {
+        if (this.calendarView && this.calendarView.controller) {
             var item = (event.ctrlKey) ? this.mOccurrence.parentItem : this.mOccurrence;
             this.calendarView.controller.modifyOccurrence(item);
         }
@@ -361,10 +379,7 @@
 
         var flavourProvider = {
             QueryInterface: function(aIID) {
-                ensureIID(
-                    [ Components.interfaces.nsIFlavorDataProvider,
-                      Components.interfaces.nsISupports], aIID);
-                return this;
+                return doQueryInterface(this, null, aIID,  [Components.interfaces.nsIFlavorDataProvider]);
             },
             item: item,
 
@@ -409,29 +424,27 @@
   </binding>
 
   <binding id="calendar-category-box">
+    <!-- calendar-views.css makes this binding hide if the categories attribute
+         is not specified -->
     <content>
-      <xul:vbox anonid="category-box" hidden="true" class="calendar-item calendar-event-selection">
+      <xul:vbox anonid="category-box"
+                class="category-color-box calendar-event-selection"
+                xbl:inherits="categories">
         <xul:hbox flex="1">
           <xul:image class="calendar-category-box-gradient" height="1"/>
         </xul:hbox>
         <xul:hbox height="1"/>
       </xul:vbox>
     </content>
-    <implementation>
-      <property name="categories">
-        <setter><![CDATA[
-          var box = document.getAnonymousElementByAttribute(this,
-                                                            "anonid",
-                                                            "category-box");
-          box.setAttribute("item-category", val);
-          if (val.length > 0) {
-            box.removeAttribute("hidden");
-          } else {
-            box.setAttribute("hidden","true");
-          }
-        ]]></setter>
-      </property>
-    </implementation>
   </binding>
 
+  <binding id="calendar-shadow-box">
+    <content>
+      <xul:box xbl:inherits="orient,hidden=flat" flex="1">
+        <xul:image class="calendar-event-box-shadow-edge-left"/>
+        <xul:image class="calendar-event-box-shadow-bottom" flex="1"/>
+        <xul:image class="calendar-event-box-shadow-edge-right"/>
+      </xul:box>
+    </content>
+  </binding>
 </bindings>

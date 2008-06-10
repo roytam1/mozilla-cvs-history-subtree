@@ -70,38 +70,22 @@ function nextMonth(dt)
 }
 
 var gMiniMonthLoading = false;
-function ltnMinimonthPick(minimonth)
-{
-    if (gMiniMonthLoading)
+function ltnMinimonthPick(minimonth) {
+    if (gMiniMonthLoading) {
         return;
-
-    var jsDate = minimonth.value;
-    document.getElementById("ltnDateTextPicker").value = jsDate;
-    var cdt = jsDateToDateTime(jsDate);
-
+    }
     if (document.getElementById("displayDeck").selectedPanel !=
         document.getElementById("calendar-view-box")) {
         ltnShowCalendarView(gLastShownCalendarView);
     }
-
-    cdt = cdt.getInTimezone(currentView().timezone);
+    var jsDate = minimonth.value;
+    document.getElementById("ltnDateTextPicker").value = jsDate;
+    var cdt = jsDateToDateTime(jsDate, currentView().timezone);
     cdt.isDate = true;
     currentView().goToDay(cdt);
 }
 
-function ltnGoToDate()
-{
-    var goToDate = document.getElementById("ltnDateTextPicker");
-    if (goToDate.value) {
-        ltnMinimonthPick(goToDate);
-    }
-}
-
-function ltnOnLoad(event)
-{
-    // Load the Calendar Manager
-    loadCalendarManager();
-
+function ltnOnLoad(event) {
     // take the existing folderPaneBox (that's what thunderbird displays
     // at the left side of the application window) and stuff that inside
     // of the deck we're introducing with the contentPanel. this essentially
@@ -213,19 +197,8 @@ function ltnOnLoad(event)
                                                            modeBoxAttrModified,
                                                            true);
 
-    // Set up the views
-    initializeViews();
-
-    // Initialize Minimonth
-    gMiniMonthLoading = true;
-
-    var today = new Date();
-    var nextmo = nextMonth(today);
-
-    document.getElementById("ltnMinimonth").value = today;
-    document.getElementById("ltnDateTextPicker").value = today;
-
-    gMiniMonthLoading = false;
+    // Take care of common initialization
+    commonInitCalendar();
 
     // nuke the onload, or we get called every time there's
     // any load that occurs
@@ -234,80 +207,41 @@ function ltnOnLoad(event)
     // Hide the calendar view so it doesn't push the status-bar offscreen
     collapseElement(document.getElementById("calendar-view-box"));
 
-    // fire up the alarm service
-    var alarmSvc = Components.classes["@mozilla.org/calendar/alarm-service;1"]
-                   .getService(Components.interfaces.calIAlarmService);
-    alarmSvc.timezone = calendarDefaultTimezone();
-    alarmSvc.startup();
-
     // Add an unload function to the window so we don't leak any listeners
-    document.getElementById("messengerWindow")
-            .addEventListener("unload", ltnFinish, false);
+    window.addEventListener("unload", ltnFinish, false);
 
-    document.getElementById("displayDeck")
-            .addEventListener("dayselect", observeViewDaySelect, false);
-
-    prepareCalendarToDoUnifinder();
-
-    // Make sure we update ourselves if the program stays open over midnight
-    scheduleMidnightUpdate(refreshUIBits);
-
+    // Set up invitations manager
     scheduleInvitationsUpdate(FIRST_DELAY_STARTUP, REPEAT_DELAY);
     getCalendarManager().addObserver(gInvitationsCalendarManagerObserver);
 
-    // Set up the command controller from calendar-common-sets.js
-    injectCalendarCommandController();
-
-    getViewDeck().addEventListener("itemselect", onSelectionChanged, true);
-
-    var filter = document.getElementById("task-tree-filter");
+    var filter = document.getElementById("task-tree-filtergroup");
     filter.value = filter.value || "all";
-}
-
-function onSelectionChanged(aEvent) {
-    var selectedItems = aEvent.detail;
-
-    calendarController.item_selected = (selectedItems.length > 0);
-    var selected_events_readonly = 0;
-    var selected_events_requires_network = 0;
-
-    for each (var item in selectedItems) {
-        if (item.calendar.readOnly) {
-            selected_events_readonly++;
-        }
-        if (item.calendar.getProperty("requiresNetwork") !== false) {
-            selected_events_requires_network++;
-        }
-    }
-
-    calendarController.selected_events_readonly =
-        (selected_events_readonly == selectedItems.length);
-
-    calendarController.selected_events_requires_network =
-        (selected_events_requires_network == selectedItems.length);
-
-    document.commandDispatcher.updateCommands('mail-toolbar');
-    document.commandDispatcher.updateCommands('calendar_commands');
+    document.getElementById("modeBroadcaster").setAttribute("mode", gCurrentMode);
+    ltnInitTodayPane();
 }
 
 /* Called at midnight to tell us to redraw date-specific widgets.  Do NOT call
  * this for normal refresh, since it also calls scheduleMidnightRefresh.
  */
 function refreshUIBits() {
-    document.getElementById("ltnMinimonth").refreshDisplay();
+    try {
+        getMinimonth().refreshDisplay();
 
-    // refresh the current view, if it has ever been shown
-    var cView = currentView();
-    if (cView.initialized) {
-        cView.goToDay(cView.selectedDay);
+        // refresh the current view, if it has ever been shown
+        var cView = currentView();
+        if (cView.initialized) {
+            cView.goToDay(cView.selectedDay);
+        }
+
+        if (!TodayPane.showsToday()) {
+            TodayPane.setDay(now());
+        }
+
+        // update the unifinder
+        refreshEventTree();
+    } catch (exc) {
+        ASSERT(false, exc);
     }
-
-    if (TodayPane.showsYesterday()) {
-      TodayPane.setDay(now());
-    }
-
-    // update the unifinder
-    refreshEventTree();
 
     // schedule our next update...
     scheduleMidnightUpdate(refreshUIBits);
@@ -322,12 +256,6 @@ function ltnSelectCalendarView(type) {
 
     // Sunbird/Lightning Common view switching code
     switchToView(type);
-
-    // Set the labels for the context-menu
-    var nextCommand = document.getElementById("context_next");
-    nextCommand.setAttribute("label", nextCommand.getAttribute("label-"+type));
-    var previousCommand = document.getElementById("context_previous")
-    previousCommand.setAttribute("label", previousCommand.getAttribute("label-"+type));
 
 }
 
@@ -390,23 +318,6 @@ function ltnShowCalendarView(type)
     ltnSelectCalendarView(type);
 }
 
-function toggleTodayPaneinMailMode()
-{
-  var oTodayPane = document.getElementById("today-pane-panel");
-  var todayPaneCommand = document.getElementById('cmd_toggleTodayPane');
-  if (oTodayPane.hasAttribute("collapsed")) {
-    oTodayPane.removeAttribute("collapsed");
-    oTodayPane.removeAttribute("collapsedinMailMode");
-    todayPaneCommand.setAttribute("checked","true");
-    document.getElementById("today-closer").setAttribute("checked", "false");
-  }
-  else {
-    oTodayPane.setAttribute("collapsed", true);
-    oTodayPane.setAttribute("collapsedinMailMode", "true");
-    todayPaneCommand.setAttribute("checked", "false");
-  }
-}
-
 
 /**
  * This function has the sole responsibility to switch back to
@@ -446,11 +357,9 @@ function LtnObserveDisplayDeckChange(event) {
 
 function ltnFinish() {
     getCalendarManager().removeObserver(gInvitationsCalendarManagerObserver);
-    getCompositeCalendar().removeObserver(agendaTreeView.calendarObserver);
 
-    unloadCalendarManager();
-
-    removeCalendarCommandController();
+    // Common finish steps
+    commonFinishCalendar();
 }
 
 // After 1.5 was released, the search box was moved into an optional toolbar

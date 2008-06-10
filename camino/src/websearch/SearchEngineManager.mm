@@ -38,6 +38,7 @@
 #import "SearchEngineManager.h"
 #import "PreferenceManager.h"
 #import "XMLSearchPluginParser.h"
+#import "NSFileManager+Utils.h"
 
 NSString *const kInstalledSearchEnginesDidChangeNotification = @"InstalledSearchEnginesChangedNotificationName";
 
@@ -56,9 +57,9 @@ static NSString *const kPreferredSearchEngineNameKey = @"PreferredSearchEngine";
 - (void)saveSearchEngineInformation;
 - (void)setInstalledSearchEngines:(NSMutableArray *)newSearchEngines;
 - (void)installedSearchEnginesChanged;
-- (void)filterDuplicatesFromEngines:(NSMutableArray *)searchEngines;
+- (BOOL)filterDuplicatesFromEngines:(NSMutableArray *)searchEngines;
 - (void)setPreferredSearchEngine:(NSString *)newPreferredSearchEngine sendingChangeNotification:(BOOL)shouldNotify;
-- (NSDictionary *)defaultSearchEngineInformationFromBundle;
+- (void)loadDefaultSearchEngineInformationFromBundle;
 - (NSString *)uniqueNameForEngine:(NSString *)engineName;
 
 @end
@@ -165,14 +166,26 @@ static NSString *const kPreferredSearchEngineNameKey = @"PreferredSearchEngine";
   if (!savedSearchEngineInfoDict || 
       [[savedSearchEngineInfoDict objectForKey:kListOfSearchEnginesKey] count] == 0)
   {
+    // We couldn't load the engines, but if a file actually did exist at |pathToSavedEngineInfo|,
+    // move it aside before clobbering it with the defaults.
+    if ([[NSFileManager defaultManager] fileExistsAtPath:pathToSavedEngineInfo]) {
+      NSString *corruptedPath = [[NSFileManager defaultManager] backupFileNameFromPath:pathToSavedEngineInfo
+                                                                            withSuffix:@"-corrupted"];
+      [[NSFileManager defaultManager] copyPath:pathToSavedEngineInfo toPath:corruptedPath handler:nil];
+      NSLog(@"Moved corrupted search engines file to '%@'", corruptedPath);
+    }
+
 #if DEBUG
     NSLog(@"No search engines found in the profile directory; loading the defaults");
 #endif
-    savedSearchEngineInfoDict = [self defaultSearchEngineInformationFromBundle];
+    [self loadDefaultSearchEngineInformationFromBundle];
+    [self saveSearchEngineInformation];
+    return;
   }
 
   NSMutableArray *savedSearchEngines = [NSMutableArray arrayWithArray:[savedSearchEngineInfoDict objectForKey:kListOfSearchEnginesKey]];
-  [self filterDuplicatesFromEngines:savedSearchEngines];
+
+  BOOL duplicatesWereRemoved = [self filterDuplicatesFromEngines:savedSearchEngines];
   [self setInstalledSearchEngines:savedSearchEngines];
 
   // Validate and set the saved preferred engine name.
@@ -182,8 +195,9 @@ static NSString *const kPreferredSearchEngineNameKey = @"PreferredSearchEngine";
   else
     [self setPreferredSearchEngine:[[self installedSearchEngineNames] objectAtIndex:0] sendingChangeNotification:NO];
 
-  // Update the saved engines with any modifications that were made during loading.
-  [self saveSearchEngineInformation];
+  // Update the saved engines if any modifications were made during loading.
+  if (duplicatesWereRemoved || ![[self preferredSearchEngine] isEqualToString:savedPreferredEngine])
+    [self saveSearchEngineInformation];
 }
 
 - (void)saveSearchEngineInformation
@@ -210,7 +224,8 @@ static NSString *const kPreferredSearchEngineNameKey = @"PreferredSearchEngine";
   [[NSNotificationCenter defaultCenter] postNotificationName:kInstalledSearchEnginesDidChangeNotification object:self];
 }
 
-- (void)filterDuplicatesFromEngines:(NSMutableArray *)searchEngines;
+// Return value indicates if any engines were removed from |searchEngines|.
+- (BOOL)filterDuplicatesFromEngines:(NSMutableArray *)searchEngines;
 {
   NSMutableSet *engineNamesAlreadySeen = [NSMutableSet setWithCapacity:[searchEngines count]];
   // Enumerate a copy, since we can't remove directly from an enumerated collection
@@ -224,12 +239,17 @@ static NSString *const kPreferredSearchEngineNameKey = @"PreferredSearchEngine";
     else
       [engineNamesAlreadySeen addObject:currentEngineName];
   }
+  // Determine if we removed an engine
+  return ([enumeratingSearchEngines count] != [searchEngines count]);
 }
 
-- (NSDictionary *)defaultSearchEngineInformationFromBundle
+- (void)loadDefaultSearchEngineInformationFromBundle
 {
   NSString *pathToDefaultEnginesInBundle = [[NSBundle mainBundle] pathForResource:@"WebSearchEngines" ofType:@"plist"];
-  return [NSDictionary dictionaryWithContentsOfFile:pathToDefaultEnginesInBundle];
+  NSDictionary *defaultEngineInfo = [NSDictionary dictionaryWithContentsOfFile:pathToDefaultEnginesInBundle];
+
+  [self setInstalledSearchEngines:[defaultEngineInfo objectForKey:kListOfSearchEnginesKey]];
+  [self setPreferredSearchEngine:[defaultEngineInfo objectForKey:kPreferredSearchEngineNameKey]];
 }
 
 - (NSString *)uniqueNameForEngine:(NSString *)engineName
@@ -278,14 +298,25 @@ static NSString *const kPreferredSearchEngineNameKey = @"PreferredSearchEngine";
     [self installedSearchEnginesChanged];
 }
 
-- (BOOL)addSearchEngineFromPlugin:(NSDictionary *)searchPluginInfoDict
+- (BOOL)addSearchEngineFromPlugin:(NSDictionary *)searchPluginInfoDict error:(NSError **)outError
 {
+  if (outError)
+    *outError = nil;
+
   XMLSearchPluginParser *pluginParser = [XMLSearchPluginParser searchPluginParserWithMIMEType:[searchPluginInfoDict objectForKey:kWebSearchPluginMIMETypeKey]];
-  if (!pluginParser)
+  if (!pluginParser) {
+    if (outError) {
+      NSDictionary *errorInfo = [NSDictionary dictionaryWithObject:NSLocalizedString(@"XMLSearchPluginParserInvalidPluginFormat", nil)
+                                                            forKey:NSLocalizedDescriptionKey];
+      *outError = [NSError errorWithDomain:kXMLSearchPluginParserErrorDomain 
+                                      code:eXMLSearchPluginParserInvalidPluginFormatError 
+                                  userInfo:errorInfo];
+    }
     return NO;
+  }
 
   NSURL *pluginURL = [searchPluginInfoDict objectForKey:kWebSearchPluginURLKey];
-  BOOL parsedOk = [pluginParser parseSearchPluginAtURL:pluginURL];
+  BOOL parsedOk = [pluginParser parseSearchPluginAtURL:pluginURL error:outError];
 
   if (parsedOk) {
     [self addSearchEngineWithName:[pluginParser searchEngineName]
@@ -409,10 +440,7 @@ static NSString *const kPreferredSearchEngineNameKey = @"PreferredSearchEngine";
 
 - (void)revertToDefaultSearchEngines
 {
-  NSDictionary *searchEngineInfoDict = [self defaultSearchEngineInformationFromBundle];
-  [self setInstalledSearchEngines:[searchEngineInfoDict objectForKey:kListOfSearchEnginesKey]];
-  [self setPreferredSearchEngine:[searchEngineInfoDict objectForKey:kPreferredSearchEngineNameKey]
-       sendingChangeNotification:NO];
+  [self loadDefaultSearchEngineInformationFromBundle];
   [self installedSearchEnginesChanged];
 }
 

@@ -52,11 +52,10 @@ var gCurrentMode = 'mail';
 
 /**
  * Helper function to get the view deck in a neutral way, regardless of whether
- * we're in Thunderbird 1.x, 2.x or SeaMonkey
+ * we're in Thunderbird or SeaMonkey
  */
 function getMailBar() {
   return document.getElementById("mail-bar2") ||
-         document.getElementById("mail-bar") ||
          document.getElementById("msgToolbar");
 }
 
@@ -98,6 +97,7 @@ function ltnSwitch2Mail() {
     switch2task.removeAttribute("checked");
 
     gCurrentMode = 'mail';
+    document.getElementById("modeBroadcaster").setAttribute("mode", gCurrentMode);
     swapPopupMenus();
 
     var mailToolbar = getMailBar();
@@ -111,7 +111,7 @@ function ltnSwitch2Mail() {
 
     var calendarToolbar = document.getElementById("task-toolbar");
     calendarToolbar.setAttribute("collapsed", "true");
-    
+
     // the content panel should display the folder tree
     var contentDeck = document.getElementById("contentPanel");
     contentDeck.selectedPanel = document.getElementById("folderPaneBox");
@@ -135,7 +135,6 @@ function ltnSwitch2Mail() {
     // Disable the rotate view menuitem
     document.getElementById("calendar_toggle_orientation_command")
             .setAttribute("disabled", "true");
-            
     window.setCursor("auto");
   }
 }
@@ -155,6 +154,8 @@ function ltnSwitch2Calendar() {
     switch2task.removeAttribute("checked");
 
     gCurrentMode = 'calendar';
+    document.getElementById("modeBroadcaster").setAttribute("mode", gCurrentMode);
+    
     swapPopupMenus();
 
     var mailToolbar = getMailBar();
@@ -182,12 +183,6 @@ function ltnSwitch2Calendar() {
     document.commandDispatcher.updateCommands('mail-toolbar');
     document.commandDispatcher.updateCommands('calendar_commands');
 
-    // always hide the task filter option
-    document.getElementById("task-tree-filter-header")
-        .setAttribute("collapsed", "true");
-    document.getElementById("task-tree-filter")
-        .setAttribute("collapsed", "true");
-    
     window.setCursor("auto");
   }
 }
@@ -208,6 +203,7 @@ function ltnSwitch2Task() {
     toggleControlDisplay("cmd_toggleCalendarToolbar", "calendar-toolbar", "calendar");
     toggleControlDisplay("cmd_toggleTaskToolbar", "task-toolbar", "task");
     gCurrentMode = 'task';
+    document.getElementById("modeBroadcaster").setAttribute("mode", gCurrentMode);    
     swapPopupMenus();
     var mailToolbar = getMailBar();
     var calendarToolbar = document.getElementById("calendar-toolbar");
@@ -224,18 +220,12 @@ function ltnSwitch2Task() {
     var deck = document.getElementById("displayDeck");
     deck.selectedPanel = taskBox;
 
+    // change title to "Tasks"
+    document.title = ltnGetString("lightning", "taskModeApplicationTitle") + " - " + 
+                     calGetString("brand", "brandShortName", null, "branding");
+
     document.commandDispatcher.updateCommands('mail-toolbar');
     document.commandDispatcher.updateCommands('calendar_commands');
-
-    // always show the task filter option
-    var filterHeader = document.getElementById("task-tree-filter-header");
-    filterHeader.removeAttribute("collapsed");
-    var filter = document.getElementById("task-tree-filter");
-    if (filterHeader.getAttribute("checked") != "true") {
-        filter.setAttribute("collapsed", "true");
-    } else {
-        filter.removeAttribute("collapsed");
-    }
 
     window.setCursor("auto");
   }
@@ -284,7 +274,7 @@ function CustomizeApplicationToolbar(id) {
     modeName = null;
   }
 
-  var customizePopup = document.getElementById("CustomizeMailToolbar"); 
+  var customizePopup = document.getElementById("CustomizeMailToolbar");
   customizePopup.setAttribute("disabled", "true");
 
   var wintype = document.documentElement.getAttribute("windowtype");
@@ -296,12 +286,12 @@ function CustomizeApplicationToolbar(id) {
   // function will be called. the argument will "mode", "mail",
   // "calendar" or "task".
   var onModeSwitch = function switchHandler(aMode) {
-    
+
     // assume that we're switching to the mode toolbar
     var toolbox = 'mode-toolbox';
 
     // check which toolbar is to be customized next
-    // and possibly switch the the appropriate mode.    
+    // and possibly switch the the appropriate mode.
     if(aMode == 'mail') {
       ltnSwitch2Mail();
       toolbox = 'mail-toolbox';
@@ -320,10 +310,10 @@ function CustomizeApplicationToolbar(id) {
     EnableDisableHierarchy(mailbar, isMode);
     EnableDisableHierarchy(calendarbar, isMode);
     EnableDisableHierarchy(taskbar, isMode);
-    
+
     // remember the current toolbox
     gCustomizeId = toolbox;
-    
+
     // return this appropriate toolbox element
     return document.getElementById(toolbox);
   };
@@ -349,7 +339,7 @@ function ModeToolboxCustomizeDone(aToolboxChanged) {
   // or not we're actually customizing the mode toolbar or
   // any other toolbar.
   var isModeToolbox = (gCustomizeId == 'mode-toolbox');
-  
+
   // enable elements on the toolbars
   if (isModeToolbox) {
     EnableDisableHierarchy(document.getElementById('mail-menubar'), false);
@@ -360,10 +350,10 @@ function ModeToolboxCustomizeDone(aToolboxChanged) {
 
   // Unconditionally enable the mode toolbar
   EnableHierarchy(document.getElementById('mode-toolbar'));
-  
+
   // Update global UI elements that may have been added or removed
   MailToolboxCustomizeDone(aToolboxChanged);
-  
+
   // make sure our toolbar buttons have the correct enabled state restored to them...
   document.commandDispatcher.updateCommands('calendar_commands');
 }
@@ -379,10 +369,10 @@ function ModeToolboxCustomizeDone(aToolboxChanged) {
 function EnableDisableHierarchy(item, disable) {
   // iterate all nodes on this particular level
   for (var i = 0; i < item.childNodes.length; ++i) {
-  
+
     // retrieve the next node that needs to be processed
     var child = item.childNodes[i];
-    
+
     // disable this node if flag indicates this case, enable otherwise
     if (disable) {
 
@@ -393,9 +383,9 @@ function EnableDisableHierarchy(item, disable) {
         child.setAttribute("itemdisabled", "true");
       }
       child.setAttribute("disabled","true");
-      
+
     } else {
-    
+
       // restore the previous state, which means either enable
       // the node or keep it disabled but remove the
       // 'itemdisabled' attribute.
@@ -424,10 +414,10 @@ function EnableDisableHierarchy(item, disable) {
 function EnableHierarchy(item) {
   // iterate all nodes on this particular level
   for (var i = 0; i < item.childNodes.length; ++i) {
-  
+
     // retrieve the next node that needs to be processed
     var child = item.childNodes[i];
-    
+
     // always enable this node and remove the
     // 'itemdisabled' attribute.
     if (child.hasAttribute("itemdisabled")) {

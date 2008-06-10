@@ -163,21 +163,30 @@ var unifinderObserver = {
         unifinderTreeView.removeItems(items.filter(fixAlldayDates));
     },
 
-    onError: function uO_onError(aErrNo, aMessage) {},
+    onError: function uO_onError(aCalendar, aErrNo, aMessage) {},
 
-    onPropertyChanged: function uO_onPropertyChanged(aCalendar, aName, aValue, aOldValue) {},
-    onPropertyDeleting: function uO_onPropertyDeleting(aCalendar, aName) {},
+    onPropertyChanged: function uO_onPropertyChanged(aCalendar, aName, aValue, aOldValue) {
+        switch (aName) {
+            case "disabled":
+                refreshEventTree();
+                break;
+        }
+    },
+
+    onPropertyDeleting: function uO_onPropertyDeleting(aCalendar, aName) {
+      this.onPropertyChanged(aCalendar, aName, null, null);
+    },
 
     // calICompositeObserver:
-    onCalendarAdded: function uO_onCalendarAdded(aDeletedItem) {
-        if (!this.mInBatch) {
+    onCalendarAdded: function uO_onCalendarAdded(aAddedCalendar) {
+        if (!this.mInBatch && !aAddedCalendar.getProperty("disabled")) {
             refreshEventTree();
         }
     },
 
-    onCalendarRemoved: function uO_onCalendarRemoved(aDeletedItem) {
+    onCalendarRemoved: function uO_onCalendarRemoved(aDeletedCalendar) {
         // TODO only remove such items that belong to the calendar
-        if (!this.mInBatch) {
+        if (!this.mInBatch && !aDeletedCalendar.getProperty("disabled")) {
             refreshEventTree();
         }
     },
@@ -304,7 +313,7 @@ function unifinderDoubleClick(event) {
     var calendarEvent = unifinderTreeView.getItemFromEvent(event);
 
     if (calendarEvent != null) {
-        modifyEventWithDialog(getOccurrenceOrParent(calendarEvent));
+        modifyEventWithDialog(calendarEvent, null, true);
     } else {
         createEventWithDialog();
     }
@@ -344,7 +353,7 @@ function unifinderSelect(event) {
     // Set up the selected items in the view. Pass in true, so we don't end
     // up in a circular loop
     currentView().setSelectedItems(selectedItems.length, selectedItems, true);
-    onSelectionChanged({detail: selectedItems});
+    calendarController.onSelectionChanged({detail: selectedItems});
 }
 
 function unifinderKeyPress(aEvent) {
@@ -547,9 +556,44 @@ var unifinderTreeView = {
         return this.eventArray.length;
     },
 
-    getRowProperties: function uTV_getRowProperties() {},
-    getCellProperties: function uTV_getCellProperties() {},
-    getColumnProperties: function uTV_getColumnProperties() {},
+
+    // TODO this code is currently identical to the task tree. We should create
+    // an itemTreeView that these tree views can inherit, that contains this
+    // code, and possibly other code related to sorting and storing items. See
+    // bug 432582 for more details.
+    getCellProperties: function uTV_getCellProperties(aRow, aCol, aProps) {
+        this.getRowProperties(aRow, aProps);
+        this.getColumnProperties(aCol, aProps);
+    },
+    getRowProperties: function uTV_getRowProperties(aRow, aProps) {
+        var item = this.eventArray[aRow];
+        if (item.priority > 0 && item.priority < 5) {
+            aProps.AppendElement(getAtomFromService("highpriority"));
+        } else if (item.priority > 5 && item.priority < 10) {
+            aProps.AppendElement(getAtomFromService("lowpriority"));
+        }
+
+        // Add calendar name atom
+        var calendarAtom = "calendar-" + formatStringForCSSRule(item.calendar.name);
+        aProps.AppendElement(getAtomFromService(calendarAtom));
+
+        // Add item status atom
+        if (item.status) {
+            aProps.AppendElement(getAtomFromService("status-" + item.status.toLowerCase()));
+        }
+
+        // Alarm status atom
+        if (item.alarmOffset) {
+            aProps.AppendElement(getAtomFromService("alarm"));
+        }
+
+        // Task categories
+        var categories = categoriesStringToArray(item.getProperty("CATEGORIES"));
+        categories.map(formatStringForCSSRule)
+                  .map(getAtomFromService)
+                  .forEach(aProps.AppendElement, aProps);
+    },
+    getColumnProperties: function uTV_getColumnProperties(aCol, aProps) {},
 
     isContainer: function uTV_isContainer() {
         return false;

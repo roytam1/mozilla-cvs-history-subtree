@@ -22,6 +22,7 @@
  *   Clint Talbert <ctalbert.moz@gmail.com>
  *   Eva Or <evaor1012@yahoo.ca>
  *   Matthew Willis <lilmatt@mozilla.com>
+ *   Philipp Kewisch <mozilla@kewis.ch>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -48,7 +49,6 @@ const CAL_ITIP_PROC_DELETE_OP = 3;
  */
 function calItipProcessor() {
     this.wrappedJSObject = this;
-    this._handledID = null;
 }
 
 calItipProcessor.prototype = {
@@ -139,32 +139,29 @@ calItipProcessor.prototype = {
 
         // Check to see if we have an existing item or not, then continue
         // processing appropriately
-        var i =0;
-        while (calItem) {
-            this._isExistingItem(calItem, recvMethod, respMethod, targetCalendar,
-                                 aListener);
-            ++i;
-            calItem = itemList[i];
+        for (var i = 0; i < itemList.length; i++) {
+            this._isExistingItem(itemList[i], aItipItem, recvMethod, respMethod,
+                                 targetCalendar, aListener);
         }
 
         // Send the appropriate response
         // figure out a good way to determine when a response is needed!
         if (recvMethod != respMethod) {
-            this._getTransport().simpleSendResponse(respItipItem);
+            this._getTransport(targetCalendar).simpleSendResponse(respItipItem);
         }
     },
 
     /* Continue processing the iTip Item now that we have determined whether
      * there is an existing item or not.
      */
-    _continueProcessingItem: function cipCPI(newItem, existingItem, recvMethod, respMethod,
-                                             calAction, targetCalendar, aListener) {
-        var transport = this._getTransport();
+    _continueProcessingItem: function cipCPI(newItem, existingItem, aItipItem,
+                                             recvMethod, respMethod, calAction,
+                                             targetCalendar, aListener) {
         switch (recvMethod) {
             case "REQUEST":
                 // Only add to calendar if we accepted invite
                 var replyStat = this._getReplyStatus(newItem,
-                                                     transport.defaultIdentity);
+                                                     aItipItem.identity);
                 if (replyStat == "DECLINED") {
                     break;
                 }
@@ -194,6 +191,7 @@ calItipProcessor.prototype = {
                                 recvMethod);
         }
 
+        // TODO bug 431127: This is email specific -> Move to transport
         // When replying, the reply must only contain the ORGANIZER and the
         // status of the ATTENDEE that represents ourselves. Therefore we must
         // remove all other ATTENDEEs from the itipItem we send back.
@@ -201,22 +199,15 @@ calItipProcessor.prototype = {
             // Get the id that represents me.
             // XXX Note that this doesn't take into consideration invitations
             //     sent to email aliases. (ex: lilmatt vs mwillis)
-            var me;
-            var idPrefix;
-            if (transport.type == "email") {
-                me = transport.defaultIdentity;
-                idPrefix = "mailto:";
-            } else {
-                throw Components.results.NS_ERROR_NOT_IMPLEMENTED;
-            }
 
             var attendees = newItem.getAttendees({});
+            var transport = this._getTransport(newItem.calendar);
 
             for each (var attendee in attendees) {
                 // Leave the ORGANIZER alone.
                 if (!attendee.isOrganizer) {
                     // example: mailto:joe@domain.com
-                    var meString = idPrefix + me;
+                    var meString = transport.scheme + ":" + aItipItem.identity
                     if (attendee.id.toLowerCase() != meString.toLowerCase()) {
                         newItem.removeAttendee(attendee);
                     }
@@ -363,7 +354,7 @@ calItipProcessor.prototype = {
                 if (!aExistingItem)
                     throw new Error("_processCalendarAction: Item to update not found");
 
-                // TODO: Handle generation properly - Bug 418345 
+                // TODO: Handle generation properly - Bug 418345
                 aCalItem.generation = aExistingItem.generation;
                 // We also have to ensure that the calendar is set properly on
                 // the new item, or items with alarms will throw during the
@@ -389,45 +380,28 @@ calItipProcessor.prototype = {
      * item for the specified attendee
      */
     _getReplyStatus: function cipGRS(aCalItem, aAttendeeId) {
-        var idPrefix = "mailto:";
-
-        // example: mailto:joe@domain.com
-        var idString = idPrefix + aAttendeeId;
+        var idString = this._getTransport(aCalItem.calendar).scheme +
+                       ":" + aAttendeeId;
         var attendee = aCalItem.getAttendeeById(idString);
-        if (!attendee) {
-            // Bug 420516 -- we don't support delegation yet TODO: Localize this?
-            throw new Error("_getReplyStatus: " +
-                            "You are not on the list of invited attendees, delegation " +
-                            "is not supported yet.  See bug 420516 for details.");
-            
-        }
-        
-        return attendee.participationStatus;
+        return attendee && attendee.participationStatus;
     },
-
-    // A placeholder to make sure we don't try to add multiple items from the
-    // onOperationComplete function.
-    _handledID:null,
 
     /**
      * Helper function to determine if this item already exists on this calendar
      * or not.  It then calls _continueProcessingItem setting calAction and
      * existingItem appropirately
      */
-    _isExistingItem: function cipIEI(aCalItem, aRecvMethod, aRespMethod,
+    _isExistingItem: function cipIEI(aCalItem, aItipItem, aRecvMethod, aRespMethod,
                                      aTargetCal, aListener) {
-        
         var foundItemListener = {
             itipProcessor: this,
             onOperationComplete:
             function (aCalendar, aStatus, aOperationType, aId, aDetail) {
                 // If there is no item, we get this call with a failure error
-                if (aStatus == Components.results.NS_ERROR_FAILURE &&
-                    !this.itipProcessor._handledID) {
-                    // Cache the id so that we know we've handled this one.
-                    this.itipProcessor._handledID = aCalItem.id;
+                if (!Components.isSuccessCode(aStatus)) {
                     this.itipProcessor._continueProcessingItem(aCalItem,
                                                                null,
+                                                               aItipItem,
                                                                aRecvMethod,
                                                                aRespMethod,
                                                                CAL_ITIP_PROC_ADD_OP,
@@ -441,6 +415,7 @@ calItipProcessor.prototype = {
                 if (aCount && aItems[0]) {
                     this.itipProcessor._continueProcessingItem(aCalItem,
                                                                aItems[0],
+                                                               aItipItem,
                                                                aRecvMethod,
                                                                aRespMethod,
                                                                CAL_ITIP_PROC_UPDATE_OP,
@@ -455,23 +430,24 @@ calItipProcessor.prototype = {
             // Then we do not have a target calendar to search,
             // this is probably a DECLINE reply or some other such response,
             // allow it to pass through
-            this._continueProcessingItem(aCalItem, null, aRecvMethod, aRespMethod,
-                                         null, aTargetCal, aListener);
+            this._continueProcessingItem(aCalItem, null, aItipItem, aRecvMethod,
+                                         aRespMethod, null, aTargetCal, aListener);
         }
     },
 
     /**
-     * Centralized location for obtaining the proper transport.  This way it
-     * will be easy to support multiple transports in the future
-     * without changing the existing code too much.
+     * Centralized location for obtaining the proper transport. If a calendar is
+     * specified, the transport type is taken from the provider. If the provider
+     * does not specify a transport, or no calendar is specified, the default
+     * email transport is returned.
      */
-    _getTransport: function cipGT() {
-        // XXX Support for transports other than email go here.
-        //     For now we just assume it's email.
-        var transport = Components.classes["@mozilla.org/calendar/itip-transport;1?type=email"].
-                        createInstance(Components.interfaces.calIItipTransport);
+    _getTransport: function cipGT(aCalendar) {
+        var transportType = (aCalendar && aCalendar.getProperty("itip.transportType")) || "email";
+
+        var transport = Components.classes["@mozilla.org/calendar/itip-transport;1?type=" + transportType]
+                                  .getService(Components.interfaces.calIItipTransport);
         if (!transport) {
-            throw new Error("iTipProcessor cannot instantiate transport");
+            throw new Error("iTipProcessor cannot instantiate transport" + (aCalendar ? "for " + aCalendar.type : ""));
         }
         return transport;
     }

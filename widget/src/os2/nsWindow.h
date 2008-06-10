@@ -338,6 +338,8 @@ protected:
    HBITMAP CreateTransparencyMask(PRInt32  format, PRUint8* aImageData,
                                   PRUint32 aWidth, PRUint32 aHeight);
 
+   BOOL NotifyForeignChildWindows(HWND aWnd);
+
    // Enumeration of the methods which are accessable on the PM thread
    enum {
       CREATE,

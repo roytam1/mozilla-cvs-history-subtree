@@ -3185,12 +3185,19 @@ nsresult nsMsgDatabase::RowCellColumnToMime2DecodedString(nsIMdbRow *row, mdb_to
     if (m_mimeConverter) 
     {
       nsAutoString decodedStr;
-      const char *charSet;
+      char *charSet;
       PRBool characterSetOverride;
-      m_dbFolderInfo->GetConstCharPtrCharacterSet(&charSet);
       m_dbFolderInfo->GetCharacterSetOverride(&characterSetOverride);
-      
+      err = RowCellColumnToCharPtr(row, m_messageCharSetColumnToken, &charSet);
+      if (NS_FAILED(err) || !*charSet || !PL_strcasecmp(charSet, "us-ascii") ||
+          characterSetOverride)
+      {
+        PR_Free(charSet);
+        m_dbFolderInfo->GetCharPtrCharacterSet(&charSet);
+      }
+
       err = m_mimeConverter->DecodeMimeHeader(nakedString, resultStr, charSet, characterSetOverride);
+      PR_Free(charSet);
     }
   }
   return err;
@@ -3215,9 +3222,15 @@ nsresult nsMsgDatabase::RowCellColumnToAddressCollationKey(nsIMdbRow *row, mdb_t
         char *resultStr = nsnull;
         char *charset;
         PRBool characterSetOverride;
-        m_dbFolderInfo->GetCharPtrCharacterSet(&charset);
         m_dbFolderInfo->GetCharacterSetOverride(&characterSetOverride);
-        
+        ret = RowCellColumnToCharPtr(row, m_messageCharSetColumnToken, &charset);
+        if (NS_FAILED(ret) || !*charset || !PL_strcasecmp(charset, "us-ascii") ||
+            characterSetOverride)
+        {
+          PR_Free(charset);
+          m_dbFolderInfo->GetCharPtrCharacterSet(&charset);
+        }
+
         ret = converter->DecodeMimeHeader(cSender, &resultStr,
           charset, characterSetOverride);
         if (NS_SUCCEEDED(ret) && resultStr)
@@ -3285,14 +3298,21 @@ nsresult nsMsgDatabase::RowCellColumnToCollationKey(nsIMdbRow *row, mdb_token co
     if (m_mimeConverter) 
     {
       nsXPIDLCString decodedStr;
-      const char *charSet;
+      char *charSet;
       PRBool characterSetOverride;
-      m_dbFolderInfo->GetConstCharPtrCharacterSet(&charSet);
       m_dbFolderInfo->GetCharacterSetOverride(&characterSetOverride);
+      err = RowCellColumnToCharPtr(row, m_messageCharSetColumnToken, &charSet);
+      if (NS_FAILED(err) || !*charSet || !PL_strcasecmp(charSet, "us-ascii") ||
+          characterSetOverride)
+      {
+        PR_Free(charSet);
+        m_dbFolderInfo->GetCharPtrCharacterSet(&charSet);
+      }
       
       err = m_mimeConverter->DecodeMimeHeader(nakedString, getter_Copies(decodedStr), charSet, characterSetOverride);
       if (NS_SUCCEEDED(err))
         err = CreateCollationKey(NS_ConvertUTF8toUCS2(decodedStr), result, len);
+      PR_Free(charSet);
     }
   }
   return err;

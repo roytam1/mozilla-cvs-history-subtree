@@ -38,116 +38,20 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/* Skin-domain style rules for lightning UI (pinstripe version) */
-
-calendar-todo-list {
-    background-color: -moz-Field;
-    color: -moz-FieldText;
-}
-
-calendar-todo-list[disabled="true"] {
-    color: GrayText;
-}
-
-calendar-todo-item {
-  -moz-box-align: center;
-  margin-top: 0;
-  margin-bottom: 0;
-}
-
-calendar-todo-item[selected="true"] {
-  background-color: Highlight;
-  color: HighlightText;
-}
-
 /* Calendar list rules */
-
 #calendar-panel {
     padding: 0px 5px 5px;
 }
 
-/*--------------------------------------------------------------------
- * Navigation controls for the views
- *-------------------------------------------------------------------*/
-
-.nav-buttons{
-    list-style-image: url("chrome://calendar/skin/prevnextarrow.png");
-}
-
-.nav-buttons[direction="next"] {
-    -moz-box-align:end;
-    -moz-image-region: rect(18px 18px 36px 0px);
-    cursor:pointer;
-}
-
-.next-button:hover:active {
-    margin: 6px 14px 4px 16px;
-}
-
-.nav-buttons[direction="prev"] {
-    -moz-box-align:start;
-    -moz-image-region: rect(0px 18px 18px 0px);
-    cursor:pointer;
-}
-
-.prev-button:hover:active {
-    margin: 6px 14px 4px 16px;
-}
-
-.title-container {
-    -moz-box-align: center;
-    -moz-box-pack: center;
-    margin: 0px 15px 0px 15px;
-}
-
-.title2 {
-    font-size:1.2em;
-    color: #4e84c2;
-    cursor:pointer;
-    -moz-appearance: none;
-    border: 0px;
-}
-
-.title1 {
-    font-size:1.5em;
-    color: #4e84c2;
-    cursor:pointer;
-    -moz-appearance: none;
-    border: 0px;
-}
-
-.title0 {
-    font-size:2.0em;
-    color: #2e4e73;
-    font-weight:bold;
-    -moz-appearance: none;
-    border: 0px;
-}
-
-.view-title-label-box
-{
-    width: 10em !important;
-    -moz-box-align: center;
-    -moz-box-pack: end;
-}
-
-.title-label-box button {
-    /* Override button min-width so views can be narrow on narrow screen */
-    min-width: 1px;
-    /* Allow overflow, so long localized month names don't prevent narrow view */
-    overflow-x: hidden;
-}
-
+/* Lightning preferences icon */
 radio[pane=paneLightning] {
     list-style-image: url("chrome://calendar/skin/cal-icon32.png");
 }
 
-/**
- * iMIP notification bar
- */
+/* iMIP notification bar */
 #imipNotificationImage {
     list-style-image: url("chrome://calendar/skin/cal-icon32.png");
-    margin-right: 8px;
+    -moz-margin-end: 8px;
 }
 
 #imipNotificationBar {
@@ -157,9 +61,8 @@ radio[pane=paneLightning] {
 }
 
 /* ::::: mode toolbar buttons ::::: */
-
 #mode-toolbar {
-  padding: 5px 2px 5px 2px;
+  padding: 5px 2px;
   border-top: 1px solid ThreeDShadow !important;
 }
 
@@ -218,7 +121,6 @@ toolbar[mode="full"] .toolbarbutton-2 {
 }
 
 /* ::::: small mode toolbar buttons ::::: */
-
 toolbar[iconsize="small"] .toolbarbutton-2 {
  list-style-image: url("chrome://calendar/skin/mode-switch-icons.png");
 }
@@ -259,47 +161,11 @@ toolbar[iconsize="small"] #task-switch-button[disabled] {
   -moz-image-region: rect(32px 123px 48px 107px);
 }
 
-/*--------------------------------------------------------------------
- * tooltips
- *-------------------------------------------------------------------*/
-vbox.tooltipBox {
-  max-width: 40em;
-}
-
-column.tooltipValueColumn {
-  max-width: 35em; /* tooltipBox max-width minus space for label */
-}
-
-label.tooltipHeaderLabel {
-  font-weight: bold;
-  text-align: right;
-  margin: 0em 1em 0em 0em; /* 1em space before value */
-}
-
-description.tooltipHeaderDescription {
-  font-weight: normal;
-  text-align: left;
-  margin: 0pt;
-}
-
-separator.tooltipBodySeparator {
-  height: 1ex; /* 1ex space above body text, below last header. */
-}
-
-description.tooltipBody {
-  font-weight: normal;
-  white-space: -moz-pre-wrap;
-  margin: 0pt;
-}
-
+/* Lightining sidebar background in calendar and task mode */
 #ltnSidebar {
-  background: white;
+  background: -moz-field;
 }
 
-#task-tree-filter {
-  margin-left: 12px;
-}
-
-#calendar-list-tree {
-  margin-left: 12px;
+.task-tree-subpane {
+  -moz-margin-start: 12px;
 }

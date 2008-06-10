@@ -22,6 +22,7 @@
  *   Joey Minta <jminta@gmail.com>
  *   Daniel Boelzle <daniel.boelzle@sun.com>
  *   Philipp Kewisch <mozilla@kewis.ch>
+ *   Martin Schroeder <mschroeder@mozilla.x-home.org>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -74,7 +75,9 @@ function calAlarmService() {
                 this.alarmService.notifyObservers("onRemoveAlarmsByCalendar", [calendar]);
                 // a refreshed calendar signals that it has been reloaded
                 // (and cannot notify detailed changes), thus reget all alarms of it:
-                this.alarmService.initAlarms([calendar]);
+                if (!calendar.getProperty("disabled")) {
+                    this.alarmService.initAlarms([calendar]);
+                }
             }
         },
         onAddItem: function(aItem) {
@@ -105,13 +108,22 @@ function calAlarmService() {
         onDeleteItem: function(aDeletedItem) {
             this.alarmService.removeAlarm(aDeletedItem);
         },
-        onError: function(aErrNo, aMessage) {},
+        onError: function(aCalendar, aErrNo, aMessage) {},
         onPropertyChanged: function(aCalendar, aName, aValue, aOldValue) {
             if (aName == "suppressAlarms") {
-                if (aOldValue && !aValue) {
-                    this.alarmService.initAlarms([aCalendar]);
-                } else if (!aOldValue && aValue) {
+                // While in the UI it should be assured that suppressAlarms is
+                // not changed if popup alarms are unsupported, be robust here.
+                if ((!aOldValue && aValue) ||
+                    aCalendar.getProperty("capabilities.alarms.popup.supported") === false) {
                     this.alarmService.notifyObservers("onRemoveAlarmsByCalendar", [aCalendar]);
+                } else if (aOldValue && !aValue) {
+                    this.alarmService.initAlarms([aCalendar]);
+                }
+            } else if (aName == "disabled") {
+                if (!aOldValue && aValue) {
+                    this.alarmService.notifyObservers("onRemoveAlarmsByCalendar", [aCalendar]);
+                } else if (aOldValue && !aValue) {
+                    this.alarmService.initAlarms([aCalendar]);
                 }
             }
         },
@@ -160,7 +172,7 @@ var calAlarmServiceClassInfo = {
     classDescription: "Calendar Alarm Service",
     classID: Components.ID("{7a9200dd-6a64-4fff-a798-c5802186e2cc}"),
     implementationLanguage: Components.interfaces.nsIProgrammingLanguage.JAVASCRIPT,
-    flags: 0
+    flags: Components.interfaces.nsIClassInfo.SINGLETON
 };
 
 calAlarmService.prototype = {
@@ -188,7 +200,7 @@ calAlarmService.prototype = {
     // This will also be called on app-startup, but nothing is done yet, to
     // prevent unwanted dialogs etc. See bug 325476 and 413296 
     observe: function cas_observe(subject, topic, data) {
-        if (topic == "profile-after-change") {
+        if (topic == "profile-after-change" || topic == "wake_notification") {
             this.shutdown();
             this.startup();
         }
@@ -200,7 +212,7 @@ calAlarmService.prototype = {
     /* calIAlarmService APIs */
     mTimezone: null,
     get timezone() {
-        return this.mTimezone;
+        return this.mTimezone || calendarDefaultTimezone();
     },
 
     set timezone(aTimezone) {
@@ -268,10 +280,6 @@ calAlarmService.prototype = {
         if (this.mStarted)
             return;
 
-        if (!this.mTimezone) {
-            throw Components.results.NS_ERROR_NOT_INITIALIZED;
-        }
-
         LOG("[calAlarmService] starting...");
 
         var observerSvc = Components.classes["@mozilla.org/observer-service;1"]
@@ -280,6 +288,7 @@ calAlarmService.prototype = {
 
         observerSvc.addObserver(this, "profile-after-change", false);
         observerSvc.addObserver(this, "xpcom-shutdown", false);
+        observerSvc.addObserver(this, "wake_notification", false);
 
         /* Tell people that we're alive so they can start monitoring alarms.
          */
@@ -373,6 +382,7 @@ calAlarmService.prototype = {
 
         observerSvc.removeObserver(this, "profile-after-change");
         observerSvc.removeObserver(this, "xpcom-shutdown");
+        observerSvc.removeObserver(this, "wake_notification");
 
         this.mStarted = false;
     },
@@ -394,7 +404,7 @@ calAlarmService.prototype = {
             alarmDate = aItem.endDate || aItem.dueDate || aItem.entryDate;
         }
 
-        if (!aItem.alarmOffset && !aItem.parentItem.alarmOffset || !alarmDate) {
+        if (!aItem.alarmOffset || !alarmDate) {
             // If there is no alarm offset, or no date the alarm offset could be
             // relative to, then there is no valid alarm.
             return null;
@@ -410,7 +420,7 @@ calAlarmService.prototype = {
             alarmDate.isDate = false;
         }
 
-        var offset = aItem.alarmOffset || aItem.parentItem.alarmOffset;
+        var offset = aItem.alarmOffset;
 
         alarmDate.addDuration(offset);
         alarmDate = alarmDate.getInTimezone(UTC());
@@ -421,8 +431,9 @@ calAlarmService.prototype = {
     addAlarm: function cas_addAlarm(aItem) {
         // Get the alarm time
         var alarmTime = this.getAlarmDate(aItem);
-        if (!alarmTime) {
-            // If there is no alarm time, don't add the alarm.
+        if (!alarmTime || (isToDo(aItem) && aItem.isCompleted)) {
+            // If there is no alarm time, don't add the alarm. Also, if the item
+            // is a task and it is completed, don't add the alarm.
             return;
         }
 
@@ -493,12 +504,6 @@ calAlarmService.prototype = {
     },
 
     removeAlarm: function cas_removeAlarm(aItem) {
-        // If the item has no alarm start date, then it was never added so don't
-        // remove it.
-        if (!this.getAlarmDate(aItem)) {
-            return;
-        }
-
         // make sure already fired alarms are purged out of the alarm window:
         this.notifyObservers("onRemoveAlarmsByItem", [aItem]);
         for each (var timer in this.removeTimers(aItem)) {
@@ -575,7 +580,8 @@ calAlarmService.prototype = {
 
         for each(var calendar in calendars) {
             // assuming that suppressAlarms does not change anymore until refresh:
-            if (!calendar.getProperty("suppressAlarms")) {
+            if (!calendar.getProperty("suppressAlarms") &&
+                calendar.getProperty("capabilities.alarms.popup.supported") !== false) {
                 calendar.getItems(filter, 0, start, until, getListener);
             }
         }
@@ -594,7 +600,8 @@ calAlarmService.prototype = {
     },
 
     alarmFired: function cas_alarmFired(event) {
-        if (event.calendar.getProperty("suppressAlarms")) {
+        if (event.calendar.getProperty("suppressAlarms") ||
+            event.calendar.getProperty("capabilities.alarms.popup.supported") === false) {
             return;
         }
         this.notifyObservers("onAlarm", [event]);

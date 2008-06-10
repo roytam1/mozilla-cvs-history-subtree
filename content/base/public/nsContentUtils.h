@@ -114,6 +114,12 @@ public:
 
   static PRBool   IsCallerTrustedForWrite();
 
+  /**
+   * Check whether a caller is trusted to have aCapability.  This also
+   * checks for UniversalXPConnect in addition to aCapability.
+   */
+  static PRBool   IsCallerTrustedForCapability(const char* aCapability);
+
   /*
    * Returns true if the nodes are both in the same document or
    * if neither is in a document.
@@ -639,6 +645,8 @@ public:
     return RemoveJSGCRoot((void*)aPtr);
   }
   static nsresult RemoveJSGCRoot(void* aPtr);
+
+  static PRBool IsNativeAnonymous(nsIContent* aContent);
   
 private:
   static nsresult doReparentContentWrapper(nsIContent *aChild,

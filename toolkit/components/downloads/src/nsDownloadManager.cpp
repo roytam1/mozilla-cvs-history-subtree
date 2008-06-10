@@ -74,7 +74,7 @@
 #include <shlobj.h>
 #endif
 
-#if defined(_MSC_VER) && _MSC_VER < 13
+#if defined(_MSC_VER) && _MSC_VER < 1300
 #define BYTES_TO_KBYTES(bytes) ((PRFloat64)((PRInt64)(bytes >> 8) / 4 + .5))
 #else
 #define BYTES_TO_KBYTES(bytes) ((PRFloat64)bytes / 1024.0 + .5)

@@ -183,7 +183,7 @@ function getPreviewForTask( toDoItem )
       var priorityInteger = parseInt(toDoItem.priority);
       var priorityString;
 
-      // These cut-offs should match calendar-event-dialog.js
+      // These cut-offs should match sun-calendar-event-dialog.js
       if (priorityInteger >= 1 && priorityInteger <= 4) {
            priorityString = calGetString('calendar', 'highPriority'); // high priority
       } else if (priorityInteger == 5) {
@@ -437,7 +437,7 @@ function boxInitializeHeaderGrid(box)
 function boxAppendLabeledText(box, labelProperty, textString)
 {
   var labelText = calGetString('calendar', labelProperty);
-  var rows = box.getElementsByTagName("rows")[0];
+  var rows = box.getElementsByTagNameNS(box.namespaceURI, "rows")[0];
   { 
     var row = document.createElement("row");
     {

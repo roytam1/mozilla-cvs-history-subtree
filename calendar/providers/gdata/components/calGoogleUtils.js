@@ -35,8 +35,21 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-// This global keeps the session Objects for the usernames
-var g_sessionMap;
+/**
+ * getGoogleSessionManager
+ * Shortcut to the google session manager
+ */
+function getGoogleSessionManager() {
+    if (this.mObject === undefined) {
+        this.mObject =
+            Components.classes["@mozilla.org/calendar/providers/gdata/session-manager;1"]
+                      .createInstance(Components.interfaces.calIGoogleSessionManager);
+    }
+    return this.mObject;
+}
+
+// Sandbox for evaluating extendedProperties.
+var gGoogleSandbox;
 
 /**
  * setCalendarPref
@@ -88,52 +101,7 @@ function getCalendarPref(aCalendar, aPrefName) {
  * @return              The formatted string
  */
 function getFormattedString(aBundleName, aStringName, aFormatArgs, aComponent) {
-    var bundlesvc = Components.classes["@mozilla.org/intl/stringbundle;1"].
-                    getService(Components.interfaces.nsIStringBundleService);
-
-    var component = aComponent || "gdata-provider";
-    var bundle = bundlesvc.createBundle("chrome://" + component + "/locale/" +
-                                        aBundleName + ".properties");
-
-    if (aFormatArgs) {
-        return bundle.formatStringFromName(aStringName,
-                                           aFormatArgs,
-                                           aFormatArgs.length);
-    } else {
-        return bundle.GetStringFromName(aStringName);
-    }
-}
-
-/**
- * getSessionByUsername
- * Gets a session object for the passed username. This object will be created if
- * it does not exist.
- *
- * @param aUsername   This user's session will be returned
- * @return            The session object requested
- */
-function getSessionByUsername(aUsername) {
-
-    // Initialize the object
-    if (!g_sessionMap) {
-        g_sessionMap = {};
-    }
-
-    // If the username contains no @, assume @gmail.com
-    // XXX Maybe use accountType=GOOGLE and just pass the raw username?
-    if (aUsername.indexOf('@') == -1) {
-        aUsername += "@gmail.com";
-    }
-
-    // Check if the session exists
-    if (!g_sessionMap.hasOwnProperty(aUsername)) {
-        LOG("Creating session for: " + aUsername);
-        g_sessionMap[aUsername] = new calGoogleSession(aUsername);
-    } else {
-        LOG("Reusing session for: " + aUsername);
-    }
-
-    return g_sessionMap[aUsername];
+    return calGetString(aBundleName, aStringName, aFormatArgs, aComponent || "gdata-provider");
 }
 
 /**
@@ -151,50 +119,11 @@ function getCalendarCredentials(aCalendarName,
                                 aUsername,
                                 aPassword,
                                 aSavePassword) {
-
-    if (typeof aUsername != "object" ||
-        typeof aPassword != "object" ||
-        typeof aSavePassword != "object") {
-        throw new Components.Exception("", Components.results.NS_ERROR_XPC_NEED_OUT_OBJECT);
-    }
-
-    var watcher = Components.classes["@mozilla.org/embedcomp/window-watcher;1"].
-                  getService(Components.interfaces.nsIWindowWatcher);
-    var prompter = watcher.getNewPrompter(null);
-
-    // Retrieve strings from properties file
-    var title = getFormattedString("gdata", "loginDialogTitle");
-
-    var text;
-    try {
-        // Branch uses chrome://necko/locale/necko.properties
-        text = getFormattedString("necko",
-                                  "EnterUserPasswordFor",
-                                  [aCalendarName],
-                                  "necko");
-    } catch (e) {
-        // Trunk uses chrome://global/locale/prompts.properties
-        text = getFormattedString("prompts",
-                                  "EnterUserPasswordFor",
-                                  [aCalendarName],
-                                  "global");
-    }
-
-    // Only show the save password box if we are supposed to.
-    var savepassword;
-    if (getPrefSafe("signon.rememberSignons", true)) {
-        savepassword = getFormattedString("passwordmgr",
-                                          "rememberPassword",
-                                          null,
-                                          "passwordmgr");
-    }
-
-    return prompter.promptUsernameAndPassword(title,
-                                              text,
-                                              aUsername,
-                                              aPassword,
-                                              savepassword,
-                                              aSavePassword);
+    return calGetCredentials(getFormattedString("gdata", "loginDialogTitle"),
+                             aCalendarName,
+                             aUsername,
+                             aPassword,
+                             aSavePassword);
 }
 
 var gdataTimezoneProvider = {
@@ -227,7 +156,7 @@ var gdataTimezoneProvider = {
         }
 
         var tzService = getTimezoneService();
-        var tz = tzService.getTimezone(tzService.tzidPrefix + aTzid);
+        var tz = tzService.getTimezone(aTzid);
         return tz || floating();
     },
 
@@ -371,9 +300,10 @@ function toRFC3339(aDateTime) {
         return "";
     }
 
-    var tzoffset_hr = Math.floor(aDateTime.timezoneOffset / 3600);
+    var full_tzoffset = aDateTime.timezoneOffset;
+    var tzoffset_hr = Math.floor(Math.abs(full_tzoffset) / 3600);
 
-    var tzoffset_mn = ((aDateTime.timezoneOffset / 3600).toFixed(2) -
+    var tzoffset_mn = ((Math.abs(full_tzoffset) / 3600).toFixed(2) -
                        tzoffset_hr) * 60;
 
     var str = aDateTime.year + "-" +
@@ -387,9 +317,9 @@ function toRFC3339(aDateTime) {
                ("00" + aDateTime.minute).substr(-2) + ":" +
                ("00" + aDateTime.second).substr(-2);
         if (aDateTime.timezoneOffset != 0) {
-            str += (tzoffset_hr < 0 ? "-" : "+") +
-                   ("00" + Math.abs(tzoffset_hr)).substr(-2) + ":" +
-                   ("00" + Math.abs(tzoffset_mn)).substr(-2);
+            str += (full_tzoffset < 0 ? "-" : "+") +
+                   ("00" + tzoffset_hr).substr(-2) + ":" +
+                   ("00" + tzoffset_mn).substr(-2);
         } else if (aDateTime.timezone.isFloating) {
             // RFC3339 Section 4.3 Unknown Local Offset Convention
             str += "-00:00";
@@ -409,44 +339,7 @@ function toRFC3339(aDateTime) {
  * @param aPassword     The corresponding password
  */
 function passwordManagerSave(aUsername, aPassword) {
-
-    ASSERT(aUsername);
-    ASSERT(aPassword);
-
-    if (Components.classes["@mozilla.org/passwordmanager;1"]) {
-        var passwordManager = Components.classes["@mozilla.org/passwordmanager;1"].
-                              getService(Components.interfaces.nsIPasswordManager);
-
-        // The realm and the username are the same, since we only save
-        // credentials per session, which only needs a user and a password
-        passwordManager.addUser(aUsername, aUsername, aPassword);
-    } else if (Components.classes["@mozilla.org/login-manager;1"]) {
-        // Trunk uses LoginManager
-        var loginManager = Components.classes["@mozilla.org/login-manager;1"].
-                           getService(Components.interfaces.nsILoginManager);
-        var hostname = "chrome://gdata-provider/" +
-                       encodeURIComponent(aUsername);
-        var logins = loginManager.findLogins({},
-                                             hostname,
-                                             null,
-                                             "Google Calendar");
-        if (logins.length > 0) {
-            var loginInfo = logins[0].clone();
-            loginInfo.password = aPassword;
-            loginManager.modifyLogin(logins[0], loginInfo);
-        } else {
-            var loginInfo = Components.classes["@mozilla.org/login-manager/loginInfo;1"].
-                            createInstance(Components.interfaces.nsILoginInfo);
-            loginInfo.init(hostname,
-                           null,
-                           "Google Calendar",
-                           aUsername,
-                           aPassword,
-                           null,
-                           null);
-            loginManager.addLogin(loginInfo);
-        }
-    }
+    calPasswordManagerSave(aUsername, aPassword, aUsername, "Google Calendar");
 }
 
 /**
@@ -458,55 +351,7 @@ function passwordManagerSave(aUsername, aPassword) {
  * @return                  Does an entry exist in the password manager
  */
 function passwordManagerGet(aUsername, aPassword) {
-
-    ASSERT(aUsername);
-
-    if (typeof aPassword != "object") {
-        throw new Components.Exception("", Components.results.NS_ERROR_XPC_NEED_OUT_OBJECT);
-    }
-
-    if (Components.classes["@mozilla.org/passwordmanager;1"]) {
-        // Branch uses PasswordManager
-        var passwordManager = Components.classes["@mozilla.org/passwordmanager;1"].
-                              getService(Components.interfaces.nsIPasswordManager);
-
-        var enumerator = passwordManager.enumerator;
-
-        while (enumerator.hasMoreElements()) {
-            var entry = enumerator.getNext().QueryInterface(Components.interfaces.nsIPassword);
-
-            // We only care about the "host" field, since the username field is the
-            // same for our purposes.
-            if (entry.host == aUsername) {
-                aPassword.value = entry.password;
-                return true;
-            }
-        }
-    } else if (Components.classes["@mozilla.org/login-manager;1"]) {
-        // Trunk uses LoginManager
-        var loginManager = Components.classes["@mozilla.org/login-manager;1"].
-                           getService(Components.interfaces.nsILoginManager);
-        if (!loginManager.getLoginSavingEnabled(aUsername)) {
-            return false;
-        }
-
-        // We use the hostname field to save the username, to avoid the need to
-        // manually iterate through all google.com logins, and to make it
-        // easier to check for per-user per-scheme login saving. Since we are
-        // saving on a on a per-account basis, so only the first login is
-        // important.
-        var hostname = "chrome://gdata-provider/" +
-                       encodeURIComponent(aUsername);
-        var logins = loginManager.findLogins({},
-                                             hostname,
-                                             null,
-                                             "Google Calendar Login");
-        if (logins.length > 0) {
-            aPassword.value = logins[0].password;
-            return true;
-        }
-    }
-    return false;
+    return calPasswordManagerGet(aUsername, aPassword, aUsername, "Google Calendar");
 }
 
 /**
@@ -517,38 +362,7 @@ function passwordManagerGet(aUsername, aPassword) {
  * @return              Could the user be removed?
  */
 function passwordManagerRemove(aUsername) {
-
-    if (Components.classes["@mozilla.org/passwordmanager;1"]) {
-        // Branch uses PasswordManager
-        var passwordManager = Components.classes["@mozilla.org/passwordmanager;1"].
-                              getService(Components.interfaces.nsIPasswordManager);
-
-        // Remove from Password Manager. Again, the host and username is always the
-        // same for our purposes.
-        try {
-            passwordManager.removeUser(aUsername, aUsername);
-        } catch (e) {
-            return false;
-        }
-    } else if (Components.classes["@mozilla.org/login-manager;1"]) {
-        // Trunk uses LoginManager
-        var loginManager = Components.classes["@mozilla.org/login-manager;1"].
-                           getService(Components.interfaces.nsILoginManager);
-        var hostname = "chrome://gdata-provider/" +
-                       encodeURIComponent(aUsername);
-        var logins = loginManager.findLogins({},
-                                             hostname,
-                                             null,
-                                             "Google Calendar");
-        if (logins.length > 0) {
-            for (var i = 0; i < logins.length; i++) {
-                loginManager.removeLogin(logins[i]);
-            }
-        } else {
-            return false;
-        }
-    }
-    return true;
+    return calPasswordManagerRemove(aUsername, aUsername, "Google Calendar");
 }
 
 /**
@@ -583,6 +397,15 @@ function ItemToXMLEntry(aItem, aAuthorEmail, aAuthorName) {
     entry.title.@type = "text";
     entry.title = aItem.title;
 
+    // gd:extendedProperty (id)
+    // If an id is set, lets save it in X-MOZ-SYNCID, since we cannot set the
+    // real event uid, gCal:syncEvent is only available for the default
+    // calendar, and also setting gCal:syncEvent cripples the event a bit.
+    var gdMozUid = <gd:extendedProperty xmlns:gd={gd}/>;
+    gdMozUid.@name = "X-MOZ-SYNCID";
+    gdMozUid.@value = aItem.id || "";
+    entry.gd::extendedProperty += gdMozUid;
+
     // atom:content
     entry.content = aItem.getProperty("DESCRIPTION") || "";
     entry.content.@type = "text";
@@ -614,58 +437,62 @@ function ItemToXMLEntry(aItem, aAuthorEmail, aAuthorName) {
     entry.gd::where.@valueString = aItem.getProperty("LOCATION") || "";
 
     // gd:who
-    var attendees = aItem.getAttendees({});
-    if (aItem.organizer) {
-        // Taking care of the organizer is the same as taking care of any other
-        // attendee. Add the organizer to the local attendees list.
-        attendees.push(aItem.organizer);
-    }
-
-    const attendeeStatusMap = {
-        "REQ-PARTICIPANT": "required",
-        "OPT-PARTICIPANT": "optional",
-        "NON-PARTICIPANT": null,
-        "CHAIR": null,
-
-        "NEEDS-ACTION": "invited",
-        "ACCEPTED": "accepted",
-        "DECLINED": "declined",
-        "TENTATIVE": "tentative",
-        "DELEGATED": "tentative"
-    };
-
-    for each (var attendee in attendees) {
-        if (attendee.userType && attendee.userType != "INDIVIDUAL") {
-            // We can only take care of individuals.
-            continue;
+    if (getPrefSafe("calendar.google.enableAttendees", false)) {
+        // XXX Only parse attendees if they are enabled, due to bug 407961
+            
+        var attendees = aItem.getAttendees({});
+        if (aItem.organizer) {
+            // Taking care of the organizer is the same as taking care of any other
+            // attendee. Add the organizer to the local attendees list.
+            attendees.push(aItem.organizer);
         }
 
-        var xmlAttendee = <gd:who xmlns:gd={gd}/>;
+        const attendeeStatusMap = {
+            "REQ-PARTICIPANT": "required",
+            "OPT-PARTICIPANT": "optional",
+            "NON-PARTICIPANT": null,
+            "CHAIR": null,
 
-        // Strip "mailto:" part
-        xmlAttendee.@email = attendee.id.substring(7);
+            "NEEDS-ACTION": "invited",
+            "ACCEPTED": "accepted",
+            "DECLINED": "declined",
+            "TENTATIVE": "tentative",
+            "DELEGATED": "tentative"
+        };
 
-        if (attendee.isOrganizer) {
-            xmlAttendee.@rel = kEVENT_SCHEMA + "organizer";
-        } else {
-            xmlAttendee.@rel = kEVENT_SCHEMA + "attendee";
+        for each (var attendee in attendees) {
+            if (attendee.userType && attendee.userType != "INDIVIDUAL") {
+                // We can only take care of individuals.
+                continue;
+            }
+
+            var xmlAttendee = <gd:who xmlns:gd={gd}/>;
+
+            // Strip "mailto:" part
+            xmlAttendee.@email = attendee.id.substring(7);
+
+            if (attendee.isOrganizer) {
+                xmlAttendee.@rel = kEVENT_SCHEMA + "organizer";
+            } else {
+                xmlAttendee.@rel = kEVENT_SCHEMA + "attendee";
+            }
+
+            if (attendee.commonName) {
+                xmlAttendee.@valueString = attendee.commonName;
+            }
+
+            if (attendeeStatusMap[attendee.role]) {
+                xmlAttendee.gd::attendeeType.@value =
+                    attendeeStatusMap[attendee.role];
+            }
+
+            if (attendeeStatusMap[attendee.participationStatus]) {
+                xmlAttendee.gd::attendeeStatus.@value =
+                    attendeeStatusMap[attendee.participationStatus];
+            }
+
+            entry.gd::who += xmlAttendee;
         }
-
-        if (attendee.commonName) {
-            xmlAttendee.@valueString = attendee.commonName;
-        }
-
-        if (attendeeStatusMap[attendee.role]) {
-            xmlAttendee.gd::attendeeType.@value =
-                attendeeStatusMap[attendee.role];
-        }
-
-        if (attendeeStatusMap[attendee.participationStatus]) {
-            xmlAttendee.gd::attendeeStatus.@value =
-                attendeeStatusMap[attendee.participationStatus];
-        }
-
-        entry.gd::who += xmlAttendee;
     }
 
     // Don't notify attendees by default. Use a preference in case the user
@@ -704,7 +531,14 @@ function ItemToXMLEntry(aItem, aAuthorEmail, aAuthorName) {
 
         gdReminder.@minutes = discreteValue;
         gdReminder.@method = "alert";
-        entry.gd::when.gd::reminder += gdReminder;
+
+        if (aItem.recurrenceInfo) {
+            // On recurring items, set the reminder directly in the <entry> tag.
+            entry.gd::reminder += gdReminder;
+        } else {
+            // Otherwise, its a child of the gd:when element
+            entry.gd::when.gd::reminder += gdReminder;
+        }
     }
 
     // saved alarms
@@ -736,6 +570,31 @@ function ItemToXMLEntry(aItem, aAuthorEmail, aAuthorName) {
     gdAlarmSnoozeTime.@value = toRFC3339(icalSnoozeTime);
     entry.gd::extendedProperty += gdAlarmSnoozeTime;
 
+    // gd:extendedProperty (snooze recurring alarms)
+    var snoozeValue = "";
+    if (aItem.recurrenceInfo) {
+        // This is an evil workaround since we don't have a really good system
+        // to save the snooze time for recurring alarms or even retrieve them
+        // from the event. This should change when we have multiple alarms
+        // support.
+        var snoozeObj = {};
+        var enumerator = aItem.propertyEnumerator;
+        while (enumerator.hasMoreElements()) {
+            var prop = enumerator.getNext().QueryInterface(Components.interfaces.nsIProperty);
+            if (prop.name.substr(0, 18) == "X-MOZ-SNOOZE-TIME-") {
+                // We have a snooze time for a recurring event, add it to our object
+                snoozeObj[prop.name.substr(18)] = prop.value;
+            }
+        }
+        snoozeValue = snoozeObj.toSource();
+    }
+    // Now save the snooze object in source format as an extended property. Do
+    // so always, since its currently impossible to unset extended properties.
+    var gdAlarmRecurSnooze = <gd:extendedProperty xmlns:gd={gd}/>;
+    gdAlarmRecurSnooze.@name = "X-GOOGLE-SNOOZE-RECUR";
+    gdAlarmRecurSnooze.@value = snoozeValue;
+    entry.gd::extendedProperty += gdAlarmRecurSnooze;
+
     // gd:visibility
     var privacy = aItem.privacy || "default";
     entry.gd::visibility.@value = kEVENT_SCHEMA + privacy.toLowerCase();
@@ -765,7 +624,14 @@ function ItemToXMLEntry(aItem, aAuthorEmail, aAuthorName) {
 
             // Add all recurrence items to the ical string
             for each (var ritem in recurrenceItems) {
-                icalString += ritem.icalProperty.icalString + kNEWLINE;
+                var prop = ritem.icalProperty;
+                if (ritem instanceof Components.interfaces.calIRecurrenceDate) {
+                    // EXDATES require special casing, since they might contain
+                    // a TZID. To avoid the need for conversion of TZID strings,
+                    // convert to UTC before serialization.
+                    prop.valueAsDatetime = ritem.date.getInTimezone(UTC());
+                }
+                icalString += prop.icalString;
             }
 
             // Put the ical string in a <gd:recurrence> tag
@@ -920,8 +786,8 @@ function getItemEditURI(aItem) {
  */
 function XMLEntryToItem(aXMLEntry, aTimezone, aCalendar, aReferenceItem) {
 
-    if (aXMLEntry == null) {
-        throw new Components.Exception("", Components.results.NS_ERROR_DOM_SYNTAX_ERR);
+    if (!aXMLEntry || typeof(aXMLEntry) != "xml" || aXMLEntry.length() == 0) {
+        throw new Components.Exception("", Components.results.NS_ERROR_FAILURE);
     }
 
     var gCal = new Namespace("gCal", "http://schemas.google.com/gCal/2005");
@@ -933,7 +799,10 @@ function XMLEntryToItem(aXMLEntry, aTimezone, aCalendar, aReferenceItem) {
 
     try {
         // id
-        var id = aXMLEntry.id.toString();
+        var id = aXMLEntry.gd::extendedProperty
+                          .(@name == "X-MOZ-SYNCID")
+                          .@value.toString() ||
+                 aXMLEntry.id.toString();
         item.id = id.substring(id.lastIndexOf('/')+1);
 
         // link
@@ -961,29 +830,22 @@ function XMLEntryToItem(aXMLEntry, aTimezone, aCalendar, aReferenceItem) {
         item.status = aXMLEntry.gd::eventStatus.@value.toString()
                                .substring(39).toUpperCase();
 
-        // gd:when
-        var recurrenceInfo = aXMLEntry.gd::recurrence.toString();
-        if (recurrenceInfo.length == 0) {
-            // If no recurrence information is given, then there will only be
-            // one gd:when tag. Otherwise, we will be parsing the startDate from
-            // the recurrence information.
-            var when = aXMLEntry.gd::when;
-            item.startDate = fromRFC3339(when.@startTime, aTimezone);
-            item.endDate = fromRFC3339(when.@endTime, aTimezone);
+        // gd:reminder (preparation)
+        // Google's alarms are always related to the start
+        item.alarmRelated = Components.interfaces.calIItemBase.ALARM_RELATED_START;
 
-            if (!item.endDate) {
-                // We have a zero-duration event
-                item.endDate = item.startDate.clone();
-            }
-
-            // gd:reminder
-
-            // Google's alarms are always related to the start
-            item.alarmRelated = Components.interfaces.calIItemBase.ALARM_RELATED_START;
-
+        /**
+         * Helper function to parse all reminders in a tagset. This sets the
+         * item's alarm, and also saves all other alarms using the
+         * X-GOOGLE-OTHERALARMS property.
+         * 
+         * @param reminderTags      The tagset to parse.
+         */
+        function parseReminders(reminderTags) {
             var lastAlarm;
             var otherAlarms = [];
-            for each (var reminder in when.gd::reminder) {
+            // Go through all reminder tags given and pick the best alarm.
+            for each (var reminder in reminderTags) {
                 // We are only intrested in "alert" reminders. Other types
                 // include sms and email alerts, but thats not the point here.
                 if (reminder.@method == "alert") {
@@ -1001,6 +863,7 @@ function XMLEntryToItem(aXMLEntry, aTimezone, aCalendar, aReferenceItem) {
                     } else if (reminder.@minutes.toString()) {
                         alarmOffset.minutes = -reminder.@minutes;
                     } else {
+                        // Invalid alarm, skip it
                         continue;
                     }
                     alarmOffset.normalize();
@@ -1033,6 +896,25 @@ function XMLEntryToItem(aXMLEntry, aTimezone, aCalendar, aReferenceItem) {
 
             // Save other alarms that were set so we don't loose them
             item.setProperty("X-GOOGLE-OTHERALARMS", otherAlarms);
+        }
+
+        // gd:when
+        var recurrenceInfo = aXMLEntry.gd::recurrence.toString();
+        if (recurrenceInfo.length == 0) {
+            // If no recurrence information is given, then there will only be
+            // one gd:when tag. Otherwise, we will be parsing the startDate from
+            // the recurrence information.
+            var when = aXMLEntry.gd::when;
+            item.startDate = fromRFC3339(when.@startTime, aTimezone);
+            item.endDate = fromRFC3339(when.@endTime, aTimezone);
+
+            if (!item.endDate) {
+                // We have a zero-duration event
+                item.endDate = item.startDate.clone();
+            }
+
+            // gd:reminder
+            parseReminders(aXMLEntry.gd::when.gd::reminder);
         } else {
             if (!item.recurrenceInfo) {
                 item.recurrenceInfo = createRecurrenceInfo(item);
@@ -1097,6 +979,27 @@ function XMLEntryToItem(aXMLEntry, aTimezone, aCalendar, aReferenceItem) {
                 // event. See gdata issue 353.
                 item.recurrenceInfo = null;
             }
+
+            // gd:reminder (for recurring events)
+            // This element is supplied as a direct child to the <entry> element
+            // for recurring items.
+            parseReminders(aXMLEntry.gd::reminder);
+        }
+
+        // gd:recurrenceException
+        for each (var exception in aXMLEntry.gd::recurrenceException.(@specialized == "true").gd::entryLink.entry) {
+            // We only want specialized exceptions, mainly becuase I haven't
+            // quite found out if a non-specialized exception also corresponds
+            // to a normal exception as libical knows it.
+            var excItem = XMLEntryToItem(exception, aTimezone, aCalendar);
+
+            // Google uses the status field to reflect negative exceptions.
+            if (excItem.status == "CANCELED") {
+                item.recurrenceInfo.removeOccurrenceAt(excItem.recurrenceId);
+            } else {
+                excItem.calendar = aCalendar;
+                item.recurrenceInfo.modifyException(excItem, true);
+            }
         }
 
         // gd:extendedProperty (alarmLastAck)
@@ -1112,45 +1015,69 @@ function XMLEntryToItem(aXMLEntry, aTimezone, aCalendar, aReferenceItem) {
         var snoozeProperty = (dtSnoozeTime ? dtSnoozeTime.icalString : null);
         item.setProperty("X-MOZ-SNOOZE-TIME", snoozeProperty);
 
+        // gd:extendedProperty (snooze recurring alarms)
+        if (item.recurrenceInfo) { 
+            if (!gGoogleSandbox) {
+                // Initialize sandbox if it does not already exist
+                gGoogleSandbox = Components.utils.Sandbox("about:blank");
+            }
+
+            // Transform back the string into our snooze properties
+            var snoozeString = aXMLEntry.gd::extendedProperty
+                                        .(@name == "X-GOOGLE-SNOOZE-RECUR")
+                                        .@value.toString();
+            var snoozeObj = Components.utils.evalInSandbox(snoozeString,
+                                                           gGoogleSandbox);
+            if (snoozeObj) {
+                for (var rid in snoozeObj) {
+                    item.setProperty("X-MOZ-SNOOZE-TIME-" + rid,
+                                     snoozeObj[rid]);
+                }
+            }
+        }
+
         // gd:where
         item.setProperty("LOCATION",
                          aXMLEntry.gd::where.@valueString.toString());
         // gd:who
+        if (getPrefSafe("calendar.google.enableAttendees", false)) {
+            // XXX Only parse attendees if they are enabled, due to bug 407961
 
-        // This object can easily translate the Google's values to our values.
-        const attendeeStatusMap = {
-            // role
-            "event.optional": "OPT-PARTICIPANT",
-            "event.required": "REQ-PARTICIPANT",
+            // This object can easily translate Google's values to our values.
+            const attendeeStatusMap = {
+                // role
+                "event.optional": "OPT-PARTICIPANT",
+                "event.required": "REQ-PARTICIPANT",
 
-            // Participation Statii
-            "event.accepted": "ACCEPTED",
-            "event.declined": "DECLINED",
-            "event.invited": "NEEDS-ACTION",
-            "event.tentative": "TENTATIVE"
-        };
+                // Participation Statii
+                "event.accepted": "ACCEPTED",
+                "event.declined": "DECLINED",
+                "event.invited": "NEEDS-ACTION",
+                "event.tentative": "TENTATIVE"
+            };
 
-        // Iterate all attendee tags.
-        for each (var who in aXMLEntry.gd::who) {
-            var attendee = createAttendee();
+            // Iterate all attendee tags.
+            for each (var who in aXMLEntry.gd::who) {
+                var attendee = createAttendee();
 
-            var rel = who.@rel.toString().substring(33);
-            var type = who.gd::attendeeType.@value.toString().substring(33);
-            var status = who.gd::attendeeStatus.@value.toString().substring(33);
+                var rel = who.@rel.toString().substring(33);
+                var type = who.gd::attendeeType.@value.toString().substring(33);
+                var status = who.gd::attendeeStatus.@value.toString().substring(33);
 
-            attendee.id = "mailto:" + who.@email.toString();
-            attendee.commonName = who.@valueString.toString();
-            attendee.rsvp = false;
-            attendee.userType = "INDIVIDUAL";
-            attendee.isOrganizer = (rel == "event.organizer");
-            attendee.participationStatus = attendeeStatusMap[status];
-            attendee.role = attendeeStatusMap[type]
-            attendee.makeImmutable();
+                attendee.id = "mailto:" + who.@email.toString();
+                attendee.commonName = who.@valueString.toString();
+                attendee.rsvp = false;
+                attendee.userType = "INDIVIDUAL";
+                attendee.isOrganizer = (rel == "event.organizer");
+                attendee.participationStatus = attendeeStatusMap[status];
+                attendee.role = attendeeStatusMap[type]
+                attendee.makeImmutable();
 
-            if (attendee.isOrganizer) {
-                item.organizer = attendee;
-            } else {
-                item.addAttendee(attendee);
+                if (attendee.isOrganizer) {
+                    item.organizer = attendee;
+                } else {
+                    item.addAttendee(attendee);
+                }
             }
         }
 
@@ -1158,7 +1085,6 @@ function XMLEntryToItem(aXMLEntry, aTimezone, aCalendar, aReferenceItem) {
         if (aXMLEntry.gd::originalEvent.toString().length > 0) {
             var rId = aXMLEntry.gd::originalEvent.gd::when.@startTime;
             item.recurrenceId = fromRFC3339(rId.toString(), aTimezone);
-            // XXX Also set parentItem, but how?
         }
 
         // gd:visibility
@@ -1180,7 +1106,6 @@ function XMLEntryToItem(aXMLEntry, aTimezone, aCalendar, aReferenceItem) {
         item.setProperty("LAST-MODIFIED", fromRFC3339(aXMLEntry.updated,
                                                       aTimezone));
 
-        // TODO gd:recurrenceException: Enhancement tracked in bug 362650
         // TODO gd:comments: Enhancement tracked in bug 362653
 
         // XXX Google currently has no priority support. See
@@ -1208,11 +1133,11 @@ function LOGitem(item) {
         attendeeString += "\n" + LOGattendee(a);
     }
 
-    var rstr = "";
+    var rstr = "\n";
     if (item.recurrenceInfo) {
         var ritems = item.recurrenceInfo.getRecurrenceItems({});
         for each (var ritem in ritems) {
-            rstr += "\n\t\t" + ritem.icalProperty.icalString;
+            rstr += "\t\t" + ritem.icalProperty.icalString;
         }
     }
 
@@ -1235,7 +1160,7 @@ function LOGitem(item) {
         "\n\tisOccurrence: " + item.getProperty("x-GOOGLE-ITEM-IS-OCCURRENCE") +
         "\n\tOrganizer: " + LOGattendee(item.organizer) +
         "\n\tAttendees: " + attendeeString +
-        "\n\trecurrence: " + (rstr ? "yes: " + rstr : "no"));
+        "\n\trecurrence: " + (rstr.length > 1 ? "yes: " + rstr : "no"));
 }
 
 function LOGattendee(aAttendee, asString) {

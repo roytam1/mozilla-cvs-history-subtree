@@ -82,7 +82,7 @@ if [ -z "${INIT_SOURCED}" -o "${INIT_SOURCED}" != "TRUE" ]; then
     Exit()
     {
         if [ -n "$1" ] ; then
-            echo "$SCRIPTNAME: Exit: $*"
+            echo "$SCRIPTNAME: Exit: $* - FAILED"
             html_failed "<TR><TD>$*"
         fi
         echo "</TABLE><BR>" >> ${RESULTS}
@@ -178,14 +178,23 @@ if [ -z "${INIT_SOURCED}" -o "${INIT_SOURCED}" != "TRUE" ]; then
     COMMON=${TEST_COMMON-$common}
     export COMMON
 
+    MAKE=`which gmake`
+    if [ -z "$MAKE" ]; then
+		MAKE=`which make`
+    fi
+    if [ -z "$MAKE" ]; then
+		You are missing make.
+		exit 5
+    fi
+
     DIST=${DIST-${MOZILLA_ROOT}/dist}
     SECURITY_ROOT=${SECURITY_ROOT-${MOZILLA_ROOT}/security/nss}
     TESTDIR=${TESTDIR-${MOZILLA_ROOT}/tests_results/security}
-    OBJDIR=`(cd $COMMON; gmake objdir_name)`
-    OS_ARCH=`(cd $COMMON; gmake os_arch)`
-    DLL_PREFIX=`(cd $COMMON; gmake dll_prefix)`
-    DLL_SUFFIX=`(cd $COMMON; gmake dll_suffix)`
-    OS_NAME=`uname -s | sed -e "s/-[0-9]*\.[0-9]*//"`
+    OBJDIR=`(cd $COMMON; $MAKE objdir_name)`
+    OS_ARCH=`(cd $COMMON; $MAKE os_arch)`
+    DLL_PREFIX=`(cd $COMMON; $MAKE dll_prefix)`
+    DLL_SUFFIX=`(cd $COMMON; $MAKE dll_suffix)`
+    OS_NAME=`uname -s | sed -e "s/-[0-9]*\.[0-9]*//" | sed -e "s/-WOW64//"`
 
     # Pathnames constructed from ${TESTDIR} are passed to NSS tools
     # such as certutil, which don't understand Cygwin pathnames.
@@ -193,12 +202,28 @@ if [ -z "${INIT_SOURCED}" -o "${INIT_SOURCED}" != "TRUE" ]; then
     # regular slashes).
     if [ "${OS_ARCH}" = "WINNT" -a "$OS_NAME" = "CYGWIN_NT" ]; then
         TESTDIR=`cygpath -m ${TESTDIR}`
+        QADIR=`cygpath -m ${QADIR}`
     fi
+
+    # Same problem with MSYS/Mingw, except we need to start over with pwd -W
+    if [ "${OS_ARCH}" = "WINNT" -a "$OS_NAME" = "MINGW32_NT" ]; then
+		mingw_mozilla_root=`(cd ../../../..; pwd -W)`
+		MINGW_MOZILLA_ROOT=${MINGW_MOZILLA_ROOT-$mingw_mozilla_root}
+		TESTDIR=${MINGW_TESTDIR-${MINGW_MOZILLA_ROOT}/tests_results/security}
+    fi
+
+    # Same problem with MSYS/Mingw, except we need to start over with pwd -W
+    if [ "${OS_ARCH}" = "WINNT" -a "$OS_NAME" = "MINGW32_NT" ]; then
+		mingw_mozilla_root=`(cd ../../../..; pwd -W)`
+		MINGW_MOZILLA_ROOT=${MINGW_MOZILLA_ROOT-$mingw_mozilla_root}
+		TESTDIR=${MINGW_TESTDIR-${MINGW_MOZILLA_ROOT}/tests_results/security}
+    fi
+    echo testdir is $TESTDIR
 
 #in case of backward comp. tests the calling scripts set the
 #PATH and LD_LIBRARY_PATH and do not want them to be changed
     if [ -z "${DON_T_SET_PATHS}" -o "${DON_T_SET_PATHS}" != "TRUE" ] ; then
-        if [ "${OS_ARCH}" = "WINNT" -a "$OS_NAME"  != "CYGWIN_NT" ]; then
+        if [ "${OS_ARCH}" = "WINNT" -a "$OS_NAME"  != "CYGWIN_NT" -a "$OS_NAME" != "MINGW32_NT" ]; then
             PATH=.\;${DIST}/${OBJDIR}/bin\;${DIST}/${OBJDIR}/lib\;$PATH
             PATH=`perl ../path_uniq -d ';' "$PATH"`
         else
@@ -219,9 +244,18 @@ if [ -z "${INIT_SOURCED}" -o "${INIT_SOURCED}" != "TRUE" ]; then
         mkdir -p ${TESTDIR}
     fi
 
-#HOST and DOMSUF are needed for the server cert 
+#HOST and DOMSUF are needed for the server cert
+
+    DOMAINNAME=`which domainname`
+    if [ -z "${DOMSUF}" -a $? -eq 0 -a -n "${DOMAINNAME}" ]; then
+        DOMSUF=`domainname`
+    fi
+
     case $HOST in
         *\.*)
+            if [ -z "${DOMSUF}" ]; then
+                DOMSUF=`echo $HOST | sed -e "s/^[^.]*\.//"`
+            fi
             HOST=`echo $HOST | sed -e "s/\..*//"`
             ;;
         ?*)
@@ -230,6 +264,9 @@ if [ -z "${INIT_SOURCED}" -o "${INIT_SOURCED}" != "TRUE" ]; then
             HOST=`uname -n`
             case $HOST in
                 *\.*)
+                    if [ -z "${DOMSUF}" ]; then
+                        DOMSUF=`echo $HOST | sed -e "s/^[^.]*\.//"`
+                    fi
                     HOST=`echo $HOST | sed -e "s/\..*//"`
                     ;;
                 ?*)
@@ -243,12 +280,10 @@ if [ -z "${INIT_SOURCED}" -o "${INIT_SOURCED}" != "TRUE" ]; then
     esac
 
     if [ -z "${DOMSUF}" ]; then
-        DOMSUF=`domainname`
-        if  [ -z "${DOMSUF}" ]; then
-            echo "$SCRIPTNAME: Fatal DOMSUF env. variable is not defined."
-            exit 1 #does not need to be Exit, very early in script
-        fi
+        echo "$SCRIPTNAME: Fatal DOMSUF env. variable is not defined."
+        exit 1 #does not need to be Exit, very early in script
     fi
+
 #HOSTADDR was a workaround for the dist. stress test, and is probably 
 #not needed anymore (purpose: be able to use IP address for the server 
 #cert instead of PC name which was not in the DNS because of dyn IP address
@@ -321,23 +356,24 @@ if [ -z "${INIT_SOURCED}" -o "${INIT_SOURCED}" != "TRUE" ]; then
         html "<HR><BR>" 
         html "<HTML><BODY>" 
 
-        echo "********************************************" | tee ${LOGFILE}
-        echo "   Platform: ${OBJDIR}" | tee ${LOGFILE}
-        echo "   Results: ${HOST}.$version" | tee ${LOGFILE}
-        echo "********************************************" | tee ${LOGFILE}
-	echo "$BC_ACTION" | tee ${LOGFILE}
-    #if running remote side of the distributed stress test let the user know who it is...
+        echo "********************************************" | tee -a ${LOGFILE}
+        echo "   Platform: ${OBJDIR}"                       | tee -a ${LOGFILE}
+        echo "   Results: ${HOST}.$version"                 | tee -a ${LOGFILE}
+        echo "********************************************" | tee -a ${LOGFILE}
+	echo "$BC_ACTION"                                   | tee -a ${LOGFILE}
+#if running remote side of the distributed stress test 
+# let the user know who it is...
     elif [ -n "$DO_REM_ST" -a "$DO_REM_ST" = "TRUE" ] ; then
-        echo "********************************************" | tee ${LOGFILE}
-        echo "   Platform: ${OBJDIR}" | tee ${LOGFILE}
-        echo "   Results: ${HOST}.$version" | tee ${LOGFILE}
-        echo "   remote side of distributed stress test " | tee ${LOGFILE}
-        echo "   `uname -n -s`" | tee ${LOGFILE}
-        echo "********************************************" | tee ${LOGFILE}
+        echo "********************************************" | tee -a ${LOGFILE}
+        echo "   Platform: ${OBJDIR}"                       | tee -a ${LOGFILE}
+        echo "   Results: ${HOST}.$version"                 | tee -a ${LOGFILE}
+        echo "   remote side of distributed stress test "   | tee -a ${LOGFILE}
+        echo "   `uname -n -s`"                             | tee -a ${LOGFILE}
+        echo "********************************************" | tee -a ${LOGFILE}
     fi
 
-    echo "$SCRIPTNAME init: Testing PATH $PATH against LIB $LD_LIBRARY_PATH" |
-        tee ${LOGFILE}
+    echo "$SCRIPTNAME init: Testing PATH $PATH against LIB $LD_LIBRARY_PATH" |\
+        tee -a ${LOGFILE}
 
     KILL="kill"
 
@@ -387,6 +423,11 @@ if [ -z "${INIT_SOURCED}" -o "${INIT_SOURCED}" != "TRUE" ]; then
     EXT_SERVERDIR=${HOSTDIR}/ext_server
     EXT_CLIENTDIR=${HOSTDIR}/ext_client
 
+    IOPR_CADIR=${HOSTDIR}/CA_iopr
+    IOPR_SSL_SERVERDIR=${HOSTDIR}/server_ssl_iopr
+    IOPR_SSL_CLIENTDIR=${HOSTDIR}/client_ssl_iopr
+    IOPR_OCSP_CLIENTDIR=${HOSTDIR}/client_ocsp_iopr
+
     CERT_EXTENSIONS_DIR=${HOSTDIR}/cert_extensions
 
     PWFILE=${TMP}/tests.pw.$$
@@ -420,6 +461,10 @@ if [ -z "${INIT_SOURCED}" -o "${INIT_SOURCED}" != "TRUE" ]; then
     R_CADIR=../CA
     R_SERVERDIR=../server
     R_CLIENTDIR=../client
+    R_IOPR_CADIR=../CA_iopr
+    R_IOPR_SSL_SERVERDIR=../server_ssl_iopr
+    R_IOPR_SSL_CLIENTDIR=../client_ssl_iopr
+    R_IOPR_OCSP_CLIENTDIR=../client_ocsp_iopr
     R_ALICEDIR=../alicedir
     R_BOBDIR=../bobdir
     R_DAVEDIR=../dave
@@ -464,9 +509,9 @@ if [ -z "${INIT_SOURCED}" -o "${INIT_SOURCED}" != "TRUE" ]; then
     R_FIPSBADPWFILE=../tests.fipsbadpw.$$
     R_FIPSP12PWFILE=../tests.fipsp12pw.$$
 
-    echo "fips140" > ${FIPSPWFILE}
+    echo "fIps140" > ${FIPSPWFILE}
     echo "fips104" > ${FIPSBADPWFILE}
-    echo "pkcs12fips140" > ${FIPSP12PWFILE}
+    echo "pKcs12fips140" > ${FIPSP12PWFILE}
 
     # a new log file, short - fast to search, mostly for tools to
     # see if their portion of the cert has succeeded, also for me -
@@ -523,6 +568,20 @@ if [ -z "${INIT_SOURCED}" -o "${INIT_SOURCED}" != "TRUE" ]; then
     TOTAL_GRP_NUM=3
     
     RELOAD_CRL=1
+
+    #################################################
+    # Interoperability testing constatnts
+    #
+    # if suite is setup for testing, IOPR_HOSTADDR_LIST should have
+    # at least one host name(FQDN)
+    # Example   IOPR_HOSTADDR_LIST="goa1.SFBay.Sun.COM"
+
+    if [ -z "`echo ${IOPR_HOSTADDR_LIST} | grep '[A-Za-z]'`" ]; then
+        IOPR=0
+    else
+        IOPR=1
+    fi
+    #################################################
 
     SCRIPTNAME=$0
     INIT_SOURCED=TRUE   #whatever one does - NEVER export this one please

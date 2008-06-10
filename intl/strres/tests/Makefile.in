@@ -60,6 +60,7 @@ EXPORT_RESOURCE	= \
 		$(srcdir)/strres-test.xul \
 		$(srcdir)/strres-test.dtd \
 		$(srcdir)/strres-test.js \
+		$(srcdir)/397093.properties \
 		$(NULL)
 
 LIBS		= \

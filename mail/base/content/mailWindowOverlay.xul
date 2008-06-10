@@ -1156,7 +1156,7 @@
               <menuitem id="newAccountMenuItem" label="&newAccountCmd.label;"
                          accesskey="&newAccountCmd.accesskey;"
                          oncommand="MsgAccountWizard();"/>
-              <menuseparator/>
+              <menuseparator id="newPopupMenuSeparator"/>
               <menuitem id="menu_newCard"/>
             </menupopup>
           </menu>
@@ -1168,29 +1168,30 @@
             <menupopup id="attachmentMenuList" onpopupshowing="FillAttachmentListPopup(this);"/>
           </menu>
           <menuitem id="menu_close"/>
-          <menuseparator/>
+          <menuseparator id="fileMenuAfterCloseSeparator"/>
           <menu id="menu_saveAs" label="&saveAsMenu.label;" accesskey="&saveAsMenu.accesskey;">
-            <menupopup>
+            <menupopup id="menu_SavePopup">
               <menuitem id="menu_saveAsFile" label="&saveAsFileCmd.label;"
                accesskey="&saveAsFileCmd.accesskey;"
                key="key_saveAsFile"
                command="cmd_saveAsFile"/>
-              <menuitem label="&saveAsTemplateCmd.label;"
+              <menuitem id="menu_saveAsTemplate" label="&saveAsTemplateCmd.label;"
                accesskey="&saveAsTemplateCmd.accesskey;"
                command="cmd_saveAsTemplate"/>
             </menupopup>
           </menu>
-          <menuseparator/>
-
+          <menuseparator id="fileMenuAfterSaveSeparator"/>
           <menu label="&getNewMsgForCmd.label;" accesskey="&getNewMsgForCmd.accesskey;"
                 sortResource="http://home.netscape.com/NC-rdf#FolderTreeName" sortDirection="ascending"
                 datasources="rdf:msgaccountmanager rdf:mailnewsfolders"
                 containment="http://home.netscape.com/NC-rdf#child"
                 ref="msgaccounts:/"
                 command="cmd_getNewMessages">
-            <menupopup>
-              <menuitem label="&getAllNewMsgCmd.label;" key="key_getAllNewMessages" command="cmd_getMsgsForAuthAccounts"/>
-              <menuseparator/>
+            <menupopup id="menu_getAllNewMsgPopup">
+              <menuitem id="menu_getAllNewMsg" label="&getAllNewMsgCmd.label;"
+                        key="key_getAllNewMessages"
+                        command="cmd_getMsgsForAuthAccounts"/>
+              <menuseparator id="fileMenuAfterGetNewMsgSeparator"/>
             </menupopup>
             <template>
               <rule nc:IsServer="true" nc:CanGetMessages="true">
@@ -1202,14 +1203,13 @@
             </template>
             <menupopup/>
           </menu>
-
           <menuitem id="menu_getnextnmsg" label="&getNextNMsgCmd.label;" accesskey="&getNextNMsgCmd.accesskey;"
                     command="cmd_getNextNMessages"/>
           <menuitem id="menu_sendunsentmsgs" label="&sendUnsentCmd.label;"
                     accesskey="&sendUnsentCmd.accesskey;" command="cmd_sendUnsentMsgs"/>
           <menuitem id="menu_subscribe" label="&subscribeCmd.label;"
                     accesskey="&subscribeCmd.accesskey;" oncommand="MsgSubscribe();"/>
-          <menuseparator/>
+          <menuseparator id="fileMenuAfterSubscribeSeparator"/>
           <menuitem id="menu_renameFolder" label="&renameFolder.label;"
                  accesskey="&renameFolder.accesskey;"
                  key="key_renameFolder"
@@ -1220,19 +1220,30 @@
                  command="cmd_emptyTrash"/>
           <menuseparator id="trashMenuSeparator"/>
           <menu id="offlineMenuItem" label="&offlineMenu.label;" accesskey="&offlineMenu.accesskey;">
-            <menupopup>
+            <menupopup id="menu_OfflinePopup">
               <menuitem id="goOfflineMenuItem" type="checkbox" label="&offlineGoOfflineCmd.label;" 
                         accesskey="&offlineGoOfflineCmd.accesskey;" oncommand="MailOfflineMgr.toggleOfflineStatus();"/>
-              <menuseparator/>
-              <menuitem label="&synchronizeOfflineCmd.label;" accesskey="&synchronizeOfflineCmd.accesskey;" command="cmd_synchronizeOffline"/>
-              <menuitem label="&settingsOfflineCmd.label;" accesskey="&settingsOfflineCmd.accesskey;" command="cmd_settingsOffline"/>
-              <menuseparator/>
-              <menuitem label="&downloadStarredCmd.label;" accesskey="&downloadStarredCmd.accesskey;"    command="cmd_downloadFlagged"/>
-              <menuitem label="&downloadSelectedCmd.label;" accesskey="&downloadSelectedCmd.accesskey;"   command="cmd_downloadSelected"/>
+              <menuseparator id="offlineMenuAfterGoSeparator"/>
+              <menuitem id="menu_synchronizeOffline"
+                        label="&synchronizeOfflineCmd.label;"
+                        accesskey="&synchronizeOfflineCmd.accesskey;"
+                        command="cmd_synchronizeOffline"/>
+              <menuitem id="menu_settingsOffline"
+                        label="&settingsOfflineCmd.label;"
+                        accesskey="&settingsOfflineCmd.accesskey;"
+                        command="cmd_settingsOffline"/>
+              <menuseparator id="offlineMenuAfterSettingsSeparator"/>
+              <menuitem id="menu_downloadFlagged"
+                        label="&downloadStarredCmd.label;"
+                        accesskey="&downloadStarredCmd.accesskey;"
+                        command="cmd_downloadFlagged"/>
+              <menuitem id="menu_downloadSelected"
+                        label="&downloadSelectedCmd.label;"
+                        accesskey="&downloadSelectedCmd.accesskey;"
+                        command="cmd_downloadSelected"/>
             </menupopup>
           </menu>
-          <menuseparator/>
-
+          <menuseparator id="fileMenuAfterOfflineSeparator"/>
           <menuitem id="printSetupMenuItem" label="&printSetupCmd.label;" accesskey="&printSetupCmd.accesskey;" command="cmd_printSetup"/>
 #ifndef XP_MACOSX
           <menuitem id="printPreviewMenuItem" label="&printPreviewCmd.label;" accesskey="&printPreviewCmd.accesskey;" command="cmd_printpreview"/>
@@ -1243,32 +1254,34 @@
     
     <!-- Edit -->
     <menu id="menu_Edit" oncommand="CommandUpdate_UndoRedo();">
-      <menupopup onpopupshowing="InitEditMessagesMenu()">
+      <menupopup id="menu_EditPopup" onpopupshowing="InitEditMessagesMenu()">
         <menuitem id="menu_undo" label="&undoDefaultCmd.label;" accesskey="&undoDefaultCmd.accesskey;" key="key_undo" command="cmd_undo"/>
         <menuitem id="menu_redo" label="&redoDefaultCmd.label;" accesskey="&redoDefaultCmd.accesskey;" key="key_redo" command="cmd_redo"/>
-        <menuseparator/>
+        <menuseparator id="editMenuAfterRedoSeparator"/>
         <menuitem id="menu_cut"/>
         <menuitem id="menu_copy"/>
         <menuitem id="menu_paste"/>
         <menuitem id="menu_delete" command="cmd_delete"/>
-        <menuseparator/>
+        <menuseparator id="editMenuAfterDeleteSeparator"/>
         <menu id="menu_select" label="&selectMenu.label;" accesskey="&selectMenu.accesskey;">
-          <menupopup>
-            <menuitem label="&all.label;" accesskey="&all.accesskey;" key="key_selectAll"
-                      command="cmd_selectAll"/>
-            <menuseparator/>
+          <menupopup id="menu_SelectPopup">
+            <menuitem id="menu_SelectAll" label="&all.label;" 
+             accesskey="&all.accesskey;" 
+             key="key_selectAll"
+             command="cmd_selectAll"/>
+            <menuseparator id="selectMenuSeparator"/>
             <menuitem id="menu_selectThread" label="&selectThreadCmd.label;"
              accesskey="&selectThreadCmd.accesskey;"
              key="key_selectThread"
              command="cmd_selectThread"/>
           </menupopup>
         </menu>
-        <menuseparator/>
+        <menuseparator id="editMenuAfterSelectSeparator"/>
         <menu id="menu_find" label="&findMenu.label;" accesskey="&findMenu.accesskey;">
-          <menupopup>
+          <menupopup id="menu_FindPopup">
             <menuitem id="menu_findCmd" label="&findCmd.label;" key="key_find" accesskey="&findCmd.accesskey;" command="cmd_find"/>
             <menuitem id="menu_findAgainCmd" label="&findAgainCmd.label;" key="key_findAgain" accesskey="&findAgainCmd.accesskey;" command="cmd_findAgain"/>
-            <menuseparator/>
+            <menuseparator id="editMenuAfterFindSeparator"/>
             <menuitem id="searchMailCmd" label="&searchMailCmd.label;" 
                       key="key_searchMail" 
                       accesskey="&searchMailCmd.accesskey;" 
@@ -1300,7 +1313,6 @@
     <!-- View -->
     <menu id="menu_View">
       <menupopup id="menu_View_Popup" onpopupshowing="view_init()">
-
         <menu id="menu_Toolbars">
           <menupopup id="view_toolbars_popup">
             <menuitem id="menu_showMessengerToolbar"
@@ -1310,11 +1322,10 @@
              oncommand="onViewToolbarCommand('mail-bar2', 'menu_showMessengerToolbar');"
              checked="true"/>
             <menuitem type="checkbox" id="menu_showTaskbar"/>
-            <menuseparator/>
+            <menuseparator id="viewMenuAfterTaskbarSeparator"/>
             <menuitem id="menu_customizeToolbar" oncommand="CustomizeMailToolbar('mail-toolbox');" label="&customizeToolbar.label;" accesskey="&customizeToolbar.accesskey;"/>
           </menupopup>
         </menu>
-
         <menu id="menu_MessagePaneLayout" label="&messagePaneLayoutStyle.label;" accesskey="&messagePaneLayoutStyle.accesskey;">
           <menupopup id="view_layout_popup" onpopupshowing="InitViewLayoutStyleMenu(event)">
             <menuitem id="messagePaneClassic" type="radio" label="&messagePaneClassic.label;" name="viewlayoutgroup"
@@ -1327,14 +1338,13 @@
               <menuitem id="threadPaneWide" type="radio" label="&threadPaneWide.label;" name="viewlayoutgroup"
                         accesskey="&threadPaneWide.accesskey;" oncommand="ChangeMailLayout(kWideThreadPaneConfig);"/>
 -->
-            <menuseparator/>
+            <menuseparator id="viewMenuAfterPaneVerticalSeparator"/>
             <menuitem id="menu_showMessage" type="checkbox" label="&showMessageCmd.label;" key="key_toggleMessagePane"
                       accesskey="&showMessageCmd.accesskey;" oncommand="MsgToggleMessagePane();"/>
           </menupopup>
         </menu>
-
         <menu id="menu_FolderViews" label="&folderView.label;" accesskey="&folderView.accesskey;">
-          <menupopup onpopupshowing="InitViewFolderViewsMenu(event)">
+          <menupopup id="menu_FolderViewsPopup" onpopupshowing="InitViewFolderViewsMenu(event)">
             <menuitem id="menu_allFolders"      label="&allFolders.label;" accesskey="&allFolders.accesskey;" 
                       type="radio" name="viewmessages" oncommand="loadFolderView(0);"/>
             <menuitem id="menu_unreadFolders"   label="&unreadFolders.label;" accesskey="&unreadFolders.accesskey;"
@@ -1345,11 +1355,9 @@
                       type="radio" name="viewmessages" oncommand="loadFolderView(3);"/>
           </menupopup>
         </menu>
-
         <menuseparator id="viewSortMenuSeparator"/>
-
         <menu id="viewSortMenu" accesskey="&sortMenu.accesskey;" label="&sortMenu.label;">
-          <menupopup onpopupshowing="InitViewSortByMenu()">
+          <menupopup id="menu_viewSortPopup" onpopupshowing="InitViewSortByMenu()">
             <menuitem id="sortByDateMenuitem" type="radio" name="sortby" label="&sortByDateCmd.label;" accesskey="&sortByDateCmd.accesskey;" oncommand="MsgSortByDate()"/>
             <menuitem id="sortByFlagMenuitem" type="radio" name="sortby" label="&sortByStarCmd.label;" accesskey="&sortByStarCmd.accesskey;" oncommand="MsgSortByFlagged()"/>
             <menuitem id="sortByOrderReceivedMenuitem" type="radio" name="sortby" label="&sortByOrderReceivedCmd.label;"  accesskey="&sortByOrderReceivedCmd.accesskey;" oncommand="MsgSortByOrderReceived()"/>
@@ -1363,10 +1371,10 @@
             <menuitem id="sortByTagsMenuitem" type="radio" name="sortby" label="&sortByTagsCmd.label;" accesskey="&sortByTagsCmd.accesskey;" oncommand="MsgSortByTags()"/>
             <menuitem id="sortByJunkStatusMenuitem" type="radio" name="sortby" label="&sortByJunkStatusCmd.label;" accesskey="&sortByJunkStatusCmd.accesskey;" oncommand="MsgSortByJunkStatus()"/>
             <menuitem id="sortByAttachmentsMenuitem" type="radio" name="sortby" label="&sortByAttachmentsCmd.label;" accesskey="&sortByAttachmentsCmd.accesskey;" oncommand="MsgSortByAttachments()"/>
-            <menuseparator/>
+            <menuseparator id="sortAfterAttachmentSeparator"/>
             <menuitem id="sortAscending" type="radio" name="sortdirection" label="&sortAscending.label;" accesskey="&sortAscending.accesskey;" oncommand="MsgSortAscending()"/>
             <menuitem id="sortDescending" type="radio" name="sortdirection" label="&sortDescending.label;" accesskey="&sortDescending.accesskey;" oncommand="MsgSortDescending()"/>
-            <menuseparator/>
+            <menuseparator id="sortAfterDescendingSeparator"/>
             <menuitem id="sortThreaded" type="radio" name="threaded" label="&sortThreaded.label;" accesskey="&sortThreaded.accesskey;" oncommand="MsgSortThreaded();"/>
             <menuitem id="sortUnthreaded" type="radio" name="threaded" label="&sortUnthreaded.label;" accesskey="&sortUnthreaded.accesskey;" oncommand="MsgSortUnthreaded();"/>
             <menuitem id="groupBySort" type="radio" name="group" label="&groupBySort.label;" accesskey="&groupBySort.accesskey;" oncommand="MsgGroupBySort();"
@@ -1376,43 +1384,40 @@
               />
           </menupopup>
         </menu>
-
         <menu id="viewMessageViewMenu" label="&msgsMenu.label;" accesskey="&msgsMenu.accesskey;"
               command="mailHideMenus" oncommand="ViewChangeByMenuitem(event.target);">
             <menupopup id="viewMessagePopup" onpopupshowing="RefreshViewPopup(this, false);">
               <menuitem id="viewMessageAll"    value="0" type="radio" label="&viewAll.label;" accesskey="&viewAll.accesskey;"/>
               <menuitem id="viewMessageUnread" value="1" type="radio" label="&viewUnread.label;" accesskey="&viewUnread.accesskey;"/>
-              <menuseparator/>
+              <menuseparator id="messageViewAfterUnreadSeparator"/>
               <menu id="viewMessageTags" label="&viewTags.label;" accesskey="&viewTags.accesskey;">
                 <menupopup id="viewMessageTagsPopup" onpopupshowing="RefreshTagsPopup(this, false);"/>
               </menu>
               <menu id="viewMessageCustomViews" label="&viewCustomViews.label;" accesskey="&viewCustomViews.accesskey;">
                 <menupopup id="viewMessageCustomViewsPopup" onpopupshowing="RefreshCustomViewsPopup(this, false);"/>
               </menu>
-              <menuseparator/>
+              <menuseparator id="messageViewAfterCustomSeparator"/>
               <menuitem id="viewMessageVirtualFolder" value="7" label="&viewVirtualFolder.label;" accesskey="&viewVirtualFolder.accesskey;"/>
               <menuitem id="viewMessageCustomize"     value="8" label="&viewCustomizeView.label;" accesskey="&viewCustomizeView.accesskey;"/>
             </menupopup>
           </menu>
 
           <menu label="&threads.label;" id="viewMessagesMenu" accesskey="&threads.accesskey;">
-            <menupopup onpopupshowing="InitViewMessagesMenu()">
+            <menupopup id="menu_ThreadsPopup" onpopupshowing="InitViewMessagesMenu()">
               <menuitem id="viewAllMessagesMenuItem" type="radio" name="viewmessages" label="&allMsgsCmd.label;" accesskey="&allMsgsCmd.accesskey;" disabled="true" command="cmd_viewAllMsgs"/>
               <menuitem id="viewUnreadMessagesMenuItem" type="radio" name="viewmessages" label="&unreadMsgsCmd.label;" accesskey="&unreadMsgsCmd.accesskey;" disabled="true" command="cmd_viewUnreadMsgs"/>
               <menuitem id="viewThreadsWithUnreadMenuItem" type="radio" name="viewmessages" label="&threadsWithUnreadCmd.label;" accesskey="&threadsWithUnreadCmd.accesskey;" disabled="true" command="cmd_viewThreadsWithUnread"/>
               <menuitem id="viewWatchedThreadsWithUnreadMenuItem" type="radio" name="viewmessages" label="&watchedThreadsWithUnreadCmd.label;" accesskey="&watchedThreadsWithUnreadCmd.accesskey;" disabled="true" command="cmd_viewWatchedThreadsWithUnread"/>
-              <menuseparator/>
+              <menuseparator id="threadsAfterWatchedSeparator"/>
               <menuitem id="viewIgnoredThreadsMenuItem" type="checkbox" label="&ignoredThreadsCmd.label;" disabled="true" command="cmd_viewIgnoredThreads" accesskey="&ignoredThreadsCmd.accesskey;"/>
-              <menuseparator/>
+              <menuseparator id="threadsAfterIgnoredSeparator"/>
               <menuitem id="menu_expandAllThreads" label="&expandAllThreadsCmd.label;" accesskey="&expandAllThreadsCmd.accesskey;" key="key_expandAllThreads" disabled="true" command="cmd_expandAllThreads"/>
               <menuitem id="collapseAllThreads" label="&collapseAllThreadsCmd.label;" accesskey="&collapseAllThreadsCmd.accesskey;" key="key_collapseAllThreads" disabled="true" command="cmd_collapseAllThreads"/>
             </menupopup>
           </menu>
-
-          <menuseparator/>
-
+          <menuseparator id="viewAfterThreadsSeparator"/>
           <menu id="viewheadersmenu" label="&headersMenu.label;" accesskey="&headersMenu.accesskey;">
-            <menupopup  onpopupshowing="InitViewHeadersMenu();">
+            <menupopup id="menu_HeadersPopup" onpopupshowing="InitViewHeadersMenu();">
               <menuitem id="viewallheaders"
                type="radio"
                name="viewheadergroup"
@@ -1427,7 +1432,6 @@
                oncommand="MsgViewNormalHeaders();"/>
             </menupopup>
           </menu>
-
           <menu id="viewBodyMenu" accesskey="&bodyMenu.accesskey;" label="&bodyMenu.label;">
             <menupopup id="viewBodyPopMenu" onpopupshowing="InitViewBodyMenu()">
               <menuitem id="bodyAllowHTML" type="radio" name="bodyPlaintextVsHTMLPref" label="&bodyAllowHTML.label;"
@@ -1439,33 +1443,30 @@
                         accesskey="&bodyAsPlaintext.accesskey;" oncommand="MsgBodyAsPlaintext()"/>
             </menupopup>
           </menu>
-
           <menuitem id="viewAttachmentsInlineMenuitem" label="&viewAttachmentsInlineCmd.label;" accesskey="&viewAttachmentsInlineCmd.accesskey;"
             oncommand="ToggleInlineAttachment(event.target)" type="checkbox" checked="true"/>
-          <menuseparator/>
-
+          <menuseparator id="viewAfterAttachmentsSeparator"/>
           <menu id="viewTextSizeMenu" label="&textSize.label;" accesskey="&textSize.accesskey;">
-            <menupopup>
-          <menuitem id="menu_textZoomEnlarge" key="key_textZoomEnlarge" label="&textZoomEnlargeCmd.label;" accesskey="&textZoomEnlargeCmd.accesskey;"
-                    command="cmd_textZoomEnlarge"/>
-          <menuitem id="menu_textZoomReduce" key="key_textZoomReduce" label="&textZoomReduceCmd.label;" accesskey="&textZoomReduceCmd.accesskey;"
-                    command="cmd_textZoomReduce"/>
-              <menuseparator/>
+            <menupopup id="menu_TextSizePopup">
+              <menuitem id="menu_textZoomEnlarge" key="key_textZoomEnlarge" label="&textZoomEnlargeCmd.label;" accesskey="&textZoomEnlargeCmd.accesskey;"
+                        command="cmd_textZoomEnlarge"/>
+              <menuitem id="menu_textZoomReduce" key="key_textZoomReduce" label="&textZoomReduceCmd.label;" accesskey="&textZoomReduceCmd.accesskey;"
+                        command="cmd_textZoomReduce"/>
+              <menuseparator id="textSizeAfterReduceSeparator"/>
               <menuitem key="key_textZoomReset" label="&textZoomResetCmd.label;" accesskey="&textZoomResetCmd.accesskey;" command="cmd_textZoomReset"/>
             </menupopup>
           </menu>
-
           <menu id="mailviewCharsetMenu" />
-          <menuseparator/>
+          <menuseparator id="viewAfterCharsetSeparator"/>
           <menuitem id="pageSourceMenuItem" label="&pageSourceCmd.label;" key="key_viewPageSource" accesskey="&pageSourceCmd.accesskey;" command="cmd_viewPageSource"/>
         </menupopup>
         </menu>
 
         <!-- Go -->
-        <menu label="&goMenu.label;" accesskey="&goMenu.accesskey;">
-          <menupopup  onpopupshowing="InitGoMessagesMenu();">
+        <menu id="menu_Go" label="&goMenu.label;" accesskey="&goMenu.accesskey;">
+          <menupopup id="menu_GoPopup" onpopupshowing="InitGoMessagesMenu();">
           <menu id="goNextMenu" label="&nextMenu.label;" accesskey="&nextMenu.accesskey;">
-            <menupopup>
+            <menupopup id="menu_GoNextPopup">
               <menuitem id="menu_nextMsg" label="&nextMsgCmd.label;" accesskey="&nextMsgCmd.accesskey;" command="cmd_nextMsg"
 #ifndef XP_MACOSX
                         key="key_nextMsg"
@@ -1476,8 +1477,8 @@
                         key="key_nextUnreadMsg"
 #endif
               />
-              <menuitem id="menu_nextStarredMsg" label="&nextStarredMsgCmd.label;" accesskey="&nextStarredMsgCmd.accesskey;" command="cmd_nextFlaggedMsg"/>
-              <menuseparator/>
+              <menuitem id="menu_nextFlaggedMsg" label="&nextStarredMsgCmd.label;" accesskey="&nextStarredMsgCmd.accesskey;" command="cmd_nextFlaggedMsg"/>
+              <menuseparator id="goNextAfterFlaggedSeparator"/>
               <menuitem id="menu_nextUnreadThread" label="&nextUnreadThread.label;" accesskey="&nextUnreadThreadCmd.accesskey;" command="cmd_nextUnreadThread"
 #ifndef XP_MACOSX
                         key="key_nextUnreadThread"
@@ -1486,7 +1487,7 @@
             </menupopup>
           </menu>
           <menu id="goPreviousMenu" label="&prevMenu.label;" accesskey="&prevMenu.accesskey;">
-            <menupopup>
+            <menupopup id="menu_GoPreviousPopup">
               <menuitem id="menu_prevMsg" label="&prevMsgCmd.label;" accesskey="&previousMsgCmd.accesskey;" command="cmd_previousMsg"
 #ifndef XP_MACOSX
                         key="key_previousMsg"
@@ -1497,7 +1498,7 @@
                         key="key_previousUnreadMsg"
 #endif
               />
-              <menuitem id="menu_prevStarredMsg" label="&prevStarredMsgCmd.label;" accesskey="&prevStarredMsgCmd.accesskey;" command="cmd_previousFlaggedMsg"/>
+              <menuitem id="menu_prevFlaggedMsg" label="&prevStarredMsgCmd.label;" accesskey="&prevStarredMsgCmd.accesskey;" command="cmd_previousFlaggedMsg"/>
             </menupopup>
           </menu>
           <menuitem id="menu_goForward" label="&goForwardCmd.label;" accesskey="&goForwardCmd.accesskey;" command="cmd_goForward"
@@ -1542,9 +1543,15 @@
               key="key_forward"
               command="cmd_forward"/>
             <menu id="forwardAsMenu" label="&forwardAsMenu.label;" accesskey="&forwardAsMenu.accesskey;">
-              <menupopup>
-                <menuitem label="&forwardAsInline.label;" accesskey="&forwardAsInline.accesskey;" command="cmd_forwardInline"/>
-                <menuitem label="&forwardAsAttachmentCmd.label;" accesskey="&forwardAsAttachmentCmd.accesskey;" command="cmd_forwardAttachment"/>
+              <menupopup id="menu_forwardAsPopup">
+                <menuitem id="menu_forwardAsInline"
+                 label="&forwardAsInline.label;"
+                 accesskey="&forwardAsInline.accesskey;"
+                 command="cmd_forwardInline"/>
+                <menuitem id="menu_forwardAsAttachment"
+                 label="&forwardAsAttachmentCmd.label;"
+                 accesskey="&forwardAsAttachmentCmd.accesskey;"
+                 command="cmd_forwardAttachment"/>
               </menupopup>
             </menu>
             <menuitem id="menu_editMsgAsNew" label="&editMsgAsNewCmd.label;"
@@ -1555,11 +1562,11 @@
               command="cmd_openMessage"
               accesskey="&openMessageWindowCmd.accesskey;"
               key="key_openMessage"/>
-            <menuseparator/>
+            <menuseparator id="messageAfterOpenMsgSeparator"/>
             <menu label="&moveMsgMenu.label;" accesskey="&moveMsgMenu.accesskey;" id="moveMenu" datasources="rdf:null"
                 sortResource="http://home.netscape.com/NC-rdf#FolderTreeName"
                 sortDirection="ascending">
-              <menupopup>
+              <menupopup id="menu_MovePopup">
                 <menu label="&moveCopyMsgRecentMenu.label;" accesskey="&moveCopyMsgRecentMenu.accesskey;" 
                       sortResource="http://home.netscape.com/NC-rdf#FolderTreeName"
                       sortDirection="ascending"
@@ -1568,7 +1575,7 @@
                   <menupopup/>
                   <template>
                     <rule nc:CanFileMessages="true">
-                      <menupopup>
+                      <menupopup id="menu_MoveRecentPopup">
                         <menuitem uri="..." class="folderMenuItem menuitem-iconic"
                           label="rdf:http://home.netscape.com/NC-rdf#FolderTreeSimpleName"
                           oncommand="MsgMoveMessage(event.target.id)" 
@@ -1581,15 +1588,17 @@
                     </rule>
                   </template>
                 </menu>
-                <menuseparator/>
+                <menuseparator id="moveMsgRecentSeparator"/>
               </menupopup>
               <template>
                 <rule nc:NoSelect="true" iscontainer="true" isempty="false">
-                  <menupopup>
+                  <menupopup id="menu_folderMenuPopup1">
                     <menu uri="..."  class="folderMenuItem menu-iconic" label="rdf:http://home.netscape.com/NC-rdf#Name">
-                      <menupopup>
-                        <menuitem label="&fileHereMenu.label;" accesskey="&fileHereMenu.accesskey;" disabled="true"/>
-                        <menuseparator/>
+                      <menupopup id="menu_fileHerePopup1">
+                        <menuitem id="menu_fileHere1" label="&fileHereMenu.label;"
+                         accesskey="&fileHereMenu.accesskey;"
+                         disabled="true"/>
+                        <menuseparator id="fileHereMenuSeparator1"/>
                       </menupopup>
                     </menu>
                   </menupopup>
@@ -1600,17 +1609,18 @@
                   </menupopup>
                 </rule>
                 <rule nc:CanFileMessages="true" iscontainer="true" isempty="false">
-                  <menupopup>
+                  <menupopup id="menu_folderMenuPopup2">
                     <menu uri="..."  class="folderMenuItem menu-iconic" label="rdf:http://home.netscape.com/NC-rdf#Name"
                           SpecialFolder="rdf:http://home.netscape.com/NC-rdf#SpecialFolder"
                           BiffState="rdf:http://home.netscape.com/NC-rdf#BiffState"
                           IsServer="rdf:http://home.netscape.com/NC-rdf#IsServer"
                           IsSecure="rdf:http://home.netscape.com/NC-rdf#IsSecure"
                           ServerType="rdf:http://home.netscape.com/NC-rdf#ServerType">
-                      <menupopup>
-                        <menuitem label="&fileHereMenu.label;" accesskey="&fileHereMenu.accesskey;" 
-                           oncommand="MsgMoveMessage(event.target.parentNode.parentNode.id)"/>
-                        <menuseparator/>
+                      <menupopup id="menu_fileHerePopup2">
+                        <menuitem id="menu_fileHere2" label="&fileHereMenu.label;"
+                         accesskey="&fileHereMenu.accesskey;"
+                         oncommand="MsgMoveMessage(event.target.parentNode.parentNode.id)"/>
+                        <menuseparator id="fileHereMenuSeparator2"/>
                       </menupopup>
                     </menu>
                   </menupopup>
@@ -1621,7 +1631,7 @@
                 </rule>
                 <rule nc:CanFileMessages="false" iscontainer="true" isempty="false">
                   <!-- note, there is no "file here" -->
-                  <menupopup>
+                  <menupopup id="menu_folderMenuPopup3">
                     <menu uri="..."  class="folderMenuItem menu-iconic" label="rdf:http://home.netscape.com/NC-rdf#Name"
                           SpecialFolder="rdf:http://home.netscape.com/NC-rdf#SpecialFolder"
                           BiffState="rdf:http://home.netscape.com/NC-rdf#BiffState"
@@ -1633,7 +1643,7 @@
                   </menupopup>
                 </rule>
                 <rule nc:CanFileMessages="true">
-                  <menupopup>
+                  <menupopup id="menu_folderMenuPopup4">
                     <menuitem uri="..." class="folderMenuItem menuitem-iconic" label="rdf:http://home.netscape.com/NC-rdf#Name" oncommand="MsgMoveMessage(event.target.id)"
                               SpecialFolder="rdf:http://home.netscape.com/NC-rdf#SpecialFolder"
                               BiffState="rdf:http://home.netscape.com/NC-rdf#BiffState"
@@ -1644,11 +1654,10 @@
                 </rule>
               </template>
             </menu>
-
             <menu label="&copyMsgMenu.label;" accesskey="&copyMsgMenu.accesskey;" id="copyMenu" datasources="rdf:null"
              sortResource="http://home.netscape.com/NC-rdf#FolderTreeName"
              sortDirection="ascending">
-              <menupopup>
+              <menupopup id="menu_copyPopup">
                 <menu label="&moveCopyMsgRecentMenu.label;" accesskey="&moveCopyMsgRecentMenu.accesskey;" 
                       sortResource="http://home.netscape.com/NC-rdf#FolderTreeName"
                       sortDirection="ascending"
@@ -1657,7 +1666,7 @@
                   <menupopup/>
                   <template>
                     <rule nc:CanFileMessages="true">
-                      <menupopup>
+                      <menupopup id="menu_copyRecentPopup">
                         <menuitem uri="..." class="folderMenuItem menuitem-iconic"
                           label="rdf:http://home.netscape.com/NC-rdf#FolderTreeSimpleName"
                           oncommand="MsgCopyMessage(event.target.id)" 
@@ -1670,36 +1679,40 @@
                     </rule>
                   </template>
                 </menu>
-                <menuseparator/>
+                <menuseparator id="copyMsgRecentSeparator"/>
               </menupopup>
               <template>
                 <rule nc:NoSelect="true" iscontainer="true" isempty="false">
-                  <menupopup>
+                  <menupopup id="menu_copyFolderMenuPopup1">
                     <menu uri="..."  class="folderMenuItem menu-iconic" label="rdf:http://home.netscape.com/NC-rdf#Name">
-                      <menupopup>
-                        <menuitem label="&copyHereMenu.label;" accesskey="&copyHereMenu.accesskey;" disabled="true"/>
-                        <menuseparator/>
+                      <menupopup id="menu_copyHerePopup1">
+                        <menuitem id="menu_copyHere1"
+                         label="&copyHereMenu.label;"
+                         accesskey="&copyHereMenu.accesskey;"
+                         disabled="true"/>
+                        <menuseparator id="copyHereMenuSeparator1"/>
                       </menupopup>
                     </menu>
                   </menupopup>
                 </rule>
                 <rule nc:NoSelect="true">
-                  <menupopup>
+                  <menupopup id="menu_copyFolderMenuPopup2">
                     <menuitem uri="..."  class="folderMenuItem menu-iconic" label="rdf:http://home.netscape.com/NC-rdf#Name" disabled="true"/>
                   </menupopup>
                 </rule>
                 <rule nc:CanFileMessages="true" iscontainer="true" isempty="false">
-                  <menupopup>
+                  <menupopup id="menu_copyFolderMenuPopup3">
                     <menu uri="..."  class="folderMenuItem menu-iconic" label="rdf:http://home.netscape.com/NC-rdf#Name"
                      SpecialFolder="rdf:http://home.netscape.com/NC-rdf#SpecialFolder"
                      BiffState="rdf:http://home.netscape.com/NC-rdf#BiffState"
                      IsServer="rdf:http://home.netscape.com/NC-rdf#IsServer"
                      IsSecure="rdf:http://home.netscape.com/NC-rdf#IsSecure"
                      ServerType="rdf:http://home.netscape.com/NC-rdf#ServerType">
-                      <menupopup>
-                        <menuitem label="&copyHereMenu.label;" accesskey="&copyHereMenu.accesskey;" 
-                          oncommand="MsgCopyMessage(event.target.parentNode.parentNode.id)"/>
-                        <menuseparator/>
+                      <menupopup id="menu_copyHerePopup2">
+                        <menuitem id="menu_copyHere2" label="&copyHereMenu.label;"
+                         accesskey="&copyHereMenu.accesskey;"
+                         oncommand="MsgCopyMessage(event.target.parentNode.parentNode.id)"/>
+                        <menuseparator id="copyHereMenuSeparator2"/>
                       </menupopup>
                     </menu>
                   </menupopup>
@@ -1710,7 +1723,7 @@
                 </rule>
                 <rule nc:CanFileMessages="false" iscontainer="true" isempty="false">
                   <!-- note, there is no "file here" -->
-                  <menupopup>
+                  <menupopup id="menu_copyFolderMenuPopup4">
                     <menu uri="..."  class="folderMenuItem menu-iconic" label="rdf:http://home.netscape.com/NC-rdf#Name"
                      SpecialFolder="rdf:http://home.netscape.com/NC-rdf#SpecialFolder"
                      BiffState="rdf:http://home.netscape.com/NC-rdf#BiffState"
@@ -1722,7 +1735,7 @@
                   </menupopup>
                 </rule>
                 <rule nc:CanFileMessages="true">
-                  <menupopup>
+                  <menupopup id="menu_copyFolderMenuPopup5">
                     <menuitem uri="..." class="folderMenuItem menuitem-iconic" label="rdf:http://home.netscape.com/NC-rdf#Name" 
                      oncommand="MsgCopyMessage(event.target.id)" 
                      SpecialFolder="rdf:http://home.netscape.com/NC-rdf#SpecialFolder"
@@ -1739,14 +1752,14 @@
             <menu id="tagMenu" label="&tagMenu.label;" accesskey="&tagMenu.accesskey;" command="cmd_tag">
               <menupopup id="tagMenu-tagpopup" onpopupshowing="InitMessageTags(this)">
               <menuitem id="tagMenu-tagRemoveAll" oncommand="RemoveAllMessageTags();"/>
-                <menuseparator/>
-                <menuseparator/>
+                <menuseparator id="tagMenuAfterRemoveSeparator"/>
+                <menuseparator id="tagMenuBeforeAddSeparator"/>
                 <menuitem id="addNewTag" label="&addNewTag.label;" accesskey="&addNewTag.accesskey;"
                           oncommand="AddTag();"/>
               </menupopup>
             </menu>
             <menu id="markMenu" label="&markMenu.label;" accesskey="&markMenu.accesskey;">
-              <menupopup onpopupshowing="InitMessageMark()">
+              <menupopup id="menu_MarkPopup" onpopupshowing="InitMessageMark()">
                 <menuitem type="checkbox" id="markReadMenuItem" label="&markAsReadCmd.label;" accesskey="&markAsReadCmd.accesskey;" command="cmd_markAsRead"
 #ifndef XP_MACOSX
                       key="key_toggleRead"
@@ -1763,7 +1776,7 @@
 #endif
               />
                 <menuitem id="menu_markAllRead" label="&markAllReadCmd.label;" key="key_markAllRead" accesskey="&markAllReadCmd.accesskey;" command="cmd_markAllRead"/>
-                <menuseparator/>
+                <menuseparator id="markMenuAfterAllReadSeparator"/>
                 <menuitem id="markFlaggedMenuItem" 
                           type="checkbox" 
                           label="&markStarredCmd.label;" 
@@ -1773,7 +1786,7 @@
                       key="key_toggleFlagged"
 #endif
               />
-                <menuseparator/>
+                <menuseparator id="markMenuAfterFlaggedSeparator"/>
                 <menuitem id="menu_markAsJunk" label="&markAsJunkCmd.label;" 
                           accesskey="&markAsJunkCmd.accesskey;" 
                           command="cmd_markAsJunk"
@@ -1788,12 +1801,13 @@
                           key="key_markNotJunk"
 #endif
               />
-                <menuitem label="&recalculateJunkScoreCmd.label;"
+                <menuitem id="menu_recalculateJunkScore"
+                          label="&recalculateJunkScoreCmd.label;"
                           accesskey="&recalculateJunkScoreCmd.accesskey;"
                           command="cmd_recalculateJunkScore"/>
               </menupopup>
             </menu>
-            <menuseparator/>
+            <menuseparator id="messageMenuAfterMarkSeparator"/>
             <menuitem id="createFilter" label="&createFilter.label;"
                       accesskey="&createFilter.accesskey;"
                       command="cmd_createFilterFromMenu"/>
@@ -1816,7 +1830,6 @@
           />
       </menupopup>
     </menu>
-
     <!-- Tasks -->
     <menu id="tasksMenu" label="&tasksMenu.label;" accesskey="&tasksMenu.accesskey;">
       <menupopup id="taskPopup" onpopupshowing="document.commandDispatcher.updateCommands('create-menu-tasks')">
@@ -1829,7 +1842,6 @@
         <menuitem id="addonsManager" label="&addons.label;" accesskey="&addons.accesskey;" 
                   oncommand="openAddonsMgr();"/>
         <menuseparator id="devToolsSeparator"/>
-
         <menuitem id="filtersCmd" label="&filtersCmd.label;"
                   accesskey="&filtersCmd.accesskey;"
                   oncommand="MsgFilters(null, null);"/>
@@ -1837,7 +1849,7 @@
                   label="&filtersApply.label;"
                   accesskey="&filtersApply.accesskey;"
                   command="cmd_applyFilters"/>
-        <menuseparator/>
+        <menuseparator id="tasksMenuAfterApplySeparator"/>
         <menuitem id="runJunkControls"
             label="&runJunkControls.label;"
 	          accesskey="&runJunkControls.accesskey;"
@@ -1846,7 +1858,7 @@
             label="&deleteJunk.label;"
 	          accesskey="&deleteJunk.accesskey;"
 	          command="cmd_deleteJunk"/>
-        <menuseparator/>
+        <menuseparator id="tasksMenuAfterDeleteSeparator"/>
         <menuitem id="menu_import" label="&importCmd.label;" 
                   accesskey="&importCmd.accesskey;" 
                   oncommand="toImport();"/>
@@ -1872,9 +1884,11 @@
       
       <!-- Help -->
 #ifdef XP_WIN
-      <menu label="&helpMenuWin.label;" accesskey="&helpMenuWin.accesskey;">
+      <menu id="menu_HelpWin" label="&helpMenuWin.label;"
+            accesskey="&helpMenuWin.accesskey;">
 #else
-      <menu label="&helpMenu.label;" accesskey="&helpMenu.accesskey;">
+      <menu id="menu_Help" label="&helpMenu.label;"
+            accesskey="&helpMenu.accesskey;">
 #endif
      <menupopup id="menu_HelpPopup" onpopupshowing="buildHelpMenu();">
 #ifdef XP_MACOSX
@@ -1888,7 +1902,7 @@
           <menuitem id="checkForUpdates" accesskey="&updateCmd.accesskey;" class="menuitem-iconic"
                     label="&updateCmd.label;" oncommand="checkForUpdates();"/>
 #ifndef XP_MACOSX
-          <menuseparator/>
+          <menuseparator id="menu_HelpAfterUpdatesSeparator"/>
 #endif
           <menuitem id="aboutName" accesskey="&aboutCmd.accesskey;"
                     label="&aboutCmd.label;"
@@ -1899,7 +1913,7 @@
         </menupopup>
       </menu>
 
-      <spacer flex="100%"/>
+      <spacer id="menubar_spacer" flex="100%"/>
       </menubar>
     </toolbaritem>
   </toolbar>

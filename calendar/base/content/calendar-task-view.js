@@ -123,10 +123,12 @@ var taskDetailsView = {
                         break;
                     case "COMPLETED":
                         if (item.completedDate) {
+                            var completedDate = item.completedDate.getInTimezone(
+                                                    calendarDefaultTimezone());
                             statusDetails.value = calGetString(
                                 "calendar",
                                 "taskDetailsStatusCompletedOn",
-                                [dateFormatter.formatDateTime(item.completedDate)]);
+                                [dateFormatter.formatDateTime(completedDate)]);
                         }
                         break;
                     case "CANCELLED":
@@ -181,7 +183,7 @@ var taskDetailsView = {
 };
 
 function taskViewUpdate(filter) {
-
+    document.getElementById("filterBroadcaster").setAttribute("value", filter);
     var percentCompleted = function(item) {
         var percent = 0;
         var property = item.getProperty("PERCENT-COMPLETE");
@@ -245,11 +247,6 @@ function taskViewUpdate(filter) {
     tree.refresh();
 }
 
-function taskViewUpdateFilter(event) {
-
-    taskViewUpdate(event.target.value);
-}
-
 function sendMailToOrganizer() {
     var item = document.getElementById("calendar-task-tree").currentTask;
     if (item != null) {
@@ -295,7 +292,7 @@ function taskViewObserveDisplayDeckChange(event) {
     // In case we find that the task view has been made visible, we refresh the view.
     if (id == "calendar-task-box") {
         taskViewUpdate(
-            document.getElementById("task-tree-filter").value || "all");
+            document.getElementById("task-tree-filtergroup").value || "all");
     }
 }
 

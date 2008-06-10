@@ -155,21 +155,7 @@ calMemoryCalendar.prototype = {
         }
 
         aItem.calendar = this.superCalendar;
-        var rec = aItem.recurrenceInfo;
-        if (rec) {
-            var exceptions = rec.getExceptionIds({});
-            for each (var exid in exceptions) {
-                var exception = rec.getExceptionFor(exid, false);
-                if (exception) {
-                    if (!exception.isMutable) {
-                        exception = exception.clone();
-                    }
-                    exception.calendar = this.superCalendar;
-                    rec.modifyException(exception);
-                }
-            }
-        }
-        
+
         aItem.makeImmutable();
         this.mItems[aItem.id] = aItem;
 
@@ -209,10 +195,9 @@ calMemoryCalendar.prototype = {
             return reportError(null, "ID for modifyItem item is null");
         }
 
-        var modifiedItem = aNewItem.clone();
-        if (modifiedItem.parentItem != modifiedItem) {
-            modifiedItem.parentItem.recurrenceInfo.modifyException(modifiedItem);
-            modifiedItem = modifiedItem.parentItem;
+        var modifiedItem = aNewItem.parentItem.clone();
+        if (aNewItem.parentItem != aNewItem) {
+            modifiedItem.recurrenceInfo.modifyException(aNewItem, false);
         }
 
         if (this.relaxedMode) {
@@ -232,19 +217,22 @@ calMemoryCalendar.prototype = {
             }
 
             aOldItem = aOldItem.parentItem;
+            var storedOldItem = this.mItems[aOldItem.id];
 
             // compareItems is not suitable here. See bug 418805.
-            if (this.mItems[aOldItem.id].icalString != aOldItem.icalString) {
+            if (storedOldItem.icalString != aOldItem.icalString) {
                 return reportError("old item mismatch in modifyItem");
             }
 
-            if (aOldItem.generation != modifiedItem.generation) {
+            if (aOldItem.generation != storedOldItem.generation) {
                 return reportError("generation mismatch in modifyItem");
             }
 
-            // Only take care of incrementing the generation if relaxed mode is
-            // off. Users of relaxed mode need to take care of this themselves.
-            modifiedItem.generation += 1;
+            if (aOldItem.generation == modifiedItem.generation) { // has been cloned and modified
+                // Only take care of incrementing the generation if relaxed mode is
+                // off. Users of relaxed mode need to take care of this themselves.
+                modifiedItem.generation += 1;
+            }
         }
 
         modifiedItem.makeImmutable();

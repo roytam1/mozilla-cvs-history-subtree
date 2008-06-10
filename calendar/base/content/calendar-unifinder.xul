@@ -93,10 +93,13 @@
           <label control="unifinder-search-field" value="&calendar.search.options.searchfor;"/>
           <textbox id="unifinder-search-field" onkeypress="searchKeyPress( this, event )" flex="1"/>
         </box>
-        <toolbarbutton id="unifinder-closer" class="unifinder-closebutton" command="calendar_show_unifinder_command"/>
+        <toolbarbutton id="unifinder-closer"
+                       class="unifinder-closebutton"
+                       command="calendar_show_unifinder_command"
+                       tooltiptext="&calendar.unifinder.close.tooltip;"/>
       </hbox>
       <tree id="unifinder-search-results-tree" flex="1"
-            onselect="unifinderSelect( event ); onSelectionChanged()"
+            onselect="unifinderSelect(event); calendarController.onSelectionChanged()"
             onkeypress="unifinderKeyPress(event)"
             _selectDelay="500"
             enableColumnDrag="true">
@@ -141,6 +144,7 @@
 
         <!-- on mousedown here happens before onclick above -->
         <treechildren tooltip="eventTreeTooltip"
+                      context="calendar-item-context-menu"
                       onkeypress="if (event.keyCode == 13) unifinderEditCommand();"
                       ondragover="return( false );"
                       ondblclick="unifinderDoubleClick(event)"

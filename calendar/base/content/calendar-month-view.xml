@@ -52,18 +52,23 @@
   xmlns:xbl="http://www.mozilla.org/xbl">
 
   <binding id="calendar-month-day-box-item" extends="chrome://calendar/content/calendar-view-core.xml#calendar-editable-item">
-    <content>
+    <content tooltip="itemTooltip">
       <xul:vbox flex="1">
         <xul:hbox>
-          <xul:image anonid="shadow-left-image" class="calendar-event-box-shadow-left"/>
-          <xul:box anonid="event-container" flex="1">
+          <xul:image anonid="shadow-left-image" xbl:inherits="hidden=flat" class="calendar-event-box-shadow-left"/>
+          <xul:box anonid="event-container"
+                   class="calendar-color-box"
+                   xbl:inherits="item-calendar"
+                   flex="1">
             <xul:box class="calendar-event-selection" orient="horizontal" flex="1">
               <xul:stack anonid="eventbox"
                          class="calendar-event-box-container"
+                         xbl:inherits="readonly,flashing,alarm,allday,priority,progress,status,calendar,categories"
                          flex="1">
                 <xul:hbox class="calendar-event-details">
                   <xul:image anonid="item-icon"
-                             class="calendar-month-day-box-item-image"/>
+                             class="calendar-month-day-box-item-image"
+                             xbl:inherits="progress,allday"/>
                   <xul:label anonid="item-label"
                              class="calendar-month-day-box-item-label"
                              xbl:inherits="context"/>
@@ -75,10 +80,9 @@
                                flex="1"
                                style="margin: 0;"/>
                     <xul:textbox anonid="event-name-textbox"
-                                 class="plain"
+                                 class="plain calendar-event-name-textbox"
                                  crop="end"
                                  hidden="true"
-                                 style="background: transparent !important;"
                                  wrap="true"/>
                     <xul:spacer flex="1"/>
                   </xul:vbox>
@@ -91,56 +95,33 @@
                 </xul:hbox>
                 <xul:image anonid="gradient"
                            class="calendar-event-box-gradient"
-                           hidden="true" height="1px"/>
+                           height="1px"/>
               </xul:stack>
             </xul:box>
-            <xul:calendar-category-box anonid="category-box"/>
+            <xul:calendar-category-box anonid="category-box" xbl:inherits="categories"/>
           </xul:box>
-          <xul:image anonid="shadow-right-image" class="calendar-event-box-shadow-right"/>
+          <xul:image anonid="shadow-right-image" xbl:inherits="hidden=flat"
+                     class="calendar-event-box-shadow-right"/>
         </xul:hbox>
-        <xul:box anonid="shadow-container" orient="horizontal">
-          <xul:image class="calendar-event-box-shadow-edge-left"/>
-          <xul:image class="calendar-event-box-shadow-bottom" flex="1"/>
-          <xul:image class="calendar-event-box-shadow-edge-right"/>
-        </xul:box>
+        <xul:calendar-shadow-box xbl:inherits="flat" orient="horizontal"/>
       </xul:vbox>
     </content>
     <implementation>
-      <constructor><![CDATA[
-        var gradient = document.getAnonymousElementByAttribute(this,
-                                                               "anonid",
-                                                               "gradient");
-        var container = document.getAnonymousElementByAttribute(this,
-                                                                "anonid",
-                                                                "event-container");
-        if (gradient) {
-          gradient.removeAttribute("hidden");
-        }
-
-        container.setAttribute("class", "calendar-item");
-        container.setAttribute("class", this.getAttribute("class"));
-        container.setAttribute("item-calendar", this.getAttribute("item-calendar"));
-        this.removeAttribute("class");
-        this.removeAttribute("item-calendar");
-      ]]>
-      </constructor>
-
       <property name="occurrence">
         <getter><![CDATA[
             return this.mOccurrence;
         ]]></getter>
         <setter><![CDATA[
+          ASSERT(!this.mOccurrence, "Code changes needed to set the occurrence twice", true);
           this.mOccurrence = val;
           var icon = document.getAnonymousElementByAttribute(this,"anonid","item-icon");                                                              
           if (isEvent(val)) {
             icon.setAttribute("type", "event");
-            if (val.startDate.isDate) {
-              icon.setAttribute("type", "all-day");
-            } else {
+            if (!val.startDate.isDate) {
               var label = document.getAnonymousElementByAttribute(this,"anonid","item-label");
               var df = Components.classes["@mozilla.org/calendar/datetime-formatter;1"].
                        getService(Components.interfaces.calIDateTimeFormatter);
-              var timezone = this.calendarView? this.calendarView.mTimezone:
+              var timezone = this.calendarView ? this.calendarView.mTimezone :
                              calendarDefaultTimezone();
               label.value = df.formatTime(
               val.startDate.getInTimezone(timezone));
@@ -148,9 +129,6 @@
             }
           } else if (isToDo(val)) {
             icon.setAttribute("type", "todo");
-            if (val.isCompleted) {
-              icon.setAttribute("completed", "true");
-            }
           }
 
           this.setEditableLabel();
@@ -161,13 +139,6 @@
       <property name="parentBox"
                 onget="return this.mParentBox;"
                 onset="this.mParentBox = val;"/>
-      <method name="removeShadows">
-        <body><![CDATA[
-          removeAnonymousElement(this, "shadow-left-image");
-          removeAnonymousElement(this, "shadow-right-image");
-          removeAnonymousElement(this, "shadow-container");
-        ]]></body>
-      </method>
     </implementation>
 
     <handlers>
@@ -185,10 +156,7 @@
 
         var flavourProvider = {
             QueryInterface: function(aIID) {
-                ensureIID(
-                    [ Components.interfaces.nsIFlavorDataProvider,
-                      Components.interfaces.nsISupports], aIID);
-                return this;
+                return doQueryInterface(this, null, aIID, [Components.interfaces.nsIFlavorDataProvider]);
             },
             item: item,
 
@@ -270,11 +238,9 @@
   </binding>
 
   <binding id="calendar-month-day-box">
-    <content>
-      <xul:vbox flex="1">
-        <xul:label anonid="day-label" crop="end" class="calendar-month-day-box-date-label"/>
-        <xul:vbox anonid="day-items"/>
-      </xul:vbox>
+    <content orient="vertical">
+      <xul:label anonid="day-label" crop="end" class="calendar-month-day-box-date-label"/>
+      <xul:vbox anonid="day-items" class="calendar-month-day-box-items-box" flex="1"/>
     </content>
 
     <implementation>
@@ -377,6 +343,7 @@
       <method name="addItem">
         <parameter name="aItem"/>
         <body><![CDATA[
+          // XXX This scales badly for adding lots of items: O(N^2)
           for each (ed in this.mItemData) {
             if (aItem.hashId == ed.item.hashId)
             {
@@ -385,7 +352,7 @@
             }
           }
 
-          function comptor(a, b) {
+          function dayboxItemComparator(a, b) {
             var aIsEvent = isEvent(a.item);
             var aIsTodo = isToDo(a.item);
 
@@ -436,11 +403,32 @@
           // Note: don't use Array.Sort, because that's quicksort, which
           // is not good for an already mostly-sorted array
           var newItem = {item: aItem};
-          for (i = 0; i<this.mItemData.length; ++i) {
-            if (comptor(this.mItemData[i], newItem) > 0)
-              break;
+
+          // A binary search into the array. That's possible here, because the
+          // array is always sorted
+          function binarySearch(itemArray, low, high, newItem, comptor) {
+            // Are we done yet?
+            if (low == high) {
+              return low + (comptor(newItem, itemArray[low]) < 0 ? 0 : 1);
+            }
+
+            var mid = Math.floor(low + ((high - low) / 2));
+            var q = comptor(newItem, itemArray[mid]);
+            if (q > 0)
+              return binarySearch(itemArray, mid + 1, high, newItem, comptor);
+            else if (q < 0)
+              return binarySearch(itemArray, low, mid, newItem, comptor);
+            return mid;
           }
-          this.mItemData.splice(i, 0, newItem);
+
+          var newIndex;
+          if (this.mItemData.length == 0) {
+            newIndex = 0;
+          } else {
+            newIndex = binarySearch(this.mItemData, 0, this.mItemData.length - 1,
+                                    newItem, dayboxItemComparator);
+          }
+          this.mItemData.splice(newIndex, 0, newItem);
 
           this.relayout();
         ]]></body>
@@ -497,11 +485,6 @@
 
       <method name="relayout">
         <body><![CDATA[
-          function createXULElement(el) {
-              return document.createElementNS("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul", el);
-          }
-
-
           for (var i = 0; i < this.mItemData.length; i++) {
             var itd = this.mItemData[i];
 
@@ -513,23 +496,7 @@
 
               var box = createXULElement("calendar-month-day-box-item");
               box.setAttribute("context", this.getAttribute("item-context") || this.getAttribute("context"));
-              box.setAttribute("class", "calendar-item");
               box.setAttribute("item-calendar", itd.item.calendar.uri.spec);
-              box.setAttribute("tooltip", "itemTooltip");
-
-              if (itd.item.hashId in this.monthView.mFlashingEvents) {
-                box.setAttribute("flashing", "true");
-              }
-
-              var categoriesSelectorList = "";
-              var categoriesProperty = itd.item.getProperty("CATEGORIES");
-              if (categoriesProperty) {
-                var categoriesArray = categoriesStringToArray(categoriesProperty);
-                var cssClassesArray = categoriesArray.map(formatStringForCSSRule);
-                categoriesSelectorList = cssClassesArray.join(" ");
-              }
-
-              box.setAttribute("item-category", categoriesSelectorList);
 
               this.dayitems.insertBefore(box, before);
 
@@ -702,6 +669,20 @@
       <handler event="click" button="0"><![CDATA[
         this.monthView.setSelectedItems(0, []);
       ]]></handler>
+      <handler event="DOMMouseScroll"><![CDATA[
+        if (event.originalTarget.getAttribute("anonid") != "day-label") {
+          // Finding out if the box is overflowing is tricky, but fortunately
+          // the height of the boxes is equal.
+          var childHeight = (this.dayitems.firstChild ?
+                             this.dayitems.firstChild.boxObject.height *
+                             this.dayitems.childNodes.length : 0);
+          if (this.dayitems.boxObject.height < childHeight) {
+            // The box is overflowing. Stop propagation and let the default
+            // event handler take care of scrolling
+            event.stopPropagation();
+          }
+        }
+      ]]></handler>
     </handlers>
   </binding>
 
@@ -820,10 +801,6 @@
 
       <!-- constructor -->
       <constructor><![CDATA[
-          function createXULElement(el) {
-            return document.createElementNS("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul", el);
-          }
-
           var headerbox = document.getAnonymousElementByAttribute(this, "anonid", "headerbox")
           for (var i = 0; i < 7; i++) {
             var hdr = createXULElement("calendar-month-view-column-header");
@@ -1243,10 +1220,6 @@
 
       <method name="relayout">
 	<body><![CDATA[
-          function createXULElement(el) {
-              return document.createElementNS("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul", el);
-          }
-
           // Adjust headers based on the starting day of the week, if necessary
           var headerbox = document.getAnonymousElementByAttribute(this, "anonid", "headerbox");
 
@@ -1654,13 +1627,22 @@
               this.calView.doDeleteItem(occ);
             }
           },
-          onError: function (aErrNo, aMessage) { },
+          onError: function (aCalendar, aErrNo, aMessage) { },
 
           onPropertyChanged: function(aCalendar, aName, aValue, aOldValue) {
-            if (aName == "suppressAlarms" &&
-                getPrefSafe("calendar.alarms.indicator.show", true)) {
-              this.calView.refresh();
-            }
+              switch (aName) {
+                  case "suppressAlarms":
+                      if (!getPrefSafe("calendar.alarms.indicator.show", true) ||
+                          aCalendar.getProperty("capabilities.alarms.popup.supported") === false ) {
+                          break;
+                      }
+                      // else fall through
+                  case "readOnly":
+                  case "disabled":
+                      // XXXvv we can be smarter about how we handle this stuff
+                      this.calView.refresh();
+                      break;
+              }
           },
           onPropertyDeleting: function(aCalendar, aName) {
             this.onPropertyChanged(aCalendar, aName, null, null);
@@ -1692,11 +1674,15 @@
           // XXXvv we can be smarter about how we handle this stuff
           //
           onCalendarAdded: function (aCalendar) {
-            this.calView.refresh();
+            if (!aCalendar.getProperty("disabled")) {
+                this.calView.refresh();
+            }
           },
 
           onCalendarRemoved: function (aCalendar) {
-            this.calView.refresh();
+            if (!aCalendar.getProperty("disabled")) {
+                this.calView.refresh();
+            }
           },
 
           onDefaultCalendarChanged: function (aNewDefaultCalendar) {

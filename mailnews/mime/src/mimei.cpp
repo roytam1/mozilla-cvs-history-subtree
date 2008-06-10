@@ -1086,15 +1086,16 @@ mime_part_address(MimeObject *obj)
 		return nsCRT::strdup(buf);
 	  else
 		{
-		  char *s = (char *)PR_MALLOC(strlen(higher) + strlen(buf) + 3);
+      		  PRUint32 slen = strlen(higher) + strlen(buf) + 3;
+      		  char *s = (char *)PR_MALLOC(slen);
 		  if (!s)
 			{
 			  PR_Free(higher);
 			  return 0;  /* MIME_OUT_OF_MEMORY */
 			}
-		  PL_strcpy(s, higher);
-		  PL_strcat(s, ".");
-		  PL_strcat(s, buf);
+      		  PL_strncpyz(s, higher, slen);
+      		  PL_strcatn(s, slen, ".");
+      		  PL_strcatn(s, slen, buf);
 		  PR_Free(higher);
 		  return s;
 		}
@@ -1228,7 +1229,8 @@ mime_set_url_part(const char *url, const char *part, PRBool append_p)
           }
 	}
 
-  result = (char *) PR_MALLOC(strlen(url) + strlen(part) + 10);
+  PRUint32 resultlen = strlen(url) + strlen(part) + 10;
+  result = (char *) PR_MALLOC(resultlen);
   if (!result) return 0;
 
   if (part_begin)
@@ -1247,17 +1249,17 @@ mime_set_url_part(const char *url, const char *part, PRBool append_p)
 	}
   else
 	{
-	  PL_strcpy(result, url);
+    	  PL_strncpyz(result, url, resultlen);
 	  if (got_q)
-		PL_strcat(result, "&part=");
+    		PL_strcatn(result, resultlen, "&part=");
 	  else
-		PL_strcat(result, "?part=");
+    		PL_strcatn(result, resultlen, "?part=");
 	}
 
-  PL_strcat(result, part);
+  PL_strcatn(result, resultlen, part);
 
   if (part_end && *part_end)
-	PL_strcat(result, part_end);
+    	PL_strcatn(result, resultlen, part_end);
 
   /* Semi-broken kludge to omit a trailing "?part=0". */
   {
@@ -1286,15 +1288,15 @@ mime_set_url_imap_part(const char *url, const char *imappart, const char *libmim
 	  *whereCurrent = 0;
   }
 	
-  result = (char *) PR_MALLOC(strlen(url) + strlen(imappart) + strlen(libmimepart) + 17);
+  PRUint32 resultLen = strlen(url) + strlen(imappart) + strlen(libmimepart) + 17;
+  result = (char *) PR_MALLOC(resultLen);
   if (!result) return 0;
 
-  PL_strcpy(result, url);
-  PL_strcat(result, "/;section=");
-  PL_strcat(result, imappart);
-  PL_strcat(result, "?part=");
-  PL_strcat(result, libmimepart);
-  result[strlen(result)] = 0;
+  PL_strncpyz(result, url, resultLen);
+  PL_strcatn(result, resultLen, "/;section=");
+  PL_strcatn(result, resultLen, imappart);
+  PL_strcatn(result, resultLen, "?part=");
+  PL_strcatn(result, resultLen, libmimepart);
 
   if (whereCurrent)
 	  *whereCurrent = '/';
@@ -1604,11 +1606,11 @@ mime_parse_url_options(const char *url, MimeDisplayOptions *options)
    else if (nsCRT::strcmp(options->part_to_load, "1"))	/* not 1 */
    {
      const char *prefix = "1.";
-     char *s = (char *) PR_MALLOC(strlen(options->part_to_load) +
-       strlen(prefix) + 1);
+     PRUint32 slen = strlen(options->part_to_load) + strlen(prefix) + 1;
+     char *s = (char *) PR_MALLOC(slen);
      if (!s) return MIME_OUT_OF_MEMORY;
-     PL_strcpy(s, prefix);
-     PL_strcat(s, options->part_to_load);
+     PL_strncpyz(s, prefix, slen);
+     PL_strcatn(s, slen, options->part_to_load);
      PR_Free(options->part_to_load);
      options->part_to_load = s;
    }

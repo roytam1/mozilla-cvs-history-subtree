@@ -1883,13 +1883,18 @@ JS_GC(JSContext *cx)
 JS_PUBLIC_API(void)
 JS_MaybeGC(JSContext *cx)
 {
-#ifdef WAY_TOO_MUCH_GC
-    JS_GC(cx);
-#else
     JSRuntime *rt;
     uint32 bytes, lastBytes;
 
     rt = cx->runtime;
+
+#ifdef JS_GC_ZEAL
+    if (rt->gcZeal > 0) {
+        JS_GC(cx);
+        return;
+    }
+#endif
+
     bytes = rt->gcBytes;
     lastBytes = rt->gcLastBytes;
 
@@ -1949,7 +1954,6 @@ JS_MaybeGC(JSContext *cx)
         /* Run scheduled but not yet executed close hooks. */
         js_RunCloseHooks(cx);
     }
-#endif
 #endif
 }
 
@@ -4083,10 +4087,10 @@ JS_CompileUCFunctionForPrincipals(JSContext *cx, JSObject *obj,
     }
     fun = js_NewFunction(cx, NULL, NULL, nargs, 0, obj, funAtom);
     if (!fun)
-        goto out;
+        goto out2;
 
     /* From this point the control must flow through the label out. */
-    JS_PUSH_TEMP_ROOT_FUNCTION(cx, fun, &tvr);
+    JS_PUSH_TEMP_ROOT_OBJECT(cx, fun->object, &tvr);
     if (nargs) {
         for (i = 0; i < nargs; i++) {
             argAtom = js_Atomize(cx, argnames[i], strlen(argnames[i]), 0);
@@ -4113,12 +4117,13 @@ JS_CompileUCFunctionForPrincipals(JSContext *cx, JSObject *obj,
         if (!OBJ_DEFINE_PROPERTY(cx, obj, ATOM_TO_JSID(funAtom),
                                  OBJECT_TO_JSVAL(fun->object),
                                  NULL, NULL, JSPROP_ENUMERATE, NULL)) {
-            return NULL;
+            fun = NULL;
+            goto out;
         }
     }
+    cx->weakRoots.newborn[GCX_OBJECT] = (JSGCThing *) fun->object;
 
   out:
-    cx->weakRoots.newborn[GCX_PRIVATE] = (JSGCThing *) fun;
     JS_POP_TEMP_ROOT(cx, &tvr);
 
   out2:
@@ -4980,6 +4985,14 @@ JS_ClearContextThread(JSContext *cx)
     jsword old = JS_THREAD_ID(cx);
     js_ClearContextThread(cx);
     return old;
+}
+#endif
+
+#ifdef JS_GC_ZEAL
+JS_PUBLIC_API(void)
+JS_SetGCZeal(JSContext *cx, uint8 zeal)
+{
+    cx->runtime->gcZeal = zeal;
 }
 #endif
 

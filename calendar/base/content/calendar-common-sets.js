@@ -59,6 +59,7 @@ var calendarController = {
         "calendar_publish_calendar_command": true,
         "calendar_publish_selected_events_command": true,
 
+        "calendar_task_filter_command": true,
         "calendar_reload_remote_calendars": true,
         "calendar_percentComplete-0_command": true,
         "calendar_percentComplete-25_command": true,
@@ -117,6 +118,8 @@ var calendarController = {
             case "calendar_modify_todo_command":
                 return this.todo_items_selected &&
                        this.todo_tasktree_focused;
+            case "calendar_task_filter_command":
+                return true;
             case "calendar_delete_todo_command":
             case "calendar_percentComplete-0_command":
             case "calendar_percentComplete-25_command":
@@ -206,17 +209,24 @@ var calendarController = {
                 editSelectedEvents();
                 break;
             case "calendar_delete_event_command":
-                deleteSelectedEvents();
+            case "cmd_delete":
+            case "button_delete":
+                var focusedElement = document.commandDispatcher.focusedElement;
+                if (focusedElement) {
+                    var focusedRichListbox = getParentNodeOrThis(focusedElement, "richlistbox");
+                    if (focusedRichListbox && focusedRichListbox.id == "agenda-listbox") {
+                        agendaListbox.deleteSelectedItem(false);
+                    } else if (focusedElement.className == "calendar-task-tree") {
+                        deleteToDoCommand(null, false);
+                    } else if (this.defaultController && !this.isCalendarInForeground()) {
+                        this.defaultController.doCommand(aCommand);
+                    } else {
+                        deleteSelectedEvents();
+                    }
+                }
                 break;
-
             case "calendar_new_todo_command":
                 createTodoWithDialog(getSelectedCalendar());
-                break;
-            case "calendar_modify_todo_command":
-                var selectedTasks = getFocusedTaskTree().selectedTasks;
-                for each (var task in selectedTasks) {
-                    modifyEventWithDialog(task);
-                }
                 break;
             case "calendar_delete_todo_command":
                 deleteToDoCommand();
@@ -255,59 +265,7 @@ var calendarController = {
             case "calendar_reload_remote_calendars":
                 getCompositeCalendar().refresh();
                 break;
-            case "calendar_percentComplete-0_command":
-                contextChangeTaskProgress(0);
-                break;
-            case "calendar_percentComplete-25_command":
-                contextChangeTaskProgress(25);
-                break;
-            case "calendar_percentComplete-50_command":
-                contextChangeTaskProgress(50);
-                break;
-            case "calendar_percentComplete-75_command":
-                contextChangeTaskProgress(75);
-                break;
-            case "calendar_percentComplete-100_command":
-                contextChangeTaskProgress(100);
-                break;
-            case "calendar_percentComplete-100_command2":
-                contextChangeTaskProgress2(100);
-                break;
-            case "calendar_priority-0_command":
-                contextChangeTaskPriority(0);
-                break;
-            case "calendar_priority-9_command":
-                contextChangeTaskPriority(9);
-                break;
-            case "calendar_priority-5_command":
-                contextChangeTaskPriority(5);
-                break;
-            case "calendar_priority-1_command":
-                contextChangeTaskPriority(1);
-                break;
             default:
-                if (this.defaultController && !this.isCalendarInForeground()) {
-                    // The delete-button demands a special handling in mail-mode
-                    // as it is supposed to delete an element of the focused pane
-                    if (aCommand == "cmd_delete" || aCommand == "button_delete") {
-                        var focusedElement = document.commandDispatcher.focusedElement;
-                        if (focusedElement) {
-                            if (focusedElement.getAttribute("id") == "agenda-listbox") {
-                                agendaListbox.deleteSelectedItem(false);
-                                return;
-                            } else if (focusedElement.className == "calendar-task-tree") {
-                                deleteToDoCommand(false);
-                                return;
-                            }
-                        }
-                    }
-
-                    // If calendar is not in foreground, let the default controller take
-                    // care. If we don't have a default controller (i.e sunbird), just
-                    // continue.
-                    this.defaultController.doCommand(aCommand);
-                    return;
-                }
                 switch (aCommand) {
                     // These commands are overridden in lightning and native in sunbird.
                     case "cmd_cut":
@@ -361,6 +319,35 @@ var calendarController = {
         return isSunbird() || (gCurrentMode && gCurrentMode != "mail");
     },
 
+    onSelectionChanged: function cC_onSelectionChanged(aEvent) {
+        var selectedItems = aEvent.detail;
+        calendarController.item_selected = selectedItems && (selectedItems.length > 0);
+        
+        var selLength = (selectedItems === undefined ? 0 : selectedItems.length);
+        var selected_events_readonly = 0;
+        var selected_events_requires_network = 0;
+        if (selLength > 0) {
+            for each (var item in selectedItems) {
+                if (item.calendar.readOnly) {
+                    selected_events_readonly++;
+                }
+                if (item.calendar.getProperty("requiresNetwork")) {
+                    selected_events_requires_network++;
+                }
+            }
+        }
+
+        calendarController.selected_events_readonly =
+              (selected_events_readonly == selLength);
+
+        calendarController.selected_events_requires_network =
+              (selected_events_requires_network == selLength);
+        document.commandDispatcher.updateCommands("calendar_commands");
+        if(!isSunbird()) {
+            document.commandDispatcher.updateCommands('mail-toolbar');
+        }
+    },
+    
     /**
      * Condition Helpers
      */
@@ -445,22 +432,15 @@ var calendarController = {
     },
 
     get todo_items_selected cC_todo_items_selected() {
-        var taskTree = getFocusedTaskTree();
-        if (taskTree) {
-            var selectedTasks = taskTree.selectedTasks;
-            return (selectedTasks.length > 0);
-        }
-        return false;
+        var selectedTasks = getSelectedTasks();
+        return (selectedTasks.length > 0);
     },
 
     get todo_items_writable cC_todo_items_writable() {
-        var taskTree = getFocusedTaskTree();
-        if (taskTree) {
-            var selectedTasks = taskTree.selectedTasks;
-            for each (var task in selectedTasks) {
-                if (isCalendarWritable(task.calendar)) {
-                    return true;
-                }
+        var selectedTasks = getSelectedTasks();
+        for each (var task in selectedTasks) {
+            if (isCalendarWritable(task.calendar)) {
+                return true;
             }
         }
         return false;
@@ -491,4 +471,18 @@ function injectCalendarCommandController() {
 
 function removeCalendarCommandController() {
     top.controllers.removeController(calendarController);
+}
+
+function setupContextItemType(event, items) {
+    if (items.some(isEvent) && items.some(isToDo)) {
+        event.target.setAttribute("type", "mixed");
+    } else if (items.length && isEvent(items[0])) {
+        event.target.setAttribute("type", "event");
+    } else if (items.length && isToDo(items[0])) {
+        event.target.setAttribute("type", "todo");
+    } else {
+        event.target.removeAttribute("type");
+    }
+
+    return true;
 }

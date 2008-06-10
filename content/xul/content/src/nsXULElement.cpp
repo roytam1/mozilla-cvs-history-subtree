@@ -593,9 +593,12 @@ nsXULElement::AddScriptEventListener(nsIAtom* aName, const nsAString& aValue)
 
     nsIContent *root = doc->GetRootContent();
     nsCOMPtr<nsIContent> content(do_QueryInterface(NS_STATIC_CAST(nsIStyledContent*, this)));
-    if ((!root || root == content) && !mNodeInfo->Equals(nsXULAtoms::overlay)) {
-        nsIScriptGlobalObject *global = doc->GetScriptGlobalObject();
 
+    nsIScriptGlobalObject *global = doc->GetScriptGlobalObject();
+    nsCOMPtr<nsPIDOMWindow> window(do_QueryInterface(global));
+
+    if (window && window->IsInnerWindow() && (!root || root == content) &&
+        !mNodeInfo->Equals(nsXULAtoms::overlay)) {
         nsCOMPtr<nsIDOMEventReceiver> receiver = do_QueryInterface(global);
         if (! receiver)
             return NS_ERROR_UNEXPECTED;
@@ -3690,6 +3693,9 @@ nsXULPrototypeScript::Compile(const PRUnichar* aText,
 
     // Use the enclosing document's principal
     // XXX is this right? or should we use the protodoc's?
+    // If we start using the protodoc's, make sure
+    // the DowngradePrincipalIfNeeded stuff in
+    // nsXULDocument::OnStreamComplete still works!
     nsIPrincipal *principal = aDocument->GetPrincipal();
     if (!principal)
         return NS_ERROR_FAILURE;

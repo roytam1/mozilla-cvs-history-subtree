@@ -65,7 +65,7 @@
   -moz-appearance: none;
   -moz-user-focus: ignore;
   -moz-box-pack: center;
-  margin: 0px 1px 0px 1px !important;
+  margin: 0px 1px !important;
   border: none !important;
   padding: 0px !important;
   min-width: 0;
@@ -97,39 +97,6 @@ toolbarbutton.chevron > .toolbarbutton-menu-dropmarker {
 }
 
 /*--------------------------------------------------------------------
- * tooltips
- *-------------------------------------------------------------------*/
-vbox.tooltipBox {
-  max-width: 40em;
-}
-
-column.tooltipValueColumn {
-  max-width: 35em; /* tooltipBox max-width minus space for label */
-}
-
-label.tooltipHeaderLabel {
-  font-weight: bold;
-  text-align: right;
-  margin: 0em 1em 0em 0em; /* 1em space before value */
-}
-
-description.tooltipHeaderDescription {
-  font-weight: normal;
-  text-align: left;
-  margin: 0px;
-}
-
-separator.tooltipBodySeparator {
-  height: 1ex; /* 1ex space above body text, below last header. */
-}
-
-description.tooltipBody {
-  font-weight: normal;
-  white-space: -moz-pre-wrap;
-  margin: 0px;
-}
-
-/*--------------------------------------------------------------------
  * print preview
  *-------------------------------------------------------------------*/
 toolbar[printpreview="true"] {
@@ -137,82 +104,8 @@ toolbar[printpreview="true"] {
 }
 
 /*--------------------------------------------------------------------
- * View controls
+ * Offline Status
  *-------------------------------------------------------------------*/
-
-calendar-navigation-buttons { 
-  padding: 0px 0px 2px 0px;
-}
-
-.title-label-box button {
-  background-color: transparent;
-  /* Override button min-width so views can be narrow on narrow screen. */
-  min-width: 1px;
-  /* Allow overflow, so long localized month names don't prevent narrow view */
-  overflow-x: hidden;
-}
-
-.nav-buttons{
-    list-style-image: url("chrome://calendar/skin/prevnextarrow.png");
-}
-
-.nav-buttons[direction="next"] {
-    -moz-box-align:end;
-    -moz-image-region: rect(18px 18px 36px 0px);
-    cursor:pointer;
-}
-
-.next-button:hover:active {
-    margin: 6px 14px 4px 16px;
-}
-
-.nav-buttons[direction="prev"] {
-    -moz-box-align:start;
-    -moz-image-region: rect(0px 18px 18px 0px);
-    cursor:pointer;
-}
-
-.prev-button:hover:active {
-    margin: 6px 14px 4px 16px;
-}
-
-.title-container {
-    -moz-box-align: center;
-    -moz-box-pack: center;
-    margin: 0px 15px 0px 15px;
-}
-
-.title2 {
-    font-size:1.2em;
-    color: #4e84c2;
-    cursor:pointer;
-    -moz-appearance: none;
-    border: 0px;
-}
-
-.title1 {
-    font-size:1.5em;
-    color: #4e84c2;
-    cursor:pointer;
-    -moz-appearance: none;
-    border: 0px;
-}
-
-.title0 {
-    font-size:2.0em;
-    color: #2e4e73;
-    font-weight:bold;
-    -moz-appearance: none;
-    border: 0px;
-}
-
-.view-title-label-box
-{
-    width: 10em !important;
-    -moz-box-align: center;
-    -moz-box-pack: end;
-}
-
 #offline-status {
     list-style-image: url(chrome://calendar/skin/offline-online.png);
     -moz-image-region: rect(0px, 32px, 16px, 16px);

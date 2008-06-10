@@ -45,6 +45,7 @@
 #include "nsINameSpaceManager.h" 
 #include "nsIDOMNSDocument.h"
 #include "nsIDocument.h"
+#include "nsTreeBoxObject.h"
 #include "nsIBoxObject.h"
 #include "nsITreeColumns.h"
 #include "nsIDOMElement.h"
@@ -115,10 +116,10 @@ nsTreeColFrame::Init(nsPresContext*  aPresContext,
   return rv;
 }
 
-NS_IMETHODIMP                                                                   
-nsTreeColFrame::Destroy(nsPresContext* aPresContext)                          
+NS_IMETHODIMP
+nsTreeColFrame::Destroy(nsPresContext* aPresContext)
 {
-  InvalidateColumns(); 
+  InvalidateColumns(PR_FALSE);
   return nsBoxFrame::Destroy(aPresContext);
 }
 
@@ -231,12 +232,21 @@ nsTreeColFrame::GetTreeBoxObject()
 }
 
 void
-nsTreeColFrame::InvalidateColumns()
+nsTreeColFrame::InvalidateColumns(PRBool aCanWalkFrameTree)
 {
   nsITreeBoxObject* treeBoxObject = GetTreeBoxObject();
   if (treeBoxObject) {
     nsCOMPtr<nsITreeColumns> columns;
-    treeBoxObject->GetColumns(getter_AddRefs(columns));
+
+    if (aCanWalkFrameTree) {
+      treeBoxObject->GetColumns(getter_AddRefs(columns));
+    } else {
+      nsITreeBoxObject* body =
+        static_cast<nsTreeBoxObject*>(treeBoxObject)->GetCachedTreeBody();
+      if (body) {
+        body->GetColumns(getter_AddRefs(columns));
+      }
+    }
 
     if (columns)
       columns->InvalidateColumns();

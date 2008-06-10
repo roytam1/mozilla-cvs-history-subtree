@@ -192,7 +192,15 @@ nsStorageStream::Write(const char *aBuffer, PRUint32 aCount, PRUint32 *aNumWritt
 
     remaining = aCount;
     readCursor = aBuffer;
-    while (remaining) {
+    // If no segments have been created yet, create one even if we don't have
+    // to write any data; this enables creating an input stream which reads from
+    // the very end of the data for any amount of data in the stream (i.e.
+    // this stream contains N bytes of data and newInputStream(N) is called),
+    // even for N=0 (with the caveat that we require .write("", 0) be called to
+    // initialize internal buffers).
+    PRBool firstTime = mSegmentedBuffer->GetSegmentCount() == 0;
+    while (remaining || NS_UNLIKELY(firstTime)) {
+        firstTime = PR_FALSE;
         availableInSegment = mSegmentEnd - mWriteCursor;
         if (!availableInSegment) {
             mWriteCursor = mSegmentedBuffer->AppendNewSegment();
@@ -550,7 +558,7 @@ NS_METHOD
 nsStorageInputStream::Seek(PRUint32 aPosition)
 {
     PRUint32 length = mStorageStream->mLogicalLength;
-    if (aPosition >= length)
+    if (aPosition > length)
         return NS_ERROR_INVALID_ARG;
 
     if (length == 0)

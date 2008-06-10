@@ -205,9 +205,6 @@ function onCommandCancel() {
     var newItem = saveItem();
     var oldItem = window.calendarItem.clone();
 
-    newItem.deleteProperty("DTSTAMP");
-    oldItem.deleteProperty("DTSTAMP");
-
     // we need to guide the description text through the text-field since
     // newlines are getting converted which would indicate changes to the
     // text.
@@ -217,10 +214,7 @@ function onCommandCancel() {
                     getElementValue("item-description"));
     setElementValue("item-description", newItem.getProperty("DESCRIPTION"));
 
-    // compare old and new version of this item. we ask the item for its
-    // representation as icalString in order to have some easily comparable
-    // form we can work with.
-    if (newItem.icalString == oldItem.icalString) {
+    if (compareItemContent(newItem, oldItem)) {
         return true;
     }
 
@@ -269,15 +263,6 @@ function onCancel() {
         dispose();
     }
     return result;
-}
-
-function timezoneString(tz) {
-    var tzid = tz.tzid;
-    var prefix = getTimezoneService().tzidPrefix;
-    if (tzid.indexOf(prefix) == 0) {
-        tzid = tzid.substring(prefix.length);
-    }
-    return tzid;
 }
 
 function loadDialog(item) {
@@ -362,23 +347,13 @@ function loadDialog(item) {
     updateTitle();
 
     var sendInvitesCheckbox = document.getElementById("send-invitations-checkbox");
-    if (item.getProperty("X-MOZ-SEND-INVITATIONS") != null) {
-        sendInvitesCheckbox.checked = (item.getProperty("X-MOZ-SEND-INVITATIONS") == "TRUE");
-    } else {
-        sendInvitesCheckbox.checked = false;
-    }
+    sendInvitesCheckbox.checked = (item.getProperty("X-MOZ-SEND-INVITATIONS") == "TRUE");
 
     updateAttendees();
     updateRepeat();
     updateReminder();
 
-    // How easy would it be to just call hasProperty(), but unfortunately
-    // this is currently flawed and doesn't give us the answer we're longing for.
-    // hasProperty() unconditionally forwards the request to the parent item
-    // if the property doesn't exist at the occurrence. That's why we need to
-    // use this somewhat awkward construct.
-    gShowTimeAs = (item.getUnproxiedProperty("TRANSP") != null) ?
-        item.getUnproxiedProperty("TRANSP") : null;
+    gShowTimeAs = item.getProperty("TRANSP");
     updateShowTimeAs();
 }
 
@@ -1012,10 +987,10 @@ function openNewCardDialog() {
         "chrome,resizable=no,titlebar,modal");
 }
 
-// automatically select "show time as free" if this
+// automatically select pref calendar.allday.defaultTransparency if this
 // event is said to be all-day.
 function setShowTimeAs(allDay) {
-    gShowTimeAs = allDay ? "TRANSPARENT" : "OPAQUE";
+    gShowTimeAs = (allDay ? getPrefSafe("calendar.allday.defaultTransparency", "TRANSPARENT") : "OPAQUE");
     updateShowTimeAs();
 }
 
@@ -1991,12 +1966,8 @@ function updateDateTime() {
               endTime.timezone = floating();
               setElementValue("todo-duedate", endTime.jsDate);
           } else {
-              // The time for the todo should default to the next full hour
-              startTime = now();
+              startTime = getDefaultStartDate();
               startTime.timezone = floating();
-              startTime.minute = 0;
-              startTime.second = 0;
-              startTime.hour++;
               endTime = startTime.clone();
 
               setElementValue("todo-entrydate", startTime.jsDate);
@@ -2050,12 +2021,8 @@ function updateDateTime() {
                 endTime.timezone = floating();
                 setElementValue("todo-duedate", endTime.jsDate);
             } else {
-                // The time for the todo should default to the next full hour
-                startTime = now();
+                startTime = getDefaultStartDate();
                 startTime.timezone = floating();
-                startTime.minute = 0;
-                startTime.second = 0;
-                startTime.hour++;
                 endTime = startTime.clone();
 
                 setElementValue("todo-entrydate", startTime.jsDate);
@@ -2093,12 +2060,12 @@ function updateTimezone() {
             }
         }
 
-        function updateTimezoneElement(aTimezone,aId,aDateTime,aCollapse) {
+        function updateTimezoneElement(aTimezone, aId, aDateTime, aCollapse) {
             var element = document.getElementById(aId);
             if (element) {
                 if (aTimezone != null && !aCollapse) {
                     element.removeAttribute('collapsed');
-                    element.value = timezoneString(aTimezone);
+                    element.value = aTimezone.displayName || aTimezone.tzid;
                     if (!aDateTime || !aDateTime.isValid || gIsReadOnly || aDateTime.isDate) {
                         if (element.hasAttribute('class')) {
                             element.setAttribute('class-on-enabled',

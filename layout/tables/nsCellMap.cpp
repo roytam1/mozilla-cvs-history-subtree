@@ -320,7 +320,7 @@ nsTableCellMap::Synchronize(nsTableFrame* aTableFrame)
     nsTableRowGroupFrame* rgFrame =
       nsTableFrame::GetRowGroupFrame((nsIFrame*)orderedRowGroups.ElementAt(rgX));
     if (rgFrame) {
-      nsCellMap* map = GetMapFor(*rgFrame);
+      nsCellMap* map = GetMapFor(*(nsTableRowGroupFrame*)(rgFrame->GetFirstInFlow()));
       if (map) {
         if (!maps.AppendElement(map)) {
           delete map;

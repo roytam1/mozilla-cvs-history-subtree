@@ -63,6 +63,41 @@
               oncommand="CustomizeApplicationToolbar('mail-toolbox');"/>
   </popup>
 
+  <popup id="messagePaneContext">
+    <menu id="messagePaneContext-calendar-convert-menu"
+          insertafter="messagePaneContext-moveMenu"
+          label="&calendar.context.convertmenu.label;"
+          accesskey="&calendar.context.convertmenu.accesskey.mail;">
+      <menupopup id="messagePaneContext-calendar-convert-menupopup">
+        <menuitem id="messagePaneContext-calendar-convert-event-menuitem"
+                  label="&calendar.context.convertmenu.event.label;"
+                  accesskey="&calendar.context.convertmenu.event.accesskey;"
+                  oncommand="calendarCalendarButtonDNDObserver.onDropMessage(messenger.msgHdrFromURI(GetFirstSelectedMessage()))"/>
+        <menuitem id="messagePaneContext-calendar-convert-task-menuitem"
+                  label="&calendar.context.convertmenu.task.label;"
+                  accesskey="&calendar.context.convertmenu.task.accesskey;"
+                  oncommand="calendarTaskButtonDNDObserver.onDropMessage(messenger.msgHdrFromURI(GetFirstSelectedMessage()))"/>
+      </menupopup>
+    </menu>
+  </popup>
+  <popup id="threadPaneContext">
+    <menu id="threadPaneContext-calendar-convert-menu"
+          insertafter="threadPaneContext-moveToFolderAgain"
+          label="&calendar.context.convertmenu.label;"
+          accesskey="&calendar.context.convertmenu.accesskey.mail;">
+      <menupopup id="threadPaneContext-calendar-convert-menupopup">
+        <menuitem id="threadPaneContext-calendar-convert-event-menuitem"
+                  label="&calendar.context.convertmenu.event.label;"
+                  accesskey="&calendar.context.convertmenu.event.accesskey;"
+                  oncommand="calendarCalendarButtonDNDObserver.onDropMessage(messenger.msgHdrFromURI(GetFirstSelectedMessage()))"/>
+        <menuitem id="threadPaneContext-calendar-convert-task-menuitem"
+                  label="&calendar.context.convertmenu.task.label;"
+                  accesskey="&calendar.context.convertmenu.task.accesskey;"
+                  oncommand="calendarTaskButtonDNDObserver.onDropMessage(messenger.msgHdrFromURI(GetFirstSelectedMessage()))"/>
+      </menupopup>
+    </menu>
+  </popup>
+
   <menuitem id="menu_customizeToolbar"
             label="&customizeToolbar.label;"
             accesskey="&customizeToolbar.accesskey;"
@@ -84,7 +119,7 @@
              context="toolbar-context-menu"
              collapsed="true"
              collapsedinMode="false"
-             defaultset="calendar-new-event-button,calendar-new-task-button,separator,calendar-go-to-today-button,separator,calendar-day-view-button,calendar-week-view-button,calendar-multiweek-view-button,calendar-month-view-button,separator,calendar-unifinder-button,separator,calendar-delete-button,calendar-print-button,separator,calendar-remote-reload-button,spring"
+             defaultset="calendar-new-event-button,calendar-new-task-button,calendar-show-todaypane-button,separator,calendar-go-to-today-button,separator,calendar-day-view-button,calendar-week-view-button,calendar-multiweek-view-button,calendar-month-view-button,separator,calendar-unifinder-button,separator,calendar-delete-button,calendar-print-button,separator,calendar-remote-reload-button,spring"
              persist="collapsedinMode"/>
     <toolbar id="task-toolbar"
              class="chromeclass-toolbar"
@@ -92,7 +127,7 @@
              context="toolbar-context-menu"
              collapsed="true"
              collapsedinMode="false"
-             defaultset="task-new-event-button,task-new-task-button,task-button-address,separator,task-category-button,task-progress-button,task-priority-button,separator,task-delete-button,task-print-button,separator,task-remote-reload-button,spring"
+             defaultset="task-new-event-button,task-new-task-button,task-button-address,task-show-todaypane-button,separator,task-category-button,task-progress-button,task-priority-button,separator,task-delete-button,task-print-button,separator,task-remote-reload-button,spring"
              persist="collapsedinMode"/>
   </toolbox>
 

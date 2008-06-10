@@ -1236,7 +1236,7 @@ function BrowserSearchInternet()
                                  .getService(Components.interfaces.nsIInternetSearchService);
         var searchURL = searchDS.GetInternetSearchURL(searchEngineURI, "ABC", 0, 0, {value:0});
         if (searchURL) {
-          searchRoot = searchURL.match(/[a-z]+:\/\/[a-z.-]+/);
+          searchRoot = searchURL.match(/^[^:]+:\/\/[^?/]+/i);
           if (searchRoot) {
             openTopWin(searchRoot + "/");
             return;
@@ -1296,7 +1296,8 @@ function BrowserOpenTab()
           uriToLoad = "about:blank";
           break;
         case 1:
-          uriToLoad = pref.getCharPref("browser.startup.homepage");
+          uriToLoad = pref.getComplexValue("browser.startup.homepage",
+                                           Components.interfaces.nsIPrefLocalizedString).data;
           break;
         case 2:
           uriToLoad = getWebNavigation().currentURI.spec;

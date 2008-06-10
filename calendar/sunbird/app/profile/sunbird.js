@@ -20,6 +20,7 @@
  *
  * Contributor(s):
  *   Philipp Kewisch <mozilla@kewis.ch>
+ *   Martin Schroeder <mschroeder@mozilla.x-home.org>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or 
@@ -50,7 +51,7 @@ pref("calendar.alarms.eventalarmlen", 15);
 pref("calendar.alarms.todoalarmlen", 15);
 pref("calendar.alarms.eventalarmunit", "minutes");
 pref("calendar.alarms.todoalarmunit", "minutes");
-pref("calendar.alarms.defaultsnoozelength", 60);
+pref("calendar.alarms.defaultsnoozelength", 5);
 pref("calendar.alarms.indicator.show", true);
 pref("calendar.alarms.indicator.totaltime", 3600);
 pref("calendar.autorefresh.enabled", true);
@@ -64,6 +65,9 @@ pref("calendar.view.dayendhour", 17);
 pref("calendar.view.visiblehours", 9);
 pref("calendar.weeks.inview", 4);
 pref("calendar.previousweeks.inview", 0);
+
+// default transparency of allday items; could be switched to e.g. "OPAQUE":
+pref("calendar.allday.defaultTransparency", "TRANSPARENT");
 
 // pref("startup.homepage_override_url","chrome://browser-region/locale/region.properties");
 pref("general.startup.calendar", true);
@@ -170,8 +174,8 @@ pref("extensions.logging.enabled", false);
 // Extension blocklist preferences
 pref("extensions.blocklist.enabled", true);
 pref("extensions.blocklist.interval", 86400);
-pref("extensions.blocklist.url", "https://addons.mozilla.org/blocklist/1/%APP_ID%/%APP_VERSION%/");
-pref("extensions.blocklist.detailsURL", "http://www.mozilla.com/blocklist/");
+pref("extensions.blocklist.url", "https://addons.mozilla.org/blocklist/2/%APP_ID%/%APP_VERSION%/%PRODUCT%/%BUILD_ID%/%BUILD_TARGET%/%LOCALE%/%CHANNEL%/%OS_VERSION%/%DISTRIBUTION%/%DISTRIBUTION_VERSION%/");
+pref("extensions.blocklist.detailsURL", "http://%LOCALE%.www.mozilla.com/%LOCALE%/blocklist/");
 
 pref("general.useragent.locale", "@AB_CD@");
 pref("general.skins.selectedSkin", "classic/1.0");

@@ -57,8 +57,6 @@
           onselect="taskDetailsView.onSelect(event);">
       <textbox id="view-task-edit-field"
                class="task-edit-field"
-               value="&calendar.task.edit.instructions.label;"
-               instructions="&calendar.task.edit.instructions.label;"
                onfocus="taskEdit.onFocus(event)"
                onblur="taskEdit.onBlur(event)"
                onkeypress="taskEdit.onKeyPress(event)"/>
@@ -66,8 +64,7 @@
         <calendar-task-tree id="calendar-task-tree" flex="1"
                             visible-columns="completed priority title startdate duedate"
                             persist="visible-columns ordinals widths sort-active sort-direction height"
-                            context="taskitem-context-menu"
-                            onselect="document.commandDispatcher.updateCommands('calendar_commands')"/>
+                            context="taskitem-context-menu"/>
         <splitter id="calendar-task-view-splitter" collapse="none" persist="state"/>
         <vbox id="calendar-task-details-container" flex="1">
           <hbox id="calendar-task-details">
@@ -97,7 +94,7 @@
                 <row id="calendar-task-details-priority-row"
                      align="top"
                      hidden="true">
-                  <label value="&calendar.task.details.priority.label;"
+                  <label value="&calendar.task.details.priority2.label;"
                          class="task-details-name"/>
                   <label id="calendar-task-details-priority-low"
                          value="&calendar.task.details.priority.low.label;"

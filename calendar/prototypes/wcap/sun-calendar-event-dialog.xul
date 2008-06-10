@@ -421,13 +421,13 @@
                             disable-on-readonly="true"/>
                   <menuseparator id="options-menuseparator1"/>
                   <menu id="options-priority-menu"
-                        label="&event.menu.options.priority.label;"
-                        accesskey="&event.menu.options.priority.accesskey;"
+                        label="&event.menu.options.priority2.label;"
+                        accesskey="&event.menu.options.priority2.accesskey;"
                         disable-on-readonly="true">
                       <menupopup id="options-priority-menupopup">
                           <menuitem id="options-priority-none-menuitem"
-                                    label="&event.menu.options.priority.none.label;"
-                                    accesskey="&event.menu.options.priority.none.accesskey;"
+                                    label="&event.menu.options.priority.notspecified.label;"
+                                    accesskey="&event.menu.options.priority.notspecified.accesskey;"
                                     type="checkbox"
                                     command="cmd_priority_none"
                                     disable-on-readonly="true"/>
@@ -613,7 +613,7 @@
 
     <grid id="event-grid"
           flex="1"
-          style="padding: 8px 10px 10px 8px;">
+          style="padding-top: 8px; padding-bottom: 10px; -moz-padding-start: 8px; -moz-padding-end: 10px;">
         <columns id="event-grid-columns">
             <column id="event-description-column"/>
             <column id="event-controls-column" flex="1"/>
@@ -1058,7 +1058,7 @@
                       flex="1"
                       collapsed="true"
                       pack="start">
-        <label value="&event.priority.label;"/>
+        <label value="&event.priority2.label;"/>
         <image id="button-importance-low"
                class="cal-statusbar-1"
                collapsed="true"

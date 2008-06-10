@@ -2799,9 +2799,6 @@ js_AllocSlot(JSContext *cx, JSObject *obj, uint32 *slotp)
         obj->slots = newslots;
     }
 
-#ifdef TOO_MUCH_GC
-    obj->slots[map->freeslot] = JSVAL_VOID;
-#endif
     *slotp = map->freeslot++;
     return JS_TRUE;
 }

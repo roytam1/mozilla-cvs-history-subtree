@@ -22,6 +22,7 @@
  * Contributor(s):
  *   Michiel van Leeuwen <mvl@exedo.nl>
  *   Daniel Boelzle <daniel.boelzle@sun.com>
+ *   Philipp Kewisch <mozilla@kewis.ch>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -103,11 +104,11 @@ function html_exportToStream(aStream, aCount, aItems, aTitle) {
 
     // Sort aItems
     function sortFunc(a, b) {
-        var start_a = calGetStartDate(a);
+        var start_a = a[calGetStartDateProp(a)];
         if (!start_a) {
             return -1;
         }
-        var start_b = calGetStartDate(b);
+        var start_b = b[calGetStartDateProp(b)];
         if (!start_b) {
             return 1;
         }
@@ -136,8 +137,8 @@ function html_exportToStream(aStream, aCount, aItems, aTitle) {
             </div>
         );
 
-        var startDate = calGetStartDate(item);
-        var endDate = calGetEndDate(item);
+        var startDate = item[calGetStartDateProp(item)];
+        var endDate = item[calGetEndDateProp(item)];
         if (startDate) {
             startDate = startDate.getInTimezone(defaultTimezone);
         }
@@ -172,7 +173,6 @@ function html_exportToStream(aStream, aCount, aItems, aTitle) {
                 </div>
             </div>
         );
-
 
         // Location
         if (item.getProperty('LOCATION')) {
@@ -221,7 +221,7 @@ function html_exportToStream(aStream, aCount, aItems, aTitle) {
     // Convert the javascript string to an array of bytes, using the
     // utf8 encoder
     var convStream = Components.classes["@mozilla.org/intl/converter-output-stream;1"]
-                               .getService(Components.interfaces.nsIConverterOutputStream);
+                               .createInstance(Components.interfaces.nsIConverterOutputStream);
     convStream.init(aStream, 'UTF-8', 0, 0x0000);
 
     var str = html.toXMLString()

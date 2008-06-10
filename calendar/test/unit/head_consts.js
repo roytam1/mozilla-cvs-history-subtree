@@ -21,6 +21,8 @@
  * Contributor(s):
  *   Daniel Boelzle <daniel.boelzle@sun.com>
  *   Sebastian Schwieger <sebo.moz@googlemail.com>
+ *   Philipp Kewisch <mozilla@kewis.ch>
+ *   Martin Schroeder <mschroeder@mozilla.x-home.org>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -39,36 +41,25 @@
 const Cc = Components.classes;
 const Ci = Components.interfaces;
 
-/// Shortcut to the timezone service
-function getTimezoneService() {
-    if (getTimezoneService.mObject === undefined) {
-        getTimezoneService.mObject = Cc["@mozilla.org/calendar/timezone-service;1"]
-                                     .getService(Ci.calITimezoneService);
-    }
-    return getTimezoneService.mObject;
+function loadChromeScript(aPath) {
+    var loader = Cc["@mozilla.org/moz/jssubscript-loader;1"]
+                 .getService(Ci.mozIJSSubScriptLoader);
+    loader.loadSubScript("chrome://" + aPath);
 }
 
-/// @return the UTC timezone.
-function UTC() {
-    if (UTC.mObject === undefined) {
-        UTC.mObject = getTimezoneService().UTC;
-    }
-    return UTC.mObject;
-}
+loadChromeScript("calendar/content/calUtils.js");
 
-/// @return the floating timezone.
-function floating() {
-    if (floating.mObject === undefined) {
-        floating.mObject = getTimezoneService().floating;
-    }
-    return floating.mObject;
-}
-
-function createDate(aYear, aMonth, aDay) {
+function createDate(aYear, aMonth, aDay, aHasTime, aHour, aMinute, aSecond, aTimezone) {
     var cd = Cc["@mozilla.org/calendar/datetime;1"]
              .createInstance(Ci.calIDateTime);
-    cd.resetTo(aYear, aMonth, aDay, 0, 0, 0, UTC());
-    cd.isDate = true;
+    cd.resetTo(aYear,
+               aMonth,
+               aDay,
+               aHour || 0,
+               aMinute || 0,
+               aSecond || 0,
+               aTimezone || UTC());
+    cd.isDate = !aHasTime;
     return cd;
 }
 
@@ -202,7 +193,7 @@ function getProps(aItem, aProp) {
     }
 }
 
-function compareItems(aLeftItem, aRightItem, aPropArray) {
+function compareItemsSpecific(aLeftItem, aRightItem, aPropArray) {
     if (!aPropArray) {
         // left out:  "id", "calendar", "lastModifiedTime", "generation",
         // "stampTime" as these are expected to change

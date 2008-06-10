@@ -130,10 +130,6 @@
       <method name="relayout">
         <body><![CDATA[
           //dump ("calendar-time-bar: relayout\n");
-          function createXULElement(el) {
-              return document.createElementNS("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul", el);
-          }
-
           var topbox = document.getAnonymousElementByAttribute(this, "anonid", "topbox");
           var orient = topbox.getAttribute("orient");
           var otherorient = "vertical";
@@ -654,11 +650,6 @@
 
           if (this.mLayoutBatchCount > 0)
               return;
-
-          function createXULElement(el) {
-              return document.createElementNS("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul", el);
-          }
-
           this.clear();
 
           var orient = this.getAttribute("orient");
@@ -799,7 +790,8 @@
                   innerColumn.setAttribute("style", style);
 
                   xulColumn.appendChild(innerColumn);
-
+                  var minHeight = 0;
+                  var minWidth = 0;
                   var curTime = 0;
                   for each (var chunk in column) {
                       var duration = chunk.duration;
@@ -810,29 +802,30 @@
                       if (chunk.event) {
                           var chunkBox = createXULElement("calendar-event-box");
                           chunkBox.setAttribute("context", this.getAttribute("item-context") || this.getAttribute("context"));
-                          chunkBox.setAttribute("style", "min-width: 1px; min-height: 1px;");
                           chunkBox.setAttribute("orient", orient);
-                          var durMinutes = duration.inSeconds / 60;
-                          if (orient == "vertical") {
-                              chunkBox.setAttribute("height", durMinutes * this.mPixPerMin);
-                          } else {
-                              chunkBox.setAttribute("width", durMinutes * this.mPixPerMin);
-                          }
-
-                          if (!isCalendarWritable(chunk.event.calendar)) {
-                              chunkBox.setAttribute("readOnly", "true");
-                          }
-
-                          if (chunk.event.hashId in this.calendarView.mFlashingEvents) {
-                              chunkBox.setAttribute("flashing", "true");
-                          }
-
                           innerColumn.appendChild(chunkBox);
-
                           chunkBox.calendarView = this.calendarView;
                           chunkBox.occurrence = chunk.event;
                           chunkBox.parentColumn = this;
-
+                          if (minHeight == 0) {
+                              minHeight = getOptimalMinimumHeight(chunkBox.eventNameLabel) + 
+                                          getSummarizedStyleValues(document.getAnonymousElementByAttribute(chunkBox, "anonid", "shadow-bottom"), ["height"]) +
+                                          getSummarizedStyleValues(document.getAnonymousElementByAttribute(chunkBox, "anonid", "eventbox"), ["margin-bottom", "margin-top"]);                              
+                              chunkBox.setAttribute("minheight", minHeight);
+                          }
+                          if (minWidth == 0) {
+                              chunkBox.eventNameLabel.setAttribute("style", "min-width: 2em");
+                              minWidth = getOptimalMinimumWidth(chunkBox.eventNameLabel);
+                              chunkBox.setAttribute("minwidth", minWidth);
+                          }
+                          var durMinutes = duration.inSeconds / 60;
+                          if (orient == "vertical") {
+                              var height = Math.max(durMinutes * this.mPixPerMin, minHeight)
+                              chunkBox.setAttribute("height", height);
+                          } else {
+                              var width = Math.max(durMinutes * this.mPixPerMin, minWidth)
+                              chunkBox.setAttribute("width", width);
+                          }
                           this.mEventBoxes.push(chunkBox);
 
                           if (this.mEventToEdit &&
@@ -1258,8 +1251,8 @@
               var dragState = col.mDragState;
               col.fgboxes.dragbox.removeAttribute("dragging");
               col.fgboxes.box.removeAttribute("dragging");
-              window.removeEventListener("mousemove", col.onEventSweepMouseMove, true);
-              window.removeEventListener("mouseup", col.onEventSweepMouseUp, true);
+              window.removeEventListener("mousemove", col.onEventSweepMouseMove, false);
+              window.removeEventListener("mouseup", col.onEventSweepMouseUp, false);
               document.calendarEventColumnDragging = null;
               col.mDragState = null;
               
@@ -1289,10 +1282,7 @@
 
               var flavourProvider = {
                   QueryInterface: function(aIID) {
-                      ensureIID(
-                          [ Components.interfaces.nsIFlavorDataProvider,
-                            Components.interfaces.nsISupports], aIID);
-                      return this;
+                      return doQueryInterface(this, null, aIID, [Components.interfaces.nsIFlavorDataProvider]);
                   },
                   item: item,
 
@@ -1429,8 +1419,8 @@
           col.fgboxes.dragbox.removeAttribute("dragging");
           col.fgboxes.box.removeAttribute("dragging");
 
-          window.removeEventListener("mousemove", col.onEventSweepMouseMove, true);
-          window.removeEventListener("mouseup", col.onEventSweepMouseUp, true);
+          window.removeEventListener("mousemove", col.onEventSweepMouseMove, false);
+          window.removeEventListener("mouseup", col.onEventSweepMouseUp, false);
 
           document.calendarEventColumnDragging = null;
 
@@ -1873,9 +1863,6 @@
             return;
           }
 
-          function createXULElement(el) {
-            return document.createElementNS("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul", el);
-          }
           var itemBox = createXULElement("calendar-editable-item");
 
           this.mainbox.appendChild(itemBox);
@@ -1932,13 +1919,28 @@
 
     <handlers>
       <handler event="dblclick" button="0"><![CDATA[
-        this.calendarView.controller.createNewEvent();
+        this.calendarView.controller.createNewEvent(null, this.mDate, null, true);
       ]]></handler>
       <handler event="mousedown"><![CDATA[
         this.calendarView.selectedDay = this.mDate;
       ]]></handler>
       <handler event="click" button="0"><![CDATA[
         this.calendarView.setSelectedItems(0, []);
+      ]]></handler>
+      <handler event="DOMMouseScroll"><![CDATA[
+        if (this.getAttribute("orient") == "vertical") {
+            // In vertical view (normal), don't let the parent multiday view
+            // handle the scrolling in its bubbling phase. The default action
+            // will make the box scroll here.
+
+            // TODO We could scroll by the height of exactly one event box, but
+            // since a normal box's boxObject doesn't implement nsIScrollBoxObject,
+            // there is no way to scroll by pixels. Using a xul:scrollbox has
+            // problems since the equalsize attribute isn't inherited by the
+            // inner box, and even if that is worked around, something makes the
+            // rotated view look bad in that case.
+            event.stopPropagation();
+        }
       ]]></handler>
     </handlers>
   </binding>
@@ -1948,9 +1950,12 @@
     -->
   <binding id="calendar-event-box" extends="chrome://calendar/content/calendar-view-core.xml#calendar-editable-item">
 
-    <content>
+    <content tooltip="itemTooltip">
       <xul:box anonid="shadowbox"
                xbl:inherits="width,height">
+<!-- TODO: Better use the  binding  <xul:calendar-shadow-box xbl:inherits="flat,orient"
+     for the shadows and control their visibility with the "flat" attribute. Probably the flat attribute may be derived from 
+     the "orient"-attribute-->
         <xul:box anonid="shadow-left-box"
                  xbl:inherits="orient" >
           <xul:image anonid="shadow-left"
@@ -1963,20 +1968,22 @@
           <xul:image anonid="shadow-left-if-vertical"
                      class="calendar-event-box-shadow-left"
                      hidden="true"/>
-          <xul:box anonid="event-container" xbl:inherits="orient" flex="1">
+          <xul:box anonid="event-container"
+                   class="calendar-color-box"
+                   xbl:inherits="orient,readonly,flashing,alarm,allday,priority,progress,status,calendar,categories,item-calendar"
+                   flex="1">
             <xul:box class="calendar-event-selection" orient="horizontal" flex="1">
               <xul:stack anonid="eventbox"
                          align="stretch"
                          class="calendar-event-box-container"
                          flex="1"
-                         xbl:inherits="context,parentorient=orient">
+                         xbl:inherits="context,parentorient=orient,readonly,flashing,alarm,allday,priority,progress,status,calendar,categories">
                 <xul:vbox class="calendar-event-details">
                   <xul:description anonid="event-name" class="calendar-event-details-core" flex="1"/>
                   <xul:textbox anonid="event-name-textbox"
-                               class="plain calendar-event-details-core"
+                               class="plain calendar-event-details-core calendar-event-name-textbox"
                                flex="1"
                                hidden="true"
-                               style="background: transparent !important;"
                                wrap="true"/>
                 </xul:vbox>
                 <xul:image width="1px" class="calendar-event-box-gradient"/>
@@ -2003,7 +2010,7 @@
                      not be resizable using the gripbars. If you want to insert
                      additional elements, do so above the box with the gripbars. -->
               </xul:stack>
-              <xul:calendar-category-box anonid="category-box"/>
+              <xul:calendar-category-box anonid="category-box" xbl:inherits="categories"/>
             </xul:box>
           </xul:box>
           <xul:image anonid="shadow-bottom"
@@ -2069,7 +2076,6 @@
 
               var eventbox = document.getAnonymousElementByAttribute(this, "anonid", "eventbox");
               eventbox.setAttribute("orient", val);
-              eventbox.setAttribute("class", "calendar-item calendar-event-box-" + val);
               var gb1 = document.getAnonymousElementByAttribute(this, "anonid", "gripbar1");
               gb1.parentorient = val;
               var gb2 = document.getAnonymousElementByAttribute(this, "anonid", "gripbar2");
@@ -2084,7 +2090,7 @@
         onget="return this.mParentColumn;"
         onset="return (this.mParentColumn = val);"/>
 
-      <property name="startMinute">
+      <property name="startMinute" readonly="true">
         <getter><![CDATA[
             if (!this.mOccurrence)
                 return 0;
@@ -2093,7 +2099,7 @@
         ]]></getter>
       </property>
 
-      <property name="endMinute">
+      <property name="endMinute" readonly="true">
         <getter><![CDATA[
             if (!this.mOccurrence)
                 return 0;
@@ -2254,8 +2260,8 @@
           // Only do this if the long weekdays are visible and we haven't already cached.
           if (!this.longWeekdayPixels && !longName.hasAttribute("hidden")) {
             this.longWeekdayPixels = longName.boxObject.width +
-                                     parseInt(document.defaultView.getComputedStyle(longName, null).getPropertyValue("margin-left")) +
-                                     parseInt(document.defaultView.getComputedStyle(longName, null).getPropertyValue("margin-right"));
+                                     parseInt(document.defaultView.getComputedStyle(longName, null).getPropertyValue("-moz-margin-start")) +
+                                     parseInt(document.defaultView.getComputedStyle(longName, null).getPropertyValue("-moz-margin-end"));
           }
         ]]></body>
       </method>
@@ -2311,6 +2317,7 @@
         var alarmService = Components.classes['@mozilla.org/calendar/alarm-service;1']
                            .getService(Components.interfaces.calIAlarmService);
         alarmService.addObserver(this.mObserver);
+
       ]]></constructor>
 
       <destructor><![CDATA[
@@ -2522,16 +2529,18 @@
                     this.calView.doDeleteEvent(occ);
                 }
             },
-            onError: function onError(aErrNo, aMessage) { },
+            onError: function onError(aCalendar, aErrNo, aMessage) { },
 
             onPropertyChanged: function(aCalendar, aName, aValue, aOldValue) {
                 switch (aName) {
                     case "suppressAlarms":
-                        if (!getPrefSafe("calendar.alarms.indicator.show", true)) {
+                        if (!getPrefSafe("calendar.alarms.indicator.show", true) ||
+                            aCalendar.getProperty("capabilities.alarms.popup.supported") === false ) {
                             break;
                         }
                         // else fall through
                     case "readOnly":
+                    case "disabled":
                         // XXXvv we can be smarter about how we handle this stuff
                         this.calView.refresh();
                         break;
@@ -2569,13 +2578,15 @@
             // XXXvv we can be smarter about how we handle this stuff
             //
             onCalendarAdded: function onCalendarAdded(aCalendar) {
-                //dump ("view onCalendarAdded\n");
-                this.calView.refresh();
+                if (!aCalendar.getProperty("disabled")) {
+                    this.calView.refresh();
+                }
             },
 
             onCalendarRemoved: function onCalendarRemoved(aCalendar) {
-                //dump ("view onCalendarRemoved\n");
-                this.calView.refresh();
+                if (!aCalendar.getProperty("disabled")) {
+                    this.calView.refresh();
+                }
             },
 
             onDefaultCalendarChanged:
@@ -2909,16 +2920,18 @@
 
       <property name="selectedDay">
         <getter><![CDATA[
-          if (this.numVisibleDates == 1)
-            return this.mDateColumns[0].date;
+          var selected;
+          if (this.numVisibleDates == 1) {
+              selected = this.mDateColumns[0].date;
+          } else if (this.mSelectedDay) {
+              selected = this.mSelectedDay;
+          } else if (this.mSelectedDayCol) {
+              selected = this.mSelectedDayCol.date;
+          }
 
-          if (this.mSelectedDay)
-            return this.mSelectedDay;
-
-          if (this.mSelectedDayCol)
-            return this.mSelectedDayCol.date;
-
-          return null;
+          // TODO Make sure the selected day is valid
+          // TODO select now if it is in the range?
+          return selected;
         ]]></getter>
         <setter><![CDATA[
           // ignore if just 1 visible, it's always selected,
@@ -3117,6 +3130,8 @@
                   child = child.nextSibling;
               }
           }
+
+          // Refresh
           this.refresh();
         ]]></body>
       </method>
@@ -3191,10 +3206,6 @@
 
       <method name="relayout">
         <body><![CDATA[
-          function createXULElement(el) {
-              return document.createElementNS("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul", el);
-          }
-
           var orient = this.getAttribute("orient");
           var otherorient = "vertical";
           if (!orient) orient = "horizontal";
@@ -3353,10 +3364,7 @@
                col.column.endLayoutBatchChange();
           }
 
-          // adjust scrollbar spacers
-          // XXX For performance reasons this method call can be moved to the
-          // XXX constructor and the reorient method as soon as the views
-          // XXX are constructed statically (24 hrs).
+          // Adjust scrollbar spacers
           this.adjustScrollBarSpacers();
         ]]></body>
       </method>
@@ -3441,6 +3449,20 @@
         ]]></body>
       </method>
 
+      <method name="adjustScrollbarSpacersForAlldayEvents">
+        <parameter name="aEvent"/>
+        <body><![CDATA[
+          var startDate = aEvent[calGetStartDateProp(aEvent)];
+          var endDate = aEvent[calGetEndDateProp(aEvent)];
+          if (startDate && startDate.isDate ||
+              endDate && endDate.isDate) {
+              // If this is an all day event, then the header with allday
+              // events could possibly get a scrollbar. Readjust them.
+              this.adjustScrollBarSpacers();
+          }
+        ]]></body>
+      </method>
+
       <method name="doAddEvent">
         <parameter name="aEvent"/>
         <body><![CDATA[
@@ -3460,6 +3482,8 @@
                   column.addEvent(aEvent);
               }
           }
+
+          this.adjustScrollbarSpacersForAlldayEvents(aEvent);
         ]]></body>
       </method>
 
@@ -3494,6 +3518,8 @@
           if (found) {
               this.fireEvent("itemselect", this.mSelectedItems);
           }
+
+          this.adjustScrollbarSpacersForAlldayEvents(aEvent);
         ]]></body>
       </method>
 
@@ -3566,11 +3592,28 @@
                          this, "anonid", "childbox");
           var propertyValue = childbox.boxObject.firstChild
                               .boxObject[propertyName];
+          // Check if we need to show the headerScrollbarSpacer at all
+          var headerPropertyValue = propertyValue;
+          var headerDayBox = document.getAnonymousElementByAttribute(
+                             this, "anonid", "headerdaybox");
+          if (headerDayBox) {
+            // Only do this when there are multiple days
+            var headerDayBoxMaxHeight = parseInt(document.defaultView.getComputedStyle(headerDayBox, null)
+                                                         .getPropertyValue("max-height"), 10);
+            if (this.getAttribute("orient") == "vertical" &&
+                headerDayBox.boxObject.height >= headerDayBoxMaxHeight) {
+                // If the headerDayBox is just as high as the max-height, then
+                // there is already a scrollbar and we don't need to show the
+                // headerScrollbarSpacer. This is only valid for the non-rotated
+                // view.
+                headerPropertyValue = 0;
+            }
+          }
 
           // set the same width/height for the label and header box spacers
           var headerScrollBarSpacer = document.getAnonymousElementByAttribute(
                                       this, "anonid", "headerscrollbarspacer");
-          headerScrollBarSpacer.setAttribute(propertyName, propertyValue);
+          headerScrollBarSpacer.setAttribute(propertyName, headerPropertyValue);
           var labelScrollBarSpacer = document.getAnonymousElementByAttribute(
                                      this, "anonid", "labelscrollbarspacer");
           labelScrollBarSpacer.setAttribute(propertyName, propertyValue);
@@ -3663,7 +3706,7 @@
     </implementation>
 
     <handlers>
-      <handler event="DOMMouseScroll"><![CDATA[
+      <handler event="DOMMouseScroll" phase="bubbling"><![CDATA[
         if (!event.ctrlKey &&
             !event.shiftKey &&
             !event.altKey &&

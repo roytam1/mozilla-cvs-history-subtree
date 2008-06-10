@@ -19,6 +19,7 @@
 # the Initial Developer. All Rights Reserved.
 #
 # Contributor(s):
+#   Philipp Kewisch <mozilla@kewis.ch>
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -51,7 +52,7 @@ endif
 
 postflight_all:
 	mkdir -p $(DIST_UNI)/xpi-stage
-	rm -rf $(DIST_UNI)/xpi-stage/*
+	rm -rf $(DIST_UNI)/xpi-stage/lightning*
 	cp -R $(DIST_PPC)/xpi-stage/lightning $(DIST_UNI)/xpi-stage
 	platform=`$(PYTHON) $(TOPSRCDIR)/calendar/lightning/build/get-platform.py \
 		$(DIST_PPC)/xpi-stage/lightning`; \

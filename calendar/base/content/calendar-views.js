@@ -51,7 +51,7 @@ var calendarViewController = {
         return this;
     },
 
-    createNewEvent: function (aCalendar, aStartTime, aEndTime) {
+    createNewEvent: function (aCalendar, aStartTime, aEndTime, aForceAllday) {
         aCalendar = aCalendar || getSelectedCalendar();
 
         // if we're given both times, skip the dialog
@@ -65,13 +65,8 @@ var calendarViewController = {
             event.title = props.GetStringFromName("newEvent");
             setDefaultAlarmValues(event);
             doTransaction('add', event, aCalendar, null, null);
-        } else if (aStartTime && aStartTime.isDate) {
-            var event = createEvent();
-            event.startDate = aStartTime;
-            setDefaultAlarmValues(event);
-            doTransaction('add', event, aCalendar, null, null);
         } else {
-            createEventWithDialog(aCalendar, aStartTime, null);
+            createEventWithDialog(aCalendar, aStartTime, null, null, null, aForceAllday);
         }
     },
 
@@ -86,6 +81,10 @@ var calendarViewController = {
         // an open dialog to save any outstanding modifications.
         aOccurrence = this.finalizePendingModification(aOccurrence);
 
+        // XXX TODO logic to ask for which occurrence to modify is currently in
+        // modifyEventWithDialog, since the type of transactions done depend on
+        // this. This in turn makes the aOccurrence here be potentially wrong, I
+        // haven't seen it used anywhere though.
         var pendingModification = {
             controller: this,
             item: aOccurrence,
@@ -103,7 +102,7 @@ var calendarViewController = {
 
         this.pendingJobs.push(pendingModification);
 
-        modifyEventWithDialog(aOccurrence,pendingModification);
+        modifyEventWithDialog(aOccurrence, pendingModification, true);
     },
 
     // iterate the list of pending modifications and see if the occurrence
@@ -166,20 +165,13 @@ var calendarViewController = {
             }
 
             // If the item contains attendees then they need to be notified
-            if (instance.hasProperty("X-MOZ-SEND-INVITATIONS") &&
-               (instance.getProperty("X-MOZ-SEND-INVITATIONS") == "TRUE")) {
-               sendItipInvitation(instance);
+            if (instance.getProperty("X-MOZ-SEND-INVITATIONS") == "TRUE") {
+               sendItipInvitation(instance, 'REQUEST', []);
             }
 
             doTransaction('modify', instance, instance.calendar, aOccurrence, null);
         } else {
-            // prompt for choice between occurrence and master for recurrent items
-            var itemToEdit = getOccurrenceOrParent(aOccurrence);
-            if (!itemToEdit) {
-                return;  // user cancelled
-            }
-
-            this.createPendingModification(itemToEdit);
+            this.createPendingModification(aOccurrence);
         }
     },
 
@@ -218,11 +210,17 @@ var calendarViewController = {
                 // Only give the user the selection if only one occurrence is
                 // selected. Otherwise he will get a dialog for each occurrence
                 // he deletes.
-                itemToDelete = getOccurrenceOrParent(itemToDelete);
+                var [itemToDelete, hasFutureItem, response] = promptOccurrenceModification(itemToDelete, false, "delete");
+                if (!response) {
+                    // The user canceled the dialog, bail out
+                    break;
+                }
             }
-            if (!itemToDelete) {
-                continue;
-            }
+
+            // Now some dirty work: Make sure more than one occurrence can be
+            // deleted by saving the recurring items and removing occurrences as
+            // they come in. If this is not an occurrence, we can go ahead and
+            // delete the whole item.
             itemToDelete = this.finalizePendingModification(itemToDelete);
             if (itemToDelete.parentItem.hashId != itemToDelete.hashId) {
                 var savedItem = getSavedItem(itemToDelete);
@@ -231,6 +229,12 @@ var calendarViewController = {
                 // Dont start the transaction yet. Do so later, in case the
                 // parent item gets modified more than once.
             } else {
+                // Add sending ITIP IMIP cancelation
+                // If the item contains attendees then they need to be notified
+                if (itemToDelete.hasProperty("X-MOZ-SEND-INVITATIONS") &&
+                (itemToDelete.getProperty("X-MOZ-SEND-INVITATIONS") == "TRUE")) {
+                    sendItipInvitation(itemToDelete,'CANCEL', []);
+                }
                 doTransaction('delete', itemToDelete, itemToDelete.calendar, null, null);
             }
         }
@@ -295,6 +299,12 @@ function switchToView(aViewType) {
             command.removeAttribute("checked");
         }
     }
+
+    // Set the labels for the context-menu
+    var nextCommand = document.getElementById("calendar-view-context-menu-next");
+    nextCommand.setAttribute("label", nextCommand.getAttribute("label-"+aViewType));
+    var previousCommand = document.getElementById("calendar-view-context-menu-previous")
+    previousCommand.setAttribute("label", previousCommand.getAttribute("label-"+aViewType));
 
     // Disable the menuitem when not in day or week view.
     var rotated = document.getElementById("calendar_toggle_orientation_command");
@@ -372,6 +382,7 @@ function scheduleMidnightUpdate(aRefreshCallback) {
     // stuck in an infinite loop.
     var udCallback = {
         notify: function(timer) {
+            LOG("scheduleMidnightUpdate -- timer shot.");
             aRefreshCallback();
         }
     };
@@ -380,8 +391,17 @@ function scheduleMidnightUpdate(aRefreshCallback) {
         // Observer for wake after sleep/hibernate/standby to create new timers and refresh UI
         var wakeObserver = {
            observe: function(aSubject, aTopic, aData) {
+               LOG("scheduleMidnightUpdate -- wakeObserver: " + aTopic);
                if (aTopic == "wake_notification") {
-                   aRefreshCallback();
+                   // postpone refresh for another couple of seconds to get netwerk ready:
+                   if (this.mTimer) {
+                       this.mTimer.cancel();
+                   } else {
+                       this.mTimer = Components.classes["@mozilla.org/timer;1"]
+                                               .createInstance(Components.interfaces.nsITimer);
+                   }
+                   this.mTimer.initWithCallback(udCallback, 10 * 1000,
+                                                Components.interfaces.nsITimer.TYPE_ONE_SHOT);
                }
            }
         };
@@ -396,12 +416,12 @@ function scheduleMidnightUpdate(aRefreshCallback) {
                                 function() {
                                     observerService.removeObserver(wakeObserver, "wake_notification");
                                 }, false);
-
         gMidnightTimer = Components.classes["@mozilla.org/timer;1"]
                                    .createInstance(Components.interfaces.nsITimer);
     } else {
         gMidnightTimer.cancel();
     }
+    LOG("scheduleMidnightUpdate -- init timer.");
     gMidnightTimer.initWithCallback(udCallback, msUntilTomorrow, gMidnightTimer.TYPE_ONE_SHOT);
 }
 
@@ -426,10 +446,11 @@ function getStyleSheet(aStyleSheetPath) {
  * equivalent to formatStringForCSSRule(categoryNameInUnicode)].
  */
 function updateStyleSheetForObject(aObject, aSheet) {
-    var selectorPrefix, name, ruleUpdaterFunc;
+    var selectorPrefix, name, ruleUpdaterFunc, classPrefix;
     if (aObject.uri) {
         // For a calendar, set background and contrasting text colors
         name = aObject.uri.spec;
+        classPrefix = ".calendar-color-box";
         selectorPrefix = "item-calendar=";
         ruleUpdaterFunc = function calendarRuleFunc(aRule, aIndex) {
             var color = aObject.getProperty('color');
@@ -443,7 +464,8 @@ function updateStyleSheetForObject(aObject, aSheet) {
         // For a category, set the category bar color.  Also note that
         // it uses the ~= selector, since there could be multiple categories.
         name = aObject;
-        selectorPrefix = "item-category~=";
+        selectorPrefix = "categories~=";
+        classPrefix = ".category-color-box"
         ruleUpdaterFunc = function categoryRuleFunc(aRule, aIndex) {
             var color = getPrefSafe("calendar.category.color."+name, null);
             if (color) {
@@ -454,7 +476,7 @@ function updateStyleSheetForObject(aObject, aSheet) {
         };
     }
 
-    var selector = '.calendar-item[' + selectorPrefix + '"' + name + '"]';
+    var selector = classPrefix + '[' + selectorPrefix + '"' + name + '"]';
 
     // Now go find our rule
     var rule, ruleIndex;
@@ -574,6 +596,23 @@ function toggleTasksInView() {
 }
 
 /**
+ * Toggle the show completed in view checkbox and refresh the current view
+ */
+function toggleShowCompletedInView() {
+    var cmd = document.getElementById("calendar_toggle_show_completed_in_view_command");
+    var newValue = (cmd.getAttribute("checked") == "true" ? "false" : "true");
+    cmd.setAttribute("checked", newValue);
+
+    var deck = getViewDeck();
+    for each (var view in deck.childNodes) {
+        view.showCompleted = (newValue == "true");
+    }
+
+    // Refresh the current view
+    currentView().goToDay(currentView().selectedDay);
+}
+
+/**
  * Provides a neutral way to go to the current day
  */
 function goToDate(aDate) {
@@ -582,42 +621,18 @@ function goToDate(aDate) {
 }
 
 /**
- * Sets up menuitems for the views
+ * Returns the calendar view that was selected before restart, or the current
+ * calendar view if it has already been set in this session
  */
-function initializeViews() {
-    // Set up the checkbox variables. Do not use the typical toggle*() functions
-    // because those will actually toggle the current value.
-    const kWorkdaysCommand = "calendar_toggle_workdays_only_command";
-    const kTasksInViewCommand = "calendar_toggle_tasks_in_view_command";
-    const kOrientation = "calendar_toggle_orientation_command";
-    const kHideCompleted = "hide-completed-checkbox";
-    var workdaysOnly = (document.getElementById(kWorkdaysCommand)
-                                .getAttribute("checked") == "true");
-
-    var tasksInView = (document.getElementById(kTasksInViewCommand)
-                               .getAttribute("checked") == "true");
-    var rotated = (document.getElementById(kOrientation)
-                           .getAttribute("checked") == "true");
-    var showCompleted = !document.getElementById(kHideCompleted).checked;
-
+function getLastCalendarView() {
     var deck = getViewDeck();
-    for each (var view in deck.childNodes) {
-        view.workdaysOnly = workdaysOnly;
-        view.tasksInView = tasksInView;
-        view.showCompleted = showCompleted;
-        view.rotated = rotated;
-    }
-
-    // Restore the last shown view
-    var deck = getViewDeck();
-    if (deck.selectedIndex < 0) {
-        // No deck item was selected beforehand, default to week view.
-        selectCalendarView("week");
-    } else {
+    if (deck.selectedIndex > -1) {
         var viewNode = deck.childNodes[deck.selectedIndex];
-        var viewName = viewNode.id.replace(/-view/, "");
-        selectCalendarView(viewName);
+        return viewNode.id.replace(/-view/, "");
     }
+
+    // No deck item was selected beforehand, default to week view.
+    return "week";
 }
 
 /**
@@ -637,7 +652,7 @@ function deleteSelectedEvents() {
 function editSelectedEvents() {
     var selectedItems = currentView().getSelectedItems({});
     if (selectedItems && selectedItems.length >= 1) {
-        modifyEventWithDialog(getOccurrenceOrParent(selectedItems[0]));
+        modifyEventWithDialog(selectedItems[0], null, true);
     }
 }
 
@@ -661,13 +676,17 @@ function selectAllEvents() {
     };
 
     var composite = getCompositeCalendar();
-    var filter = composite.ITEM_FILTER_COMPLETED_ALL |
-                 composite.ITEM_FILTER_CLASS_OCCURRENCES;
+    var filter = composite.ITEM_FILTER_CLASS_OCCURRENCES;
 
     if (currentView().tasksInView) {
         filter |= composite.ITEM_FILTER_TYPE_ALL; 
     } else {
         filter |= composite.ITEM_FILTER_TYPE_EVENT;
+    }
+    if (currentView().showCompleted) {
+        filter |= composite.ITEM_FILTER_COMPLETED_ALL;
+    } else {
+        filter |= composite.ITEM_FILTER_COMPLETED_NO;
     }
 
     // Need to move one day out to get all events

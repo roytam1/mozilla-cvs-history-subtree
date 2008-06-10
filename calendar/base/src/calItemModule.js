@@ -107,6 +107,11 @@ const componentData =
      service: true,
      onComponentLoad: "onCalCalendarManagerLoad()"},
 
+    {cid: Components.ID("{b8db7c7f-c168-4e11-becb-f26c1c4f5f8f}"),
+     contractid: "@mozilla.org/calendar/alarm;1",
+     script: "calAlarm.js",
+     constructor: "calAlarm"},
+
     {cid: Components.ID("{7a9200dd-6a64-4fff-a798-c5802186e2cc}"),
      contractid: "@mozilla.org/calendar/alarm-service;1",
      script: "calAlarmService.js",
@@ -184,6 +189,11 @@ const componentData =
      script: "calProtocolHandler.js",
      constructor: "calProtocolHandler"},
 
+    {cid: Components.ID("{b2ee6f91-b061-4527-97a1-b85361775fc1}"),
+     contractid: "@mozilla.org/network/protocol;1?name=webcals",
+     script: "calProtocolHandler.js",
+     constructor: "calProtocolHandler"},
+
     {cid: Components.ID("{6fe88047-75b6-4874-80e8-5f5800f14984}"),
      contractid: "@mozilla.org/calendar/ics-parser;1",
      script: "calIcsParser.js",
@@ -197,7 +207,13 @@ const componentData =
     {cid: Components.ID("{40a1ccf4-5f54-4815-b842-abf06f84dbfd}"),
      contractid: "@mozilla.org/calendar/transactionmanager;1",
      script: "calTransactionManager.js",
-     constructor: "calTransactionManager"}
+     constructor: "calTransactionManager"},
+
+    {cid: Components.ID("{1a23ace4-a0dd-43b4-96a8-b3cd419a14a5}"),
+     contractid: "@mozilla.org/calendar/timezone-service;1",
+     script: "calTimezoneService.js",
+     constructor: "calTimezoneService",
+     service: true}
     ];
 
 var calItemModule = {
@@ -274,7 +290,7 @@ var calItemModule = {
         }
     },
 
-    makeFactoryFor: function(constructor) {
+    makeFactoryFor: function(constructor, contractid) {
         var factory = {
             QueryInterface: function (aIID) {
                 if (!aIID.equals(Components.interfaces.nsISupports) &&
@@ -286,7 +302,7 @@ var calItemModule = {
             createInstance: function (outer, iid) {
                 if (outer != null)
                     throw Components.results.NS_ERROR_NO_AGGREGATION;
-                return (new constructor()).QueryInterface(iid);
+                return (new constructor(contractid)).QueryInterface(iid);
             }
         };
 
@@ -311,7 +327,9 @@ var calItemModule = {
                     eval(componentData[i].onComponentLoad);
                 }
                 // eval to get usual scope-walking
-                return this.makeFactoryFor(eval(componentData[i].constructor));
+                // somebody knows why we eval the constructor function's name?
+                return this.makeFactoryFor(eval(componentData[i].constructor),
+                                           componentData[i].contractid);
             }
         }
 

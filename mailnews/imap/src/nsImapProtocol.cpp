@@ -7624,6 +7624,29 @@ nsresult nsImapProtocol::GetMsgWindow(nsIMsgWindow **aMsgWindow)
     return rv;
 }
 
+nsresult nsImapProtocol::GetPassword(nsXPIDLCString &password)
+{
+  nsCOMPtr<nsIMsgWindow> msgWindow;
+
+  if (password.IsEmpty() && m_imapServerSink &&
+      !(m_useSecAuth && GetServerStateParser().GetCapabilityFlag() & kHasAuthGssApiCapability))
+  {
+    nsresult rv = GetMsgWindow(getter_AddRefs(msgWindow));
+    if (NS_FAILED(rv)) return rv;
+    // need to copy password, because in the case of Cancel,
+    // GetPasswordWithUI will set the password pointer to null.
+    char *pPassword = ToNewCString(m_lastPasswordSent);
+    char *savePassword = pPassword;
+    rv = m_imapServerSink->PromptForPassword(&pPassword, msgWindow);
+    PR_Free(savePassword);
+    if (rv == NS_MSG_PASSWORD_PROMPT_CANCELLED)
+      return NS_ERROR_ABORT;
+    password.Adopt(pPassword);
+  }
+  m_lastPasswordSent = password;
+  return NS_OK;
+}
+
 PRBool nsImapProtocol::TryToLogon()
 {
   PRInt32 logonTries = 0;
@@ -7647,8 +7670,6 @@ PRBool nsImapProtocol::TryToLogon()
     
   }
       
-  nsCOMPtr<nsIMsgWindow> aMsgWindow;
-
   do
   {
       PRBool imapPasswordIsNew = PR_FALSE;
@@ -7664,11 +7685,11 @@ PRBool nsImapProtocol::TryToLogon()
       if (NS_SUCCEEDED(rv) && prefBranch) 
         prefBranch->GetBoolPref("mail.auth_login", &prefBool);
 
+      if (GetServerStateParser().GetCapabilityFlag() == kCapabilityUndefined)
+        Capability();
+
       if (prefBool) 
       {
-        if (GetServerStateParser().GetCapabilityFlag() == kCapabilityUndefined)
-          Capability();
-
         // If secure auth is configured, don't proceed unless the server
         // supports it. This avoids fallback to insecure login in case
         // authentication fails.
@@ -7689,25 +7710,11 @@ PRBool nsImapProtocol::TryToLogon()
           m_hostSessionList->SetCapabilityForHost(GetImapServerKey(), kCapabilityUndefined);
           break;
         }
-        if (password.IsEmpty() && m_imapServerSink &&
-            !(m_useSecAuth && GetServerStateParser().GetCapabilityFlag() & kHasAuthGssApiCapability))
-        {
-          if (!aMsgWindow)
-          {
-              rv = GetMsgWindow(getter_AddRefs(aMsgWindow));
-              if (NS_FAILED(rv)) return rv;
-          }
-          char *pPassword = ToNewCString(m_lastPasswordSent);
-          char *savePassword = pPassword;
-          rv = m_imapServerSink->PromptForPassword(&pPassword, aMsgWindow);
-          PR_Free(savePassword);
-          if (rv == NS_MSG_PASSWORD_PROMPT_CANCELLED)
-            break;
-          password.Adopt(pPassword);
-         }
+
+        rv = GetPassword(password);
+        if(NS_FAILED(rv)) break;
 
         clientSucceeded = PR_TRUE;
-        m_lastPasswordSent = password;
         // Use CRAM/NTLM/MSN only if secure auth is enabled. This is for servers that
         // say they support CRAM but are so badly broken that trying it causes
         // all subsequent login attempts to fail (bug 231303, bug 227560)
@@ -7742,9 +7749,13 @@ PRBool nsImapProtocol::TryToLogon()
         }
         else if (! (GetServerStateParser().GetCapabilityFlag() & kLoginDisabled))
           InsecureLogin(userName, password);
-      }
+      } // if prefBool
       else if (! (GetServerStateParser().GetCapabilityFlag() & kLoginDisabled))
+      {
+        rv = GetPassword(password);
+        if(NS_FAILED(rv)) break;
         InsecureLogin(userName, password);
+      }
 
       if (!clientSucceeded || !GetServerStateParser().LastCommandSuccessful())
       {

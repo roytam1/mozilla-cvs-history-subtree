@@ -3367,6 +3367,11 @@ nsTableFrame::ReflowChildren(nsTableReflowState& aReflowState,
             // we PushChildren below, anyway.
             rowGroups.InsertElementAt(continuingFrame, childX + 1);
           }
+          else {
+            // put the nextinflow so that it will get pushed
+            rowGroups.InsertElementAt(kidNextInFlow, childX + 1);
+          }
+
           // We've used up all of our available space so push the remaining
           // children to the next-in-flow
           nsIFrame* nextSibling = kidFrame->GetNextSibling();

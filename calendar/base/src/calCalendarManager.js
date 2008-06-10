@@ -61,6 +61,7 @@ function onCalCalendarManagerLoad() {
 
 function calCalendarManager() {
     this.wrappedJSObject = this;
+    this.mObservers = new calListenerBag(Components.interfaces.calICalendarManagerObserver);
     this.setUpStartupObservers();
 }
 
@@ -84,7 +85,7 @@ var calCalendarManagerClassInfo = {
     classDescription: "Calendar Manager",
     classID: Components.ID("{f42585e7-e736-4600-985d-9624c1c51992}"),
     implementationLanguage: Components.interfaces.nsIProgrammingLanguage.JAVASCRIPT,
-    flags: 0
+    flags: Components.interfaces.nsIClassInfo.SINGLETON
 };
 
 calCalendarManager.prototype = {
@@ -211,7 +212,7 @@ calCalendarManager.prototype = {
                 // Refresh all the calendars that can be refreshed.
                 var cals = this.getCalendars({});
                 for each (var cal in cals) {
-                    if (cal.canRefresh) {
+                    if (!cal.getProperty("disabled") && cal.canRefresh) {
                         cal.refresh();
                     }
                 }
@@ -345,18 +346,11 @@ calCalendarManager.prototype = {
     initDB: function() {
         var dbService = Components.classes[kStorageServiceContractID]
                                   .getService(kStorageServiceIID);
-
-        if ("getProfileStorage" in dbService) {
-            // 1.8 branch
-            this.mDB = dbService.getProfileStorage("profile");
-        } else {
-            // trunk
-            this.mDB = dbService.openSpecialDatabase("profile");
-        }
+        this.mDB = dbService.openSpecialDatabase("profile");
 
         var sqlTables = { cal_calendars: "id INTEGER PRIMARY KEY, type TEXT, uri TEXT",
                           cal_calendars_prefs: "id INTEGER PRIMARY KEY, calendar INTEGER, name TEXT, value TEXT",
-                          cal_calmgr_schema_version: "version INTEGER",
+                          cal_calmgr_schema_version: "version INTEGER"
                         };
 
         // Should we check the schema version to see if we need to upgrade?
@@ -526,11 +520,7 @@ calCalendarManager.prototype = {
     },
 
     notifyObservers: function(functionName, args) {
-        function notify(obs) {
-            try { obs[functionName].apply(obs, args);  }
-            catch (e) { }
-        }
-        this.mObservers.forEach(notify);
+        this.mObservers.notify(functionName, args);
     },
 
     /**
@@ -782,20 +772,13 @@ calCalendarManager.prototype = {
         this.mDeletePref.reset();
     },
     
-    mObservers: Array(),
+    mObservers: null,
     addObserver: function(aObserver) {
-        if (this.mObservers.indexOf(aObserver) != -1)
-            return;
-
-        this.mObservers.push(aObserver);
+        this.mObservers.add(aObserver);
     },
 
     removeObserver: function(aObserver) {
-        function notThis(v) {
-            return v != aObserver;
-        }
-        
-        this.mObservers = this.mObservers.filter(notThis);
+        this.mObservers.remove(aObserver);
     }
 };
 
@@ -822,11 +805,9 @@ calMgrCalendarObserver.prototype = {
     calMgr: null,
 
     QueryInterface: function mBL_QueryInterface(aIID) {
-        ensureIID(
-            [ Components.interfaces.nsIWindowMediatorListener,
-              Components.interfaces.calIObserver,
-              Components.interfaces.nsISupports], aIID);
-        return this;
+        return doQueryInterface(this, calMgrCalendarObserver.prototype, aIID,
+                                [Components.interfaces.nsIWindowMediatorListener,
+                                 Components.interfaces.calIObserver]);
     },
 
     // nsIWindowMediatorListener:
@@ -870,7 +851,7 @@ calMgrCalendarObserver.prototype = {
     onAddItem: function(aItem) {},
     onModifyItem: function(aNewItem, aOldItem) {},
     onDeleteItem: function(aDeletedItem) {},
-    onError: function(aErrNo, aMessage) {
+    onError: function(aCalendar, aErrNo, aMessage) {
         this.announceError(aErrNo, aMessage);
     },
 

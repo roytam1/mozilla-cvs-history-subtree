@@ -47,14 +47,15 @@ function getCompositeCalendar() {
             .createInstance(Components.interfaces.calICompositeCalendar);
 
         gCompositeCalendar.prefPrefix = 'calendar-main';
+        var chromeWindow = window.QueryInterface(Components.interfaces.nsIDOMChromeWindow);    
+        gCompositeCalendar.setStatusObserver(gCalendarStatusFeedback, chromeWindow);
     }
     return gCompositeCalendar;
 }
 
 function getSelectedCalendar() {
-    var tree = document.getElementById("calendar-list-tree");
-    return (tree.currentIndex > -1) &&
-           calendarListTreeView.mCalendarList[tree.currentIndex] || null;
+    var tree = document.getElementById("calendar-list-tree-widget");
+    return calendarListTreeView.getCalendar(tree.currentIndex);
 }
 
 function promptDeleteCalendar(aCalendar) {
@@ -125,7 +126,7 @@ function loadCalendarManager() {
     calendarListInitCategoryColors();
 
     // Set up the tree view
-    var tree = document.getElementById("calendar-list-tree");
+    var tree = document.getElementById("calendar-list-tree-widget");
     calendarListTreeView.tree = tree;
     tree.view = calendarListTreeView;
 
@@ -226,7 +227,7 @@ function calendarListUpdateColor(aCalendar) {
         }
     }
 
-    var ruleString = selectorPrefix + "(color-" + color.substr(1) + ") { }";
+    var ruleString = selectorPrefix + "(calendar-list-tree-color, color-" + color.substr(1) + ") { }";
 
     var rule = gCachedStyleSheet
                .insertRule(ruleString, gCachedStyleSheet.cssRules.length);
@@ -291,13 +292,12 @@ var calendarListTreeView = {
         }
 
         this.mCalendarList.splice(index, 1);
-        this.treebox.rowCountChanged(index, -1);
-
         if (index == this.rowCount) {
             index--;
         }
 
-        this.tree.view.selection.select(index);
+        this.tree.view.selection.select(index + 1);
+        this.treebox.rowCountChanged(index, -1);
     },
 
     updateCalendar: function cLTV_updateCalendar(aCalendar) {
@@ -335,43 +335,57 @@ var calendarListTreeView = {
         return this.mCalendarList.length;
     },
 
-    getRowProperties: function cLTV_getRowProperties(aRow, aProps) {},
+    getCalendar: function cLTV_getCalendar(index) {
+        if (index < 0) {
+            index = 0;
+        } else if (index >= this.mCalendarList.length) {
+            index = (this.mCalendarList.length - 1);
+        }
+        return this.mCalendarList[index];
+    },
 
     getCellProperties: function cLTV_getCellProperties(aRow, aCol, aProps) {
-        var calendar = this.mCalendarList[aRow];
+        this.getRowProperties(aRow, aProps);
+        this.getColumnProperties(aCol, aProps);
+    },
+
+    getRowProperties: function cLTV_getRowProperties(aRow, aProps) {
+        var calendar = this.getCalendar(aRow);
         var composite = getCompositeCalendar();
 
-        switch (aCol.id) {
-            case "calendar-list-tree-checkbox":
-                if (composite.getCalendar(calendar.uri)) {
-                    aProps.AppendElement(getAtomFromService("checked"));
-                } else {
-                    aProps.AppendElement(getAtomFromService("unchecked"));
-                }
-                break;
-            case "calendar-list-tree-color":
-                // Get the calendar color
-                var color = calendar.getProperty("color");
-                color = color && color.substr(1);
+        // Set up the composite calendar status
+        if (composite.getCalendar(calendar.uri)) {
+            aProps.AppendElement(getAtomFromService("checked"));
+        } else {
+            aProps.AppendElement(getAtomFromService("unchecked"));
+        }
 
-                // Set up the calendar color (background)
-                var bgColorProp = "color-" + (color || "default");
-                aProps.AppendElement(getAtomFromService(bgColorProp));
+        // Get the calendar color
+        var color = calendar.getProperty("color");
+        color = color && color.substr(1);
 
-                // Set a property to get the contrasting text color (foreground)
-                var fgColorProp = getContrastingTextColor(color || "a8c2e1");
-                aProps.AppendElement(getAtomFromService(fgColorProp));
+        // Set up the calendar color (background)
+        var bgColorProp = "color-" + (color || "default");
+        aProps.AppendElement(getAtomFromService(bgColorProp));
 
-                // Set up the readonly symbol
-                if (calendar.readOnly) {
-                    aProps.AppendElement(getAtomFromService("readOnly"));
-                }
+        // Set a property to get the contrasting text color (foreground)
+        var fgColorProp = getContrastingTextColor(color || "a8c2e1");
+        aProps.AppendElement(getAtomFromService(fgColorProp));
 
-                break;
+        // Set up the readonly symbol
+        if (calendar.readOnly) {
+            aProps.AppendElement(getAtomFromService("readOnly"));
+        }
+
+        // Set up the disabled state
+        if (calendar.getProperty("disabled")) {
+            aProps.AppendElement(getAtomFromService("disabled"));
+        } else {
+            aProps.AppendElement(getAtomFromService("enabled"));
         }
     },
 
-    getColumnProperties: function cLTV_getColumnProperties(a, aProps) {},
+    getColumnProperties: function cLTV_getColumnProperties(aCol, aProps) {},
 
     isContainer: function cLTV_isContainer(aRow) {
         return false;
@@ -414,7 +428,7 @@ var calendarListTreeView = {
     getProgressMode: function cLTV_getProgressMode(aRow, aCol) {},
 
     getCellValue: function cLTV_getCellValue(aRow, aCol) {
-        var calendar = this.mCalendarList[aRow];
+        var calendar = this.getCalendar(aRow);
         var composite = getCompositeCalendar();
 
         switch (aCol.id) {
@@ -428,12 +442,12 @@ var calendarListTreeView = {
     },
 
     getCellText: function cLTV_getCellText(aRow, aCol) {
-        var calendar = this.mCalendarList[aRow];
+        var calendar = this.getCalendar(aRow);
         var composite = getCompositeCalendar();
 
         switch (aCol.id) {
             case "calendar-list-tree-calendar":
-                return this.mCalendarList[aRow].name;
+                return this.getCalendar(aRow).name;
 
         }
         return "";
@@ -448,7 +462,7 @@ var calendarListTreeView = {
     cycleHeader: function cLTV_cycleHeader(aCol) { },
 
     cycleCell: function cLTV_cycleCell(aRow, aCol) {
-        var calendar = this.mCalendarList[aRow];
+        var calendar = this.getCalendar(aRow);
         var composite = getCompositeCalendar();
 
         switch (aCol.id) {
@@ -460,8 +474,11 @@ var calendarListTreeView = {
                 }
                 break;
             case "calendar-list-tree-color":
-                // Clicking on the color should toggle the readonly state.
-                calendar.readOnly = !calendar.readOnly;
+                // Clicking on the color should toggle the readonly state,
+                // unless we are disabled.
+                if (!calendar.getProperty("disabled")) {
+                    calendar.readOnly = !calendar.readOnly;
+                }
                 break;
         }
         this.treebox.invalidateRow(aRow);
@@ -472,7 +489,7 @@ var calendarListTreeView = {
     },
 
     setCellValue: function cLTV_setCellValue(aRow, aCol, aValue) {
-        var calendar = this.mCalendarList[aRow];
+        var calendar = this.getCalendar(aRow);
         var composite = getCompositeCalendar();
 
         switch (aCol.id) {
@@ -529,7 +546,7 @@ var calendarListTreeView = {
             return;
         }
         if (calendar) {
-            openCalendarProperties(calendar, null);
+            openCalendarProperties(calendar);
         } else {
             openCalendarWizard();
         }
@@ -557,7 +574,7 @@ var calendarListTreeView = {
             row.value =  this.tree.currentIndex;
             col.value = this.treebox.columns
                             .getNamedColumn("calendar-list-tree-calendar");
-            calendar = this.mCalendarList[row.value];
+            calendar = this.getCalendar(row.value);
         } else {
             // Using the mouse, the context menu will open on the treechildren
             // element. Here we can use client points.
@@ -634,16 +651,22 @@ var calendarManagerCompositeObserver = {
     onEndBatch: function cMO_onEndBatch() { },
     onLoad: function cMO_onLoad() { },
 
+    // TODO: remove these temporary caldav exclusions when it is safe to do so
+    // needed to allow cadav refresh() to update w/o forcing visibility    
     onAddItem: function cMO_onAddItem(aItem) {
-        ensureCalendarVisible(aItem.calendar);
+        if (aItem.calendar.type != "caldav") {
+            ensureCalendarVisible(aItem.calendar);
+        }
     },
 
     onModifyItem: function cMO_onModifyItem(aNewItem, aOldItem) {
-        ensureCalendarVisible(aNewItem.calendar);
+        if (aNewItem.calendar.type != "caldav") {
+            ensureCalendarVisible(aNewItem.calendar);
+        }
     },
 
     onDeleteItem: function cMO_onDeleteItem(aDeletedItem) { },
-    onError: function cMO_onError(aErrNo, aMessage) { },
+    onError: function cMO_onError(aCalendar, aErrNo, aMessage) { },
 
     onPropertyChanged: function cMO_onPropertyChanged(aCalendar,
                                                       aName,
@@ -738,16 +761,22 @@ var calendarManagerObserver = {
     onEndBatch: function cMO_onEndBatch() { },
     onLoad: function cMO_onLoad() { },
 
+    // TODO: remove these temporary caldav exclusions when it is safe to do so
+    // needed to allow cadav refresh() to update w/o forcing visibility    
     onAddItem: function cMO_onAddItem(aItem) {
-        ensureCalendarVisible(aItem.calendar);
+        if (aItem.calendar.type != "caldav") {
+            ensureCalendarVisible(aItem.calendar);
+        }
     },
 
     onModifyItem: function cMO_onModifyItem(aNewItem, aOldItem) {
-        ensureCalendarVisible(aNewItem.calendar);
+        if (aNewItem.calendar.type != "caldav") {
+            ensureCalendarVisible(aNewItem.calendar);
+        }
     },
 
     onDeleteItem: function cMO_onDeleteItem(aDeletedItem) { },
-    onError: function cMO_onError(aErrNo, aMessage) { },
+    onError: function cMO_onError(aCalendar, aErrNo, aMessage) { },
 
     onPropertyChanged: function cMO_onPropertyChanged(aCalendar,
                                                       aName,
@@ -762,6 +791,7 @@ var calendarManagerObserver = {
                 calendarListTreeView.updateCalendar(aCalendar);
                 break;
             case "readOnly":
+            case "disabled":
                 calendarListTreeView.updateCalendar(aCalendar);
                 // Fall through, update commands in any cases.
             case "requiresNetwork":
