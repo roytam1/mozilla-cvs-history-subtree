@@ -26,7 +26,7 @@ $BuildAdministrator = "Kurt.Zenker\@sun.com";
 
 #- You'll need to change these to suit your machine's needs
 #$DisplayServer = ':0.0';
-#$DisplayServer = ':99';
+$DisplayServer = ':99';
 
 #- Default values of command-line opts
 #-
@@ -48,6 +48,7 @@ $BuildAdministrator = "Kurt.Zenker\@sun.com";
 # Only used when $BuildLocales = 1
 %WGetFiles         = ();  # Pull files from the web, URL => Location
 #$WGetTimeout       = 360; # Wget timeout, in seconds
+$WGetTimeout       = 600; # Wget timeout, in seconds
 #$BuildLocalesArgs  = "";  # Extra attributes to add to the makefile command
                           # which builds the "installers-<locale>" target.
                           # Typically used to set ZIP_IN and WIN32_INSTALLER_IN
@@ -195,7 +196,7 @@ $ObjDir = 'lightning-obj';
 
 # Extra build name, if needed.
 #$BuildNameExtra = '';
-$BuildNameExtra = 'Lightning-1.8-Testrelease';
+$BuildNameExtra = 'Lt-Release';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -210,7 +211,7 @@ $BuildNameExtra = 'Lightning-1.8-Testrelease';
 
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
-$BuildTree  = 'MozillaTest';
+$BuildTree  = 'Sunbird-Mozilla1.8';
 
 #$BuildName = '';
 $BuildTag = 'MOZILLA_1_8_BRANCH';
@@ -261,11 +262,11 @@ $build_hour    = "3";
 $ssh_user      = "kzenker";
 #$ssh_server    = "stage.mozilla.org";
 #$ftp_path      = "/home/ftp/pub/mozilla/nightly/experimental";
-$ftp_path      = "/home/ftp/pub/calendar/lightning/experimental/nightly";
+$ftp_path      = "/home/ftp/pub/calendar/lightning/nightly";
 #$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/mozilla/nightly/experimental";
-$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/calendar/lightning/experimental/nightly";
-$tbox_ftp_path = "/home/ftp/pub/calendar/lightning/experimental/tinderbox-builds";
-$tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/calendar/lightning/experimental/tinderbox-builds";
+$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/calendar/lightning/nightly";
+$tbox_ftp_path = "/home/ftp/pub/calendar/lightning/tinderbox-builds";
+$tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/calendar/lightning/tinderbox-builds";
 #$milestone     = "trunk";
 $milestone     = "mozilla1.8";
 #$notify_list   = 'build-announce@mozilla.org';
