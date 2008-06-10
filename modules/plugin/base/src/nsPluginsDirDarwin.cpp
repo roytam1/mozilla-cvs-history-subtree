@@ -237,12 +237,22 @@ nsPluginFile::~nsPluginFile() {}
  */
 nsresult nsPluginFile::LoadPlugin(PRLibrary* &outLibrary)
 {
- 	const char* path;
+    const char* path;
 
     if (!mPlugin)
         return NS_ERROR_NULL_POINTER;
 
     nsCAutoString temp;
+    mPlugin->GetNativeLeafName(temp);
+    /*
+     * Don't load the VDP fake plugin, to avoid tripping a bad bug in OS X
+     * 10.5.3 (see bug 436575).
+     */
+    if (!strcmp(temp.get(), "VerifiedDownloadPlugin.plugin")) {
+        NS_WARNING("Preventing load of VerifiedDownloadPlugin.plugin (see bug 436575)");
+        return NS_ERROR_FAILURE;
+    }
+
     mPlugin->GetNativePath(temp);
     path = temp.get();
 
