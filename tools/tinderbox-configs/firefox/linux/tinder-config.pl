@@ -142,13 +142,13 @@ $BuildNameExtra = 'Fx-Release';
 $ConfigureOnly = 1;
 %WGetFiles = (
 # CONFIG: 	      "http://%stagingServer%/pub/mozilla.org/firefox/nightly/%version%-candidates/build%build%/firefox-%version%.en-US.linux-i686.tar.gz" => 
-"http://production-1.8-master.build.mozilla.org/pub/mozilla.org/firefox/nightly/2.0.0.14-candidates/rc1/firefox-2.0.0.14.en-US.linux-i686.tar.gz" => 
+"http://stage-old.mozilla.org/pub/mozilla.org/firefox/nightly/2.0.0.15-candidates/build2/firefox-2.0.0.15.en-US.linux-i686.tar.gz" => 
 # CONFIG:	      "/%l10n_buildDir%/%l10n_buildPlatform%/firefox.tar.gz"
-"//builds/tinderbox/Fx-Mozilla1.8-l10n-Release/Linux_2.4.21-27.0.4.EL_Depend/firefox.tar.gz"
+"//builds/tinderbox/Fx-Mozilla1.8-l10n-Release/Linux_2.4.21-53.EL_Depend/firefox.tar.gz"
 	      );
 
 # CONFIG: $BuildLocalesArgs = "ZIP_IN=%l10n_buildDir%/%l10n_buildPlatform%/firefox.tar.gz";
-$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Fx-Mozilla1.8-l10n-Release/Linux_2.4.21-27.0.4.EL_Depend/firefox.tar.gz";
+$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Fx-Mozilla1.8-l10n-Release/Linux_2.4.21-53.EL_Depend/firefox.tar.gz";
 
 #-
 #- The rest should not need to be changed
@@ -164,7 +164,7 @@ $BuildTree  = 'MozillaRelease';
 
 #$BuildName = '';
 # CONFIG: $BuildTag = '%productTag%_RELEASE';
-$BuildTag = 'FIREFOX_2_0_0_14_RELEASE';
+$BuildTag = 'FIREFOX_2_0_0_15_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -198,13 +198,13 @@ $ssh_version   = "2";
 # CONFIG: $ssh_user      = "%sshUser%";
 $ssh_user      = "cltbld";
 # CONFIG: $ssh_server    = "%sshServer%";
-$ssh_server    = "production-1.8-master.build.mozilla.org";
+$ssh_server    = "stage-old.mozilla.org";
 $ftp_path      = "/home/ftp/pub/firefox/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
 # CONFIG: $milestone     = "firefox%version%-l10n";
-$milestone     = "firefox2.0.0.14-l10n";
+$milestone     = "firefox2.0.0.15-l10n";
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 1;
