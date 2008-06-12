@@ -221,10 +221,10 @@ $LocalizationVersionFile = 'calendar/sunbird/config/version.txt';
 
 %WGetFiles = (
           "http://ftp.mozilla.org/pub/mozilla.org/calendar/sunbird/nightly/latest-mozilla1.8/sunbird-%version%.en-US.solaris2.10-sparc.tar.bz2" =>
-          "/home/calbld/tb-lightning-sols/Sunbird1.8-l10n/SunOS_5.10_Clobber/sunbird.tar.bz2"
+          "/export/home/calbld/tb-lightning-sols/Sunbird1.8-l10n/SunOS_5.10_Clobber/sunbird.tar.bz2"
           );
 
-$BuildLocalesArgs = "ZIP_IN=/home/calbld/tb-lightning-sols/Sunbird1.8-l10n/SunOS_5.10_Clobber/sunbird.tar.bz2";
+$BuildLocalesArgs = "ZIP_IN=/export/home/calbld/tb-lightning-sols/Sunbird1.8-l10n/SunOS_5.10_Clobber/sunbird.tar.bz2";
 
 
 #-
