@@ -220,3 +220,17 @@ components/myspell/en-US.dic
 components/myspell/en-US.aff
 regxpcom.exe
 components/xmlextras.xpt
+#ifdef XP_UNIX
+#ifndef XP_MACOSX
+extensions/._talkback@mozilla.org
+extensions/talkback@mozilla.org/._chrome.manifest
+extensions/talkback@mozilla.org/._components
+extensions/talkback@mozilla.org/components/._libqfaservices.so
+extensions/talkback@mozilla.org/components/._qfaservices.xpt
+extensions/talkback@mozilla.org/components/._talkback
+extensions/talkback@mozilla.org/components/talkback/._XTalkback.ad
+extensions/talkback@mozilla.org/components/talkback/._master.ini
+extensions/talkback@mozilla.org/components/talkback/._talkback
+extensions/talkback@mozilla.org/components/talkback/._talkback.so
+#endif
+#endif
