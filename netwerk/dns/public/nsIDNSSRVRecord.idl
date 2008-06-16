@@ -38,6 +38,11 @@
 interface nsIDNSSRVRecord : nsISupports
 {
     /**
+     * @return the time-to-live field of this record.
+     */
+    readonly attribute unsigned long ttl;
+
+    /**
      * @return the priority field of this record.
      */
     readonly attribute unsigned short priority;

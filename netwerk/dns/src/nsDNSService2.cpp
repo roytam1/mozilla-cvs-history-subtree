@@ -37,6 +37,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 #include <stdlib.h> // for rand()
+#include <time.h> // for time()
 #include "nsDNSService2.h"
 #include "nsIDNSRecord.h"
 #include "nsIDNSListener.h"
@@ -62,7 +63,6 @@
 #include "prmon.h"
 #include "prio.h"
 #include "plstr.h"
-#include "prrng.h"
 
 #if defined(XP_WIN32)
 #include <WinDef.h>
@@ -88,6 +88,7 @@ static const char kPrefDisableIPv6[]        = "network.dns.disableIPv6";
 
 struct nsSrvRecord
 {
+    PRUint32 ttl;
     char     host[256];
     PRUint16 port;
     PRUint16 priority;
@@ -118,6 +119,14 @@ private:
 };
 
 NS_IMPL_THREADSAFE_ISUPPORTS1(nsDNSSRVRecord, nsIDNSSRVRecord)
+
+NS_IMETHODIMP
+nsDNSSRVRecord::GetTtl(PRUint32 *aTtl)
+{
+    NS_ENSURE_ARG(aTtl);
+    *aTtl = mRecord->ttl;
+    return NS_OK;
+}
 
 NS_IMETHODIMP
 nsDNSSRVRecord::GetPriority(PRUint16 *aPriority)
@@ -266,6 +275,7 @@ ResolveSRV(const nsACString &host, PRUint32 aFlags, nsISimpleEnumerator **result
               delete sorted;
               return NS_ERROR_OUT_OF_MEMORY;
           }
+          sr->ttl = record->dwTtl;
           strncpy(sr->host, (char*)record->Data.Srv.pNameTarget, 
                   sizeof(sr->host)-1);
           sr->host[sizeof(sr->host)-1] = '\0'; 
@@ -280,7 +290,7 @@ ResolveSRV(const nsACString &host, PRUint32 aFlags, nsISimpleEnumerator **result
     DnsRecordListFree(results, DnsFreeRecordList);
 #else
     unsigned char buffer[NS_PACKETSZ];
-    PRInt32 size;
+    PRInt32 size, ttl;
     PRUint16 qdcount, ancount;
     unsigned char *ptr;
     unsigned char *end;
@@ -324,8 +334,13 @@ ResolveSRV(const nsACString &host, PRUint32 aFlags, nsISimpleEnumerator **result
         ptr += size;
 
         NS_GET16(type, ptr);
-        // skip rr_class, ttl and rdlength
-        ptr += 8; 
+        // skip rr_class
+        ptr += 2;
+        
+        NS_GET32(ttl, ptr);
+        
+        // skip rdlength
+        ptr += 2;
     
         if (type == ns_t_srv) {
             nsSrvRecord *sr = new nsSrvRecord;
@@ -334,6 +349,7 @@ ResolveSRV(const nsACString &host, PRUint32 aFlags, nsISimpleEnumerator **result
                 delete sorted;
                 return NS_ERROR_OUT_OF_MEMORY;
             }
+            sr->ttl = ttl;
             NS_GET16(sr->priority, ptr);
             NS_GET16(sr->weight, ptr);
             NS_GET16(sr->port, ptr); 
@@ -358,9 +374,7 @@ ResolveSRV(const nsACString &host, PRUint32 aFlags, nsISimpleEnumerator **result
     sorted->Sort(CompareSRV, NULL);
     
     // RFC 2782 weighting algorithm
-    PRUint32 seed;
-    PR_GetRandomNoise(&seed, sizeof(seed));
-    srand(seed);
+    srand(time(NULL));
     
     for (PRInt32 ii=0; ii<sorted->Count(); ++ii) {
         float sum = 0;
@@ -411,6 +425,7 @@ ResolveSRV(const nsACString &host, PRUint32 aFlags, nsISimpleEnumerator **result
 
 struct nsNaptrRecord
 {
+    PRUint32 ttl;
     char     replacement[256];
     char     regexp[256];
     char     service[256];
@@ -436,6 +451,14 @@ private:
 };
     
 NS_IMPL_THREADSAFE_ISUPPORTS1(nsDNSNAPTRRecord, nsIDNSNAPTRRecord)
+
+NS_IMETHODIMP
+nsDNSNAPTRRecord::GetTtl(PRUint32 *aTtl)
+{
+    NS_ENSURE_ARG(aTtl);
+    *aTtl = mRecord->ttl;
+    return NS_OK;
+}
 
 NS_IMETHODIMP
 nsDNSNAPTRRecord::GetFlag(nsACString &flag)
@@ -584,6 +607,7 @@ ResolveNAPTR(const nsACString &domain, PRUint32 aFlags, nsISimpleEnumerator **re
 
           int dataLength = record->wDataLength;
 
+          sr->ttl = record->dwTtl;
           sr->order = record->Data.NAPTR.wOrder;
           sr->preference = record->Data.NAPTR.wPreference;
 
@@ -658,7 +682,7 @@ ResolveNAPTR(const nsACString &domain, PRUint32 aFlags, nsISimpleEnumerator **re
     DnsRecordListFree(results, DnsFreeRecordList);
 #else
     unsigned char buffer[NS_PACKETSZ];
-    PRInt32 size;
+    PRInt32 size, ttl;
     PRUint16 qdcount, ancount;
     unsigned char *ptr;
     unsigned char *end;
@@ -702,8 +726,13 @@ ResolveNAPTR(const nsACString &domain, PRUint32 aFlags, nsISimpleEnumerator **re
         ptr += size;
 
         NS_GET16(type, ptr);
-        // skip rr_class, ttl and rdlength
-        ptr += 8; 
+        // skip rr_class
+        ptr += 2;
+        
+        NS_GET32(ttl, ptr);
+        
+        // skip rdlength
+        ptr += 2;
        
         if (type == ns_t_naptr) {
             nsNaptrRecord *sr = new nsNaptrRecord;
@@ -713,6 +742,7 @@ ResolveNAPTR(const nsACString &domain, PRUint32 aFlags, nsISimpleEnumerator **re
                 return NS_ERROR_OUT_OF_MEMORY;
             }
             
+            sr->ttl = ttl;
             NS_GET16(sr->order, ptr);
             NS_GET16(sr->preference, ptr);
             PRUint32 n;
