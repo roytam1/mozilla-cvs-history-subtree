@@ -14,7 +14,7 @@
  * The Original Code is the Mozilla SIP client project.
  *
  * The Initial Developer of the Original Code is 8x8 Inc.
- * Portions created by the Initial Developer are Copyright (C) 2005
+ * Portions created by the Initial Developer are Copyright (C) 2005-2008
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -38,6 +38,13 @@
 
 interface zapIStunMessage;
 interface zapIStunAddressResolveListener;
+interface zapINetItfAddress;
+
+%{C++
+#include "nsCOMArray.h"
+%}
+
+[ptr] native NetItfAddrArray(nsCOMArray<zapINetItfAddress>);
 
 /**
  * \defgroup NETUTILS_MODULE ZAP NetUtils module
@@ -46,11 +53,13 @@ interface zapIStunAddressResolveListener;
 /**
  * \ingroup NETUTILS_MODULE
  */
-[scriptable, uuid(93fa38d7-aad3-4857-ad1c-b353c79481f1)]
+[scriptable, uuid(fca750a3-cbfd-4cb0-a7f3-6707caf42cba)]
 interface zapINetUtils : nsISupports
 {
   /**
    * Create an empty STUN message
+   *
+   * DEPRECATED
    */
   zapIStunMessage createStunMessage();
 
@@ -60,6 +69,8 @@ interface zapINetUtils : nsISupports
    * If parsing of the packet succeeds, unknownAttribs will contain
    * any attributes with values less than or equal to 0x7fff which
    * were not understood.
+   *
+   * DEPRECATED
    */
   zapIStunMessage deserializeStunPacket(in ACString packet,
                                         [array, size_is(count)] out
@@ -77,6 +88,8 @@ interface zapINetUtils : nsISupports
    * the header), or n>20 (== the length of the STUN message including
    * header) if the buffer appears to be a (possibly partial) STUN
    * message and the length can be determined.
+   *
+   * DEPRECATED
    */
   PRInt32 snoopStunPacket(in ACString buffer);
 
@@ -84,6 +97,8 @@ interface zapINetUtils : nsISupports
    * Asynchronously resolve our mapped NAT address using the given
    * stun server. 'stunServer' can be a domain name or IP address,
    * optionally postfixed with ':' and port number.
+   *
+   * DEPRECATED
    */
   void resolveMappedAddress(in zapIStunAddressResolveListener listener,
                             in ACString stunServer);
@@ -91,14 +106,23 @@ interface zapINetUtils : nsISupports
   /**
    * Returns the 'primary' ip address of the local host.  This will be
    * the first ip address returned by the dns resolver for the current
-   * hostname, or if this fails on Linux, the address of interface
-   * 'eth0'. If no ip address can be inferred, 127.0.0.1 will be
-   * returned.
-   *
-   * Note: This is a temporary method that will be replaced by a mechanism
-   * for querying all local ip addresses at some point.
+   * hostname, or if this fails on Unix-like OSs, the address of
+   * interface 'eth0'. If no 'primary' ip address can be inferred,
+   * 127.0.0.1 will be returned.
    */
   ACString getPrimaryHostAddress();
+
+  /**
+   * Returns an array of IP addresses of all network interfaces on the
+   * local machine.
+   */
+  void getNetItfAddresses(out unsigned long count,
+                         [retval, array, size_is(count)] out zapINetItfAddress results);
+  
+  /**
+   * C++-friendly, non-scriptable version of getNetItfAddresses()
+   */
+  [noscript] void getNetItfAddressesCOMArray(in NetItfAddrArray results);
 };
 
 %{ C++

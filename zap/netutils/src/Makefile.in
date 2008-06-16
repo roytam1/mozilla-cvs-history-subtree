@@ -22,13 +22,21 @@ CPPSRCS		= \
 		zapNetUtils.cpp \
 		zapStunMessage.cpp \
 		zapNetUtilsModule.cpp \
+		zapNetItfAddress.cpp \
 		$(NULL)
+
+ifeq ($(OS_ARCH),WINNT)
+CPPSRCS		+= \
+		zapNetHelpersWin.cpp \
+		$(NULL)
+endif
 
 XPIDLSRCS	= \
 		zapINetUtils.idl \
 		zapIStunMessage.idl \
 		zapIStunAddressResolveListener.idl \
 		zapIStunResolver.idl \
+		zapINetItfAddress.idl \
 		$(NULL)
 
 EXTRA_PP_COMPONENTS = \

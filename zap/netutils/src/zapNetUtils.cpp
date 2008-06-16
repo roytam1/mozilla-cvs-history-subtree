@@ -14,7 +14,7 @@
  * The Original Code is the Mozilla SIP client project.
  *
  * The Initial Developer of the Original Code is 8x8 Inc.
- * Portions created by the Initial Developer are Copyright (C) 2005
+ * Portions created by the Initial Developer are Copyright (C) 2005-2008
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -43,16 +43,62 @@
 #include "nsComponentManagerUtils.h"
 #include "nsIDNSService.h"
 #include "nsIDNSRecord.h"
+#include "zapNetItfAddress.h"
+#include "nsAutoPtr.h"
+#include "nsMemory.h"
+
+#ifdef XP_WIN
+#include "zapNetHelpersWin.h"
+#else
+#include <sys/ioctl.h>
+#include <net/if.h>
+#include <netdb.h>
+#include <ifaddrs.h>
+#endif
+
+////////////////////////////////////////////////////////////////////////
+// helpers
+
+// XXX something like this should be in NSPR
+static PRBool sockaddr_to_prnetaddr(const struct sockaddr *sa, PRNetAddr *pa)
+{
+  if (!sa) {
+    NS_WARNING("Null socket");
+    return PR_FALSE;
+  }
+  
+  switch (sa->sa_family) {
+  case AF_INET:
+    memcpy(pa, sa, sizeof(struct sockaddr_in));
+    pa->raw.family = PR_AF_INET;
+    break;
+  case AF_INET6:
+    memcpy(pa, sa, sizeof(struct sockaddr_in6));
+    pa->raw.family = PR_AF_INET6;
+    break;
+  default:
+    NS_WARNING("Unsupported address family");
+    return PR_FALSE;
+  }
+  return PR_TRUE;
+}
+
 
 ////////////////////////////////////////////////////////////////////////
 // zapNetUtils
 
 zapNetUtils::zapNetUtils()
 {
+#ifdef XP_WIN
+  InitNetHelpersWin();
+#endif
 }
 
 zapNetUtils::~zapNetUtils()
 {
+#ifdef XP_WIN
+  FreeNetHelpersWin();
+#endif
 }
 
 //----------------------------------------------------------------------
@@ -161,18 +207,6 @@ zapNetUtils::ResolveMappedAddress(zapIStunAddressResolveListener *listener, cons
 }
 
 
-#ifdef XP_UNIX
-#include <stdio.h>
-#include <string.h>
-#include <sys/ioctl.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <net/if.h>
-#include <netdb.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#endif
-
 /* ACString getPrimaryHostAddress(); */
 NS_IMETHODIMP
 zapNetUtils::GetPrimaryHostAddress(nsACString & retval)
@@ -207,4 +241,65 @@ zapNetUtils::GetPrimaryHostAddress(nsACString & retval)
 #endif
   
   return NS_OK;
+}
+
+/* void getNetItfAddresses (out unsigned long count, [array, size_is (count), retval] out zapINetItfAddress results); */
+NS_IMETHODIMP
+zapNetUtils::GetNetItfAddresses(PRUint32 *count, zapINetItfAddress ***results)
+{
+  *count = 0;
+  *results = nsnull;
+  
+  nsCOMArray<zapINetItfAddress> addrs;
+  nsresult rv = GetNetItfAddressesCOMArray(&addrs);
+  NS_ENSURE_SUCCESS(rv, rv);
+  if (addrs.Count() == 0) return NS_OK;
+
+  *results = static_cast<zapINetItfAddress**>(nsMemory::Alloc(sizeof(zapINetItfAddress*) * addrs.Count()));
+  NS_ENSURE_TRUE(*results, NS_ERROR_OUT_OF_MEMORY);
+
+  *count = addrs.Count();
+  for (int i=0; i<*count; ++i) {
+    NS_ADDREF((*results)[i] = addrs[i]);
+  }
+  
+  return NS_OK;
+}
+
+/* [noscript] void getNetItfAddressesCOMArray (in NetItfAddrArray results); */
+NS_IMETHODIMP
+zapNetUtils::GetNetItfAddressesCOMArray(nsCOMArray<zapINetItfAddress> * results)
+{
+  results->Clear();
+
+  struct ifaddrs *addrs;
+  if (getifaddrs(&addrs) < 0)
+    return NS_ERROR_FAILURE;
+ 
+  nsresult rv = NS_ERROR_OUT_OF_MEMORY;
+  struct ifaddrs *p = addrs;
+  while (p) {
+    struct ifaddrs *c = p;
+    p = c->ifa_next;
+    
+    nsRefPtr<zapNetItfAddress> nia = new zapNetItfAddress();
+    if (!nia) goto bail;
+    if (!sockaddr_to_prnetaddr(c->ifa_addr, &nia->mNetAddr)) {
+      // unsupported address family -> skip
+      continue;
+    }
+    nia->mItfName = c->ifa_name;
+    nia->mFlags = c->ifa_flags;
+
+    if (!results->AppendObject(static_cast<zapINetItfAddress*>(nia))) goto bail;
+  }
+
+  // success!
+  rv = NS_OK;
+  // fall through to clean up addrs
+  
+ bail:
+  freeifaddrs(addrs);
+  
+  return rv;
 }
