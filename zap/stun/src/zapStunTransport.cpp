@@ -40,12 +40,12 @@
 #include "nsVoidArray.h"
 #include "nsIPropertyBag2.h"
 #include "nsComponentManagerUtils.h"
+#include "nsServiceManagerUtils.h"
 #include "zapStunMessage2.h"
 #include "zapIStunAttributeFactory.h"
 #include "zapStunAttributes.h"
 #include "zapITransportAddress.h"
-
-#include "zlib.h"
+#include "zapICryptoUtils.h"
 
 class zapTransportAddress : public zapITransportAddress
 {
@@ -97,14 +97,19 @@ zapTransportAddress::GetTransport(nsACString & transport)
 static nsresult
 computeFingerPrint(zapIStunMessage2 *message, PRUint32 & value)
 {
+  nsCOMPtr<zapICryptoUtils> crypto = do_GetService(ZAP_CRYPTOUTILS_CONTRACTID);
+  if (!crypto) {
+    NS_WARNING("Can't find CryptoUtils module");
+    return NS_ERROR_FAILURE;
+  }
+  
   nsCString data;
   nsresult rv = message->Serialize(data);
   NS_ENSURE_SUCCESS(rv, rv);
     
   // compute the crc32 of the serialized stun message
   // excluding the last 8 bytes of the fingerprint attribute
-  value = crc32(0L, (const unsigned char*)PromiseFlatCString(data).get(), 
-                data.Length()-8);
+  crypto->ComputeCRC32(StringHead(data, data.Length()-8) , &value);
                              
   value ^= 0x5354554e;
   
