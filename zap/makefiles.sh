@@ -51,6 +51,10 @@ add_makefiles "
   zap/sip/Makefile
   zap/sip/idl/Makefile
   zap/sip/idl/syntax/Makefile
+  zap/stun/Makefile
+  zap/stun/idl/Makefile
+  zap/stun/idl/attributes/Makefile
+  zap/stun/src/Makefile
   zap/zmk/Makefile
   zap/zmk/base/Makefile
   zap/zmk/ccitt-adpcm/Makefile

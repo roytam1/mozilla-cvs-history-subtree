@@ -37,6 +37,7 @@ XPIDLSRCS	= \
 		zapIStunAddressResolveListener.idl \
 		zapIStunResolver.idl \
 		zapINetItfAddress.idl \
+		zapITransportAddress.idl \
 		$(NULL)
 
 EXTRA_PP_COMPONENTS = \

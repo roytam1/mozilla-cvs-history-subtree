@@ -1,0 +1,26 @@
+DEPTH		= ../../..
+topsrcdir	= @top_srcdir@
+srcdir		= @srcdir@
+VPATH		= @srcdir@
+
+include $(DEPTH)/config/autoconf.mk
+
+MODULE       = zap_stun
+XPIDL_MODULE = zap_stun
+
+DIRS =  attributes
+
+XPIDLSRCS = \
+		zapIStunAttributeFactory.idl \
+		zapIStunMessage2.idl \
+		zapIStunDNSResolver.idl \
+		zapIStunTransport.idl \
+		zapIStunAgent.idl \
+		zapIStunClient2.idl \
+		zapIStunServer2.idl \
+		$(NULL)
+
+include $(topsrcdir)/config/rules.mk
+
+
+

@@ -1,0 +1,54 @@
+DEPTH		= ../../..
+topsrcdir	= @top_srcdir@
+srcdir		= @srcdir@
+VPATH		= @srcdir@
+
+include $(DEPTH)/config/autoconf.mk
+
+MODULE		= zap_stun
+XPIDL_MODULE    = zap_stun
+LIBRARY_NAME	= zap_stun
+EXPORT_LIBRARY	= 1
+IS_COMPONENT	= 1
+MODULE_NAME	= zap_stun
+
+REQUIRES	= \
+		xpcom \
+		string \
+		necko \
+		zap_netutils \
+		$(ZLIB_REQUIRES) \
+		$(NULL)
+		
+CPPSRCS		= \
+		zapStunAddressAttribute.cpp \
+		zapStunXorAddressAttribute.cpp \
+		zapStunAttributeFactory.cpp \
+		zapStunErrorCodeAttribute.cpp \
+		zapStunUnknownAttribute.cpp \
+		zapStunStringAttribute.cpp \
+		zapStunRawAttribute.cpp \
+		zapStunUint8Attribute.cpp \
+		zapStunUint16Attribute.cpp \
+		zapStunUint32Attribute.cpp \
+		zapStunUint64Attribute.cpp \
+		zapStunMessage2.cpp \
+		zapStunTransport.cpp \
+		zapStunModule.cpp \
+		$(NULL)
+
+EXTRA_PP_COMPONENTS = \
+		zapStunAuthentication.jsm \
+		zapStunDNSResolver.js \
+		zapStunClient2.js \
+		zapStunServer2.js \
+		zapStunClassicUsage.js \
+		$(NULL)		
+
+include $(topsrcdir)/config/rules.mk
+
+EXTRA_DSO_LDOPTS += \
+		$(XPCOM_GLUE_LDOPTS) \
+		$(NSPR_LIBS) \
+		$(ZLIB_LIBS) \
+		$(NULL)

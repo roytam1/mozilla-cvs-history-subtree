@@ -1,0 +1,27 @@
+DEPTH		= ../../../..
+topsrcdir	= @top_srcdir@
+srcdir		= @srcdir@
+VPATH		= @srcdir@
+
+include $(DEPTH)/config/autoconf.mk
+
+MODULE       = zap_stun
+XPIDL_MODULE = zap_stun_attributes
+
+XPIDLSRCS = \
+		zapIStunAttribute.idl \
+		zapIStunAddressAttribute.idl \
+		zapIStunErrorCodeAttribute.idl \
+		zapIStunStringAttribute.idl \
+		zapIStunRawAttribute.idl \
+		zapIStunUint8Attribute.idl \
+		zapIStunUint16Attribute.idl \
+		zapIStunUint32Attribute.idl \
+		zapIStunUint64Attribute.idl \
+		zapIStunUnknownAttribute.idl \
+		$(NULL)
+
+include $(topsrcdir)/config/rules.mk
+
+
+

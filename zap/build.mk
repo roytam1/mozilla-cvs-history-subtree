@@ -13,7 +13,7 @@ include $(topsrcdir)/xulrunner/build.mk
 # into dist/XUL.framework as part of the 'libs' build phase, so zapi
 # libs must be built by then.
 
-tier_toolkit_dirs += zap/base zap/netutils zap/zmk zap/sdp zap/sip 
+tier_toolkit_dirs += zap/base zap/netutils zap/stun zap/zmk zap/sdp zap/sip
 
 # xxx might want to split zap/base, zap/netutils and zap/zmk into
 # tier_gecko_dirs, if we end up using them in mozilla code.

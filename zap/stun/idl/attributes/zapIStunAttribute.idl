@@ -1,0 +1,126 @@
+/* ***** BEGIN LICENSE BLOCK *****
+ * Version: MPL 1.1/GPL 2.0/LGPL 2.1
+ *
+ * The contents of this file are subject to the Mozilla Public License Version
+ * 1.1 (the "License"); you may not use this file except in compliance with
+ * the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS IS" basis,
+ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+ * for the specific language governing rights and limitations under the
+ * License.
+ *
+ * The Original Code is the Mozilla SIP client project.
+ *
+ * The Initial Developer of the Original Code is 8x8 Inc.
+ * Portions created by the Initial Developer are Copyright (C) 2005-2008
+ * the Initial Developer. All Rights Reserved.
+ *
+ * Contributor(s):
+ *   Eilon Yardeni <eyardeni@8x8.com> (original author)
+ *
+ * Alternatively, the contents of this file may be used under the terms of
+ * either the GNU General Public License Version 2 or later (the "GPL"), or
+ * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+ * in which case the provisions of the GPL or the LGPL are applicable instead
+ * of those above. If you wish to allow use of your version of this file only
+ * under the terms of either the GPL or the LGPL, and not to allow others to
+ * use your version of this file under the terms of the MPL, indicate your
+ * decision by deleting the provisions above and replace them with the notice
+ * and other provisions required by the GPL or the LGPL. If you do not delete
+ * the provisions above, a recipient may use your version of this file under
+ * the terms of any one of the MPL, the GPL or the LGPL.
+ *
+ * ***** END LICENSE BLOCK ***** */
+
+#include "nsISupports.idl"
+
+interface zapIStunMessage2;
+/**
+ * \ingroup STUN_MODULE
+ */
+[scriptable, uuid(9763dbe4-caec-4b13-b8b3-65d4e8feba43)]
+interface zapIStunAttribute : nsISupports
+{ 
+  /**
+   * Attribute type
+   */
+  attribute unsigned short type;
+  
+  /**
+   * Attribute value length in bytes (not including padding)
+   */
+  readonly attribute unsigned short length;
+  
+  /**
+   * Serialize()
+   *
+   * Serializes the attribute and returns value + padding
+   *
+   * As some attributes use some fields from the STUN message
+   * when serializing themselves, we pass the message into the serialize method
+   * (for example xor-address use the magic cookie and transactionID)
+   */
+  ACString serialize(in zapIStunMessage2 aMessage);
+    
+  /**
+   * Deserialize()
+   *
+   * Initialize the attribute object
+   *
+   * aType -   the attribute's type
+   * aLength - the attribute's value length (not include padding)
+   * aData   - serialized attribute value (include padding)
+   *
+   * As some attributes use some fields from the STUN message
+   * when deserializing themselves, we pass the message into the deserialize method
+   * (for example xor-address use the magic cookie and transactionID)   
+   */
+  void deserialize(in unsigned short   aType,
+                   in unsigned short   aLength,
+                   in ACString         aData,
+                   in zapIStunMessage2 aMessage);
+                     
+  /**
+   * STUN attributes defined by rfc3489bis:
+   */
+   
+  /* Comprehension-required range (0x0000-0x7FFF): */
+  const unsigned short  MAPPED_ADDRESS       = 0x0001;
+  const unsigned short  USERNAME             = 0x0006;
+  const unsigned short  MESSAGE_INTEGRITY    = 0x0008;
+  const unsigned short  ERROR_CODE           = 0x0009;
+  const unsigned short  UNKNOWN_ATTRIBUTES   = 0x000A;
+  const unsigned short  REALM                = 0x0014;
+  const unsigned short  NONCE                = 0x0015;
+  const unsigned short  XOR_MAPPED_ADDRESS   = 0x0020;
+  /* Comprehension-optional range (0x8000-0xFFFF): */
+  const unsigned short  SERVER               = 0x8022;
+  const unsigned short  ALTERNATE_SERVER     = 0x8023;
+  const unsigned short  FINGERPRINT          = 0x8028;
+    
+  /**
+   * STUN attributes defined by draft-ietf-behave-turn:
+   */
+  /* Comprehension-required range (0x0000-0x7FFF): */
+  const unsigned short  CHANNEL_NUMBER       = 0x000C;
+  const unsigned short  LIFETIME             = 0x000D;
+  const unsigned short  BANDWIDTH            = 0x0010;
+  const unsigned short  PEER_ADDRESS         = 0x0012;
+  const unsigned short  DATA                 = 0x0013;
+  const unsigned short  RELAY_ADDRESS        = 0x0016;
+  const unsigned short  REQUESTED_PROPS      = 0x0018;
+  const unsigned short  REQUESTED_TRANSPORT  = 0x0019;
+  const unsigned short  RESERVATION_TOKEN    = 0x0022;
+    
+  /**
+   * STUN attributes defined by draft-ietf-mmusic-ice:
+   */
+  /* Comprehension-required range (0x0000-0x7FFF): */
+  const unsigned short  PRIORITY             = 0x0024;
+  const unsigned short  USE_CANDIDATE        = 0x0025;
+  /* Comprehension-optional range (0x8000-0xFFFF): */
+  const unsigned short  ICE_CONTROLLED       = 0x8029;
+  const unsigned short  ICE_CONTROLLING      = 0x802a;         
+};
