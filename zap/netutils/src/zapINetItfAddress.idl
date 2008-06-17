@@ -36,6 +36,10 @@
 
 #include "nsISupports.idl"
 
+%{C++
+#include "prio.h"
+%}
+
 native PRNetAddr(PRNetAddr);
 
 /**
