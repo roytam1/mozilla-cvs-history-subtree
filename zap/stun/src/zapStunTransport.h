@@ -38,6 +38,7 @@
 #define __ZAP_STUNTRANSPORT_H__
 
 #include "zapIStunTransport.h"
+#include "zapICryptoUtils.h"
 #include "nsCOMPtr.h"
 #include "nsAutoPtr.h"
 #include "nsTArray.h"
@@ -63,12 +64,14 @@ private:
                       
   PRBool isValidMethod(PRUint16 msgMethod);
   PRBool isValidFingerprint(zapIStunMessage2 *message);
-
+  nsresult ComputeFingerPrint(zapIStunMessage2 *message, PRUint32 & value);
+  
   nsCOMPtr<zapIStunTransportSink>     mSink;
   nsCOMPtr<zapIStunTransportListener> mClientListener;
   nsCOMPtr<zapIStunTransportListener> mServerListener;
   nsCOMPtr<zapIStunAttributeFactory>  mAttrFactory;
   nsRefPtr<zapTransportAddress>       mTransportAddress;
+  nsCOMPtr<zapICryptoUtils>           mCryptoUtils;
   
   PRBool mSupportRFC3489;
   PRUint32 mUseFingerPrint;

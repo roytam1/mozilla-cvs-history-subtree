@@ -94,28 +94,6 @@ zapTransportAddress::GetTransport(nsACString & transport)
   return NS_OK; 
 }
 
-static nsresult
-computeFingerPrint(zapIStunMessage2 *message, PRUint32 & value)
-{
-  nsCOMPtr<zapICryptoUtils> crypto = do_GetService(ZAP_CRYPTOUTILS_CONTRACTID);
-  if (!crypto) {
-    NS_WARNING("Can't find CryptoUtils module");
-    return NS_ERROR_FAILURE;
-  }
-  
-  nsCString data;
-  nsresult rv = message->Serialize(data);
-  NS_ENSURE_SUCCESS(rv, rv);
-    
-  // compute the crc32 of the serialized stun message
-  // excluding the last 8 bytes of the fingerprint attribute
-  crypto->ComputeCRC32(StringHead(data, data.Length()-8) , &value);
-                             
-  value ^= 0x5354554e;
-  
-  return NS_OK;
-}
-
 zapStunTransport::zapStunTransport()
   : mSupportRFC3489(PR_FALSE), mUseFingerPrint(0)
 {
@@ -166,6 +144,9 @@ zapStunTransport::Init(nsIPropertyBag2 *aConfiguration)
   // place holder for transport address
   mTransportAddress = new zapTransportAddress();
   NS_ENSURE_TRUE(mTransportAddress, NS_ERROR_OUT_OF_MEMORY);
+
+  mCryptoUtils = do_GetService(ZAP_CRYPTOUTILS_CONTRACTID, &rv);
+  NS_ENSURE_SUCCESS(rv, rv);
   
   return NS_OK;
 }
@@ -210,7 +191,7 @@ zapStunTransport::SendMessage(zapIStunMessage2     *aMessage,
     }
     
     PRUint32 crc;
-    rv = computeFingerPrint(aMessage, crc);
+    rv = this->ComputeFingerPrint(aMessage, crc);
     NS_ENSURE_SUCCESS(rv, rv);
     
     fpAttr->SetValue(crc);
@@ -475,7 +456,7 @@ zapStunTransport::isValidFingerprint(zapIStunMessage2 *message)
   NS_ENSURE_SUCCESS(rv, PR_FALSE);
   
   PRUint32 crcValue, attrValue;
-  rv = computeFingerPrint(message, crcValue);
+  rv = this->ComputeFingerPrint(message, crcValue);
   NS_ENSURE_SUCCESS(rv, PR_FALSE);
 
   fpAttr->GetValue(&attrValue);
@@ -490,3 +471,22 @@ zapStunTransport::isValidFingerprint(zapIStunMessage2 *message)
     
   return res;
 }
+
+nsresult
+zapStunTransport::ComputeFingerPrint(zapIStunMessage2 *message, PRUint32 & value)
+{
+  NS_ASSERTION(mCryptoUtils, "mCryptoUtils not initialized");
+  
+  nsCString data;
+  nsresult rv = message->Serialize(data);
+  NS_ENSURE_SUCCESS(rv, rv);
+    
+  // compute the crc32 of the serialized stun message
+  // excluding the last 8 bytes of the fingerprint attribute
+  mCryptoUtils->ComputeCRC32(StringHead(data, data.Length()-8) , &value);
+                             
+  value ^= 0x5354554e;
+  
+  return NS_OK;
+}
+
