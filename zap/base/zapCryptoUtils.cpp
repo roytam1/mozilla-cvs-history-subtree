@@ -40,6 +40,9 @@
 #include "nsStringAPI.h"
 #include "nsCOMPtr.h"
 
+// crc-32 table from crc32table.cpp 
+extern PRUint32 crctable[256];
+
 ////////////////////////////////////////////////////////////////////////
 // zapCryptoUtils
 
@@ -114,6 +117,24 @@ zapCryptoUtils::ComputeSHA1HMAC(const nsACString & text,
   hash->Update(outer, 64);
   hash->Update((PRUint8*)Hinner.get(), 20);
   hash->Finish(PR_FALSE, retval);
+  
+  return NS_OK;
+}
+
+/* unsigned long computeCRC32 (in ACString data); */
+NS_IMETHODIMP
+zapCryptoUtils::ComputeCRC32(const nsACString & data, PRUint32 *_retval)
+{
+  // Table-driven CRC-32 implementation as described in Ross Williams'
+  // "A Painless Guide to CRC Error Detection Algorithms"
+
+  PRUint32 len = data.Length();
+  const PRUint8 *p = (const PRUint8*)data.BeginReading();
+  
+  PRUint32 crc = 0xFFFFFFFF;
+  while (len--)
+    crc = crctable[(crc ^ *p++) & 0xFF] ^ (crc >> 8);
+  *_retval = crc ^ 0xFFFFFFFF;
   
   return NS_OK;
 }

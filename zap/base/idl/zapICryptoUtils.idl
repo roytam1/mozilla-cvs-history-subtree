@@ -52,6 +52,11 @@ interface zapICryptoUtils : nsISupports
    * RFC2104.
    */
   ACString computeSHA1HMAC(in ACString text, in ACString key);
+
+  /**
+   * Compute the CRC-32 checksum of 'data'.
+   */
+  unsigned long computeCRC32(in ACString data);
 };
 
 %{ C++
