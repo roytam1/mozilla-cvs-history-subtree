@@ -1953,7 +1953,8 @@ nsXMLHttpRequest::ChangeState(PRUint32 aState, PRBool aBroadcast,
   if ((mState & XML_HTTP_REQUEST_ASYNC) &&
       (aState & XML_HTTP_REQUEST_LOADSTATES) && // Broadcast load states only
       aBroadcast &&
-      onReadyStateChangeListener) {
+      onReadyStateChangeListener &&
+      NS_SUCCEEDED(CheckInnerWindowCorrectness())) {
     nsCOMPtr<nsIJSContextStack> stack;
     JSContext *cx = nsnull;
 
