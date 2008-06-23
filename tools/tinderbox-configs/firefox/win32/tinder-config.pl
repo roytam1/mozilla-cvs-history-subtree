@@ -142,11 +142,11 @@ $ConfigureOnly = 1;
 # Existing build files to download.
 %WGetFiles = (
 # CONFIG:	      'http://%stagingServer%/pub/mozilla.org/firefox/nightly/%version%-candidates/build%build%/unsigned/firefox-%version%.en-US.win32.installer.exe' =>
-'http://stage-old.mozilla.org/pub/mozilla.org/firefox/nightly/2.0.0.15-candidates/build2/unsigned/firefox-2.0.0.15.en-US.win32.installer.exe' =>
+'http://stage-old.mozilla.org/pub/mozilla.org/firefox/nightly/2.0.0.15-candidates/build3/unsigned/firefox-2.0.0.15.en-US.win32.installer.exe' =>
 # CONFIG:	      "%l10n_buildDir%/%l10n_buildPlatform%/firefox-installer.exe",
 "/cygdrive/c/builds/tinderbox/Fx-Mozilla1.8-l10n-Release/WINNT_5.2_Depend/firefox-installer.exe",
 # CONFIG:	      'http://%stagingServer%/pub/mozilla.org/firefox/nightly/%version%-candidates/build%build%/unsigned/firefox-%version%.en-US.win32.zip' =>
-'http://stage-old.mozilla.org/pub/mozilla.org/firefox/nightly/2.0.0.15-candidates/build2/unsigned/firefox-2.0.0.15.en-US.win32.zip' =>
+'http://stage-old.mozilla.org/pub/mozilla.org/firefox/nightly/2.0.0.15-candidates/build3/unsigned/firefox-2.0.0.15.en-US.win32.zip' =>
 # CONFIG:	      "%l10n_buildDir%/%l10n_buildPlatform%/firefox.zip"
 "/cygdrive/c/builds/tinderbox/Fx-Mozilla1.8-l10n-Release/WINNT_5.2_Depend/firefox.zip"
 	      );
