@@ -15,6 +15,7 @@ ac_add_options --enable-update-packaging
 ac_add_options --enable-optimize="-Os -freorder-blocks -fno-reorder-functions -gstabs+"
 ac_add_options --disable-debug
 ac_add_options --disable-tests
+ac_add_options --with-branding=browser/branding/unofficial
 
 CC=/tools/gcc/bin/gcc
 CXX=/tools/gcc/bin/g++
