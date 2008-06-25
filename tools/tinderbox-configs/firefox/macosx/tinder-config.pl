@@ -12,8 +12,6 @@ $ENV{DYLD_NO_FIX_PREBINDING} = "1";
 $ENV{LD_PREBIND_ALLOW_OVERLAP} = "1";
 $ENV{CVS_RSH} = "ssh";
 
-$BuildXForms = 1;
-
 # $ENV{MOZ_PACKAGE_MSI}
 #-----------------------------------------------------------------------------
 #  Default: 0
@@ -45,7 +43,7 @@ $BuildAdministrator = 'build@mozilla.org';
 #$BuildDebug        = 0;      # Debug or Opt (Darwin)
 #$ReportStatus      = 1;      # Send results to server, or not
 #$ReportFinalStatus = 1;      # Finer control over $ReportStatus.
-#$UseTimeStamp      = 1;      # Use the CVS 'pull-by-timestamp' option, or not
+$UseTimeStamp      = 0;      # Use the CVS 'pull-by-timestamp' option, or not
 #$BuildOnce         = 0;      # Build once, don't send results to server
 #$TestOnly          = 0;      # Only run tests, don't pull/build
 #$BuildEmbed        = 0;      # After building seamonkey, go build embed app.
@@ -55,28 +53,27 @@ $BuildAdministrator = 'build@mozilla.org';
 # Tests
 $CleanProfile             = 1;
 #$ResetHomeDirForTests     = 1;
-$ProductName              = 'BonEcho';
-$MacOSProductName         = 'BonEcho';
-$VendorName               = "";
+$ProductName              = 'Firefox';
+$VendorName               = 'Mozilla';
 
-#$RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
+$RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
 #$RegxpcomTest             = 1;
-#$AliveTest                = 1;
+$AliveTest                = 1;
 #$JavaTest                 = 0;
 #$ViewerTest               = 0;
 #$BloatTest                = 0;  # warren memory bloat test
 #$BloatTest2               = 0;  # dbaron memory bloat test, require tracemalloc
 #$DomToTextConversionTest  = 0;  
 #$XpcomGlueTest            = 0;
-#$CodesizeTest             = 1;  # Z,  require mozilla/tools/codesighs
+$CodesizeTest             = 0;  # Z,  require mozilla/tools/codesighs
 #$EmbedCodesizeTest        = 0;  # mZ, require mozilla/tools/codesigns
 #$MailBloatTest            = 0;
 #$EmbedTest                = 0;  # Assumes you wanted $BuildEmbed=1
-#$LayoutPerformanceTest    = 1;  # Tp
+$LayoutPerformanceTest    = 0;  # Tp
 #$DHTMLPerformanceTest     = 0;  # Tdhtml
 #$QATest                   = 0;  
-#$XULWindowOpenTest        = 1;  # Txul
-$StartupPerformanceTest   = 1;  # Ts
+$XULWindowOpenTest        = 0;  # Txul
+$StartupPerformanceTest   = 0;  # Ts
 
 #$TestsPhoneHome           = 0;  # Should test report back to server?
 
@@ -152,7 +149,7 @@ $moz_cvsroot   = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 $ObjDir = '../build/unifox';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'Fx-Nightly';
+$BuildNameExtra = 'Fx-Release';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -168,10 +165,9 @@ $BuildNameExtra = 'Fx-Nightly';
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
 $BuildTree  = 'Mozilla1.8';
-#$BuildTree  = 'MozillaTest';
 
 #$BuildName = '';
-$BuildTag = 'MOZILLA_1_8_BRANCH';
+$BuildTag = 'FIREFOX_2_0_0_1_RELEASE';
 
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
@@ -194,9 +190,9 @@ $BinaryName = 'firefox-bin';
 # Release build options
 $ReleaseBuild  = 1;
 $shiptalkback  = 1;
-#$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
+$ReleaseToLatest = 0; # Push the release to latest-<milestone>?
 $ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
-$build_hour    = "3";
+$build_hour    = 3;
 $package_creation_path = "/browser/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
 $mac_bundle_path = "/browser/app";
@@ -207,7 +203,7 @@ $ftp_path      = "/home/ftp/pub/firefox/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
-$milestone     = 'mozilla1.8';
+$milestone     = 'firefox2.0.0.1';
 $notify_list   = 'build-announce@mozilla.org';
 $stub_installer = 0;
 $sea_installer = 0;
@@ -220,7 +216,7 @@ $update_platform = "Darwin_Universal-gcc3";
 $update_hash = "sha1";
 $update_filehost = "ftp.mozilla.org";
 $update_ver_file = "browser/config/version.txt";
-$update_pushinfo = 1;
+$update_pushinfo = 0;
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
