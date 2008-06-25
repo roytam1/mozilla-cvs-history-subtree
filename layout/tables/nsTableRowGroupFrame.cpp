@@ -640,10 +640,6 @@ nsTableRowGroupFrame::CalculateRowHeights(nsPresContext*          aPresContext,
         // iteratate the row's cell frames 
         while (cellFrame) {
           PRInt32 rowSpan = tableFrame->GetEffectiveRowSpan(rowIndex + startRowIndex, *cellFrame);
-          if ((rowIndex + rowSpan) > numRows) {
-            // there might be rows pushed already to the nextInFlow
-            rowSpan = numRows - rowIndex;
-          }
           if (rowSpan > 1) { // a cell with rowspan > 1, determine the height of the rows it spans
             nscoord heightOfRowsSpanned = 0;
             nscoord heightOfUnStyledRowsSpanned = 0;

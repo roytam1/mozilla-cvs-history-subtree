@@ -136,8 +136,7 @@
                                               prefuitype="bool"
                                               onclick="setDefaultBrowser();syncPref(this);" 
                                               />
-                                     
-                                     <!--         
+                                              
                                 <checkbox     
                                               id="setFullscreen"
                                               label="&fullScreenEnabled.label;"
@@ -150,9 +149,6 @@
                                               label="&homebarEnabled.label;"
                                               preference="ui.homebar" 
                                               onclick="syncPref(this)" />
-                                              
-                                               -->
-                                               
                                               
                             </vbox>
 

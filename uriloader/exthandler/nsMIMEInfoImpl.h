@@ -111,11 +111,6 @@ class nsMIMEInfoBase : public nsIMIMEInfo {
      */
     void CopyBasicDataTo(nsMIMEInfoBase* aOther);
 
-    /**
-     * Return whether this MIMEInfo has any extensions
-     */
-    PRBool HasExtensions() const { return mExtensions.Count() != 0; }
-
   protected:
     /**
      * Launch the default application for the given file.

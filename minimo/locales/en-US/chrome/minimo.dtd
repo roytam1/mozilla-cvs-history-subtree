@@ -43,7 +43,7 @@
 <!ENTITY panCmd.label                 "Pan...">
 <!ENTITY reloadCmd.label              "Reload">
 <!ENTITY linknewtab.label             "Open link in New Tab">
-<!ENTITY bookmarks.label              "Homebase...">
+<!ENTITY bookmarks.label              "Bookmarks...">
 <!ENTITY bookmarkthispage.label       "Bookmark This Page">
 <!ENTITY contextCopy.label            "Copy" >
 <!ENTITY contextPaste.label           "Paste" >

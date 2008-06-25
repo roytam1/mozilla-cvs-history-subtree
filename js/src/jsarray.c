@@ -1852,7 +1852,7 @@ js_NewArrayObject(JSContext *cx, jsuint length, jsval *vector)
     if (!obj)
         return NULL;
     if (!InitArrayObject(cx, obj, length, vector)) {
-        cx->weakRoots.newborn[GCX_OBJECT] = NULL;
+        cx->newborn[GCX_OBJECT] = NULL;
         return NULL;
     }
     return obj;

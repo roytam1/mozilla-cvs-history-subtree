@@ -466,39 +466,15 @@ nsSVGCairoPathGeometry::GetCoveredRegion(nsISVGRendererRegion **_retval)
 {
   *_retval = nsnull;
 
-  float width;
-  PRUint16 paintType;
-  PRBool hasStroke = PR_FALSE, hasFill = PR_FALSE;
-
-  mSource->GetStrokePaintType(&paintType);
-  mSource->GetStrokeWidth(&width);
-  if (paintType != nsISVGGeometrySource::PAINT_TYPE_NONE && width > 0)
-    hasStroke = PR_TRUE;
-
-  mSource->GetFillPaintType(&paintType);
-  if (paintType != nsISVGGeometrySource::PAINT_TYPE_NONE)
-    hasFill = PR_TRUE;
-
-  if (!hasStroke && !hasFill)
-    return NS_OK;
-
   cairo_t *ctx = cairo_create(gSVGCairoDummySurface);
 
   GeneratePath(ctx, nsnull);
   SetupStrokeGeometry(ctx);
 
   double xmin, ymin, xmax, ymax;
-
-  if (hasStroke) {
-    // need to use user_to_device instead of setting the identity_matrix
-    // to make sure stroke-width is interpreted in the right coordinate space
-    cairo_stroke_extents(ctx, &xmin, &ymin, &xmax, &ymax);
-    cairo_user_to_device(ctx, &xmin, &ymin);
-    cairo_user_to_device(ctx, &xmax, &ymax);
-  } else {
-    cairo_identity_matrix(ctx);
-    cairo_fill_extents(ctx, &xmin, &ymin, &xmax, &ymax);
-  }
+  cairo_stroke_extents(ctx, &xmin, &ymin, &xmax, &ymax);
+  cairo_user_to_device(ctx, &xmin, &ymin);
+  cairo_user_to_device(ctx, &xmax, &ymax);
 
   cairo_destroy(ctx);
 

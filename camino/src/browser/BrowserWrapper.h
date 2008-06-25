@@ -66,10 +66,10 @@ class nsIArray;
 - (void)updateSiteIcons:(NSImage*)icon ignoreTyping:(BOOL)ignoreTyping;
 
 - (void)showPopupBlocked:(BOOL)blocked;
+- (void)configurePopupBlocking;
+- (void)unblockAllPopupSites:(nsIArray*)inSites;
 - (void)showSecurityState:(unsigned long)state;
 - (void)showFeedDetected:(BOOL)inDetected;
-- (void)showBlockedPopups:(nsIArray*)blockedSites whitelistingSource:(BOOL)shouldWhitelist;
-- (void)blacklistPopupsFromURL:(NSString*)inURL;
 
 - (BOOL)userChangedLocationField;
 
@@ -131,28 +131,27 @@ class nsIArray;
 
   NSImage*                  mSiteIconImage;    // current proxy icon image, which may be a site icon (favicon).
   NSString*                 mSiteIconURI;      // uri from  which we loaded the site icon	
-
-  NSString*                 mPendingURI;       // strong
   
     // the secure state of this browser. We need to hold it so that we can set
     // the global lock icon whenever we become the primary. Value is one of
     // security enums in nsIWebProgressListener.
   unsigned long             mSecureState;
-    // the display title for this page (which may be different than the page title)
-  NSString*                 mDisplayTitle;
+    // the title associated with this tab's url. We need to hold it so that we
+    // can set the window title whenever we become the primary. 
+  NSString*                 mTitle;
+    // the title we use for the tab. This differs for mTitle when the tab is loading
+  NSString*                 mTabTitle;
     // array of popupevents that have been blocked. We can use them to reconstruct the popups
     // later. If nil, no sites are blocked. Cleared after each new page.
-  nsIMutableArray*          mBlockedPopups;
-  NSMutableArray*           mFeedList;         // list of feeds found on page
+  nsIMutableArray*          mBlockedSites;
+  NSMutableArray*           mFeedList;        // list of feeds found on page
 
-  CHBrowserView*            mBrowserView;      // retained
+  CHBrowserView*            mBrowserView;     // retained
   ToolTip*                  mToolTip;
-  NSMutableArray*           mStatusStrings;    // current status bar messages, STRONG
-  NSMutableSet*             mLoadingResources; // page resources currently loading, STRONG
+  NSMutableArray*           mStatusStrings;   // current status bar messages, STRONG
 
   IBOutlet NSView*          mBlockedPopupView;   // loaded on demand, can be nil, STRONG
-  IBOutlet RolloverImageButton* mBlockedPopupCloseButton;
-  IBOutlet NSTextField*     mBlockedPopupLabel;
+  IBOutlet RolloverImageButton* mBlockedPopupCloseButton; 
 
   double                    mProgress;
   
@@ -162,6 +161,7 @@ class nsIArray;
   NSMutableDictionary*      mContentViewProviders;   // ContentViewProviders keyed by the url that shows them
   
   BOOL mIsBusy;
+  BOOL mOffline;
   BOOL mListenersAttached; // We hook up our click and context menu listeners lazily.
                            // If we never become the primary view, we don't bother creating the listeners.
   BOOL mActivateOnLoad;    // If set, activate the browser view when loading starts.
@@ -188,12 +188,9 @@ class nsIArray;
 - (BOOL)isBusy;
 - (BOOL)isEmpty;                      // is about:blank loaded?
 - (BOOL)isInternalURI;
-- (BOOL)isBookmarkable;
 - (BOOL)canReload;
 
-- (NSString*)pendingURI;
-- (NSString*)currentURI;
-- (NSString*)displayTitle;
+- (NSString*)windowTitle;
 - (NSString*)pageTitle;
 - (NSImage*)siteIcon;
 - (NSString*)statusString;
@@ -203,9 +200,10 @@ class nsIArray;
 - (unsigned long)securityState;
 - (NSArray*)feedList;
 
-- (IBAction)showPopups:(id)sender;
-- (IBAction)unblockPopups:(id)sender;
-- (IBAction)blacklistPopups:(id)sender;
+- (NSString*)getCurrentURI;
+
+- (IBAction)configurePopupBlocking:(id)sender;
+- (IBAction)unblockPopupSites:(id)sender;
 - (IBAction)hideBlockedPopupView:(id)sender;
 
 - (void)loadURI:(NSString *)urlSpec referrer:(NSString*)referrer flags:(unsigned int)flags focusContent:(BOOL)focusContent allowPopups:(BOOL)inAllowPopups;
@@ -222,6 +220,7 @@ class nsIArray;
 
 - (NSWindow*)getNativeWindow;
 - (NSMenu*)getContextMenu;
+- (void)getTitle:(NSString **)outTitle andHref:(NSString**)outHrefString;
 
 // Custom view embedding
 - (void)registerContentViewProvider:(id<ContentViewProvider>)inProvider forURL:(NSString*)inURL;
@@ -231,8 +230,6 @@ class nsIArray;
 // CHBrowserListener messages
 - (void)onLoadingStarted;
 - (void)onLoadingCompleted:(BOOL)succeeded;
-- (void)onResourceLoadingStarted:(NSNumber*)resourceIdentifier;
-- (void)onResourceLoadingCompleted:(NSNumber*)resourceIdentifier;
 - (void)onProgressChange64:(long long)currentBytes outOf:(long long)maxBytes;
 - (void)onProgressChange:(long)currentBytes outOf:(long)maxBytes;
 - (void)onLocationChange:(NSString*)urlSpec isNewPage:(BOOL)newPage requestSucceeded:(BOOL)requestOK;

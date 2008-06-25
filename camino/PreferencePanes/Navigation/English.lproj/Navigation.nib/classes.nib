@@ -14,7 +14,6 @@
         }, 
         {
             ACTIONS = {
-                checkDefaultBrowserOnLaunchClicked = id; 
                 checkboxStartPageClicked = id; 
                 defaultBrowserChange = id; 
                 defaultFeedViewerChange = id; 

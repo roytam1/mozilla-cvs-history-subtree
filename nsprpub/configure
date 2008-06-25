@@ -687,7 +687,7 @@ test "$host_alias" != "$target_alias" &&
 
 MOD_MAJOR_VERSION=4
 MOD_MINOR_VERSION=6
-MOD_PATCH_VERSION=7
+MOD_PATCH_VERSION=5
 NSPR_MODNAME=nspr20
 _HAVE_PTHREADS=
 USE_PTHREADS=
@@ -3581,10 +3581,10 @@ EOF
 
     fi
 
-    # HP-UX 11i v2 (B.11.23) or higher
+    # HP-UX 11i (B.11.11) or higher
     
     case "$OS_RELEASE" in
-    [C-Z]*|B.[2-9]*|B.1[2-9]*|B.11.[3-9]*|B.11.2[3-9]*)
+    [C-Z]*|B.[2-9]*|B.1[2-9]*|B.11.[2-9]*|B.11.1[1-9]*)
         USE_IPV6=1
         ;;
     esac

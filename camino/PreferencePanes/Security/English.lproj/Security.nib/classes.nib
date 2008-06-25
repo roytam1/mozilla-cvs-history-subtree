@@ -16,6 +16,7 @@
             ACTIONS = {
                 clickCertificateSelectionBehavior = id; 
                 clickEnableLeaveEncrypted = id; 
+                clickEnableLoadLowGrade = id; 
                 clickEnableViewMixed = id; 
                 showCertificates = id; 
             }; 
@@ -24,6 +25,7 @@
             OUTLETS = {
                 mCertificateBehavior = NSMatrix; 
                 mLeaveEncrypted = NSButton; 
+                mLoadLowGrade = NSButton; 
                 mViewMixed = NSButton; 
             }; 
             SUPERCLASS = PreferencePaneBase; 

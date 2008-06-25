@@ -624,15 +624,16 @@ js_ComputeThis(JSContext *cx, JSObject *thisp, jsval *argv)
 
 static JSBool
 NoSuchMethod(JSContext *cx, JSStackFrame *fp, jsval *vp, uint32 flags,
-             uintN argc)
+             uintN *argcp)
 {
+    jsval v, *sp, *newsp;
     JSObject *thisp, *argsobj;
-    jsval *sp, roots[3];
-    JSTempValueRooter tvr;
     jsid id;
-    JSBool ok;
     jsbytecode *pc;
     jsatomid atomIndex;
+    JSAtom *atom;
+    uintN argc;
+    JSArena *a;
 
     /*
      * We must call js_ComputeThis here to censor Call objects.  A performance
@@ -661,11 +662,6 @@ NoSuchMethod(JSContext *cx, JSStackFrame *fp, jsval *vp, uint32 flags,
     thisp = js_ComputeThis(cx, thisp, vp + 2);
     if (!thisp)
         return JS_FALSE;
-    vp[1] = OBJECT_TO_JSVAL(thisp);
-
-    /* From here on, control must flow through label out: to return. */
-    memset(roots, 0, sizeof roots);
-    JS_PUSH_TEMP_ROOT(cx, JS_ARRAY_LENGTH(roots), roots, &tvr);
 
     id = ATOM_TO_JSID(cx->runtime->atomState.noSuchMethodAtom);
 #if JS_HAS_XML_SUPPORT
@@ -673,21 +669,18 @@ NoSuchMethod(JSContext *cx, JSStackFrame *fp, jsval *vp, uint32 flags,
         JSXMLObjectOps *ops;
 
         ops = (JSXMLObjectOps *) thisp->map->ops;
-        thisp = ops->getMethod(cx, thisp, id, &roots[2]);
-        if (!thisp) {
-            ok = JS_FALSE;
-            goto out;
-        }
+        thisp = ops->getMethod(cx, thisp, id, &v);
+        if (!thisp)
+            return JS_FALSE;
         vp[1] = OBJECT_TO_JSVAL(thisp);
     } else
 #endif
     {
-        ok = OBJ_GET_PROPERTY(cx, thisp, id, &roots[2]);
-        if (!ok)
-            goto out;
+        if (!OBJ_GET_PROPERTY(cx, thisp, id, &v))
+            return JS_FALSE;
     }
-    if (JSVAL_IS_PRIMITIVE(roots[2]))
-        goto not_function;
+    if (JSVAL_IS_PRIMITIVE(v))
+        goto bad;
 
     pc = (jsbytecode *) vp[-(intN)fp->script->depth];
     switch ((JSOp) *pc) {
@@ -697,29 +690,55 @@ NoSuchMethod(JSContext *cx, JSStackFrame *fp, jsval *vp, uint32 flags,
       case JSOP_GETMETHOD:
 #endif
         atomIndex = GET_ATOM_INDEX(pc);
-        roots[0] = ATOM_KEY(js_GetAtom(cx, &fp->script->atomMap, atomIndex));
+        atom = js_GetAtom(cx, &fp->script->atomMap, atomIndex);
+        argc = *argcp;
         argsobj = js_NewArrayObject(cx, argc, vp + 2);
-        if (!argsobj) {
-            ok = JS_FALSE;
-            goto out;
+        if (!argsobj)
+            return JS_FALSE;
+
+        sp = vp + 4;
+        if (argc < 2) {
+            a = cx->stackPool.current;
+            if ((jsuword)sp > a->limit) {
+                /*
+                 * Arguments must be contiguous, and must include argv[-1]
+                 * and argv[-2], so allocate more stack, advance sp, and
+                 * set newsp[1] to thisp (vp[1]).  The other argv elements
+                 * will be set below, using negative indexing from sp.
+                 */
+                newsp = js_AllocRawStack(cx, 4, NULL);
+                if (!newsp)
+                    return JS_FALSE;
+                newsp[1] = OBJECT_TO_JSVAL(thisp);
+                sp = newsp + 4;
+            } else if ((jsuword)sp > a->avail) {
+                /*
+                 * Inline, optimized version of JS_ARENA_ALLOCATE to claim
+                 * the small number of words not already allocated as part
+                 * of the caller's operand stack.
+                 */
+                JS_ArenaCountAllocation(&cx->stackPool,
+                                        (jsuword)sp - a->avail);
+                a->avail = (jsuword)sp;
+            }
         }
-        roots[1] = OBJECT_TO_JSVAL(argsobj);
-        ok = js_InternalInvoke(cx, thisp, roots[2], flags | JSINVOKE_INTERNAL,
-                               2, roots, &vp[0]);
+
+        sp[-4] = v;
+        JS_ASSERT(sp[-3] == OBJECT_TO_JSVAL(thisp));
+        sp[-2] = ATOM_KEY(atom);
+        sp[-1] = OBJECT_TO_JSVAL(argsobj);
+        SAVE_SP(fp);
+        *argcp = 2;
         break;
 
       default:
-        goto not_function;
+        goto bad;
     }
+    return JS_TRUE;
 
-  out:
-    JS_POP_TEMP_ROOT(cx, &tvr);
-    return ok;
-
-  not_function:
+bad:
     js_ReportIsNotFunction(cx, vp, flags & JSINVOKE_FUNFLAGS);
-    ok = JS_FALSE;
-    goto out;
+    return JS_FALSE;
 }
 
 #endif /* JS_HAS_NO_SUCH_METHOD */
@@ -1121,14 +1140,16 @@ js_Invoke(JSContext *cx, uintN argc, uintN flags)
      */
     if (JSVAL_IS_PRIMITIVE(v)) {
 #if JS_HAS_NO_SUCH_METHOD
-        if (fp->script && !(flags & JSINVOKE_INTERNAL)) {
-            ok = NoSuchMethod(cx, fp, vp, flags, argc);
-            if (ok)
-                frame.rval = *vp;
+        if (!fp->script || (flags & JSINVOKE_INTERNAL))
+            goto bad;
+        ok = NoSuchMethod(cx, fp, vp, flags, &argc);
+        if (!ok)
             goto out2;
-        }
-#endif
+        RESTORE_SP(fp);
+        v = *vp;
+#else
         goto bad;
+#endif
     }
 
     /* Load thisv after potentially calling NoSuchMethod, which may set it. */
@@ -1472,7 +1493,7 @@ js_InternalInvoke(JSContext *cx, JSObject *obj, jsval fval, uintN flags,
 
         /*
          * Store *rval in the a scoped local root if a scope is open, else in
-         * the lastInternalResult pigeon-hole GC root, solely so users of
+         * the cx->lastInternalResult pigeon-hole GC root, solely so users of
          * js_InternalInvoke and its direct and indirect (js_ValueToString for
          * example) callers do not need to manage roots for local, temporary
          * references to such results.
@@ -1483,7 +1504,7 @@ js_InternalInvoke(JSContext *cx, JSObject *obj, jsval fval, uintN flags,
                 if (js_PushLocalRoot(cx, cx->localRootStack, *rval) < 0)
                     ok = JS_FALSE;
             } else {
-                cx->weakRoots.lastInternalResult = *rval;
+                cx->lastInternalResult = *rval;
             }
         }
     }
@@ -1945,7 +1966,7 @@ js_InvokeConstructor(JSContext *cx, jsval *vp, uintN argc)
     /* Now we have an object with a constructor method; call it. */
     vp[1] = OBJECT_TO_JSVAL(obj);
     if (!js_Invoke(cx, argc, JSINVOKE_CONSTRUCT)) {
-        cx->weakRoots.newborn[GCX_OBJECT] = NULL;
+        cx->newborn[GCX_OBJECT] = NULL;
         return JS_FALSE;
     }
 
@@ -3759,6 +3780,16 @@ interrupt:
             vp = sp - (argc + 2);
             lval = *vp;
             SAVE_SP_AND_PC(fp);
+#if JS_HAS_NO_SUCH_METHOD
+            if (JSVAL_IS_PRIMITIVE(lval)) {
+                ok = NoSuchMethod(cx, fp, vp, 0, &argc);
+                if (!ok)
+                    goto out;
+                RESTORE_SP(fp);
+                lval = *vp;
+            }
+#endif
+
             if (VALUE_IS_FUNCTION(cx, lval) &&
                 (obj = JSVAL_TO_OBJECT(lval),
                  fun = (JSFunction *) JS_GetPrivate(cx, obj),
@@ -4850,52 +4881,41 @@ interrupt:
             slot = GET_VARNO(pc2);
             obj = ATOM_TO_OBJECT(atom);
 
+            /*
+             * Handle the hard case of a local function defined in a body that
+             * contains direct let declarations. In this case, we must search
+             * the script's constants for the first block object, and clone it
+             * onto the scope chain, so that the local function being defined
+             * here captures the let variables.
+             */
             JS_ASSERT(!fp->blockChain);
-            if (!(fp->flags & JSFRAME_POP_BLOCKS)) {
-                /*
-                 * If the compiler-created function object (obj) is scoped by a
-                 * let-induced body block, temporarily update fp->blockChain so
-                 * that js_GetScopeChain will clone the block into the runtime
-                 * scope needed to parent the function object's clone.
-                 */
-                parent = OBJ_GET_PARENT(cx, obj);
-                if (OBJ_GET_CLASS(cx, parent) == &js_BlockClass)
-                    fp->blockChain = parent;
-                parent = js_GetScopeChain(cx, fp);
-            } else {
-                /*
-                 * We have already emulated JSOP_ENTERBLOCK for the enclosing
-                 * body block, for a prior JSOP_DEFLOCALFUN in the prolog,  so
-                 * we just load fp->scopeChain into parent.
-                 *
-                 * In typical execution scenarios, the prolog bytecodes that
-                 * include this JSOP_DEFLOCALFUN run, then come main bytecodes
-                 * including JSOP_ENTERBLOCK for the outermost (body) block.
-                 * JSOP_ENTERBLOCK will detect that it need not do anything if
-                 * the body block was entered above due to a local function.
-                 * Finally the matching JSOP_LEAVEBLOCK runs.
-                 *
-                 * If the matching JSOP_LEAVEBLOCK for the body block does not
-                 * run for some reason, the body block will be properly "put"
-                 * (via js_PutBlockObject) by the PutBlockObjects call at the
-                 * bottom of js_Interpret.
-                 */
-                parent = fp->scopeChain;
-                JS_ASSERT(OBJ_GET_CLASS(cx, parent) == &js_BlockClass);
-                JS_ASSERT(OBJ_GET_PROTO(cx, parent) == OBJ_GET_PARENT(cx, obj));
-                JS_ASSERT(OBJ_GET_CLASS(cx, OBJ_GET_PARENT(cx, parent))
-                          == &js_CallClass);
+            if (fp->fun && (fp->fun->flags & JSFUN_BLOCKLOCALFUN)) {
+                jsatomid aid;
+
+                obj2 = NULL;
+                for (aid = 0; aid < script->atomMap.length; aid++) {
+                    if (ATOM_IS_OBJECT(script->atomMap.vector[aid])) {
+                        obj2 = ATOM_TO_OBJECT(script->atomMap.vector[aid]);
+                        if (OBJ_GET_CLASS(cx, obj2) == &js_BlockClass)
+                            break;
+                    }
+                }
+                fp->blockChain = obj2;
             }
 
             /* If re-parenting, store a clone of the function object. */
+            obj2 = fp->scopeChain;
+            parent = js_GetScopeChain(cx, fp);
             if (OBJ_GET_PARENT(cx, obj) != parent) {
                 SAVE_SP_AND_PC(fp);
                 obj = js_CloneFunctionObject(cx, obj, parent);
-                if (!obj) {
+                if (!obj)
                     ok = JS_FALSE;
-                    goto out;
-                }
             }
+            fp->blockChain = NULL;
+            fp->scopeChain = obj2;
+            if (!ok)
+                goto out;
             fp->vars[slot] = OBJECT_TO_JSVAL(obj);
           END_LITOPX_CASE(JSOP_DEFLOCALFUN)
 
@@ -5001,7 +5021,7 @@ interrupt:
             /* Restore fp->scopeChain now that obj is defined in parent. */
             fp->scopeChain = obj2;
             if (!ok) {
-                cx->weakRoots.newborn[GCX_OBJECT] = NULL;
+                cx->newborn[GCX_OBJECT] = NULL;
                 goto out;
             }
 
@@ -5080,7 +5100,7 @@ interrupt:
             /* Restore fp->scopeChain now that obj is defined in fp->varobj. */
             fp->scopeChain = obj2;
             if (!ok) {
-                cx->weakRoots.newborn[GCX_OBJECT] = NULL;
+                cx->newborn[GCX_OBJECT] = NULL;
                 goto out;
             }
 
@@ -5206,7 +5226,7 @@ interrupt:
             JS_ASSERT(sp - fp->spbase >= 1);
             lval = FETCH_OPND(-1);
             JS_ASSERT(JSVAL_IS_OBJECT(lval));
-            cx->weakRoots.newborn[GCX_OBJECT] = JSVAL_TO_GCTHING(lval);
+            cx->newborn[GCX_OBJECT] = JSVAL_TO_GCTHING(lval);
           END_CASE(JSOP_ENDINIT)
 
           BEGIN_CASE(JSOP_INITPROP)
@@ -5290,8 +5310,6 @@ interrupt:
             if (!JSVAL_IS_OBJECT(rval)) {
                 char numBuf[12];
                 JS_snprintf(numBuf, sizeof numBuf, "%u", (unsigned) i);
-
-                SAVE_SP_AND_PC(fp);
                 JS_ReportErrorNumber(cx, js_GetErrorMessage, NULL,
                                      JSMSG_BAD_SHARP_USE, numBuf);
                 ok = JS_FALSE;
@@ -5360,12 +5378,7 @@ interrupt:
 
           BEGIN_CASE(JSOP_GOSUBX)
             JS_ASSERT(cx->exception != JSVAL_HOLE);
-            if (!cx->throwing) {
-                lval = JSVAL_HOLE;
-            } else {
-                lval = cx->exception;
-                cx->throwing = JS_FALSE;
-            }
+            lval = cx->throwing ? cx->exception : JSVAL_HOLE;
             PUSH(lval);
             i = PTRDIFF(pc, script->main, jsbytecode) + JSOP_GOSUBX_LENGTH;
             len = GET_JUMPX_OFFSET(pc);
@@ -5393,7 +5406,6 @@ interrupt:
           END_VARLEN_CASE
 
           BEGIN_CASE(JSOP_EXCEPTION)
-            JS_ASSERT(cx->throwing);
             PUSH(cx->exception);
             cx->throwing = JS_FALSE;
           END_CASE(JSOP_EXCEPTION)
@@ -5401,11 +5413,9 @@ interrupt:
           BEGIN_CASE(JSOP_THROWING)
             JS_ASSERT(!cx->throwing);
             cx->throwing = JS_TRUE;
-            cx->exception = POP_OPND();
           END_CASE(JSOP_THROWING)
 
           BEGIN_CASE(JSOP_THROW)
-            JS_ASSERT(!cx->throwing);
             cx->throwing = JS_TRUE;
             cx->exception = POP_OPND();
             ok = JS_FALSE;
@@ -5804,7 +5814,6 @@ interrupt:
           END_LITOPX_CASE(JSOP_SETMETHOD)
 
           BEGIN_CASE(JSOP_GETFUNNS)
-            SAVE_SP_AND_PC(fp);
             ok = js_GetFunctionNamespace(cx, &rval);
             if (!ok)
                 goto out;
@@ -5833,23 +5842,12 @@ interrupt:
              */
             if (fp->flags & JSFRAME_POP_BLOCKS) {
                 JS_ASSERT(!fp->blockChain);
-
-                /*
-                 * Check whether JSOP_DEFLOCALFUN emulated JSOP_ENTERBLOCK for
-                 * the body block in order to correctly scope the local cloned
-                 * function object it creates.
-                 */
-                parent = fp->scopeChain;
-                if (OBJ_GET_PROTO(cx, parent) == obj) {
-                    JS_ASSERT(OBJ_GET_CLASS(cx, parent) == &js_BlockClass);
-                } else {
-                    obj = js_CloneBlockObject(cx, obj, parent, fp);
-                    if (!obj) {
-                        ok = JS_FALSE;
-                        goto out;
-                    }
-                    fp->scopeChain = obj;
+                obj = js_CloneBlockObject(cx, obj, fp->scopeChain, fp);
+                if (!obj) {
+                    ok = JS_FALSE;
+                    goto out;
                 }
+                fp->scopeChain = obj;
             } else {
                 JS_ASSERT(!fp->blockChain ||
                           OBJ_GET_PARENT(cx, obj) == fp->blockChain);

@@ -55,34 +55,7 @@ function onLoad()
     window.mode = args.mode;
     window.recurrenceInfo = null;
 
-    // the calling entity provides us with an object that is responsible
-    // for recording details about the initiated modification. the 'finalize'-property
-    // is our hook in order to receive a notification in case the operation needs
-    // to be terminated prematurely. this function will be called if the calling
-    // entity needs to immediately terminate the pending modification. in this
-    // case we serialize the item and close the window.
-    if (args.job) {
-
-        // keep this context...
-        var self = this;
-
-        // store the 'finalize'-functor in the provided job-object.
-        args.job.finalize = function finalize() {
-
-            // store any pending modifications...
-            self.onAccept();
-
-            var item = window.calendarItem;
-
-            // ...and close the window.
-            window.close();
-
-            return item;
-        }
-    }
-
-    if (window.calendarItem.calendar && window.calendarItem.calendar.readOnly
-        && window.mode != "new") {
+    if (window.calendarItem.calendar && window.calendarItem.calendar.readOnly) {
         gReadOnlyMode = true;
     }
 
@@ -94,8 +67,6 @@ function onLoad()
         var menuitem = calendarList.appendItem(calendar.name, i);
         menuitem.calendar = calendar;
     }
-
-    document.getElementById("send-invitations-checkbox").collapsed = isSunbird();
 
     loadDialog(window.calendarItem);
 
@@ -124,24 +95,15 @@ function onLoad()
     document.getElementById("item-title").focus();
 
     opener.setCursor("auto");
-}
 
-function dispose()
-{
-    var args = window.arguments[0];
-    if(args.job && args.job.dispose)
-      args.job.dispose();
+    self.focus();
 }
 
 function onAccept()
 {
-    // we need to clone the item in order to apply the changes.
-    // it is important to not apply the changes to the original item
-    // (even if it happens to be mutable) in order to guarantee
-    // that providers see a proper oldItem/newItem pair in case
-    // they rely on this fact (e.g. WCAP does).
+    // if this event isn't mutable, we need to clone it like a sheep
     var originalItem = window.calendarItem;
-    var item = originalItem.clone();
+    var item = (originalItem.isMutable) ? originalItem : originalItem.clone();
 
     saveDialog(item);
 
@@ -153,16 +115,12 @@ function onAccept()
     // of a bug on 1_8_BRANCH we need this to make it really persist.
     document.persist("description-row", "collapsed");
 
-    dispose();
-
-    window.calendarItem = item;
-
     return true;
 }
 
 function onCancel()
 {
-    dispose();
+
 }
 
 function loadDialog(item)
@@ -451,17 +409,11 @@ function saveDialog(item)
         item.completedDate = jsDateToDateTime(getElementValue("completed-date-picker"));
     }
 
-    // Attendees
+    /* attendence */
     item.removeAllAttendees();
     var attendeeListBox = document.getElementById("attendees-list");
     for each (att in attendeeListBox.attendees) {
         item.addAttendee(att);
-    }
-    var sendInvitesCheckbox = document.getElementById("send-invitations-checkbox");
-    if (sendInvitesCheckbox.checked) {
-        setItemProperty(item, "X-MOZ-SEND-INVITATIONS", "TRUE");
-    } else {
-        item.deleteProperty("X-MOZ-SEND-INVITATIONS");
     }
 
     /* alarms */
@@ -523,7 +475,7 @@ function updateComponentType(aValue) {
         newItem.startDate = oldItem.entryDate || now();
         newItem.endDate = oldItem.dueDate || now();
     } else {
-        newItem = createTodo();
+        newItem = createToDo();
         oldItem.wrappedJSObject.cloneItemBaseInto(newItem.wrappedJSObject);
         newItem.entryDate = oldItem.startDate;
         newItem.dueDate = oldItem.endDate;
@@ -683,12 +635,6 @@ function updateAccept()
                                               !cal.readOnly);
     if (gReadOnlyMode || cal.readOnly) {
         enableAccept = false;
-    }
-
-    if (cal.sendItipInvitations) {
-        enableElement("send-invitations-checkbox");
-    } else {
-        disableElement("send-invitations-checkbox");
     }
 
     if (!updateTaskAlarmWarnings()) {
@@ -988,15 +934,9 @@ function loadDetails() {
     gDetailsShown = true;
     var item = window.calendarItem;
 
-    // Attendees
+    /* attendence */
     var attendeeListBox = document.getElementById("attendees-list");
     attendeeListBox.attendees = item.getAttendees({});
-    var sendInvitesCheckbox = document.getElementById("send-invitations-checkbox");
-    if (item.hasProperty("X-MOZ-SEND-INVITATIONS")) {
-        sendInvitesCheckbox.checked = (item.getProperty("X-MOZ-SEND-INVITATIONS") == "TRUE");
-    } else {
-        sendInvitesCheckbox.checked = false;
-    }
 
     /* Status */
     setElementValue("item-url",         item.getProperty("URL"));

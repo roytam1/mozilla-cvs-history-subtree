@@ -367,7 +367,7 @@ nsHTMLButtonElement::HandleDOMEvent(nsPresContext* aPresContext,
 
       case NS_MOUSE_LEFT_CLICK:
         {
-          nsCOMPtr<nsIPresShell> presShell = aPresContext->GetPresShell();
+          nsIPresShell *presShell = aPresContext->GetPresShell();
           if (presShell) {
             // single-click
             nsUIEvent event(NS_IS_TRUSTED_EVENT(aEvent), NS_UI_ACTIVATE, 1);
@@ -389,7 +389,7 @@ nsHTMLButtonElement::HandleDOMEvent(nsPresContext* aPresContext,
             event.originator      = this;
             nsEventStatus status  = nsEventStatus_eIgnore;
 
-            nsCOMPtr<nsIPresShell> presShell = aPresContext->GetPresShell();
+            nsIPresShell *presShell = aPresContext->GetPresShell();
             // If |nsIPresShell::Destroy| has been called due to
             // handling the event (base class HandleDOMEvent, above),
             // the pres context will return a null pres shell.  See

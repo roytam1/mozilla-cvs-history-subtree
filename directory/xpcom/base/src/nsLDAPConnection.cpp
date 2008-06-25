@@ -602,7 +602,7 @@ CheckLDAPOperationResult(nsHashKey *aKey, void *aData, void* aClosure)
     LDAPMessage *msgHandle;
     nsCOMPtr<nsILDAPMessage> msg;
     PRBool operationFinished = PR_TRUE;
-    struct timeval timeout = { 1, 0 }; 
+    struct timeval timeout = { 0, 0 }; 
     PRIntervalTime sleepTime = PR_MillisecondsToInterval(40);
 
     // we need to access some of the connection loop's objects

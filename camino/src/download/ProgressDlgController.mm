@@ -21,7 +21,7 @@
  *
  * Contributor(s):
  *   Calum Robinson <calumr@mac.com>
- *   Josh Aas <josh@mozilla.com>
+ *   Josh Aas <josha@mac.com>
  *   Nick Kreeger <nick.kreeger@park.edu>
  *   Bruce Davidson <mozilla@transoceanic.org.uk>
  *
@@ -142,8 +142,6 @@ static id gSharedProgressController = nil;
   [toolbar setAutosavesConfiguration:YES];
   [[self window] setToolbar:toolbar];    
   
-  mFileChangeWatcher = [[FileChangeWatcher alloc] init];
-  
   // load the saved instances to mProgressViewControllers array
   [self loadProgressViewControllers];
 }
@@ -155,7 +153,6 @@ static id gSharedProgressController = nil;
     gSharedProgressController = nil;
   }
   [mProgressViewControllers release];
-  [mFileChangeWatcher release];
   [self killDownloadTimer];
   [super dealloc];
 }
@@ -384,8 +381,6 @@ static id gSharedProgressController = nil;
   int instanceToSelect = -1;
   BOOL shiftKeyDown = (([theEvent modifierFlags] & NSShiftKeyMask) != 0);
 
-  if ([[theEvent characters] length] < 1)
-    return;
   unichar key = [[theEvent characters] characterAtIndex:0];
   switch (key)
   {
@@ -531,7 +526,7 @@ static id gSharedProgressController = nil;
   }
 }
 
--(void)didStartDownload:(ProgressViewController*)progressDisplay
+-(void)didStartDownload:(id <CHDownloadProgressDisplay>)progressDisplay
 {
   if (![[self window] isVisible]) {
     [self showWindow:nil]; // make sure the window is visible
@@ -650,11 +645,6 @@ static id gSharedProgressController = nil;
 
 -(void)removeDownload:(id <CHDownloadProgressDisplay>)progressDisplay suppressRedraw:(BOOL)suppressRedraw
 {
-  [progressDisplay displayWillBeRemoved];
-  // This is sometimes called by code that thinks it can continue
-  // to use |progressDisplay|. Extended the lifetime slightly as a
-  // band-aid, but this logic should really be reworked.
-  [[progressDisplay retain] autorelease];
   [mProgressViewControllers removeObject:progressDisplay];
   
   if ([mProgressViewControllers count] == 0) {
@@ -818,24 +808,13 @@ static id gSharedProgressController = nil;
     NSDictionary* downloadsDictionary;
     while((downloadsDictionary = [downloadsEnum nextObject]))
     {
-      ProgressViewController* curController = [[ProgressViewController alloc] initWithDictionary:downloadsDictionary
-                                                                             andWindowController:self];
+      ProgressViewController* curController = [[ProgressViewController alloc] initWithDictionary:downloadsDictionary];
       [mProgressViewControllers addObject:curController];
       [curController release];
     }
     
     [self rebuildViews];
   }
-}
-
--(void)addFileDelegateToWatchList:(id<WatchedFileDelegate>)aWatchedFileDelegate
-{
-  [mFileChangeWatcher addWatchedFileDelegate:aWatchedFileDelegate];
-}
-
--(void)removeFileDelegateFromWatchList:(id<WatchedFileDelegate>)aWatchedFileDelegate
-{
-  [mFileChangeWatcher removeWatchedFileDelegate:aWatchedFileDelegate];
 }
 
 // Remove the successful downloads from the downloads list
@@ -1222,7 +1201,8 @@ static id gSharedProgressController = nil;
  */
 -(id <CHDownloadProgressDisplay>)createProgressDisplay
 {
-  ProgressViewController* newController = [[[ProgressViewController alloc] initWithWindowController:self] autorelease];
+  ProgressViewController *newController = [[[ProgressViewController alloc] init] autorelease];
+  [newController setProgressWindowController:self];
   [mProgressViewControllers addObject:newController];
   
   return newController;

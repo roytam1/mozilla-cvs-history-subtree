@@ -116,17 +116,6 @@ calICSCalendar.prototype = {
     //
     // calICalendar interface
     //
-    // attribute AUTF8String id;
-    mID: null,
-    get id() {
-        return this.mID;
-    },
-    set id(id) {
-        if (this.mID)
-            throw Components.results.NS_ERROR_ALREADY_INITIALIZED;
-        return (this.mID = id);
-    },
-
     get name() {
         return getCalendarManager().getCalendarPref(this, "NAME");
     },
@@ -246,6 +235,7 @@ calICSCalendar.prototype = {
                                          .createInstance(Components.interfaces.calICalendar);
         this.mMemoryCalendar.uri = this.mUri;
         this.mMemoryCalendar.wrappedJSObject.calendarToReturn = this;
+        this.mMemoryCalendar.addObserver(this.mObserver);
 
         this.mObserver.onStartBatch();
 
@@ -269,13 +259,6 @@ calICSCalendar.prototype = {
         }
         this.mObserver.onEndBatch();
         this.mObserver.onLoad();
-        
-        // Now that all items have been stuffed into the memory calendar
-        // we should add ourselves as observer. It is important that this
-        // happens *after* the calls to adoptItem in the above loop to prevent
-        // the views from being notified.
-        this.mMemoryCalendar.addObserver(this.mObserver);
-        
         this.unlock();
     },
 
@@ -403,8 +386,6 @@ calICSCalendar.prototype = {
     removeObserver: function (aObserver) {
         this.mObserver.removeObserver(aObserver);
     },
-
-    get sendItipInvitations() { return true; },
 
     // Always use the queue, just to reduce the amount of places where
     // this.mMemoryCalendar.addItem() and friends are called. less
@@ -943,7 +924,7 @@ WebDavResource.prototype = {
             iid.equals(CI.nsISupports)) {
             return this;
         }
-        throw Components.interfaces.NS_ERROR_NO_INTERFACE;
+        throw Components.interfaces.NS_NO_INTERFACE;
     }
 };
 

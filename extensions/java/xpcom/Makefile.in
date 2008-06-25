@@ -13,8 +13,9 @@
 #
 # The Original Code is Java XPCOM Bindings.
 #
-# The Initial Developer of the Original Code is IBM Corporation.
-# Portions created by the Initial Developer are Copyright (C) 2007
+# The Initial Developer of the Original Code is
+# IBM Corporation.
+# Portions created by the Initial Developer are Copyright (C) 2005
 # IBM Corporation. All Rights Reserved.
 #
 # Contributor(s):
@@ -41,13 +42,9 @@ VPATH		= @srcdir@
 
 include $(DEPTH)/config/autoconf.mk
 
-DIRS = interfaces glue
+DIRS = src
+
+TOOL_DIRS = glue
 
 include $(topsrcdir)/config/rules.mk
 
-# Build the implementation Java classes
-libs::
-	make -C src jar-libs
-
-install::
-	make -C src jar-install

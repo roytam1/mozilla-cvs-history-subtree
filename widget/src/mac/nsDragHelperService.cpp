@@ -239,13 +239,6 @@ nsDragHelperService::Drop(DragReference inDragRef, nsIEventSink *inSink,
         result = dragNotAcceptedErr;
   } // if a valid drag session
 
-#ifdef MOZ_WIDGET_COCOA
-  // we don't need the drag session anymore, the user has released the
-  // mouse and the event has already gone to gecko.
-  mDragService->EndDragSession();
-  mDragService = nsnull;
-#endif  // MOZ_WIDGET_COCOA
-
   // if there was any kind of error, the drag wasn't accepted
   *outAccepted = (result == noErr);
 

@@ -86,32 +86,6 @@ function onLoad()
   // arguments this window has been called with.
   var args = window.arguments[0];
   
-  // the calling entity provides us with an object that is responsible
-  // for recording details about the initiated modification. the 'finalize'-property
-  // is our hook in order to receive a notification in case the operation needs
-  // to be terminated prematurely. this function will be called if the calling
-  // entity needs to immediately terminate the pending modification. in this
-  // case we serialize the item and close the window.
-  if(args.job) {
-
-    // keep this context...
-    var self = this;
-
-    // store the 'finalize'-functor in the provided job-object.
-    args.job.finalize = function() {
-
-      // store any pending modifications...
-      self.onAccept();
-
-      var item = window.calendarItem;
-
-      // ...and close the window.
-      window.close();
-
-      return item;
-    }
-  }
-
   window.fbWrapper = args.fbWrapper;
 
   // the most important attribute we expect from the
@@ -184,33 +158,20 @@ function onLoad()
 }
 
 //////////////////////////////////////////////////////////////////////////////
-// dispose
-//////////////////////////////////////////////////////////////////////////////
-
-function dispose()
-{
-  var args = window.arguments[0];
-  if(args.job && args.job.dispose)
-    args.job.dispose();
-}
-
-//////////////////////////////////////////////////////////////////////////////
 // onAccept
 //////////////////////////////////////////////////////////////////////////////
 
 function onAccept()
 {
-  dispose();
-
   onCommandSave();
   return true;
 }
 
 //////////////////////////////////////////////////////////////////////////////
-// onCommandCancel
+// onCancel
 //////////////////////////////////////////////////////////////////////////////
 
-function onCommandCancel()
+function onCancel()
 {
   // assume that new items need to be asked whether or
   // not the newly created item wants to be saved.
@@ -261,19 +222,6 @@ function onCommandCancel()
       default:
         return false;
   }
-}
-
-//////////////////////////////////////////////////////////////////////////////
-// onCancel
-//////////////////////////////////////////////////////////////////////////////
-
-function onCancel()
-{
-  var result = onCommandCancel();
-  if(result == true) {
-    dispose();
-  }
-  return result;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -753,7 +701,7 @@ function loadRepeat(item)
     }
     if (rules.length == 1) {
       var rule = rules[0];
-      if (rule instanceof Ci.calIRecurrenceRule) {
+      if (rule instanceof calIRecurrenceRule) {
         switch(rule.type) {
           case 'DAILY':
             if (rule.interval == 1) {
@@ -2052,19 +2000,19 @@ function updateRepeat()
     switch (repeatValue)
     {
       case 'daily':
-        var recRule = createRecurrenceRule();
+        var recRule = new calRecurrenceRule();
         recRule.type = 'DAILY';
         recRule.interval = 1;
         recRule.count = -1;
         break;
       case 'weekly':
-        var recRule = createRecurrenceRule();
+        var recRule = new calRecurrenceRule();
         recRule.type = 'WEEKLY';
         recRule.interval = 1;
         recRule.count = -1;
         break;
       case 'every.weekday':
-        var recRule = createRecurrenceRule();
+        var recRule = new calRecurrenceRule();
         recRule.type = 'DAILY';
         recRule.interval = 1;
         recRule.count = -1;
@@ -2072,19 +2020,19 @@ function updateRepeat()
         recRule.setComponent("BYDAY", onDays.length, onDays);
         break;
       case 'bi.weekly':
-        var recRule = createRecurrenceRule();
+        var recRule = new calRecurrenceRule();
         recRule.type = 'WEEKLY';
         recRule.interval = 2;
         recRule.count = -1;
         break;
       case 'monthly':
-        var recRule = createRecurrenceRule();
+        var recRule = new calRecurrenceRule();
         recRule.type = 'MONTHLY';
         recRule.interval = 1;
         recRule.count = -1;
         break;
       case 'yearly':
-        var recRule = createRecurrenceRule();
+        var recRule = new calRecurrenceRule();
         recRule.type = 'YEARLY';
         recRule.interval = 1;
         recRule.count = -1;
@@ -2186,13 +2134,9 @@ function updateToDoStatus(status,passedInCompletedDate)
 
 function saveItem()
 {
-  // we need to clone the item in order to apply the changes.
-  // it is important to not apply the changes to the original item
-  // (even if it happens to be mutable) in order to guarantee
-  // that providers see a proper oldItem/newItem pair in case
-  // they rely on this fact (e.g. WCAP does).
+  // if this event isn't mutable, we need to clone it like a sheep
   var originalItem = window.calendarItem;
-  var item = originalItem.clone();
+  var item = (originalItem.isMutable) ? originalItem : originalItem.clone();
 
   // override item's recurrenceInfo *before* serializing date/time-objects.
   if(!window.isOccurrence)
@@ -2658,7 +2602,6 @@ function browseDocument()
 
 function updateAttendees()
 {
-  var regexp = new RegExp("^mailto:(.*)", "i");   
   var attendeeRow = document.getElementById("attendee-row");
   if(!window.attendees || !window.attendees.length) {
     attendeeRow.setAttribute('collapsed','true');
@@ -2672,11 +2615,9 @@ function updateAttendees()
         attendeeNames += attendee.commonName;
       } else if(attendee.id && attendee.id.length) {
         var email = attendee.id;
-        if (regexp.test(email)) {
-          attendeeNames += RegExp.$1;
-        } else {
-          attendeeNames += email;
-        }
+        if (email.indexOf("mailto:") == 0)
+          email = email.split("mailto:")[1]
+        attendeeNames += email;
       } else {
         continue;
       }
@@ -2722,7 +2663,7 @@ function updateRepeatDetails()
         var rrules = splitRecurrenceRules(recurrenceInfo);
         if (rrules[0].length == 1) {
           var rule = rrules[0][0];
-          if(rule instanceof Ci.calIRecurrenceRule) {
+          if(rule instanceof calIRecurrenceRule) {
 
             // currently we don't allow for any BYxxx-rules.
             if (!checkRecurrenceRule(rule,['BYSECOND',

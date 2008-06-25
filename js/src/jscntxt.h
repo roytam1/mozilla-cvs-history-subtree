@@ -530,7 +530,6 @@ typedef union JSTempValueUnion {
     void                *gcthing;
     JSTempValueMarker   marker;
     JSScopeProperty     *sprop;
-    JSWeakRoots         *weakRoots;
     jsval               *array;
 } JSTempValueUnion;
 
@@ -547,7 +546,6 @@ JS_STATIC_ASSERT(sizeof(JSTempValueUnion) == sizeof(JSObject *));
  * If count is -1, then u.value contains the single value or GC-thing to root.
  * If count is -2, then u.marker holds a mark hook called to mark the values.
  * If count is -3, then u.sprop points to the property tree node to mark.
- * If count is -4, then u.weakRoots points to saved weak roots.
  * If count >= 0, then u.array points to a stack-allocated vector of jsvals.
  *
  * To root a single GC-thing pointer, which need not be tagged and stored as a
@@ -577,10 +575,9 @@ struct JSTempValueRooter {
     JSTempValueUnion    u;
 };
 
-#define JSTVU_SINGLE        (-1)
-#define JSTVU_MARKER        (-2)
-#define JSTVU_SPROP         (-3)
-#define JSTVU_WEAK_ROOTS    (-4)
+#define JSTVU_SINGLE    (-1)
+#define JSTVU_MARKER    (-2)
+#define JSTVU_SPROP     (-3)
 
 #define JS_PUSH_TEMP_ROOT_COMMON(cx,tvr)                                      \
     JS_BEGIN_MACRO                                                            \
@@ -654,13 +651,6 @@ struct JSTempValueRooter {
         JS_PUSH_TEMP_ROOT_COMMON(cx, tvr);                                    \
     JS_END_MACRO
 
-#define JS_PUSH_TEMP_ROOT_WEAK_COPY(cx,weakRoots_,tvr)                        \
-    JS_BEGIN_MACRO                                                            \
-        (tvr)->count = JSTVU_WEAK_ROOTS;                                      \
-        (tvr)->u.weakRoots = (weakRoots_);                                    \
-        JS_PUSH_TEMP_ROOT_COMMON(cx, tvr);                                    \
-    JS_END_MACRO
-
 struct JSContext {
     /* JSRuntime contextList linkage. */
     JSCList             links;
@@ -689,8 +679,14 @@ struct JSContext {
     /* Top-level object and pointer to top stack frame's scope chain. */
     JSObject            *globalObject;
 
-    /* Storage to root recently allocated GC things and script result. */
-    JSWeakRoots         weakRoots;
+    /* Most recently created things by type, members of the GC's root set. */
+    JSGCThing           *newborn[GCX_NTYPES];
+
+    /* Atom root for the last-looked-up atom on this context. */
+    JSAtom              *lastAtom;
+
+    /* Root for the result of the most recent js_InternalInvoke call. */
+    jsval               lastInternalResult;
 
     /* Regular expression class statics (XXX not shared globally). */
     JSRegExpStatics     regExpStatics;

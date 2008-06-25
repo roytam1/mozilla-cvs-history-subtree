@@ -2647,7 +2647,7 @@ nsGenericElement::SetFocus(nsPresContext* aPresContext)
   // the disabled attribute
 
   nsIFrame* frame = nsnull;
-  nsCOMPtr<nsIPresShell> presShell = aPresContext->PresShell();
+  nsIPresShell *presShell = aPresContext->PresShell();
   presShell->GetPrimaryFrameFor(this, &frame);
   if (frame && frame->IsFocusable()) {
     aPresContext->EventStateManager()->SetContentState(this,

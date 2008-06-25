@@ -727,7 +727,7 @@ nsresult calIcalComponent::GetDateTimeAttribute(
             icaltimezone *zone = icalcomponent_get_timezone(vcalendar, tzid);
             if (!zone) {
                 NS_WARNING("Can't find specified VTIMEZONE in VCALENDAR!");
-                return calIErrors::INVALID_TIMEZONE;
+                return NS_ERROR_FAILURE;
             }
             icalcomponent * tzcomp = icaltimezone_get_component(zone);
             if (tzcomp == nsnull) {

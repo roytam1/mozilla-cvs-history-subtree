@@ -54,7 +54,7 @@ client, supporting advanced junk mail detection and other useful features.">
 <!ENTITY dict_intro.label "Dictionaries are used to check the spelling of your messages.">
 <!ENTITY dict_info.label
 'Many additional languages can be installed from the 
-<a href="https://en-us.add-ons.mozilla.org/en-US/seamonkey/1.1/dictionaries/">dictionaries</a> 
+<a href="https://addons.mozilla.org/en-US/seamonkey/1.1/dictionaries/">dictionaries</a> 
 section on <a href="http://addons.mozilla.org/">Mozilla Add-ons</a>.'>
 <!ENTITY info.title "More Information">
 <!ENTITY info_bugs.label

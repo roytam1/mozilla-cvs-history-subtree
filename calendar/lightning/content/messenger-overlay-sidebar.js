@@ -27,7 +27,6 @@
  *   Stefan Sitter <ssitter@googlemail.com>
  *   Thomas Benisch <thomas.benisch@sun.com>
  *   Michael Buettner <michael.buettner@sun.com>
- *   Philipp Kewisch <mozilla@kewis.ch>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or 
@@ -42,122 +41,6 @@
  * the terms of any one of the MPL, the GPL or the LGPL.
  *
  * ***** END LICENSE BLOCK ***** */
-
-var CalendarController =
-{
-  defaultController: null,
-
-  supportsCommand: function ccSC(command) {
-    switch (command) {
-      case "cmd_cut":
-      case "cmd_copy":
-      case "cmd_paste":
-      case "cmd_undo":
-      case "cmd_redo":
-      case "cmd_print":
-      case "cmd_printpreview":
-        return true;
-    }
-    if (this.defaultController) {
-      return this.defaultController.supportsCommand(command);
-    }
-    return false;
-  },
-
-  isCommandEnabled: function ccICE(command) {
-    switch (command) {
-      case "cmd_cut":
-      case "cmd_copy":
-        return currentView().getSelectedItems({}).length != 0;
-      case "cmd_paste":
-        return canPaste();
-      case "cmd_undo":
-        if (this.isCalendarInForeground()) {
-          goSetMenuValue(command, 'valueDefault');
-          if (canUndo()) {
-            return true;
-          }
-        }
-        break;
-      case "cmd_redo":
-        if (this.isCalendarInForeground()) {
-          goSetMenuValue(command, 'valueDefault');
-          if(canRedo()) {
-            return true;
-          }
-        }
-        break;
-      case "cmd_print":
-        if (this.isCalendarInForeground()) {
-          return true;
-        }
-        break;
-      case "cmd_printpreview":
-        if (this.isCalendarInForeground()) {
-          return false;
-        }
-        break;
-    }
-    if (this.defaultController) {
-      return this.defaultController.isCommandEnabled(command);
-    }
-    return false;
-  },
-
-  doCommand: function ccDC(command) {
-    // if the user invoked a key short cut then it is possible that we got
-    // here for a command which is really disabled. kick out if the
-    // command should be disabled.
-    if (!this.isCommandEnabled(command)) {
-      return;
-    }
-
-    switch ( command )
-    {
-      case "cmd_cut":
-        cutToClipboard();
-        break;
-      case "cmd_copy":
-        copyToClipboard();
-        break;
-      case "cmd_paste":
-        pasteFromClipboard();
-        break;
-      case "cmd_undo":
-        if (this.isCalendarInForeground() && canUndo()) {
-          getTransactionMgr().undo();
-        }
-        break;
-      case "cmd_redo":
-        if (this.isCalendarInForeground() && canRedo()) {
-          getTransactionMgr().redo();
-        }
-        break;
-      case "cmd_print":
-        if (this.isCalendarInForeground()) {
-          calPrint();
-          return;
-        }
-        break;
-      case "cmd_printpreview":
-        if (this.isCalendarInForeground()) {
-          return;
-        }
-        break;
-    }
-    if (this.defaultController) {
-      this.defaultController.doCommand(command);
-    }
-  },
-
-  onEvent: function ccOE(event) {
-    // do nothing here...
-  },
-  
-  isCalendarInForeground: function ccIC() {
-    return document.getElementById("displayDeck").selectedPanel.id == "calendar-view-box";
-  }
-};
 
 function ltnSidebarCalendarSelected(tree)
 {
@@ -271,7 +154,6 @@ function ltnOnLoad(event)
     var nextmo = nextMonth(today);
 
     document.getElementById("ltnMinimonth").value = today;
-    document.getElementById("ltnDateTextPicker").value = today;
 
     gMiniMonthLoading = false;
 
@@ -314,22 +196,7 @@ function ltnOnLoad(event)
             null);
     }
 
-    // we need to put our new command controller *before* the one that
-    // gets installed by thunderbird. since we get called pretty early
-    // during startup we need to install the function below as a callback
-    // that periodically checks when the original thunderbird controller
-    // gets alive. please note that setTimeout with a value of 0 means that
-    // we leave the current thread in order to re-enter the message loop.
-    var injectCommandController = function inject() {
-      var controller = top.controllers.getControllerForCommand("cmd_undo");
-      if (!controller) {
-        setTimeout(injectCommandController, 0);
-      } else {
-        CalendarController.defaultController = controller;
-        top.controllers.insertControllerAt(0, CalendarController);
-      }
-    }
-    injectCommandController();
+    return;
 }
 
 /* Called at midnight to tell us to redraw date-specific widgets.  Do NOT call
@@ -470,10 +337,9 @@ function ltnEditSelectedItem() {
 
 function ltnDeleteSelectedItem() {
     var selectedItems = currentView().getSelectedItems({});
-    calendarViewController.deleteOccurrences(selectedItems.length,
-                                             selectedItems,
-                                             false,
-                                             false);
+    for each (var item in selectedItems) {
+        calendarViewController.deleteOccurrence(item);
+    }
 }
 
 function ltnCreateEvent() {

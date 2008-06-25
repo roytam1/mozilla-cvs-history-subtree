@@ -22,7 +22,6 @@
  * Contributor(s):
  *   ArentJan Banck <ajbanck@planet.nl>
  *   Matthew Willis <mattwillis@gmail.com>
- *   Stefan Sitter <ssitter@googlemail.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -50,8 +49,7 @@ var gCategoriesPane = {
         // On non-instant-apply platforms, once this pane has been loaded,
         // attach our "revert all changes" function to the parent prefwindow's
         // "ondialogcancel" event.
-        var parentPrefWindow = document.getElementById("CalendarPreferences") ||
-                               document.getElementById("MailPreferences");
+        var parentPrefWindow = document.getElementById("CalendarPreferences");
         if (!parentPrefWindow.instantApply) {
             var existingOnDialogCancel = parentPrefWindow.getAttribute("ondialogcancel");
             parentPrefWindow.setAttribute("ondialogcancel",

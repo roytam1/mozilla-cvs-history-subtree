@@ -2330,10 +2330,6 @@ nsPostScriptObj::draw_image(nsIImage *anImage,
   anImage->LockImagePixels(PR_FALSE);
   PRUint8 *theBits = anImage->GetBits();
 
-  anImage->LockImagePixels(PR_TRUE);
-  PRUint8 *theAlphaBits = anImage->GetAlphaBits();
-  PRUint8 alphaDepth = anImage->GetAlphaDepth();
-
   // Image data is unavailable, or it has no height or width.
   // There's nothing to print, so just return.
   if (!theBits || (0 == iRect.width) || (0 == iRect.height)) {
@@ -2411,40 +2407,21 @@ nsPostScriptObj::draw_image(nsIImage *anImage,
   // if it's partially clipped in the document.
   int outputCount = 0;
   PRInt32 bytesPerRow = anImage->GetLineStride();
-  PRInt32 bytesPerAlphaRow = anImage->GetAlphaLineStride();
 
   for (nscoord y = 0; y < iRect.height; y++) {
     // calculate the starting point for this row of pixels
     PRUint8 *row = theBits                // Pixel buffer start
       + y * bytesPerRow;                  // Rows already output
-    PRUint8 *alphaRow = theAlphaBits + y * bytesPerAlphaRow;
 
     for (nscoord x = 0; x < iRect.width; x++) {
       PRUint8 *pixel = row + (x * 3);
-      PRUint8 alpha = 255;
-      // we don't need to worry about 1-bit alpha because
-      // nsImageGTK::LockImagePixels whitens the transparent portions
-      if (alphaDepth == 8)
-        alpha = alphaRow[x];
-      PRUint8 p[3];
-
-      if (alpha == 0) {
-        p[0] = p[1] = p[2] = 0xff;
-      } else if (alpha == 255) {
-        p[0] = pixel[0];
-        p[1] = pixel[1];
-        p[2] = pixel[2];
-      } else {
-        MOZ_BLEND(p[0], 255, pixel[0], alpha);
-        MOZ_BLEND(p[1], 255, pixel[1], alpha);
-        MOZ_BLEND(p[2], 255, pixel[2], alpha);
-      }
-
       if (mPrintSetup->color)
-        outputCount += fprintf(mScriptFP, "%02x%02x%02x", p[0], p[1], p[2]);
+        outputCount +=
+          fprintf(mScriptFP, "%02x%02x%02x", pixel[0], pixel[1], pixel[2]);
       else
         outputCount +=
-          fprintf(mScriptFP, "%02x", NS_RGB_TO_GRAY(p[0], p[1], p[2]));
+          fprintf(mScriptFP, "%02x",
+	      NS_RGB_TO_GRAY(pixel[0], pixel[1], pixel[2]));
       if (outputCount >= 72) {
         fputc('\n', mScriptFP);
         outputCount = 0;

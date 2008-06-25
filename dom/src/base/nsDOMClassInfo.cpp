@@ -4732,12 +4732,10 @@ nsDOMConstructor::HasInstance(nsIXPConnectWrappedNative *wrapper,
     return NS_OK;
   }
 
-  if (name_struct->mType != nsGlobalNameStruct::eTypeClassConstructor &&
-      name_struct->mType != nsGlobalNameStruct::eTypeExternalClassInfo &&
-      name_struct->mType != nsGlobalNameStruct::eTypeExternalConstructorAlias) {
-    // Doesn't have DOM interfaces.
-    return NS_OK;
-  }
+  NS_ASSERTION(name_struct->mType == nsGlobalNameStruct::eTypeClassConstructor ||
+               name_struct->mType == nsGlobalNameStruct::eTypeExternalClassInfo ||
+               name_struct->mType == nsGlobalNameStruct::eTypeExternalConstructorAlias,
+               "The constructor was set up with a struct of the wrong type.");
 
   if (!mClassName) {
     NS_ERROR("nsDOMConstructor::HasInstance can't get name.");
@@ -6724,26 +6722,6 @@ nsEventReceiverSH::AddEventListenerHelper(JSContext *cx, JSObject *obj,
     return JS_FALSE;
   }
 
-  // Set obj to be the object on which we'll actually register the
-  // event listener.
-  wrapper->GetJSObject(&obj);
-
-  // Check that the caller has permission to call obj's addEventListener.
-  if (NS_FAILED(sSecMan->CheckPropertyAccess(cx, obj,
-                                             JS_GET_CLASS(cx, obj)->name,
-                                             sAddEventListener_id,
-                                             nsIXPCSecurityManager::ACCESS_GET_PROPERTY)) ||
-      NS_FAILED(sSecMan->CheckPropertyAccess(cx, obj,
-                                             JS_GET_CLASS(cx, obj)->name,
-                                             sAddEventListener_id,
-                                             nsIXPCSecurityManager::ACCESS_CALL_METHOD))) {
-    // The caller doesn't have access to get or call the callee
-    // object's addEventListener method. The security manager already
-    // threw an exception for us, so simply return false.
-
-    return JS_FALSE;
-  }
-
   if (JSVAL_IS_PRIMITIVE(argv[1])) {
     // The second argument must be a function, or a
     // nsIDOMEventListener. Throw an error.
@@ -8166,13 +8144,8 @@ nsHTMLDocumentSH::DocumentAllTagsNewResolve(JSContext *cx, JSObject *obj,
 
     JSString *str = JSVAL_TO_STRING(id);
 
-    JSObject *proto = ::JS_GetPrototype(cx, obj);
-    if (NS_UNLIKELY(!proto)) {
-      return JS_TRUE;
-    }
-
     JSBool found;
-    if (!::JS_HasUCProperty(cx, proto,
+    if (!::JS_HasUCProperty(cx, ::JS_GetPrototype(cx, obj),
                             ::JS_GetStringChars(str),
                             ::JS_GetStringLength(str), &found)) {
       return JS_FALSE;
@@ -8998,9 +8971,6 @@ nsHTMLExternalObjSH::GetProperty(nsIXPConnectWrappedNative *wrapper,
                                  jsval *vp, PRBool *_retval)
 {
   JSObject *pi_obj = ::JS_GetPrototype(cx, obj);
-  if (NS_UNLIKELY(!pi_obj)) {
-    return NS_OK;
-  }
 
   const jschar *id_chars = nsnull;
   size_t id_length = 0;
@@ -9043,9 +9013,6 @@ nsHTMLExternalObjSH::SetProperty(nsIXPConnectWrappedNative *wrapper,
                                  jsval *vp, PRBool *_retval)
 {
   JSObject *pi_obj = ::JS_GetPrototype(cx, obj);
-  if (NS_UNLIKELY(!pi_obj)) {
-    return NS_OK;
-  }
 
   const jschar *id_chars = nsnull;
   size_t id_length = 0;

@@ -38,10 +38,8 @@ package org.mozilla.xpcom.internal;
 
 import java.io.File;
 
-import org.mozilla.xpcom.IJavaXPCOMUtils;
 
-
-public class JavaXPCOMMethods implements IJavaXPCOMUtils {
+public class JavaXPCOMMethods {
 
   public static void registerJavaXPCOMMethods(File aLibXULDirectory) {
     // load JNI library
@@ -86,10 +84,6 @@ public class JavaXPCOMMethods implements IJavaXPCOMUtils {
       return null;
     }
   }
-
-  public native long wrapJavaObject(Object aJavaObject, String aIID);
-
-  public native Object wrapXPCOMObject(long aXPCOMObject, String aIID);
 
 }
 

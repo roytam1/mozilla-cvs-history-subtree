@@ -23,7 +23,6 @@
  *   Vladimir Vukicevic <vladimir.vukicevic@oracle.com>
  *   Mike Shaver <shaver@off.net>
  *   Joey Minta <jminta@gmail.com>
- *   Matthew Willis <lilmatt@mozilla.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -378,11 +377,7 @@ calItemBase.prototype = {
     },
 
     setProperty: function (aName, aValue) {
-        if (aName == "LAST-MODIFIED") {
-            this.mDirty = false;
-        } else {
-            this.modify();
-        }
+        this.modify();
         this.mProperties.setProperty(aName.toUpperCase(), aValue);
     },
 
@@ -413,14 +408,9 @@ calItemBase.prototype = {
 
     getAttendeeById: function (id) {
         var attendees = this.getAttendees({});
-        var lowerCaseId = id.toLowerCase();
-        for each (var attendee in attendees) {
-            // This match must be case insensitive to deal with differing
-            // cases of things like MAILTO:
-            if (attendee.id.toLowerCase() == lowerCaseId) {
-                return attendee;
-            }
-        }
+        for (var i = 0; i < attendees.length; i++)
+            if (attendees[i].id == id)
+                return attendees[i];
         return null;
     },
 
@@ -428,10 +418,8 @@ calItemBase.prototype = {
         this.modify();
         var found = false, newAttendees = [];
         var attendees = this.getAttendees({});
-        var attIdLowerCase =attendee.id.toLowerCase();
-
         for (var i = 0; i < attendees.length; i++) {
-            if (attendees[i].id.toLowerCase() != attIdLowerCase)
+            if (attendees[i].id != attendee.id)
                 newAttendees.push(attendees[i]);
             else
                 found = true;

@@ -43,7 +43,6 @@
 #include "nsIDOMElement.h"
 #include "nsIDOMNSHTMLElement.h"
 #include "nsIDocument.h"
-#include "nsIDOMDocumentXBL.h"
 #include "nsINameSpaceManager.h"
 #include "nsIDOMNodeList.h"
 #include "nsIXFormsXPathEvaluator.h"
@@ -307,13 +306,16 @@ nsXFormsUtils::GetNodeContext(nsIDOMElement           *aElement,
     *aContextPosition = 1;
 
   // Find correct model element
+  nsCOMPtr<nsIDOMDocument> domDoc;
+  aElement->GetOwnerDocument(getter_AddRefs(domDoc));
+  NS_ENSURE_TRUE(domDoc, NS_ERROR_FAILURE);
+
   nsAutoString bindId;
   NS_NAMED_LITERAL_STRING(bindStr, "bind");
   aElement->GetAttribute(bindStr, bindId);
   if (!bindId.IsEmpty()) {
     // CASE 1: Use @bind
-    GetElementByContextId(aElement, bindId, aBindElement);
-
+    domDoc->GetElementById(bindId, aBindElement);
     if (!IsXFormsElement(*aBindElement, bindStr)) {
       const PRUnichar *strings[] = { bindId.get(), bindStr.get() };
       nsXFormsUtils::ReportError(NS_LITERAL_STRING("idRefError"),
@@ -334,9 +336,9 @@ nsXFormsUtils::GetNodeContext(nsIDOMElement           *aElement,
       
       if (!modelId.IsEmpty()) {
         nsCOMPtr<nsIDOMElement> modelElement;
-        GetElementByContextId(aElement, modelId, getter_AddRefs(modelElement));
+        domDoc->GetElementById(modelId, getter_AddRefs(modelElement));
         nsCOMPtr<nsIModelElementPrivate> model = do_QueryInterface(modelElement);
-
+        
         // No element found, or element not a \<model\> element
         if (!model) {
           const PRUnichar *strings[] = { modelId.get(), modelStr.get() };
@@ -362,9 +364,6 @@ nsXFormsUtils::GetNodeContext(nsIDOMElement           *aElement,
     // set, it sets the model to the first model in the document.
   
     NS_ENSURE_SUCCESS(rv, rv);
-    if (rv == NS_OK_XFORMS_NOTREADY) {
-      return rv;
-    }
   }
 
   // if context node is not set, it's the document element of the model's
@@ -539,9 +538,6 @@ nsXFormsUtils::EvaluateNodeBinding(nsIDOMElement           *aElement,
                                &contextSize);
 
   NS_ENSURE_SUCCESS(rv, rv);
-  if (rv == NS_OK_XFORMS_NOTREADY) {
-    return rv;
-  }
 
   if (!contextNode) {
     return NS_OK;   // this will happen if the doc is still loading
@@ -690,22 +686,8 @@ nsXFormsUtils::GetNodeValue(nsIDOMNode* aDataNode, nsAString& aNodeValue)
 
   case nsIDOMNode::ELEMENT_NODE:
     {
-      // XForms specs 8.1.1 (http://www.w3.org/TR/xforms/slice8.html#ui-processing)
-      // says: 'if text child nodes are present, returns the string-value of the
-      // first text child node. Otherwise, returns "" (the empty string)'.
-      // The 'text child node' that is mentioned above is from the xforms
-      // instance document which is, according to spec, is formed by
-      // 'creating an XPath data model'. So we need to treat 'text node' in
-      // this case as an XPath text node and not a DOM text node.
-      // DOM XPath specs (http://www.w3.org/TR/2002/WD-DOM-Level-3-XPath-20020328/xpath.html#TextNodes)
-      // says:
-      // 'Applications using XPath in an environment with fragmented text nodes
-      // must manually gather the text of a single logical text node possibly
-      // from multiple nodes beginning with the first Text node or CDATASection
-      // node returned by the implementation'.
-
-      // Therefore we concatenate contiguous CDATA/DOM text nodes and return
-      // as node value.
+      // "If text child nodes are present, returns the string-value of the
+      // first text child node.  Otherwise, returns "" (the empty string)".
 
       // Find the first child text node.
       nsCOMPtr<nsIDOMNodeList> childNodes;
@@ -716,7 +698,6 @@ nsXFormsUtils::GetNodeValue(nsIDOMNode* aDataNode, nsAString& aNodeValue)
         PRUint32 childCount;
         childNodes->GetLength(&childCount);
 
-        nsAutoString value;
         for (PRUint32 i = 0; i < childCount; ++i) {
           childNodes->Item(i, getter_AddRefs(child));
           NS_ASSERTION(child, "DOMNodeList length is wrong!");
@@ -724,9 +705,7 @@ nsXFormsUtils::GetNodeValue(nsIDOMNode* aDataNode, nsAString& aNodeValue)
           child->GetNodeType(&nodeType);
           if (nodeType == nsIDOMNode::TEXT_NODE ||
               nodeType == nsIDOMNode::CDATA_SECTION_NODE) {
-            child->GetNodeValue(value);
-            aNodeValue.Append(value);
-          } else {
+            child->GetNodeValue(aNodeValue);
             break;
           }
         }
@@ -1255,30 +1234,6 @@ nsXFormsUtils::FindParentContext(nsIDOMElement           *aElement,
                                       &cPosition,
                                       &cSize);
       NS_ENSURE_SUCCESS(rv, rv);
-
-      // If we were unable to bind due to the context control not being ready,
-      // then let the context control know that we want to be told when it is
-      // ready.  But if this bind works and we are still waiting for
-      // notification, then remove ourselves from the list we think we
-      // are on.  All of this rigamarole just in case some crazy mutation
-      // handler is out there stirring the pot.
-      nsCOMPtr<nsIXFormsControl> control(do_QueryInterface(aElement));
-      if (control) {
-        if (rv == NS_OK_XFORMS_NOTREADY) {
-          contextControl->AddRemoveAbortedControl(control, PR_TRUE);
-          return rv;
-        }
-
-        if (rv == NS_OK) {
-          nsCOMPtr<nsIXFormsContextControl> ctxtControl;
-
-          control->GetAbortedBindListContainer(getter_AddRefs(ctxtControl));
-          if (ctxtControl) {
-            ctxtControl->AddRemoveAbortedControl(control, PR_FALSE);
-          }
-        }
-      }
-
       // If the call failed, it means that we _have_ a parent which sets the
       // context but it is invalid, ie. the XPath expression could have
       // generated an error.
@@ -1752,17 +1707,19 @@ FindRepeatContext(nsIDOMElement *aElement, PRBool aFindContainer)
 
 /* static */
 nsresult
-nsXFormsUtils::GetElementById(const nsAString  &aId,
+nsXFormsUtils::GetElementById(nsIDOMDocument   *aDoc,
+                              const nsAString  &aId,
                               const PRBool      aOnlyXForms,
                               nsIDOMElement    *aCaller,
                               nsIDOMElement   **aElement)
 {
   NS_ENSURE_TRUE(!aId.IsEmpty(), NS_ERROR_INVALID_ARG);
+  NS_ENSURE_ARG_POINTER(aDoc);
   NS_ENSURE_ARG_POINTER(aElement);
   *aElement = nsnull;
 
   nsCOMPtr<nsIDOMElement> element;
-  GetElementByContextId(aCaller, aId, getter_AddRefs(element));
+  aDoc->GetElementById(aId, getter_AddRefs(element));
   if (!element)
     return NS_OK;
 
@@ -1848,55 +1805,6 @@ nsXFormsUtils::GetElementById(const nsAString  &aId,
   return NS_OK;
 }
 
-/* static */
-nsresult
-nsXFormsUtils::GetElementByContextId(nsIDOMElement   *aRefNode,
-                                     const nsAString &aId,
-                                     nsIDOMElement   **aElement)
-{
-  NS_ENSURE_ARG(aRefNode);
-  NS_ENSURE_ARG_POINTER(aElement);
-
-  *aElement = nsnull;
-
-  nsCOMPtr<nsIDOMDocument> document;
-  aRefNode->GetOwnerDocument(getter_AddRefs(document));
-  if (!document)
-    return NS_OK;
-
-  // Even if given element is anonymous node then search element by ID attribute
-  // of document because anonymous node can inherit attribute from bound node
-  // that is refID of document.
-
-  nsresult rv = document->GetElementById(aId, aElement);
-  NS_ENSURE_SUCCESS(rv, rv);
-
-  if (*aElement)
-    return NS_OK;
-
-  nsCOMPtr<nsIDOMDocumentXBL> xblDoc(do_QueryInterface(document));
-  if (!xblDoc)
-    return NS_OK;
-
-  nsCOMPtr<nsIContent> content(do_QueryInterface(aRefNode));
-  if (!content)
-    return NS_OK;
-
-  // Search for the element with the given value in its 'anonid' attribute
-  // throughout the complete bindings chain. We must ensure that the binding
-  // parent of currently traversed element is not element itself to avoid an
-  // infinite loop.
-  nsIContent *boundContent;
-  for (boundContent = content->GetBindingParent(); boundContent != nsnull &&
-         boundContent != boundContent->GetBindingParent() && !*aElement;
-         boundContent = boundContent->GetBindingParent()) {
-    nsCOMPtr<nsIDOMElement> boundElm(do_QueryInterface(boundContent));
-    xblDoc->GetAnonymousElementByAttribute(boundElm, NS_LITERAL_STRING("anonid"),
-                                           aId, aElement);
-  }
-
-  return NS_OK;
-}
 
 /* static */
 PRBool
@@ -2354,37 +2262,5 @@ nsXFormsUtils::SetSingleNodeBindingValue(nsIDOMElement *aElement,
       return PR_TRUE;
   }
   return PR_FALSE;
-}
-
-/* static */ PRBool
-nsXFormsUtils::NodeHasItemset(nsIDOMNode *aNode)
-{
-  PRBool hasItemset = PR_FALSE;
-
-  nsCOMPtr<nsIDOMNodeList> children;
-  aNode->GetChildNodes(getter_AddRefs(children));
-
-  PRUint32 childCount = 0;
-  if (children) {
-    children->GetLength(&childCount);
-  }
-
-  for (PRUint32 i = 0; i < childCount; ++i) {
-    nsCOMPtr<nsIDOMNode> child;
-    children->Item(i, getter_AddRefs(child));
-    if (nsXFormsUtils::IsXFormsElement(child, NS_LITERAL_STRING("itemset"))) {
-      hasItemset = PR_TRUE;
-      break;
-    } else if (nsXFormsUtils::IsXFormsElement(child,
-                                              NS_LITERAL_STRING("choices"))) {
-      // The choices element may have an itemset.
-      hasItemset = nsXFormsUtils::NodeHasItemset(child);
-      if (hasItemset) {
-        // No need to look at any other children.
-        break;
-      }
-    }
-  }
-  return hasItemset;
 }
 

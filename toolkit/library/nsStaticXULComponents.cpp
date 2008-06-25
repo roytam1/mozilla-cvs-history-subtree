@@ -151,14 +151,9 @@
 #define XREMOTE_MODULES
 #endif
 
-#ifdef MOZ_STORAGE
-#define STORAGE_MODULE MODULE(mozStorageModule)
-#else
-#define STORAGE_MODULE
-#endif
-
 #ifdef MOZ_PLACES
-#define PLACES_MODULES
+#define PLACES_MODULES \
+    MODULE(mozStorageModule)
 #else
 #define PLACES_MODULES \
     MODULE(nsMorkModule)
@@ -200,7 +195,6 @@
     MODULE(application)                      \
     MODULE(Apprunner)                        \
     MODULE(CommandLineModule)                \
-    STORAGE_MODULE                           \
     PLACES_MODULES                           \
     MODULE(nsToolkitCompsModule)             \
     XREMOTE_MODULES                          \

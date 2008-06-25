@@ -66,9 +66,14 @@ nsXFormsToggleElement::HandleAction(nsIDOMEvent* aEvent,
   mElement->GetAttribute(caseStr, caseAttr);
   if (caseAttr.IsEmpty())
     return NS_OK;
+  
+  nsCOMPtr<nsIDOMDocument> doc;
+  mElement->GetOwnerDocument(getter_AddRefs(doc));
+  if (!doc)
+    return NS_OK;
 
   nsCOMPtr<nsIDOMElement> caseEl;
-  nsXFormsUtils::GetElementById(caseAttr, PR_TRUE, mElement,
+  nsXFormsUtils::GetElementById(doc, caseAttr, PR_TRUE, mElement,
                                 getter_AddRefs(caseEl));
   if (!caseEl)
     return NS_OK;

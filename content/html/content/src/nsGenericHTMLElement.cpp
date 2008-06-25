@@ -1526,7 +1526,7 @@ nsGenericHTMLElement::DispatchEvent(nsPresContext* aPresContext,
     return NS_OK;
   }
 
-  nsCOMPtr<nsIPresShell> shell = aPresContext->GetPresShell();
+  nsIPresShell *shell = aPresContext->GetPresShell();
   if (!shell) {
     return NS_OK;
   }
@@ -1681,7 +1681,7 @@ nsGenericHTMLElement::HandleDOMEventForAnchors(nsPresContext* aPresContext,
           }
 
           // The default action is simply to dispatch DOMActivate
-          nsCOMPtr<nsIPresShell> shell = aPresContext->GetPresShell();
+          nsIPresShell *shell = aPresContext->GetPresShell();
           if (shell) {
             // single-click
             nsUIEvent actEvent(NS_IS_TRUSTED_EVENT(aEvent), NS_UI_ACTIVATE, 1);

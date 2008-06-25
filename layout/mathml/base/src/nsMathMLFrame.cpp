@@ -62,21 +62,6 @@ static NS_DEFINE_CID(kCSSStyleSheetCID, NS_CSS_STYLESHEET_CID);
 
 NS_IMPL_QUERY_INTERFACE1(nsMathMLFrame, nsIMathMLFrame)
 
-eMathMLFrameType
-nsMathMLFrame::GetMathMLFrameType()
-{
-  // see if it is an embellished operator (mapped to 'Op' in TeX)
-  if (mEmbellishData.coreFrame)
-    return GetMathMLFrameTypeFor(mEmbellishData.coreFrame);
-
-  // if it has a prescribed base, fetch the type from there
-  if (mPresentationData.baseFrame)
-    return GetMathMLFrameTypeFor(mPresentationData.baseFrame);
-
-  // everything else is treated as ordinary (mapped to 'Ord' in TeX)
-  return eMathMLFrameType_Ordinary;  
-}
-
 NS_IMETHODIMP
 nsMathMLFrame::InheritAutomaticData(nsIFrame* aParent) 
 {
@@ -167,9 +152,9 @@ nsMathMLFrame::GetEmbellishDataFrom(nsIFrame*        aFrame,
   aEmbellishData.leftSpace = 0;
   aEmbellishData.rightSpace = 0;
 
-  if (aFrame && aFrame->IsFrameOfType(nsIFrame::eMathML)) {
+  if (aFrame) {
     nsIMathMLFrame* mathMLFrame;
-    CallQueryInterface(aFrame, &mathMLFrame);
+    aFrame->QueryInterface(NS_GET_IID(nsIMathMLFrame), (void**)&mathMLFrame);
     if (mathMLFrame) {
       mathMLFrame->GetEmbellishData(aEmbellishData);
     }
@@ -191,13 +176,11 @@ nsMathMLFrame::GetPresentationDataFrom(nsIFrame*           aFrame,
 
   nsIFrame* frame = aFrame;
   while (frame) {
-    if (frame->IsFrameOfType(nsIFrame::eMathML)) {
-      nsIMathMLFrame* mathMLFrame;
-      CallQueryInterface(frame, &mathMLFrame);
-      if (mathMLFrame) {
-        mathMLFrame->GetPresentationData(aPresentationData);
-        break;
-      }
+    nsIMathMLFrame* mathMLFrame;
+    frame->QueryInterface(NS_GET_IID(nsIMathMLFrame), (void**)&mathMLFrame);
+    if (mathMLFrame) {
+      mathMLFrame->GetPresentationData(aPresentationData);
+      break;
     }
     // stop if the caller doesn't want to lookup beyond the frame
     if (!aClimbTree) {

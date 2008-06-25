@@ -336,7 +336,6 @@ get_next_line_start (char *line_start, int chars_left)
  *  It returns a tmp buffer.  NOTE: I'm not sure if it matters if we
  *  split a line in the middle of a UTF-8 character. It probably won't
  *  look nice in a text editor. 
- *  This will add the trailing newline as well
  */
 static char*
 fold_property_line (char *text)
@@ -389,8 +388,6 @@ fold_property_line (char *text)
 	chars_left -= (next_line_start - line_start);
 	line_start = next_line_start;
     }
-
-    icalmemory_append_string (&buf, &buf_ptr, &buf_size, newline);
 
     /* Copy it to a temporary buffer, and then free it. */
     out_buf = icalmemory_tmp_buffer (strlen (buf) + 1);
@@ -540,11 +537,12 @@ icalproperty_as_ical_string (icalproperty* prop)
 	
     }
     
+    icalmemory_append_string(&buf, &buf_ptr, &buf_size, newline);
+
     /* Now, copy the buffer to a tmp_buffer, which is safe to give to
        the caller without worring about de-allocating it. */
 
-    /* We now use a function to fold the line properly every 75 characters.
-       That function also adds the newline for us. */
+    /* We now use a function to fold the line properly every 75 characters. */
     out_buf = fold_property_line (buf);
 
     icalmemory_free_buffer(buf);
@@ -646,8 +644,6 @@ const char* icalproperty_get_parameter_as_string(icalproperty* prop,
     icalparameter *param;
     char* str;
     char* pv;
-    char* pvql;
-    char* pvqr;
 
     icalerror_check_arg_rz( (prop!=0),"prop");
     icalerror_check_arg_rz( (name!=0),"name");
@@ -685,19 +681,8 @@ const char* icalproperty_get_parameter_as_string(icalproperty* prop,
         return 0;
     }
 
-    // see if this string is quoted, immediately return if not
-    // otherwise removed the quotes from the string.
-    ++pv;
-    pvql = strchr(pv,'"');
-    if(pvql == 0)
-        return pv;
-    pvqr = strrchr(pvql,'"');
-    if(pvqr == 0){
-        icalerror_set_errno(ICAL_INTERNAL_ERROR);
-        return 0;
-    }
-    *pvqr = '\0';
-    return pvql+1;
+    return pv+1;
+
 }
 
 /** @see icalproperty_remove_parameter_by_kind() 

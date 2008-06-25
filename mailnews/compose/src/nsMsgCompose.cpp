@@ -2768,7 +2768,7 @@ QuotingOutputStreamListener::InsertToCompose(nsIEditor *aEditor,
   return NS_OK;
 }
 
-NS_IMPL_ISUPPORTS2(QuotingOutputStreamListener, nsIMsgQuotingOutputStreamListener, nsIStreamListener)
+NS_IMPL_ISUPPORTS1(QuotingOutputStreamListener, nsIStreamListener)
 ////////////////////////////////////////////////////////////////////////////////////
 // END OF QUOTING LISTENER
 ////////////////////////////////////////////////////////////////////////////////////

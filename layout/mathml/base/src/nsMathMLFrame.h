@@ -95,8 +95,6 @@ public:
     return NS_OK;
   }
 
-  virtual eMathMLFrameType GetMathMLFrameType();
-
   NS_IMETHOD
   Stretch(nsIRenderingContext& aRenderingContext,
           nsStretchDirection   aStretchDirection,
@@ -230,18 +228,6 @@ public:
   ParseNamedSpaceValue(nsIFrame*   aMathMLmstyleFrame,
                        nsString&   aString,
                        nsCSSValue& aCSSValue);
-
-  static eMathMLFrameType
-  GetMathMLFrameTypeFor(nsIFrame* aFrame)
-  {
-    if (aFrame->IsFrameOfType(nsIFrame::eMathML)) {
-      nsIMathMLFrame* mathMLFrame;
-      CallQueryInterface(aFrame, &mathMLFrame);
-      if (mathMLFrame)
-        return mathMLFrame->GetMathMLFrameType();
-    }
-    return eMathMLFrameType_UNKNOWN;
-  }
 
   // estimate of the italic correction
   static void

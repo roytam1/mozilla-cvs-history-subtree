@@ -78,7 +78,6 @@ NSString* const kPrefChangedPrefNameUserInfoKey = @"pref_name";
 
 
 static NSString* const AdBlockingChangedNotificationName = @"AdBlockingChanged";
-static NSString* const kFlashBlockChangedNotificationName = @"FlashBlockChanged";
 
 #if MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_4
 // These are supposedly not available before the 10.4 SDK, but some of the
@@ -224,9 +223,6 @@ WriteVersion(nsIFile* aProfileDir, const nsACString& aVersion,
 
 - (BOOL)cleanupUserContentCSS;
 - (void)refreshAdBlockingStyleSheet:(BOOL)inLoad;
-- (void)refreshFlashBlockStyleSheet:(BOOL)inLoad;
-- (void)refreshStyleSheet:(nsIURI *)cssFileURI load:(BOOL)inLoad;
-- (BOOL)isFlashBlockAllowed;
 
 @end
 
@@ -441,10 +437,6 @@ static BOOL gMadePrefManager;
                                                name:AdBlockingChangedNotificationName
                                              object:nil];
 
-  [[NSNotificationCenter defaultCenter] addObserver:self
-                                           selector:@selector(flashBlockPrefChanged:)
-                                               name:kFlashBlockChangedNotificationName
-                                             object:nil];
 }
 
 - (void)savePrefsFile
@@ -835,11 +827,6 @@ static BOOL gMadePrefManager;
 
     if (enableAdBlocking)
       [self refreshAdBlockingStyleSheet:YES];
-
-    // Load flashblock if enabled.  Make sure to test dependencies to avoid conflicts
-    BOOL flashBlockAllowed = [self isFlashBlockAllowed];	
-    if (flashBlockAllowed && [self getBooleanPref:"camino.enable_flashblock" withSuccess:nil])
-      [self refreshFlashBlockStyleSheet:YES];
 }
 
 #pragma mark -
@@ -1010,14 +997,6 @@ typedef enum EProxyConfig {
   [self refreshAdBlockingStyleSheet:adBlockingEnabled];
 }
 
-- (void)flashBlockPrefChanged:(NSNotification*)inNotification
-{
-  BOOL allowed = [self isFlashBlockAllowed];
- 
-  BOOL flashBlockEnabled = allowed && [self getBooleanPref:"camino.enable_flashblock" withSuccess:nil];
-  [self refreshFlashBlockStyleSheet:flashBlockEnabled];
-}
-
 // some versions of 0.9a copied ad_blocking.css into <profile>/chrome/userContent.css.
 // now that we load ad_blocking.css dynamically, we have to move that file aside to
 // avoid loading it.
@@ -1045,6 +1024,10 @@ typedef enum EProxyConfig {
 // param is NO
 - (void)refreshAdBlockingStyleSheet:(BOOL)inLoad
 {
+  nsCOMPtr<nsIStyleSheetService> ssService = do_GetService("@mozilla.org/content/style-sheet-service;1");
+  if (!ssService)
+    return;
+
   // the the uri of the sheet in our bundle
   NSString* cssFilePath = [[NSBundle mainBundle] pathForResource:@"ad_blocking" ofType:@"css"];
   if (![[NSFileManager defaultManager] isReadableFileAtPath:cssFilePath]) {
@@ -1063,30 +1046,8 @@ typedef enum EProxyConfig {
   if (NS_FAILED(rv))
     return;
   
-  [self refreshStyleSheet:cssFileURI load:inLoad];
-}
-
-// this will reload the flashblock sheet if it's already registered, or unload it if the 
-// param is NO
-- (void)refreshFlashBlockStyleSheet:(BOOL)inLoad
-{
-  // the the uri of the flashblock sheet in the chrome path
-  nsCOMPtr<nsIURI> cssFileURI;
-  nsresult rv = NS_NewURI(getter_AddRefs(cssFileURI), "chrome://flashblock/content/flashblock.css");
-  if (NS_FAILED(rv))
-    return; 
-
-  [self refreshStyleSheet:cssFileURI load:inLoad];
-}
-
-- (void)refreshStyleSheet:(nsIURI *)cssFileURI load:(BOOL)inLoad
-{
-  nsCOMPtr<nsIStyleSheetService> ssService = do_GetService("@mozilla.org/content/style-sheet-service;1");
-  if (!ssService)
-    return;
-
   PRBool alreadyRegistered = PR_FALSE;
-  ssService->SheetRegistered(cssFileURI, nsIStyleSheetService::USER_SHEET, &alreadyRegistered);
+  rv = ssService->SheetRegistered(cssFileURI, nsIStyleSheetService::USER_SHEET, &alreadyRegistered);
   if (alreadyRegistered)
     ssService->UnregisterSheet(cssFileURI, nsIStyleSheetService::USER_SHEET);
   
@@ -1375,23 +1336,6 @@ typedef enum EProxyConfig {
   
   if (prefObserverOwner)
     [existingObservers removeObjectIdenticalTo:prefObserverOwner];   // this should release it and unregister the observer
-}
-
-//
-// isFlashBlockAllowed
-//
-// Checks whether FlashBlock can be enabled
-// FlashBlock only allowed if javascript and plug-ins enabled
-// NOTE: This code is duplicated in WebFeatures.mm since the FlashBlock checkbox
-// settings are done by WebFeatures and stylesheet loading is done by PreferenceManager
-//
--(BOOL) isFlashBlockAllowed
-{
-  BOOL gotPref = NO;
-  BOOL jsEnabled = [self getBooleanPref:"javascript.enabled" withSuccess:&gotPref] && gotPref;
-  BOOL pluginsEnabled = [self getBooleanPref:"camino.enable_plugins" withSuccess:&gotPref] || !gotPref;
-
-  return jsEnabled && pluginsEnabled;
 }
 
 @end

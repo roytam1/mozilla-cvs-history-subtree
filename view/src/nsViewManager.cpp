@@ -2034,10 +2034,6 @@ NS_IMETHODIMP nsViewManager::DispatchEvent(nsGUIEvent *aEvent, nsEventStatus *aS
                 BeginUpdateViewBatch();
                 observer->WillPaint();
                 EndUpdateViewBatch(NS_VMREFRESH_NO_SYNC);
-
-                // Get the view pointer again since the code above might have
-                // destroyed it (bug 378273).
-                view = nsView::GetViewFor(aEvent->widget);
               }
             }
             // Make sure to sync up any widget geometry changes we
@@ -2045,11 +2041,8 @@ NS_IMETHODIMP nsViewManager::DispatchEvent(nsGUIEvent *aEvent, nsEventStatus *aS
             if (rootVM->mHasPendingUpdates) {
               rootVM->ProcessPendingUpdates(mRootView, PR_FALSE);
             }
-            
-            if (view) {
-              Refresh(view, event->renderingContext, region,
-                      NS_VMREFRESH_DOUBLE_BUFFER);
-            }
+            Refresh(view, event->renderingContext, region,
+                    NS_VMREFRESH_DOUBLE_BUFFER);
           }
         } else {
           // since we got an NS_PAINT event, we need to

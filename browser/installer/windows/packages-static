@@ -222,7 +222,6 @@ bin\components\nsSessionStore.js
 bin\components\sessionstore.xpt
 bin\components\nsURLFormatter.js
 bin\components\urlformatter.xpt
-bin\components\nsDefaultCLH.js
 
 ; Safe Browsing
 bin\components\nsSafebrowsingApplication.js

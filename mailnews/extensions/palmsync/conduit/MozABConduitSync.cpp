@@ -43,8 +43,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "CondAPI.h"
-#include "hslog.h"
 #include "MozABConduitSync.h"
 #include "MozABConduitRecord.h"
 
@@ -98,11 +96,6 @@ long CMozABConduitSync::Perform(void)
 {
     long retval = 0;
 
-    // Log the start time.
-    time_t ltime;
-    time( &ltime );
-    CONDUIT_LOG1(gFD, "\n------------ START OF PALM SYNC ------------ at %s", ctime(&ltime));
-
     if (m_rSyncProperties.m_SyncType > eProfileInstall)
         return GEN_ERR_BAD_SYNC_TYPE;
 
@@ -122,10 +115,8 @@ long CMozABConduitSync::Perform(void)
 
     // Register this conduit with SyncMgr.DLL for communication to HH
     retval = SyncRegisterConduit(m_ConduitHandle);
-    if (retval) {
-        CONDUIT_LOG0(gFD, "Failed SyncRegisterConduit.\n");
+    if (retval)
         return retval;
-    }
 
     for (int iCount=0; iCount < m_TotRemoteDBs && !retval; iCount++) {
         retval = GetRemoteDBInfo(iCount);
@@ -142,24 +133,16 @@ long CMozABConduitSync::Perform(void)
                     0,
 					          m_remoteDB->m_CardNum,
                     m_rSyncProperties.m_SyncType);
-        if(!m_dbHH) {
-            CONDUIT_LOG0(gFD, "Failed dbHH.\n");
+        if(!m_dbHH)
             return GEN_ERR_LOW_MEMORY;
-        }
 
         m_dbPC = new MozABPCManager();
         if(!m_dbPC) {
             if (m_dbHH)
                 delete m_dbHH;
             m_dbHH = NULL;
-            CONDUIT_LOG0(gFD, "Failed dbPC.\n");
             return GEN_ERR_LOW_MEMORY;
         }
-
-        char conduitName[32];
-        GetConduitName(conduitName, 32);
-        LogAddFormattedEntry(slSyncStarted, FALSE, "SYNC %s", conduitName);
-        CONDUIT_LOG1(gFD, "slSyncStarted. SyncType=%d\n", m_rSyncProperties.m_SyncType);
 
         switch (m_rSyncProperties.m_SyncType) {
             case eFast:
@@ -196,15 +179,6 @@ long CMozABConduitSync::Perform(void)
                 break;
         }
 
-        if (retval) {
-            LogAddFormattedEntry(slSyncAborted, FALSE, "retval=%d %s\n", retval, conduitName);
-            CONDUIT_LOG1(gFD, "Sync finished with errors retval=%d\n", retval);
-        }
-        else {
-            LogAddFormattedEntry(slSyncFinished, FALSE, "%s", conduitName);
-            CONDUIT_LOG0(gFD, "Sync Finished retval=0\n");
-        }
-
         // remove the handheld and PC manager
         if (m_dbHH)
             delete m_dbHH;
@@ -213,10 +187,6 @@ long CMozABConduitSync::Perform(void)
             delete m_dbPC;
         m_dbPC = NULL;
     }
-
-    // Log the end time.
-    time( &ltime );
-    CONDUIT_LOG1(gFD, "------------ END OF PALM SYNC -------------- at %s\n", ctime(&ltime));
 
     // Unregister the conduit
     long retval2 = 0;
@@ -292,7 +262,10 @@ BOOL CMozABConduitSync::CategoryExists(CPString &mozABName, BOOL isPAB)
 // needs to call SyncYieldCycles(1) atleast once every 7 seconds
 DWORD WINAPI DoFastSync(LPVOID lpParameter)
 {
-    CONDUIT_LOG0(gFD, "-- SYNC DoFastSync --\n");
+    // Log the start time.
+    time_t ltime;
+    time( &ltime );
+    CONDUIT_LOG1(gFD, "------------ START OF PALM SYNC ------------ at %s", ctime(&ltime));
 
     CMozABConduitSync * sync = (CMozABConduitSync * ) lpParameter;
     if(!sync || !sync->m_dbHH)
@@ -639,6 +612,9 @@ DWORD WINAPI DoFastSync(LPVOID lpParameter)
     // close the HH DB once synced
     retval = sync->m_dbHH->CloseDB(FALSE);
 
+    // Log the end time.
+    time( &ltime );
+    CONDUIT_LOG1(gFD, "------------ END OF PALM SYNC ------------ at %s\n", ctime(&ltime));
     return retval;
 }
 
@@ -665,7 +641,10 @@ long CMozABConduitSync::CopyHHtoPC()
 {
     long retval=0;
     BOOL success = FALSE;
-    CONDUIT_LOG0(gFD, "-- SYNC Palm -> Destkop --\n");
+    // Log the start time.
+    time_t ltime;
+    time( &ltime );
+    CONDUIT_LOG1(gFD, "------------ yyy START OF PALM SYNC Palm -> Destkop ------------ at %s", ctime(&ltime));
 
     if(!m_dbHH)
         return retval;
@@ -853,6 +832,9 @@ long CMozABConduitSync::CopyHHtoPC()
     // close the HH DB once synced
     retval = m_dbHH->CloseDB(FALSE);
 
+    // Log the end time.
+    time( &ltime );
+    CONDUIT_LOG1(gFD, "------------ END OF PALM SYNC ------------ at %s\n", ctime(&ltime));
     return retval;
 }
 
@@ -861,7 +843,10 @@ long CMozABConduitSync::CopyPCtoHH()
     long retval=0;
     BOOL success = FALSE;
 
-    CONDUIT_LOG0(gFD, "-- SYNC Destkop-> Palm --\n");
+    // Log the start time.
+    time_t ltime;
+    time( &ltime );
+    CONDUIT_LOG1(gFD, "------------ START OF PALM SYNC Destkop-> Palm   ------------ at %s", ctime(&ltime));
 
     if(!m_dbHH)
         return retval;
@@ -1006,6 +991,9 @@ long CMozABConduitSync::CopyPCtoHH()
     // close the HH DB once synced
     retval = m_dbHH->CloseDB(FALSE);
 
+    // Log the end time.
+    time( &ltime );
+    CONDUIT_LOG1(gFD, "------------ END OF PALM SYNC ------------ at %s\n", ctime(&ltime));
     return retval;
 }
 

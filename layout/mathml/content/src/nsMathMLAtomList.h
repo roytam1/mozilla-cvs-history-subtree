@@ -63,6 +63,15 @@ MATHML_ATOM(MOZlastrow, "-moz-math-lastrow")
 MATHML_ATOM(MOZfirstcolumn, "-moz-math-firstcolumn")
 MATHML_ATOM(MOZlastcolumn, "-moz-math-lastcolumn")
 
+MATHML_ATOM(ordinaryMathMLFrame, "OrdinaryMathMLFrame")
+MATHML_ATOM(operatorOrdinaryMathMLFrame, "OperatorOrdinaryMathMLFrame")
+MATHML_ATOM(operatorInvisibleMathMLFrame, "OperatorInvisibleMathMLFrame")
+MATHML_ATOM(operatorUserDefinedMathMLFrame, "OperatorUserDefinedMathMLFrame")
+MATHML_ATOM(innerMathMLFrame, "InnerMathMLFrame") // 'inner' in TeX
+MATHML_ATOM(italicIdentifierMathMLFrame, "ItalicIdentifierMathMLFrame")
+MATHML_ATOM(uprightIdentifierMathMLFrame, "UprightIdentifierMathMLFrame")
+
+
 MATHML_ATOM(abs_, "abs")
 MATHML_ATOM(accent_, "accent")
 MATHML_ATOM(accentunder_, "accentunder")

@@ -151,16 +151,6 @@ calWcapCalendar.prototype = {
     },
     
     // calICalendar:
-    mID: null,
-    get id() {
-        return this.mID;
-    },
-    set id(id) {
-        if (this.mID)
-            throw Components.results.NS_ERROR_ALREADY_INITIALIZED;
-        return (this.mID = id);
-    },
-
     get name() {
         return getCalendarManager().getCalendarPref(
             this.session.defaultCalendar, "NAME");
@@ -245,10 +235,6 @@ calWcapCalendar.prototype = {
         return (this.m_bSuppressAlarms = bSuppressAlarms);
     },
     
-    get sendItipInvitations() {
-        return false;
-    },
-
     get canRefresh() { return (this.m_cachedResults != null); },
     refresh: function calWcapCalendar_refresh() {
         log("refresh.", this);
@@ -370,7 +356,7 @@ calWcapCalendar.prototype = {
             // cut mozilla prefix: assuming that the latter string portion
             //                     semantically equals the demanded timezone
             tzid = tzid.substring( // next slash after "/mozilla.org/"
-                tzid.indexOf("/", "/mozilla.org/".length) + 1);
+                tzid.indexOf("/", "/mozilla.org/".length) + 1 );
         }
         if (!this.session.isSupportedTimezone(tzid)) {
             // xxx todo: we could further on search for a matching region,
@@ -388,8 +374,14 @@ calWcapCalendar.prototype = {
     checkAccess: function calWcapCalendar_checkAccess(accessControlBits)
     {
         // xxx todo: take real acl into account
-        // for now, optimistically assuming that everybody has full access, server will check:
+        // for now, assuming that owners have been granted full access,
+        // and all others can read, but not add/modify/delete.
         var granted = calIWcapCalendar.AC_FULL;
+        if (!this.isOwnedCalendar) {
+            // burn out write access:
+            granted &= ~(calIWcapCalendar.AC_COMP_WRITE |
+                         calIWcapCalendar.AC_PROP_WRITE);
+        }
         // check whether every bit fits:
         return ((accessControlBits & granted) == accessControlBits);
     },

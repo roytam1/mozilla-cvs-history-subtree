@@ -41,8 +41,8 @@
 var gTimezonesPane = {
     init: function () {
         var tzMenuList = document.getElementById("calendar.timezone.menulist");
-        var prefValue = document.getElementById("calendar.timezone.local").value;
-
+        prefValue = document.getElementById("calendar.timezone.local").value;
+        
         if (!prefValue) {
             prefValue = calendarDefaultTimezone();
             tzMenuList.value = prefValue;

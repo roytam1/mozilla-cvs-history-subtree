@@ -37,7 +37,7 @@
    - ***** END LICENSE BLOCK *****
 -->
 
-<!-- Note that this file depends on helper functions in calUtils.js-->
+<!-- Note that this file depends on helper functions in calendarUtils.js-->
 
 <bindings id="calendar-specific-view-bindings"
     xmlns="http://www.mozilla.org/xbl"
@@ -67,15 +67,17 @@
                 this.updateDaysOffPrefs();
 
                 // add a preference observer to monitor changes
-                var pb2 = Cc["@mozilla.org/preferences-service;1"].
-                          getService(Ci.nsIPrefBranch2);
+                var pb2 = Components.classes
+                          ["@mozilla.org/preferences-service;1"]
+                          .getService(Components.interfaces.nsIPrefBranch2);
                 pb2.addObserver("calendar.", this.mPrefObserver, false);
                 return;
             ]]></constructor>
 
             <destructor><![CDATA[
-                var pb2 = Cc["@mozilla.org/preferences-service;1"].
-                          getService(Ci.nsIPrefBranch2);
+                var pb2 = Components.classes
+                          ["@mozilla.org/preferences-service;1"]
+                          .getService(Components.interfaces.nsIPrefBranch2);
                 pb2.removeObserver("calendar.", this.mPrefObserver);
                 return;
             ]]></destructor>
@@ -209,8 +211,7 @@
                     var d1 = this.startDay.clone();
                     var savedSelectedDay = this.selectedDay.clone();
                     // aNumber only corresponds to the number of weeks to move
-                    // make sure to compensate for previous weeks in view too
-                    d1.day += 7 * (aNumber + getPrefSafe("calendar.previousweeks.inview", 4));
+                    d1.day += 7*aNumber;
                     d1.normalize();
                     this.goToDay(d1);
                     var viewElement = document.getAnonymousElementByAttribute(this, "anonid", "view-element");

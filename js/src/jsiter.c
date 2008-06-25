@@ -814,7 +814,7 @@ js_NewGenerator(JSContext *cx, JSStackFrame *fp)
     return obj;
 
   bad:
-    cx->weakRoots.newborn[GCX_OBJECT] = NULL;
+    cx->newborn[GCX_OBJECT] = NULL;
     return NULL;
 }
 

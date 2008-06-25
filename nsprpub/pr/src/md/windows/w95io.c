@@ -123,8 +123,6 @@ _PR_MD_INIT_IO()
     _PR_NT_InitSids();
 
     InitUnicodeSupport();
-
-    _PR_MD_InitSockets();
 }
 
 PRStatus

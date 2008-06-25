@@ -77,15 +77,6 @@
         </getter>
       </property>
 
-      <property name="MOZTYPE_NS" readonly="true">
-        <getter>
-          return "http://www.mozilla.org/projects/xforms/2005/type";
-        </getter>
-      </property>
-
-      <property name="XHTML_NS" readonly="true"
-                onget="return 'http://www.w3.org/1999/xhtml';"/>
-
       <!-- Dispatch UI Event to the control itself -->
       <method name="dispatchDOMUIEvent">
         <parameter name="aType"/>
@@ -263,31 +254,7 @@
           return true;
         </body>
       </method>
-
-      <constructor>
-        this.setMediatype();
-      </constructor>
-
-      <method name="setMediatype">
-        <body>
-          if (this.hasAttribute("mediatype")) {
-            this.setAttributeNS(this.MOZTYPE_NS, "mediatype",
-                                this.getAttribute("mediatype"));
-          }
-        </body>
-      </method>
     </implementation>
-
-    <handlers>
-      <handler event="DOMAttrModified">
-      <![CDATA[
-        if (event.attrName == "mediatype" &&
-            event.relatedNode.namespaceURI == "") {
-          this.setMediatype();
-        }
-      ]]>
-      </handler>
-    </handlers>
   </binding>
 
 
@@ -370,51 +337,6 @@
         this.advanceFocusToParent();
       </handler>
     </handlers>
-  </binding>
-
-
-  <!-- LABEL: <ACCESKEY SUPPORT>
-    The label widget assumes successors bindings implement getElementControl()
-    method what returns the object:
-    {
-      set value(); // set "string" value
-    }
-  -->
-  <binding id="xformswidget-label-accesskey-base"
-           extends="#xformswidget-label-base">
-
-    <implementation>
-      <method name="formatWithAccesskey">
-        <parameter name="aAccesskey"/>
-        <parameter name="aTextNode"/>
-        <body>
-          var text = aTextNode.nodeValue;
-          var location = text.indexOf(aAccesskey);
-          var span = this.ownerDocument.createElementNS(this.XHTML_NS, "span");
-
-          if (location > -1) {
-            // We create a range around the character we want and surround
-            // it with an html:span.
-            var range = this.ownerDocument.createRange();
-            range.setStart(aTextNode, location);
-            range.setEnd(aTextNode, location + 1);
-
-            span.setAttribute("class", "xf-accesskey-inline");
-            range.surroundContents(span);
-          } else {
-            // If we didn't find the accesskey, append it to the end.
-            span.setAttribute("class", "xf-accesskey-appended");
-            span.textContent = aAccesskey;
-            if (aTextNode.nextSibling) {
-              aTextNode.parentNode.insertBefore(span,
-                                                aTextNode.nextSibling);
-            } else {
-              aTextNode.parentNode.appendChild(span);
-            }
-          }
-        </body>
-      </method>
-    </implementation>
   </binding>
 
 
@@ -556,24 +478,6 @@
   </binding>
 
 
-  <!-- UPLOAD: DISABLED -->
-  <binding id="xformswidget-upload-disabled-base"
-           extends="#xformswidget-upload-base">
-    <implementation>
-      <method name="getControlElement">
-        <body>
-          return {
-            get value(){ return ""; },
-            set value(val){},
-            set readonly(val){},
-            focus: function(){}
-          };
-        </body>
-      </method>
-    </implementation>
-  </binding>
-
-
   <!-- REPEAT -->
   <binding id="xformswidget-repeat-base" extends="#xformswidget-accessors">
 
@@ -600,38 +504,6 @@
         <children/>
       </xforms:repeat>
     </content>
-  </binding>
-
-
-  <!-- MEDIATYPE -->
-  <binding id="xformswidget-mediatype" extends="#xformswidget-base">
-    <implementation implements="nsIXFormsUIWidget">
-      <method name="refresh">
-        <body>
-          this.setMediatype();
-        </body>
-      </method>
-
-      <method name="setMediatype">
-        <body>
-        <![CDATA[
-          var parent = this.parentNode;
-          if (parent.namespaceURI == this.XFORMS_NS &&
-              parent.localName == "output" &&
-              !parent.hasAttribute("mediatype")) {
-            parent.setAttributeNS(this.MOZTYPE_NS, "mediatype",
-                                  this.stringValue);
-          }
-        ]]>
-        </body>
-      </method>
-    </implementation>
-
-    <handlers>
-      <handler event="DOMCharacterDataModified">
-        this.setMediatype();
-      </handler>
-    </handlers>
   </binding>
 
 </bindings>

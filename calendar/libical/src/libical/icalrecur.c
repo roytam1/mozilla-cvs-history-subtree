@@ -138,8 +138,6 @@
 #include <stdint.h>
 #endif
 
-#include <limits.h>
-
 #ifndef HAVE_INTPTR_T
 #if defined (WIN32) || defined (XP_BEOS)
 typedef long intptr_t;
@@ -440,16 +438,13 @@ struct icalrecurrencetype icalrecurrencetype_from_string(const char* str)
 	if (strcmp(name,"FREQ") == 0){
 	    parser.rt.freq = icalrecur_string_to_freq(value);
 	} else if (strcmp(name,"COUNT") == 0){
-	    int v = atoi(value);
-	    if (v >= 0) {
-	    parser.rt.count = v;
-	    }
+	    parser.rt.count = atoi(value);
 	} else if (strcmp(name,"UNTIL") == 0){
 	    parser.rt.until = icaltime_from_string(value);
 	} else if (strcmp(name,"INTERVAL") == 0){
-	    int v = atoi(value);
-	    if (v > 0 && v <= SHRT_MAX) {
-	    parser.rt.interval = (short) v;
+	    short v = (short)atoi(value);
+	    if (v > 0) {
+		parser.rt.interval = v;
 	    }
 	} else if (strcmp(name,"WKST") == 0){
 	    parser.rt.week_start = icalrecur_string_to_weekday(value);

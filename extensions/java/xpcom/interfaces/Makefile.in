@@ -50,7 +50,6 @@ JAVA_SRCS = \
 		$(srcdir)/IMozilla.java \
 		$(srcdir)/IGRE.java \
 		$(srcdir)/IXPCOM.java \
-		$(srcdir)/IJavaXPCOMUtils.java \
 		$(srcdir)/IAppFileLocProvider.java \
 		$(srcdir)/INIParser.java \
 		$(srcdir)/VersionComparator.java \
@@ -96,5 +95,9 @@ $(JARFILE): $(COMPILED_JAVA_CLASSES)
 $(JARFILE_SRC): $(JARFILE)
 	$(JAR) cf $@ -C _java org
 	$(JAR) uf $@ -C $(JAVA_DIST_DIR)/default org
+
+# Build the implementation Java classes, which depend on these interfaces
+export:: $(JARFILE) $(JARFILE_SRC)
+	$(MAKE) -C ../src jarfile
 
 .NOTPARALLEL::

@@ -77,12 +77,12 @@ nsMathMLTokenFrame::~nsMathMLTokenFrame()
 {
 }
 
-eMathMLFrameType
-nsMathMLTokenFrame::GetMathMLFrameType()
+nsIAtom*
+nsMathMLTokenFrame::GetType() const
 {
   // treat everything other than <mi> as ordinary...
   if (mContent->Tag() != nsMathMLAtoms::mi_) {
-    return eMathMLFrameType_Ordinary;
+    return nsMathMLAtoms::ordinaryMathMLFrame;
   }
 
   // for <mi>, distinguish between italic and upright...
@@ -91,8 +91,8 @@ nsMathMLTokenFrame::GetMathMLFrameType()
 
   // treat invariant the same as italic to inherit its inter-space properties
   return value.EqualsLiteral("normal")
-    ? eMathMLFrameType_UprightIdentifier
-    : eMathMLFrameType_ItalicIdentifier;
+    ? nsMathMLAtoms::uprightIdentifierMathMLFrame
+    : nsMathMLAtoms::italicIdentifierMathMLFrame;
 }
 
 static void

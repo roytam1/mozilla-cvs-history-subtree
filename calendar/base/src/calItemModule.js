@@ -22,8 +22,6 @@
  * Contributor(s):
  *   Vladimir Vukicevic <vladimir.vukicevic@oracle.com>
  *   Mike Shaver <shaver@off.net>
- *   Matthew Willis <lilmatt@mozilla.com>
- *   Philipp Kewisch <mozilla@kewis.ch>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -83,15 +81,10 @@ function initBaseComponent()
 /* Update these in calBaseCID.h */
 const componentData =
     [
-     /* calItemBase and calUtils must be first: later scripts depend on them */
+     /* calItemBase must be first: later scripts depend on it */
     {cid: null,
      contractid: null,
      script: "calItemBase.js",
-     constructor: null},
-
-    {cid: null,
-     contractid: null,
-     script: "calUtils.js",
      constructor: null},
 
     {cid: Components.ID("{f42585e7-e736-4600-985d-9624c1c51992}"),
@@ -141,15 +134,10 @@ const componentData =
      script: "calWeekTitleService.js",
      constructor: "calWeekTitleService"},
 
-    {cid: Components.ID("{f41392ab-dcad-4bad-818f-b3d1631c4d93}"),
+    {cid: Components.ID("{b84de879-4b85-4d68-8550-e0C527e46f98}"),
      contractid: "@mozilla.org/calendar/itip-item;1",
      script: "calItipItem.js",
      constructor: "calItipItem"},
-
-    {cid: Components.ID("{9787876b-0780-4464-8282-b7f86fb221e8}"),
-     contractid: "@mozilla.org/calendar/itip-processor;1",
-     script: "calItipProcessor.js",
-     constructor: "calItipProcessor"},
 
     {cid: Components.ID("{1e2fc0e2-bf5f-4d60-9f1e-5e92cf517c0b}"),
      contractid: "@mozilla.org/network/protocol;1?name=webcal",
@@ -164,12 +152,7 @@ const componentData =
     {cid: Components.ID("{207a6682-8ff1-4203-9160-729ec28c8766}"),
      contractid: "@mozilla.org/calendar/ics-serializer;1",
      script: "calIcsSerializer.js",
-     constructor: "calIcsSerializer"},
-
-    {cid: Components.ID("{40a1ccf4-5f54-4815-b842-abf06f84dbfd}"),
-     contractid: "@mozilla.org/calendar/transactionmanager;1",
-     script: "calTransactionManager.js",
-     constructor: "calTransactionManager"}
+     constructor: "calIcsSerializer"}
     ];
 
 var calItemModule = {

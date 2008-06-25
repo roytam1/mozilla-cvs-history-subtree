@@ -67,8 +67,7 @@
                   ondragover="nsDragAndDrop.dragOver(event, this.parentNode.parentNode); event.stopPropagation();"
                   ondragdrop="nsDragAndDrop.drop(event, this.parentNode.parentNode); event.stopPropagation();"
                   ondragexit="nsDragAndDrop.dragExit(event, this.parentNode.parentNode); event.stopPropagation();">
-          <xul:tooltip onpopupshowing="event.stopPropagation(); return this.parentNode.parentNode.parentNode.doPreview(this);"
-                       onpopuphiding="this.parentNode.parentNode.parentNode.resetPreview(this);" orient="vertical">
+          <xul:tooltip onpopupshowing="event.stopPropagation(); return this.parentNode.parentNode.parentNode.doPreview(this);" orient="vertical">
             <xul:label class="tooltip-label" crop="right"/>
             <xul:label class="tooltip-label" hidden="true"><html:canvas class="tab-tooltip-canvas"/></xul:label>
           </xul:tooltip>
@@ -214,12 +213,9 @@
           var canvas = aPopup.lastChild.firstChild;
           canvas.parentNode.hidden = true;
 
-          var win = b.contentWindow;
-          var w = win.innerWidth;
-          var h = win.innerHeight;
-
-          if (tab == this.mCurrentTab || h == 0
-              || !this.mPrefs.getBoolPref("browser.tabs.tooltippreview.enable")) {
+          if (!this.mPrefs.getBoolPref("browser.tabs.tooltippreview.enable")) {
+            label.removeAttribute("width");
+            aPopup.removeAttribute("tabpreview");
             return true;
           }
 
@@ -232,6 +228,9 @@
 
           label.width = 0;
           aPopup.setAttribute("tabpreview", "true");
+          var win = b.contentWindow;
+          var w = win.innerWidth;
+          var h = win.innerHeight;
 
           var canvasW = this.mPrefs.getIntPref("browser.tabs.tooltippreview.width");
           var canvasH = Math.round(canvasW * h / w);
@@ -264,24 +263,6 @@
             ctx.restore();
           }
           return true;
-        ]]>
-        </body>
-      </method>
-
-      <!-- XXXcst This should not be needed, but it seems that the tooltip
-           sizing is happening too early when we want to stop showing the
-           preview.  This clears the label's width early (i.e. when the
-           previous preview disappears) so that when the next tooltip appears,
-           it doesn't start with a bad size.  For now, I blame Gecko. -->
-      <method name="resetPreview">
-        <parameter name="aPopup"/>
-        <body>
-        <![CDATA[
-          var label = aPopup.firstChild;
-          // if this function is removed, these two lines need to be restored
-          // to the non-preview codepath above
-          label.removeAttribute("width");
-          aPopup.removeAttribute("tabpreview");
         ]]>
         </body>
       </method>
@@ -634,9 +615,7 @@
               if (docElement.getAttribute("chromehidden").indexOf("location") != -1) {
                 var uri  = this.mURIFixup.createExposableURI(
                              this.mCurrentBrowser.currentURI);
-                if (uri.schemeIs("about"))
-                  newTitle = uri.spec + sep + newTitle;
-                else if (uri.host)
+                if (uri.host)
                   newTitle = uri.prePath + sep + newTitle;
               }
             } catch (e) {}

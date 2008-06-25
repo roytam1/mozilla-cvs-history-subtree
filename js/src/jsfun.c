@@ -256,7 +256,7 @@ js_GetArgsObject(JSContext *cx, JSStackFrame *fp)
     /* Link the new object to fp so it can get actual argument values. */
     argsobj = js_NewObject(cx, &js_ArgumentsClass, NULL, NULL);
     if (!argsobj || !JS_SetPrivate(cx, argsobj, fp)) {
-        cx->weakRoots.newborn[GCX_OBJECT] = NULL;
+        cx->newborn[GCX_OBJECT] = NULL;
         return NULL;
     }
 
@@ -608,7 +608,7 @@ js_GetCallObject(JSContext *cx, JSStackFrame *fp, JSObject *parent)
     /* Create the call object and link it to its stack frame. */
     callobj = js_NewObject(cx, &js_CallClass, NULL, parent);
     if (!callobj || !JS_SetPrivate(cx, callobj, fp)) {
-        cx->weakRoots.newborn[GCX_OBJECT] = NULL;
+        cx->newborn[GCX_OBJECT] = NULL;
         return NULL;
     }
     fp->callobj = callobj;
@@ -1132,7 +1132,7 @@ fun_resolve(JSContext *cx, JSObject *obj, jsval id, uintN flags,
                  * root until then to protect pval in case it is figuratively
                  * up in the air, with no strong refs protecting it.
                  */
-                cx->weakRoots.newborn[GCX_OBJECT] = JSVAL_TO_GCTHING(pval);
+                cx->newborn[GCX_OBJECT] = JSVAL_TO_GCTHING(pval);
                 parentProto = JSVAL_TO_OBJECT(pval);
             }
         }
@@ -1163,7 +1163,7 @@ fun_resolve(JSContext *cx, JSObject *obj, jsval id, uintN flags,
          */
         if (!js_SetClassPrototype(cx, obj, proto,
                                   JSPROP_ENUMERATE | JSPROP_PERMANENT)) {
-            cx->weakRoots.newborn[GCX_OBJECT] = NULL;
+            cx->newborn[GCX_OBJECT] = NULL;
             return JS_FALSE;
         }
         *objp = obj;
@@ -2093,7 +2093,7 @@ js_InitFunctionClass(JSContext *cx, JSObject *obj)
     return proto;
 
 bad:
-    cx->weakRoots.newborn[GCX_OBJECT] = NULL;
+    cx->newborn[GCX_OBJECT] = NULL;
     return NULL;
 }
 
@@ -2136,7 +2136,7 @@ js_NewFunction(JSContext *cx, JSObject *funobj, JSNative native, uintN nargs,
 
     /*
      * Allocate fun after allocating funobj so slot allocation in js_NewObject
-     * does not wipe out fun from newborn[GCX_PRIVATE].
+     * does not wipe out fun from cx->newborn[GCX_PRIVATE].
      */
     fun = (JSFunction *) js_NewGCThing(cx, GCX_PRIVATE, sizeof(JSFunction));
     if (!fun)
@@ -2154,7 +2154,7 @@ js_NewFunction(JSContext *cx, JSObject *funobj, JSNative native, uintN nargs,
 
     /* Link fun to funobj and vice versa. */
     if (!js_LinkFunctionObject(cx, fun, funobj)) {
-        cx->weakRoots.newborn[GCX_OBJECT] = NULL;
+        cx->newborn[GCX_OBJECT] = NULL;
         fun = NULL;
     }
 
@@ -2175,7 +2175,7 @@ js_CloneFunctionObject(JSContext *cx, JSObject *funobj, JSObject *parent)
         return NULL;
     fun = (JSFunction *) JS_GetPrivate(cx, funobj);
     if (!js_LinkFunctionObject(cx, fun, newfunobj)) {
-        cx->weakRoots.newborn[GCX_OBJECT] = NULL;
+        cx->newborn[GCX_OBJECT] = NULL;
         return NULL;
     }
     return newfunobj;

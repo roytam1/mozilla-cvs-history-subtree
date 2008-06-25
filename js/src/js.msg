@@ -297,5 +297,4 @@ MSG_DEF(JSMSG_BAD_GENERATOR_YIELD,    214, 1, JSEXN_TYPEERR, "yield from closing
 MSG_DEF(JSMSG_BAD_YIELD_SYNTAX,       215, 0, JSEXN_SYNTAXERR, "yield expression must be parenthesized")
 MSG_DEF(JSMSG_ARRAY_COMP_LEFTSIDE,    216, 0, JSEXN_SYNTAXERR, "invalid array comprehension left-hand side")
 MSG_DEF(JSMSG_YIELD_FROM_FILTER,      217, 0, JSEXN_INTERNALERR, "yield not yet supported from filtering predicate")
-MSG_DEF(JSMSG_COMPILE_EXECED_SCRIPT,  218, 0, JSEXN_TYPEERR, "cannot compile over a script that is currently executing")
-MSG_DEF(JSMSG_NON_LIST_XML_METHOD,    219, 2, JSEXN_TYPEERR, "cannot call {0} method on an XML list with {1} elements")
+MSG_DEF(JSMSG_SELF_MODIFYING_SCRIPT,  218, 0, JSEXN_TYPEERR, "self-modifying script detected")

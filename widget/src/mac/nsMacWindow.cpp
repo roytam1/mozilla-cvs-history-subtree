@@ -402,6 +402,8 @@ nsresult nsMacWindow::StandardCreate(nsIWidget *aParent,
         mIsTopWidgetWindow = PR_TRUE;
         if (aInitData)
         {
+          // We never give dialog boxes a close box.
+
           switch (aInitData->mBorderStyle)
           {
             case eBorderStyle_none:
@@ -415,13 +417,13 @@ nsresult nsMacWindow::StandardCreate(nsIWidget *aParent,
             case eBorderStyle_all:
               windowClass = kDocumentWindowClass;
               attributes = kWindowCollapseBoxAttribute |
-                           kWindowResizableAttributes |
-                           kWindowCloseBoxAttribute;
+                           kWindowResizableAttributes;
               break;
 
             default:
                 windowClass = kDocumentWindowClass;
 
+                // we ignore the close flag here, since mac dialogs should never have a close box.
                 switch(aInitData->mBorderStyle & (eBorderStyle_resizeh | eBorderStyle_title))
                 {
                   // combinations of individual options.
@@ -448,13 +450,8 @@ nsresult nsMacWindow::StandardCreate(nsIWidget *aParent,
                     NS_WARNING("Unhandled combination of window flags");
                     break;
                 }
-
-                // if we set any attributes above then check the close flag and set it here
-                if (attributes != kWindowNoAttributes &&
-                    aInitData->mBorderStyle & eBorderStyle_close)
-                  attributes |= kWindowCloseBoxAttribute;
+              }
           }
-        }
         else
         {
           windowClass = kMovableModalWindowClass;
@@ -1144,11 +1141,6 @@ NS_IMETHODIMP nsMacWindow::Show(PRBool aState)
     }
     else {
       if (mWindowPtr) {
-#ifndef MOZ_SUNBIRD
-// XXX bug 348146 - Hiding and showing the popup rapidly screws up
-//                  Sunbird's datepicker as the hide isn't finished
-//                  before we try to show. We need to fix this.
-//
         static TransitionWindowWithOptions_type transitionFunc;
         if (mWindowType == eWindowType_popup) {
           // Popups will hide by fading out with TransitionWindowWithOptions,
@@ -1192,7 +1184,6 @@ NS_IMETHODIMP nsMacWindow::Show(PRBool aState)
                          PR_TRUE, &transitionOptions);
         }
         else
-#endif // ifndef MOZ_SUNBIRD
           ::HideWindow(mWindowPtr);
       }
       mShown = PR_FALSE;
@@ -2058,22 +2049,6 @@ NS_IMETHODIMP
 nsMacWindow::DispatchEvent ( void* anEvent, PRBool *_retval )
 {
   *_retval = PR_FALSE;
-
-  // This method is presently only used for mouse events, which are sent into
-  // into nsMacEventHandler::HandleOSEvent.  Mouse events can't be sent to
-  // windows that aren't shown, but in some cases, we'll see them anyway.  This
-  // can happen when a pop-up window is logically hidden but is physically in
-  // the process of fading out.
-  //
-  // If a pop-up is fading out because its parent widget hierarchy has
-  // disappeared (such as when its parent window is closed), then the pop-up
-  // will be destroyed as soon as it has faded out, and some of the objects
-  // in the pop-up, including the event handler, will be invalid.  To avoid
-  // definite crashes, filter out these events that logically should not
-  // even exist.
-  if (!mShown)
-    return NS_OK;
-
   NS_ENSURE_TRUE(mMacEventHandler.get(), NS_ERROR_FAILURE);
   *_retval = mMacEventHandler->HandleOSEvent(*NS_REINTERPRET_CAST(EventRecord*,anEvent));
 

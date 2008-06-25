@@ -240,26 +240,6 @@ nsScriptSecurityManager::GetSafeJSContext()
     return cx;
 }
 
-// Both params are inout
-static nsresult
-MaybeFixupURIAndScheme(nsCOMPtr<nsIURI>& aURI, nsCString& aScheme)
-{
-    nsresult rv = NS_OK;
-    if (aScheme.EqualsLiteral("wyciwyg")) {
-        // Need to dig out the real URI
-        nsCOMPtr<nsIURIFixup> fixup = do_GetService(NS_URIFIXUP_CONTRACTID);
-        if (fixup) {
-            nsCOMPtr<nsIURI> newURI;
-            rv = fixup->CreateExposableURI(aURI, getter_AddRefs(newURI));
-            if (NS_SUCCEEDED(rv) && newURI != aURI) {
-                aURI = newURI;
-                rv = aURI->GetScheme(aScheme);
-            }
-        }
-    }
-    return rv;
-}
-
 NS_IMETHODIMP
 nsScriptSecurityManager::SecurityCompareURIs(nsIURI* aSourceURI,
                                              nsIURI* aTargetURI,
@@ -298,15 +278,9 @@ nsScriptSecurityManager::SecurityCompareURIs(nsIURI* aSourceURI,
     // Compare schemes
     nsCAutoString targetScheme;
     nsresult rv = targetBaseURI->GetScheme(targetScheme);
-    if (NS_SUCCEEDED(rv))
-        rv = MaybeFixupURIAndScheme(targetBaseURI, targetScheme);
-
     nsCAutoString sourceScheme;
     if (NS_SUCCEEDED(rv))
         rv = sourceBaseURI->GetScheme(sourceScheme);
-    if (NS_SUCCEEDED(rv))
-        rv = MaybeFixupURIAndScheme(sourceBaseURI, sourceScheme);
-    
     if (NS_SUCCEEDED(rv) && targetScheme.Equals(sourceScheme))
     {
         if (targetScheme.EqualsLiteral("file"))
@@ -1350,7 +1324,7 @@ nsScriptSecurityManager::CheckLoadURIWithPrincipal(nsIPrincipal* aPrincipal,
         { "javascript",      AllowProtocol  },
         { "ftp",             AllowProtocol  },
         { "about safe",      AllowProtocol  },
-        { "about",           DenyProtocol   },
+        { "about",           ChromeProtocol },
         { "mailto",          AllowProtocol  },
         { "aim",             AllowProtocol  },
         { "data",            AllowProtocol  },

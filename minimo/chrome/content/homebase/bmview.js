@@ -147,6 +147,7 @@ function bmInit(targetDoc, targetElement) {
 
 
 	var testLoad=new bmProcessor(multiMarks);
+	testLoad.xslSet("bookmark_template_multiple.xml");
 	testLoad.setTargetDocument(targetDoc);
 	testLoad.setTargetElement(targetElement);
 	testLoad.run();
@@ -179,9 +180,10 @@ function homebase_menuBuild(winRef) {
 
 function bmProcessor(bookmarkStore) {
 
+  this.xmlRef=document.implementation.createDocument("","",null);
+  this.xslRef=document.implementation.createDocument("http://www.w3.org/1999/XSL/Transform","stylesheet",null);
   this.xmlRef=null;
-  this.xslRef=null;
-  
+
   var aDOMParser = new DOMParser();
 
   try {
@@ -199,15 +201,33 @@ function bmProcessor(bookmarkStore) {
     this.xmlRef = aDOMParser.parseFromString(bookmarkEmpty,"text/xml");
   }
 
+  this.xslUrl="";
 
-  var aDOMParser = new DOMParser();
-  var xsltTemplate = "<xsl:stylesheet version=\"1.0\" xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\" xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"                xmlns:dc=\"http://purl.org/dc/elements/1.1/\"                xmlns:rss=\"http://purl.org/rss/1.0/\" xmlns:html=\"http://www.w3.org/1999/xhtml\"                xmlns:xul=\"http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul\"><xsl:output method=\"html\" indent=\"yes\"/><xsl:template match=\"/\"><div id=\"container2\" >  <div style=\"text-align:center\">    <img src=\"chrome://minimo/skin/extensions/icon-urlbar.png\">    </img>    <input type=\"text\" id=\"urlbar2\" style=\"text-align:left;background-color:white;width:90%\" />  </div>	  <div style=\"text-align:center\" class=\"extensions\">      <img src=\"chrome://minimo/skin/extensions/google.png\">    </img>    <input type=\"text\" id=\"search-google\"                 style=\"text-align:left;background-color:white;width:90%\"                 onchange=\"return SearchGoogle(this.value);\"  />      </div>	  <xsl:for-each select=\"/bmgroup/bm/li\"><xsl:choose><xsl:when test=\"@action\"><!--  <div class=\"section\">&titleExtensions.label;</div>-->  <div class=\"item extensions\" >    <img>      <xsl:attribute name=\"src\" >        <xsl:value-of select=\"@iconsrc\"/>      </xsl:attribute> 	    </img>    <a>      <xsl:attribute name=\"href\">javascript:</xsl:attribute> 	      <xsl:attribute name=\"onclick\">hbOpenAsTab('<xsl:value-of select=\".\"/>');return false</xsl:attribute>      <xsl:value-of select=\"@title\"/>    </a>  </div>	</xsl:when></xsl:choose><xsl:choose><xsl:when test=\"@page\" >  <div class=\"item pagelink\" >    <img>      <xsl:attribute name=\"src\" >        <xsl:value-of select=\"@iconsrc\"/>      </xsl:attribute> 	    </img>    <a>      <xsl:attribute name=\"href\">javascript:</xsl:attribute> 	      <xsl:attribute name=\"onclick\">hbOpenAsTab('<xsl:value-of select=\".\"/>');return false</xsl:attribute>      <xsl:value-of select=\"@title\"/>    </a>  </div>  </xsl:when></xsl:choose><xsl:choose><xsl:when test=\"@rss\" >  <div class=\"item rsslink\" >    <img>      <xsl:attribute name=\"src\" >        <xsl:value-of select=\"@iconsrc\"/>      </xsl:attribute> 	    </img>    <a>      <xsl:attribute name=\"href\">javascript:</xsl:attribute> 	      <xsl:attribute name=\"onclick\">hbOpenAsTab('<xsl:value-of select=\".\"/>');return false</xsl:attribute>      <xsl:value-of select=\"@title\"/>    </a>  </div></xsl:when></xsl:choose></xsl:for-each><!--<h3>&titleHistory.label;</h3>--> <xsl:for-each select=\"/bmgroup/bm/li\"><xsl:choose><xsl:when test=\"@hbhistory\" >  <div  class=\"item timehistory\" ><a>      <xsl:attribute name=\"href\">javascript:</xsl:attribute> 	      <xsl:attribute name=\"onclick\">hbOpenAsTab('<xsl:value-of select=\"@value\"/>');return false</xsl:attribute><xsl:attribute name=\"class\"><xsl:value-of select=\"@classdomainvalue\"/></xsl:attribute>      <xsl:value-of select=\".\"/>    </a>  </div><history><xsl:attribute name=\"value\"><xsl:value-of select=\"@value\"/></xsl:attribute></history>  </xsl:when></xsl:choose><xsl:choose><xsl:when test=\"@hbhistoryhandler\" ><a>      <xsl:attribute name=\"href\">javascript:</xsl:attribute> 	      <xsl:attribute name=\"onclick\">hbToggleClass('<xsl:value-of select=\"@classdomainvalue\"/>');return false</xsl:attribute>      [+]    </a>  <div  class=\"item timehistory\" ><a>      <xsl:attribute name=\"href\">javascript:</xsl:attribute> 	      <xsl:attribute name=\"onclick\">hbOpenAsTab('<xsl:value-of select=\"@value\"/>');return false</xsl:attribute>      <xsl:value-of select=\".\"/>    </a>  </div><history><xsl:attribute name=\"value\"><xsl:value-of select=\"@value\"/></xsl:attribute></history>  </xsl:when></xsl:choose>  </xsl:for-each>  </div></xsl:template></xsl:stylesheet>";
+  var myThis=this;
+  var omega=function thisScopeFunction2() { myThis.xslLoaded(); }
 
-  this.xslRef = aDOMParser.parseFromString(xsltTemplate,"text/xml");
+  this.xslRef.addEventListener("load",omega,false);
 
   this.xmlLoadedState=true;
-  this.xslLoadedState=true;
-  
+  this.xslLoadedState=false;
+}
+
+bmProcessor.prototype.xmlLoaded = function () {
+	this.xmlLoadedState=true;	
+	this.apply();
+}
+
+bmProcessor.prototype.xslLoaded = function () {
+	this.xslLoadedState=true;
+	this.apply();
+}
+
+bmProcessor.prototype.xmlSet = function (urlstr) {
+	this.xmlUrl=urlstr;
+}
+
+bmProcessor.prototype.xslSet = function (urlstr) {
+	this.xslUrl=urlstr;
 }
 
 bmProcessor.prototype.setTargetDocument = function (targetDoc) {
@@ -219,7 +239,6 @@ bmProcessor.prototype.setTargetElement = function (targetEle) {
 }
 
 bmProcessor.prototype.apply = function () {
-
     if( this.xmlRef.getElementsByTagName("li").length < 1) {
       if( this.targetDocument && this.targetDocument ) {
         if(this.targetDocument.getElementById("message-empty")) {
@@ -244,8 +263,15 @@ bmProcessor.prototype.apply = function () {
 }
 
 bmProcessor.prototype.run = function () {
-
-	this.apply();
+	try {
+		// Already parsed.
+		// this.xmlRef.load(this.xmlUrl);
+	} catch (e) {
+	}
+	try {
+		this.xslRef.load(this.xslUrl);
+	} catch (e) {
+	}
 
 }
 

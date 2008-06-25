@@ -21,7 +21,6 @@
 #
 # Contributor(s):
 #   Vladimir Vukicevic <vladimir.vukicevic@oracle.com>
-#   Philipp Kewisch <mozilla@kewis.ch>
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either of the GNU General Public License Version 2 or later (the "GPL"),
@@ -84,17 +83,15 @@ EXTRA_SCRIPTS = \
     calCalendarManager.js \
     calDateTimeFormatter.js \
     calEvent.js \
-    calIcsParser.js \
-    calIcsSerializer.js \
     calItemBase.js \
     calItipItem.js \
-    calItipProcessor.js \
+    calIcsParser.js \
+    calIcsSerializer.js \
     calProtocolHandler.js \
     calRecurrenceInfo.js \
     calTodo.js \
     calUtils.js \
     calWeekTitleService.js \
-    calTransactionManager.js \
     $(NULL)
 
 # Use NSINSTALL to make the directory, as there's no mtime to preserve.

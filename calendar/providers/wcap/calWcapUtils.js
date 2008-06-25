@@ -338,19 +338,24 @@ function getPref(prefName, defaultValue) {
     var prefBranch = Components.classes["@mozilla.org/preferences-service;1"]
                                .getService(nsIPrefBranch);
     var ret;
-    switch (prefBranch.getPrefType(prefName)) {
-    case nsIPrefBranch.PREF_BOOL:
-        ret = prefBranch.getBoolPref(prefName);
-        break;
-    case nsIPrefBranch.PREF_INT:
-        ret = prefBranch.getIntPref(prefName);
-        break;
-    case nsIPrefBranch.PREF_STRING:
-        ret = prefBranch.getCharPref(prefName);
-        break;
-    default:
+    try {
+        switch (prefBranch.getPrefType(prefName)) {
+        case nsIPrefBranch.PREF_BOOL:
+            ret = prefBranch.getBoolPref(prefName);
+            break;
+        case nsIPrefBranch.PREF_INT:
+            ret = prefBranch.getIntPref(prefName);
+            break;
+        case nsIPrefBranch.PREF_STRING:
+            ret = prefBranch.getCharPref(prefName);
+            break;
+        default:
+            ret = defaultValue;
+            break;
+        }
+    }
+    catch (exc) {
         ret = defaultValue;
-        break;
     }
     log(ret, "getPref(): prefName=" + prefName);
     return ret;

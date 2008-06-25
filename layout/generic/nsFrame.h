@@ -446,18 +446,6 @@ public:
   static void DisplayReflowShutdown();
 #endif
 
-  /**
-   * Adjust the given parent frame to the right style context parent frame for
-   * the child, given the pseudo-type of the prospective child.  This handles
-   * things like walking out of table pseudos and so forth.
-   *
-   * @param aProspectiveParent what GetParent() on the child returns.
-   *                           Must not be null.
-   * @param aChildPseudo the child's pseudo type, if any.
-   */
-  static nsIFrame*
-  CorrectStyleParentFrame(nsIFrame* aProspectiveParent, nsIAtom* aChildPseudo);
-
 protected:
   // Protected constructor and destructor
   nsFrame();

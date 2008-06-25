@@ -86,12 +86,12 @@ static const PRUnichar kApplyFunction  = PRUnichar(0x2061);
 static const PRUnichar kInvisibleTimes = PRUnichar(0x2062);
 static const PRUnichar kNullCh         = PRUnichar('\0');
 
-eMathMLFrameType
-nsMathMLmoFrame::GetMathMLFrameType()
+nsIAtom*
+nsMathMLmoFrame::GetType() const
 {
   return NS_MATHML_OPERATOR_IS_INVISIBLE(mFlags)
-    ? eMathMLFrameType_OperatorInvisible
-    : eMathMLFrameType_OperatorOrdinary;
+    ? nsMathMLAtoms::operatorInvisibleMathMLFrame
+    : nsMathMLAtoms::operatorOrdinaryMathMLFrame;
 }
 
 // since a mouse click implies selection, we cannot just rely on the

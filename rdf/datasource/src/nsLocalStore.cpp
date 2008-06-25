@@ -63,7 +63,6 @@
 #include "nsIObserverService.h"
 #include "nsWeakReference.h"
 #include "nsCRT.h"
-#include "stdio.h"
 
 ////////////////////////////////////////////////////////////////////////
 
@@ -79,7 +78,6 @@ protected:
     LocalStoreImpl();
     virtual ~LocalStoreImpl();
     nsresult Init();
-    nsresult CreateLocalStore(nsIFile* aFile);
     nsresult LoadData();
 
     friend NS_IMETHODIMP
@@ -405,43 +403,6 @@ LocalStoreImpl::Init()
 }
 
 nsresult
-LocalStoreImpl::CreateLocalStore(nsIFile* aFile)
-{
-    nsresult rv;
-
-    rv = aFile->Create(nsIFile::NORMAL_FILE_TYPE, 0666);
-    if (NS_FAILED(rv)) return rv;
-
-    nsCOMPtr<nsIOutputStream> outStream;
-    rv = NS_NewLocalFileOutputStream(getter_AddRefs(outStream), aFile);
-    if (NS_FAILED(rv)) return rv;
-
-    const char defaultRDF[] = 
-        "<?xml version=\"1.0\"?>\n" \
-        "<RDF:RDF xmlns:RDF=\"" RDF_NAMESPACE_URI "\"\n" \
-        "         xmlns:NC=\""  NC_NAMESPACE_URI "\">\n" \
-        "  <!-- Empty -->\n" \
-        "</RDF:RDF>\n";
-
-    PRUint32 count;
-    rv = outStream->Write(defaultRDF, sizeof(defaultRDF)-1, &count);
-    if (NS_FAILED(rv)) return rv;
-
-    if (count != sizeof(defaultRDF)-1)
-        return NS_ERROR_UNEXPECTED;
-
-    // Okay, now see if the file exists _for real_. If it's still
-    // not there, it could be that the profile service gave us
-    // back a read-only directory. Whatever.
-    PRBool fileExistsFlag = PR_FALSE;
-    aFile->Exists(&fileExistsFlag);
-    if (!fileExistsFlag)
-        return NS_ERROR_UNEXPECTED;
-
-    return NS_OK;
-}
-
-nsresult
 LocalStoreImpl::LoadData()
 {
     nsresult rv;
@@ -457,8 +418,35 @@ LocalStoreImpl::LoadData()
     (void)aFile->Exists(&fileExistsFlag);
     if (!fileExistsFlag) {
         // if file doesn't exist, create it
-        rv = CreateLocalStore(aFile);
-        if (NS_FAILED(rv)) return rv;
+        (void)aFile->Create(nsIFile::NORMAL_FILE_TYPE, 0666);
+
+        nsCOMPtr<nsIOutputStream> outStream;
+        rv = NS_NewLocalFileOutputStream(getter_AddRefs(outStream), aFile);
+        if (NS_FAILED(rv))
+            return rv;
+
+        const char defaultRDF[] = 
+            "<?xml version=\"1.0\"?>\n" \
+            "<RDF:RDF xmlns:RDF=\"" RDF_NAMESPACE_URI "\"\n" \
+            "         xmlns:NC=\""  NC_NAMESPACE_URI "\">\n" \
+            "  <!-- Empty -->\n" \
+            "</RDF:RDF>\n";
+
+        PRUint32 count;
+        rv = outStream->Write(defaultRDF, sizeof(defaultRDF)-1, &count);
+        if (NS_FAILED(rv))
+            return rv;
+
+        if (count != sizeof(defaultRDF)-1)
+            return NS_ERROR_UNEXPECTED;
+
+        // Okay, now see if the file exists _for real_. If it's still
+        // not there, it could be that the profile service gave us
+        // back a read-only directory. Whatever.
+        fileExistsFlag = PR_FALSE;
+        (void)aFile->Exists(&fileExistsFlag);
+        if (!fileExistsFlag)
+            return NS_ERROR_UNEXPECTED;
     }
 
     mInner = do_CreateInstance(NS_RDF_DATASOURCE_CONTRACTID_PREFIX "xml-datasource", &rv);
@@ -479,18 +467,7 @@ LocalStoreImpl::LoadData()
     if (NS_FAILED(rv)) return rv;
 
     // Read the datasource synchronously.
-    rv = remote->Refresh(PR_TRUE);
-    
-    if (NS_FAILED(rv)) {
-        // Load failed, delete and recreate a fresh localstore
-        aFile->Remove(PR_TRUE);
-        rv = CreateLocalStore(aFile);
-        if (NS_FAILED(rv)) return rv;
-        
-        rv = remote->Refresh(PR_TRUE);
-    }
-
-    return rv;
+    return remote->Refresh(PR_TRUE);
 }
 
 

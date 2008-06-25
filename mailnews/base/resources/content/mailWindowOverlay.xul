@@ -1865,7 +1865,7 @@
       <label id="allowRemoteContentForAuthorDesc" class="text-link"
              onclick="allowRemoteContentForSender();"/>
     </vbox>
-    <button label="&loadRemoteContentButton.label;" oncommand="LoadMsgWithRemoteContent();"/>
+    <button label="&loadRemoteContentButton.label;" oncommand="loadMsgWithRemoteContent();"/>
   </hbox>
 </deck>
 

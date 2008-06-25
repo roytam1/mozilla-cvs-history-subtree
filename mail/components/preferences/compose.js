@@ -53,18 +53,18 @@ var gComposePane = {
       this.mLDAPPrefsService = Components.classes[kLDAPPrefContractID].getService(Components.interfaces.nsILDAPPrefsService);
 
     this.createDirectoriesList();
-
+    
     // build the local address book menu list. We do this by hand instead of using the xul template
-    // builder because of Bug #285076,
+    // builder because of Bug #285076, 
     this.createLocalDirectoriesList();
-
+    
     this.enableAutocomplete();
 
     this.initLanguageMenu();
 
     this.populateFonts();
 
-    document.getElementById('downloadDictionaries').setAttribute('href', this.getDictionaryURL());
+    document.getElementById('downloadDictionaries').setAttribute('href', this.getDictionaryURL());  
 
     var preference = document.getElementById("mail.preferences.compose.selectedTabIndex");
     if (preference.value)
@@ -76,7 +76,7 @@ var gComposePane = {
   {
     var formatter = Components.classes["@mozilla.org/toolkit/URLFormatterService;1"]
                     .getService(Components.interfaces.nsIURLFormatter);
-
+                    
     return formatter.formatURLPref("spellchecker.dictionaries.download.url");
   },
 
@@ -91,27 +91,27 @@ var gComposePane = {
 
   sendOptionsDialog: function()
   {
-    document.documentElement.openSubDialog("chrome://messenger/content/preferences/sendoptions.xul","", null);
+    document.documentElement.openSubDialog("chrome://messenger/content/preferences/sendoptions.xul","", null);    
   },
 
   htmlComposeDialog: function()
   {
-    document.documentElement.openSubDialog("chrome://messenger/content/preferences/htmlcompose.xul","", null);
+    document.documentElement.openSubDialog("chrome://messenger/content/preferences/htmlcompose.xul","", null);  
   },
 
-  enableAutocomplete: function()
+  enableAutocomplete: function() 
   {
-    var directoriesList =  document.getElementById("directoriesList");
+    var directoriesList =  document.getElementById("directoriesList"); 
     var directoriesListPopup = document.getElementById("directoriesListPopup");
     var editButton = document.getElementById("editButton");
 
-    if (document.getElementById("autocompleteLDAP").checked)
+    if (document.getElementById("autocompleteLDAP").checked) 
     {
       editButton.removeAttribute("disabled");
       directoriesList.removeAttribute("disabled");
       directoriesListPopup.removeAttribute("disabled");
     }
-    else
+    else 
     {
       directoriesList.setAttribute("disabled", true);
       directoriesListPopup.setAttribute("disabled", true);
@@ -120,14 +120,14 @@ var gComposePane = {
 
     // if we do not have any directories disable the dropdown list box
     if (!this.mDirectories || (this.mDirectories < 1))
-      directoriesList.setAttribute("disabled", true);
+      directoriesList.setAttribute("disabled", true);  
   },
 
-  createLocalDirectoriesList: function ()
+  createLocalDirectoriesList: function () 
   {
     var abPopup = document.getElementById("abPopup-menupopup");
 
-    if (abPopup)
+    if (abPopup) 
       this.loadLocalDirectories(abPopup);
   },
 
@@ -151,7 +151,7 @@ var gComposePane = {
           item = document.createElement("menuitem");
           item.setAttribute("label", addrbook.dirName);
           item.setAttribute("value", abURI);
-          aPopup.appendChild(item);
+          aPopup.appendChild(item);   
           if (preference.value == abURI)
           {
             aPopup.parentNode.value = abURI;
@@ -166,7 +166,7 @@ var gComposePane = {
   {
     var directoriesListPopup = document.getElementById("directoriesListPopup");
 
-    if (directoriesListPopup)
+    if (directoriesListPopup) 
       this.loadDirectories(directoriesListPopup);
   },
 
@@ -180,28 +180,28 @@ var gComposePane = {
     var position;
     var dirType;
     var prefService;
-
+    
     prefService = Components.classes["@mozilla.org/preferences-service;1"]
                             .getService(Components.interfaces.nsIPrefBranch);
-
-    if (!this.mDirectories)
+    
+    if (!this.mDirectories) 
     {
-      try
+      try 
       {
         if (this.mLDAPPrefsService)
           arrayOfDirectories = this.mLDAPPrefsService.getServerList(prefService, prefCount);
       }
       catch (ex) {}
 
-      if (arrayOfDirectories)
+      if (arrayOfDirectories) 
       {
         this.mDirectories = new Array();
         for (var i = 0; i < prefCount.value; i++)
         {
-          if ((arrayOfDirectories[i] != "ldap_2.servers.pab") &&
-            (arrayOfDirectories[i] != "ldap_2.servers.history"))
+          if ((arrayOfDirectories[i] != "ldap_2.servers.pab") && 
+            (arrayOfDirectories[i] != "ldap_2.servers.history")) 
           {
-            try
+            try 
             {
               position = prefService.getIntPref(arrayOfDirectories[i]+".position");
             }
@@ -209,7 +209,7 @@ var gComposePane = {
             {
               position = 1;
             }
-
+          
             try
             {
               dirType = prefService.getIntPref(arrayOfDirectories[i]+".dirType");
@@ -219,7 +219,7 @@ var gComposePane = {
               dirType = 1;
             }
 
-            if ((position != 0) && (dirType == 1))
+            if ((position != 0) && (dirType == 1)) 
             {
               try
               {
@@ -230,24 +230,24 @@ var gComposePane = {
               {
                 description="";
               }
-
-              if (description != "")
+              
+              if (description != "") 
               {
-                if (aPopup)
+                if (aPopup) 
                 {
                   item = document.createElement("menuitem");
                   item.setAttribute("label", description);
                   item.setAttribute("value", arrayOfDirectories[i]);
                   aPopup.appendChild(item);
                 }
-
+              
                 this.mDirectories[j++] = {value:arrayOfDirectories[i], label:description};
               }
             }
           }
         }
-
-        if (aPopup)
+      
+        if (aPopup) 
         {
           // we are in mail/news Account settings
           item = document.createElement("menuitem");
@@ -262,7 +262,7 @@ var gComposePane = {
           var value = directoriesList.value;
           directoriesList.selectedItem = null;
           directoriesList.value = value;
-          if (!directoriesList.selectedItem)
+          if (!directoriesList.selectedItem) 
           {
             directoriesList.value = "";
             // If we have no other directories, also disable the popup.
@@ -284,7 +284,7 @@ var gComposePane = {
     if (gRefresh)
     {
       var popup = document.getElementById("directoriesListPopup");
-      if (popup)
+      if (popup) 
         while (popup.hasChildNodes())
           popup.removeChild(popup.lastChild);
 
@@ -297,7 +297,6 @@ var gComposePane = {
 
   initLanguageMenu: function ()
   {
-    var languageMenuList = document.getElementById("languageMenuList");
     this.mSpellChecker = Components.classes['@mozilla.org/spellchecker/myspell;1'].getService(Components.interfaces.mozISpellCheckingEngine);
     var o1 = {};
     var o2 = {};
@@ -309,9 +308,6 @@ var gComposePane = {
 
     var dictList = o1.value;
     var count    = o2.value;
-
-    // if we don't have any dictionaries installed, disable the menu list
-    languageMenuList.disabled = !count;
 
     // If dictionary count hasn't changed then no need to update the menu.
     if (this.mDictCount == count)
@@ -329,7 +325,7 @@ var gComposePane = {
     // If we have a language string bundle, load the region string bundle.
     if (languageBundle)
       regionBundle = document.getElementById("regionBundle");
-
+  
     var menuStr2;
     var isoStrArray;
     var langId;
@@ -364,7 +360,7 @@ var gComposePane = {
       }
       dictList[i] = [langLabel, langId];
     }
-
+  
     // sort by locale-aware collation
     dictList.sort(
       function compareFn(a, b)
@@ -373,36 +369,45 @@ var gComposePane = {
       }
     );
 
+    var languageMenuList = document.getElementById("languageMenuList");
     // Remove any languages from the list.
     var languageMenuPopup = languageMenuList.firstChild;
     while (languageMenuPopup.hasChildNodes())
       languageMenuPopup.removeChild(languageMenuPopup.firstChild);
 
-    // append the dictionaries to the menu list...
+    var curLang  = languageMenuList.value;
+    var defaultItem = null;
+
     for (i = 0; i < count; i++)
-      languageMenuList.appendItem(dictList[i][0], dictList[i][1]);
+    {
+      var item = languageMenuList.appendItem(dictList[i][0], dictList[i][1]);
+      if (curLang && dictList[i][1] == curLang)
+        defaultItem = item;
+    }
 
-    languageMenuList.setInitialSelection();
+    // Now make sure the correct item in the menu list is selected.
+    if (defaultItem)
+      languageMenuList.selectedItem = defaultItem;
   },
-
-  populateFonts: function()
+  
+  populateFonts: function() 
   {
     var fontsList = document.getElementById("FontSelect");
-    try
+    try 
     {
       var enumerator = Components.classes["@mozilla.org/gfx/fontenumerator;1"]
                                  .getService(Components.interfaces.nsIFontEnumerator);
       var localFontCount = { value: 0 }
       var localFonts = enumerator.EnumerateAllFonts(localFontCount);
-      for (var i = 0; i < localFonts.length; ++i)
+      for (var i = 0; i < localFonts.length; ++i) 
       {
-        if (localFonts[i] != "")
+        if (localFonts[i] != "") 
           fontsList.appendItem(localFonts[i], localFonts[i]);
       }
     }
     catch(e) { }
    },
-
+   
    restoreHTMLDefaults: function()
    {
      // reset throws an exception if the pref value is already the default so

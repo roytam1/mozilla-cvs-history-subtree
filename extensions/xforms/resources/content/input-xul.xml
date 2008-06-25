@@ -48,8 +48,7 @@
           xmlns="http://www.mozilla.org/xbl"
           xmlns:xbl="http://www.mozilla.org/xbl"
           xmlns:xul="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
-          xmlns:mozType="http://www.mozilla.org/projects/xforms/2005/type"
-          xmlns:html="http://www.w3.org/1999/xhtml">
+          xmlns:mozType="http://www.mozilla.org/projects/xforms/2005/type">
 
 
   <!-- INPUT: base widget for input: <default>, textarea: <default> and
@@ -70,10 +69,7 @@
             __proto__: control.inputField,
 
             set readonly(val) {
-              if (val)
-                this.control.setAttribute("readonly", val);
-              else
-                this.control.removeAttribute("readonly");
+              this.control.readonly = val;
             }
           };
         </body>
@@ -108,8 +104,8 @@
            extends="#xformswidget-input-base">
     <content>
       <children includes="label"/>
-      <xul:textbox class="xf-value" anonid="control" flex="1"
-                   xbl:inherits="accesskey, tabindex"/>
+      <xul:textbox class="xf-value" anonid="control"
+                   xbl:inherits="accesskey" flex="1"/>
       <children/>
     </content>
 
@@ -128,8 +124,7 @@
            extends="chrome://xforms/content/input.xml#xformswidget-input-boolean-base">
     <content>
       <children includes="label"/>
-      <xul:checkbox anonid="control" class="xf-value"
-                    xbl:inherits="accesskey, tabindex"/>
+      <xul:checkbox anonid="control" xbl:inherits="accesskey" class="xf-value"/>
       <children/>
     </content>
 
@@ -180,63 +175,23 @@
   <binding id="xformswidget-input-date"
            extends="#xformswidget-input-base">
 
-    <resources>
-      <stylesheet src="chrome://xforms/skin/input-xul.css"/>
-    </resources>
-
     <content>
       <children includes="label"/>
-      <xul:hbox class="-moz-menulist-container" flex="1">
-        <html:input anonid="control" flex="1"
-                    class="-moz-menulist-textfield"
-                    allowevents="true"
-                    xbl:inherits="accesskey, tabindex"/>
-        <xul:dropmarker mozType:dropmarker="true" anonid="dropmarker"
-                        xbl:inherits="disabled"/>
-      </xul:hbox>
+      <xul:textbox anonid="control" xbl:inherits="accesskey" flex="1"/>
+      <xul:toolbarbutton anonid="dropmarker"/>
       <xul:popup anonid="popup" ignorekeys="true">
-        <xul:box mozType:calendar="true" anonid="picker"
-                 internaltabhandling="true"/>
+        <xul:box mozType:calendar="true" anonid="picker"/>
       </xul:popup>
       <children/>
     </content>
 
-    <implementation implements="nsIXFormsComboboxUIWidget, nsIAccessibleProvider">
-    <!-- nsIXFormsComboboxUIWidget -->
-      <property name="open">
-        <getter>
-          return this._isPickerVisible;
-        </getter>
-        <setter>
-          if (val)
-            this.showPicker();
-          else
-            this.hidePicker();
-        </setter>
-      </property>
-
-    <!-- nsIAccessibleProvider -->
-      <property name="accessibleType" readonly="true">
-        <getter>
-          return Components.interfaces.nsIAccessibleProvider.XFormsInputDate;
-        </getter>
-      </property>
-
-      <method name="getControlElement">
-        <body>
-          return this.ownerDocument.
-            getAnonymousElementByAttribute(this, 'anonid', 'control');
-        </body>
-      </method>
-
+    <implementation>
       <constructor>
         var pickerChangeHandler = {
           inputControl: this,
           handleEvent: function(aEvent) {
-            if (aEvent.originalTarget == this.inputControl.picker) {
-              this.inputControl.control.value = this.inputControl.picker.value;
-              this.inputControl.hidePicker();
-            }
+            this.inputControl.control.value = this.inputControl.picker.value;
+            this.inputControl.hidePicker();
           }
         };
         this.picker.addEventListener("change", pickerChangeHandler, false);
@@ -254,9 +209,6 @@
         <body>
           this.popup.hidePopup();
           this._isPickerVisible = false;
-
-          this.ownerDocument.defaultView.setTimeout(
-            function(control) { control.focus(); }, 0, this.control);
         </body>
       </method>
 
@@ -312,17 +264,10 @@
         this.picker.value = this.control.value;
       </handler>
 
-      <handler event="popupshown">
-        this.ownerDocument.defaultView.setTimeout(
-          function(picker) { picker.focus();} , 0, this.picker);
-      </handler>
-
       <handler event="keypress">
       <![CDATA[
         if (event.keyCode == event.DOM_VK_F4) {
           this.togglePicker();
-        } else if (event.keyCode == event.DOM_VK_ESCAPE) {
-          this.hidePicker();
         } else if (event.altKey && (event.keyCode == event.DOM_VK_DOWN ||
                    event.keyCode == event.DOM_VK_UP)) {
           this.togglePicker();
@@ -333,10 +278,9 @@
     </handlers>
   </binding>
 
-
   <!-- INPUT: <DATE, APPEARANCE='FULL'> -->
   <binding id="xformswidget-input-date-full"
-           extends="chrome://xforms/content/input.xml#xformswidget-input-date-calendar-base">
+           extends="chrome://xforms/content/input.xml#xformswidget-input-base">
     <content>
       <children includes="label"/>
       <xul:box mozType:calendar="true" anonid="control"/>
@@ -369,8 +313,8 @@
            extends="#xformswidget-input-base">
     <content>
       <children includes="label"/>
-      <xul:textbox type="password" anonid="control" flex="1"
-                   xbl:inherits="tabindex"/>
+      <xul:textbox type="password" anonid="control"
+                  xbl:inherits="accesskey" flex="1"/>
       <children/>
     </content>
 
@@ -389,9 +333,8 @@
            extends="#xformswidget-input-base">
     <content>
       <children includes="label"/>
-      <xul:textbox multiline="true" class="xf-value"
-                   anonid="control" flex="1"
-                   xbl:inherits="accesskey, tabindex"/>
+      <xul:textbox multiline="true" class="xf-value" 
+                   anonid="control" xbl:inherits="accesskey" flex="1"/>
       <children/>
     </content>
   </binding>

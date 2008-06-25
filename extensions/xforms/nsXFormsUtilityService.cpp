@@ -52,8 +52,6 @@
 #include "nsISchemaDuration.h"
 #include "nsXFormsSchemaValidator.h"
 #include "prdtoa.h"
-#include "nsIXFormsControl.h"
-#include "nsIModelElementPrivate.h"
 
 NS_IMPL_ISUPPORTS1(nsXFormsUtilityService, nsIXFormsUtilityService)
 
@@ -62,20 +60,6 @@ NS_IMPL_ISUPPORTS1(nsXFormsUtilityService, nsIXFormsUtilityService)
  */
 #define NS_SCHEMAVALIDATOR_CONTRACTID  "@mozilla.org/schemavalidator;1"
 
-
-NS_IMETHODIMP
-nsXFormsUtilityService::GetBuiltinTypeName(nsIDOMNode *aElement,
-                                           nsAString& aName)
-{
-  nsCOMPtr<nsIDOMElement> element(do_QueryInterface(aElement));
-  NS_ENSURE_TRUE(element, NS_ERROR_FAILURE);
-
-  nsCOMPtr<nsIModelElementPrivate> model = nsXFormsUtils::GetModel(element);
-  NS_ENSURE_TRUE(model, NS_ERROR_FAILURE);
-
-  nsCOMPtr<nsIXFormsControl> control(do_QueryInterface(element));
-  return model->GetBuiltinTypeNameForControl(control, aName);
-}
 
 NS_IMETHODIMP
 nsXFormsUtilityService::GetModelFromNode(nsIDOMNode *aNode, 
@@ -212,33 +196,22 @@ nsXFormsUtilityService::ValidateString(const nsAString & aValue,
 }
 
 NS_IMETHODIMP
-nsXFormsUtilityService::GetRepeatIndexById(nsIDOMNode *aResolverNode,
-                                           const nsAString &aId,
-                                           PRInt32         *aIndex)
+nsXFormsUtilityService::GetRepeatIndex(nsIDOMNode *aRepeat, PRInt32 *aIndex)
 {
-  NS_ENSURE_ARG_POINTER(aIndex);
+  NS_ASSERTION(aIndex, "no return buffer for index, we'll crash soon");
+  *aIndex = 0;
 
-  nsCOMPtr<nsIDOMElement> resolverElement(do_QueryInterface(aResolverNode));
-  NS_ENSURE_STATE(resolverElement);
-
-  nsCOMPtr<nsIDOMElement> element;
-  nsXFormsUtils::GetElementByContextId(resolverElement, aId,
-                                       getter_AddRefs(element));
-
-  nsCOMPtr<nsIDOMNode> node(do_QueryInterface(element));
-
-  nsCOMPtr<nsIXFormsRepeatElement> repeat = do_QueryInterface(node);
-  if (!repeat) {
+  nsCOMPtr<nsIXFormsRepeatElement> repeatEle = do_QueryInterface(aRepeat);
+  if (!repeatEle) {
     // if aRepeat isn't a repeat element, then setting aIndex to -1 to tell
     // XPath to return NaN.  Per 7.8.5 in the spec (1.0, 2nd edition)
     *aIndex = -1;
-    return NS_OK;
+  } else {
+    PRUint32 retIndex = 0;
+    nsresult rv = repeatEle->GetIndex(&retIndex);
+    NS_ENSURE_SUCCESS(rv, rv);
+    *aIndex = retIndex;
   }
-
-  PRUint32 retIndex = 0;
-  nsresult rv = repeat->GetIndex(&retIndex);
-  NS_ENSURE_SUCCESS(rv, rv);
-  *aIndex = retIndex;
 
   return NS_OK;
 }

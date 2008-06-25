@@ -36,6 +36,8 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+const Cc = Components.classes;
+const Ci = Components.interfaces;
 const SUNBIRD_UID = "{718e30fb-e89b-41dd-9da7-e25a45638b28}";
 const FIREFOX_UID = "{ec8030f7-c20a-464f-9b0e-13a3a9e97384}";
 
@@ -72,9 +74,16 @@ var gMigrateWizard = {
         LOG("migrators: " + window.arguments.length);
         for each (var migrator in window.arguments[0]) {
             var listItem = document.createElement("listitem");
-            listItem.setAttribute("type", "checkbox");
-            listItem.setAttribute("checked", true);
-            listItem.setAttribute("label", migrator.title);
+            var checkCell = document.createElement("listcell");
+            checkCell.setAttribute("type", "checkbox");
+
+            checkCell.setAttribute("checked", true);
+            listItem.appendChild(checkCell);
+
+            var nameCell = document.createElement("listcell");
+            nameCell.setAttribute("label", migrator.title);
+            listItem.appendChild(nameCell);
+
             listItem.migrator = migrator;
             listbox.appendChild(listItem);
         }
@@ -91,8 +100,8 @@ var gMigrateWizard = {
         // Get all the checked migrators into an array
         var listbox = document.getElementById("datasource-list");
         for (var i = listbox.childNodes.length-1; i >= 0; i--) {
-            LOG("Checking child node: " + listbox.childNodes[i]);
-            if (listbox.childNodes[i].getAttribute("checked")) {
+            LOG("Checking child node: " + listbox.childNodes[i].firstChild);
+            if (listbox.childNodes[i].firstChild.getAttribute("checked")) {
                 LOG("Adding migrator");
                 migrators.push(listbox.childNodes[i].migrator);
             }
@@ -280,7 +289,7 @@ var gDataMigrator = {
         // is installed, we have to nuke it.  The old extension defines some of
         // the same paths as we do, and the resulting file conflicts result in
         // first-class badness. getCompositeCalendar is a conflicting function
-        // that exists in Lighnting's version of calUtils.js.  If it isn't
+        // that exists in Lighnting's version of calendarUtils.js.  If it isn't
         // defined, we have a conflict.
         if (this.isLightning() && !("getCompositeCalendar" in window)) {
 

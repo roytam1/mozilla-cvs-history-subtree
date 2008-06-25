@@ -56,7 +56,7 @@
 
     <script type="application/x-javascript" src="chrome://calendar/content/migration.js"/>
     <script type="application/x-javascript" src="chrome://calendar/content/import-export.js"/>
-    <script type="application/x-javascript" src="chrome://calendar/content/calUtils.js"/>
+    <script type="application/x-javascript" src="chrome://calendar/content/calendarUtils.js"/>
 
     <wizardpage id="wizardPage1"
                 pageid="initialPage"
@@ -64,6 +64,10 @@
                 label="&migration.welcome;">
         <description id="wizard-desc">&migration.list.description;</description>
         <listbox id="datasource-list" flex="1">
+            <listcols>
+                <listcol/>
+                <listcol flex="1"/>
+             </listcols>
         </listbox>
     </wizardpage>
 

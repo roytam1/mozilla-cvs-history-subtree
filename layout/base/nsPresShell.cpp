@@ -188,7 +188,6 @@
 #include "nsIMenuFrame.h"
 #include "nsITreeBoxObject.h"
 #endif
-#include "nsIMenuParent.h"
 #include "nsPlaceholderFrame.h"
 
 // Dummy layout request
@@ -1222,8 +1221,6 @@ public:
   NS_IMETHOD BidiStyleChangeReflow();
 #endif
 
-  virtual void HidePopups();
-
   //nsIViewObserver interface
 
   NS_IMETHOD Paint(nsIView *aView,
@@ -1399,9 +1396,6 @@ protected:
   nsresult SetPrefFocusRules(void);
   nsresult SetPrefNoScriptRule();
   nsresult SetPrefNoFramesRule(void);
-
-  // Hide a view if it is a popup
-  void HideViewIfPopup(nsIView* aView);
 
   nsICSSStyleSheet*         mPrefStyleSheet; // mStyleSet owns it but we maintain a ref, may be null
 #ifdef DEBUG
@@ -5391,7 +5385,6 @@ PresShell::FlushPendingNotifications(mozFlushType aType)
     }
 
     if (aType & Flush_OnlyReflow) {
-      mFrameConstructor->RecalcQuotesAndCounters();
       ProcessReflowCommands(PR_FALSE);
     }
 
@@ -6726,18 +6719,6 @@ PresShell::Thaw()
   UnsuppressPainting();
 }
 
-void
-PresShell::HidePopups()
-{
-  nsIViewManager *vm = GetViewManager();
-  if (vm) {
-    nsIView *rootView = nsnull;
-    vm->GetRootView(rootView);
-    if (rootView)
-      HideViewIfPopup(rootView);
-  }
-}
-
 //--------------------------------------------------------
 // Start of protected and private methods on the PresShell
 //--------------------------------------------------------
@@ -7337,27 +7318,6 @@ PresShell::EnumeratePlugins(nsIDOMDocument *aDocument,
     nsCOMPtr<nsIContent> content = do_QueryInterface(node);
     if (content)
       aCallback(this, content);
-  }
-}
-
-void
-PresShell::HideViewIfPopup(nsIView* aView)
-{
-  nsIFrame* frame = NS_STATIC_CAST(nsIFrame*, aView->GetClientData());
-  if (frame) {
-    nsIMenuParent* parent;
-    CallQueryInterface(frame, &parent);
-    if (parent) {
-      parent->HideChain();
-      // really make sure the view is hidden
-      mViewManager->SetViewVisibility(aView, nsViewVisibility_kHide);
-    }
-  }
-
-  nsIView* child = aView->GetFirstChild();
-  while (child) {
-    HideViewIfPopup(child);
-    child = child->GetNextSibling();
   }
 }
 

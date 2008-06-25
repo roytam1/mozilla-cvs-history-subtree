@@ -282,14 +282,7 @@ nsDragService::InvokeDragSession (nsIDOMNode *aDOMNode, nsISupportsArray * aTran
   // reset by the dragTrackingHandler).
   StartDragSession();
   ::TrackDrag ( theDragRef, &theEvent, theDragRgn );
-#ifndef MOZ_WIDGET_COCOA
   EndDragSession();
-#else  // MOZ_WIDGET_COCOA
-  if (mDoingDrag) {
-    // An action proc inside of TrackDrag may have already ended the drag.
-    EndDragSession();
-  }
-#endif  // MOZ_WIDGET_COCOA
   
   // clean up after ourselves 
   ::DisposeRgn ( theDragRgn );

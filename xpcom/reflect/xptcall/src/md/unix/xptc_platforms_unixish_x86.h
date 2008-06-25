@@ -107,16 +107,12 @@
 #define THUNK_BASED_THIS_ADJUST
 
 #elif defined(__OpenBSD__) 
-#if __GNUC__ >= 3
-#define THUNK_BASED_THIS_ADJUST
-#else
-/* OpenBSD introduces GCC 2.95.x in late May 1999 */
+/* OpenBSD instroduces GCC 2.95.x in late May 1999 */
 #include <sys/param.h>
 #if OpenBSD <= 199905
 #define THUNK_BASED_THIS_ADJUST
 #else
 #define CFRONT_STYLE_THIS_ADJUST
-#endif
 #endif
 
 #elif defined(__bsdi__) 
@@ -129,13 +125,7 @@
 #endif
 
 #elif defined(NTO) 
-#if (__GNUC__ == 2) && (__GNUC_MINOR__ <= 7)
-/* Old gcc 2.7.x.x.  What does gcc 2.8.x do?? */
 #define CFRONT_STYLE_THIS_ADJUST
-#else
-/* egcs and later */
-#define THUNK_BASED_THIS_ADJUST
-#endif
 
 #elif defined(__BEOS__) 
 #define CFRONT_STYLE_THIS_ADJUST
@@ -173,7 +163,7 @@
 /* Define KEEP_STACK_16_BYTE_ALIGNED if the stack needs to maintain alignment
  * in a CALL for some good reason (like ABI compliance). */
 
-#if defined(XP_MACOSX) || defined(__QNXNTO__)
+#ifdef XP_MACOSX
 /* http://developer.apple.com/documentation/DeveloperTools/Conceptual/LowLevelABI/Articles/IA32.html */
 #define KEEP_STACK_16_BYTE_ALIGNED
 #endif

@@ -24,7 +24,6 @@
  *   Michael Buettner <michael.buettner@sun.com>
  *   gekacheka@yahoo.com
  *   Matthew Willis <lilmatt@mozilla.com>
- *   Philipp Kewisch <mozilla@kewis.ch>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -83,65 +82,10 @@ var calendarViewController = {
         }
     },
 
-    pendingJobs: [],
-
-    // in order to initiate a modification for the occurrence passed as argument
-    // we create an object that records the necessary details and store it in an
-    // internal array ('pendingJobs'). this way we're in a position to terminate
-    // any pending modification if need should be.
-    createPendingModification: function (aOccurrence) {
-        // finalize a (possibly) pending modification. this will notify
-        // an open dialog to save any outstanding modifications.
-        aOccurrence = this.finalizePendingModification(aOccurrence);
-
-        var pendingModification = {
-            controller: this,
-            item: aOccurrence,
-            finalize: null,
-            dispose: function() {
-                var array = this.controller.pendingJobs;
-                for (var i=0; i<array.length; i++) {
-                    if (array[i] == this) {
-                        array.splice(i,1);
-                        break;
-                    }
-                }
-            }
-        }
-
-        this.pendingJobs.push(pendingModification);
-
-        modifyEventWithDialog(aOccurrence,pendingModification);
-    },
-
-    // iterate the list of pending modifications and see if the occurrence
-    // passed as argument is currently about to be modified (event dialog is
-    // open with the item in question). if this should be the case we call
-    // finalize() in order to bring the dialog down and avoid dataloss.
-    finalizePendingModification: function (aOccurrence) {
-
-      for each (var job in this.pendingJobs) {
-          var item = job.item;
-          var parent = item.parent;
-          if (item.hasSameIds(aOccurrence) ||
-              item.parentItem.hasSameIds(aOccurrence) ||
-              item.hasSameIds(aOccurrence.parentItem)) {
-              // terminate() will most probably create a modified item instance.
-              aOccurrence = job.finalize();
-              break;
-        }
-      }
-
-      return aOccurrence;
-    },
-
     modifyOccurrence: function (aOccurrence, aNewStartTime, aNewEndTime, aNewTitle) {
-
-        aOccurrence = this.finalizePendingModification(aOccurrence);
-
         // if modifying this item directly (e.g. just dragged to new time),
         // then do so; otherwise pop up the dialog
-        if (aNewStartTime || aNewEndTime || aNewTitle) {
+        if ((aNewStartTime && aNewEndTime) || aNewTitle) {
             var instance = aOccurrence.clone();
 
             if (aNewTitle) {
@@ -154,22 +98,14 @@ var calendarViewController = {
             // function. If we ever revert that decision, check CVS history
             // here to get that code back.
 
-            if (aNewStartTime || aNewEndTime) {
+            if (aNewStartTime) { // we know we have aEndTime too then
                 // Yay for variable names that make this next line look silly
                 if (instance instanceof Components.interfaces.calIEvent) {
-                    if (aNewStartTime && instance.startDate) {
-                        instance.startDate = aNewStartTime;
-                    }
-                    if (aNewEndTime && instance.endDate) {
-                        instance.endDate = aNewEndTime;
-                    }
+                    instance.startDate = aNewStartTime;
+                    instance.endDate = aNewEndTime;
                 } else {
-                    if (aNewStartTime && instance.entryDate) {
-                        instance.entryDate = aNewStartTime;
-                    }
-                    if (aNewEndTime && instance.dueDate) {
-                        instance.dueDate = aNewEndTime;
-                    }
+                    instance.entryDate = aNewStartTime;
+                    instance.dueDate = aNewEndTime;
                 }
             }
             doTransaction('modify', instance, instance.calendar, aOccurrence, null);
@@ -179,76 +115,22 @@ var calendarViewController = {
             if (!itemToEdit) {
                 return;  // user cancelled
             }
-
-            this.createPendingModification(itemToEdit);
+            modifyEventWithDialog(itemToEdit);
         }
     },
 
-    deleteOccurrences: function (aCount,
-                                 aOccurrences,
-                                 aUseParentItems,
-                                 aDoNotConfirm) {
-        startBatchTransaction();
-        var recurringItems = {};
-
-        function getSavedItem(aItemToDelete) {
-            // Get the parent item, saving it in our recurringItems object for
-            // later use. Use one string twice to resolve "ab" + "cd" vs. "a" +
-            // "bcd" ambiguity.
-            var hashVal = aItemToDelete.parentItem.calendar.id +
-                          aItemToDelete.parentItem.id +
-                          aItemToDelete.parentItem.calendar.id;
-            if (!recurringItems[hashVal]) {
-                recurringItems[hashVal] = {
-                    oldItem: aItemToDelete.parentItem,
-                    newItem: aItemToDelete.parentItem.clone()
-                };
-            }
-            return recurringItems[hashVal];
+    deleteOccurrence: function (aOccurrence) {
+        var itemToDelete = getOccurrenceOrParent(aOccurrence);
+        if (!itemToDelete) {
+            return;
         }
-
-        // Make sure we are modifying a copy of aOccurrences, otherwise we will
-        // run into race conditions when the view's doDeleteItem removes the
-        // array elements while we are iterating through them.
-        var occurrences = aOccurrences.slice(0);
-
-        for each (var itemToDelete in occurrences) {
-            if (aUseParentItems) {
-                // Usually happens when ctrl-click is used. In that case we
-                // don't need to ask the user if he wants to delete an
-                // occurrence or not.
-                itemToDelete = itemToDelete.parentItem;
-            } else if (!aDoNotConfirm && occurrences.length == 1) {
-                // Only give the user the selection if only one occurrence is
-                // selected. Otherwise he will get a dialog for each occurrence
-                // he deletes.
-                itemToDelete = getOccurrenceOrParent(itemToDelete);
-            }
-            if (!itemToDelete) {
-                continue;
-            }
-            itemToDelete = this.finalizePendingModification(itemToDelete);
-            if (!itemToDelete.parentItem.hasSameIds(itemToDelete)) {
-                var savedItem = getSavedItem(itemToDelete);
-                savedItem.newItem.recurrenceInfo
-                         .removeOccurrenceAt(itemToDelete.recurrenceId);
-                // Dont start the transaction yet. Do so later, in case the
-                // parent item gets modified more than once.
-            } else {
-                doTransaction('delete', itemToDelete, itemToDelete.calendar, null, null);
-            }
+        if (!itemToDelete.parentItem.hasSameIds(itemToDelete)) {
+            var event = itemToDelete.parentItem.clone();
+            event.recurrenceInfo.removeOccurrenceAt(itemToDelete.recurrenceId);
+            doTransaction('modify', event, event.calendar, itemToDelete.parentItem, null);
+        } else {
+            doTransaction('delete', itemToDelete, itemToDelete.calendar, null, null);
         }
-
-        // Now handle recurring events. This makes sure that all occurrences
-        // that have been passed are deleted.
-        for each (var ritem in recurringItems) {
-            doTransaction('modify',
-                          ritem.newItem,
-                          ritem.newItem.calendar,
-                          ritem.oldItem,
-                          null);
-        }
-        endBatchTransaction();
     }
 };
 
@@ -283,7 +165,7 @@ function switchToView(aViewType) {
 }
 
 function moveView(aNumber) {
-    currentView().moveView(aNumber);
+    getViewDeck().selectedPanel.moveView(aNumber);
 }
 
 // Helper function to get the view deck in a neutral way, regardless of whether
@@ -294,19 +176,8 @@ function getViewDeck() {
     return sbDeck || ltnDeck;
 }
 
-/**
- * Returns the currently visible calendar view.
- */
 function currentView() {
     return getViewDeck().selectedPanel;
-}
-
-/**
- * Returns the selected day in the views in a app (Sunbird vs. Lightning)
- * neutral way
- */
-function getSelectedDay() {
-    return currentView().selectedDay;
 }
 
 /** Creates a timer that will fire after midnight.  Pass in a function as 
@@ -339,8 +210,6 @@ function getStyleSheet(aStyleSheetPath) {
             return sheet;
         }
     }
-    // Avoid the js strict "function does not always return a value" warning.
-    return null;
 }
 
 // Updates the style rules for a particular object.  If the object is a

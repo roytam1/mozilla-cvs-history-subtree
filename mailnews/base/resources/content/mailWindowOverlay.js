@@ -2184,10 +2184,10 @@ var gMessageNotificationBar =
 };
 
 /**
- * LoadMsgWithRemoteContent
+ * loadMsgWithRemoteContent
  *   Reload the current message, allowing remote content
  */
-function LoadMsgWithRemoteContent()
+function loadMsgWithRemoteContent()
 {
   // we want to get the msg hdr for the currently selected message
   // change the "remoteContentBar" property on it

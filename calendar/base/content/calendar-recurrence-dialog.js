@@ -131,7 +131,7 @@ function loadDialog()
     if (rules.length > 0) {
         // we only handle 1 rule currently
         var rule = rules[0];
-        if (rule instanceof Ci.calIRecurrenceRule) {
+        if (rule instanceof calIRecurrenceRule) {
 
             switch(rule.type) {
             case "DAILY":
@@ -159,17 +159,17 @@ function loadDialog()
                 var days = rule.getComponent("BYMONTHDAY", {});
                 if (days.length > 0 && days[0]) {
                     if (days[0] == -1) {
-                        calRadioGroupSelectItem("monthly-type", "monthly-last-day");
+                        radioGroupSelectItem("monthly-type", "monthly-last-day");
                     } else {
-                        calRadioGroupSelectItem("monthly-type", "monthly-nth-day");
+                        radioGroupSelectItem("monthly-type", "monthly-nth-day");
                     }
                 }
                 days = rule.getComponent("BYDAY", {}) ;
                 if (days.length > 0 && days[0] > 0) {
-                    calRadioGroupSelectItem("monthly-type", "monthly-nth-week");
+                    radioGroupSelectItem("monthly-type", "monthly-nth-week");
                 }
                 if (days.length > 0 && days[0] < 0) {
-                    calRadioGroupSelectItem("monthly-type", "monthly-last-week");
+                    radioGroupSelectItem("monthly-type", "monthly-last-week");
                 }
                 break;
             case "YEARLY":
@@ -232,7 +232,7 @@ function saveDialog()
         recurrenceInfo.item = window.calendarEvent;
     }
 
-    var recRule = createRecurrenceRule();
+    var recRule = new calRecurrenceRule();
     switch (deckNumber) {
     case 0:
         recRule.type = "DAILY";

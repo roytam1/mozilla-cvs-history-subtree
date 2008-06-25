@@ -303,10 +303,6 @@ private:
                                        nsISchemaComplexType *aSchemaComplexType,
                                        PRBool *aResult);
 
-  nsresult ValidateComplexModelEmpty(nsIDOMNode    *aNode,
-                              nsISchemaComplexType *aSchemaComplexType,
-                              PRBool               *aResult);
-
   nsresult ValidateComplexModelSimple(nsIDOMNode *aNode,
                                       nsISchemaComplexType *aSchemaComplexType,
                                       PRBool *aResult);
@@ -318,7 +314,7 @@ private:
   nsresult ValidateComplexSequence(nsIDOMNode *aStartNode,
                                    nsISchemaModelGroup *aSchemaModelGroup,
                                    nsIDOMNode **aLeftOvers, PRBool *aNotFound,
-                                   PRBool *aResult, PRUint32 *aValidatedNodes);
+                                   PRBool *aResult);
 
   nsresult ValidateComplexParticle(nsIDOMNode* aNode,
                                    nsISchemaParticle *aSchemaParticle,
@@ -350,7 +346,6 @@ private:
                                         const nsAString & aAttrName,
                                         PRUint32 *aFoundAttrCount,
                                         PRBool *aResult);
-  nsresult GetElementXsiType(nsIDOMNode* aNode, nsISchemaType** aType);
 
 static void
 ReleaseObject(void    *aObject,

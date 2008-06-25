@@ -196,36 +196,6 @@ NSString* const kTabBarBackgroundDoubleClickedNotification = @"kTabBarBackground
   return nil;
 }
 
-// Returns the number of tabs, excluding ones which contain a URI unsuitable for
-// bookmarking (e.g. a blank or unsafe URI)
-- (int)numberOfBookmarkableTabViewItems
-{
-  int numberOfBookmarkableTabs = 0;
-  int numberOfTabs = [self numberOfTabViewItems];
-  for (int i = 0; i < numberOfTabs; i++) {
-    BrowserWrapper* browserWrapper = (BrowserWrapper*)[[self tabViewItemAtIndex:i] view];
-    if ([browserWrapper isBookmarkable])
-      numberOfBookmarkableTabs++;
-  }
-  return numberOfBookmarkableTabs;
-}
-
-- (int)indexOfTabViewItemWithURL:(NSString*)aURL
-{
-  // Try the selected tab first.
-  if ([[(BrowserWrapper*)[[self selectedTabViewItem] view] currentURI] isEqualToString:aURL])
-    return [self indexOfTabViewItem:[self selectedTabViewItem]];
-  // Otherwise just walk all the tabs and return the first match.
-  NSArray* tabViewItems = [self tabViewItems];
-  for (unsigned int i = 0; i < [tabViewItems count]; i++) {
-    id tab = [tabViewItems objectAtIndex:i];
-    if ([[(BrowserWrapper*)[tab view] currentURI] isEqualToString:aURL]) {
-      return i;
-    }
-  }
-  return NSNotFound;
-}
-
 /******************************************/
 /*** Accessor Methods                   ***/
 /******************************************/
@@ -426,7 +396,7 @@ NSString* const kTabBarBackgroundDoubleClickedNotification = @"kTabBarBackground
 {
   [self hideDragDestinationIndicator];
 
-  NSArray* urls = nil;
+  NSArray* urls;
   NSArray* pasteBoardTypes = [[sender draggingPasteboard] types];
   if ([pasteBoardTypes containsObject:kCaminoBookmarkListPBoardType]) {
     NSArray* bookmarkUUIDs = [[sender draggingPasteboard] propertyListForType:kCaminoBookmarkListPBoardType];

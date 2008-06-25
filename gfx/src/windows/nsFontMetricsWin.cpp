@@ -5948,10 +5948,8 @@ PRBool LookupWinFontName(const nsAFlatString& aName, nsAString& aWinName)
       // if font codepage == current codepage, use the native name
       return PR_FALSE;
     }
-    // if font codepage != current codepage, map to the ASCII name by
-    // truncating '.cpXXX' (6 characters) at the end. 
-    // aWinName ends with '.cpXXX' where 'XXX' is 932,936,949 or 950.
-    aWinName.Truncate(aWinName.Length() - 6);
+    // if font codepage != current codepage, map to the ASCII name
+    aWinName.Truncate(aWinName.Length() - gCodepageStr->Length());
     return PR_TRUE;
   }
   return PR_FALSE;  // native name not listed in the properties file.

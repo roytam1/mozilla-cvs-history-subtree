@@ -63,7 +63,6 @@ class nsIDOMEvent;
 #define NS_NAMESPACE_XML_SCHEMA          "http://www.w3.org/2001/XMLSchema"
 #define NS_NAMESPACE_XML_SCHEMA_INSTANCE "http://www.w3.org/2001/XMLSchema-instance"
 #define NS_NAMESPACE_MOZ_XFORMS_TYPE     "http://www.mozilla.org/projects/xforms/2005/type"
-#define NS_NAMESPACE_SOAP_ENVELOPE       "http://schemas.xmlsoap.org/soap/envelope/"
 #define NS_NAMESPACE_MOZ_XFORMS_LAZY     "http://www.mozilla.org/projects/xforms/2005/lazy"
 
 /**
@@ -380,9 +379,6 @@ public:
    * @param aContextNode      The resulting context node
    * @param aContextPosition  The resulting context position
    * @param aContextSize      The resulting context size
-   *
-   * This function may return NS_OK_XFORMS_NOTREADY if parent context containers
-   * haven't yet had a chance to bind.
    */
   static NS_HIDDEN_(nsresult) FindParentContext(nsIDOMElement           *aElement,
                                                 nsIModelElementPrivate **aModel,
@@ -524,50 +520,21 @@ public:
   static NS_HIDDEN_(PRBool) IsDocumentReadyForBind(nsIDOMElement *aElement);
 
   /**
-   * Search for an element by ID through repeat rows looking for controls in
-   * addition to looking through the regular DOM.
+   * Retrieve an element by id, handling (cloned) elements inside repeats.
    *
-   * For example, xf:dispatch dispatches an event to an element with the given
-   * ID. If the element is in a repeat, you don't want to dispatch the event to
-   * the element in the DOM since we just end up hiding it and treating it as
-   * part of the repeat template. So we use nsXFormsUtils::GetElementById to
-   * dispatch the event to the contol with that id that is in the repeat row
-   * that has the current focus (well, the repeat row that corresponds to the
-   * repeat's index). If the element with that ID isn't in a repeat, then it
-   * picks the element with that ID from the DOM. But you wouldn't want to use
-   * this call for items that you know can't be inside repeats (like instance or
-   * submission elements). So for those you should use
-   * nsXFormsUtils::GetElementByContextId.
-   *
+   * @param aDoc              The document to get element from
    * @param aId               The id of the element
    * @param aOnlyXForms       Only search for XForms elements
    * @param aCaller           The caller (or rather the caller's DOM element),
                               ignored if nsnull
    * @param aElement          The element (or nsnull if not found)
    */
-  static NS_HIDDEN_(nsresult) GetElementById(const nsAString  &aId,
+  static NS_HIDDEN_(nsresult) GetElementById(nsIDOMDocument   *aDoc,
+                                             const nsAString  &aId,
                                              const PRBool      aOnlyXForms,
                                              nsIDOMElement    *aCaller,
                                              nsIDOMElement   **aElement);
-
-  /**
-   * Search for an element with the given ID value. First
-   * nsIDOMDocument::getElementById() is used. If it successful then found
-   * element is returned. Second, if the given node is inside anonymous content
-   * then search is performed throughout the complete bindings chain by @anonid
-   * attribute.
-   *
-   * @param aRefNode      The node relatively of which search is performed in
-   *                      anonymous content
-   * @param aId           The @id/@anonid value to search for
-   *
-   * @return aElement     The element we found that has its ID/anonid value
-   *                      equal to aId
-   */
-  static NS_HIDDEN_(nsresult) GetElementByContextId(nsIDOMElement   *aRefNode,
-                                                    const nsAString &aId,
-                                                    nsIDOMElement   **aElement);
-
+  
   /**
    * Shows an error dialog for fatal errors.
    *
@@ -621,15 +588,6 @@ public:
    */
   static NS_HIDDEN_(nsresult) GetWindowFromDocument(nsIDOMDocument        *aDoc,
                                                     nsIDOMWindowInternal **aWindow);
-
-  /**
-   * Determine whether the given node contains an xf:itemset as a child.
-   * In valid XForms documents this should only be possible if aNode is an
-   * xf:select/1 or an xf:choices element.  This function is used primarily
-   * as a worker function for select/1's IsContentAllowed override.
-
-   */
-  static NS_HIDDEN_(PRBool) NodeHasItemset(nsIDOMNode *aNode);
 
 private:
   /**

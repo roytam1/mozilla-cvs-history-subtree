@@ -100,7 +100,6 @@
                         </vbox>
                       </groupbox>
 
-<!--
                       <groupbox class='box-prefgroupitem'>
 
                         <vbox class="box-prefpadding">
@@ -113,7 +112,6 @@
                         </vbox>
 
                       </groupbox>
--->
 
                       <groupbox class='box-prefgroupitem' id='home-box'>
 

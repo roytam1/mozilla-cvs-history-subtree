@@ -84,12 +84,10 @@ enum {
   kFunc_FinalizeProxy,
   kFunc_IsSameXPCOMObject,
   kFunc_ReleaseProfileLock,
-  kFunc_GetNativeHandleFromAWT,
-  kFunc_WrapJavaObject,
-  kFunc_WrapXPCOMObject
+  kFunc_GetNativeHandleFromAWT
 };
 
-#define JX_NUM_FUNCS 18
+#define JX_NUM_FUNCS 16
 
 
 // Get path string from java.io.File object.
@@ -168,10 +166,6 @@ LoadXULMethods(JNIEnv* env, jobject aXPCOMPath, void** aFunctions)
             (NSFuncPtr*) &aFunctions[kFunc_ReleaseProfileLock] },
     { "_Java_org_mozilla_xpcom_internal_MozillaImpl_getNativeHandleFromAWT@12",
             (NSFuncPtr*) &aFunctions[kFunc_GetNativeHandleFromAWT] },
-    { "_Java_org_mozilla_xpcom_internal_JavaXPCOMMethods_wrapJavaObject@16",
-            (NSFuncPtr*) &aFunctions[kFunc_WrapJavaObject] },
-    { "_Java_org_mozilla_xpcom_internal_JavaXPCOMMethods_wrapXPCOMObject@20",
-            (NSFuncPtr*) &aFunctions[kFunc_WrapXPCOMObject] },
     { nsnull, nsnull }
   };
 #else
@@ -208,10 +202,6 @@ LoadXULMethods(JNIEnv* env, jobject aXPCOMPath, void** aFunctions)
             (NSFuncPtr*) &aFunctions[kFunc_ReleaseProfileLock] },
     { "Java_org_mozilla_xpcom_internal_MozillaImpl_getNativeHandleFromAWT",
             (NSFuncPtr*) &aFunctions[kFunc_GetNativeHandleFromAWT] },
-    { "Java_org_mozilla_xpcom_internal_JavaXPCOMMethods_wrapJavaObject",
-            (NSFuncPtr*) &aFunctions[kFunc_WrapJavaObject] },
-    { "Java_org_mozilla_xpcom_internal_JavaXPCOMMethods_wrapXPCOMObject",
-            (NSFuncPtr*) &aFunctions[kFunc_WrapXPCOMObject] },
     { nsnull, nsnull }
   };
 #endif
@@ -313,16 +303,9 @@ RegisterNativeMethods(JNIEnv* env, void** aFunctions)
       (void*) aFunctions[kFunc_IsSameXPCOMObject] }
   };
 
-  JNINativeMethod lockProxy_methods[] = {
+   JNINativeMethod lockProxy_methods[] = {
     { "releaseNative", "(J)V",
       (void*) aFunctions[kFunc_ReleaseProfileLock] }
-  };
-
-  JNINativeMethod util_methods[] = {
-    { "wrapJavaObject", "(Ljava/lang/Object;Ljava/lang/String;)J",
-      (void*) aFunctions[kFunc_WrapJavaObject] },
-    { "wrapXPCOMObject", "(JLjava/lang/String;)Ljava/lang/Object;",
-      (void*) aFunctions[kFunc_WrapXPCOMObject] }
   };
 
   jint rc = -1;
@@ -362,14 +345,6 @@ RegisterNativeMethods(JNIEnv* env, void** aFunctions)
   if (clazz) {
     rc = env->RegisterNatives(clazz, lockProxy_methods,
                       sizeof(lockProxy_methods) / sizeof(lockProxy_methods[0]));
-  }
-  NS_ENSURE_TRUE(rc == 0, NS_ERROR_FAILURE);
-
-  rc = -1;
-  clazz = env->FindClass("org/mozilla/xpcom/internal/JavaXPCOMMethods");
-  if (clazz) {
-    rc = env->RegisterNatives(clazz, util_methods,
-                              sizeof(util_methods) / sizeof(util_methods[0]));
   }
   NS_ENSURE_TRUE(rc == 0, NS_ERROR_FAILURE);
 

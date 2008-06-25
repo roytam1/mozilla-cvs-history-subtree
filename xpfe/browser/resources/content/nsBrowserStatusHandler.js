@@ -297,7 +297,7 @@ nsBrowserStatusHandler.prototype =
       }
     }
 
-    if (!getWebNavigation().canGoBack && location == "about:blank" && !content.opener)
+    if (!getWebNavigation().canGoBack && location == "about:blank")
       location = "";
 
     // Disable menu entries for images, enable otherwise

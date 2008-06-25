@@ -38,8 +38,6 @@
 
 #include "cairo-gstate-private.h"
 
-#define PEN_MAX_VERTICES 0xffff
-
 static int
 _cairo_pen_vertices_needed (double tolerance, double radius, cairo_matrix_t *matrix);
 
@@ -91,7 +89,7 @@ _cairo_pen_init (cairo_pen_t *pen, double radius, cairo_gstate_t *gstate)
 						    radius,
 						    &gstate->ctm);
 
-    if ((pen->num_vertices <= 0) || (pen->num_vertices > PEN_MAX_VERTICES)) {
+    if (pen->num_vertices > 0xffff) {
         return CAIRO_STATUS_NO_MEMORY;
     }
 
@@ -153,17 +151,7 @@ _cairo_pen_add_points (cairo_pen_t *pen, cairo_point_t *point, int num_points)
     int num_vertices;
     int i;
 
-    if (num_points <= 0 || num_points > PEN_MAX_VERTICES)
-	return CAIRO_STATUS_NO_MEMORY;
-
-    if (pen->num_vertices < 0 || pen->num_vertices > PEN_MAX_VERTICES)
-	return CAIRO_STATUS_NO_MEMORY;
-
     num_vertices = pen->num_vertices + num_points;
-
-    if (num_vertices > PEN_MAX_VERTICES)
-	return CAIRO_STATUS_NO_MEMORY;
-
     vertices = realloc (pen->vertices, num_vertices * sizeof (cairo_pen_vertex_t));
     if (vertices == NULL)
 	return CAIRO_STATUS_NO_MEMORY;

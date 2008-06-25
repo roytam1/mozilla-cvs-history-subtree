@@ -2440,7 +2440,7 @@ js_NewObject(JSContext *cx, JSClass *clasp, JSObject *proto, JSObject *parent)
 
 out:
     JS_POP_TEMP_ROOT(cx, &tvr);
-    cx->weakRoots.newborn[GCX_OBJECT] = (JSGCThing *) obj;
+    cx->newborn[GCX_OBJECT] = (JSGCThing *) obj;
     return obj;
 
 bad:
@@ -2667,7 +2667,7 @@ out:
     return obj;
 
 bad:
-    cx->weakRoots.newborn[GCX_OBJECT] = NULL;
+    cx->newborn[GCX_OBJECT] = NULL;
     obj = NULL;
     goto out;
 }
@@ -3648,10 +3648,8 @@ js_SetProperty(JSContext *cx, JSObject *obj, jsid id, jsval *vp)
 
             /* Don't clone a shared prototype property. */
             if (attrs & JSPROP_SHARED) {
-                if (SPROP_HAS_STUB_SETTER(sprop) &&
-                    !(sprop->attrs & JSPROP_GETTER)) {
-                    return JS_TRUE;
-                }
+                JS_ASSERT(!SPROP_HAS_STUB_SETTER(sprop) ||
+                          (sprop->attrs & JSPROP_GETTER));
                 return SPROP_SET(cx, sprop, obj, pobj, vp);
             }
 
@@ -4437,7 +4435,7 @@ js_GetClassPrototype(JSContext *cx, JSObject *scope, jsid id,
              * instance that delegates to this object, or just query the
              * prototype for its class.
              */
-            cx->weakRoots.newborn[GCX_OBJECT] = JSVAL_TO_GCTHING(v);
+            cx->newborn[GCX_OBJECT] = JSVAL_TO_GCTHING(v);
         }
     }
     *protop = JSVAL_IS_OBJECT(v) ? JSVAL_TO_OBJECT(v) : NULL;

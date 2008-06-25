@@ -109,6 +109,10 @@ function weekPrint_format(aStream, aStart, aEnd, aCount, aItems, aTitle) {
     }
     var sortedList = filteredItems.sort(compareItems);
 
+    var sbs = Components.classes["@mozilla.org/intl/stringbundle;1"]
+                        .getService(Components.interfaces.nsIStringBundleService);
+    var props = sbs.createBundle("chrome://calendar/locale/calendar.properties");
+
     var weekFormatter = Components.classes["@mozilla.org/calendar/weektitle-service;1"]
                                   .getService(Components.interfaces.calIWeekTitleService);
 
@@ -139,7 +143,7 @@ function weekPrint_format(aStream, aStart, aEnd, aCount, aItems, aTitle) {
 
     while(date.compare(end) == -1) {
         var weekno = weekFormatter.getWeekTitle(date);
-        var weekTitle = calGetString("calendar", 'WeekTitle', [weekno]);
+        var weekTitle = props.formatStringFromName('WeekTitle', [weekno], 1);
         body.appendChild(
                      <table border='0' width='100%' class='main-table'>
                          <tr> 
@@ -250,7 +254,10 @@ function weekPrint_getDayTable(aDate, aItems) {
 
             // We cache the string for "All Day" 'cause we're good like that.
             if (this.mAllDayString == null) {
-                this.mAllDayString = calGetString("dateFormat", "AllDay");
+                var sbs = Components.classes["@mozilla.org/intl/stringbundle;1"]
+                                    .getService(Components.interfaces.nsIStringBundleService);
+                var props = sbs.createBundle("chrome://calendar/locale/dateFormat.properties");
+                this.mAllDayString = props.GetStringFromName("AllDay");
             }
             return this.mAllDayString;
         }

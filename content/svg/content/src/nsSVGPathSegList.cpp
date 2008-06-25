@@ -223,7 +223,7 @@ NS_IMETHODIMP nsSVGPathSegList::Initialize(nsIDOMSVGPathSeg *newItem,
 /* nsIDOMSVGPathSeg getItem (in unsigned long index); */
 NS_IMETHODIMP nsSVGPathSegList::GetItem(PRUint32 index, nsIDOMSVGPathSeg **_retval)
 {
-  if (index >= NS_STATIC_CAST(PRUint32, mSegments.Count())) {
+  if ((PRInt32)index >= mSegments.Count()) {
     *_retval = nsnull;
     return NS_ERROR_DOM_INDEX_SIZE_ERR;
   }
@@ -262,7 +262,7 @@ NS_IMETHODIMP nsSVGPathSegList::ReplaceItem(nsIDOMSVGPathSeg *newItem,
 /* nsIDOMSVGPathSeg removeItem (in unsigned long index); */
 NS_IMETHODIMP nsSVGPathSegList::RemoveItem(PRUint32 index, nsIDOMSVGPathSeg **_retval)
 {
-  if (index >= NS_STATIC_CAST(PRUint32, mSegments.Count())) {
+  if ((PRInt32)index >= mSegments.Count()) {
     *_retval = nsnull;
     return NS_ERROR_DOM_INDEX_SIZE_ERR;
   }

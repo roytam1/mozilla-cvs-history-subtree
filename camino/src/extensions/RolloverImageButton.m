@@ -20,7 +20,6 @@
  *
  * Contributor(s):
  *   Aaron Schulman <aschulm@umd.edu>
- *   Stuart Morgan <stuart.morgan@alumni.case.edu>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -71,13 +70,18 @@
 
 - (void)dealloc
 {
-  [self removeTrackingRect];
   [mImage release];
   [mHoverImage release];
   
   NSNotificationCenter *nc = [NSNotificationCenter defaultCenter];
   [nc removeObserver:self];
   [super dealloc];
+}
+
+- (void)removeFromSuperview
+{
+  [self removeTrackingRect];
+  [super removeFromSuperview];
 }
 
 - (void)setEnabled:(BOOL)inStatus
@@ -100,30 +104,18 @@
     [self removeTrackingRect];
 }
 
-- (void)viewWillMoveToWindow:(NSWindow*)window
-{
-  [self removeTrackingRect];
-  // unregister the button from observering the current window
-  [[NSNotificationCenter defaultCenter] removeObserver:self];
-  [super viewWillMoveToWindow:window];
-}
-
 - (void)viewDidMoveToWindow
 {
   [self updateTrackingRect];
+  NSNotificationCenter *nc = [NSNotificationCenter defaultCenter];
+  // unregister the button from observering the current window just in case a tab moves from one window to another
+  [nc removeObserver:self];
   if ([self window]) {
-    NSNotificationCenter *nc = [NSNotificationCenter defaultCenter];
     [nc addObserver:self selector:@selector(handleWindowIsKey:)
           name:NSWindowDidBecomeKeyNotification object:[self window]];
     [nc addObserver:self selector:@selector(handleWindowResignKey:)
           name:NSWindowDidResignKeyNotification object:[self window]];
   }
-}
-
-- (void)setBounds:(NSRect)inBounds
-{
-  [super setBounds:inBounds];
-  [self updateTrackingRect];
 }
 
 - (void)setFrame:(NSRect)inFrame
@@ -228,14 +220,14 @@
 - (BOOL)isMouseInside
 {
   NSPoint mousePointInWindow = [[self window] convertScreenToBase:[NSEvent mouseLocation]];
-  NSPoint mousePointInView = [self convertPoint:mousePointInWindow fromView:nil];
-  return NSMouseInRect(mousePointInView, [self bounds], NO);
+  NSPoint mousePointInView = [[self superview] convertPoint:mousePointInWindow fromView:nil];
+  return NSMouseInRect(mousePointInView, [self frame], NO);
 }
 
 - (void)removeTrackingRect
 {
   if (mTrackingTag != -1) {
-    [self removeTrackingRect:mTrackingTag];
+    [[self superview] removeTrackingRect:mTrackingTag];
     mTrackingTag = -1;
   }
 }
@@ -246,7 +238,7 @@
     return;
   [self removeTrackingRect];
   BOOL mouseInside = [self isMouseInside];
-  mTrackingTag = [self addTrackingRect:[self bounds] owner:self userData:nil assumeInside:mouseInside];
+  mTrackingTag = [[self superview] addTrackingRect:[self frame] owner:self userData:nil assumeInside:mouseInside];
   [self updateImage:mouseInside];
 }
 

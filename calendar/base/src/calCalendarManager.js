@@ -37,7 +37,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-const SUNBIRD_UID = "{718e30fb-e89b-41dd-9da7-e25a45638b28}";
 
 const kStorageServiceContractID = "@mozilla.org/storage/service;1";
 const kStorageServiceIID = Components.interfaces.mozIStorageService;
@@ -176,7 +175,7 @@ calCalendarManager.prototype = {
         }
     },
     
-    DB_SCHEMA_VERSION: 7,
+    DB_SCHEMA_VERSION: 6,
 
     upgradeDB: function (oldVersion) {
         // some common helpers
@@ -300,19 +299,7 @@ calCalendarManager.prototype = {
                 var brandSb = sbs.createBundle("chrome://branding/locale/brand.properties");
                 var calSb = sbs.createBundle("chrome://calendar/locale/calendar.properties");
 
-                var hostAppName = brandSb.GetStringFromName("brandShortName");
-
-                // If we're Lightning, we want to include the extension name
-                // in the error message rather than blaming Thunderbird.
-                var appInfo = Components.classes["@mozilla.org/xre/app-info;1"]
-                                        .getService(Ci.nsIXULAppInfo);
-                var calAppName;
-                if (appInfo.ID == SUNBIRD_UID) {
-                    calAppName = hostAppName;
-                } else {
-                    lightningSb = sbs.createBundle("chrome://lightning/locale/lightning.properties");
-                    calAppName = lightningSb.GetStringFromName("brandShortName");
-                }
+                var shortName = brandSb.GetStringFromName("brandShortName");
 
                 var promptSvc = Components.classes["@mozilla.org/embedcomp/prompt-service;1"]
                                           .getService(Components.interfaces.nsIPromptService);
@@ -323,13 +310,13 @@ calCalendarManager.prototype = {
 
                 var choice = promptSvc.confirmEx(
                                 null,
-                                calSb.formatStringFromName("tooNewSchemaErrorBoxTitle",
-                                                           [calAppName], 1),
-                                calSb.formatStringFromName("tooNewSchemaErrorBoxText",
-                                                           [calAppName, hostAppName], 2),
+                                calSb.formatStringFromName("tooNewSchemaErrorTitle",
+                                                           [shortName], 1),
+                                calSb.formatStringFromName("tooNewSchemaErrorText",
+                                                           [shortName], 1),
                                 buttonFlags,
                                 calSb.formatStringFromName("tooNewSchemaButtonQuit",
-                                                           [hostAppName], 1),
+                                                           [shortName], 1),
                                 null, // No second button text
                                 null, // No third button text
                                 null, // No checkbox
@@ -346,6 +333,10 @@ calCalendarManager.prototype = {
         this.mSelectCalendars = createStatement (
             this.mDB,
             "SELECT oid,* FROM cal_calendars");
+
+        this.mFindCalendar = createStatement (
+            this.mDB,
+            "SELECT id FROM cal_calendars WHERE type = :type AND uri = :uri");
 
         this.mRegisterCalendar = createStatement (
             this.mDB,
@@ -374,6 +365,7 @@ calCalendarManager.prototype = {
         this.mDeletePrefs = createStatement (
             this.mDB,
             "DELETE FROM cal_calendars_prefs WHERE calendar = :calendar");
+
     },
 
     /** 
@@ -411,6 +403,21 @@ calCalendarManager.prototype = {
         throw "cal_calendar_schema_version SELECT returned no results";
     },
 
+    findCalendarID: function(calendar) {
+        var stmt = this.mFindCalendar;
+        stmt.reset();
+        var pp = stmt.params;
+        pp.type = calendar.type;
+        pp.uri = calendar.uri.spec;
+
+        var id = -1;
+        if (stmt.step()) {
+            id = stmt.row.id;
+        }
+        stmt.reset();
+        return id;
+    },
+    
     notifyObservers: function(functionName, args) {
         function notify(obs) {
             try { obs[functionName].apply(obs, args);  }
@@ -430,7 +437,7 @@ calCalendarManager.prototype = {
 
     registerCalendar: function(calendar) {
         // bail if this calendar (or one that looks identical to it) is already registered
-        if (calendar.id > 0) {
+        if (this.findCalendarID(calendar) > 0) {
             dump ("registerCalendar: calendar already registered\n");
             throw Components.results.NS_ERROR_FAILURE;
         }
@@ -445,12 +452,9 @@ calCalendarManager.prototype = {
 
         this.mRegisterCalendar.step();
         this.mRegisterCalendar.reset();
-        
-        calendar.id = this.mDB.lastInsertRowID;
-        
         //dump("adding [" + this.mDB.lastInsertRowID + "]\n");
         //this.mCache[this.mDB.lastInsertRowID] = calendar;
-        this.mCache[calendar.id] = calendar;
+        this.mCache[this.findCalendarID(calendar)] = calendar;
 
         this.notifyObservers("onCalendarRegistered", [calendar]);
     },
@@ -458,7 +462,7 @@ calCalendarManager.prototype = {
     unregisterCalendar: function(calendar) {
         this.notifyObservers("onCalendarUnregistering", [calendar]);
 
-        var calendarID = calendar.id;
+        var calendarID = this.findCalendarID(calendar);
 
         var pp = this.mUnregisterCalendar.params;
         pp.id = calendarID;
@@ -477,7 +481,7 @@ calCalendarManager.prototype = {
     deleteCalendar: function(calendar) {
         /* check to see if calendar is unregistered first... */
         /* delete the calendar for good */
-        if (calendar.id in this.mCache) {
+        if (this.findCalendarID(calendar) in this.mCache) {
             throw "Can't delete a registered calendar";
         }
         this.notifyObservers("onCalendarDeleting", [calendar]);
@@ -517,9 +521,7 @@ calCalendarManager.prototype = {
 
         for each (var caldata in newCalendarData) {
             try {
-                var cal = this.createCalendar(caldata.type, makeURI(caldata.uri));
-                cal.id = caldata.id;
-                this.mCache[caldata.id] = cal;
+                this.mCache[caldata.id] = this.createCalendar(caldata.type, makeURI(caldata.uri));
             } catch (e) {
                 dump("Can't create calendar for " + caldata.id + " (" + caldata.type + ", " + 
                      caldata.uri + "): " + e + "\n");
@@ -541,7 +543,7 @@ calCalendarManager.prototype = {
         var stmt = this.mGetPref;
         stmt.reset();
         var pp = stmt.params;
-        pp.calendar = calendar.id;
+        pp.calendar = this.findCalendarID(calendar);
         pp.name = name;
 
         var value = null;
@@ -556,7 +558,7 @@ calCalendarManager.prototype = {
         // pref names must be lower case
         name = name.toLowerCase();
 
-        var calendarID = calendar.id;
+        var calendarID = this.findCalendarID(calendar);
 
         this.mDB.beginTransaction();
 
@@ -584,7 +586,7 @@ calCalendarManager.prototype = {
 
         this.notifyObservers("onCalendarPrefDeleting", [calendar, name]);
 
-        var calendarID = calendar.id;
+        var calendarID = this.findCalendarID(calendar);
 
         var pp = this.mDeletePref.params;
         pp.calendar = calendarID;
@@ -592,7 +594,7 @@ calCalendarManager.prototype = {
         this.mDeletePref.step();
         this.mDeletePref.reset();
     },
-    
+
     mObservers: Array(),
     addObserver: function(aObserver) {
         if (this.mObservers.indexOf(aObserver) != -1)

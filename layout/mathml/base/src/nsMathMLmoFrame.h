@@ -51,7 +51,7 @@ class nsMathMLmoFrame : public nsMathMLTokenFrame {
 public:
   friend nsresult NS_NewMathMLmoFrame(nsIPresShell* aPresShell, nsIFrame** aNewFrame);
 
-  virtual eMathMLFrameType GetMathMLFrameType();
+  virtual nsIAtom* GetType() const;
 
   virtual void
   SetAdditionalStyleContext(PRInt32          aIndex, 

@@ -21,7 +21,6 @@ REQUIRES = necko \
 CPPSRCS = \
           nsUrlClassifierDBService.cpp \
           nsUrlClassifierStreamUpdater.cpp \
-          nsUrlClassifierUtils.cpp \
           $(NULL)
 
 LOCAL_INCLUDES = \

@@ -208,16 +208,14 @@ nsXTFBindableElementWrapper::QueryInterface(REFNSIID aIID, void** aInstancePtr)
   }
 
   // try to get get the interface from our wrapped element:
-  nsCOMPtr<nsISupports> inner;
-  QueryInterfaceInner(aIID, getter_AddRefs(inner));
+  void *innerPtr = nsnull;
+  QueryInterfaceInner(aIID, &innerPtr);
 
-  if (inner) {
-    rv = NS_NewXTFInterfaceAggregator(aIID, inner,
-                                      NS_STATIC_CAST(nsIContent*, this),
-                                      aInstancePtr);
-
-    return rv;
-  }
+  if (innerPtr)
+    return NS_NewXTFInterfaceAggregator(aIID,
+                                        NS_STATIC_CAST(nsISupports*, innerPtr),
+                                        NS_STATIC_CAST(nsIContent*, this),
+                                        aInstancePtr);
 
   return NS_ERROR_NO_INTERFACE;
 }

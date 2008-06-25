@@ -179,11 +179,9 @@ CairoGradient(cairo_t *ctx, nsISVGGradient *aGrad,
 
   PRUint16 aSpread;
   aGrad->GetSpreadMethod(&aSpread);
-  // We don't call cairo_pattern_set_extend for SVG_SPREADMETHOD_PAD because
-  // pad is cairo's default, and the explicit argument used for pad changed
-  // from CAIRO_EXTEND_NONE to CAIRO_EXTEND_PAD between cairo 1.0 and 1.2. See
-  // bug 358930.
-  if (aSpread == nsIDOMSVGGradientElement::SVG_SPREADMETHOD_REFLECT)
+  if (aSpread == nsIDOMSVGGradientElement::SVG_SPREADMETHOD_PAD)
+    cairo_pattern_set_extend(gradient, CAIRO_EXTEND_NONE);
+  else if (aSpread == nsIDOMSVGGradientElement::SVG_SPREADMETHOD_REFLECT)
     cairo_pattern_set_extend(gradient, CAIRO_EXTEND_REFLECT);
   else if (aSpread == nsIDOMSVGGradientElement::SVG_SPREADMETHOD_REPEAT)
     cairo_pattern_set_extend(gradient, CAIRO_EXTEND_REPEAT);

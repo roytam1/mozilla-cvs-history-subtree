@@ -120,7 +120,7 @@ var gAlarmsPane = {
         var fp = Components.classes["@mozilla.org/filepicker;1"]
                     .createInstance(nsIFilePicker);
 
-        var bundlePreferences = document.getElementById("bundleCalendarPreferences");
+        var bundlePreferences = document.getElementById("bundlePreferences");
         var title = bundlePreferences.getString("Open");
         var wildmat = "*.wav";
         var label = bundlePreferences.getFormattedString("filterWav", [wildmat], 1);
@@ -146,13 +146,9 @@ var gAlarmsPane = {
                             .getService(Components.interfaces.nsIIOService);
         var url;
         try {
+            url = ios.newURI(soundUrl, null, null);
             soundIfc.init();
-            if (soundUrl && soundUrl.length && soundUrl.length > 0) {
-                url = ios.newURI(soundUrl, null, null);
-                soundIfc.play(url);
-            } else {
-                soundIfc.beep();
-            }
+            soundIfc.play(url);
         } catch (ex) {
             dump("alarms.js previewAlarm Exception caught! " + ex + "\n");
         }

@@ -82,7 +82,6 @@
 #include "nsIDOMDocumentEvent.h"
 #include "nsIChannelEventSink.h"
 #include "nsIXFormsEphemeralMessageUI.h"
-#include "nsIContent.h"
 
 #define MESSAGE_WINDOW_PROPERTIES \
   "centerscreen,chrome,dependent,dialog"
@@ -165,8 +164,7 @@ public:
 private:
   nsresult HandleEphemeralMessage(nsIDOMDocument* aDoc, nsIDOMEvent* aEvent);
   nsresult HandleModalAndModelessMessage(nsIDOMDocument* aDoc, nsAString& aLevel);
-  void ImportNode(nsIDOMNode* aSrc, nsIDOMDocument* aDestDoc,
-                  nsIDOMNode** aTarget);
+  void CloneNode(nsIDOMNode* aSrc, nsIDOMNode** aTarget);
   PRBool HandleInlineAlert(nsIDOMEvent* aEvent);
   nsresult ConstructMessageWindowURL(const nsAString& aData,
                                      PRBool aIsLink,
@@ -272,21 +270,12 @@ nsXFormsMessageElement::OnDestroyed()
 NS_IMETHODIMP
 nsXFormsMessageElement::HandleEvent(nsIDOMEvent* aEvent)
 {
-  if (GetRepeatState() == eType_Template) {
-    return NS_OK;
-  }
-
-  nsCOMPtr<nsIDOMEventTarget> target;
-  aEvent->GetTarget(getter_AddRefs(target));
-  nsCOMPtr<nsIContent> content(do_QueryInterface(target));
-
   return nsXFormsUtils::EventHandlingAllowed(aEvent, mElement) ?
            HandleAction(aEvent, nsnull) : NS_OK;
 }
 
 void
-nsXFormsMessageElement::ImportNode(nsIDOMNode* aSrc, nsIDOMDocument* aDestDoc,
-                                   nsIDOMNode** aTarget)
+nsXFormsMessageElement::CloneNode(nsIDOMNode* aSrc, nsIDOMNode** aTarget)
 {
   nsAutoString ns;
   nsAutoString localName;
@@ -299,17 +288,21 @@ nsXFormsMessageElement::ImportNode(nsIDOMNode* aSrc, nsIDOMDocument* aDestDoc,
       localName.EqualsLiteral("output")) {
     nsCOMPtr<nsIDelegateInternal> outEl(do_QueryInterface(aSrc));
     if (outEl) {
-      nsCOMPtr<nsIDOMText> text;
-      nsAutoString value;
-      outEl->GetValue(value);
-      aDestDoc->CreateTextNode(value, getter_AddRefs(text));
-      NS_IF_ADDREF(*aTarget = text);
+      nsCOMPtr<nsIDOMDocument> doc;
+      aSrc->GetOwnerDocument(getter_AddRefs(doc));
+      if (doc) {
+        nsCOMPtr<nsIDOMText> text;
+        nsAutoString value;
+        outEl->GetValue(value);
+        doc->CreateTextNode(value, getter_AddRefs(text));
+        NS_IF_ADDREF(*aTarget = text);
+      }
     }
     return;
   }
 
   // Clone other elements
-  aDestDoc->ImportNode(aSrc, PR_FALSE, aTarget);
+  aSrc->CloneNode(PR_FALSE, aTarget);
 
   if (!*aTarget)
     return;
@@ -329,7 +322,7 @@ nsXFormsMessageElement::ImportNode(nsIDOMNode* aSrc, nsIDOMDocument* aDestDoc,
     
     if (child) {
       nsCOMPtr<nsIDOMNode> clone;
-      ImportNode(child, aDestDoc, getter_AddRefs(clone));
+      CloneNode(child, getter_AddRefs(clone));
       if (clone)
         (*aTarget)->AppendChild(clone, getter_AddRefs(tmp));
     }
@@ -734,7 +727,7 @@ nsXFormsMessageElement::HandleModalAndModelessMessage(nsIDOMDocument* aDoc,
         
         if (child) {
           nsCOMPtr<nsIDOMNode> clone;
-          ImportNode(child, ddoc, getter_AddRefs(clone));
+          CloneNode(child, getter_AddRefs(clone));
           if (clone)
             bodyEl->AppendChild(clone, getter_AddRefs(tmp));
         }

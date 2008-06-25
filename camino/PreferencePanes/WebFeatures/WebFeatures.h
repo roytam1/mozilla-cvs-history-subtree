@@ -22,7 +22,7 @@
  *
  * Contributor(s):
  *   william@dell.wisner.name (William Dell Wisner)
- *   josh@mozilla.com (Josh Aas)
+ *   joshmoz@gmail.com (Josh Aas)
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -58,11 +58,9 @@ class nsISupportsArray;
   IBOutlet NSButton *mImageResize;
   IBOutlet NSButton *mPreventAnimation;
   IBOutlet NSButton *mEditWhitelist;
-  IBOutlet NSButton *mEnableFlashBlock;  
 
   IBOutlet id mWhitelistPanel;
   IBOutlet ExtendedTableView*   mWhitelistTable;
-  IBOutlet NSTableColumn*       mPolicyColumn;
   IBOutlet NSTextField*         mAddField;
   IBOutlet NSButton*            mAddButton;
 
@@ -84,7 +82,6 @@ class nsISupportsArray;
 -(IBAction) clickEnableImageResizing:(id)sender;
 -(IBAction) clickPreventAnimation:(id)sender;
 -(IBAction) editWhitelist:(id)sender;
--(IBAction) clickEnableFlashBlock:(id)sender;
 
 -(IBAction) clickEnableAnnoyanceBlocker:(id)sender;
 -(void) setAnnoyingWindowPrefsTo:(BOOL)inValue;

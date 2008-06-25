@@ -276,8 +276,6 @@ extern PRBool _pr_useUnicode;
 #endif /* MOZ_UNICODE */
 
 /* --- Socket IO stuff --- */
-extern void _PR_MD_InitSockets(void);
-extern void _PR_MD_CleanupSockets(void);
 #define _MD_EACCES                WSAEACCES
 #define _MD_EADDRINUSE            WSAEADDRINUSE
 #define _MD_EADDRNOTAVAIL         WSAEADDRNOTAVAIL

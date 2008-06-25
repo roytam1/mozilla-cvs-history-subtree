@@ -43,21 +43,20 @@
 #import "BrowserTabView.h"
 #import "BrowserWindowController.h"
 #import "BrowserTabViewItem.h"
-#import "BookmarkToolbar.h"
 
-static NSString* const kBrowserWindowListKey = @"BrowserWindows";
-static NSString* const kDownloadWindowKey = @"DownloadWindow";
-static NSString* const kTabListKey = @"Tabs";
-static NSString* const kSelectedTabKey = @"SelectedTab";
-static NSString* const kFrameKey = @"Frame";
-static NSString* const kIsVisibleKey = @"Visible";
-static NSString* const kIsKeyWindowKey = @"Key";
-static NSString* const kIsMiniaturizedKey = @"Miniaturized";
-static NSString* const kToolbarIsVisibleKey = @"ToolbarVisible";
-static NSString* const kBookmarkBarIsVisibleKey = @"BookmarkBarVisible";
+const NSString* kBrowserWindowListKey = @"BrowserWindows";
+const NSString* kDownloadWindowKey = @"DownloadWindow";
+const NSString* kTabListKey = @"Tabs";
+const NSString* kSelectedTabKey = @"SelectedTab";
+const NSString* kFrameKey = @"Frame";
+const NSString* kIsVisibleKey = @"Visible";
+const NSString* kIsKeyWindowKey = @"Key";
+const NSString* kIsMiniaturizedKey = @"Miniaturized";
+const NSString* kToolbarIsVisibleKey = @"ToolbarVisible";
+const NSString* kBookmarkBarIsVisibleKey = @"BookmarkBarVisible";
 
 // Number of seconds to coalesce changes before saving them
-const NSTimeInterval kPersistDelay = 10.0;
+const NSTimeInterval kPersistDelay = 60.0;
 
 @interface SessionManager(Private)
 
@@ -115,14 +114,7 @@ const NSTimeInterval kPersistDelay = 10.0;
       NSEnumerator* tabEnumerator = [[tabView tabViewItems] objectEnumerator];
       BrowserTabViewItem* tab;
       while ((tab = [tabEnumerator nextObject])) {
-        BrowserWrapper* browser = (BrowserWrapper*)[tab view];
-        NSString* foundWindowURL;
-        // if the user quits too quickly, the pages in the process of being restored will
-        // still be blank; in those cases, save the URI they are trying to load instead.
-        if ([browser isEmpty] && [browser pendingURI])
-          foundWindowURL = [browser pendingURI];
-        else
-          foundWindowURL = [browser currentURI];
+        NSString* foundWindowURL = [(BrowserWrapper*)[tab view] getCurrentURI];
         [storedTabs addObject:foundWindowURL];
       }
       int selectedTabIndex = [tabView indexOfTabViewItem:[tabView selectedTabViewItem]];

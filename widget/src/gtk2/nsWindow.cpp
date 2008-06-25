@@ -4959,14 +4959,12 @@ IM_set_text_range(const PRInt32 aLen,
 GtkIMContext *
 IM_get_input_context(MozDrawingarea *aArea)
 {
-    if (!aArea)
-        return nsnull;
     GtkWidget *owningWidget =
         get_gtk_widget_for_gdk_window(aArea->inner_window);
 
     nsWindow *owningWindow = get_window_for_gtk_widget(owningWidget);
 
-    return owningWindow ? owningWindow->mIMContext : nsnull;
+    return owningWindow->mIMContext;
 }
 
 #endif

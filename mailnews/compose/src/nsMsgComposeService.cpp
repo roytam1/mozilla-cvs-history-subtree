@@ -1482,7 +1482,6 @@ nsMsgComposeService::Handle(nsICommandLine* aCmdLine)
   nsresult rv;
   PRInt32 found, end, count;
   nsAutoString uristr;
-  PRBool composeShouldHandle = PR_TRUE;
 
   rv = aCmdLine->FindFlag(NS_LITERAL_STRING("compose"), PR_FALSE, &found);
   NS_ENSURE_SUCCESS(rv, rv);
@@ -1490,12 +1489,7 @@ nsMsgComposeService::Handle(nsICommandLine* aCmdLine)
   // MAC OS X passes in -url mailto:mscott@mozilla.org into the command line
   // instead of -compose.
   if (found == -1)
-  {
     rv = aCmdLine->FindFlag(NS_LITERAL_STRING("url"), PR_FALSE, &found);
-    // we don't want to consume the argument for -url unless we're sure it is a mailto url and we'll
-    // figure that out shortly.
-    composeShouldHandle = PR_FALSE;
-  }
 
   if (found == -1)
     return NS_OK;
@@ -1508,12 +1502,11 @@ nsMsgComposeService::Handle(nsICommandLine* aCmdLine)
   if (count > found + 1) {
     aCmdLine->GetArgument(found + 1, uristr);
     if (StringBeginsWith(uristr, NS_LITERAL_STRING("mailto:"))  ||
-        StringBeginsWith(uristr, NS_LITERAL_STRING("to="))  ||
-        StringBeginsWith(uristr, NS_LITERAL_STRING("cc="))  ||
-        StringBeginsWith(uristr, NS_LITERAL_STRING("subject=")) ||
-        StringBeginsWith(uristr, NS_LITERAL_STRING("body="))  ||
-        StringBeginsWith(uristr, NS_LITERAL_STRING("attachment="))) {
-      composeShouldHandle = PR_TRUE; // the -url argument looks like mailto
+	StringBeginsWith(uristr, NS_LITERAL_STRING("to="))  ||
+	StringBeginsWith(uristr, NS_LITERAL_STRING("cc="))  ||
+	StringBeginsWith(uristr, NS_LITERAL_STRING("subject="))  ||
+	StringBeginsWith(uristr, NS_LITERAL_STRING("body="))  ||
+	StringBeginsWith(uristr, NS_LITERAL_STRING("attachment="))) {
       end++;
       // mailto: URIs are frequently passed with spaces in them. They should be
       // escaped with %20, but we hack around broken clients. See bug 231032.
@@ -1532,26 +1525,24 @@ nsMsgComposeService::Handle(nsICommandLine* aCmdLine)
       uristr.Truncate();
     }
   }
-  if (composeShouldHandle)
-  {
-    aCmdLine->RemoveArguments(found, end);
 
-    nsCOMPtr<nsIWindowWatcher> wwatch (do_GetService(NS_WINDOWWATCHER_CONTRACTID));
-    NS_ENSURE_TRUE(wwatch, NS_ERROR_FAILURE);
+  aCmdLine->RemoveArguments(found, end);
 
-    nsCOMPtr<nsISupportsString> arg;
-    if (!uristr.IsEmpty()) {
-      arg = do_CreateInstance(NS_SUPPORTS_STRING_CONTRACTID);
-      if (arg)
-        arg->SetData(uristr);
-    }    
+  nsCOMPtr<nsIWindowWatcher> wwatch (do_GetService(NS_WINDOWWATCHER_CONTRACTID));
+  NS_ENSURE_TRUE(wwatch, NS_ERROR_FAILURE);
 
-    nsCOMPtr<nsIDOMWindow> opened;
-    wwatch->OpenWindow(nsnull, DEFAULT_CHROME, "_blank",
-                       "chrome,dialog=no,all", arg, getter_AddRefs(opened));
+  nsCOMPtr<nsISupportsString> arg;
+  if (!uristr.IsEmpty()) {
+    arg = do_CreateInstance(NS_SUPPORTS_STRING_CONTRACTID);
+    if (arg)
+      arg->SetData(uristr);
+  }    
 
-    aCmdLine->SetPreventDefault(PR_TRUE);
-  }
+  nsCOMPtr<nsIDOMWindow> opened;
+  wwatch->OpenWindow(nsnull, DEFAULT_CHROME, "_blank",
+                     "chrome,dialog=no,all", arg, getter_AddRefs(opened));
+
+  aCmdLine->SetPreventDefault(PR_TRUE);
   return NS_OK;
 }
 

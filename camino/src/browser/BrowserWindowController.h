@@ -190,8 +190,7 @@ typedef enum
 
 - (void)focusURLBar;
 
-- (void)showBlockedPopups:(nsIArray*)blockedSites whitelistingSource:(BOOL)shouldWhitelist;
-- (void)blacklistPopupsFromURL:(NSString*)inURL;
+- (void)unblockAllPopupSites:(nsIArray*)inSites;
 
   // call to update feed detection in a page
 - (void)showFeedDetected:(BOOL)inDetected;

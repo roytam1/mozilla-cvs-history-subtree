@@ -91,25 +91,11 @@
         <implementation>
             <method name="setNames">
                 <parameter name="aNameArray"/>
-                <parameter name="aDate"/>
                 <body><![CDATA[
                     for (var i = -2; i < 3; i++) {
                         document.getAnonymousElementByAttribute(this, "anonid", "title-"+i)
                                 .setAttribute("label", aNameArray[i+2]);
                     }
-                    var sbs = Components.classes["@mozilla.org/intl/stringbundle;1"]
-                                        .getService(Components.interfaces.nsIStringBundleService);
-                    var brand = sbs.createBundle("chrome://branding/locale/brand.properties");
-
-                    var docTitle;
-                    if (!aDate) {
-                        docTitle = aNameArray[2];
-                    } else {
-                        var df = Cc["@mozilla.org/calendar/datetime-formatter;1"].
-                                 getService(Ci.calIDateTimeFormatter);
-                        docTitle = df.formatDate(aDate);
-                    }
-                    document.title = docTitle + " - " + brand.GetStringFromName("brandShortName");
                 ]]></body>
             </method>
             <method name="moveView">
@@ -161,13 +147,6 @@
                         return false;
                     }
                     return retval;
-                ]]></getter>
-            </property>
-
-            <property name="viewElem">
-                <getter><![CDATA[
-                    return document.getAnonymousElementByAttribute(
-                           this, "anonid", "view-element");
                 ]]></getter>
             </property>
 

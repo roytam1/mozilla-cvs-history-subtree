@@ -508,7 +508,7 @@ QuoteString(Sprinter *sp, JSString *str, uint32 quote)
                 if (t == z) {
                     char numbuf[10];
                     JS_snprintf(numbuf, sizeof numbuf, "0x%x", c);
-                    JS_ReportErrorFlagsAndNumber(sp->context, JSREPORT_ERROR,
+                    JS_ReportErrorFlagsAndNumber(cx, JSREPORT_ERROR,
                                                  js_GetErrorMessage, NULL,
                                                  JSMSG_BAD_SURROGATE_CHAR,
                                                  numbuf);
@@ -2118,8 +2118,15 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
               }
 
               case JSOP_EXCEPTION:
-                /* The catch decompiler handles this op itself. */
-                LOCAL_ASSERT(JS_FALSE);
+                /*
+                 * The only other JSOP_EXCEPTION cases occur as part of a code
+                 * sequence that follows a SRC_CATCH-annotated JSOP_ENTERBLOCK
+                 * or that precedes a SRC_HIDDEN-annotated JSOP_POP emitted
+                 * when returning from within a finally clause.
+                 */
+                sn = js_GetSrcNote(jp->script, pc);
+                LOCAL_ASSERT(sn && SN_TYPE(sn) == SRC_HIDDEN);
+                todo = -2;
                 break;
 
               case JSOP_POP:
@@ -2333,18 +2340,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                     pc += oplen;
                     LOCAL_ASSERT(*pc == JSOP_EXCEPTION);
                     pc += JSOP_EXCEPTION_LENGTH;
-                    if (*pc == JSOP_DUP) {
-                        sn2 = js_GetSrcNote(jp->script, pc);
-                        if (sn2 && SN_TYPE(sn2) == SRC_HIDDEN) {
-                            /*
-                             * This is a hidden dup to save the exception for
-                             * later. It must exist only when the catch has
-                             * an exception guard.
-                             */
-                            LOCAL_ASSERT(js_GetSrcNoteOffset(sn, 0) != 0);
-                            pc += JSOP_DUP_LENGTH;
-                        }
-                    }
+
 #if JS_HAS_DESTRUCTURING
                     if (*pc == JSOP_DUP) {
                         pc = DecompileDestructuring(ss, pc, endpc);
@@ -3794,13 +3790,9 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                 break;
 
               case JSOP_NEWINIT:
-              {
-                JSBool isArray;
-
                 LOCAL_ASSERT(ss->top >= 2);
                 (void) PopOff(ss, op);
                 lval = POP_STR();
-                isArray = (*lval == 'A');
                 todo = ss->sprinter.offset;
 #if JS_HAS_SHARP_VARS
                 op = (JSOp)pc[len];
@@ -3813,7 +3805,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                         return NULL;
                 }
 #endif /* JS_HAS_SHARP_VARS */
-                if (isArray) {
+                if (*lval == 'A') {
                     ++ss->inArrayInit;
                     if (SprintCString(&ss->sprinter, "[") < 0)
                         return NULL;
@@ -3822,22 +3814,17 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                         return NULL;
                 }
                 break;
-              }
 
               case JSOP_ENDINIT:
                 op = JSOP_NOP;           /* turn off parens */
                 rval = POP_STR();
                 sn = js_GetSrcNote(jp->script, pc);
-
-                /* Skip any #n= prefix to find the opening bracket. */
-                for (xval = rval; *xval != '[' && *xval != '{'; xval++)
-                    continue;
-                if (*xval == '[')
+                if (*rval == '[')
                     --ss->inArrayInit;
                 todo = Sprint(&ss->sprinter, "%s%s%c",
                               rval,
                               (sn && SN_TYPE(sn) == SRC_CONTINUE) ? ", " : "",
-                              (*xval == '[') ? ']' : '}');
+                              (*rval == '[') ? ']' : '}');
                 break;
 
               case JSOP_INITPROP:

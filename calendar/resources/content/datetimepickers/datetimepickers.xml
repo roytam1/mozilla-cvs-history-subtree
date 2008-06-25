@@ -178,17 +178,16 @@
                if (aWord != parser.mDayNames[i]) {
                  continue;
                }
-               // Figure out what day of the week today is.
-               var today = createDateTime();
-               today.jsDate = new Date();
-               today.getInTimezone(calendarDefaultTimezone());
+               // Figure out what day of the week today is 
+               var calDate = createDateTime();
+               calDate.jsDate = new Date();
 
-               // i-weekday gets the offset. Add 7 to ensure that the %
-               // operation stays positive.
-               var offset = (i - today.weekday + 7) % 7;
-               today.day = today.day + offset;
-               today.normalize();
-               return today.jsDate;
+               // i-weekday gets the offset (off by 1), add 7 to ensure
+               // that the % operation stays positive.
+               var offset = (i-calDate.weekday+7)%7 +1;
+               var now = new Date();
+               now.setDate(now.getDate()+offset);
+               return now;
              }
              return null;
            }

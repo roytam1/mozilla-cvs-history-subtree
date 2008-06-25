@@ -257,11 +257,11 @@ MODULES_all :=                                  \
 #
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
-MOZ_CO_TAG           = MOZILLA_1_8_BRANCH
-NSPR_CO_TAG          = NSPR_4_6_7_BETA1
+MOZ_CO_TAG           = THUNDERBIRD_2_0_0_0_RELEASE
+NSPR_CO_TAG          = NSPR_4_6_5_RTM
 NSS_CO_TAG           = NSS_3_11_5_RTM
-LDAPCSDK_CO_TAG      = MOZILLA_1_8_BRANCH
-LOCALES_CO_TAG       = MOZILLA_1_8_BRANCH
+LDAPCSDK_CO_TAG      = THUNDERBIRD_2_0_0_0_RELEASE
+LOCALES_CO_TAG       = THUNDERBIRD_2_0_0_0_RELEASE
 
 BUILD_MODULES = all
 
@@ -987,7 +987,7 @@ cleansrcdir:
 # (! IS_FIRST_CHECKOUT)
 endif
 
-echo-variable-%:
-	@echo $($*)
+echo_objdir:
+	@echo $(OBJDIR)
 
 .PHONY: checkout real_checkout depend build export libs alldep install clean realclean distclean cleansrcdir pull_all build_all clobber clobber_all pull_and_build_all everything configure preflight_all preflight postflight postflight_all
