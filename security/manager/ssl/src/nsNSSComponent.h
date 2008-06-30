@@ -278,7 +278,7 @@ private:
   nsSSLThread *mSSLThread;
   nsCertVerificationThread *mCertVerificationThread;
   nsNSSHttpInterface mHttpForNSS;
-  nsClientAuthRememberService mClientAuthRememberService;
+  nsRefPtr<nsClientAuthRememberService> mClientAuthRememberService;
 };
 
 class PSMContentListener : public nsIURIContentListener,
