@@ -69,20 +69,15 @@ function onLoad() {
     }
 
     window.readOnly = calendar.readOnly;
-    if (!window.readOnly) {
-        try {
-            // temporary hack unless all group scheduling features are supported
-            // by the caching facade (calCachedCalendar):
-            var provider = calendar.getProperty("private.wcapCalendar")
-                                   .QueryInterface(Components.interfaces.calIWcapCalendar);
-            var attendee = provider.getInvitedAttendee(item);
-            if (attendee) {
-                window.attendee = attendee.clone();
-                item.removeAttendee(attendee);
-                item.addAttendee(window.attendee);
-            }
-        }
-        catch(e) {
+    if (!window.readOnly && calendar instanceof Components.interfaces.calISchedulingSupport) {
+        var attendee = calendar.getInvitedAttendee(item);
+        if (attendee) {
+            window.attendee = attendee.clone();
+            // Since we don't have API to update an attendee in place, remove
+            // and add again. Also, this is needed if the attendee doesn't exist
+            // (i.e REPLY on a mailing list)
+            item.removeAttendee(attendee);
+            item.addAttendee(window.attendee);
         }
     }
 
@@ -97,14 +92,27 @@ function onLoad() {
     var kDefaultTimezone = calendarDefaultTimezone();
     var start = item.startDate || item.entryDate;
     if (start) {
-        document.getElementById("item-datetime")
-            .value = formatter.formatDateLong(
-                start.getInTimezone(kDefaultTimezone));
+        document.getElementById("item-datetime-start")
+                    .value = formatter.formatDateTime(
+                    start.getInTimezone(kDefaultTimezone));
+    } else {
+        document.getElementById("item-datetime-start-label").setAttribute("hidden", "true");
+        document.getElementById("item-datetime-start").setAttribute("hidden", "true");        
     }
-
+    var end = (item.dueDate || item.endDate || item.startDate);
+    if (!end || end.isDate == true) {
+        document.getElementById("item-datetime-end-label").setAttribute("hidden", "true");
+        document.getElementById("item-datetime-end").setAttribute("hidden", "true");
+    } else {
+        if (isToDo(item)) {
+            var dueLabel = calGetString("sun-calendar-event-dialog", "summaryDueTaskLabel")
+            document.getElementById("item-datetime-end-label").setAttribute("value", dueLabel);
+        }
+        document.getElementById("item-datetime-end").value = formatter.formatDateTime(
+                                      end.getInTimezone(kDefaultTimezone));
+    }
     if (!window.readOnly) {
-        document.getElementById("item-main-separator")
-            .removeAttribute("hidden");
+        document.getElementById("item-main-separator").removeAttribute("hidden");
     }
 
     updateInvitationStatus();

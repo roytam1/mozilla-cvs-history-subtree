@@ -13,12 +13,12 @@
  *
  * The Original Code is Sun Microsystems code.
  *
- * The Initial Developer of the Original Code is Sun Microsystems.
- * Portions created by the Initial Developer are Copyright (C) 2006
+ * The Initial Developer of the Original Code is
+ *   Philipp Kewisch <mozilla@kewis.ch>
+ * Portions created by the Initial Developer are Copyright (C) 2008
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Thomas Benisch <thomas.benisch@sun.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -34,7 +34,13 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-.calendar-invitations-sidebar-label {
-  margin-top: 2px;
-  margin-bottom: 2px;
+#lightning-newCalendar-row > hbox > label[chromedir="rtl"] {
+  background: url(chrome://calendar/skin/cal-icon32.png) right no-repeat !important;
+}
+
+#lightning-newCalendar-row > hbox > label {
+  background: url(chrome://calendar/skin/cal-icon32.png) no-repeat !important;
+  padding-top: .55em;
+  padding-bottom: .55em;
+  -moz-padding-start: 45px;
 }

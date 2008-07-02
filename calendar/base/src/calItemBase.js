@@ -25,6 +25,7 @@
  *   Joey Minta <jminta@gmail.com>
  *   Matthew Willis <lilmatt@mozilla.com>
  *   Daniel Boelzle <daniel.boelzle@sun.com>
+ *   Philipp Kewisch <mozilla@kewis.ch>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -451,18 +452,18 @@ calItemBase.prototype = {
         this.modify();
         var found = false, newAttendees = [];
         var attendees = this.getAttendees({});
-        var attIdLowerCase =attendee.id.toLowerCase();
+        var attIdLowerCase = attendee.id.toLowerCase();
 
         for (var i = 0; i < attendees.length; i++) {
-            if (attendees[i].id.toLowerCase() != attIdLowerCase)
+            if (attendees[i].id.toLowerCase() != attIdLowerCase) {
                 newAttendees.push(attendees[i]);
-            else
+            } else {
                 found = true;
+            }
         }
-        if (found)
+        if (found) {
             this.mAttendees = newAttendees;
-        else
-            throw Component.results.NS_ERROR_INVALID_ARG;
+        }
     },
 
     removeAllAttendees: function() {
@@ -755,8 +756,18 @@ calItemBase.prototype = {
         }
     },
     
-    getOccurrencesBetween: function(aStartDate, aEndDate, aCount) {
-        throw Components.results.NS_ERROR_NOT_IMPLEMENTED;
+    getOccurrencesBetween: function cIB_getOccurrencesBetween(aStartDate, aEndDate, aCount) {
+        if (this.recurrenceInfo) {
+            return this.recurrenceInfo.getOccurrences(aStartDate, aEndDate, 0, aCount);
+        }
+
+        if (checkIfInRange(this, aStartDate, aEndDate)) {
+            aCount.value = 1;
+            return [this];
+        }
+
+        aCount.value = 0;
+        return [];
     }
 };
 

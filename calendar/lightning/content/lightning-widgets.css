@@ -11,17 +11,17 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is Lightning code.
+ * The Original Code is Sun Microsystems code.
  *
- * The Initial Developer of the Original Code is Oracle Corporation
- * Portions created by the Initial Developer are Copyright (C) 2005
+ * The Initial Developer of the Original Code is
+ *   Philipp Kewisch <mozilla@kewis.ch>
+ * Portions created by the Initial Developer are Copyright (C) 2008
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Mike Shaver <shaver@mozilla.org>
  *
  * Alternatively, the contents of this file may be used under the terms of
- * either the GNU General Public License Version 2 or later (the "GPL"), or 
+ * either the GNU General Public License Version 2 or later (the "GPL"), or
  * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
  * in which case the provisions of the GPL or the LGPL are applicable instead
  * of those above. If you wish to allow use of your version of this file only
@@ -34,4 +34,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/* XBL and other rules required for use of Lightning widgets go here. */
+lightning-notification-bar {
+  -moz-binding: url(chrome://lightning/content/lightning-widgets.xml#lightning-notification-bar);
+}

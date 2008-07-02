@@ -114,7 +114,8 @@ function calWcapCalendar_getRecurrenceParams(item, out_rrules, out_rdates, out_e
                     out_rdates.value.push(getIcalUTC(ensureDateTime(rItem.date)));
                 }
             } else {
-                this.notifyError("don\'t know how to handle this recurrence item: " + rItem.valueAsIcalString);
+                this.notifyError(NS_ERROR_UNEXPECTED,
+                                 "don\'t know how to handle this recurrence item: " + rItem.valueAsIcalString);
             }
         }
     }
@@ -475,7 +476,7 @@ function calWcapCalendar_storeItem(bAddItem, item, oldItem, request) {
         }
         var icsClass = getPrivacy(item);
         if (!oldItem || icsClass != getPrivacy(oldItem)) {
-            params += ("&icsClass="+ icsClass);
+            params += ("&icsClass=" + icsClass);
         }
 
         if (!oldItem || item.status != oldItem.status) {
@@ -573,9 +574,13 @@ function calWcapCalendar_storeItem(bAddItem, item, oldItem, request) {
             params += ("&uid=" + encodeURIComponent(item.id));
         }
 
-        // be picky about create/modify:
+        // be picky about create/modify, if possible:
         // WCAP_STORE_TYPE_CREATE, WCAP_STORE_TYPE_MODIFY
-        params += (bAddItem ? "&storetype=1" : "&storetype=2");
+        if (bAddItem) {
+            params += "&storetype=1";
+        } else if (oldItem) {
+            params += "&storetype=2";
+        } // else we don't know exactly, so don't check
 
         if (bIsParent) {
             params += "&mod=4"; // THIS AND ALL INSTANCES
@@ -601,7 +606,8 @@ function calWcapCalendar_storeItem(bAddItem, item, oldItem, request) {
                 throw new Components.Exception("empty VCALENDAR returned!");
             }
             if (items.length > 1) {
-                this_.notifyError("unexpected number of items: " + items.length);
+                this_.notifyError(NS_ERROR_UNEXPECTED,
+                                  "unexpected number of items: " + items.length);
             }
             var newItem = items[0];
             this_.tunnelXProps(newItem, item);
@@ -658,16 +664,12 @@ function calWcapCalendar_adoptItem(item, listener) {
     var this_ = this;
     var request = new calWcapRequest(
         function adoptItem_resp(request, err, newItem) {
-            if (listener) {
-                listener.onOperationComplete(this_.superCalendar,
-                                             getResultCode(err),
-                                             calIOperationListener.ADD,
-                                             err ? item.id : newItem.id,
-                                             err ? err : newItem);
-            }
-            if (err) {
-                this_.notifyError(err);
-            } else {
+            this_.notifyOperationComplete(listener,
+                                          getResultCode(err),
+                                          calIOperationListener.ADD,
+                                          err ? item.id : newItem.id,
+                                          err ? err : newItem);
+            if (!err) {
                 this_.notifyObservers("onAddItem", [newItem]);
             }
         },
@@ -694,14 +696,11 @@ function calWcapCalendar_modifyItem(newItem, oldItem, listener) {
     var this_ = this;
     var request = new calWcapRequest(
         function modifyItem_resp(request, err, item) {
-            if (listener) {
-                listener.onOperationComplete(this_.superCalendar, getResultCode(err),
-                                             calIOperationListener.MODIFY,
-                                             newItem.id, err ? err : item);
-            }
-            if (err) {
-                this_.notifyError(err);
-            } else {
+            this_.notifyOperationComplete(listener,
+                                          getResultCode(err),
+                                          calIOperationListener.MODIFY,
+                                          newItem.id, err ? err : item);
+            if (!err) {
                 this_.notifyObservers("onModifyItem", [item, oldItem]);
             }
         },
@@ -780,15 +779,11 @@ function calWcapCalendar_deleteItem(item, listener) {
     var request = new calWcapRequest(
         function deleteItem_resp(request, err) {
             // xxx todo: need to notify about each deleted item if multiple?
-            if (listener) {
-                listener.onOperationComplete(
-                    this_.superCalendar, getResultCode(err),
-                    calIOperationListener.DELETE,
-                    item.id, err ? err : item);
-            }
-            if (err) {
-                this_.notifyError(err);
-            } else {
+            this_.notifyOperationComplete(listener,
+                                          getResultCode(err),
+                                          calIOperationListener.DELETE,
+                                          item.id, err ? err : item);
+            if (!err) {
                 this_.notifyObservers("onDeleteItem", [item]);
             }
         },
@@ -1065,15 +1060,11 @@ function calWcapCalendar_getItem(id, listener) {
     var this_ = this;
     var request = new calWcapRequest(
         function getItem_resp(request, err, item) {
-            if (listener) {
-                listener.onOperationComplete(this_.superCalendar, getResultCode(err),
-                                             calIOperationListener.GET,
-                                             item ? item.id : null,
-                                             err || item);
-            }
-            if (err) {
-                this_.notifyError(err);
-            }
+            this_.notifyOperationComplete(listener,
+                                          getResultCode(err),
+                                          calIOperationListener.GET,
+                                          item ? item.id : null,
+                                          err || item);
         },
         log("getItem() call: id=" + id, this));
 
@@ -1091,7 +1082,8 @@ function calWcapCalendar_getItem(id, listener) {
                 throw new Components.Exception("no such item!");
             }
             if (items.length > 1) {
-                this_.notifyError("unexpected number of items: " + items.length);
+                this_.notifyError(NS_ERROR_UNEXPECTED,
+                                  "unexpected number of items: " + items.length);
             }
             if (listener) {
                 listener.onGetResult(this_.superCalendar, NS_OK,
@@ -1147,12 +1139,12 @@ function getItemFilterParams(itemFilter) {
 //         compstate += ";REPLY-ACCEPTED";
 //     if (itemFilter & calIWcapCalendar.ITEM_FILTER_REQUEST_COMPLETED)
 //         compstate += ";REQUEST-COMPLETED";
-    if (itemFilter & calIWcapCalendar.ITEM_FILTER_REQUEST_NEEDS_ACTION) {
+    if (itemFilter & calICalendar.ITEM_FILTER_REQUEST_NEEDS_ACTION) {
         compstate += ";REQUEST-NEEDS-ACTION";
     }
-    if (itemFilter & calIWcapCalendar.ITEM_FILTER_REQUEST_NEEDSNOACTION) {
-        compstate += ";REQUEST-NEEDSNOACTION";
-    }
+//     if (itemFilter & calIWcapCalendar.ITEM_FILTER_REQUEST_NEEDSNOACTION) {
+//         compstate += ";REQUEST-NEEDSNOACTION";
+//     }
 //     if (itemFilter & calIWcapCalendar.ITEM_FILTER_REQUEST_PENDING)
 //         compstate += ";REQUEST-PENDING";
 //     if (itemFilter & calIWcapCalendar.ITEM_FILTER_REQUEST_WAITFORREPLY)
@@ -1174,31 +1166,17 @@ function calWcapCalendar_getItems(itemFilter, maxResults, rangeStart, rangeEnd, 
     var request = new calWcapRequest(
         function getItems_resp(request, err, data) {
             log("getItems() complete: " + errorToString(err), this_);
-            var rc = getResultCode(err);
-            if (err) {
-                if (listener) {
-                    listener.onOperationComplete(this_.superCalendar, rc,
-                                                 calIOperationListener.GET,
-                                                 null, err);
-                }
-                this_.notifyError(err, request.suppressOnError);
-            } else {
-                if (listener) {
-                    listener.onOperationComplete(this_.superCalendar, rc,
-                                                 calIOperationListener.GET,
-                                                 null, null);
-                }
-            }
+            this_.notifyOperationComplete(listener,
+                                          getResultCode(err),
+                                          calIOperationListener.GET,
+                                          null,
+                                          err);
         },
         log("getItems():\n\titemFilter=0x" + itemFilter.toString(0x10) +
             ",\n\tmaxResults=" + maxResults +
             ",\n\trangeStart=" + zRangeStart +
             ",\n\trangeEnd=" + zRangeEnd, this));
     
-    if (itemFilter & calIWcapCalendar.ITEM_FILTER_SUPPRESS_ONERROR) {
-        request.suppressOnError = true;
-    }
-
     if (this.aboutToBeUnregistered) {
         // limiting the amount of network traffic while unregistering
         log("being unregistered, no results.", this);
@@ -1355,96 +1333,28 @@ function calWcapCalendar_resetLog() {
 calWcapCalendar.prototype.replayChangesOn =
 function calWcapCalendar_replayChangesOn(destCal, listener) {
     var this_ = this;
-    var opListener = {
-        QueryInterface: function(iid) {
-            return doQueryInterface(this, opListener, iid,
-                                    [Components.interfaces.calIGenericOperationListener,
-                                     nsISupports]);
-        },
-        onResult: function(op, result) {
-            if (!op.isPending) {
-                if (Components.isSuccessCode(op.status)) {
-                    this_.setProperty("replay.last_stamp", getIcalUTC(result));
-                    log("new replay stamp: " + getIcalUTC(result), this_);
-                } else {
-                    logError("error replaying changes: " + errorToString(op.status));
-                }
-                if (listener) {
-                    listener.onResult(op, null);
-                }
-            }
-        }
-    };
-    return this.syncChangesTo_(destCal, calICalendar.ITEM_FILTER_ALL_ITEMS,
-                               getDatetimeFromIcalString(this.getProperty("replay.last_stamp")),
-                               opListener);
-};
-
-calWcapCalendar.prototype.syncChangesTo =
-function calWcapCalendar_syncChangesTo(destCal, itemFilter, dtFrom, listener) {
-    // xxx todo: move to Thomas
-    // do NOT puke up error box every three minutes!
-    itemFilter |= calIWcapCalendar.ITEM_FILTER_SUPPRESS_ONERROR;
-    return this.syncChangesTo_(destCal, itemFilter, dtFrom, listener);
-};
-
-calWcapCalendar.prototype.syncChangesTo_ =
-function calWcapCalendar_syncChangesTo_(destCal, itemFilter, dtFrom, listener) {
-    dtFrom = ensureDateTime(dtFrom);
+    var itemFilter = calICalendar.ITEM_FILTER_ALL_ITEMS;
+    var dtFrom = getDatetimeFromIcalString(this.getProperty("replay.last_stamp"));
     var now = getTime(); // new stamp for this sync
 
-    var this_ = this;
     var request_ = new calWcapRequest(
-        function syncChangesTo_resp(request, err) {
+        function replayChangesOn_resp(request, err) {
             if (err) {
-                log("SYNC failed!", this_);
-                if (listener) {
-                    var opListener = null;
-                    try {
-                        opListener = listener.QueryInterface(Components.interfaces.calIGenericOperationListener);
-                    } catch (exc) {
-                        listener.onOperationComplete(this_.superCalendar, getResultCode(err),
-                                                     calIWcapCalendar.SYNC, null, err);
-                    }
-                    if (opListener) {
-                        opListener.onResult(request, null);
-                    }
-                }
-                this_.notifyError(err, request.suppressOnError);
+                logError("error replaying changes: " + errorToString(err));
+                this_.notifyError(err);
             } else {
-
-                log("SYNC succeeded.", this_);
-                if (listener) {
-                    var opListener = null;
-                    try {
-                        opListener = listener.QueryInterface(Components.interfaces.calIGenericOperationListener);
-                    } catch (exc) {
-                        listener.onOperationComplete(this_.superCalendar, NS_OK,
-                                                     calIWcapCalendar.SYNC, null, now);
-                    }
-                    if (opListener) {
-                        opListener.onResult(request, now);
-                    }
-                }
+                log("replay succeeded.", this_);
+                this_.setProperty("replay.last_stamp", getIcalUTC(now));
+                log("new replay stamp: " + getIcalUTC(now), this_);
+            }
+            if (opListener) {
+                opListener.onResult(request, null);
             }
         },
-        log("syncChangesTo():\n\titemFilter=0x" + itemFilter.toString(0x10) +
+        log("replayChangesOn():\n\titemFilter=0x" + itemFilter.toString(0x10) +
             "\n\tdtFrom=" + getIcalUTC(dtFrom), this));
 
-    if (itemFilter & calIWcapCalendar.ITEM_FILTER_SUPPRESS_ONERROR) {
-        request_.suppressOnError = true;
-    }
-
     try {
-        var calObserver = null;
-        if (listener) {
-            try {
-                calObserver = listener.QueryInterface(Components.interfaces.calIObserver);
-            }
-            catch (exc) {
-            }
-        }
-
         var writeListener = {
             onGetResult: function() {},
             onOperationComplete: function(cal, status, opType, id, detail) {
@@ -1461,46 +1371,37 @@ function calWcapCalendar_syncChangesTo_(destCal, itemFilter, dtFrom, listener) {
                     var bAdd = (!dtCreated || !dtFrom || dtCreated.compare(dtFrom) >= 0);
                     modifiedIds[item.id] = true;
                     if (bAdd) {
-                        log("syncChangesTo(): new item " + item.id, this_);
+                        log("replayChangesOn(): new item " + item.id, this_);
                         if (destCal) {
                             destCal.addItem(item, writeListener);
                         }
-                        if (calObserver)
-                            calObserver.onAddItem(item);
                     } else {
-                        log("syncChangesTo(): modified item " + item.id, this_);
+                        log("replayChangesOn(): modified item " + item.id, this_);
                         if (destCal) {
                             destCal.modifyItem(item, null, writeListener);
                         }
-                        if (calObserver)
-                            calObserver.onModifyItem(item, null);
                     }
                 }
                 for each (var item in request.m_deletedItems) {
                     // don't delete anything that has been touched by lastmods:
                     if (modifiedIds[item.id]) {
-                        log("syncChangesTo(): skipping deletion of " + item.id, this_);
+                        log("replayChangesOn(): skipping deletion of " + item.id, this_);
                     } else if (isParent(item)) {
-                        log("syncChangesTo(): deleted item " + item.id, this_);
+                        log("replayChangesOn(): deleted item " + item.id, this_);
                         if (destCal) {
                             destCal.deleteItem(item, writeListener);
                         }
-                        if (calObserver)
-                            calObserver.onDeleteItem(item);
                     } else { // modify parent instead of
                              // straight-forward deleteItem(). WTF.
                         var parent = item.parentItem.clone();
                         parent.recurrenceInfo.removeOccurrenceAt(item.recurrenceId);
-                        log("syncChangesTo(): modified parent "+ parent.id, this_);
+                        log("replayChangesOn(): modified parent "+ parent.id, this_);
                         if (destCal) {
                             destCal.modifyItem(parent, item, writeListener);
                         }
-                        if (calObserver) {
-                            calObserver.onModifyItem(parent, item);
-                        }
                     }
                 }
-            }, "syncChangesTo() netFinishedRespFunc");
+            }, "replayChangesOn() netFinishedRespFunc");
         request_.attachSubRequest(request);
 
         // assure being logged in to calc server times:
@@ -1519,7 +1420,7 @@ function calWcapCalendar_syncChangesTo_(destCal, itemFilter, dtFrom, listener) {
                     params += ("&dtstart=" + getIcalUTC(dtFrom));
                     params += ("&dtend=" + getIcalUTC(this_.session.getServerTime(now)));
 
-                    log("syncChangesTo(): getting last modifications...", this_);
+                    log("replayChangesOn(): getting last modifications...", this_);
                     this_.issueNetworkRequest(
                         request,
                         function modifiedNetResp(err, icalRootComp) {
@@ -1534,7 +1435,7 @@ function calWcapCalendar_syncChangesTo_(destCal, itemFilter, dtFrom, listener) {
                         params + getItemFilterParams(itemFilter),
                         calIWcapCalendar.AC_COMP_READ);
 
-                    log("syncChangesTo(): getting deleted items...", this_);
+                    log("replayChangesOn(): getting deleted items...", this_);
                     this_.issueNetworkRequest(
                         request,
                         function modifiedNetResp(err, icalRootComp) {

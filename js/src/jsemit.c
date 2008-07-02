@@ -5361,7 +5361,7 @@ js_EmitTree(JSContext *cx, JSCodeGenerator *cg, JSParseNode *pn)
                  * supported.
                  */
                 js_ReportCompileErrorNumber(cx,
-                                            pn2, JSREPORT_ERROR,
+                                            pn2, JSREPORT_PN | JSREPORT_ERROR,
                                             JSMSG_BAD_GETTER_OR_SETTER,
                                             (op == JSOP_GETTER)
                                             ? js_getter_str

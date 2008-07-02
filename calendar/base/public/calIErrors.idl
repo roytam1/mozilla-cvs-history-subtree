@@ -88,6 +88,26 @@ interface calIErrors : nsISupports
    */
   const unsigned long PROVIDER_CREATION_FAILED = ERROR_BASE + 6;
 
+  /**
+   * Profile data has newer schema than we know in this calendar version.
+   */
+  const unsigned long STORAGE_UNKNOWN_SCHEMA_ERROR = ERROR_BASE + 7;
+
+  /**
+   * Profile data may refer to newer timezones than we know.
+   */
+  const unsigned long STORAGE_UNKNOWN_TIMEZONES_ERROR = ERROR_BASE + 8;
+
+  /**
+   * The calendar could not be accessed for reading.
+   */
+  const unsigned long READ_FAILED = ERROR_BASE + 9;
+
+  /**
+   * The calendar could not be accessed for modification.
+   */
+  const unsigned long MODIFICATION_FAILED = ERROR_BASE + 10;
+
   /* ICS specific errors */
   const unsigned long ICS_ERROR_BASE = ERROR_BASE + 0x100;
 

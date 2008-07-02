@@ -1953,7 +1953,8 @@ nsXMLHttpRequest::ChangeState(PRUint32 aState, PRBool aBroadcast,
   if ((mState & XML_HTTP_REQUEST_ASYNC) &&
       (aState & XML_HTTP_REQUEST_LOADSTATES) && // Broadcast load states only
       aBroadcast &&
-      onReadyStateChangeListener) {
+      onReadyStateChangeListener &&
+      NS_SUCCEEDED(CheckInnerWindowCorrectness())) {
     nsCOMPtr<nsIJSContextStack> stack;
     JSContext *cx = nsnull;
 
@@ -1989,39 +1990,26 @@ nsXMLHttpRequest::OnChannelRedirect(nsIChannel *aOldChannel,
 {
   NS_PRECONDITION(aNewChannel, "Redirect without a channel?");
 
-  if (mScriptContext && !(mState & XML_HTTP_REQUEST_XSITEENABLED)) {
+  if (!(mState & XML_HTTP_REQUEST_XSITEENABLED)) {
     nsresult rv = NS_ERROR_FAILURE;
 
-    nsCOMPtr<nsIJSContextStack> stack(do_GetService("@mozilla.org/js/xpc/ContextStack;1", & rv));
-    if (NS_FAILED(rv))
-      return rv;
-
-    JSContext *cx = (JSContext *)mScriptContext->GetNativeContext();
-    if (!cx)
-      return NS_ERROR_UNEXPECTED;
-
-    nsCOMPtr<nsIScriptSecurityManager> secMan =
-             do_GetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID, &rv);
-    if (NS_FAILED(rv))
-      return rv;
+    nsCOMPtr<nsIURI> oldURI;
+    rv = aOldChannel->GetURI(getter_AddRefs(oldURI));
+    NS_ENSURE_SUCCESS(rv, rv);
 
     nsCOMPtr<nsIURI> newURI;
     rv = aNewChannel->GetURI(getter_AddRefs(newURI)); // The redirected URI
     if (NS_FAILED(rv))
       return rv;
 
-    stack->Push(cx);
-
-    rv = secMan->CheckSameOrigin(cx, newURI);
-
-    stack->Pop(&cx);
-
-    if (NS_FAILED(rv)) {
-      // The security manager set a pending exception.  Since we're
-      // running under the event loop, we need to report it.
-      ::JS_ReportPendingException(cx);
+    nsCOMPtr<nsIScriptSecurityManager> secMan =
+             do_GetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID, &rv);
+    if (NS_FAILED(rv))
       return rv;
-    }
+
+    rv = secMan->CheckSameOriginURI(oldURI, newURI);
+    if (NS_FAILED(rv))
+      return rv;
   }
 
   if (mChannelEventSink) {

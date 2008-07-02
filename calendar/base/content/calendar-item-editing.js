@@ -108,6 +108,7 @@ function createEventWithDialog(calendar, startDate, endDate, summary, event, aFo
                 // If the event should be forced to be allday, then don't set up
                 // any default hours and directly make it allday.
                 event.startDate.isDate = true;
+                event.startDate.timezone = floating();
             }
         } else {
             // If no start date was passed, then default to the next full hour
@@ -123,6 +124,7 @@ function createEventWithDialog(calendar, startDate, endDate, summary, event, aFo
                 // day should pass the end date. Right now, they should make
                 // sure that the end date is 00:00:00 of the day after.
                 event.endDate.isDate = true;
+                event.endDate.timezone = floating();
             }
         } else {
             event.endDate = event.startDate.clone();
@@ -194,12 +196,12 @@ function modifyEventWithDialog(aItem, job, aPromptOccurrence) {
     };
 
     var item = aItem;
+    var futureItem, response;
     if (aPromptOccurrence !== false) {
-        var futureItem, response;
         [item, futureItem, response] = promptOccurrenceModification(aItem, true, "edit");
     }
 
-    if (item && response) {
+    if (item && (response || response === undefined)) {
         openEventDialog(item, item.calendar, "modify", onModifyItem, job);
     } else if (job && job.dispose) {
         // If the action was canceled and there is a job, dispose it directly.
@@ -265,10 +267,9 @@ function openEventDialog(calendarItem, calendar, mode, callback, job) {
     // we'll open the summary dialog since the user is not allowed to change
     // the details of the item.
     var isInvitation = false;
-    try {
+    if (calendar instanceof Components.interfaces.calISchedulingSupport) {
         isInvitation = calendar.isInvitation(calendarItem);
     }
-    catch(e) {}
 
     // open the dialog modeless
     var url = "chrome://calendar/content/sun-calendar-event-dialog.xul";

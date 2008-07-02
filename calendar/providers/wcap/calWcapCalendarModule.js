@@ -42,6 +42,7 @@
 
 // constants:
 const NS_OK = Components.results.NS_OK;
+const NS_ERROR_UNEXPECTED = Components.results.NS_ERROR_UNEXPECTED;
 const nsIException = Components.interfaces.nsIException;
 const nsISupports = Components.interfaces.nsISupports;
 const calIWcapSession = Components.interfaces.calIWcapSession;
@@ -126,6 +127,7 @@ var g_classInfo = {
         getInterfaces: function ci_wcapCalendar_getInterfaces(count) {
             const ifaces = [calIWcapCalendar,
                             calICalendar,
+                            Components.interfaces.calISchedulingSupport,
                             Components.interfaces.calIChangeLog,
                             Components.interfaces.calICalendarProvider,
                             Components.interfaces.nsIClassInfo,

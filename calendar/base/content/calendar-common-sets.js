@@ -169,7 +169,9 @@ var calendarController = {
                     // If calendar is not in foreground, let the default controller take
                     // care. If we don't have a default controller (i.e sunbird), just
                     // continue.
-                    return this.defaultController.isCommandEnabled(aCommand);
+                    if (this.defaultController.supportsCommand(aCommand)) {
+                        return this.defaultController.isCommandEnabled(aCommand);
+                    }
                 }
                 switch (aCommand) {
                     // Thunderbird Commands
@@ -212,7 +214,9 @@ var calendarController = {
             case "cmd_delete":
             case "button_delete":
                 var focusedElement = document.commandDispatcher.focusedElement;
-                if (focusedElement) {
+                if (!focusedElement && this.defaultController && !this.isCalendarInForeground()) {
+                    this.defaultController.doCommand(aCommand);
+                } else {
                     var focusedRichListbox = getParentNodeOrThis(focusedElement, "richlistbox");
                     if (focusedRichListbox && focusedRichListbox.id == "agenda-listbox") {
                         agendaListbox.deleteSelectedItem(false);
@@ -266,6 +270,13 @@ var calendarController = {
                 getCompositeCalendar().refresh();
                 break;
             default:
+                if (this.defaultController && !this.isCalendarInForeground()) {
+                    // If calendar is not in foreground, let the default controller take
+                    // care. If we don't have a default controller (i.e sunbird), just
+                    // continue.
+                    this.defaultController.doCommand(aCommand);
+                    return;
+                }                
                 switch (aCommand) {
                     // These commands are overridden in lightning and native in sunbird.
                     case "cmd_cut":

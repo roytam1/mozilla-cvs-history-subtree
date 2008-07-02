@@ -43,7 +43,8 @@ calProviderBase.prototype = {
     QueryInterface: function cPB_QueryInterface(aIID) {
         return doQueryInterface(this, calProviderBase.prototype, aIID,
                                 [Components.interfaces.nsISupports,
-                                 Components.interfaces.calICalendar]);
+                                 Components.interfaces.calICalendar,
+                                 Components.interfaces.calISchedulingSupport]);
     },
 
     mID: null,
@@ -55,6 +56,7 @@ calProviderBase.prototype = {
         this.wrappedJSObject = this;
         this.mObservers = new calListenerBag(Components.interfaces.calIObserver);
         this.mProperties = {};
+        this.mProperties.currentStatus = Components.results.NS_OK;
     },
 
     get observers() {
@@ -148,12 +150,66 @@ calProviderBase.prototype = {
         this.mObservers.notify("onEndBatch");
     },
 
+    mTransientProperties: {
+        currentStatus: true
+    },
+
+    notifyOperationComplete: function cPB_notifyOperationComplete(aListener,
+                                                                  aStatus,
+                                                                  aOperationType,
+                                                                  aId,
+                                                                  aDetail) {
+        if (aListener) {
+            try {
+                aListener.onOperationComplete(this.superCalendar, aStatus, aOperationType, aId, aDetail);
+            } catch (exc) {
+                ERROR(exc);
+            }
+        }
+        if (aStatus == Components.interfaces.calIErrors.OPERATION_CANCELLED) {
+            return; // cancellation doesn't change current status, no notification
+        }
+        if (Components.isSuccessCode(aStatus)) {
+            this.setProperty("currentStatus", aStatus);
+        } else {
+            if (aDetail instanceof Components.interfaces.nsIException) {
+                this.notifyError(aDetail); // will set currentStatus
+            } else {
+                this.notifyError(aStatus, aDetail); // will set currentStatus
+            }
+            this.notifyError(aOperationType == Components.interfaces.calIOperationListener.GET
+                             ? Components.interfaces.calIErrors.READ_FAILED
+                             : Components.interfaces.calIErrors.MODIFICATION_FAILED,
+                             "");
+        }
+    },
+
+    // for convenience also callable with just an exception
+    notifyError: function cPB_notifyError(aErrNo, aMessage) {
+        if (aErrNo == Components.interfaces.calIErrors.OPERATION_CANCELLED) {
+            return; // cancellation doesn't change current status, no notification
+        }
+        if (aErrNo instanceof Components.interfaces.nsIException) {
+            if (!aMessage) {
+                aMessage = aErrNo.message;
+            }
+            aErrNo = aErrNo.result;
+        }
+        this.setProperty("currentStatus", aErrNo);
+        this.observers.notify("onError", [this.superCalendar, aErrNo, aMessage]);
+    },
+
     // nsIVariant getProperty(in AUTF8String aName);
     getProperty: function cPB_getProperty(aName) {
+        // temporary hack to get the uncached calendar instance
+        if (aName == "cache.uncachedCalendar") {
+            return this;
+        }
+
         var ret = this.mProperties[aName];
         if (ret === undefined) {
             ret = null;
-            if (this.id) {
+            if (!this.mTransientProperties[aName] && this.id) {
                 // xxx future: return getPrefSafe("calendars." + this.id + "." + aName, null);
                 ret = getCalendarManager().getCalendarPref_(this, aName);
                 if (ret !== null) {
@@ -193,7 +249,7 @@ calProviderBase.prototype = {
         var oldValue = this.getProperty(aName);
         if (oldValue != aValue) {
             this.mProperties[aName] = aValue;
-            if (this.id) {
+            if (!this.mTransientProperties[aName] && this.id) {
                 var v = aValue;
                 // xxx todo: work around value types here unless we save into the prefs...
                 switch (aName) {
@@ -240,5 +296,52 @@ calProviderBase.prototype = {
     // void removeObserver( in calIObserver observer );
     removeObserver: function cPB_removeObserver(aObserver) {
         this.mObservers.remove(aObserver);
+    },
+
+    // calISchedulingSupport: Implementation corresponding to our iTIP/iMIP support
+    isInvitation: function cPB_isInvitation(aItem) {
+        return this.getInvitedAttendee(aItem) != null;
+    },
+
+    // helper function to filter invitations, checks exceptions for invitations:
+    itip_checkInvitation: function cPB_itip_checkInvitation(aItem) {
+        if (this.isInvitation(aItem)) {
+            return true;
+        }
+        var recInfo = aItem.recurrenceInfo;
+        if (recInfo) {
+            var this_ = this;
+            function checkExc(rid) {
+                return this_.isInvitation(recInfo.getExceptionFor(rid, false));
+            }
+            return recInfo.getExceptionIds({}).some(checkExc);
+        }
+        return false;
+    },
+
+    itip_getInvitedAttendee: function cPB_itip_getInvitedAttendee(aItem) {
+        // This is the iTIP specific base implementation for storage and memory,
+        // it will mind what account has received the incoming message, e.g.
+//         var account = aItem.getProperty("X-MOZ-IMIP-INCOMING-ACCOUNT");
+//         if (account) {
+//             account = ("mailto:" + account);
+//             var att = aItem.getAttendeeById(account);
+//             if (att) {
+//                 // we take the existing attendee
+//                 return att;
+//             }
+//             // else user may have changed mail accounts, or we has been invited via ml
+//             // in any way, we create a new attendee to be added here, which may be
+//             // overridden by UI in case that account doesn't exist anymore:
+//             att = Components.classes["@mozilla.org/calendar/attendee;1"]
+//                             .createInstance(Components.interfaces.calIAttendee);
+//             att.participationStatus = "NEEDS-ACTION";
+//             att.id = account;
+//         }
+        // for now not impl
+        return null;
+    },
+    getInvitedAttendee: function cPB_getInvitedAttendee(aItem) {
+        return this.itip_getInvitedAttendee(aItem);
     }
 };
