@@ -247,9 +247,8 @@ FREEBL_GetVector(void)
     extern const char __nss_freebl_sccsid[];
 
     /* force a reference that won't get optimized away */
-    volatile char c;
+    volatile char c = __nss_freebl_rcsid[0] + __nss_freebl_sccsid[0]; 
 
-    c = __nss_freebl_rcsid[0] + __nss_freebl_sccsid[0]; 
     return &vector;
 }
 

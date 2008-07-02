@@ -76,7 +76,6 @@ DIRS = lib  \
  ssltap  \
  strsclnt \
  symkeyutil \
- tests \
  tstclnt  \
  vfychain \
  vfyserv \

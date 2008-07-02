@@ -163,6 +163,7 @@ pkix_pl_OcspResponse_Destroy(
         if (ocspRsp->nssOCSPResponse != NULL) {
                 CERT_DestroyOCSPResponse(ocspRsp->nssOCSPResponse);
                 ocspRsp->nssOCSPResponse = NULL;
+                ocspRsp->signerCert = NULL;
         }
 
         if (ocspRsp->signerCert != NULL) {
@@ -955,9 +956,6 @@ cleanup:
             /* Save signer's certificate in signature. */
             signature->cert = CERT_DupCertificate(response->signerCert);
         }
-
-	if (issuerCert)
-	    CERT_DestroyCertificate(issuerCert);
         
         PKIX_RETURN(OCSPRESPONSE);
 }
@@ -997,7 +995,6 @@ pkix_pl_OcspResponse_GetStatusForCert(
 {
         SECStatus rv = SECFailure;
         SECStatus rvCache;
-        PRBool certIDWasConsumed = PR_FALSE;
 
         PKIX_ENTER(OCSPRESPONSE, "pkix_pl_OcspResponse_GetStatusForCert");
         PKIX_NULLCHECK_THREE(response, pPassed, pReturnCode);
@@ -1008,19 +1005,14 @@ pkix_pl_OcspResponse_GetStatusForCert(
          * set response->signerCert.
          */
         PKIX_NULLCHECK_TWO(response->signerCert, response->request);
-        PKIX_NULLCHECK_TWO(cid, cid->certID);
 
         rv = cert_ProcessOCSPResponse(response->handle,
                                       response->nssOCSPResponse,
                                       cid->certID,
                                       response->signerCert,
                                       PR_Now(),
-                                      &certIDWasConsumed,
+                                      &cid->certIDWasConsumed,
                                       &rvCache);
-        if (certIDWasConsumed) {
-                cid->certID = NULL;
-        }
-
 	if (rv == SECSuccess) {
                 *pPassed = PKIX_TRUE;
                 *pReturnCode = 0;

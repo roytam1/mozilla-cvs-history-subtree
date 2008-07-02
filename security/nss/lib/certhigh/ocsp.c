@@ -1646,6 +1646,7 @@ ocsp_CreateCertID(PRArenaPool *arena, CERTCertificate *cert, int64 time)
 {
     CERTOCSPCertID *certID;
     CERTCertificate *issuerCert = NULL;
+    SECItem *tempItem = NULL;
     void *mark = PORT_ArenaMark(arena);
     SECStatus rv;
 
@@ -1716,6 +1717,9 @@ ocsp_CreateCertID(PRArenaPool *arena, CERTCertificate *cert, int64 time)
 loser:
     if (issuerCert != NULL) {
 	CERT_DestroyCertificate(issuerCert);
+    }
+    if (tempItem != NULL) {
+	SECITEM_FreeItem(tempItem, PR_TRUE);
     }
     PORT_ArenaRelease(arena, mark);
     return NULL;
@@ -2718,7 +2722,7 @@ ocsp_ParseURL(const char *url, char **pHostname, PRUint16 *pPort, char **pPath)
     unsigned short port = 80;		/* default, in case not in url */
     char *hostname = NULL;
     char *path = NULL;
-    const char *save;
+    char *save;
     char c;
     int len;
 

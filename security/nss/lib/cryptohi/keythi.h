@@ -76,7 +76,7 @@ SEC_END_PROTOS
 */
 
 struct SECKEYRSAPublicKeyStr {
-    PLArenaPool * arena;
+    PRArenaPool * arena;
     SECItem modulus;
     SECItem publicExponent;
 };
@@ -88,7 +88,7 @@ typedef struct SECKEYRSAPublicKeyStr SECKEYRSAPublicKey;
 */
 
 struct SECKEYPQGParamsStr {
-    PLArenaPool *arena;
+    PRArenaPool *arena;
     SECItem prime;    /* p */
     SECItem subPrime; /* q */
     SECItem base;     /* g */
@@ -108,14 +108,14 @@ typedef struct SECKEYDSAPublicKeyStr SECKEYDSAPublicKey;
 ** Structure member names suggested by PKCS#3.
 */
 struct SECKEYDHParamsStr {
-    PLArenaPool * arena;
+    PRArenaPool * arena;
     SECItem prime; /* p */
     SECItem base; /* g */
 };
 typedef struct SECKEYDHParamsStr SECKEYDHParams;
 
 struct SECKEYDHPublicKeyStr {
-    PLArenaPool * arena;
+    PRArenaPool * arena;
     SECItem prime;
     SECItem base;
     SECItem publicValue;
@@ -242,7 +242,7 @@ typedef struct {
 
 typedef struct {
     PRCList list;
-    PLArenaPool *arena;
+    PRArenaPool *arena;
 } SECKEYPrivateKeyList;
 
 typedef struct {
@@ -252,7 +252,7 @@ typedef struct {
 
 typedef struct {
     PRCList list;
-    PLArenaPool *arena;
+    PRArenaPool *arena;
 } SECKEYPublicKeyList;
 #endif /* _KEYTHI_H_ */
 

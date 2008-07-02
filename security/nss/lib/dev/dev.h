@@ -389,13 +389,15 @@ nssSlot_CreateSession
  * nssToken_GenerateKeyPair
  * nssToken_GenerateSymmetricKey
  * nssToken_DeleteStoredObject
- * nssToken_FindObjects
+ * nssToken_FindCertificates
  * nssToken_FindCertificatesBySubject
  * nssToken_FindCertificatesByNickname
  * nssToken_FindCertificatesByEmail
  * nssToken_FindCertificateByIssuerAndSerialNumber
  * nssToken_FindCertificateByEncodedCertificate
+ * nssToken_FindTrustObjects
  * nssToken_FindTrustForCertificate
+ * nssToken_FindCRLs
  * nssToken_FindCRLsBySubject
  * nssToken_FindPrivateKeys
  * nssToken_FindPrivateKeyByID
@@ -448,7 +450,7 @@ nssToken_ImportCertificate
   nssSession *sessionOpt,
   NSSCertificateType certType,
   NSSItem *id,
-  const NSSUTF8 *nickname,
+  NSSUTF8 *nickname,
   NSSDER *encoding,
   NSSDER *issuer,
   NSSDER *subject,
@@ -493,11 +495,10 @@ nssToken_DeleteStoredObject
 );
 
 NSS_EXTERN nssCryptokiObject **
-nssToken_FindObjects
+nssToken_FindCertificates
 (
   NSSToken *token,
   nssSession *sessionOpt,
-  CK_OBJECT_CLASS objclass,
   nssTokenSearchType searchType,
   PRUint32 maximumOpt,
   PRStatus *statusOpt
@@ -568,6 +569,16 @@ nssToken_FindCertificateByEncodedCertificate
   PRStatus *statusOpt
 );
 
+NSS_EXTERN nssCryptokiObject **
+nssToken_FindTrustObjects
+(
+  NSSToken *token,
+  nssSession *sessionOpt,
+  nssTokenSearchType searchType,
+  PRUint32 maximumOpt,
+  PRStatus *statusOpt
+);
+
 NSS_EXTERN nssCryptokiObject *
 nssToken_FindTrustForCertificate
 (
@@ -577,6 +588,16 @@ nssToken_FindTrustForCertificate
   NSSDER *certIssuer,
   NSSDER *certSerial,
   nssTokenSearchType searchType
+);
+
+NSS_EXTERN nssCryptokiObject **
+nssToken_FindCRLs
+(
+  NSSToken *token,
+  nssSession *sessionOpt,
+  nssTokenSearchType searchType,
+  PRUint32 maximumOpt,
+  PRStatus *statusOpt
 );
 
 NSS_EXTERN nssCryptokiObject **
@@ -771,7 +792,7 @@ nssCryptokiPrivateKey_SetCertificate
 (
   nssCryptokiObject *keyObject,
   nssSession *sessionOpt,
-  const NSSUTF8 *nickname,
+  NSSUTF8 *nickname,
   NSSItem *id,
   NSSDER *subject
 );

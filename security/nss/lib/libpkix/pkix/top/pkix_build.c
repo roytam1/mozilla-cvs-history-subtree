@@ -48,10 +48,12 @@
 
 extern PRLogModuleInfo *pkixLog;
 
-#ifdef DEBUG_kaie
+#ifdef PR_LOGGING
 void
 pkix_trace_dump_cert(const char *info, PKIX_PL_Cert *cert, void *plContext)
 {
+        PKIX_ENTER(FORWARDBUILDERSTATE, "pkix_trace_dump_cert");
+
         if (pkixLog && PR_LOG_TEST(pkixLog, PR_LOG_DEBUG)) {
             PKIX_PL_String *unString;
             char *unAscii;
@@ -1014,7 +1016,7 @@ pkix_Build_SortCertComparator(
                 plContext),
                 PKIX_OBJECTCOMPARATORFAILED);
 
-        *pResult = !result;
+        *pResult = result;
 
 cleanup:
 
@@ -1553,7 +1555,6 @@ cleanup:
         PKIX_DECREF(policyChecker);
         PKIX_DECREF(userChecker);
         PKIX_DECREF(userCheckersList);
-        PKIX_DECREF(userCheckerExtOIDs);
 
         PKIX_RETURN(BUILD);
 }
@@ -2501,8 +2502,7 @@ pkix_BuildForwardDepthFirstSearch(
                 }
             }
 
-            if (state->status == BUILD_AIAPENDING &&
-                state->buildConstants.aiaMgr) {
+            if (state->status == BUILD_AIAPENDING) {
                 PKIX_CHECK(PKIX_PL_AIAMgr_GetAIACerts
                         (state->buildConstants.aiaMgr,
                         state->prevCert,
@@ -2673,7 +2673,7 @@ pkix_BuildForwardDepthFirstSearch(
                                     PKIX_VERIFYNODECREATEFAILED);
                     }
 
-#ifdef DEBUG_kaie
+#ifdef PR_LOGGING
                     pkix_trace_dump_cert(
                       "pkix_BuildForwardDepthFirstSearch calling pkix_Build_VerifyCertificate",
                       state->candidateCert, plContext);
@@ -2711,7 +2711,6 @@ pkix_BuildForwardDepthFirstSearch(
                                         PKIX_VERIFYNODEADDTOTREEFAILED);
                                 PKIX_DECREF(verifyNode);
                             }
-                            pkixTempErrorReceived = PKIX_FALSE;
                             PKIX_DECREF(finalError);
                             finalError = verifyError;
                             verifyError = NULL;
@@ -2793,7 +2792,6 @@ pkix_BuildForwardDepthFirstSearch(
                                     PKIX_VERIFYNODEADDTOTREEFAILED);
                             PKIX_DECREF(verifyNode);
                     }
-                    pkixTempErrorReceived = PKIX_FALSE;
                     PKIX_DECREF(finalError);
                     finalError = verifyError;
                     verifyError = NULL;
@@ -2878,9 +2876,6 @@ pkix_BuildForwardDepthFirstSearch(
                                 state->status = BUILD_CHECKTRUSTED;
                                 goto cleanup;
                             }
-                            /* Reset temp error that was set by 
-                             * PKIX_CHECK_ONLY_FATAL and continue */
-                            pkixTempErrorReceived = PKIX_FALSE;
                             PKIX_DECREF(trustAnchor);
                     }
 
@@ -3018,7 +3013,6 @@ pkix_BuildForwardDepthFirstSearch(
                                       plContext),
                                       PKIX_VERIFYNODESETERRORFAILED);
                               }
-                              pkixTempErrorReceived = PKIX_FALSE;
                               PKIX_DECREF(finalError);
                               finalError = verifyError;
                               verifyError = NULL;
@@ -3076,9 +3070,6 @@ pkix_BuildForwardDepthFirstSearch(
                                         state->status = BUILD_VALCHAIN;
                                         goto cleanup;
                                     }
-                                    /* Reset temp error that was set by 
-                                     * PKIX_CHECK_ONLY_FATAL and continue */
-                                    pkixTempErrorReceived = PKIX_FALSE;
                             }
 
                             state->status = BUILD_CHECKWITHANCHORS;
@@ -3552,7 +3543,7 @@ pkix_Build_TryShortcut(
                             /* Exit loop with anchor set */
                             break;
                     }
-                    pkixTempErrorReceived = PKIX_FALSE;
+
                 }   /* if (passed == PKIX_FALSE) ... else ... */
                 PKIX_DECREF(trustedPubKey);
                 PKIX_DECREF(anchor);
@@ -4047,12 +4038,8 @@ pkix_Build_InitiateBuildChain(
                     }
             }
     
-            /* Do not initialize AIA manager if we are not going to fetch
-             * cert using aia url. */
-            if (procParams->useAIAForCertFetching) {
-                PKIX_CHECK(PKIX_PL_AIAMgr_Create(&aiaMgr, plContext),
-                           PKIX_AIAMGRCREATEFAILED);
-            }
+            PKIX_CHECK(PKIX_PL_AIAMgr_Create(&aiaMgr, plContext),
+                    PKIX_AIAMGRCREATEFAILED);
 
             /*
              * We initialize all the fields of buildConstants here, in one place,

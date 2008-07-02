@@ -288,10 +288,10 @@ pkix_OcspChecker_Check(
                 PKIX_OCSPRESPONSEGETSTATUSFORCERTFAILED);
 
 cleanup:
-        if (!passed && cid && cid->certID) {
+        if (!passed && cid && cid->certID && !cid->certIDWasConsumed) {
                 /* We still own the certID object, which means that 
                  * it did not get consumed to create a cache entry.
-                 * Let's make sure there is one.
+                 * Let's make sure we create one.
                  */
                 PKIX_Error *err;
                 err = PKIX_PL_OcspCertID_RememberOCSPProcessingFailure(

@@ -84,6 +84,7 @@ extern SECStatus
 pkix_pl_lifecycle_ObjectTableUpdate(int *objCountTable);
 
 PRInt32 parallelFnInvocationCount;
+
 #endif /* PKIX_OBJECT_LEAK_TEST */
 
 
@@ -845,7 +846,7 @@ cert_PkixErrorToNssCode(
             if (!pkixLog) break;
         }
         if (pkixLog) {
-            PR_LOG(pkixLog, 2, ("Error at level %d: %s\n", errLevel,
+            PR_LOG(pkixLog, 1, ("Error at level %d: %s\n", errLevel,
                                 PKIX_ErrorText[errPtr->errCode]));
         }
         errPtr = errPtr->cause;
@@ -1019,6 +1020,9 @@ cert_GetBuildResults(
         fprintf(stderr, "BUILD ERROR:\n%s\n", temp);
         PKIX_PL_Free(temp, NULL);
 #endif /* DEBUG */
+        cert_PkixErrorToNssCode(error, &nssErrorCode, plContext);
+        PORT_SetError(nssErrorCode);
+        
         if (verifyNode) {
             PKIX_Error *tmpError =
                 cert_GetLogFromVerifyNode(log, verifyNode, plContext);
@@ -1026,8 +1030,6 @@ cert_GetBuildResults(
                 PKIX_PL_Object_DecRef((PKIX_PL_Object *)tmpError, plContext);
             }
         }
-        cert_PkixErrorToNssCode(error, &nssErrorCode, plContext);
-        PORT_SetError(nssErrorCode);
         goto cleanup;
     }
 
@@ -1145,7 +1147,7 @@ cert_VerifyCertChainPkix(
     CERTCertificate *cert,
     PRBool           checkSig,
     SECCertUsage     requiredUsage,
-    PRTime           time,
+    PRUint64         time,
     void            *wincx,
     CERTVerifyLog   *log,
     PRBool          *pSigerror,
@@ -1169,7 +1171,6 @@ cert_VerifyCertChainPkix(
     int  objCountTable[PKIX_NUMTYPES]; 
     int  fnInvLocalCount = 0;
 
-    testStartFnStackPosition = 2;
     fnStackNameArr[0] = "cert_VerifyCertChainPkix";
     fnStackInvCountArr[0] = 0;
     PKIX_Boolean abortOnLeak = 
@@ -1199,7 +1200,7 @@ do {
         pkix_pl_lifecycle_ObjectTableUpdate(objCountTable); 
     }
 
-    PR_LOG(pkixLog, 1, ("Memory leak test: Loop %d\n", memLeakLoopCount++));
+    PR_LOG(pkixLog, 1, ("Memory leak test: Loop %d\n", memLeakLoopCount));
 #endif /* PKIX_OBJECT_LEAK_TEST */
 
     error =
@@ -1275,12 +1276,6 @@ cleanup:
     leakedObjNum =
         pkix_pl_lifecycle_ObjectLeakCheck(leakedObjNum ? objCountTable : NULL);
     
-    if (pkixLog && leakedObjNum) {
-        PR_LOG(pkixLog, 1, ("The generated error caused an object leaks. "
-                            "Stack %s\n", errorFnStackString));
-    }
-    PR_Free(errorFnStackString);
-    errorFnStackString = NULL;
     if (abortOnLeak) {
         PORT_Assert(leakedObjNum == 0);
     }
@@ -1744,13 +1739,6 @@ cert_pkixSetParam(PKIX_ProcessingParams *procParams,
                                                       plContext);
             break;
 
-        case cert_pi_useAIACertFetch:
-            error =
-                PKIX_ProcessingParams_SetUseAIAForCertFetching(procParams,
-                                     (PRBool)(param->value.scalar.b != 0),
-                                                               plContext);
-            break;
-            
         default:
             PORT_SetError(errCode);
             r = SECFailure;
@@ -1806,10 +1794,6 @@ cert_pkixDestroyValOutParam(CERTValOutParam *params)
                 CERT_DestroyCertList(i->value.pointer.chain);
                 i->value.pointer.chain = NULL;
             }
-            break;
-
-        default:
-            break;
         }
     }
 }
@@ -2056,11 +2040,10 @@ SECStatus CERT_PKIXVerifyCert(
     int  memLeakLoopCount = 0;
     int  objCountTable[PKIX_NUMTYPES];
     int  fnInvLocalCount = 0;
-    testStartFnStackPosition = 1;
     fnStackNameArr[0] = "CERT_PKIXVerifyCert";
     fnStackInvCountArr[0] = 0;
     PKIX_Boolean abortOnLeak = 
-        (PR_GetEnv("PKIX_OBJECT_LEAK_TEST_ABORT_ON_LEAK") == NULL) ?
+        PR_GetEnv("PKIX_OBJECT_LEAK_TEST_ABORT_ON_LEAK") ?
                                                    PKIX_FALSE : PKIX_TRUE;
     runningLeakTest = PKIX_TRUE;
 
@@ -2078,10 +2061,8 @@ do {
     certSelector = NULL;
     certStores = NULL;
     valResult = NULL;
-    verifyNode = NULL;
     trustAnchor = NULL;
     trustAnchorCert = NULL;
-    builtCertList = NULL;
     oparam = NULL;
     i=0;
     errorGenerated = PKIX_FALSE;
@@ -2091,7 +2072,7 @@ do {
         pkix_pl_lifecycle_ObjectTableUpdate(objCountTable);
     }
 
-    PR_LOG(pkixLog, 1, ("Memory leak test: Loop %d\n", memLeakLoopCount++));
+    PR_LOG(pkixLog, 1, ("Memory leak test: Loop %d\n", memLeakLoopCount));
 #endif /* PKIX_OBJECT_LEAK_TEST */
 
     error = PKIX_PL_NssContext_Create(
@@ -2177,10 +2158,6 @@ do {
         goto cleanup;
     }
 
-#ifdef PKIX_OBJECT_LEAK_TEST
-    PORT_Assert(!errorGenerated);
-#endif /* PKIX_OBJECT_LEAK_TEST */
-
     oparam = cert_pkix_FindOutputParam(paramsOut, cert_po_trustAnchor);
     if (oparam != NULL) {
         oparam->value.pointer.cert = 
@@ -2207,9 +2184,6 @@ cleanup:
     if (verifyNode) {
         /* Return validation log only upon error. */
         oparam = cert_pkix_FindOutputParam(paramsOut, cert_po_errorLog);
-#ifdef PKIX_OBJECT_LEAK_TEST
-        if (!errorGenerated)
-#endif /* PKIX_OBJECT_LEAK_TEST */
         if (r && oparam != NULL) {
             PKIX_Error *tmpError =
                 cert_GetLogFromVerifyNode(oparam->value.pointer.log,
@@ -2260,12 +2234,6 @@ cleanup:
     leakedObjNum =
         pkix_pl_lifecycle_ObjectLeakCheck(leakedObjNum ? objCountTable : NULL);
 
-    if (pkixLog && leakedObjNum) {
-        PR_LOG(pkixLog, 1, ("The generated error caused an object leaks. "
-                            "Stack %s\n", errorFnStackString));
-    }
-    PR_Free(errorFnStackString);
-    errorFnStackString = NULL;
     if (abortOnLeak) {
         PORT_Assert(leakedObjNum == 0);
     }
@@ -2278,3 +2246,4 @@ cleanup:
 
     return r;
 }
+

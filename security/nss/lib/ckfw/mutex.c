@@ -111,6 +111,15 @@ nssCKFWMutex_verifyPointer
 
 #endif /* DEBUG */
 
+static CK_RV
+mutex_noop
+(
+  CK_VOID_PTR pMutex
+)
+{
+  return CKR_OK;
+}
+
 /*
  * nssCKFWMutex_Create
  *

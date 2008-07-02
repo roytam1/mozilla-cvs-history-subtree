@@ -71,20 +71,10 @@ extern CERTName *CERT_AsciiToName(char *string);
 /*
 ** Convert an CERTName into its RFC1485 encoded equivalent.
 ** Returns a string that must be freed with PORT_Free().
-** This version produces a string for maximum human readability,
-** not for strict RFC compliance.
 */
 extern char *CERT_NameToAscii(CERTName *name);
 
-/*
-** Convert an CERTName into its RFC1485 encoded equivalent.
-** Returns a string that must be freed with PORT_Free().
-** Caller chooses encoding rules.
-*/
-extern char *CERT_NameToAsciiInvertible(CERTName *name, 
-                                        CertStrictnessLevel strict);
-
-extern CERTAVA *CERT_CopyAVA(PLArenaPool *arena, CERTAVA *src);
+extern CERTAVA *CERT_CopyAVA(PRArenaPool *arena, CERTAVA *src);
 
 /* convert an OID to dotted-decimal representation */
 /* Returns a string that must be freed with PR_smprintf_free(). */
@@ -105,12 +95,12 @@ extern SECComparison CERT_CompareAVA(const CERTAVA *a, const CERTAVA *b);
 ** Create an RDN (relative-distinguished-name). The argument list is a
 ** NULL terminated list of AVA's.
 */
-extern CERTRDN *CERT_CreateRDN(PLArenaPool *arena, CERTAVA *avas, ...);
+extern CERTRDN *CERT_CreateRDN(PRArenaPool *arena, CERTAVA *avas, ...);
 
 /*
 ** Make a copy of "src" storing it in "dest".
 */
-extern SECStatus CERT_CopyRDN(PLArenaPool *arena, CERTRDN *dest, CERTRDN *src);
+extern SECStatus CERT_CopyRDN(PRArenaPool *arena, CERTRDN *dest, CERTRDN *src);
 
 /*
 ** Destory an RDN object.
@@ -124,7 +114,7 @@ extern void CERT_DestroyRDN(CERTRDN *rdn, PRBool freeit);
 **	"rdn" the RDN to add to
 **	"ava" the AVA to add
 */
-extern SECStatus CERT_AddAVA(PLArenaPool *arena, CERTRDN *rdn, CERTAVA *ava);
+extern SECStatus CERT_AddAVA(PRArenaPool *arena, CERTRDN *rdn, CERTAVA *ava);
 
 /*
 ** Compare two RDN's, returning the difference between them.
@@ -142,7 +132,7 @@ extern CERTName *CERT_CreateName(CERTRDN *rdn, ...);
 ** "dest" before allocation is done (use CERT_DestroyName(dest, PR_FALSE) to
 ** do that).
 */
-extern SECStatus CERT_CopyName(PLArenaPool *arena, CERTName *dest, CERTName *src);
+extern SECStatus CERT_CopyName(PRArenaPool *arena, CERTName *dest, CERTName *src);
 
 /*
 ** Destroy a Name object.
@@ -185,7 +175,7 @@ extern char *CERT_Hexify (SECItem *i, int do_colon);
 **	"notBefore" the time before which the validity is not valid
 **	"notAfter" the time after which the validity is not valid
 */
-extern CERTValidity *CERT_CreateValidity(PRTime notBefore, PRTime notAfter);
+extern CERTValidity *CERT_CreateValidity(int64 notBefore, int64 notAfter);
 
 /*
 ** Destroy a validity object.
@@ -201,7 +191,7 @@ extern void CERT_DestroyValidity(CERTValidity *v);
 ** that).
 */
 extern SECStatus CERT_CopyValidity
-   (PLArenaPool *arena, CERTValidity *dest, CERTValidity *src);
+   (PRArenaPool *arena, CERTValidity *dest, CERTValidity *src);
 
 /*
 ** The cert lib considers a cert or CRL valid if the "notBefore" time is
@@ -315,7 +305,7 @@ extern void CERT_SetDefaultCertDB(CERTCertDBHandle *handle);
 extern CERTCertDBHandle *CERT_GetDefaultCertDB(void);
 
 extern CERTCertList *CERT_GetCertChainFromCert(CERTCertificate *cert, 
-					       PRTime time, 
+					       int64 time, 
 					       SECCertUsage usage);
 extern CERTCertificate *
 CERT_NewTempCertificate (CERTCertDBHandle *handle, SECItem *derCert,
@@ -337,7 +327,7 @@ CERT_NewTempCertificate (CERTCertDBHandle *handle, SECItem *derCert,
 **	"value" is the null terminated string containing the value
 */
 extern CERTAVA *CERT_CreateAVA
-   (PLArenaPool *arena, SECOidTag kind, int valueType, char *value);
+   (PRArenaPool *arena, SECOidTag kind, int valueType, char *value);
 
 /*
 ** Extract the Distinguished Name from a DER encoded certificate
@@ -356,10 +346,10 @@ extern SECStatus CERT_IssuerNameFromDERCert(SECItem *derCert,
 
 extern SECItem *
 CERT_EncodeGeneralName(CERTGeneralName *genName, SECItem *dest,
-		       PLArenaPool *arena);
+		       PRArenaPool *arena);
 
 extern CERTGeneralName *
-CERT_DecodeGeneralName(PLArenaPool *reqArena, SECItem *encodedName,
+CERT_DecodeGeneralName(PRArenaPool *reqArena, SECItem *encodedName,
 		       CERTGeneralName  *genName);
 
 
@@ -371,10 +361,10 @@ CERT_DecodeGeneralName(PLArenaPool *reqArena, SECItem *encodedName,
 **	"derCert" the DER encoded certificate
 **	"key" the returned key
 */
-extern SECStatus CERT_KeyFromDERCert(PLArenaPool *reqArena, SECItem *derCert,
+extern SECStatus CERT_KeyFromDERCert(PRArenaPool *reqArena, SECItem *derCert,
                                      SECItem *key);
 
-extern SECStatus CERT_KeyFromIssuerAndSN(PLArenaPool *arena, SECItem *issuer,
+extern SECStatus CERT_KeyFromIssuerAndSN(PRArenaPool *arena, SECItem *issuer,
 					 SECItem *sn, SECItem *key);
 
 extern SECStatus CERT_SerialNumberFromDERCert(SECItem *derCert, 
@@ -388,7 +378,7 @@ extern SECStatus CERT_SerialNumberFromDERCert(SECItem *derCert,
 **	"derCrl" the DER encoded crl
 **	"key" the returned key
 */
-extern SECStatus CERT_KeyFromDERCrl(PLArenaPool *arena, SECItem *derCrl, SECItem *key);
+extern SECStatus CERT_KeyFromDERCrl(PRArenaPool *arena, SECItem *derCrl, SECItem *key);
 
 /*
 ** Open the certificate database.  Use callback to get name of database.
@@ -447,14 +437,14 @@ CERT_DecodeDERCertificate (SECItem *derSignedCert, PRBool copyDER, char *nicknam
 #define SEC_KRL_TYPE	0
 
 extern CERTSignedCrl *
-CERT_DecodeDERCrl (PLArenaPool *arena, SECItem *derSignedCrl,int type);
+CERT_DecodeDERCrl (PRArenaPool *arena, SECItem *derSignedCrl,int type);
 
 /*
  * same as CERT_DecodeDERCrl, plus allow options to be passed in
  */
 
 extern CERTSignedCrl *
-CERT_DecodeDERCrlWithFlags(PLArenaPool *narena, SECItem *derSignedCrl,
+CERT_DecodeDERCrlWithFlags(PRArenaPool *narena, SECItem *derSignedCrl,
                           int type, PRInt32 options);
 
 /* CRL options to pass */
@@ -560,14 +550,6 @@ extern CERTCertificate *
 CERT_FindCertBySubjectKeyID (CERTCertDBHandle *handle, SECItem *subjKeyID);
 
 /*
-** Encode Certificate SKID (Subject Key ID) extension.
-**
-*/
-extern SECStatus 
-CERT_EncodeSubjectKeyID(PLArenaPool *arena, const SECItem* srcString,
-                        SECItem *encodedValue);
-
-/*
 ** Find a certificate in the database by a nickname
 **	"nickname" is the ascii string nickname to look for
 */
@@ -606,7 +588,7 @@ CERT_FindCertBySPKDigest(CERTCertDBHandle *handle, SECItem *spkDigest);
  * Find the issuer of a cert
  */
 CERTCertificate *
-CERT_FindCertIssuer(CERTCertificate *cert, PRTime validTime, SECCertUsage usage);
+CERT_FindCertIssuer(CERTCertificate *cert, int64 validTime, SECCertUsage usage);
 
 /*
 ** Check the validity times of a certificate vs. time 't', allowing
@@ -642,7 +624,7 @@ CERT_GetCertTimes (CERTCertificate *c, PRTime *notBefore, PRTime *notAfter);
 /*
 ** Extract the issuer and serial number from a certificate
 */
-extern CERTIssuerAndSN *CERT_GetCertIssuerAndSN(PLArenaPool *, 
+extern CERTIssuerAndSN *CERT_GetCertIssuerAndSN(PRArenaPool *, 
 							CERTCertificate *);
 
 /*
@@ -652,7 +634,7 @@ extern CERTIssuerAndSN *CERT_GetCertIssuerAndSN(PLArenaPool *,
 */
 extern SECStatus CERT_VerifySignedData(CERTSignedData *sd,
 				       CERTCertificate *cert,
-				       PRTime t,
+				       int64 t,
 				       void *wincx);
 /*
 ** verify the signature of a signed data object with the given DER publickey
@@ -680,7 +662,7 @@ CERT_VerifySignedDataWithPublicKey(CERTSignedData *sd,
 extern SECStatus
 CERT_VerifyCertificate(CERTCertDBHandle *handle, CERTCertificate *cert,
 		PRBool checkSig, SECCertificateUsage requiredUsages,
-                PRTime t, void *wincx, CERTVerifyLog *log,
+                int64 t, void *wincx, CERTVerifyLog *log,
                 SECCertificateUsage* returnedUsages);
 
 /* same as above, but uses current time */
@@ -696,7 +678,7 @@ CERT_VerifyCertificateNow(CERTCertDBHandle *handle, CERTCertificate *cert,
 */
 extern SECStatus
 CERT_VerifyCACertForUsage(CERTCertDBHandle *handle, CERTCertificate *cert,
-		PRBool checkSig, SECCertUsage certUsage, PRTime t,
+		PRBool checkSig, SECCertUsage certUsage, int64 t,
 		void *wincx, CERTVerifyLog *log);
 
 /*
@@ -709,7 +691,7 @@ CERT_VerifyCACertForUsage(CERTCertDBHandle *handle, CERTCertificate *cert,
 */
 extern SECStatus
 CERT_VerifyCert(CERTCertDBHandle *handle, CERTCertificate *cert,
-		PRBool checkSig, SECCertUsage certUsage, PRTime t,
+		PRBool checkSig, SECCertUsage certUsage, int64 t,
 		void *wincx, CERTVerifyLog *log);
 
 /* same as above, but uses current time */
@@ -719,7 +701,7 @@ CERT_VerifyCertNow(CERTCertDBHandle *handle, CERTCertificate *cert,
 
 SECStatus
 CERT_VerifyCertChain(CERTCertDBHandle *handle, CERTCertificate *cert,
-		     PRBool checkSig, SECCertUsage certUsage, PRTime t,
+		     PRBool checkSig, SECCertUsage certUsage, int64 t,
 		     void *wincx, CERTVerifyLog *log);
 
 /*
@@ -852,7 +834,7 @@ extern SECStatus CERT_EncodeAndAddBitStrExtension
 
 
 extern SECStatus
-CERT_EncodeAltNameExtension(PLArenaPool *arena,  CERTGeneralName  *value, SECItem *encodedValue);
+CERT_EncodeAltNameExtension(PRArenaPool *arena,  CERTGeneralName  *value, SECItem *encodedValue);
 
 
 /*
@@ -892,19 +874,19 @@ CERT_DestroyOidSequence(CERTOidSequence *oidSeq);
 **	encodedValue - output encoded value
 */
 extern SECStatus CERT_EncodeBasicConstraintValue
-   (PLArenaPool *arena, CERTBasicConstraints *value, SECItem *encodedValue);
+   (PRArenaPool *arena, CERTBasicConstraints *value, SECItem *encodedValue);
 
 /*
 ** Encode the value of the authorityKeyIdentifier extension.
 */
 extern SECStatus CERT_EncodeAuthKeyID
-   (PLArenaPool *arena, CERTAuthKeyID *value, SECItem *encodedValue);
+   (PRArenaPool *arena, CERTAuthKeyID *value, SECItem *encodedValue);
 
 /*
 ** Encode the value of the crlDistributionPoints extension.
 */
 extern SECStatus CERT_EncodeCRLDistributionPoints
-   (PLArenaPool *arena, CERTCrlDistributionPoints *value,SECItem *derValue);
+   (PRArenaPool *arena, CERTCrlDistributionPoints *value,SECItem *derValue);
 
 /*
 ** Decodes a DER encoded basicConstaint extension value into a readable format
@@ -921,7 +903,7 @@ extern SECStatus CERT_DecodeBasicConstraintValue
 **	Returns a CERTAuthKeyID structure which contains the decoded value
 */
 extern CERTAuthKeyID *CERT_DecodeAuthKeyID 
-			(PLArenaPool *arena, SECItem *encodedValue);
+			(PRArenaPool *arena, SECItem *encodedValue);
 
 
 /* Decodes a DER encoded crlDistributionPoints extension value into a 
@@ -932,7 +914,7 @@ extern CERTAuthKeyID *CERT_DecodeAuthKeyID
 **          decoded value
 */
 extern CERTCrlDistributionPoints * CERT_DecodeCRLDistributionPoints
-   (PLArenaPool *arena, SECItem *der);
+   (PRArenaPool *arena, SECItem *der);
 
 /* Extract certain name type from a generalName */
 extern void *CERT_GetGeneralNameByType
@@ -971,7 +953,7 @@ extern char *CERT_FindCertURLExtension (CERTCertificate *cert, int tag,
 /* Returns the decoded value of the authKeyID extension.
 **   Note that this uses passed in the arena to allocate storage for the result
 */
-extern CERTAuthKeyID * CERT_FindAuthKeyIDExten (PLArenaPool *arena,CERTCertificate *cert);
+extern CERTAuthKeyID * CERT_FindAuthKeyIDExten (PRArenaPool *arena,CERTCertificate *cert);
 
 /* Returns the decoded value of the basicConstraint extension.
  */
@@ -1022,7 +1004,7 @@ extern SECStatus CERT_FindCRLExtension
    (CERTCrl *crl, int tag, SECItem *value);
 
 extern SECStatus
-   CERT_FindInvalidDateExten (CERTCrl *crl, PRTime *value);
+   CERT_FindInvalidDateExten (CERTCrl *crl, int64 *value);
 
 /*
 ** Set up a crl for adding X509v3 extensions.  Returns an opaque handle
@@ -1045,7 +1027,7 @@ extern CERTCertNicknames *CERT_GetCertNicknames (CERTCertDBHandle *handle,
 /*
 ** Finds the crlNumber extension and decodes its value into 'value'
 */
-extern SECStatus CERT_FindCRLNumberExten (PLArenaPool *arena, CERTCrl *crl,
+extern SECStatus CERT_FindCRLNumberExten (PRArenaPool *arena, CERTCrl *crl,
                                           SECItem *value);
 
 extern SECStatus CERT_FindCRLEntryReasonExten (CERTCrlEntry *crlEntry,
@@ -1181,15 +1163,15 @@ CERTUserNotice *
 CERT_DecodeUserNotice(SECItem *noticeItem);
 
 extern CERTGeneralName *
-CERT_DecodeAltNameExtension(PLArenaPool *reqArena, SECItem *EncodedAltName);
+CERT_DecodeAltNameExtension(PRArenaPool *reqArena, SECItem *EncodedAltName);
 
 extern CERTNameConstraints *
-CERT_DecodeNameConstraintsExtension(PLArenaPool *arena, 
+CERT_DecodeNameConstraintsExtension(PRArenaPool *arena, 
                                     SECItem *encodedConstraints);
 
 /* returns addr of a NULL termainated array of pointers to CERTAuthInfoAccess */
 extern CERTAuthInfoAccess **
-CERT_DecodeAuthInfoAccessExtension(PLArenaPool *reqArena,
+CERT_DecodeAuthInfoAccessExtension(PRArenaPool *reqArena,
 				   SECItem     *encodedExtension);
 
 extern CERTPrivKeyUsagePeriod *
@@ -1274,10 +1256,10 @@ SECStatus
 CERT_CheckForEvilCert(CERTCertificate *cert);
 
 CERTGeneralName *
-CERT_GetCertificateNames(CERTCertificate *cert, PLArenaPool *arena);
+CERT_GetCertificateNames(CERTCertificate *cert, PRArenaPool *arena);
 
 char *
-CERT_GetNickName(CERTCertificate   *cert, CERTCertDBHandle *handle, PLArenaPool *nicknameArena);
+CERT_GetNickName(CERTCertificate   *cert, CERTCertDBHandle *handle, PRArenaPool *nicknameArena);
 
 /*
  * Creates or adds to a list of all certs with a give subject name, sorted by
@@ -1286,7 +1268,25 @@ CERT_GetNickName(CERTCertificate   *cert, CERTCertDBHandle *handle, PLArenaPool 
  */
 CERTCertList *
 CERT_CreateSubjectCertList(CERTCertList *certList, CERTCertDBHandle *handle,
-			   SECItem *name, PRTime sorttime, PRBool validOnly);
+			   SECItem *name, int64 sorttime, PRBool validOnly);
+
+/*
+ * Creates or adds to a list of all certs with a give nickname, sorted by
+ * validity time, newest first.  Invalid certs are considered older than valid
+ * certs. If validOnly is set, do not include invalid certs on list.
+ */
+CERTCertList *
+CERT_CreateNicknameCertList(CERTCertList *certList, CERTCertDBHandle *handle,
+			    char *nickname, int64 sorttime, PRBool validOnly);
+
+/*
+ * Creates or adds to a list of all certs with a give email addr, sorted by
+ * validity time, newest first.  Invalid certs are considered older than valid
+ * certs. If validOnly is set, do not include invalid certs on list.
+ */
+CERTCertList *
+CERT_CreateEmailAddrCertList(CERTCertList *certList, CERTCertDBHandle *handle,
+			     char *emailAddr, int64 sorttime, PRBool validOnly);
 
 /*
  * remove certs from a list that don't have keyUsage and certType
@@ -1414,7 +1414,7 @@ CERT_ExtractNicknameString(char *namestring, char *expiredString,
  *		not yet good.
  */
 char *
-CERT_GetCertNicknameWithValidity(PLArenaPool *arena, CERTCertificate *cert,
+CERT_GetCertNicknameWithValidity(PRArenaPool *arena, CERTCertificate *cert,
 				 char *expiredString, char *notYetGoodString);
 
 /*
@@ -1437,7 +1437,7 @@ CERT_DerNameToAscii(SECItem *dername);
 CERTCertificate *
 CERT_FindMatchingCert(CERTCertDBHandle *handle, SECItem *derName,
 		      CERTCertOwner owner, SECCertUsage usage,
-		      PRBool preferTrusted, PRTime validTime, PRBool validOnly);
+		      PRBool preferTrusted, int64 validTime, PRBool validOnly);
 
 /*
  * Acquire the global lock on the cert database.
@@ -1512,12 +1512,12 @@ CERT_UnlockCertTrust(CERTCertificate *cert);
  * results in a NULL being returned (and an appropriate error set).
  */ 
 extern SECItem *
-CERT_GetSPKIDigest(PLArenaPool *arena, const CERTCertificate *cert,
+CERT_GetSPKIDigest(PRArenaPool *arena, const CERTCertificate *cert,
                    SECOidTag digestAlg, SECItem *fill);
 
 
 SECStatus CERT_CheckCRL(CERTCertificate* cert, CERTCertificate* issuer,
-                        SECItem* dp, PRTime t, void* wincx);
+                        SECItem* dp, int64 t, void* wincx);
 
 
 /*
@@ -1533,7 +1533,7 @@ CERT_AddNameConstraint(CERTNameConstraint *list,
  * SECItem data.
  */
 extern CERTNameConstraint *
-CERT_CopyNameConstraint(PLArenaPool         *arena, 
+CERT_CopyNameConstraint(PRArenaPool         *arena, 
 			CERTNameConstraint  *dest, 
 			CERTNameConstraint  *src);
 
@@ -1542,7 +1542,7 @@ CERT_CopyNameConstraint(PLArenaPool         *arena,
  * the name.
  */
 extern SECStatus
-CERT_CheckNameSpace(PLArenaPool          *arena,
+CERT_CheckNameSpace(PRArenaPool          *arena,
 		    CERTNameConstraints  *constraints,
 		    CERTGeneralName      *currentName);
 
@@ -1550,7 +1550,7 @@ CERT_CheckNameSpace(PLArenaPool          *arena,
  * Extract and allocate the name constraints extension from the CA cert.
  */
 extern SECStatus
-CERT_FindNameConstraintsExten(PLArenaPool      *arena,
+CERT_FindNameConstraintsExten(PRArenaPool      *arena,
 			      CERTCertificate  *cert,
 			      CERTNameConstraints **constraints);
 
@@ -1564,37 +1564,37 @@ CERT_NewGeneralName(PLArenaPool *arena, CERTGeneralNameType type);
  * PKIX extension encoding routines
  */
 extern SECStatus
-CERT_EncodePolicyConstraintsExtension(PLArenaPool *arena,
+CERT_EncodePolicyConstraintsExtension(PRArenaPool *arena,
                                       CERTCertificatePolicyConstraints *constr,
                                       SECItem *dest);
 extern SECStatus
-CERT_EncodeInhibitAnyExtension(PLArenaPool *arena,
+CERT_EncodeInhibitAnyExtension(PRArenaPool *arena,
                                CERTCertificateInhibitAny *inhibitAny,
                                SECItem *dest);
 extern SECStatus
-CERT_EncodePolicyMappingExtension(PLArenaPool *arena,
+CERT_EncodePolicyMappingExtension(PRArenaPool *arena,
                                   CERTCertificatePolicyMappings *maps,
                                   SECItem *dest);
 
-extern SECStatus CERT_EncodeInfoAccessExtension(PLArenaPool *arena,
+extern SECStatus CERT_EncodeInfoAccessExtension(PRArenaPool *arena,
                                                     CERTAuthInfoAccess **info,
                                                     SECItem *dest);
 extern SECStatus
-CERT_EncodeUserNotice(PLArenaPool *arena,
+CERT_EncodeUserNotice(PRArenaPool *arena,
                       CERTUserNotice *notice,
                       SECItem *dest);
 
 extern SECStatus
-CERT_EncodeDisplayText(PLArenaPool *arena,
+CERT_EncodeDisplayText(PRArenaPool *arena,
                        SECItem *text,
                        SECItem *dest);
 
 extern SECStatus
-CERT_EncodeCertPoliciesExtension(PLArenaPool *arena,
+CERT_EncodeCertPoliciesExtension(PRArenaPool *arena,
                                  CERTPolicyInfo **info,
                                  SECItem *dest);
 extern SECStatus
-CERT_EncodeNoticeReference(PLArenaPool *arena,
+CERT_EncodeNoticeReference(PRArenaPool *arena,
                            CERTNoticeReference *reference,
                            SECItem *dest);
 

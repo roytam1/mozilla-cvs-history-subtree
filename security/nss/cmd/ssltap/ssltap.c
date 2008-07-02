@@ -159,15 +159,6 @@ int hMACsize=0;
 				 +                          \
 				 (((PRUint32)((PRUint8*)x)[2]) << 0)  \
 				 ) )
-#define GET_32(x) ((PRUint32)   (  \
-				 (((PRUint32)((PRUint8*)x)[0]) << 24) \
-				 +                          \
-				 (((PRUint32)((PRUint8*)x)[1]) << 16) \
-				 +                          \
-				 (((PRUint32)((PRUint8*)x)[2]) << 8)  \
-				 +                          \
-				 (((PRUint32)((PRUint8*)x)[3]) << 0)  \
-				 ) )
 
 void print_hex(int amt, unsigned char *buf);
 void read_stream_bytes(unsigned char *d, DataBufferList *db, int length);
@@ -455,7 +446,6 @@ const char * helloExtensionNameString(int ex_num) {
   case  5: ex_name = "status_request";                 break;
   case 10: ex_name = "elliptic_curves";                break;
   case 11: ex_name = "ec_point_formats";               break;
-  case 35: ex_name = "session_ticket";                 break;
   default: sprintf(buf, "%d", ex_num);  ex_name = (const char *)buf; break;
   }
 
@@ -733,7 +723,6 @@ void print_ssl3_handshake(unsigned char *tbuf,
     case 0:  PR_FPUTS("hello_request)\n"               ); break;
     case 1:  PR_FPUTS("client_hello)\n"                ); break;
     case 2:  PR_FPUTS("server_hello)\n"                ); break;
-    case 4:  PR_FPUTS("new_session_ticket)\n"          ); break;
     case 11: PR_FPUTS("certificate)\n"                 ); break;
     case 12: PR_FPUTS("server_key_exchange)\n"         ); break;
     case 13: PR_FPUTS("certificate_request)\n"         ); break;
@@ -767,7 +756,7 @@ void print_ssl3_handshake(unsigned char *tbuf,
 	    int sidlength = (int)hsdata[2+32];
 	    PR_fprintf(PR_STDOUT,"            session ID = {\n");
 	    PR_fprintf(PR_STDOUT,"                length = %d\n",sidlength);
-	    PR_fprintf(PR_STDOUT,"                contents = {...}\n");
+	    PR_fprintf(PR_STDOUT,"                contents = {..}\n");
 	    if (sslhexparse) print_hex(sidlength,&hsdata[2+32+1]);
 	    PR_fprintf(PR_STDOUT,"            }\n");
 	    pos = 2+32+1+sidlength;
@@ -833,7 +822,7 @@ void print_ssl3_handshake(unsigned char *tbuf,
 	PR_fprintf(PR_STDOUT,"            session ID = {\n");
 	sidlength = (int)hsdata[2+32];
 	PR_fprintf(PR_STDOUT,"                length = %d\n",sidlength);
-	PR_fprintf(PR_STDOUT,"                contents = {...}\n");
+	PR_fprintf(PR_STDOUT,"                contents = {..}\n");
 	if (sslhexparse) print_hex(sidlength,&hsdata[2+32+1]);
 	PR_fprintf(PR_STDOUT,"            }\n");
 	pos = 2+32+1+sidlength;
@@ -853,37 +842,6 @@ void print_ssl3_handshake(unsigned char *tbuf,
 	/* pretty print extensions, if any */
 	pos = print_hello_extension(hsdata, sslh.length, pos);
 
-	PR_fprintf(PR_STDOUT,"         }\n");
-      }
-      break;
-
-    case 4: /* new session ticket */
-      {
-	PRUint32 lifetimehint;
-	PRUint16 ticketlength;
-	char lifetime[32];
-	lifetimehint = GET_32(hsdata);
-	if (lifetimehint) {
-	  PRExplodedTime et;
-	  PRTime t = lifetimehint;
-	  t *= PR_USEC_PER_SEC;
-	  PR_ExplodeTime(t, PR_GMTParameters, &et);
-	  /* use HTTP Cookie header's date format */
-	  PR_FormatTimeUSEnglish(lifetime, sizeof lifetime,
-				 "%a, %d-%b-%Y %H:%M:%S GMT", &et);
-	} else {
-	  /* 0 means the lifetime of the ticket is unspecified */
-	  strcpy(lifetime, "unspecified");
-	}
-	ticketlength = GET_SHORT((hsdata+4));
-	PR_fprintf(PR_STDOUT,"         NewSessionTicket {\n");
-	PR_fprintf(PR_STDOUT,"            ticket_lifetime_hint = %s\n",
-		   lifetime);
-	PR_fprintf(PR_STDOUT,"            ticket = {\n");
-	PR_fprintf(PR_STDOUT,"                length = %d\n",ticketlength);
-	PR_fprintf(PR_STDOUT,"                contents = {...}\n");
-	if (sslhexparse) print_hex(ticketlength,&hsdata[4+2]);
-	PR_fprintf(PR_STDOUT,"            }\n");
 	PR_fprintf(PR_STDOUT,"         }\n");
       }
       break;
