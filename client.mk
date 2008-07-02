@@ -257,11 +257,11 @@ MODULES_all :=                                  \
 #
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
-MOZ_CO_TAG           = FIREFOX_2_0_0_16_RELEASE
-NSPR_CO_TAG          = FIREFOX_2_0_0_16_RELEASE
-NSS_CO_TAG           = FIREFOX_2_0_0_16_RELEASE
-LDAPCSDK_CO_TAG      = FIREFOX_2_0_0_16_RELEASE
-LOCALES_CO_TAG       = FIREFOX_2_0_0_16_RELEASE
+MOZ_CO_TAG           = SEAMONKEY_1_1_11_RELEASE
+NSPR_CO_TAG          = SEAMONKEY_1_1_11_RELEASE
+NSS_CO_TAG           = SEAMONKEY_1_1_11_RELEASE
+LDAPCSDK_CO_TAG      = SEAMONKEY_1_1_11_RELEASE
+LOCALES_CO_TAG       = SEAMONKEY_1_1_11_RELEASE
 
 NSS_FIPS_CO_TAG      = NSS_3_11_4_RTM
 NSS_FIPS_CO_DIR      = nss-fips
