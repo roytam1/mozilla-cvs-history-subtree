@@ -1364,6 +1364,7 @@ sub get_profile_dir {
     # $BinaryName and use the correct profile for browser.
     $profile_product_name = 'Firefox' if ($Settings::BinaryName =~ /^firefox/);
     $profile_product_name = 'Sunbird' if ($Settings::BinaryName =~ /^sunbird/);
+    $profile_product_name = 'Thunderbird' if ($Settings::BinaryName =~ /^thunderbird/);
 
     my $profile_dir;
 
