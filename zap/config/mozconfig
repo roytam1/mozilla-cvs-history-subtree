@@ -6,5 +6,4 @@ mk_add_options MOZ_CO_PROJECT=zap
 ac_add_options --enable-application=zap
 
 ac_add_options --enable-crypto
-#ac_add_options --enable-extensions=xml-rpc,gnomevfs,jssh
-#ac_add_options --disable-libxul
+
