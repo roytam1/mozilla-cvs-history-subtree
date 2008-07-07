@@ -143,17 +143,17 @@ $ConfigureOnly = 1;
 $LocalizationVersionFile = 'mail/config/version.txt';
 %WGetFiles = (
 # CONFIG:          "http://%stagingServer%/pub/mozilla.org/thunderbird/nightly/%version%-candidates/build%build%/unsigned/thunderbird-%version%.en-US.win32.installer.exe" =>
-"http://production-1.8-master.build.mozilla.org/pub/mozilla.org/thunderbird/nightly/2.0.0.14-candidates/rc1/unsigned/thunderbird-2.0.0.14.en-US.win32.installer.exe" =>
+"http://stage-old.mozilla.org/pub/mozilla.org/thunderbird/nightly/2.0.0.16-candidates/build1/unsigned/thunderbird-2.0.0.16.en-US.win32.installer.exe" =>
 # CONFIG:            "%l10n_buildDir%/%l10n_buildPlatform%/thunderbird-installer.exe",
-"/cygdrive/c/builds/tinderbox/Tb-Mozilla1.8-l10n-Release/WINNT_5.2_Depend/thunderbird-installer.exe",
+"/cygdrive/e/builds/tinderbox/Tb-Mozilla1.8-l10n-Release/WINNT_5.0_Depend/thunderbird-installer.exe",
 # CONFIG:         "http://%stagingServer%/pub/mozilla.org/thunderbird/nightly/%version%-candidates/build%build%/unsigned/thunderbird-%version%.en-US.win32.zip" =>
-"http://production-1.8-master.build.mozilla.org/pub/mozilla.org/thunderbird/nightly/2.0.0.14-candidates/rc1/unsigned/thunderbird-2.0.0.14.en-US.win32.zip" =>
+"http://stage-old.mozilla.org/pub/mozilla.org/thunderbird/nightly/2.0.0.16-candidates/build1/unsigned/thunderbird-2.0.0.16.en-US.win32.zip" =>
 # CONFIG:            "%l10n_buildDir%/%l10n_buildPlatform%/thunderbird.zip"
-"/cygdrive/c/builds/tinderbox/Tb-Mozilla1.8-l10n-Release/WINNT_5.2_Depend/thunderbird.zip"
+"/cygdrive/e/builds/tinderbox/Tb-Mozilla1.8-l10n-Release/WINNT_5.0_Depend/thunderbird.zip"
              );
 
 # CONFIG: $BuildLocalesArgs = "ZIP_IN=%l10n_buildDir%/%l10n_buildPlatform%/thunderbird.zip WIN32_INSTALLER_IN=%l10n_buildDir%/%l10n_buildPlatform%/thunderbird-installer.exe";
-$BuildLocalesArgs = "ZIP_IN=/cygdrive/c/builds/tinderbox/Tb-Mozilla1.8-l10n-Release/WINNT_5.2_Depend/thunderbird.zip WIN32_INSTALLER_IN=/cygdrive/c/builds/tinderbox/Tb-Mozilla1.8-l10n-Release/WINNT_5.2_Depend/thunderbird-installer.exe";
+$BuildLocalesArgs = "ZIP_IN=/cygdrive/e/builds/tinderbox/Tb-Mozilla1.8-l10n-Release/WINNT_5.0_Depend/thunderbird.zip WIN32_INSTALLER_IN=/cygdrive/e/builds/tinderbox/Tb-Mozilla1.8-l10n-Release/WINNT_5.0_Depend/thunderbird-installer.exe";
 
 #-
 #- The rest should not need to be changed
@@ -169,7 +169,7 @@ $BuildTree  = 'MozillaRelease';
 
 #$BuildName = '';
 # CONFIG: $BuildTag = '%productTag%_RELEASE';
-$BuildTag = 'THUNDERBIRD_2_0_0_14_RELEASE';
+$BuildTag = 'THUNDERBIRD_2_0_0_16_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -205,13 +205,13 @@ $ssh_version   = "2";
 $ssh_user      = "cltbld";
 #$ssh_key       = "'$ENV{HOME}/.ssh/tbirdbld_dsa'";
 # CONFIG: $ssh_server    = "%sshServer%";
-$ssh_server    = "production-1.8-master.build.mozilla.org";
+$ssh_server    = "stage-old.mozilla.org";
 $ftp_path      = "/home/ftp/pub/thunderbird/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly";
 $tbox_ftp_path = "/home/ftp/pub/thunderbird/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/tinderbox-builds";
 # CONFIG: $milestone     = "thunderbird%version%-l10n";
-$milestone     = "thunderbird2.0.0.14-l10n";
+$milestone     = "thunderbird2.0.0.16-l10n";
 $notify_list   = "build-announce\@mozilla.org";
 $stub_installer = 0;
 $sea_installer = 1;
