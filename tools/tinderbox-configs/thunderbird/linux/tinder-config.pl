@@ -144,13 +144,13 @@ $ConfigureOnly = 1;
 $LocalizationVersionFile = 'mail/config/version.txt';
 %WGetFiles = (
 # CONFIG:            "http://%stagingServer%/pub/mozilla.org/thunderbird/nightly/%version%-candidates/build%build%/thunderbird-%version%.en-US.linux-i686.tar.gz" => 
-"http://production-1.8-master.build.mozilla.org/pub/mozilla.org/thunderbird/nightly/2.0.0.14-candidates/rc1/thunderbird-2.0.0.14.en-US.linux-i686.tar.gz" => 
+"http://stage-old.mozilla.org/pub/mozilla.org/thunderbird/nightly/2.0.0.16-candidates/build1/thunderbird-2.0.0.16.en-US.linux-i686.tar.gz" => 
 # CONFIG:            "%l10n_buildDir%/%l10n_buildPlatform%/thunderbird.tar.gz"
-"/builds/tinderbox/Tb-Mozilla1.8-l10n-Release/Linux_2.4.20-28.8_Depend/thunderbird.tar.gz"
+"/builds/tinderbox/Tb-Mozilla1.8-l10n-Release/Linux_2.4.18-14_Depend/thunderbird.tar.gz"
 	      );
 
 # CONFIG: $BuildLocalesArgs = "ZIP_IN=%l10n_buildDir%/%l10n_buildPlatform%/thunderbird.tar.gz";
-$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Tb-Mozilla1.8-l10n-Release/Linux_2.4.20-28.8_Depend/thunderbird.tar.gz";
+$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Tb-Mozilla1.8-l10n-Release/Linux_2.4.18-14_Depend/thunderbird.tar.gz";
 
 #-
 #- The rest should not need to be changed
@@ -166,7 +166,7 @@ $BuildTree  = 'MozillaRelease';
 
 #$BuildName = '';
 # CONFIG: $BuildTag = '%productTag%_RELEASE';
-$BuildTag = 'THUNDERBIRD_2_0_0_14_RELEASE';
+$BuildTag = 'THUNDERBIRD_2_0_0_16_RELEASE';
 #$BuildTag = 'AVIARY_1_0_1_20050124_BRANCH';
 #$BuildTag = 'FIREFOX_1_0_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
@@ -204,13 +204,13 @@ $ssh_version   = "2";
 $ssh_user      = "cltbld";
 #$ssh_key       = "'$ENV{HOME}/.ssh/tbirdbld_dsa'";
 # CONFIG: $ssh_server    = "%sshServer%";
-$ssh_server    = "production-1.8-master.build.mozilla.org";
+$ssh_server    = "stage-old.mozilla.org";
 $ftp_path      = "/home/ftp/pub/thunderbird/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly";
 $tbox_ftp_path = "/home/ftp/pub/thunderbird/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/tinderbox-builds";
 # CONFIG: $milestone     = "thunderbird%version%-l10n";
-$milestone     = "thunderbird2.0.0.14-l10n";
+$milestone     = "thunderbird2.0.0.16-l10n";
 $notify_list   = "build-announce\@mozilla.org";
 $stub_installer = 0;
 $sea_installer = 0;
