@@ -1,0 +1,5 @@
+. $topsrcdir/zap/config/mozconfig
+
+mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/../release
+mk_add_options MOZ_MAKE_FLAGS=-j4
+
