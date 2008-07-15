@@ -6526,20 +6526,10 @@ nsGlobalWindow::SetTimeoutOrInterval(PRBool aIsInterval, PRInt32 *aReturn)
   }
 
   nsCOMPtr<nsIPrincipal> ourPrincipal = GetPrincipal();
-  JSPrincipals *jsprins;
-  rv = ourPrincipal->GetJSPrincipals(cx, &jsprins);
-  if (NS_FAILED(rv)) {
-    timeout->Release(scx);
-
-    return rv;
-  }
-
-  // We know that ourPrincipal holds a strong ref to jsprins.
-  JSPRINCIPALS_DROP(cx, jsprins);
 
   const char *filename;
   if (nsJSUtils::GetCallingLocation(cx, &filename, &timeout->mLineNo,
-                                    jsprins)) {
+                                    ourPrincipal)) {
     timeout->mFileName = PL_strdup(filename);
 
     if (!timeout->mFileName) {

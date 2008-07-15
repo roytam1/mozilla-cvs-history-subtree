@@ -55,12 +55,13 @@ class nsIScriptContext;
 class nsIScriptGlobalObject;
 class nsIDOMGCParticipant;
 class nsIXPConnectJSObjectHolder;
+class nsIPrincipal;
 
 class nsJSUtils
 {
 public:
   static JSBool GetCallingLocation(JSContext* aContext, const char* *aFilename,
-                                   PRUint32* aLineno, JSPrincipals* aPrincipals);
+                                   PRUint32* aLineno, nsIPrincipal* aPrincipal);
 
   static jsval ConvertStringToJSVal(const nsString& aProp,
                                     JSContext* aContext);
