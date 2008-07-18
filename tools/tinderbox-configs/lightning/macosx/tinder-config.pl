@@ -9,6 +9,8 @@
 
 $ENV{CVS_RSH} = "ssh";
 
+$ENV{DISABLE_LIGHTNING_INSTALL} = "TRUE";
+
 # $ENV{MOZ_PACKAGE_MSI}
 #-----------------------------------------------------------------------------
 #  Default: 0
