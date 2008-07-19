@@ -61,9 +61,6 @@ ifdef LIGHTNING_FIREFOX
 FIREFOX_VERSION := $(shell cat $(MOZILLA_SRCDIR)/browser/config/version.txt)
 endif
 
-# include config.mk here so myconfig or app-config can set DISABLE_LIGHTNING_INSTALL
-include $(topsrcdir)/config/config.mk
-
 # installing lightning in a thunderbird build causes problems on tinderboxes
 # (see bug 406441 and bug 440017), so we need to provide a hook for the
 # tinderboxen to disable that.
