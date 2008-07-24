@@ -294,3 +294,6 @@ components/calMemoryCalendar.js
 components/calStorageCalendar.js
 # bug 381049 (Moved crashreporter interface)
 components/crashreporter.xpt
+
+# bug 446366 (renamed interface)
+js/calWeekTitleService.js
