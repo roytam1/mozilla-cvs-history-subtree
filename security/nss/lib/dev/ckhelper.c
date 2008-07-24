@@ -556,7 +556,7 @@ NSS_IMPLEMENT PRStatus
 nssCryptokiPrivateKey_SetCertificate (
   nssCryptokiObject *keyObject,
   nssSession *sessionOpt,
-  const NSSUTF8 *nickname,
+  NSSUTF8 *nickname,
   NSSItem *id,
   NSSDER *subject
 )

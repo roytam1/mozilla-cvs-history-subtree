@@ -100,11 +100,10 @@ Usage(const char *progName)
 {
     fprintf(stderr, 
 	"Usage: %s [options] certfile [[options] certfile] ...\n"
-	"\tWhere options are:\n"
+	"\twhere options are:\n"
 	"\t-a\t\t Following certfile is base64 encoded\n"
 	"\t-b YYMMDDHHMMZ\t Validate date (default: now)\n"
 	"\t-d directory\t Database directory\n"
-	"\t-f \t\t Enable cert fetching from AIA URL\n"
 	"\t-o oid\t\t Set policy OID for cert validation(Format OID.1.2.3)\n"
 	"\t-p \t\t Use PKIX Library to validate certificate by calling:\n"
 	"\t\t\t   * CERT_VerifyCertificate if specified once,\n"
@@ -114,13 +113,12 @@ Usage(const char *progName)
         "\t\t\t Implemented as of today are:\n"
         "\t\t\t   * allow-crl (default)\n"
         "\t\t\t   * allow-crl-and-ocsp\n"
-        "\t-t\t\t Following cert is explicitly trusted (overrides db trust).\n"
 	"\t-u usage \t 0=SSL client, 1=SSL server, 2=SSL StepUp, 3=SSL CA,\n"
 	"\t\t\t 4=Email signer, 5=Email recipient, 6=Object signer,\n"
 	"\t\t\t 9=ProtectedObjectSigner, 10=OCSP responder, 11=Any CA\n"
 	"\t-v\t\t Verbose mode. Prints root cert subject(double the\n"
-	"\t\t\t argument for whole root cert info)\n"
-	"\t-w password\t Database password.\n",
+         "\t\t\t argument for whole root cert info)\n"
+	"\t-w password\t Database password\n",
 	progName);
     exit(1);
 }
@@ -195,13 +193,17 @@ forgetCerts(void)
 
 
 CERTCertificate *
-getCert(const char *name, PRBool isAscii, const char * progName)
+getCert(const char *name, PRBool isAscii)
 {
-    CERTCertificate * cert;
-    CERTCertDBHandle *defaultDB;
+    unsigned char * pb;
+    CERTCertificate * cert  = NULL;
+    CERTCertDBHandle *defaultDB = NULL;
     PRFileDesc*     fd;
-    SECStatus       rv;
-    SECItem         item        = {0, NULL, 0};
+    PRInt32         cc      = -1;
+    PRInt32         total;
+    PRInt32         remaining;
+    SECItem         item;
+    static unsigned char certBuf[RD_BUF_SIZE];
 
     defaultDB = CERT_GetDefaultCertDB();
 
@@ -220,19 +222,39 @@ getCert(const char *name, PRBool isAscii, const char * progName)
 	        name, err, SECU_Strerror(err));
 	return cert;
     }
-
-    rv = SECU_ReadDERFromFile(&item, fd, isAscii);
+    /* read until EOF or buffer is full */
+    pb = certBuf;
+    while (0 < (remaining = (sizeof certBuf) - (pb - certBuf))) {
+	cc = PR_Read(fd, pb, remaining);
+	if (cc == 0) 
+	    break;
+	if (cc < 0) {
+	    PRIntn err = PR_GetError();
+	    fprintf(stderr, "read of %s failed, %d = %s\n", 
+	        name, err, SECU_Strerror(err));
+	    break;
+	}
+	/* cc > 0 */
+	pb += cc;
+    }
     PR_Close(fd);
-    if (rv != SECSuccess) {
-	fprintf(stderr, "%s: SECU_ReadDERFromFile failed\n", progName);
+    if (cc < 0)
+    	return cert;
+    if (!remaining || cc > 0) { /* file was too big. */
+	fprintf(stderr, "cert file %s was too big.\n", name);
 	return cert;
     }
-
-    if (!item.len) { /* file was empty */
+    total = pb - certBuf;
+    if (!total) { /* file was empty */
 	fprintf(stderr, "cert file %s was empty.\n", name);
 	return cert;
     }
-
+    if (isAscii) {
+    	/* convert from Base64 to binary here ... someday */
+    }
+    item.type = siBuffer;
+    item.data = certBuf;
+    item.len  = total;
     cert = CERT_NewTempCertificate(defaultDB, &item, 
                                    NULL     /* nickname */, 
                                    PR_FALSE /* isPerm */, 
@@ -242,7 +264,6 @@ getCert(const char *name, PRBool isAscii, const char * progName)
 	fprintf(stderr, "couldn't import %s, %d = %s\n",
 	        name, err, SECU_Strerror(err));
     }
-    PORT_Free(item.data);
     return cert;
 }
 
@@ -284,13 +305,12 @@ main(int argc, char *argv[], char *envp[])
     CERTVerifyLog        log;
     CERTCertList        *builtChain = NULL;
     char *               revConfig    = NULL;
-    PRBool               certFetching = PR_FALSE;
 
     PR_Init( PR_SYSTEM_THREAD, PR_PRIORITY_NORMAL, 1);
 
     progName = PL_strdup(argv[0]);
 
-    optstate = PL_CreateOptState(argc, argv, "ab:d:fo:prs:tu:w:v");
+    optstate = PL_CreateOptState(argc, argv, "ab:d:o:prs:tu:w:v");
     while ((status = PL_GetNextOpt(optstate)) == PL_OPT_OK) {
 	switch(optstate->option) {
 	case  0  : /* positional parameter */  goto breakout;
@@ -298,12 +318,10 @@ main(int argc, char *argv[], char *envp[])
 	case 'b' : secStatus = DER_AsciiToTime(&time, optstate->value);
 	           if (secStatus != SECSuccess) Usage(progName); break;
 	case 'd' : certDir  = PL_strdup(optstate->value);     break;
-	case 'f' : certFetching = PR_TRUE;                    break;
 	case 'o' : oidStr = PL_strdup(optstate->value);       break;
 	case 'p' : usePkix += 1;                              break;
 	case 'r' : isAscii  = PR_FALSE;                       break;
-	case 's' : revConfig  = PL_strdup(optstate->value);   break;
-	case 't' : trusted  = PR_TRUE;                        break;
+        case 's' : revConfig  = PL_strdup(optstate->value);   break;
 	case 'u' : usage    = PORT_Atoi(optstate->value);
 	           if (usage < 0 || usage > 62) Usage(progName);
 		   certUsage = ((SECCertificateUsage)1) << usage; 
@@ -317,19 +335,6 @@ main(int argc, char *argv[], char *envp[])
 breakout:
     if (status != PL_OPT_OK)
 	Usage(progName);
-
-    if (usePkix < 2) {
-        if (oidStr) {
-            fprintf(stderr, "Policy oid(-o) can be used only with"
-                    " CERT_PKIXVerifyChain(-pp) function.\n");
-            Usage(progName);
-        }
-        if (trusted) {
-            fprintf(stderr, "Cert trust flag can be used only with"
-                    " CERT_PKIXVerifyChain(-pp) function.\n");
-            Usage(progName);
-        }
-    }
 
     if (revConfig && !isAllowedRevConfig(revConfig)) {
         fprintf(stderr, "Invalid revocation configuration specified.\n");
@@ -364,12 +369,7 @@ breakout:
 	case 'r' : isAscii  = PR_FALSE;                       break;
 	case 't' : trusted  = PR_TRUE;                       break;
 	case  0  : /* positional parameter */
-            if (usePkix < 2 && trusted) {
-                fprintf(stderr, "Cert trust flag can be used only with"
-                        " CERT_PKIXVerifyChain(-pp) function.\n");
-                Usage(progName);
-            }
-	    cert = getCert(optstate->value, isAscii, progName);
+	    cert = getCert(optstate->value, isAscii);
 	    if (!cert) 
 	        goto punt;
 	    rememberCert(cert, trusted);
@@ -406,12 +406,12 @@ breakout:
                                            &log, /* error log */
                                            NULL);/* returned usages */
     } else do {
-        static CERTValOutParam cvout[4];
-        static CERTValInParam cvin[6];
+        CERTValOutParam cvout[4];
+        CERTValInParam cvin[5];
         SECOidTag oidTag;
         int inParamIndex = 0;
-        static CERTRevocationFlags rev;
-        static PRUint64 revFlags[2];
+        CERTRevocationFlags rev;
+        PRUint64 revFlags[2];
 
         if (oidStr) {
             PRArenaPool *arena;
@@ -459,13 +459,9 @@ breakout:
             inParamIndex++;
         }
 
-        cvin[inParamIndex].type = cert_pi_useAIACertFetch;
-        cvin[inParamIndex].value.scalar.b = certFetching;
-        inParamIndex++;
-
-        cvin[inParamIndex].type = cert_pi_date;
-        cvin[inParamIndex].value.scalar.time = time;
-        inParamIndex++;
+	cvin[inParamIndex].type = cert_pi_date;
+	cvin[inParamIndex].value.scalar.time = time;
+	inParamIndex++;
 
         revFlags[cert_revocation_method_crl] = 
             CERT_REV_M_TEST_USING_THIS_METHOD;
@@ -500,9 +496,7 @@ breakout:
         cvin[inParamIndex].type = cert_pi_end;
         
         cvout[0].type = cert_po_trustAnchor;
-        cvout[0].value.pointer.cert = NULL;
         cvout[1].type = cert_po_certList;
-        cvout[1].value.pointer.chain = NULL;
 
         /* setting pointer to CERTVerifyLog. Initialized structure
          * will be used CERT_PKIXVerifyCert */
@@ -575,11 +569,6 @@ punt:
 	SECU_PrintError(progName, "NSS_Shutdown");
 	rv = 1;
     }
-    PORT_Free(progName);
-    PORT_Free(certDir);
-    PORT_Free(oidStr);
-    PORT_Free(revConfig);
-    PORT_Free(password);
     PR_Cleanup();
     return rv;
 }

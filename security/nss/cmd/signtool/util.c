@@ -831,7 +831,15 @@ JarListModules(void)
 
     SECMODModuleList * mlp;
 
-    if ((moduleLock = SECMOD_GetDefaultModuleListLock()) == NULL) {
+    modules = SECMOD_GetDefaultModuleList();
+
+    if (modules == NULL) {
+	PR_fprintf(errorFD, "%s: Can't get module list\n", PROGRAM_NAME);
+	errorCount++;
+	exit (ERRX);
+    }
+
+    if ((moduleLock = SECMOD_NewListLock()) == NULL) {
 	/* this is the wrong text */
 	PR_fprintf(errorFD, "%s: unable to acquire lock on module list\n",
 	     		PROGRAM_NAME);
@@ -840,15 +848,6 @@ JarListModules(void)
     }
 
     SECMOD_GetReadLock (moduleLock);
-
-    modules = SECMOD_GetDefaultModuleList();
-
-    if (modules == NULL) {
-	SECMOD_ReleaseReadLock (moduleLock);
-	PR_fprintf(errorFD, "%s: Can't get module list\n", PROGRAM_NAME);
-	errorCount++;
-	exit (ERRX);
-    }
 
     PR_fprintf(outputFD, "\nListing of PKCS11 modules\n");
     PR_fprintf(outputFD, "-----------------------------------------------\n");

@@ -2574,6 +2574,7 @@ pkix_pl_OcspRequest_Create(
         PKIX_PL_Cert *cert,
         PKIX_PL_OcspCertID *cid,
         PKIX_PL_Date *validity,
+        PKIX_Boolean addServiceLocator,
         PKIX_PL_Cert *signerCert,
         PKIX_Boolean *pURIFound,
         PKIX_PL_OcspRequest **pRequest,

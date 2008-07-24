@@ -48,7 +48,6 @@ static const char CVS_ID[] = "@(#) $RCSfile$ $Revision$ $Date$";
 #ifndef BASE_H
 #include "base.h"
 #endif /* BASE_H */
-#include <limits.h> /* for UINT_MAX */
 #include <string.h> /* for memmove */
 
 #define NSS_MAX_ERROR_STACK_COUNT 16 /* error codes */
@@ -76,12 +75,9 @@ typedef struct error_stack_str error_stack;
  *
  * Thread-private data must be indexed.  This is that index.
  * See PR_NewThreadPrivateIndex for more information.
- *
- * Thread-private data indexes are in the range [0, 127].
  */
 
-#define INVALID_TPD_INDEX UINT_MAX
-static PRUintn error_stack_index = INVALID_TPD_INDEX;
+static PRUintn error_stack_index;
 
 /*
  * call_once
@@ -120,7 +116,7 @@ error_get_my_stack ( void)
   PRUint32 new_bytes;
   error_stack *new_stack;
 
-  if( INVALID_TPD_INDEX == error_stack_index ) {
+  if( 0 == error_stack_index ) {
     st = PR_CallOnce(&error_call_once, error_once_function);
     if( PR_SUCCESS != st ) {
       return (error_stack *)NULL;
@@ -286,20 +282,5 @@ nss_ClearErrorStack ( void)
 
   es->header.count = 0;
   es->stack[0] = 0;
-  return;
-}
-
-/*
- * nss_DestroyErrorStack
- *
- * This routine frees the calling thread's error stack.
- */
-
-NSS_IMPLEMENT void
-nss_DestroyErrorStack ( void)
-{
-  if( INVALID_TPD_INDEX != error_stack_index ) {
-    PR_SetThreadPrivate(error_stack_index, NULL);
-  }
   return;
 }

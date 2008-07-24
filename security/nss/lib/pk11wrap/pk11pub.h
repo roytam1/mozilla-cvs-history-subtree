@@ -269,7 +269,7 @@ CK_MECHANISM_TYPE PK11_AlgtagToMechanism(SECOidTag algTag);
 SECOidTag PK11_MechanismToAlgtag(CK_MECHANISM_TYPE type);
 SECOidTag PK11_FortezzaMapSig(SECOidTag algTag);
 SECStatus PK11_ParamToAlgid(SECOidTag algtag, SECItem *param,
-                                   PLArenaPool *arena, SECAlgorithmID *algid);
+                                   PRArenaPool *arena, SECAlgorithmID *algid);
 SECStatus PK11_SeedRandom(PK11SlotInfo *,unsigned char *data,int len);
 SECStatus PK11_GenerateRandomOnSlot(PK11SlotInfo *,unsigned char *data,int len);
 SECStatus PK11_RandomUpdate(void *data, size_t bytes);
@@ -591,12 +591,11 @@ CERTCertificate * PK11_FindCertFromNickname(const char *nickname, void *wincx);
 CERTCertList * PK11_FindCertsFromNickname(const char *nickname, void *wincx);
 CERTCertificate *PK11_GetCertFromPrivateKey(SECKEYPrivateKey *privKey);
 SECStatus PK11_ImportCert(PK11SlotInfo *slot, CERTCertificate *cert,
-                CK_OBJECT_HANDLE key, const char *nickname, 
-                PRBool includeTrust);
+                CK_OBJECT_HANDLE key, char *nickname, PRBool includeTrust);
 SECStatus PK11_ImportDERCert(PK11SlotInfo *slot, SECItem *derCert,
                 CK_OBJECT_HANDLE key, char *nickname, PRBool includeTrust);
-PK11SlotInfo *PK11_ImportCertForKey(CERTCertificate *cert, 
-                                    const char *nickname, void *wincx);
+PK11SlotInfo *PK11_ImportCertForKey(CERTCertificate *cert, char *nickname,
+								void *wincx);
 PK11SlotInfo *PK11_ImportDERCertForKey(SECItem *derCert, char *nickname,
 								void *wincx);
 PK11SlotInfo *PK11_KeyForCertExists(CERTCertificate *cert,
@@ -615,8 +614,6 @@ SECStatus PK11_TraverseCertsForSubjectInSlot(CERTCertificate *cert,
 	void *arg);
 CERTCertificate *PK11_FindCertFromDERCert(PK11SlotInfo *slot, 
 					  CERTCertificate *cert, void *wincx);
-CERTCertificate *PK11_FindCertFromDERCertItem(PK11SlotInfo *slot,
-                                          SECItem *derCert, void *wincx);
 SECStatus PK11_ImportCertForKeyToSlot(PK11SlotInfo *slot, CERTCertificate *cert,
 					char *nickname, PRBool addUsage,
 					void *wincx);
@@ -630,7 +627,7 @@ SECStatus PK11_TraverseCertsForNicknameInSlot(SECItem *nickname,
 CERTCertList * PK11_ListCerts(PK11CertListType type, void *pwarg);
 CERTCertList * PK11_ListCertsInSlot(PK11SlotInfo *slot);
 CERTSignedCrl* PK11_ImportCRL(PK11SlotInfo * slot, SECItem *derCRL, char *url,
-    int type, void *wincx, PRInt32 importOptions, PLArenaPool* arena, PRInt32 decodeOptions);
+    int type, void *wincx, PRInt32 importOptions, PRArenaPool* arena, PRInt32 decodeOptions);
 
 /**********************************************************************
  *                   Sign/Verify 

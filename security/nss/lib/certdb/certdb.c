@@ -1489,7 +1489,7 @@ cert_VerifySubjectAltName(CERTCertificate *cert, const char *hn)
     unsigned int      hnLen;
     int               DNSextCount    = 0;
     int               IPextCount     = 0;
-    PRBool            isIPaddr       = PR_FALSE;
+    PRBool            isIPaddr;
     SECStatus         rv             = SECFailure;
     SECItem           subAltName;
     PRNetAddr         netAddr;
@@ -1503,17 +1503,17 @@ cert_VerifySubjectAltName(CERTCertificate *cert, const char *hn)
     rv = CERT_FindCertExtension(cert, SEC_OID_X509_SUBJECT_ALT_NAME, 
 				&subAltName);
     if (rv != SECSuccess) {
-	goto fail;
+	goto finish;
     }
     isIPaddr = (PR_SUCCESS == PR_StringToNetAddr(hn, &netAddr));
     rv = SECFailure;
     arena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
     if (!arena) 
-	goto fail;
+	goto finish;
 
     nameList = current = CERT_DecodeAltNameExtension(arena, &subAltName);
     if (!current)
-    	goto fail;
+    	goto finish;
 
     do {
 	switch (current->type) {
@@ -1527,7 +1527,7 @@ cert_VerifySubjectAltName(CERTCertificate *cert, const char *hn)
 		    cnBufLen = cnLen + 1;
 		    cn = (char *)PORT_ArenaAlloc(arena, cnBufLen);
 		    if (!cn)
-			goto fail;
+			goto finish;
 		}
 		PORT_Memcpy(cn, current->name.other.data, cnLen);
 		cn[cnLen] = 0;
@@ -1579,9 +1579,7 @@ cert_VerifySubjectAltName(CERTCertificate *cert, const char *hn)
 	current = CERT_GetNextGeneralName(current);
     } while (current != nameList);
 
-fail:
-
-    if (!(isIPaddr ? IPextCount : DNSextCount)) {
+    if ((!isIPaddr && !DNSextCount) || (isIPaddr && !IPextCount)) {
 	/* no relevant value in the extension was found. */
 	PORT_SetError(SEC_ERROR_EXTENSION_NOT_FOUND);
     } else {

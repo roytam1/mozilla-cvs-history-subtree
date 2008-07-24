@@ -898,14 +898,6 @@ NSS_Shutdown(void)
 	shutdownRV = SECFailure;
     }
     pk11sdr_Shutdown();
-    /*
-     * A thread's error stack is automatically destroyed when the thread
-     * terminates, except for the primordial thread, whose error stack is
-     * destroyed by PR_Cleanup.  Since NSS is usually shut down by the
-     * primordial thread and many NSS-based apps don't call PR_Cleanup,
-     * we destroy the calling thread's error stack here.
-     */
-    nss_DestroyErrorStack();
     nssArena_Shutdown();
     if (status == PR_FAILURE) {
 	if (NSS_GetError() == NSS_ERROR_BUSY) {
