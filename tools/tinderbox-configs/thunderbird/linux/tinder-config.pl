@@ -125,6 +125,7 @@ $ProductName              = "Thunderbird";
 # :pserver:$ENV{USER}%netscape.com@cvs.mozilla.org:/cvsroot
 
 #$moz_cvsroot   = $ENV{CVSROOT};
+# CONFIG: $moz_cvsroot   = '%mozillaCvsroot%';
 $moz_cvsroot   = ":ext:ffxbld\@cvs.mozilla.org:/cvsroot";
 
 #- Set these proper values for your tinderbox server
@@ -137,7 +138,7 @@ $moz_cvsroot   = ":ext:ffxbld\@cvs.mozilla.org:/cvsroot";
 #$ObjDir = '';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'Tb-Trunk-l10n';
+$BuildNameExtra = 'Tb-Trunk-l10n-Release';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -148,10 +149,13 @@ $ConfigureOnly = 1;
 
 $LocalizationVersionFile = 'mail/config/version.txt';
 %WGetFiles = (
-	      "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly/latest-trunk/thunderbird-%version%.en-US.linux-i686.tar.bz2" =>
-	      "/builds/tinderbox/Tb-Trunk-l10n/Linux_2.6.18-53.1.19.el5_Depend/thunderbird.tar.bz2"
+# CONFIG:             "http://%stagingServer%/pub/mozilla.org/thunderbird/nightly/%version%-candidates/build%build%/thunderbird-%version%.en-US.linux-i686.tar.bz2" =>
+             "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly/latest-trunk/thunderbird-%version%.en-US.linux-i686.tar.bz2" =>
+# CONFIG:             "%l10n_buildDir%/%l10n_buildPlatform%/thunderbird.tar.bz2"
+             "/builds/tinderbox/Tb-Trunk-l10n/Linux_2.6.18-53.1.19.el5_Depend/thunderbird.tar.bz2"
 	      );
 
+# CONFIG: $BuildLocalesArgs = "ZIP_IN=%l10n_buildDir%/%l10n_buildPlatform%/thunderbird.tar.bz2";
 $BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Tb-Trunk-l10n/Linux_2.6.18-53.1.19.el5_Depend/thunderbird.tar.bz2";
 
 #-
@@ -163,12 +167,12 @@ $BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Tb-Trunk-l10n/Linux_2.6.18-53.1.19
 
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
-$BuildTree  = 'Mozilla-l10n';
+# CONFIG: $BuildTree  = '%buildTree%';
+$BuildTree  = 'MozillaRelease';
 
 #$BuildName = '';
-$BuildTag = '';
-#$BuildTag = 'AVIARY_1_0_1_20050124_BRANCH';
-#$BuildTag = 'FIREFOX_1_0_RELEASE';
+# CONFIG: $BuildTag = '%productTag%_RELEASE';
+$BuildTag = 'THUNDERBIRD_3_0a2_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -194,34 +198,35 @@ $BinaryName = 'thunderbird-bin';
 $ReleaseBuild  = 1;
 $LocaleProduct = "mail";
 $shiptalkback  = 0;
-$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
-$ReleaseToDated = 0; # Push the release to YYYY-MM-DD-HH-<milestone>?
+$ReleaseToLatest = 0; # Push the release to latest-<milestone>?
+$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
 $build_hour    = "9";
 $package_creation_path = "/mail/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
 $ssh_version   = "2";
+# CONFIG: $ssh_user      = "%sshUser%";
 $ssh_user      = "tbirdbld";
-$ssh_key       = "'$ENV{HOME}/.ssh/tbirdbld_dsa'";
+# CONFIG: $ssh_server    = "%sshServer%";
 $ssh_server    = "stage-old.mozilla.org";
-$ReleaseGroup  = "thunderbird";
 $ftp_path      = "/home/ftp/pub/thunderbird/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly";
 $tbox_ftp_path = "/home/ftp/pub/thunderbird/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/tinderbox-builds";
-$milestone     = "trunk-l10n";
+# CONFIG: $milestone     = 'thunderbird%version%-l10n';
+$milestone     = "thunderbird3.0a2-l10n";
 $notify_list   = "build-announce\@mozilla.org";
 $stub_installer = 0;
 $sea_installer = 0;
 $archive       = 1;
 $push_raw_xpis = 1;
-$update_package = 0;
+$update_package = 1;
 $update_product = "Thunderbird";
 $update_version = "trunk";
 $update_platform = "Linux_x86-gcc3";
 $update_hash = "sha1";
 $update_filehost = "ftp.mozilla.org";
-$update_appv = "3.0a1";
-$update_extv = "3.0a1";
+$update_ver_file = 'mail/config/version.txt';
+$update_pushinfo = 0;
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
