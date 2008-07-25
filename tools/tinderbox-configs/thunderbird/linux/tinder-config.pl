@@ -137,7 +137,7 @@ $BuildTree  = 'MozillaRelease';
 
 #$BuildName = '';
 # CONFIG: $BuildTag = '%productTag%_RELEASE';
-$BuildTag = 'THUNDERBIRD_3_0a1_RELEASE';
+$BuildTag = 'THUNDERBIRD_3_0a2_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
@@ -177,7 +177,7 @@ $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly";
 $tbox_ftp_path = "/home/ftp/pub/thunderbird/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/tinderbox-builds";
 # CONFIG: $milestone     = 'thunderbird%version%';
-$milestone     = 'thunderbird3.0a1';
+$milestone     = 'thunderbird3.0a2';
 $notify_list   = "build-announce\@mozilla.org";
 $stub_installer = 0;
 $sea_installer = 0;
@@ -193,7 +193,7 @@ $update_pushinfo = 0;
 $crashreporter_buildsymbols = 1;
 $crashreporter_pushsymbols = 1;
 # CONFIG: $ENV{'SYMBOL_SERVER_HOST'}    = '%symbolServer%';
-$ENV{'SYMBOL_SERVER_HOST'}    = 'stage-old.mozilla.org';
+$ENV{'SYMBOL_SERVER_HOST'}    = 'dm-symbolpush01.mozilla.org';
 # CONFIG: $ENV{'SYMBOL_SERVER_USER'}    = '%symbolServerUser%';
 $ENV{'SYMBOL_SERVER_USER'}    = 'tbirdbld';
 # CONFIG: $ENV{'SYMBOL_SERVER_PATH'}    = '%symbolServerPath%';
