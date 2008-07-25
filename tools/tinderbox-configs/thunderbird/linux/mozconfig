@@ -10,7 +10,7 @@ mk_add_options MOZ_CO_LOCALES=all
 # CONFIG: mk_add_options LOCALES_CO_TAG=%productTag%_RELEASE
 mk_add_options LOCALES_CO_TAG=THUNDERBIRD_3_0a2_RELEASE
 # CONFIG: mk_add_options LOCALES_CVSROOT=%l10nCvsroot%
-mk_add_options LOCALES_CVSROOT=:ext:ffxbld@cvs.mozilla.org:/l10n
+mk_add_options LOCALES_CVSROOT=cltbld@cvs.mozilla.org:/l10n
 mk_add_options MOZ_MAKE_FLAGS="-j1"
 mk_add_options MOZ_CO_MODULE="mozilla/tools/update-packaging"
 

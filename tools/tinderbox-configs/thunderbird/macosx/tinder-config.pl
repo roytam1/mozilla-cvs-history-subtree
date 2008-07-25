@@ -120,7 +120,7 @@ $ProductName              = "Shredder";
 # :pserver:$ENV{USER}%netscape.com@cvs.mozilla.org:/cvsroot
 
 # CONFIG: $moz_cvsroot   = '%mozillaCvsroot%';
-$moz_cvsroot   = ":ext:ffxbld\@cvs.mozilla.org:/cvsroot";
+$moz_cvsroot   = 'cltbld@cvs.mozilla.org:/cvsroot';
 
 #- Set these proper values for your tinderbox server
 #$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
@@ -143,13 +143,13 @@ $ConfigureOnly = 1;
 $LocalizationVersionFile = 'mail/config/version.txt';
 %WGetFiles = (
 # CONFIG:             "http://%stagingServer%/pub/mozilla.org/thunderbird/nightly/%version%-candidates/build%build%/thunderbird-%version%.en-US.mac.dmg" =>
-             "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly/latest-trunk/thunderbird-%version%.en-US.mac.dmg" =>
+"http://stage-old.mozilla.org/pub/mozilla.org/thunderbird/nightly/3.0a2-candidates/build1/thunderbird-3.0a2.en-US.mac.dmg" =>
 # CONFIG:             "%l10n_buildDir%/%l10n_buildPlatform%/thunderbird.dmg"
-             "/builds/tinderbox/Tb-Trunk-l10n/Darwin_8.8.4_Depend/thunderbird.dmg"
+"/builds/tinderbox/Tb-Mozilla1.9-l10n-Release/Darwin_8.8.4_Depend/thunderbird.dmg"
 	     );
 
 # CONFIG: $BuildLocalesArgs = "ZIP_IN=%l10n_buildDir%/%l10n_buildPlatform%/thunderbird.dmg";
-$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Tb-Trunk-l10n/Darwin_8.8.4_Depend/thunderbird.dmg";
+$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Tb-Mozilla1.9-l10n-Release/Darwin_8.8.4_Depend/thunderbird.dmg";
 
 
 #-
@@ -199,7 +199,7 @@ $package_creation_path = "/mail/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
 $mac_bundle_path = "/mail/app";
 # CONFIG: $ssh_user      = "%sshUser%";
-$ssh_user      = "tbirdbld";
+$ssh_user      = "cltbld";
 # CONFIG: $ssh_server    = "%sshServer%";
 $ssh_server    = "stage-old.mozilla.org";
 $ftp_path      = "/home/ftp/pub/thunderbird/nightly";
@@ -207,7 +207,7 @@ $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly";
 $tbox_ftp_path = "/home/ftp/pub/thunderbird/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/tinderbox-builds";
 # CONFIG: $milestone     = 'thunderbird%version%-l10n';
-$milestone     = "thunderbird3.0a2-l10n";
+$milestone     = 'thunderbird3.0a2-l10n';
 $notify_list   = "build-announce\@mozilla.org";
 $stub_installer = 0;
 $sea_installer = 0;
