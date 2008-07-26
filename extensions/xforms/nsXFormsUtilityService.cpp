@@ -567,3 +567,41 @@ nsXFormsUtilityService::GetEventContextInfo(const nsAString & aContextName,
   return NS_OK;
 }
 
+NS_IMETHODIMP
+nsXFormsUtilityService::Context(nsIDOMNode  *aResolverNode,
+                                nsIDOMNode **aResult)
+{
+
+  nsCOMPtr<nsIDOMNode> contextNode;
+  PRUint32 contextNodesetSize = 0;
+  PRInt32 contextPosition;
+  nsCOMPtr<nsIModelElementPrivate> model;
+  nsCOMPtr<nsIDOMElement> bindElement;
+  nsCOMPtr<nsIXFormsControl> parentControl;
+  PRBool outerBind;
+
+  nsCOMPtr<nsIDOMElement> element(do_QueryInterface(aResolverNode));
+  if (!element) {
+    contextNode.swap(*aResult);
+    return NS_OK;
+  }
+
+  nsresult rv =
+    nsXFormsUtils::GetNodeContext(element,
+                                  nsXFormsUtils::ELEMENT_WITH_MODEL_ATTR,
+                                  getter_AddRefs(model),
+                                  getter_AddRefs(bindElement),
+                                  &outerBind,
+                                  getter_AddRefs(parentControl),
+                                  getter_AddRefs(contextNode),
+                                  &contextPosition,
+                                  (PRInt32*)&contextNodesetSize,
+                                  PR_FALSE);
+
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  contextNode.swap(*aResult);
+
+  return NS_OK;
+}
+

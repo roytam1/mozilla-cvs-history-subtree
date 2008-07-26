@@ -73,7 +73,8 @@ public:
         EVENT,                // event()
         POWER,                // power()
         RANDOM,               // random()
-        COMPARE               // compare()
+        COMPARE,              // compare()
+        CONTEXT               // context()
     };
 
     /*

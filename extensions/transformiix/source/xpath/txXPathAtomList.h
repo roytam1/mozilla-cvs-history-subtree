@@ -114,4 +114,5 @@ TX_ATOM(event, "event")
 TX_ATOM(power, "power")
 TX_ATOM(random, "random")
 TX_ATOM(compare, "compare")
+TX_ATOM(context, "context")
 #endif

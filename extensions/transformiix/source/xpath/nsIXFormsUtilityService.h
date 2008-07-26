@@ -53,11 +53,11 @@ class nsIDOMNode; /* forward declaration */
 class nsIXFormsModelElement; /* forward declaration */
 
 /* starting interface:    nsIXFormsUtilityService */
-#define NS_IXFORMSUTILITYSERVICE_IID_STR "2ad098f4-5ee7-4282-a9f7-584eb95e1d69"
+#define NS_IXFORMSUTILITYSERVICE_IID_STR "c1d0d2a2-8612-4c28-85fa-511227b3bcea"
 
 #define NS_IXFORMSUTILITYSERVICE_IID \
-  {0x2ad098f4, 0x5ee7, 0x4282, \
-    { 0xa9, 0xf7, 0x58, 0x4e, 0xb9, 0x5e, 0x1d, 0x69 }}
+  {0xc1d0d2a2, 0x8612, 0x4c28, \
+    { 0x85, 0xfa, 0x51, 0x12, 0x27, 0xb3, 0xbc, 0xea }}
 
 #define NS_XFORMS_UTILITY_CONTRACTID   "@mozilla.org/xforms-utility-service;1"
 
@@ -73,7 +73,8 @@ class nsIXFormsModelElement; /* forward declaration */
   NS_IMETHOD GetSecondsFromDateTime(const nsAString & aValue, double *aSeconds); \
   NS_IMETHOD GetDaysFromDateTime(const nsAString & aValue, PRInt32 *aDays); \
   NS_IMETHOD GetEventContextInfo(const nsAString & aContextName, nsIDOMNode *aNode, nsCOMArray<nsIDOMNode> *aResult); \
-  NS_IMETHOD GetTime(nsAString & aValue, PRBool aUTC);
+  NS_IMETHOD GetTime(nsAString & aValue, PRBool aUTC); \
+  NS_IMETHOD Context(nsIDOMNode *aResolverNode, nsIDOMNode **aResult);
 
 /**
  * Private interface implemented by the nsXFormsUtilityService in XForms extension.
@@ -174,6 +175,13 @@ class NS_NO_VTABLE nsIXFormsUtilityService : public nsISupports {
    */
   /* void getTime(out DOMString, PRBool aUTC); */
   NS_IMETHOD GetTime(nsAString & aValue, PRBool aUTC) = 0;
+
+  /**
+   * Function to retrieve the context node of the node that contained
+   * the XPath context() function.
+   */
+  /* nsIDOMNode context (in nsIDOMNode aResolverNode); */
+  NS_IMETHOD Context(nsIDOMNode *aResolverNode, nsIDOMNode **aResult) = 0;
 };
 
 #define NS_ERROR_XFORMS_CALCUATION_EXCEPTION \
