@@ -1995,3 +1995,14 @@ nsSchemaValidatorUtils::SetToNullOrElement(nsIDOMNode *aNode,
   }
 }
 
+PRBool
+nsSchemaValidatorUtils::IsGMT(const nsAString & aDateTime)
+{
+  if (!aDateTime.IsEmpty()) {
+    if (aDateTime.Last() == 'Z') {
+      return PR_TRUE;
+    }
+  }
+
+  return PR_FALSE;
+}

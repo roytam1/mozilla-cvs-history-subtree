@@ -2408,7 +2408,8 @@ nsSchemaValidator::ValidateBuiltinTypeTime(const nsAString & aValue,
     sprintf(fulldate, "22-AUG-1993 %d:%d:%d.%u", time.hour, time.minute,
             time.second, time.milisecond);
 
-    PR_ParseTimeString(fulldate, PR_TRUE, aResult);
+    PRBool isGMT = nsSchemaValidatorUtils::IsGMT(aValue);
+    PR_ParseTimeString(fulldate, isGMT ? PR_TRUE : PR_FALSE, aResult);
   } else {
     *aResult = nsnull;
     rv = NS_ERROR_ILLEGAL_VALUE;
@@ -2528,7 +2529,8 @@ nsSchemaValidator::ValidateBuiltinTypeDate(const nsAString & aValue,
     sprintf(fulldate, "%d-%s-%u 00:00:00", date.day,
             monthShorthand.get(), date.year);
 
-    PR_ParseTimeString(fulldate, PR_TRUE, aResult);
+    PRBool isGMT = nsSchemaValidatorUtils::IsGMT(aValue);
+    PR_ParseTimeString(fulldate, isGMT ? PR_TRUE : PR_FALSE, aResult);
   } else {
     *aResult = nsnull;
     rv = NS_ERROR_ILLEGAL_VALUE;
@@ -2615,7 +2617,8 @@ nsSchemaValidator::ValidateBuiltinTypeDateTime(const nsAString & aValue,
       dateTime.time.second,
       dateTime.time.milisecond);
 
-    PR_ParseTimeString(fulldate, PR_TRUE, aResult);
+    PRBool isGMT = nsSchemaValidatorUtils::IsGMT(aValue);
+    PR_ParseTimeString(fulldate, isGMT ? PR_TRUE : PR_FALSE, aResult);
   } else {
     *aResult = nsnull;
     rv = NS_ERROR_ILLEGAL_VALUE;
