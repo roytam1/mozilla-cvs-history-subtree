@@ -117,4 +117,5 @@ TX_ATOM(compare, "compare")
 TX_ATOM(context, "context")
 TX_ATOM(daysToDate, "days-to-date")
 TX_ATOM(secondsToDateTime, "seconds-to-dateTime")
+TX_ATOM(isCardNumber, "is-card-number")
 #endif

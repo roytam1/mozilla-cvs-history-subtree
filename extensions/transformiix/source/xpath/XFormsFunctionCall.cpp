@@ -768,6 +768,26 @@ XFormsFunctionCall::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
 
       return aContext->recycler()->getStringResult(dateTime, aResult);
     }
+    case ISCARDNUMBER:
+    {
+      if (!requireParams(1, 1, aContext))
+        return NS_ERROR_XPATH_BAD_ARGUMENT_COUNT;
+
+      nsAutoString number;
+      evaluateToString((Expr*)iter.next(), aContext, number);
+
+      nsCOMPtr<nsIXFormsUtilityService>xformsService =
+            do_GetService("@mozilla.org/xforms-utility-service;1", &rv);
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      PRBool result;
+      rv = xformsService->IsCardNumber(number, &result);
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      aContext->recycler()->getBoolResult(result, aResult);
+
+      return NS_OK;
+    }
   } /* switch() */
 
   aContext->receiveError(NS_LITERAL_STRING("Internal error"),
@@ -898,6 +918,11 @@ XFormsFunctionCall::getNameAtom(nsIAtom** aAtom)
     case SECONDSTODATETIME:
     {
       *aAtom = txXPathAtoms::secondsToDateTime;
+      break;
+    }
+    case ISCARDNUMBER:
+    {
+      *aAtom = txXPathAtoms::isCardNumber;
       break;
     }
     default:

@@ -53,11 +53,11 @@ class nsIDOMNode; /* forward declaration */
 class nsIXFormsModelElement; /* forward declaration */
 
 /* starting interface:    nsIXFormsUtilityService */
-#define NS_IXFORMSUTILITYSERVICE_IID_STR "c1d0d2a2-8612-4c28-85fa-511227b3bcea"
+#define NS_IXFORMSUTILITYSERVICE_IID_STR "0c62c3ae-593a-466c-9f71-b6d0c76ab574"
 
 #define NS_IXFORMSUTILITYSERVICE_IID \
-  {0xc1d0d2a2, 0x8612, 0x4c28, \
-    { 0x85, 0xfa, 0x51, 0x12, 0x27, 0xb3, 0xbc, 0xea }}
+  {0x0c62c3ae, 0x593a, 0x466c, \
+    { 0x9f, 0x71, 0xb6, 0xd0, 0xc7, 0x6a, 0xb5, 0x74 }}
 
 #define NS_XFORMS_UTILITY_CONTRACTID   "@mozilla.org/xforms-utility-service;1"
 
@@ -74,7 +74,8 @@ class nsIXFormsModelElement; /* forward declaration */
   NS_IMETHOD GetDaysFromDateTime(const nsAString & aValue, PRInt32 *aDays); \
   NS_IMETHOD GetEventContextInfo(const nsAString & aContextName, nsIDOMNode *aNode, nsCOMArray<nsIDOMNode> *aResult); \
   NS_IMETHOD GetTime(nsAString & aValue, PRBool aUTC); \
-  NS_IMETHOD Context(nsIDOMNode *aResolverNode, nsIDOMNode **aResult);
+  NS_IMETHOD Context(nsIDOMNode *aResolverNode, nsIDOMNode **aResult); \
+  NS_IMETHOD IsCardNumber(const nsAString & aNumber, PRBool *aResult);
 
 /**
  * Private interface implemented by the nsXFormsUtilityService in XForms extension.
@@ -182,6 +183,13 @@ class NS_NO_VTABLE nsIXFormsUtilityService : public nsISupports {
    */
   /* nsIDOMNode context (in nsIDOMNode aResolverNode); */
   NS_IMETHOD Context(nsIDOMNode *aResolverNode, nsIDOMNode **aResult) = 0;
+
+  /**
+   * Function to determine if a number is a valid card number according to
+   * the Luhn algorithm.
+   */
+  /* PRBool(in DOMString); */
+  NS_IMETHOD IsCardNumber(const nsAString & aNumber, PRBool *aResult) = 0;
 };
 
 #define NS_ERROR_XFORMS_CALCUATION_EXCEPTION \

@@ -124,6 +124,8 @@ nsXFormsSchemaValidator::ValidateXFormsTypeString(const nsAString & aValue,
     isValid = IsValidSchemaListItem(aValue);
   } else if (aType.EqualsLiteral("listItems")) {
     isValid = IsValidSchemaListItems(aValue);
+  } else if (aType.EqualsLiteral("card-number")) {
+    isValid = IsValidSchemaCardNumber(aValue);
   }
 
   return isValid;
@@ -220,3 +222,21 @@ nsXFormsSchemaValidator::IsValidSchemaListItems(const nsAString & aValue)
   return isValid;
 }
 
+PRBool
+nsXFormsSchemaValidator::IsValidSchemaCardNumber(const nsAString & aValue)
+{
+  nsAutoString value(aValue);
+
+  // A valid card-number is between 12 and 19 digits in length.
+  PRInt32 len = value.Length();
+  if ((len < 12) || (len > 19))
+    return PR_FALSE;
+
+  for (PRInt32 i = 0; i < len; ++i) {
+    PRUnichar c = value.CharAt(i);
+    if ((c > '9') || (c < '0'))
+        return PR_FALSE;
+  }
+
+  return PR_TRUE;
+}

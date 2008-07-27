@@ -76,7 +76,8 @@ public:
         COMPARE,              // compare()
         CONTEXT,              // context()
         DAYSTODATE,           // days-to-date()
-        SECONDSTODATETIME     // seconds-to-dateTime()
+        SECONDSTODATETIME,    // seconds-to-dateTime()
+        ISCARDNUMBER          // is-card-number()
     };
 
     /*

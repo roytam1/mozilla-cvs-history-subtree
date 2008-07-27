@@ -605,3 +605,37 @@ nsXFormsUtilityService::Context(nsIDOMNode  *aResolverNode,
   return NS_OK;
 }
 
+NS_IMETHODIMP
+nsXFormsUtilityService::IsCardNumber(const nsAString& aNumber, PRBool *aResult)
+{
+  nsAutoString number(aNumber);
+
+  nsXFormsSchemaValidator validator;
+  if (!validator.ValidateString(number,
+                                NS_LITERAL_STRING("card-number"),
+                                NS_LITERAL_STRING(NS_NAMESPACE_XFORMS))) {
+    *aResult = PR_FALSE;
+    return NS_OK;
+  }
+
+  // Now check if the card number is a valid Luhn number.
+  PRInt32 sum = 0;
+  PRBool alt = false;
+  for (PRInt32 i = number.Length() - 1; i >= 0; --i) {
+    PRUnichar currentChar = number.CharAt(i);
+    PRInt32 digit = abs(currentChar - '0');
+
+    if (alt) {
+      digit *= 2;
+      if (digit > 9) {
+        digit -= 9;
+      }
+    }
+    sum += digit;
+    alt = !alt;
+  }
+
+  *aResult = (sum % 10 == 0);
+
+  return NS_OK;
+}

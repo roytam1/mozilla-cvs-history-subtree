@@ -280,6 +280,9 @@ nsXFormsXPathEvaluator::XFormsParseContextImpl::resolveFunctionCall(
     else if (aName == txXPathAtoms::secondsToDateTime) {
       aFnCall = new XFormsFunctionCall(XFormsFunctionCall::SECONDSTODATETIME);
     }
+    else if (aName == txXPathAtoms::isCardNumber) {
+      aFnCall = new XFormsFunctionCall(XFormsFunctionCall::ISCARDNUMBER);
+    }
     else {
       // didn't find functioncall here, aFnCall should be null
       isOutOfMem = PR_FALSE;
