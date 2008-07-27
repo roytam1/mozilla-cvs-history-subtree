@@ -67,6 +67,7 @@ nsIAtom* nsXFormsAtoms::instanceDocumentOwner;
 nsIAtom* nsXFormsAtoms::externalMessagesProperty;
 nsIAtom* nsXFormsAtoms::deferredEventListProperty;
 nsIAtom* nsXFormsAtoms::attrBased;
+nsIAtom* nsXFormsAtoms::resource;
 
 const nsStaticAtom nsXFormsAtoms::Atoms_info[] = {
   { "src",                      &nsXFormsAtoms::src },
@@ -96,7 +97,8 @@ const nsStaticAtom nsXFormsAtoms::Atoms_info[] = {
   { "instanceDocumentOwner",    &nsXFormsAtoms::instanceDocumentOwner },
   { "ExternalMessagesProperty", &nsXFormsAtoms::externalMessagesProperty },
   { "DeferredEventListProperty",&nsXFormsAtoms::deferredEventListProperty },
-  { "attrBased",                &nsXFormsAtoms::attrBased }
+  { "attrBased",                &nsXFormsAtoms::attrBased },
+  { "resource",                 &nsXFormsAtoms::resource }
 };
 
 void
