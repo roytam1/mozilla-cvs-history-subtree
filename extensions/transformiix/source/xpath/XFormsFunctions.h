@@ -74,7 +74,9 @@ public:
         POWER,                // power()
         RANDOM,               // random()
         COMPARE,              // compare()
-        CONTEXT               // context()
+        CONTEXT,              // context()
+        DAYSTODATE,           // days-to-date()
+        SECONDSTODATETIME     // seconds-to-dateTime()
     };
 
     /*

@@ -707,6 +707,67 @@ XFormsFunctionCall::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
 
       return NS_OK;
     }
+    case DAYSTODATE:
+    {
+      if (!requireParams(1, 1, aContext))
+        return NS_ERROR_XPATH_BAD_ARGUMENT_COUNT;
+
+      double days = evaluateToNumber((Expr*)iter.next(), aContext);
+
+      nsAutoString date;
+      if (!Double::isNaN(days)) {
+        // Round total number of days to the nearest whole number.
+        PRTime t_days;
+        LL_I2L(t_days, floor(days+0.5));
+
+        PRTime t_secs, t_secs_per_day, t_usec, usec_per_sec;
+        // Calculate total number of seconds in aDays.
+        LL_I2L(t_secs_per_day, 86400UL);
+        LL_MUL(t_secs, t_days, t_secs_per_day);
+        // Convert total seconds to usecs.
+        LL_I2L(usec_per_sec, PR_USEC_PER_SEC);
+        LL_MUL(t_usec, t_secs, usec_per_sec);
+
+        // Convert the time to xsd:date format.
+        PRExplodedTime et;
+        PR_ExplodeTime(t_usec, PR_GMTParameters, &et);
+        char ctime[60];
+        PR_FormatTime(ctime, sizeof(ctime), "%Y-%m-%d", &et);
+        date.AppendASCII(ctime);
+      }
+
+      return aContext->recycler()->getStringResult(date, aResult);
+
+      return NS_OK;
+    }
+    case SECONDSTODATETIME:
+    {
+      if (!requireParams(1, 1, aContext))
+        return NS_ERROR_XPATH_BAD_ARGUMENT_COUNT;
+
+      double seconds = evaluateToNumber((Expr*)iter.next(), aContext);
+
+      nsAutoString dateTime;
+      if (!Double::isNaN(seconds)) {
+        // Round total number of seconds to the nearest whole number.
+        PRTime t_secs;
+        LL_I2L(t_secs, floor(seconds+0.5));
+
+        // Convert total seconds to usecs.
+        PRTime t_usec, usec_per_sec;
+        LL_I2L(usec_per_sec, PR_USEC_PER_SEC);
+        LL_MUL(t_usec, t_secs, usec_per_sec);
+
+        // Convert the time to xsd:dateTime format.
+        PRExplodedTime et;
+        PR_ExplodeTime(t_usec, PR_GMTParameters, &et);
+        char ctime[60];
+        PR_FormatTime(ctime, sizeof(ctime), "%Y-%m-%dT%H:%M:%SZ", &et);
+        dateTime.AppendASCII(ctime);
+      }
+
+      return aContext->recycler()->getStringResult(dateTime, aResult);
+    }
   } /* switch() */
 
   aContext->receiveError(NS_LITERAL_STRING("Internal error"),
@@ -827,6 +888,16 @@ XFormsFunctionCall::getNameAtom(nsIAtom** aAtom)
     case CONTEXT:
     {
       *aAtom = txXPathAtoms::context;
+      break;
+    }
+    case DAYSTODATE:
+    {
+      *aAtom = txXPathAtoms::daysToDate;
+      break;
+    }
+    case SECONDSTODATETIME:
+    {
+      *aAtom = txXPathAtoms::secondsToDateTime;
       break;
     }
     default:

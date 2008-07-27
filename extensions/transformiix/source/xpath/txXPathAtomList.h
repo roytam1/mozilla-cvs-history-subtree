@@ -115,4 +115,6 @@ TX_ATOM(power, "power")
 TX_ATOM(random, "random")
 TX_ATOM(compare, "compare")
 TX_ATOM(context, "context")
+TX_ATOM(daysToDate, "days-to-date")
+TX_ATOM(secondsToDateTime, "seconds-to-dateTime")
 #endif
