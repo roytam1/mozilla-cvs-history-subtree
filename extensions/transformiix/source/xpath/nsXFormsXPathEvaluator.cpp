@@ -283,6 +283,10 @@ nsXFormsXPathEvaluator::XFormsParseContextImpl::resolveFunctionCall(
     else if (aName == txXPathAtoms::isCardNumber) {
       aFnCall = new XFormsFunctionCall(XFormsFunctionCall::ISCARDNUMBER);
     }
+    else if (aName == txXPathAtoms::digest) {
+      aFnCall = new XFormsFunctionCall(XFormsFunctionCall::DIGEST,
+                                       mResolverNode);
+    }
     else {
       // didn't find functioncall here, aFnCall should be null
       isOutOfMem = PR_FALSE;

@@ -77,7 +77,8 @@ public:
         CONTEXT,              // context()
         DAYSTODATE,           // days-to-date()
         SECONDSTODATETIME,    // seconds-to-dateTime()
-        ISCARDNUMBER          // is-card-number()
+        ISCARDNUMBER,         // is-card-number()
+        DIGEST                // digest()
     };
 
     /*

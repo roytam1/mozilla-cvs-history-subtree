@@ -2538,3 +2538,23 @@ nsXFormsUtils::AskStopWaiting(nsIDOMElement *aElement)
     return PR_FALSE;
   }
 }
+
+static inline PRUnichar
+ToHexChar(PRInt16 aValue)
+{
+  if (aValue < 10)
+    return (PRUnichar) aValue + '0';
+  else
+    return (PRUnichar) aValue - 10 + 'A';
+}
+
+void
+nsXFormsUtils::BinaryToHex(const char *aBuffer, PRUint32 aCount,
+                           PRUnichar **aHexString)
+{
+  for (PRUint32 index = 0; index < aCount; index++) {
+    (*aHexString)[index * 2] = ToHexChar((aBuffer[index] >> 4) & 0xf);
+    (*aHexString)[index * 2 + 1] = ToHexChar(aBuffer[index] & 0xf);
+  }
+}
+

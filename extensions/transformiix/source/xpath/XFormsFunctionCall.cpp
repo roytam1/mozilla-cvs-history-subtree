@@ -788,6 +788,30 @@ XFormsFunctionCall::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
 
       return NS_OK;
     }
+    case DIGEST:
+    {
+      nsresult rv;
+      if (!requireParams(2, 3, aContext))
+        return NS_ERROR_XPATH_BAD_ARGUMENT_COUNT;
+
+      nsAutoString data, algorithm, encoding;
+      evaluateToString((Expr*)iter.next(), aContext, data);
+      evaluateToString((Expr*)iter.next(), aContext, algorithm);
+      evaluateToString((Expr*)iter.next(), aContext, encoding);
+
+      nsCOMPtr<nsIXFormsUtilityService>xformsService =
+            do_GetService("@mozilla.org/xforms-utility-service;1", &rv);
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      // mNode is the node that contained the Event XPath expression.
+      nsAutoString result;
+      rv = xformsService->Digest(data, algorithm, encoding, mNode, result);
+      if (NS_FAILED(rv)) {
+        return rv;
+      }
+
+      return aContext->recycler()->getStringResult(result, aResult);
+    }
   } /* switch() */
 
   aContext->receiveError(NS_LITERAL_STRING("Internal error"),
@@ -923,6 +947,11 @@ XFormsFunctionCall::getNameAtom(nsIAtom** aAtom)
     case ISCARDNUMBER:
     {
       *aAtom = txXPathAtoms::isCardNumber;
+      break;
+    }
+    case DIGEST:
+    {
+      *aAtom = txXPathAtoms::digest;
       break;
     }
     default:
