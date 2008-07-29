@@ -55,7 +55,7 @@ $UseTimeStamp      = 0;      # Use the CVS 'pull-by-timestamp' option, or not
 # Tests
 $CleanProfile             = 1;
 #$ResetHomeDirForTests     = 1;
-$ProductName              = "Shredder";
+$ProductName              = "Thunderbird";
 #$VendorName               = 'Mozilla';
 
 $RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
