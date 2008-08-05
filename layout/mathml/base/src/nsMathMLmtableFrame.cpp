@@ -53,6 +53,7 @@
 #include "nsTableOuterFrame.h"
 #include "nsTableFrame.h"
 #include "nsTableCellFrame.h"
+#include "celldata.h"
 
 #include "nsMathMLmtableFrame.h"
 
@@ -629,8 +630,9 @@ nsMathMLmtdFrame::GetRowSpan()
                    nsMathMLAtoms::rowspan_, value)) {
     PRInt32 error;
     rowspan = value.ToInteger(&error);
-    if (error)
+    if (error || rowspan < 0)
       rowspan = 1;
+    rowspan = PR_MIN(rowspan, MAX_ROWSPAN);
   }
   return rowspan;
 }
@@ -644,7 +646,7 @@ nsMathMLmtdFrame::GetColSpan()
                    nsMathMLAtoms::columnspan_, value)) {
     PRInt32 error;
     colspan = value.ToInteger(&error);
-    if (error)
+    if (error || colspan < 0 || colspan > MAX_COLSPAN)
       colspan = 1;
   }
   return colspan;

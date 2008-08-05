@@ -45,6 +45,7 @@
 #include "nsPresContext.h"
 #include "nsRuleData.h"
 #include "nsIDocument.h"
+#include "celldata.h"
 
 class nsHTMLTableCellElement : public nsGenericHTMLElement,
                                public nsIDOMHTMLTableCellElement
@@ -258,9 +259,6 @@ static const nsAttrValue::EnumTable kCellScopeTable[] = {
   { "colgroup", NS_STYLE_CELL_SCOPE_COLGROUP },
   { 0 }
 };
-
-#define MAX_ROWSPAN 8190 // celldata.h can not handle more
-#define MAX_COLSPAN 1000 // limit as IE and opera do
 
 PRBool
 nsHTMLTableCellElement::ParseAttribute(nsIAtom* aAttribute,
