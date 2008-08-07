@@ -287,6 +287,9 @@ nsXFormsXPathEvaluator::XFormsParseContextImpl::resolveFunctionCall(
       aFnCall = new XFormsFunctionCall(XFormsFunctionCall::DIGEST,
                                        mResolverNode);
     }
+    else if (aName == txXPathAtoms::adjustDateTimeToTimezone) {
+      aFnCall = new XFormsFunctionCall(XFormsFunctionCall::ADJUSTDATETIMETOTIMEZONE);
+    }
     else {
       // didn't find functioncall here, aFnCall should be null
       isOutOfMem = PR_FALSE;

@@ -119,4 +119,5 @@ TX_ATOM(daysToDate, "days-to-date")
 TX_ATOM(secondsToDateTime, "seconds-to-dateTime")
 TX_ATOM(isCardNumber, "is-card-number")
 TX_ATOM(digest, "digest")
+TX_ATOM(adjustDateTimeToTimezone, "adjust-dateTime-to-timezone")
 #endif

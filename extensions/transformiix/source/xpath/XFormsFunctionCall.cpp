@@ -812,6 +812,27 @@ XFormsFunctionCall::evaluate(txIEvalContext* aContext, txAExprResult** aResult)
 
       return aContext->recycler()->getStringResult(result, aResult);
     }
+    case ADJUSTDATETIMETOTIMEZONE:
+    {
+      nsresult rv;
+      if (!requireParams(1, 1, aContext))
+        return NS_ERROR_XPATH_BAD_ARGUMENT_COUNT;
+
+      nsAutoString dateTime;
+      evaluateToString((Expr*)iter.next(), aContext, dateTime);
+
+      nsCOMPtr<nsIXFormsUtilityService>xformsService =
+            do_GetService("@mozilla.org/xforms-utility-service;1", &rv);
+      NS_ENSURE_SUCCESS(rv, rv);
+
+      nsAutoString result;
+      rv = xformsService->AdjustDateTimeToTimezone(dateTime, result);
+      if (NS_FAILED(rv)) {
+        return rv;
+      }
+
+      return aContext->recycler()->getStringResult(result, aResult);
+    }
   } /* switch() */
 
   aContext->receiveError(NS_LITERAL_STRING("Internal error"),
@@ -952,6 +973,11 @@ XFormsFunctionCall::getNameAtom(nsIAtom** aAtom)
     case DIGEST:
     {
       *aAtom = txXPathAtoms::digest;
+      break;
+    }
+    case ADJUSTDATETIMETOTIMEZONE:
+    {
+      *aAtom = txXPathAtoms::adjustDateTimeToTimezone;
       break;
     }
     default:
