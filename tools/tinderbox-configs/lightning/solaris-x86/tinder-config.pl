@@ -253,6 +253,7 @@ $shiptalkback  = 0;
 #$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
 #$OfficialBuildMachinery = 1; # Allow official clobber nightlies.  When false, $cachebuild in post-mozilla-rel.pl can never be true.
 #$ReleaseGroup = ''; # group to set uploaded files to (if non-empty)
+$ReleaseGroup = 'calendar'; # group to set uploaded files to (if non-empty)
 $build_hour    = "3";
 #$package_creation_path = "/xpinstall/packager";
 # path to make in to recreate mac bundle, needed for mac + talkback:
