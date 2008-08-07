@@ -1394,18 +1394,18 @@ nsXFormsSubmissionElement::AddNameSpaces(nsIDOMElement   *aTarget,
           attrName.Append(localName);
           aTarget->SetAttributeNS(kXMLNSNameSpaceURI, attrName, value);
         }
-      } else if (!value.IsEmpty()) {
+      } else if (!aPrefixHash ||
+                  aPrefixHash->Contains(NS_LITERAL_STRING("#default"))) {
+        // only serialize the default namespace declaration if
+        // includenamespaceprefixes is declared and it includes '#default'
+        // or if we haven't already serialized it (none of the child elements
+        // used it)
         PRBool hasDefaultNSAttr;
         aTarget->HasAttributeNS(kXMLNSNameSpaceURI,
                                 NS_LITERAL_STRING("xmlns"), &hasDefaultNSAttr);
 
         if (!hasDefaultNSAttr) {
-          aTarget->GetNamespaceURI(nsURI);
-          if (!nsURI.IsEmpty()) {
-            // if aTarget default namespace uri isn't empty and it hasn't
-            // default namespace attribute then we should add it.
-            aTarget->SetAttributeNS(kXMLNSNameSpaceURI, localName, value);
-          }
+          aTarget->SetAttributeNS(kXMLNSNameSpaceURI, localName, value);
         }
       }
     }
@@ -1516,19 +1516,6 @@ nsXFormsSubmissionElement::CreateSubmissionDoc(nsIDOMNode      *aRoot,
     nsCOMPtr<nsIDOMElement> submDocElm;
     submDoc->GetDocumentElement(getter_AddRefs(submDocElm));
     NS_ENSURE_STATE(submDocElm);
-
-    // if submission document has empty default namespace attribute and if
-    // @includenamespaceprefixes attribute doesn't contain "#default" value then
-    // we should remove default namespace attribute (see the specs 11.3).
-    nsAutoString XMLNSAttrValue;
-    submDocElm->GetAttributeNS(kXMLNSNameSpaceURI, NS_LITERAL_STRING("xmlns"),
-                               XMLNSAttrValue);
-
-    if (XMLNSAttrValue.IsEmpty() && (!prefixHash ||
-        !prefixHash->Contains(NS_LITERAL_STRING("#default")))) {
-      submDocElm->RemoveAttributeNS(kXMLNSNameSpaceURI,
-                                    NS_LITERAL_STRING("xmlns"));
-    }
 
     // handle namespaces on the root element of the instance document
     nsCOMPtr<nsIDOMElement> instDocElm;
