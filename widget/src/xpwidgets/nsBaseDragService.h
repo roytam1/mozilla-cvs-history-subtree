@@ -54,7 +54,7 @@ class nsPresContext;
  * XP DragService wrapper base class
  */
 
-class nsBaseDragService : public nsIDragService,
+class nsBaseDragService : public nsIDragService_1_8_BRANCH,
                           public nsIDragSession
 {
 
@@ -67,6 +67,7 @@ public:
 
   //nsIDragSession and nsIDragService
   NS_DECL_NSIDRAGSERVICE
+  NS_DECL_NSIDRAGSERVICE_1_8_BRANCH
   NS_DECL_NSIDRAGSESSION
 
 protected:
@@ -82,6 +83,7 @@ protected:
   nsCOMPtr<nsIDOMNode> mSourceNode;
   nsCOMPtr<nsIDOMDocument> mSourceDocument;       // the document at the drag source. will be null
                                                   //  if it came from outside the app.
+  PRUint32 mSuppressLevel;
 };
 
 #endif // nsBaseDragService_h__

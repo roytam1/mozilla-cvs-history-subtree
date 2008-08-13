@@ -57,7 +57,8 @@
 
 NS_IMPL_ADDREF(nsBaseDragService)
 NS_IMPL_RELEASE(nsBaseDragService)
-NS_IMPL_QUERY_INTERFACE2(nsBaseDragService, nsIDragService, nsIDragSession)
+NS_IMPL_QUERY_INTERFACE3(nsBaseDragService, nsIDragService,
+                         nsIDragService_1_8_BRANCH, nsIDragSession)
 
 
 //-------------------------------------------------------------------------
@@ -67,7 +68,7 @@ NS_IMPL_QUERY_INTERFACE2(nsBaseDragService, nsIDragService, nsIDragSession)
 //-------------------------------------------------------------------------
 nsBaseDragService::nsBaseDragService()
   : mCanDrop(PR_FALSE), mDoingDrag(PR_FALSE),
-    mDragAction(DRAGDROP_ACTION_NONE), mTargetSize(0,0)
+    mDragAction(DRAGDROP_ACTION_NONE), mTargetSize(0,0), mSuppressLevel(0)
 {
   nsresult result = NS_NewISupportsArray(getter_AddRefs(mTransArray));
   if (NS_FAILED(result)) {
@@ -201,6 +202,7 @@ nsBaseDragService::InvokeDragSession(nsIDOMNode *aDOMNode,
                                      PRUint32 aActionType)
 {
   NS_ENSURE_TRUE(aDOMNode, NS_ERROR_INVALID_ARG);
+  NS_ENSURE_TRUE(mSuppressLevel == 0, NS_ERROR_FAILURE);
 
   // stash the document of the dom node
   aDOMNode->GetOwnerDocument(getter_AddRefs(mSourceDocument));
@@ -239,7 +241,7 @@ nsBaseDragService::GetCurrentSession(nsIDragSession ** aSession)
 
   // "this" also implements a drag session, so say we are one but only
   // if there is currently a drag going on.
-  if (mDoingDrag) {
+  if (!mSuppressLevel && mDoingDrag) {
     *aSession = this;
     NS_ADDREF(*aSession);      // addRef because we're a "getter"
   }
@@ -306,3 +308,18 @@ nsBaseDragService::GetFrameFromNode(nsIDOMNode* inNode, nsIFrame** outFrame,
   }
 
 } // GetFrameFromNode
+
+NS_IMETHODIMP
+nsBaseDragService::Suppress()
+{
+  EndDragSession();
+  ++mSuppressLevel;
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsBaseDragService::Unsuppress()
+{
+  --mSuppressLevel;
+  return NS_OK;
+}

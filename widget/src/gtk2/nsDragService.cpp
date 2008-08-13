@@ -67,8 +67,9 @@ static const char gTextUriListType[] = "text/uri-list";
 
 NS_IMPL_ADDREF_INHERITED(nsDragService, nsBaseDragService)
 NS_IMPL_RELEASE_INHERITED(nsDragService, nsBaseDragService)
-NS_IMPL_QUERY_INTERFACE4(nsDragService,
+NS_IMPL_QUERY_INTERFACE5(nsDragService,
                          nsIDragService,
+                         nsIDragService_1_8_BRANCH,
                          nsIDragSession,
                          nsIDragSessionGTK,
                          nsIObserver)
@@ -155,8 +156,11 @@ nsDragService::InvokeDragSession(nsIDOMNode *aDOMNode,
                                  PRUint32 aActionType)
 {
     PR_LOG(sDragLm, PR_LOG_DEBUG, ("nsDragService::InvokeDragSession"));
-    nsBaseDragService::InvokeDragSession(aDOMNode, aArrayTransferables,
-                                         aRegion, aActionType);
+    nsresult rv = nsBaseDragService::InvokeDragSession(aDOMNode,
+                                                       aArrayTransferables,
+                                                       aRegion, aActionType);
+    NS_ENSURE_SUCCESS(rv, rv);
+
     // make sure that we have an array of transferables to use
     if (!aArrayTransferables)
         return NS_ERROR_INVALID_ARG;

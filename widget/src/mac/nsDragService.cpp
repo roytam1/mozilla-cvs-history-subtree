@@ -92,7 +92,11 @@ static const PRUint32 kPrivateFlavorTag = 'MZ..' & kPrivateFlavorMask;
 // we need our own stuff for MacOS because of nsIDragSessionMac.
 NS_IMPL_ADDREF_INHERITED(nsDragService, nsBaseDragService)
 NS_IMPL_RELEASE_INHERITED(nsDragService, nsBaseDragService)
-NS_IMPL_QUERY_INTERFACE3(nsDragService, nsIDragService, nsIDragSession, nsIDragSessionMac)
+NS_IMPL_QUERY_INTERFACE4(nsDragService,
+                         nsIDragService,
+                         nsIDragService_1_8_BRANCH,
+                         nsIDragSession,
+                         nsIDragSessionMac)
 
 
 //
@@ -223,7 +227,10 @@ nsDragService::InvokeDragSession (nsIDOMNode *aDOMNode, nsISupportsArray * aTran
 #endif
 
   ::InitCursor();
-  nsBaseDragService::InvokeDragSession ( aDOMNode, aTransferableArray, aDragRgn, aActionType );
+  nsresult rv = nsBaseDragService::InvokeDragSession(aDOMNode,
+                                                     aTransferableArray,
+                                                     aDragRgn, aActionType);
+  NS_ENSURE_SUCCESS(rv, rv);
   
   DragReference theDragRef;
   OSErr result = ::NewDrag(&theDragRef);

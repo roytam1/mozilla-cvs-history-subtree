@@ -109,14 +109,15 @@ NS_IMETHODIMP nsDragService::InvokeDragSession (nsIDOMNode *aDOMNode,
                                                 nsIScriptableRegion *aRegion,
                                                 PRUint32 aActionType)
 {
-  nsBaseDragService::InvokeDragSession(aDOMNode, aArrayTransferables,
-                                       aRegion, aActionType);
+  nsresult rv = nsBaseDragService::InvokeDragSession(aDOMNode,
+                                                     aArrayTransferables,
+                                                     aRegion, aActionType);
+  NS_ENSURE_SUCCESS(rv, rv);
 
   /* no data - no dnd */
   if (!aArrayTransferables)
     return NS_ERROR_INVALID_ARG;
 
-  nsresult rv;
   PRUint32 numItemsToDrag = 0;
 
   mSourceDataItems = aArrayTransferables;
@@ -158,7 +159,7 @@ NS_IMETHODIMP nsDragService::GetCurrentSession(nsIDragSession **aSession)
   if (!aSession)
     return NS_ERROR_FAILURE;
 
-  if (!mDragging) {
+  if (!mDragging || mSuppressLevel) {
     *aSession = nsnull;
     return NS_OK;
   }
