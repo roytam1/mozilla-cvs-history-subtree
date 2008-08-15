@@ -98,6 +98,7 @@ Var fhUninstallLog
 !include version.nsh
 
 VIAddVersionKey "FileDescription" "${BrandShortName} Installer"
+VIAddVersionKey "OriginalFilename" "setup.exe"
 
 !insertmacro GetLongPath
 !insertmacro RegCleanMain

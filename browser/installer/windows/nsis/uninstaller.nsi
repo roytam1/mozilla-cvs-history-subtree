@@ -85,6 +85,7 @@ Var TmpVal
 ; This is named BrandShortName helper because we use this for software update
 ; post update cleanup.
 VIAddVersionKey "FileDescription" "${BrandShortName} Helper"
+VIAddVersionKey "OriginalFilename" "helper.exe"
 
 !insertmacro GetLongPath
 !insertmacro AddHandlerValues
