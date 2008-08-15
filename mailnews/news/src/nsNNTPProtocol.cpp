@@ -4103,7 +4103,6 @@ PRInt32 nsNNTPProtocol::DoCancel()
     char *subject = nsnull;
     char *newsgroups = nsnull;
     char *distribution = nsnull;
-    char *other_random_headers = nsnull;
     char *body = nsnull;
     cancelInfoEntry cancelInfo;
     PRBool requireConfirmationForCancel = PR_TRUE;
@@ -4153,7 +4152,6 @@ PRInt32 nsNNTPProtocol::DoCancel()
   L = PL_strlen (id);
   
   subject = (char *) PR_Malloc (L + 20);
-  other_random_headers = (char *) PR_Malloc (L + 20);
   body = (char *) PR_Malloc (PL_strlen (XP_AppCodeName) + 100);
   
   nsXPIDLString alertText;
@@ -4161,6 +4159,9 @@ PRInt32 nsNNTPProtocol::DoCancel()
   
   PRInt32 confirmCancelResult = 0;
 
+  // A little early to declare, but the goto causes problems
+  nsCAutoString otherHeaders;
+ 
   /* Make sure that this loser isn't cancelling someone else's posting.
      Yes, there are occasionally good reasons to do so.  Those people
      capable of making that decision (news admins) have other tools with
@@ -4228,7 +4229,7 @@ reported here */
       goto FAIL;
   }  
   
-  if (!subject || !other_random_headers || !body) 
+  if (!subject || !body) 
   {
     status = MK_OUT_OF_MEMORY;
     failure = PR_TRUE;
@@ -4238,13 +4239,13 @@ reported here */
   PL_strcpy (subject, "cancel ");
   PL_strcat (subject, id);
 
-  PL_strcpy (other_random_headers, "Control: cancel ");
-  PL_strcat (other_random_headers, id);
-  PL_strcat (other_random_headers, CRLF);
+  otherHeaders.AppendLiteral("Control: cancel ");
+  otherHeaders += id;
+  otherHeaders.AppendLiteral(CRLF);
   if (distribution) {
-    PL_strcat (other_random_headers, "Distribution: ");
-	  PL_strcat (other_random_headers, distribution);
-	  PL_strcat (other_random_headers, CRLF);
+    otherHeaders.AppendLiteral("Distribution: ");
+    otherHeaders += distribution;
+    otherHeaders.AppendLiteral(CRLF);
   }
 
   PL_strcpy (body, "This message was cancelled from within ");
@@ -4262,12 +4263,12 @@ reported here */
                        "Newsgroups: %s" CRLF
                        "Subject: %s" CRLF
                        "References: %s" CRLF
-                       "%s" /* other_random_headers, already with CRLF */
+                       "%s" /* otherHeaders, already with CRLF */
                        CRLF /* body separator */
                        "%s" /* body, already with CRLF */
                        "." CRLF, /* trailing message terminator "." */
                        cancelInfo.from, newsgroups, subject, id,
-                       other_random_headers, body);
+                       otherHeaders.get(), body);
     
     nsCOMPtr<nsIMsgMailNewsUrl> mailnewsurl = do_QueryInterface(m_runningURL);
     if (mailnewsurl)
@@ -4314,7 +4315,6 @@ FAIL:
   PR_Free (subject);
   PR_Free (newsgroups);
   PR_Free (distribution);
-  PR_Free (other_random_headers);
   PR_Free (body);
 
   return status;
