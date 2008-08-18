@@ -2573,6 +2573,9 @@ js_MarkStackFrame(JSContext *cx, JSStackFrame *fp)
     if (JSVAL_IS_GCTHING((jsval)fp->thisp))
         GC_MARK(cx, JSVAL_TO_GCTHING((jsval)fp->thisp), "this");
 
+    if (fp->callee)
+        GC_MARK(cx, fp->callee, "callee object");
+
     /*
      * Mark fp->argv, even though in the common case it will be marked via our
      * caller's frame, or via a JSStackHeader if fp was pushed by an external

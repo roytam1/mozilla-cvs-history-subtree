@@ -454,6 +454,7 @@ js_watch_set(JSContext *cx, JSObject *obj, jsval id, jsval *vp)
                     frame.pc = script->code + script->length
                              - JSOP_STOP_LENGTH;
                 }
+                frame.callee = closure;
                 frame.fun = fun;
                 frame.argv = argv + 2;
                 frame.down = cx->fp;
