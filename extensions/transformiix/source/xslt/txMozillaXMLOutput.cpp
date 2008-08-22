@@ -724,6 +724,17 @@ txMozillaXMLOutput::createResultDocument(const nsAString& aName, PRInt32 aNsID,
 
             mDocumentIsHTML = PR_FALSE;
         }
+        nsCOMPtr<nsIDocument_MOZILLA_1_8_BRANCH3> source =
+          do_QueryInterface(aSourceDocument);
+        NS_ENSURE_STATE(source);
+        PRBool hasHadScriptObject = PR_FALSE;
+        nsIScriptGlobalObject* sgo =
+          source->GetScriptHandlingObject(hasHadScriptObject);
+        NS_ENSURE_STATE(sgo || !hasHadScriptObject);
+        nsCOMPtr<nsIDocument_MOZILLA_1_8_BRANCH3> doc18 =
+          do_QueryInterface(doc);
+        NS_ENSURE_STATE(doc18);
+        doc18->SetScriptHandlingObject(sgo);
         mDocument = do_QueryInterface(doc);
     }
     else {
