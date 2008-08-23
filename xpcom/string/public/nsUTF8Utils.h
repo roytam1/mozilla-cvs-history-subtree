@@ -139,6 +139,14 @@ class ConvertUTF8toUTF16
 
             while ( state-- )
               {
+                if (p == end)
+                  {
+                    NS_ERROR("Buffer ended in the middle of a multibyte sequence");
+                    mErrorEncountered = PR_TRUE;
+                    mBuffer = out;
+                    return N;
+                  }
+
                 c = *p++;
 
                 if ( UTF8traits::isInSeq(c) )
