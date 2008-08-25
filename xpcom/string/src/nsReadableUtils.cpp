@@ -1094,3 +1094,19 @@ NS_COM const nsAFlatCString& EmptyCString()
 
     return sEmpty;
   }
+
+NS_COM
+void
+AppendUCS4ToUTF16(PRUint32 aSource, nsAString& aDest)
+  {
+    NS_ASSERTION(IS_VALID_CHAR(aSource), "Invalid UCS4 char");
+    if (IS_IN_BMP(aSource))
+      {
+        aDest.Append(PRUnichar(aSource));
+      }
+    else
+      {
+        aDest.Append(H_SURROGATE(aSource));
+        aDest.Append(L_SURROGATE(aSource));
+      }
+  }

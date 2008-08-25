@@ -371,5 +371,7 @@ inline PRBool EnsureStringLength(T& aStr, PRUint32 aLen)
     return (aStr.Length() == aLen);
 }
 
+NS_COM void
+AppendUCS4ToUTF16(const PRUint32 aSource, nsAString& aDest);
 
 #endif // !defined(nsReadableUtils_h___)
