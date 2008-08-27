@@ -785,7 +785,6 @@ FeedWriter.prototype = {
 
         this._contentSandbox.defaultHandlerMenuItem = menuItem;
         codeStr += "handlersMenuPopup.appendChild(defaultHandlerMenuItem); ";
-     }
       }
       else {
         this._defaultSystemReader = null;
