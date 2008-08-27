@@ -1499,7 +1499,7 @@ JSObject *
 XPCNativeWrapper::GetNewOrUsed(JSContext *cx, XPCWrappedNative *wrapper,
                                JSObject *callee)
 {
-  if (callee && PR_FALSE) {
+  if (callee) {
     nsCOMPtr<nsIPrincipal> prin;
 
     nsCOMPtr<nsIScriptSecurityManager> ssm = GetSecurityManager(cx);
@@ -1509,7 +1509,7 @@ XPCNativeWrapper::GetNewOrUsed(JSContext *cx, XPCWrappedNative *wrapper,
     if (NS_SUCCEEDED(rv) && prin) {
       nsCOMPtr<nsIPrincipal> sysprin;
       rv = ssm->GetSystemPrincipal(getter_AddRefs(sysprin));
-      if (NS_SUCCEEDED(rv) && sysprin == prin) {
+      if (NS_SUCCEEDED(rv) && sysprin != prin) {
         jsval v = OBJECT_TO_JSVAL(wrapper->GetFlatJSObject());
         if (!XPCNativeWrapperCtor(cx, JSVAL_TO_OBJECT(v), 1, &v, &v))
           return nsnull;
