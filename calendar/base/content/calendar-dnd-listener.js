@@ -56,7 +56,7 @@ var itemConversion = {
                 aEmailAddresses, addresses, names, fullNames);
             for (var i = 0; i < numAddresses; i++) {
                 var attendee = createAttendee();
-                attendee.id = addresses.value[i];
+                attendee.id = "MAILTO:" + addresses.value[i];
                 attendee.commonName = names.value[i];
                 attendee.role = "REQ-PARTICIPANT";
                 attendee.participationStatus = "NEEDS-ACTION";
@@ -112,7 +112,7 @@ var itemConversion = {
     },
 
     copyItemBase: function iC_copyItemBase(aItem, aTarget) {
-        const copyProps = ["SUMMARY", "LOCATION", "CATEGORIES", "DESCRIPTION",
+        const copyProps = ["SUMMARY", "LOCATION", "DESCRIPTION",
                            "URL", "CLASS", "PRIORITY", "STATUS"];
 
         for each (var prop in copyProps) {
@@ -124,6 +124,10 @@ var itemConversion = {
         for each (var attendee in attendees) {
             aTarget.addAttendee(attendee.clone());
         }
+
+        // Categories
+        var categories = aItem.getCategories({});
+        aTarget.setCategories(categories.length, categories);
 
         // Organizer
         aTarget.organizer = (aItem.organizer ? aItem.organizer.clone() : null);
@@ -322,7 +326,7 @@ calDNDBaseObserver.prototype = {
                 try {
                     loader.init(channel, listener, null, 0);
                 } catch(e) {
-                    Component.utils.reportError(e)
+                    Components.utils.reportError(e)
                 }
                 break;
             case "text/x-moz-message":

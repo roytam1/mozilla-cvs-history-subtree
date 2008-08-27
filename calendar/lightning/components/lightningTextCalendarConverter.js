@@ -50,16 +50,57 @@ function getLightningStringBundle()
     return svc.createBundle("chrome://lightning/locale/lightning.properties");
 }
 
-function createHtmlTableSection(label, text)
+function linkifyText(text) {
+    XML.ignoreWhitespace = false;
+    XML.prettyPrinting = false;
+    XML.prettyIndent = false;
+    var linkifiedText = <p/>;
+    var localText = text;
+
+    // XXX This should be improved to also understand abbreviated urls, could be
+    // extended to only linkify urls that have an internal protocol handler, or
+    // have an external protocol handler that has an app assigned. The same
+    // could be done for mailto links which are not handled here either.
+
+    while (localText.length) {
+        var pos = localText.search(/(^|\s+)([a-zA-Z0-9]+):\/\/[^\s]+/);
+        if (pos == -1) {
+            linkifiedText.appendChild(localText);
+            break;
+        }
+        pos += localText.substr(pos).match(/^\s*/)[0].length;
+        var endPos = pos + localText.substr(pos).search(/([.!,<>(){}]+)?(\s+|$)/);
+        var url = localText.substr(pos, endPos - pos);
+
+        if (pos > 0) {
+            linkifiedText.appendChild(localText.substr(0, pos));
+        }
+        var a = <a>{url}</a>;
+        a.@href = url;
+
+        linkifiedText.appendChild(a);
+
+        localText = localText.substr(endPos);
+    }
+    dump(linkifiedText.toXMLString());
+    return linkifiedText;
+}
+
+function createHtmlTableSection(label, text, linkify)
 {
     var tblRow = <tr>
                     <td class="description">
                         <p>{label}</p>
                     </td>
                     <td class="content">
-                        <p>{text}</p>
+                        <p/>
                     </td>
                  </tr>;
+    if (linkify) {
+        tblRow.td.(@class == "content").p = linkifyText(text);
+    } else {
+        tblRow.td.(@class == "content").p = text;
+    }
     return tblRow;
 }
 
@@ -74,7 +115,7 @@ function createHtml(event)
                <html>
                <head>
                     <meta http-equiv='Content-Type' content='text/html; charset=utf-8'/>
-                    <link rel='stylesheet' type='text/css' href='chrome://lightning/skin/imip.css'/>
+                    <link rel='stylesheet' type='text/css' href='chrome://messagebody/skin/imip.css'/>
                </head>
                <body>
                     <table>
@@ -103,15 +144,7 @@ function createHtml(event)
                                                                eventLocation));
         }
 
-        var dateFormatter = Components.classes["@mozilla.org/calendar/datetime-formatter;1"]
-                                  .getService(Components.interfaces.calIDateTimeFormatter);
-        var startString = new Object();
-        var endString = new Object();
-        dateFormatter.formatInterval(event.startDate.getInTimezone(calendarDefaultTimezone()),
-                                     event.endDate.getInTimezone(calendarDefaultTimezone()),
-                                     startString, endString);
-        var dateString = startString.value + " - " + endString.value;
-
+        var dateString = getDateFormatter().formatItemInterval(event);
         var labelText = stringBundle.GetStringFromName("imipHtml.when");
         html.body.table.appendChild(createHtmlTableSection(labelText,
                                                            dateString));
@@ -132,13 +165,13 @@ function createHtml(event)
             var desc = eventDescription.replace("*~*~*~*~*~*~*~*~*~*", "");
 
             labelText = stringBundle.GetStringFromName("imipHtml.description");
-            html.body.table.appendChild(createHtmlTableSection(labelText,desc));
+            html.body.table.appendChild(createHtmlTableSection(labelText, desc, true));
         }
 
         var eventComment = event.getProperty("COMMENT");
         if (eventComment) {
             labelText = stringBundle.GetStringFromName("imipHtml.comment");
-            html.body.table.appendChild(createHtmlTableSection(labelText,eventComment));
+            html.body.table.appendChild(createHtmlTableSection(labelText,eventComment, true));
         }
     }
 
@@ -167,9 +200,18 @@ ltnMimeConverter.prototype = {
     },
 
     convertToHTML: function lmcCTH(contentType, data) {
-        var event = Components.classes["@mozilla.org/calendar/event;1"].
-                    createInstance(Components.interfaces.calIEvent);
-        event.icalString = data;
+        var event = null;
+        calIterateIcalComponent(getIcsService().parseICS(data, null),
+                                function(icalComp) {
+                                    if (icalComp.componentType == "VEVENT") {
+                                        event = createEvent();
+                                        event.icalComponent = icalComp;
+                                    }
+                                    return (icalComp.componentType != "VEVENT");
+                                });
+        if (!event) {
+            return;
+        }
         var html = createHtml(event);
 
         try {

@@ -47,15 +47,23 @@ function getCompositeCalendar() {
             .createInstance(Components.interfaces.calICompositeCalendar);
 
         gCompositeCalendar.prefPrefix = 'calendar-main';
-        var chromeWindow = window.QueryInterface(Components.interfaces.nsIDOMChromeWindow);
-        gCompositeCalendar.setStatusObserver(gCalendarStatusFeedback, chromeWindow);
+        if (gCalendarStatusFeedback) {
+            // If we are in a window that has calendar status feedback, set up
+            // our status observer.
+            var chromeWindow = window.QueryInterface(Components.interfaces.nsIDOMChromeWindow);
+            gCompositeCalendar.setStatusObserver(gCalendarStatusFeedback, chromeWindow);
+        }
     }
     return gCompositeCalendar;
 }
 
 function getSelectedCalendar() {
     var tree = document.getElementById("calendar-list-tree-widget");
-    return calendarListTreeView.getCalendar(tree.currentIndex);
+    if (tree) {
+        return calendarListTreeView.getCalendar(tree.currentIndex);
+    } else { // make robust in startup scenarios when calendar list is not yet loaded:
+        return getCompositeCalendar().defaultCalendar;
+    }
 }
 
 function promptDeleteCalendar(aCalendar) {

@@ -51,7 +51,6 @@
     <content tooltip="itemTooltip">
       <xul:vbox flex="1">
         <xul:hbox>
-          <xul:image class="calendar-event-box-shadow-left" xbl:inherits="hidden=flat"/>
           <xul:box anonid="event-container"
                    class="calendar-color-box"
                    xbl:inherits="item-calendar"                   
@@ -91,9 +90,7 @@
             </xul:box>
             <xul:calendar-category-box anonid="category-box" xbl:inherits="categories"/>
           </xul:box>
-          <xul:image class="calendar-event-box-shadow-right" xbl:inherits="hidden=flat"/>
         </xul:hbox>
-        <calendar-shadow-box xbl:inherits="flat" orient="horizontal"/>
       </xul:vbox>
     </content>
 
@@ -188,9 +185,8 @@
         <body><![CDATA[
           var item = this.mOccurrence;          
           this.setAttribute("item-calendar", item.calendar.uri.spec);
-          var categoriesProperty = item.getProperty("CATEGORIES");
-          if (categoriesProperty) {
-            var categoriesArray = categoriesStringToArray(categoriesProperty);
+          var categoriesArray = item.getCategories({});
+          if (categoriesArray.length > 0) {
             var cssClassesArray = categoriesArray.map(formatStringForCSSRule);
             this.setAttribute("categories", cssClassesArray.join(" "));
           }
@@ -249,6 +245,12 @@
 
           // calendar name
           this.setAttribute("calendar", item.calendar.name.toLowerCase());
+
+          // Invitation
+          if (item.calendar instanceof Components.interfaces.calISchedulingSupport &&
+              item.calendar.isInvitation(item)) {
+              this.setAttribute("invitation-status", item.calendar.getInvitedAttendee(item).participationStatus);
+          }
         ]]></body>
       </method>
 
@@ -263,9 +265,6 @@
 
           this.eventNameTextbox.value = this.mOriginalTextLabel;
           this.eventNameTextbox.removeAttribute("hidden");
-          if (this.calendarView) {
-              this.calendarView.activeInPlaceEdit = true;
-          }
           this.eventNameInput.focus();
           this.eventNameInput.select();
         ]]></body>
@@ -293,10 +292,6 @@
             return;
 
           this.mEditing = false;
-
-          if (this.calendarView) {
-            this.calendarView.activeInPlaceEdit = false;
-          }
 
           if (saveChanges && (this.eventNameTextbox.value != this.mOriginalTextLabel)) {
               this.calendarView.controller.modifyOccurrence(this.mOccurrence, 
@@ -438,13 +433,4 @@
     </content>
   </binding>
 
-  <binding id="calendar-shadow-box">
-    <content>
-      <xul:box xbl:inherits="orient,hidden=flat" flex="1">
-        <xul:image class="calendar-event-box-shadow-edge-left"/>
-        <xul:image class="calendar-event-box-shadow-bottom" flex="1"/>
-        <xul:image class="calendar-event-box-shadow-edge-right"/>
-      </xul:box>
-    </content>
-  </binding>
 </bindings>

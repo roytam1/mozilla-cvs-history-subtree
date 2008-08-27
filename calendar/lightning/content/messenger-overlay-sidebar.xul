@@ -224,6 +224,14 @@
                    mode="task"
                    label="&calendar.task.filter.completed.label;"
                    accesskey="&calendar.task.filter.completed.accesskey;"/>
+         <menuitem id="tasks-view-filter-open"
+                   name="filtergroup"
+                   type="radio"
+                   value="open"
+                   command="calendar_task_filter_command"
+                   mode="task"
+                   label="&calendar.task.filter.open.label;"
+                   accesskey="&calendar.task.filter.open.accesskey;"/>
        </menupopup>
      </menu>
      <menuseparator id="before-Unifinder-Section" mode="calendar"/>
@@ -292,16 +300,43 @@
                 label="&lightning.sidebar.invitations.label;"
                 accesskey="&lightning.sidebar.invitations.accesskey;"
                 command="calendar_toggle_invitations_command"/>
-      <menuseparator id="before-today-pane" mode="mail,calendar,task"/>
-      <menuitem id="ltnShowTodayPane"
-                label="&calendar.context.button.label;"
-                accesskey="&calendar.context.button.accesskey;"
-                type="checkbox"
-                key="todaypanekey"
-                mode="mail,calendar,task"
-                command="calendar_toggle_todaypane_command"/>
-
+      <menuseparator id="before-today-pane"/>
+      <menu id="today-pane-menu"
+            label="&calendar.context.button.label;"
+            accesskey="&calendar.context.button.accesskey;">
+        <menupopup>
+          <menuitem id="ltnShowTodayPane-2"
+                    label="&todaypane.showTodayPane.label;"
+                    accesskey="&todaypane.showTodayPane.accesskey;"
+                    type="checkbox"
+                    key="todaypanekey"
+                    command="calendar_toggle_todaypane_command"/>
+          <menuseparator id="before-displayminiday"/>
+          <menuitem id="today-pane-displayminiday"
+                    name="minidisplay"
+                    value="miniday"
+                    type="radio"
+                    oncommand="TodayPane.displayMiniSection(1)"
+                    label="&todaypane.showMiniday.label;"
+                    accesskey="&todaypane.showMiniday.accesskey;"/>
+          <menuitem id="today-pane-displayminimonth"
+                    name="minidisplay"
+                    value="minimonth"
+                    type="radio"
+                    oncommand="TodayPane.displayMiniSection(2)"
+                    label="&todaypane.showMinimonth.label;"
+                    accesskey="&todaypane.showMinimonth.accesskey;"/>
+          <menuitem id="today-pane-displaynone"
+                    name="minidisplay"
+                    value="none"
+                    type="radio"
+                    oncommand="TodayPane.displayMiniSection(3)"
+                    label="&todaypane.showNone.label;"
+                    accesskey="&todaypane.showNone.accesskey;"/>
+        </menupopup>
+      </menu>
    </menupopup>
+
  <menupopup id="view_toolbars_popup">
    <menuitem id="ltnCalendarToolbar"
              type="checkbox"
@@ -435,7 +470,6 @@
                  observes="calendar_edit_calendar_command"/>
     </menupopup>
   </popupset>
-  <tooltip id="itemTooltip" noautohide="true"/>
 
 </window>
 
@@ -489,6 +523,7 @@
                  <radio id="opt_notstarted_filter" label="&calendar.task.filter.notstarted.label;" value="notstarted" command="calendar_task_filter_command"/>
                  <radio id="opt_overdue_filter" label="&calendar.task.filter.overdue.label;" value="overdue" command="calendar_task_filter_command"/>
                  <radio id="opt_completed_filter" label="&calendar.task.filter.completed.label;" value="completed" command="calendar_task_filter_command"/>
+                 <radio id="opt_open_filter" label="&calendar.task.filter.open.label;" value="open" command="calendar_task_filter_command"/>
                </radiogroup>
             </modevbox>
           </modevbox>

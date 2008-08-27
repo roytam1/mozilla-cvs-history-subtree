@@ -20,6 +20,7 @@
  * Contributor(s):
  *   Michael Buettner <michael.buettner@sun.com>
  *   Philipp Kewisch <mozilla@kewis.ch>
+ *   Berend Cornelius <berend.cornelius@sun.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -127,16 +128,12 @@ var taskDetailsView = {
                         break;
                 }
             }
-            var category = item.getProperty("CATEGORIES");
-            if (displayElement("calendar-task-details-category-row", category && category.length)) {
-                document.getElementById("calendar-task-details-category").value = category;
+            var categories = item.getCategories({});
+            if (displayElement("calendar-task-details-category-row", categories.length > 0)) {
+                document.getElementById("calendar-task-details-category").value = categories.join(", ");
             }
-            if (displayElement("calendar-task-details-entrydate-row", item.entryDate != null)) {
-                document.getElementById("calendar-task-details-entrydate").value = dateFormatter.formatDateTime(item.entryDate);
-            }
-            if (displayElement("calendar-task-details-duedate-row", item.dueDate != null)) {
-                document.getElementById("calendar-task-details-duedate").value = dateFormatter.formatDateTime(item.dueDate);
-            }
+            document.getElementById("task-start-row").Item = item;
+            document.getElementById("task-due-row").Item = item;
             var parentItem = item;
             if (parentItem.parentItem != parentItem) {
                 parentItem = parentItem.parentItem;
@@ -188,6 +185,9 @@ function taskViewUpdate(filter) {
           }
           return (percentCompleted(item) < 100) &&
                  !(item.dueDate.compare(now()) > 0);
+        },
+        open: function filterCompleted(item) {
+            return (percentCompleted(item) < 100);
         },
         completed: function filterCompleted(item) {
             return (percentCompleted(item) >= 100);

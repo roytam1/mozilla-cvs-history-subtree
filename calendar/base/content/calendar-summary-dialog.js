@@ -20,6 +20,7 @@
  * Contributor(s):
  *   Michael Buettner <michael.buettner@sun.com>
  *   Philipp Kewisch <mozilla@kewis.ch>
+ *   Berend Cornelius <berend.cornelius@sun.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -38,7 +39,7 @@
 function onLoad() {
     var args = window.arguments[0];
     var item = args.calendarEvent;
-    item = (item.isMutable) ? item : item.clone();
+    item = item.clone(); // use an own copy of the passed item
     var calendar = item.calendar;
     window.item = item;
 
@@ -69,9 +70,14 @@ function onLoad() {
     }
 
     window.readOnly = calendar.readOnly;
-    if (!window.readOnly && calendar instanceof Components.interfaces.calISchedulingSupport) {
+    if (!window.readOnly && calInstanceOf(calendar, Components.interfaces.calISchedulingSupport)) {
         var attendee = calendar.getInvitedAttendee(item);
         if (attendee) {
+            // if this is an unresponded invitation, preset our default alarm values:
+            if (attendee.participationStatus == "NEEDS-ACTION") {
+                setDefaultAlarmValues(item);
+            }
+
             window.attendee = attendee.clone();
             // Since we don't have API to update an attendee in place, remove
             // and add again. Also, this is needed if the attendee doesn't exist
@@ -81,39 +87,10 @@ function onLoad() {
         }
     }
 
-    var formatter = Components.classes[
-        "@mozilla.org/calendar/datetime-formatter;1"]
-            .getService(
-                Components.interfaces.calIDateTimeFormatter);
-
     document.getElementById("item-title").value = item.title;
 
-    // show the start time of the event
-    var kDefaultTimezone = calendarDefaultTimezone();
-    var start = item.startDate || item.entryDate;
-    if (start) {
-        document.getElementById("item-datetime-start")
-                    .value = formatter.formatDateTime(
-                    start.getInTimezone(kDefaultTimezone));
-    } else {
-        document.getElementById("item-datetime-start-label").setAttribute("hidden", "true");
-        document.getElementById("item-datetime-start").setAttribute("hidden", "true");        
-    }
-    var end = (item.dueDate || item.endDate || item.startDate);
-    if (!end || end.isDate == true) {
-        document.getElementById("item-datetime-end-label").setAttribute("hidden", "true");
-        document.getElementById("item-datetime-end").setAttribute("hidden", "true");
-    } else {
-        if (isToDo(item)) {
-            var dueLabel = calGetString("sun-calendar-event-dialog", "summaryDueTaskLabel")
-            document.getElementById("item-datetime-end-label").setAttribute("value", dueLabel);
-        }
-        document.getElementById("item-datetime-end").value = formatter.formatDateTime(
-                                      end.getInTimezone(kDefaultTimezone));
-    }
-    if (!window.readOnly) {
-        document.getElementById("item-main-separator").removeAttribute("hidden");
-    }
+    document.getElementById("item-start-row").Item = item;
+    document.getElementById("item-end-row").Item = item;
 
     updateInvitationStatus();
 
@@ -127,6 +104,7 @@ function onLoad() {
 
     updateRepeatDetails();
     updateAttendees();
+    updateLink();
 
     var location = item.getProperty("LOCATION");
     if (location && location.length) {
@@ -134,28 +112,21 @@ function onLoad() {
         document.getElementById("item-location").value = location;
     }
 
-    var category = item.getProperty("CATEGORIES");
-    if (category && category.length) {
+    var categories = item.getCategories({});
+    if (categories.length > 0) {
         document.getElementById("category-row").removeAttribute("hidden");
-        document.getElementById("item-category").value = category;
+        document.getElementById("item-category").value = categories.join(", "); // TODO l10n-unfriendly
     }
 
     var organizer = item.organizer;
-    if (organizer) {
+    if (organizer && organizer.id) {
+        document.getElementById("organizer-row").removeAttribute("hidden");
+
         if (organizer.commonName && organizer.commonName.length) {
-            document.getElementById("organizer-row")
-                .removeAttribute("hidden");
-            document.getElementById("item-organizer")
-                .value = organizer.commonName;
+            document.getElementById("item-organizer").value = organizer.commonName;
+            document.getElementById("item-organizer").setAttribute("tooltiptext", organizer.toString());
         } else if (organizer.id && organizer.id.length) {
-            var email = organizer.id;
-            var re = new RegExp("^mailto:(.*)", "i");
-            var matches = re.exec(email);
-            if (matches) {
-                email = matches[1];
-            }
-            document.getElementById("organizer-row").removeAttribute("hidden");
-            document.getElementById("item-organizer").value = email;
+            document.getElementById("item-organizer").value = organizer.toString();
         }
     }
 
@@ -180,14 +151,6 @@ function onLoad() {
             textbox.value = description;
             textbox.inputField.readOnly = true;
         }
-    }
-
-    if (item.hasProperty("URL")) {
-      var url = item.getProperty("URL");
-      if (url && url.length) {
-        document.getElementById("item-link-box").removeAttribute("hidden");
-        document.getElementById("item-link").value = url;
-      }
     }
 
     document.title = item.title;
@@ -314,33 +277,28 @@ function updateAttendees() {
         var list = listbox.getElementsByTagName("listitem");
         var page = 0;
         var line = 0;
-        var re = new RegExp("^mailto:(.*)", "i");
         for each (var attendee in attendees) {
-            var name = attendee.commonName;
-            if (!(name && name.length)) {
-                if (attendee.id && attendee.id.length) {
-                    var email = attendee.id;
-                    if (email && email.length) {
-                        var matches = re.exec(email);
-                        if (matches) {
-                            email = matches[1];
-                        }
-                    }
-                    name = email;
-                }
+            var itemNode = list[line];
+            var listcell = itemNode.getElementsByTagName("listcell")[page];
+            var image = itemNode.getElementsByTagName("image")[page];
+            var label = itemNode.getElementsByTagName("label")[page];
+            if (attendee.commonName && attendee.commonName.length) {
+                label.value = attendee.commonName;
+                // XXX While this is correct from a XUL standpoint, it doesn't
+                // seem to work on the listcell. Working around this would be an
+                // evil hack, so I'm waiting for it to be fixed in the core
+                // code instead.
+                listcell.setAttribute("tooltiptext", attendee.toString());
+            } else {
+                label.value = attendee.toString();
             }
-            if (name && name.length) {
-                var itemNode = list[line];
-                var image = itemNode.getElementsByTagName("image")[page];
-                var label = itemNode.getElementsByTagName("label")[page];
-                label.value = name;
-                image.setAttribute("status", attendee.participationStatus);
-                image.removeAttribute("hidden");
-                page++;
-                if (page > 1) {
-                  page = 0;
-                  line++;
-                }
+            image.setAttribute("status", attendee.participationStatus);
+            image.removeAttribute("hidden");
+
+            page++;
+            if (page > 1) {
+              page = 0;
+              line++;
             }
         }
     }
@@ -364,14 +322,7 @@ function sendMailToOrganizer() {
     var organizer = item.organizer;
     if (organizer) {
         if (organizer.id && organizer.id.length) {
-            var email = organizer.id;
-            var re = new RegExp("^mailto:(.*)", "i");
-            if (email && email.length) {
-                var matches = re.exec(email);
-                if (matches) {
-                    email = matches[1];
-                }
-            }
+            var email = organizer.id.replace(/^mailto:/i, "");
 
             // Set up the subject
             var emailSubject = calGetString("sun-calendar-event-dialog",

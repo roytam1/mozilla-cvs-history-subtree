@@ -117,7 +117,7 @@ timezone-page {
 
 /****************************************************************************************/
 
-listbox {
+.listbox-noborder {
     margin: 0px 0px;
     border-style: none;
 }
@@ -186,6 +186,7 @@ listbox {
     -moz-user-focus: none;
 }
 
+/* This definition is only required for MOZILLA_1_8_BRANCH */
 .textbox-addressingWidget[noMatchesFound="true"] {
     color: red;
 }
@@ -378,7 +379,7 @@ listbox {
     height: 400px;
 }
 
-listboxbody {
+.attendees-list-listbox > listboxbody { 
     overflow-y: hidden !important;
 }
 

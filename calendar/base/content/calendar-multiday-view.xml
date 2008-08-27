@@ -27,6 +27,7 @@
    -   Michael Buettner <michael.buettner@sun.com>
    -   Philipp Kewisch <mozilla@kewis.ch>
    -   Markus Adrario <MarkusAdrario@web.de>
+   -   Berend Cornelius <berend.cornelius@sun.com>
    -
    - Alternatively, the contents of this file may be used under the terms of
    - either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -132,9 +133,7 @@
           //dump ("calendar-time-bar: relayout\n");
           var topbox = document.getAnonymousElementByAttribute(this, "anonid", "topbox");
           var orient = topbox.getAttribute("orient");
-          var otherorient = "vertical";
-          if (!orient) orient = "horizontal";
-          if (orient == "vertical") otherorient = "horizontal";
+          var otherorient = getOtherOrientation(orient);
 
           //dump ("calendar-time-bar: orient: " + orient + " other: " + otherorient + "\n");
 
@@ -196,7 +195,7 @@
               // Set up workweek hours
               if (theHour < this.mDayStartHour || theHour >= this.mDayEndHour) {
                   box.setAttribute("off-time", "true");
-              } 
+              }
 
               box.setAttribute("class", "calendar-time-bar-box-" + (theHour % 2 == 0 ? "even" : "odd"));
               topbox.appendChild(box);
@@ -216,48 +215,32 @@
      - event, thus changing its start/end time.
     -->
   <binding id="calendar-event-gripbar">
-    <content>
-      <xul:box anonid="thebox" flex="1">
-        <xul:spacer flex="1"/>
-        <xul:image xbl:inherits="class"/>
-        <xul:spacer flex="1"/>
-      </xul:box>
-    </content>
+     <content>
+       <xul:box anonid="thebox"
+                flex="1"
+                pack="center"
+                xbl:inherits="align=whichside">
+         <xul:image xbl:inherits="class"/>
+       </xul:box>
+     </content>
 
     <implementation>
-      <!-- public -->
-      <field name="eventElement">null</field>
-
       <property name="parentorient">
         <getter><![CDATA[
           return this.getAttribute("parentorient");
         ]]></getter>
         <setter><![CDATA[
-          this.setAttribute("parentorient", val);
           var thebox = document.getAnonymousElementByAttribute(this, "anonid", "thebox");
-          if (val == "vertical")
-              thebox.setAttribute("orient", "horizontal");
-          else
-              thebox.setAttribute("orient", "vertical");
+          this.setAttribute("parentorient", val);
+          thebox.setAttribute("orient", getOtherOrientation(val));
           return val;
         ]]></setter>
       </property>
 
       <!-- private -->
-      <field name="mSide">top</field>
-
-      <field name="mResizing">false</field>
-      <field name="mSizeStartX">0</field>
-      <field name="mSizeStartY">0</field>
-
       <constructor><![CDATA[
-        if (this.getAttribute("side") == "top")
-            this.mSide = "top";
-        else if (this.getAttribute("side") == "bottom")
-            this.mSide = "bottom";
         this.parentorient = this.getAttribute("parentorient");
       ]]></constructor>
-
     </implementation>
 
     <handlers>
@@ -293,6 +276,7 @@
           <xul:label anonid="fgdragbox-endlabel" class="fgdragbox-label"/>
         </xul:box>
       </xul:stack>
+      <xul:calendar-event-box anonid="config-box" hidden="true" xbl:inherits="orient"/>      
     </content>
 
     <implementation>
@@ -406,6 +390,7 @@
       </property>
 
       <field name="mFgboxes">null</field>
+      <field name="mMinDuration">null</field>
       <property
         name="fgboxes"
         readonly="true">
@@ -653,13 +638,18 @@
           this.clear();
 
           var orient = this.getAttribute("orient");
-          var otherorient = "vertical";
-          if (!orient) orient = "horizontal";
-          if (orient == "vertical") otherorient = "horizontal";
+          this.bgbox.setAttribute("orient", orient);
 
           // bgbox is used mainly for drawing the grid.  at some point it may
           // also be used for all-day events.
-          this.bgbox.setAttribute("orient", orient);
+          var otherorient = getOtherOrientation(orient);
+          var configBox = document.getAnonymousElementByAttribute(this, "anonid", "config-box");
+          configBox.removeAttribute("hidden");          
+          var minSize = configBox.getOptimalMinSize();
+          configBox.setAttribute("hidden", "true");          
+          this.mMinDuration = Components.classes["@mozilla.org/calendar/duration;1"]
+                                            .createInstance(Components.interfaces.calIDuration);
+          this.mMinDuration.minutes = parseInt(minSize/this.mPixPerMin);
 
           var theMin = this.mStartMin;
           while (theMin < this.mEndMin) {
@@ -790,8 +780,6 @@
                   innerColumn.setAttribute("style", style);
 
                   xulColumn.appendChild(innerColumn);
-                  var minHeight = 0;
-                  var minWidth = 0;
                   var curTime = 0;
                   for each (var chunk in column) {
                       var duration = chunk.duration;
@@ -801,31 +789,22 @@
 
                       if (chunk.event) {
                           var chunkBox = createXULElement("calendar-event-box");
-                          chunkBox.setAttribute("context", this.getAttribute("item-context") || this.getAttribute("context"));
+                          var durMinutes = duration.inSeconds / 60;
+                          var size = Math.max(durMinutes * this.mPixPerMin, minSize);
+                          if (orient == "vertical") {
+                              chunkBox.setAttribute("height", size);
+                          } else {
+                              chunkBox.setAttribute("width", size);
+                          }
+                          chunkBox.setAttribute("context",
+                                                this.getAttribute("item-context") ||
+                                                  this.getAttribute("context"));
                           chunkBox.setAttribute("orient", orient);
                           innerColumn.appendChild(chunkBox);
                           chunkBox.calendarView = this.calendarView;
                           chunkBox.occurrence = chunk.event;
                           chunkBox.parentColumn = this;
-                          if (minHeight == 0) {
-                              minHeight = getOptimalMinimumHeight(chunkBox.eventNameLabel) + 
-                                          getSummarizedStyleValues(document.getAnonymousElementByAttribute(chunkBox, "anonid", "shadow-bottom"), ["height"]) +
-                                          getSummarizedStyleValues(document.getAnonymousElementByAttribute(chunkBox, "anonid", "eventbox"), ["margin-bottom", "margin-top"]);                              
-                              chunkBox.setAttribute("minheight", minHeight);
-                          }
-                          if (minWidth == 0) {
-                              chunkBox.eventNameLabel.setAttribute("style", "min-width: 2em");
-                              minWidth = getOptimalMinimumWidth(chunkBox.eventNameLabel);
-                              chunkBox.setAttribute("minwidth", minWidth);
-                          }
-                          var durMinutes = duration.inSeconds / 60;
-                          if (orient == "vertical") {
-                              var height = Math.max(durMinutes * this.mPixPerMin, minHeight)
-                              chunkBox.setAttribute("height", height);
-                          } else {
-                              var width = Math.max(durMinutes * this.mPixPerMin, minWidth)
-                              chunkBox.setAttribute("width", width);
-                          }
+                          
                           this.mEventBoxes.push(chunkBox);
 
                           if (this.mEventToEdit &&
@@ -923,10 +902,10 @@
            */
           for (var i in this.mEvents) {
               var item = this.mEvents[i].event;
-              var itemStart = item.startDate || item.entryDate;
-              var itemEnd = item.endDate || item.dueDate;
+              var itemStart, itemEnd;
+              [itemStart, itemEnd] = this.getLayoutEnd(item);
               if (!latestItemEnd) {
-                  latestItemEnd = itemEnd;
+                 latestItemEnd = itemEnd;
               }
               if (currentBlob.length && latestItemEnd &&
                   itemStart.compare(latestItemEnd) != -1) {
@@ -958,8 +937,9 @@
               //
               // Remember that any time we're starting a new blob, colEndArray
               // will be empty, but that's ok.
-              for (var ii=0; ii<colEndArray.length; ++ii) {
-                  var colEnd = colEndArray[ii].endDate || colEndArray[ii].dueDate;
+              for (var ii = 0; ii < colEndArray.length; ++ii) {
+                  var colStart, colEnd;
+                  [colStart, colEnd] = this.getLayoutEnd(colEndArray[ii]);
                   if (colEnd.compare(itemStart) != 1) {
                       // Yay, we can jump into this column
                       colEndArray[ii] = item;
@@ -968,8 +948,8 @@
                       // jump into as well.
                       var lastCol = Number(ii) + 1;
                       while (lastCol < colEndArray.length) {
-                          var nextColEnd = colEndArray[lastCol].endDate ||
-                                           colEndArray[lastCol].dueDate;
+                          var nextColStart, nextColEnd;
+                          [nextColStart, nextColEnd] = this.getLayoutEnd(colEndArray[lastCol]);
                           // If the next column's item ends after we start, we
                           // can't expand any further
                           if (nextColEnd.compare(itemStart) == 1) {
@@ -1066,7 +1046,8 @@
               //   the start of any possible conflicts.
               var lastColNum = colEndArray.length;
               for (var mm in currentBlob) {
-                  var mmEnd = currentBlob[mm].item.endDate || currentBlob[mm].item.dueDate
+                  var mmStart, mmEnd;
+                  [mmStart, mmEnd] = this.getLayoutEnd(currentBlob[mm].item);
                   if (currentBlob[mm].startCol + currentBlob[mm].colSpan == lastColNum &&
                       mmEnd.compare(itemStart) != 1) {
                       currentBlob[mm] = {item: currentBlob[mm].item,
@@ -1090,6 +1071,28 @@
                       totalCols: colEndArray.length});
 
           return this.setupBoxStructure(blobs);
+        ]]></body>
+      </method>
+
+      <method name="getLayoutEnd">
+        <parameter name="aItem"/>
+        <body><![CDATA[
+          var item = aItem.clone();
+          var start = item.startDate || item.entryDate;
+          if (!compareObjects(start.timezone, this.mTimezone)) {
+              start = start.getInTimezone(this.mTimezone);
+          }
+          var end = item.endDate || item.dueDate
+          if (!compareObjects(end.timezone, this.mTimezone)) {
+              end = end.getInTimezone(this.mTimezone);
+          }
+          var secEnd = start.clone();
+          secEnd.addDuration(this.mMinDuration);
+          if (secEnd.nativeTime > end.nativeTime) {
+               return [start, secEnd];
+          } else {
+               return [start, end];
+          }
         ]]></body>
       </method>
 
@@ -1170,10 +1173,8 @@
                   // take into account that items can span several days.
                   // that's why i'm clipping the start- and end-time to the
                   // timespan of this column.
-                  var start = data.item.startDate || data.item.entryDate;
-                  if (!compareObjects(start.timezone, this.mTimezone)) {
-                      start = start.getInTimezone(this.mTimezone);
-                  }
+                  var start, end;
+                  [start, end] = this.getLayoutEnd(data.item);
                   if (start.year  != this.date.year ||
                       start.month != this.date.month ||
                       start.day   != this.date.day) {
@@ -1183,10 +1184,6 @@
                                     this.date.day,
                                     0,this.mStartMin,0,
                                     start.timezone);
-                  }
-                  var end = data.item.endDate || data.item.dueDate;
-                  if (!compareObjects(end.timezone, this.mTimezone)) {
-                      end = end.getInTimezone(this.mTimezone);
                   }
                   if (end.year  != this.date.year ||
                       end.month != this.date.month ||
@@ -1247,7 +1244,7 @@
               event.clientX > (event.target.boxObject.x + event.target.boxObject.width) ||
               event.clientY < (event.target.boxObject.y) ||
               event.clientY > (event.target.boxObject.y + event.target.boxObject.height)) {
-              
+
               var dragState = col.mDragState;
               col.fgboxes.dragbox.removeAttribute("dragging");
               col.fgboxes.box.removeAttribute("dragging");
@@ -1255,7 +1252,7 @@
               window.removeEventListener("mouseup", col.onEventSweepMouseUp, false);
               document.calendarEventColumnDragging = null;
               col.mDragState = null;
-              
+
               var dragService = Components.classes["@mozilla.org/widget/dragservice;1"].
                                 getService(Components.interfaces.nsIDragService);
               var transfer = Components.classes["@mozilla.org/widget/transferable;1"].
@@ -1263,7 +1260,7 @@
               transfer.addDataFlavor("text/calendar");
 
               var item = dragState.dragOccurrence;
-          
+
               // the multiday view currently exhibits a less than optimal strategy
               // in terms of item selection. items don't get automatically selected
               // when clicked and dragged, as to differentiate inline editing from
@@ -1308,7 +1305,7 @@
               var serializer = Components.classes["@mozilla.org/calendar/ics-serializer;1"].
                                           createInstance(Components.interfaces.calIIcsSerializer);
               serializer.addItems([item], 1);
-              
+
               var supportsString = Components.classes["@mozilla.org/supports-string;1"].
                                    createInstance(Components.interfaces.nsISupportsString);
               supportsString.data = serializer.serializeToString();
@@ -1321,7 +1318,7 @@
               supArray.AppendElement(transfer);
 
               dragService.invokeDragSession(col, supArray, null, action);
-              
+
               return;
           }
 
@@ -1949,25 +1946,8 @@
      -  An individual event box, to be inserted into a column.
     -->
   <binding id="calendar-event-box" extends="chrome://calendar/content/calendar-view-core.xml#calendar-editable-item">
-
     <content tooltip="itemTooltip">
-      <xul:box anonid="shadowbox"
-               xbl:inherits="width,height">
-<!-- TODO: Better use the  binding  <xul:calendar-shadow-box xbl:inherits="flat,orient"
-     for the shadows and control their visibility with the "flat" attribute. Probably the flat attribute may be derived from 
-     the "orient"-attribute-->
-        <xul:box anonid="shadow-left-box"
-                 xbl:inherits="orient" >
-          <xul:image anonid="shadow-left"
-                     class="calendar-event-box-shadow-left"
-                     flex="1"/>
-          <xul:image anonid="shadow-edge-left"
-                     class="calendar-event-box-shadow-edge-left"/>
-        </xul:box>
         <xul:box xbl:inherits="orient,width,height" flex="1">
-          <xul:image anonid="shadow-left-if-vertical"
-                     class="calendar-event-box-shadow-left"
-                     hidden="true"/>
           <xul:box anonid="event-container"
                    class="calendar-color-box"
                    xbl:inherits="orient,readonly,flashing,alarm,allday,priority,progress,status,calendar,categories,item-calendar"
@@ -1978,7 +1958,8 @@
                          class="calendar-event-box-container"
                          flex="1"
                          xbl:inherits="context,parentorient=orient,readonly,flashing,alarm,allday,priority,progress,status,calendar,categories">
-                <xul:vbox class="calendar-event-details">
+                <xul:image flex="1" class="calendar-event-box-gradient"/>
+                <xul:vbox class="calendar-event-details" anonid="calendar-event-details">
                   <xul:description anonid="event-name" class="calendar-event-details-core" flex="1"/>
                   <xul:textbox anonid="event-name-textbox"
                                class="plain calendar-event-details-core calendar-event-name-textbox"
@@ -1986,15 +1967,15 @@
                                hidden="true"
                                wrap="true"/>
                 </xul:vbox>
-                <xul:image width="1px" class="calendar-event-box-gradient"/>
                 <xul:hbox pack="end">
-                    <xul:vbox pack="start">
-                      <xul:image anonid="alarm-image"
-                                 class="alarm-image"
-                                 xbl:inherits="flashing"
-                                 hidden="true"/>
-                    </xul:vbox>
-                </xul:hbox>
+                  <xul:hbox align="start">
+                    <xul:image anonid="alarm-image"
+                               class="alarm-image"
+                               xbl:inherits="flashing"
+                               hidden="true"/>
+                   </xul:hbox>
+                   <xul:calendar-category-box anonid="category-box" xbl:inherits="categories" pack="end"/>
+                 </xul:hbox>
                 <xul:box xbl:inherits="orient" flex="1">
                   <xul:calendar-event-gripbar anonid="gripbar1"
                                               class="calendar-event-box-grippy-top"
@@ -2010,47 +1991,14 @@
                      not be resizable using the gripbars. If you want to insert
                      additional elements, do so above the box with the gripbars. -->
               </xul:stack>
-              <xul:calendar-category-box anonid="category-box" xbl:inherits="categories"/>
             </xul:box>
           </xul:box>
-          <xul:image anonid="shadow-bottom"
-                     class="calendar-event-box-shadow-bottom"/>
-        </xul:box>
-        <xul:box xbl:inherits="orient">
-          <xul:image anonid="shadow-edge-left-if-vertical"
-                     class="calendar-event-box-shadow-edge-left"
-                     hidden="true"/>
-          <xul:image anonid="shadow-right"
-                     class="calendar-event-box-shadow-right"
-                     flex="1"/>
-          <xul:image anonid="shadow-edge-right"
-                     class="calendar-event-box-shadow-edge-right"/>
-        </xul:box>
       </xul:box>
     </content>
 
     <implementation>
       <constructor><![CDATA[
          this.orient = this.getAttribute("orient");
-         var otherorient = "vertical";
-         if (!orient) orient = "horizontal";
-         if (orient == "vertical") otherorient = "horizontal";
-
-         var shadowbox = document.getAnonymousElementByAttribute(this, "anonid", "shadowbox");
-         shadowbox.setAttribute("orient",otherorient);
-
-         if (orient != "vertical") {
-             // Switch bottom/right shadows
-             var shadowBottom = document.getAnonymousElementByAttribute(this, "anonid", "shadow-bottom");
-             var shadowRight = document.getAnonymousElementByAttribute(this, "anonid", "shadow-right");
-             shadowBottom.setAttribute("class", "calendar-event-box-shadow-right");
-             shadowRight.setAttribute("class", "calendar-event-box-shadow-bottom");
-
-             // Move left shadow in layout
-             document.getAnonymousElementByAttribute(this, "anonid", "shadow-edge-left-if-vertical").removeAttribute("hidden");
-             document.getAnonymousElementByAttribute(this, "anonid", "shadow-left-if-vertical").removeAttribute("hidden");
-             document.getAnonymousElementByAttribute(this, "anonid", "shadow-left-box").setAttribute("hidden","true");
-         }
       ]]></constructor>
 
       <!-- fields -->
@@ -2073,7 +2021,6 @@
           if (needsrelayout) {
               var otherorient = "vertical";
               if (val != "horizontal") otherorient = "horizontal";
-
               var eventbox = document.getAnonymousElementByAttribute(this, "anonid", "eventbox");
               eventbox.setAttribute("orient", val);
               var gb1 = document.getAnonymousElementByAttribute(this, "anonid", "gripbar1");
@@ -2083,6 +2030,25 @@
           }
 
           return ret;
+        ]]></body>
+      </method>
+
+      <method name="getOptimalMinSize">
+        <body><![CDATA[
+          if (this.getAttribute("orient") == "vertical") {
+              var minHeight = getOptimalMinimumHeight(this.eventNameLabel) + 
+                          getSummarizedStyleValues(document.getAnonymousElementByAttribute(this, "anonid", "calendar-event-details"), ["margin-bottom", "margin-top"]) +
+                          getSummarizedStyleValues(this, ["border-bottom-width", "border-top-width"]);
+              this.setAttribute("minheight", minHeight);
+              this.setAttribute("minwidth", "1");
+              return minHeight;
+          } else {
+              this.eventNameLabel.setAttribute("style", "min-width: 2em");
+              var minWidth = getOptimalMinimumWidth(this.eventNameLabel);
+              this.setAttribute("minwidth", minWidth);
+              this.setAttribute("minheight", "1");
+              return minWidth;
+          }
         ]]></body>
       </method>
 
@@ -2138,11 +2104,11 @@
         this.mInMouseDown = true;
         this.mMouseX = event.screenX;
         this.mMouseY = event.screenY;
-        
+
         var whichside = event.whichside;
         if (!whichside)
             return;
-        
+
         this.calendarView.setSelectedItems(1,
             [event.ctrlKey ? this.mOccurrence.parentItem : this.mOccurrence]);
 
@@ -2166,8 +2132,6 @@
                 this.calendarView.selectedItem = this.mOccurrence;
 
                 this.mEditing = false;
-                if (this.calendarView)
-                    this.calendarView.activeInPlaceEdit = false;
 
                 this.parentColumn.startSweepingToModifyEvent(this, this.mOccurrence, "middle", this.mMouseX, this.mMouseY);
                 this.mInMouseDown = false;
@@ -2191,17 +2155,9 @@
     </handlers>
   </binding>
 
-  <binding id="calendar-day-label">
-    <content>
-      <xul:hbox anonid="mainbox" flex="1">
-        <xul:spacer flex="1"/>
-        <xul:vbox>
-          <xul:label anonid="dateName" class="calendar-day-label-date"/>
-          <xul:label anonid="longWeekdayName" class="calendar-day-label-name"/>
-          <xul:label anonid="shortWeekdayName" class="calendar-day-label-name" hidden="true"/>
-        </xul:vbox>
-        <xul:spacer flex="1"/>
-      </xul:hbox>
+  <binding id="calendar-day-label" extends="xul:box">
+    <content flex="1" pack="center" xbl:inherits="selected">
+      <xul:label anonid="dateName" class="calendar-day-label-date" xbl:inherits="selected"/>
     </content>
     <implementation>
       <field name="longWeekdayPixels">0</field>
@@ -2213,27 +2169,19 @@
         ]]></getter>
         <setter><![CDATA[
           this.mDate = val;
-          var df = Components.classes["@mozilla.org/calendar/datetime-formatter;1"].
-                     getService(Components.interfaces.calIDateTimeFormatter);
-
-          var shortName = document.getAnonymousElementByAttribute(this, "anonid", "shortWeekdayName");
-          var longName = document.getAnonymousElementByAttribute(this, "anonid", "longWeekdayName");
           var day = document.getAnonymousElementByAttribute(this, "anonid", "dateName");
-
-          longName.setAttribute("value", calGetString("dateFormat","day." + (val.weekday + 1) + ".name"));
-          shortName.setAttribute("value", calGetString("dateFormat","day." + (val.weekday + 1) + ".Mmm"));
-          day.setAttribute("value", df.formatDateWithoutYear(val));
-
+          var label = getDateFormatter().shortDayName(val.weekday) + " " +
+                      getDateFormatter().formatDateWithoutYear(val);
+          day.setAttribute("value", label);
           return val;
         ]]></setter>
       </property>
 
       <property name="shortWeekNames">
         <getter><![CDATA[
-          return document.getAnonymousElementByAttribute(this, "anonid", "shortWeekdayName").hasAttribute("hidden");
         ]]></getter>
         <setter><![CDATA[
-          var shortName = document.getAnonymousElementByAttribute(this, "anonid", "shortWeekdayName");
+          var shortName = document.getAnonymousElementByAttribute(this, "anonid", "dateNameshortWeekdayName");
           var longName = document.getAnonymousElementByAttribute(this, "anonid", "longWeekdayName");
 
           // cache before change, in case we are switching to short
@@ -2956,6 +2904,7 @@
               this.mSelectedDay = val;
             }
           }
+          var headerColLabel = this.selectColumnHeader(val);
           this.fireEvent("dayselect", val);
           return val;
         ]]></setter>
@@ -3053,16 +3002,6 @@
         <setter>this.setPixelsPerMin(val); return val;</setter>
       </property>
 
-      <property name="activeInPlaceEdit">
-        <getter><![CDATA[
-          return this.mInPlaceEditActive;
-        ]]></getter>
-        <setter><![CDATA[
-          this.mInPlaceEditActive = val;
-          return val;
-        ]]></setter>
-      </property>
-
       <!-- private -->
 
       <property name="numVisibleDates" readonly="true">
@@ -3102,7 +3041,7 @@
               if (this.getAttribute("orient") != aVal)
                   needsreorient = true;
           }
-
+          
           if (aAttr == "context" || aAttr == "item-context")
               needsrelayout = true;
 
@@ -3138,16 +3077,10 @@
           for each (var id in normalelems) {
               document.getAnonymousElementByAttribute(this, "anonid", id).setAttribute("orient", orient);
           }
-
           for each (var id in otherelems) {
               document.getAnonymousElementByAttribute(this, "anonid", id).setAttribute("orient", otherorient);
           }
 
-          var labelbox = document.getAnonymousElementByAttribute(this, "anonid", "labelbox");
-          var labeltimespacer = document.getAnonymousElementByAttribute(this, "anonid", "labeltimespacer");
-          var headerbox = document.getAnonymousElementByAttribute(this, "anonid", "headerbox");
-          var headertimespacer = document.getAnonymousElementByAttribute(this, "anonid", "headertimespacer");
-          var timebar = document.getAnonymousElementByAttribute(this, "anonid", "timebar");
           var childbox = document.getAnonymousElementByAttribute(
                          this, "anonid", "childbox");
           var mainbox = document.getAnonymousElementByAttribute(
@@ -3168,12 +3101,10 @@
           var boxes = ["daybox", "headerdaybox"];
           for each (var boxname in boxes) {
               var box = document.getAnonymousElementByAttribute(this, "anonid", boxname);
-              var child = box.firstChild;
-              while (child) {
-                  child.setAttribute("orient", orient);
-                  child = child.nextSibling;
-              }
+              setAttributeToChildren(box, "orient", orient);
           }
+          var box = document.getAnonymousElementByAttribute(this, "anonid", "labeldaybox");
+          setAttributeToChildren(box, "orient", otherorient);
 
           // Refresh
           this.refresh();
@@ -3187,7 +3118,7 @@
         <body><![CDATA[
           var pendingRefresh = this.mRefreshPending;
           if (pendingRefresh) {
-              if (pendingRefresh instanceof Components.interfaces.calIOperation) {
+              if (calInstanceOf(pendingRefresh, Components.interfaces.calIOperation)) {
                   this.mRefreshPending = null;
                   pendingRefresh.cancel(null);
               } else {
@@ -3251,9 +3182,8 @@
       <method name="relayout">
         <body><![CDATA[
           var orient = this.getAttribute("orient");
-          var otherorient = "vertical";
           if (!orient) orient = "horizontal";
-          if (orient == "vertical") otherorient = "horizontal";
+          var otherorient = getOtherOrientation(orient);
 
           var computedDateList;
           if (this.mDateList) {
@@ -3343,41 +3273,37 @@
                   dayEventsBox.dayOff = false;
                   dayHeaderBox.removeAttribute("weekend");
               }
-
+              var labelbox;
+              if (counter < labelboxkids.length) {
+                  labelbox = labelboxkids[counter];
+                  labelbox.date = d;
+              } else {
+                  labelbox = createXULElement("calendar-day-label");
+                  labelbox.setAttribute("orient", otherorient);
+                  labeldaybox.appendChild(labelbox);
+                  labelbox.date = d;
+              }
               // Set attributes for date relations.
               if (this.numVisibleDates > 1) {
                   switch (d.compare(today)) {
                       case -1:
                           dayHeaderBox.setAttribute("relation", "past");
                           dayEventsBox.setAttribute("relation", "past");
+                          labelbox.setAttribute("relation", "past");
                           break;
                       case 0:
                           dayHeaderBox.setAttribute("relation", "today");
                           dayEventsBox.setAttribute("relation", "today");
+                          labelbox.setAttribute("relation", "today");
                           break;
                       case 1:
                           dayHeaderBox.setAttribute("relation", "future");
                           dayEventsBox.setAttribute("relation", "future");
+                          labelbox.setAttribute("relation", "future");
                           break;
                   }
               }
 
-              var labelbox;
-
-              var df = Components.classes["@mozilla.org/calendar/datetime-formatter;1"].
-                       getService(Components.interfaces.calIDateTimeFormatter);
-              if (counter < labelboxkids.length) {
-                  labelbox = labelboxkids[counter];
-                  labelbox.date = d;
-                  labelbox.shortWeekNames = false;
-              } else {
-                  labelbox = createXULElement("calendar-day-label");
-                  labelbox.setAttribute("flex", "1");
-                  labeldaybox.appendChild(labelbox);
-
-                  labelbox.date = d;
-                  labelbox.shortWeekNames = false;
-              }
               maxDayWidth = Math.max(maxDayWidth, labelbox.longWeekdayPixels);
 
               // We don't want to actually mess with our original dates, plus
@@ -3410,6 +3336,7 @@
 
           // Adjust scrollbar spacers
           this.adjustScrollBarSpacers();
+          this.fireEvent("relayouted");
         ]]></body>
       </method>
 
@@ -3421,6 +3348,22 @@
                   return col;
           }
           return null;
+        ]]></body>
+      </method>
+
+      <method name="selectColumnHeader">
+        <parameter name="aDate"/>
+        <body><![CDATA[
+          var labeldaybox = document.getAnonymousElementByAttribute(this, "anonid", "labeldaybox");
+          var child = labeldaybox.firstChild;
+          while (child) {
+              if (child.date.compare(aDate) == 0) {
+                  child.setAttribute("selected", "true");
+              } else {
+                  child.removeAttribute("selected");
+              }
+              child = child.nextSibling;
+            }
         ]]></body>
       </method>
 
@@ -3630,7 +3573,8 @@
             // This happens in rotated view. Don't do anything there.
             return;
           }
-
+/* onoverflow is currently not triggered and we keep this code in comments
+   until we will take care of it...
           if (labeldayboxkids[0].boxObject.width * this.daysInView > this.mLongWeekdayTotalPixels) {
             // We have an underflow. Since the boxes all have equal width, we
             // can use the first boxes' width and multiply bu the number of
@@ -3643,7 +3587,7 @@
             for (var i = 0; i < labeldayboxkids.length; i++) {
               labeldayboxkids[i].shortWeekNames = true;
             }
-          }
+          } */
         ]]></body>
       </method>
 
@@ -3791,21 +3735,6 @@
         // action in any case.
         event.preventDefault();
       ]]></handler>
-      <handler event="keypress"><![CDATA[
-        const kKE = Components.interfaces.nsIDOMKeyEvent;
-        if (event.keyCode == kKE.DOM_VK_BACK_SPACE ||
-            event.keyCode == kKE.DOM_VK_DELETE)
-        {
-            if (!this.activeInPlaceEdit && this.mSelectedItems.length && this.controller) {
-                this.controller.deleteOccurrences(this.mSelectedItems.length,
-                                                  this.mSelectedItems,
-                                                  event.ctrlKey,
-                                                  false);
-            }
-        }
-      ]]></handler>
     </handlers>
   </binding>
 </bindings>
-
-<!-- -*- Mode: xml; indent-tabs-mode: nil; -*- -->

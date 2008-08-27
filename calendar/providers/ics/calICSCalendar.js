@@ -129,7 +129,7 @@ calICSCalendar.prototype = {
                                   .getService(Components.interfaces.nsIIOService);
         var channel = ioService.newChannelFromURI(this.mUri);
 
-        if (channel instanceof Components.interfaces.nsIHttpChannel) {
+        if (calInstanceOf(channel, Components.interfaces.nsIHttpChannel)) {
             this.mHooks = new httpHooks();
         } else {
             this.mHooks = new dummyHooks();
@@ -377,19 +377,22 @@ calICSCalendar.prototype = {
         if ((channel && !channel.requestSucceeded) ||
             (!channel && !Components.isSuccessCode(request.status))) {
             ctxt.mObserver.onError(this.superCalendar,
-                                   request.status,
+                                   Components.isSuccessCode(request.status)
+                                   ? calIErrors.DAV_PUT_ERROR
+                                   : request.status,
                                    "Publishing the calendar file failed\n" +
                                        "Status code: "+request.status.toString(16)+"\n");
             ctxt.mObserver.onError(this.superCalendar, calIErrors.MODIFICATION_FAILED, "");
         }
 
         // Allow the hook to grab data of the channel, like the new etag
-        ctxt.mHooks.onAfterPut(channel);
-
-        ctxt.unlock();
-        var appStartup = Components.classes["@mozilla.org/toolkit/app-startup;1"]
-                                   .getService(Components.interfaces.nsIAppStartup);
-        appStartup.exitLastWindowClosingSurvivalArea();
+        ctxt.mHooks.onAfterPut(channel,
+                               function() {
+                                   ctxt.unlock();
+                                   var appStartup = Components.classes["@mozilla.org/toolkit/app-startup;1"]
+                                       .getService(Components.interfaces.nsIAppStartup);
+                                   appStartup.exitLastWindowClosingSurvivalArea();
+                               });
     },
 
     // Always use the queue, just to reduce the amount of places where
@@ -511,25 +514,11 @@ calICSCalendar.prototype = {
         this.mObserver.onEndBatch();
     },
 
-    // nsIInterfaceRequestor impl
-    getInterface: function(iid, instance) {
-        if (iid.equals(Components.interfaces.nsIAuthPrompt)) {
-            return new calAuthPrompt();
-        }
-        else if (iid.equals(Components.interfaces.nsIPrompt)) {
-            // use the window watcher service to get a nsIPrompt impl
-            return Components.classes["@mozilla.org/embedcomp/window-watcher;1"]
-                             .getService(Components.interfaces.nsIWindowWatcher)
-                             .getNewPrompter(null);
-        }
-
-        try {
-            return this.QueryInterface(iid);
-        } catch (e) {
-            Components.returnCode = e;
-        }
-        return null;
-    },
+    /**
+     * @see nsIInterfaceRequestor
+     * @see calProviderUtils.js
+     */
+    getInterface: calInterfaceRequestor_getInterface,
 
     /**
      * Make a backup of the (remote) calendar
@@ -813,7 +802,8 @@ dummyHooks.prototype = {
         return true;
     },
     
-    onAfterPut: function(aChannel) {
+    onAfterPut: function(aChannel, aRespFunc) {
+        aRespFunc();
         return true;
     }
 };
@@ -870,60 +860,78 @@ httpHooks.prototype = {
         return true;
     },
     
-    onAfterPut: function(aChannel) {
+    onAfterPut: function(aChannel, aRespFunc) {
         var httpchannel = aChannel.QueryInterface(Components.interfaces.nsIHttpChannel);
         try {
             this.mEtag = httpchannel.getResponseHeader("ETag");
+            aRespFunc();
         } catch(e) {
             // There was no ETag header on the response. This means that
             // putting is not atomic. This is bad. Race conditions can happen,
             // because there is a time in which we don't know the right
             // etag.
             // Try to do the best we can, by immediatly getting the etag.
-            
-            // Only on branch, because webdav doesn't work on trunk: bug 332840
-            if (isOnBranch) {
-                var res = new WebDavResource(aChannel.URI);
-                var webSvc = Components.classes['@mozilla.org/webdav/service;1']
-                                       .getService(Components.interfaces.nsIWebDAVService);
-                // The namespace is 'DAV:', not just 'DAV'.
-                webSvc.getResourceProperties(res, 1, ['DAV: getetag'], false,
-                                             this, null, null);
-            } else {
-                // instead, on trunk, set mEtag to null, so it will be ignored on 
-                // the next GET/PUT
-                this.mEtag = null;
+
+            var etagListener = {};
+            var thisCalendar = this; // need to reference in callback
+
+            etagListener.onStreamComplete =
+                function ics_etLoSC(aLoader, aContext, aStatus, aResultLength,
+                                    aResult) {
+                var resultConverter = Components.classes["@mozilla.org/intl/scriptableunicodeconverter"]
+                                                .createInstance(Components
+                                                .interfaces.nsIScriptableUnicodeConverter);
+                resultConverter.charset = "UTF-8";
+
+                var str;
+                try {
+                    str = resultConverter.convertFromByteArray(aResult, aResultLength);
+                } catch (e) {
+                    LOG("Failed to fetch channel etag");
+                }
+                if (str.indexOf("<?xml ") == 0) {
+                    str = str.substring(str.indexOf('<', 2));
+                }
+                var multistatus = new XML(str);
+                try {
+                    thisCalendar.mEtag = multistatus..D::getetag;
+                } catch (e) {
+                    thisCalendar.mEtag = null;
+                }
+                aRespFunc();
             }
+            var D = new Namespace("D", "DAV:");
+            default xml namespace = D;
+            var queryXml = <D:propfind xmlns:D="DAV:">
+                    <D:prop>
+                      <D:getetag/>
+                    </D:prop>
+                  </D:propfind>;
+
+            var etagChannel = calPrepHttpChannel(aChannel.URI, queryXml,
+                                                 "text/xml; charset=utf-8",
+                                                 this);
+            etagChannel.setRequestHeader("Depth", "0", false);
+            etagChannel.requestMethod = "PROPFIND";
+            var streamLoader = Components.classes["@mozilla.org/network/stream-loader;1"]
+                                         .createInstance(Components.interfaces
+                                         .nsIStreamLoader);
+
+            calSendHttpRequest(streamLoader, etagChannel, etagListener);
         }
         return true;
     },
 
-    onOperationComplete: function(aStatusCode, aResource, aOperation, aClosure) {
-    },
+    // nsIProgressEventSink
+    onProgress: function onProgress(aRequest, aContext, aProgress, aProgressMax) {},
+    onStatus: function onStatus(aRequest, aContext, aStatus, aStatusArg) {},
 
-    onOperationDetail: function(aStatusCode, aResource, aOperation, aDetail, aClosure) {
-        var props = aDetail.QueryInterface(Components.interfaces.nsIProperties);
-        try {
-            this.mEtag = props.get('DAV: getetag', Components.interfaces.nsISupportsString).toString();
-        } catch(e) {
-            // No etag header. Now what?
-            this.mEtag = null;
-        }
-    }
-};
-
-function WebDavResource(url) {
-    this.mResourceURL = url;
-}
-
-WebDavResource.prototype = {
-    mResourceURL: {},
-    get resourceURL() { return this.mResourceURL; },
-    QueryInterface: function(iid) {
-        if (iid.equals(CI.nsIWebDAVResource) ||
-            iid.equals(CI.nsISupports)) {
+    getInterface: function(aIid) {
+        if (aIid.equals(Components.interfaces.nsIProgressEventSink)) {
             return this;
+        } else {    
+            Components.returnCode = Components.results.NS_ERROR_NO_INTERFACE;
+            return null;
         }
-        throw Components.interfaces.NS_ERROR_NO_INTERFACE;
     }
 };

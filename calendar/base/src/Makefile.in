@@ -100,10 +100,12 @@ EXTRA_SCRIPTS = \
     calItipProcessor.js \
     calProtocolHandler.js \
     calRecurrenceInfo.js \
+    calRelation.js \
     calTodo.js \
     calUtils.js \
     calAuthUtils.js \
-    calWeekTitleService.js \
+    calProviderUtils.js \
+    calWeekInfoService.js \
     calTransactionManager.js \
     calFreeBusyService.js \
     calCalendarSearchService.js \

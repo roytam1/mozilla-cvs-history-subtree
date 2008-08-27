@@ -98,19 +98,13 @@
         <parameter name="showsToday"/>
         <body><![CDATA[
             this.mItem = synthetic;
-            var dateFormatter = Components.classes["@mozilla.org/calendar/datetime-formatter;1"]
-                                  .getService(Components.interfaces.calIDateTimeFormatter);
             if (showsToday) {
                 this.kCheckbox.label = this.getAttribute("title");
             } else {
-                if (synthetic.end.day == (synthetic.start.day + 1)) {
-                    var label = dateFormatter.formatDate(synthetic.start);
-                    this.kCheckbox.label = label;
+                if (synthetic.duration == 1) {
+                    this.kCheckbox.label = getDateFormatter().formatDate(synthetic.start);
                 } else {
-                    var startString = new Object();
-                    var endString = new Object();
-                    dateFormatter.formatInterval(synthetic.start, synthetic.end, startString, endString);
-                    this.kCheckbox.label = startString.value + " - " + endString.value;
+                    this.kCheckbox.label = getDateFormatter().formatInterval(synthetic.start, synthetic.end);
                 }
             }
         ]]></body>
@@ -192,16 +186,17 @@
             }
             var durationbox = document.getAnonymousElementByAttribute(this, "anonid", "agenda-event-start");
             durationbox.value = duration;
-            var calcolor = "";
-            try {
-                var calcolor = this.mOccurrence.calendar.getProperty("color");
-            } catch (e) {
-            }
-            if (!calcolor) {
-                calcolor = "#a8c2e1";
-            }
+            this.refreshColor();
+        ]]></body>
+      </method>
+      <method name="refreshColor">
+        <body><![CDATA[
+            var calcolor = ((this.mOccurrence &&
+                             this.mOccurrence.calendar.getProperty("color")) ||
+                            "#a8c2e1");
+  
             var imagebox = document.getAnonymousElementByAttribute(this, "anonid", "agenda-calendar-image");
-            imagebox.setAttribute("style","background-color: "  + calcolor + ";");
+            imagebox.setAttribute("style", "background-color: " + calcolor + ";");
         ]]></body>
       </method>
     </implementation>

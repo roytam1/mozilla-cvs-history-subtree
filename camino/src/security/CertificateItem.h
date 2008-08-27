@@ -114,6 +114,7 @@ extern NSString* const CertificateChangedNotificationName;
 
 - (NSDate*)expiresDate;
 - (NSString*)expiresString;
+- (NSString*)shortExpiresString;
 
 - (NSDate*)validFromDate;
 - (NSString*)validFromString;

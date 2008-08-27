@@ -209,6 +209,7 @@ calCachedCalendar.prototype = {
                     default:
                         throw new Error("unsupported cache calendar type: " + calType);
                 }
+                cachedCalendar.transientProperties = true;
                 cachedCalendar.setProperty("relaxedMode", true);
                 cachedCalendar.superCalendar = this;
                 if (!this.mCachedObserver) {
@@ -328,7 +329,7 @@ calCachedCalendar.prototype = {
         return getIOService().offline;
     },
     get supportsChangeLog() {
-        return (this.mUncachedCalendar instanceof Components.interfaces.calIChangeLog);
+        return calInstanceOf(this.mUncachedCalendar, Components.interfaces.calIChangeLog);
     },
 
     get canRefresh() { // enable triggering sync using the reload button
@@ -483,8 +484,9 @@ calCachedCalendar.prototype = {
 
     defineForwards(calCachedCalendar.prototype, "mUncachedCalendar",
                    ["getProperty", "setProperty", "deleteProperty",
-                    "isInvitation", "getInvitedAttendee"],
-                   ["sendItipInvitations", "type"], ["id", "name", "uri", "readOnly"]);
+                    "isInvitation", "getInvitedAttendee", "canNotify"],
+                   ["type"],
+                   ["id", "name", "uri", "readOnly"]);
     defineForwards(calCachedCalendar.prototype, "mCachedCalendar",
                    ["getItem", "getItems", "startBatch", "endBatch"], [], []);
 })();

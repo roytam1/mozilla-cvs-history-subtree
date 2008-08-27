@@ -2538,3 +2538,44 @@ nsXFormsUtils::AskStopWaiting(nsIDOMElement *aElement)
     return PR_FALSE;
   }
 }
+
+static inline PRUnichar
+ToHexChar(PRInt16 aValue)
+{
+  if (aValue < 10)
+    return (PRUnichar) aValue + '0';
+  else
+    return (PRUnichar) aValue - 10 + 'A';
+}
+
+void
+nsXFormsUtils::BinaryToHex(const char *aBuffer, PRUint32 aCount,
+                           PRUnichar **aHexString)
+{
+  for (PRUint32 index = 0; index < aCount; index++) {
+    (*aHexString)[index * 2] = ToHexChar((aBuffer[index] >> 4) & 0xf);
+    (*aHexString)[index * 2 + 1] = ToHexChar(aBuffer[index] & 0xf);
+  }
+}
+
+/* static */ nsresult
+nsXFormsUtils::GetTimeZone(const nsAString &aTime,
+                           nsAString &aResult)
+{
+  aResult.Truncate();
+
+  if (!aTime.IsEmpty()) {
+    PRInt32 timeZoneSeparator = aTime.FindChar(PRUnichar('-'));
+    if (timeZoneSeparator == kNotFound) {
+      timeZoneSeparator = aTime.FindChar(PRUnichar('+'));
+      if (timeZoneSeparator == kNotFound) {
+        // no time zone information available
+        return NS_OK;
+      }
+    }
+    aResult.Append(Substring(aTime, timeZoneSeparator,
+                             aTime.Length() - timeZoneSeparator));
+  }
+
+  return NS_OK;
+}

@@ -55,7 +55,6 @@
     <content tooltip="itemTooltip">
       <xul:vbox flex="1">
         <xul:hbox>
-          <xul:image anonid="shadow-left-image" xbl:inherits="hidden=flat" class="calendar-event-box-shadow-left"/>
           <xul:box anonid="event-container"
                    class="calendar-color-box"
                    xbl:inherits="item-calendar"
@@ -100,10 +99,7 @@
             </xul:box>
             <xul:calendar-category-box anonid="category-box" xbl:inherits="categories"/>
           </xul:box>
-          <xul:image anonid="shadow-right-image" xbl:inherits="hidden=flat"
-                     class="calendar-event-box-shadow-right"/>
         </xul:hbox>
-        <xul:calendar-shadow-box xbl:inherits="flat" orient="horizontal"/>
       </xul:vbox>
     </content>
     <implementation>
@@ -123,8 +119,27 @@
                        getService(Components.interfaces.calIDateTimeFormatter);
               var timezone = this.calendarView ? this.calendarView.mTimezone :
                              calendarDefaultTimezone();
-              label.value = df.formatTime(
-              val.startDate.getInTimezone(timezone));
+              var parentDate = ensureDateTime(this.parentBox.date);
+              var startTime = val.startDate.getInTimezone(timezone);
+              var endTime = val.endDate.getInTimezone(timezone);
+              var nextDay = parentDate.clone();
+              nextDay.day++;
+              var comp = endTime.compare(nextDay);
+              if(startTime.compare( parentDate) == -1 ) {
+                if (comp == 1)  {
+                  label.value = "↔";
+                } else if (comp == 0) {
+                  label.value = "↤";
+                } else {
+                  label.value = "⇥ " + df.formatTime(endTime);
+                }
+              } else {
+                if (comp == 1) {
+                  label.value = "⇤ " + df.formatTime(startTime);
+                } else {
+                  label.value = df.formatTime(startTime);
+                }
+              }
               label.setAttribute("time", "true");
             }
           } else if (isToDo(val)) {
@@ -239,7 +254,10 @@
 
   <binding id="calendar-month-day-box">
     <content orient="vertical">
-      <xul:label anonid="day-label" crop="end" class="calendar-month-day-box-date-label"/>
+      <xul:label anonid="day-label" 
+                 crop="end" 
+                 class="calendar-month-day-box-date-label" 
+                 xbl:inherits="relation,selected"/>
       <xul:vbox anonid="day-items" class="calendar-month-day-box-items-box" flex="1"/>
     </content>
 
@@ -475,8 +493,8 @@
 
               box.calendarView = this.monthView;
               box.item = itd.item;
-              box.occurrence = itd.item;
               box.parentBox = this;
+              box.occurrence = itd.item;
               itd.box = box;
             }
           }
@@ -1040,23 +1058,7 @@
       <method name="showDate">
         <parameter name="aDate"/>
         <body><![CDATA[
-          aDate = aDate.getInTimezone(this.mTimezone);
-
-          // We might need to do some adjusting here to make sure we still
-          // display whole month even with alternative week-start days
-          var startDate = aDate.startOfMonth;
-          var endDate = aDate.endOfMonth;
-          if (startDate.weekday < this.mWeekStartOffset) {
-            // Go back one week to make sure we display this day
-            startDate.day -= 7;
-          }
-
-          if (endDate.weekday < this.mWeekStartOffset) {
-            // Go back one week so we don't display any extra days
-            endDate.day -= 7;
-          }
-
-          this.setDateRange(startDate, endDate);
+          this.setDateRange(aDate.startOfMonth, aDate.endOfMonth);
           this.selectedDay = aDate;
         ]]></body>
       </method>
@@ -1065,17 +1067,8 @@
         <parameter name="aStartDate"/>
         <parameter name="aEndDate"/>
         <body><![CDATA[
-          if (this.mTimezone != aStartDate.timezone) {
-            aStartDate = aStartDate.getInTimezone(this.mTimezone);
-            aEndDate = aEndDate.getInTimezone(this.mTimezone);
-          }
-
-          this.mStartDate = aStartDate.startOfWeek;
-          this.mEndDate = aEndDate.endOfWeek;
-
-          this.mStartDate.day += this.mWeekStartOffset;
-          this.mEndDate.day += this.mWeekStartOffset;
-
+          this.mStartDate = getWeekInfoService().getStartOfWeek(aStartDate.getInTimezone(this.mTimezone))
+          this.mEndDate = getWeekInfoService().getEndOfWeek(aEndDate.getInTimezone(this.mTimezone));
           this.refresh();
         ]]></body>
       </method>
@@ -1140,7 +1133,7 @@
         <body><![CDATA[
           var pendingRefresh = this.mRefreshPending;
           if (pendingRefresh) {
-              if (pendingRefresh instanceof Components.interfaces.calIOperation) {
+              if (calInstanceOf(pendingRefresh, Components.interfaces.calIOperation)) {
                   this.mRefreshPending = null;
                   pendingRefresh.cancel(null);
               } else {
@@ -1218,8 +1211,9 @@
             this.mSelectedDayBox.box.selected = false;
           }
 
-          if (!this.mStartDate || !this.mEndDate)
-            throw NS_ERROR_FAILURE;
+          if (!this.mStartDate || !this.mEndDate) {
+            throw Components.results.NS_ERROR_FAILURE;
+          }
 
           // Days that are not in the main month on display are displayed with
           // a gray background.  Unless the month actually starts on a Sunday,
@@ -1331,6 +1325,7 @@
               today.compare(dateList[dateList.length-1]) != 1) {
               this.findBoxForDate(today).box.setAttribute("today", "true");
           }
+          this.fireEvent("relayouted");
         ]]></body>
       </method>
 
@@ -1708,22 +1703,5 @@
         ]]></body>
       </method>
     </implementation>
-
-    <handlers>
-      <handler event="keypress"><![CDATA[
-        const kKE = Components.interfaces.nsIDOMKeyEvent;
-        if (event.keyCode == kKE.DOM_VK_BACK_SPACE ||
-            event.keyCode == kKE.DOM_VK_DELETE)
-        {
-            if (!this.activeInPlaceEdit && this.mSelectedItems.length && this.controller) {
-                this.controller.deleteOccurrences(this.mSelectedItems.length,
-                                                  this.mSelectedItems,
-                                                  event.ctrlKey,
-                                                  false);
-            }
-        }
-      ]]></handler>
-    </handlers>
   </binding>
-
 </bindings>

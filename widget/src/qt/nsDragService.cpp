@@ -60,7 +60,11 @@
 
 NS_IMPL_ADDREF_INHERITED(nsDragService, nsBaseDragService)
 NS_IMPL_RELEASE_INHERITED(nsDragService, nsBaseDragService)
-NS_IMPL_QUERY_INTERFACE3(nsDragService, nsIDragService, nsIDragSession, nsIDragSessionQt )
+NS_IMPL_QUERY_INTERFACE4(nsDragService,
+                         nsIDragService,
+                         nsIDragService_1_8_BRANCH,
+                         nsIDragSession,
+                         nsIDragSessionQt )
 
 //-------------------------------------------------------------------------
 // static variables
@@ -97,8 +101,10 @@ nsDragService::InvokeDragSession(nsIDOMNode *aDOMNode,
 {
   PRUint32 numItemsToDrag = 0;
 
-  nsBaseDragService::InvokeDragSession(aDOMNode, aArrayTransferables,
-                                       aRegion, aActionType);
+  nsresult rv = nsBaseDragService::InvokeDragSession(aDOMNode,
+                                                     aArrayTransferables,
+                                                     aRegion, aActionType);
+  NS_ENSURE_SUCCESS(rv, rv);
 
   // make sure that we have an array of transferables to use
   if (!aArrayTransferables) {

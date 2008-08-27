@@ -71,7 +71,7 @@ function nextMonth(dt)
 
 var gMiniMonthLoading = false;
 function ltnMinimonthPick(minimonth) {
-    if (gMiniMonthLoading) {
+    if (gMiniMonthLoading || gCurrentMode != "calendar") {
         return;
     }
     if (document.getElementById("displayDeck").selectedPanel !=
@@ -211,7 +211,7 @@ function ltnOnLoad(event) {
     window.addEventListener("unload", ltnFinish, false);
 
     // Set up invitations manager
-    scheduleInvitationsUpdate(FIRST_DELAY_STARTUP, REPEAT_DELAY);
+    scheduleInvitationsUpdate(FIRST_DELAY_STARTUP);
     getCalendarManager().addObserver(gInvitationsCalendarManagerObserver);
 
     var filter = document.getElementById("task-tree-filtergroup");
@@ -392,8 +392,19 @@ var calendarpopuplist = new Array();
 var taskpopuplist = new Array();
 var mailpopuplist = new Array();
 var menulist = new Array();
+#ifdef XP_MACOSX
+    var quitMenu = null;
+    var prefMenu = null;
+#endif
 
 function ltnInitializeMenus(){
+#ifdef XP_MACOSX
+    // The following Mac specific code-lines became necessary due to bug 409845
+    prefMenu = document.getElementById("menu_preferences");
+    prefMenu.setAttribute("mode", "system");
+    quitMenu = document.getElementById("menu_FileQuitItem");
+    quitMenu.setAttribute("mode", "system");
+#endif
     copyPopupMenus();
     ltnRemoveMailOnlyItems(calendarpopuplist, "calendar");
     ltnRemoveMailOnlyItems(taskpopuplist, "task");
@@ -493,7 +504,7 @@ function copyPopupMenus() {
     menulist.push(document.getElementById("tasksMenu"));
 
     // define PopupMenus for calendar mode...
-    var excludeList = new Array("task");
+    var excludeList = new Array("mail", "task", "system");
     addToPopupList(menulist[0], null, calendarpopuplist, excludeList, true, true);
     addToPopupList(menulist[1], null, calendarpopuplist, excludeList, true, false);
     addToPopupList(menulist[2], null, calendarpopuplist, excludeList, true, true);
@@ -502,7 +513,7 @@ function copyPopupMenus() {
     addToPopupList(menulist[5], null, calendarpopuplist, excludeList, true, false);
 
     // define PopupMenus for task mode...
-    var excludeList = new Array("calendar");
+    var excludeList = new Array("mail", "calendar", "system");
     addToPopupList(menulist[0], null, taskpopuplist, excludeList, true, true);
     addToPopupList(menulist[1], null, taskpopuplist, excludeList, true, false);
     addToPopupList(menulist[2], null, taskpopuplist, excludeList, true, true);
@@ -620,6 +631,10 @@ function swapPopupMenus() {
             menu.replaceChild(newmenupopuplist[i], oldmenupopup);
         }
     }
+#ifdef XP_MACOSX
+    document.getElementById("menu_File").firstChild.appendChild(quitMenu);
+    document.getElementById("tasksMenu").firstChild.appendChild(prefMenu);
+#endif
     document.getElementById("menu_showTaskbar").setAttribute("checked", showStatusbar);
     var messageMenu = document.getElementById("messageMenu");
     if (gCurrentMode == "mail") {
@@ -656,7 +671,6 @@ const FIRST_DELAY_STARTUP = 100;
 const FIRST_DELAY_RESCHEDULE = 100;
 const FIRST_DELAY_REGISTER = 10000;
 const FIRST_DELAY_UNREGISTER = 0;
-const REPEAT_DELAY = 180000;
 
 var gInvitationsOperationListener = {
     mCount: 0,
@@ -694,29 +708,26 @@ var gInvitationsCalendarManagerObserver = {
     mSideBar: this,
 
     onCalendarRegistered: function cMO_onCalendarRegistered(aCalendar) {
-        this.mSideBar.rescheduleInvitationsUpdate(FIRST_DELAY_REGISTER,
-                                                  REPEAT_DELAY);
+        this.mSideBar.rescheduleInvitationsUpdate(FIRST_DELAY_REGISTER);
     },
 
     onCalendarUnregistering: function cMO_onCalendarUnregistering(aCalendar) {
-        this.mSideBar.rescheduleInvitationsUpdate(FIRST_DELAY_UNREGISTER,
-                                                  REPEAT_DELAY);
+        this.mSideBar.rescheduleInvitationsUpdate(FIRST_DELAY_UNREGISTER);
     },
 
     onCalendarDeleting: function cMO_onCalendarDeleting(aCalendar) {
     }
 };
 
-function scheduleInvitationsUpdate(firstDelay, repeatDelay) {
+function scheduleInvitationsUpdate(firstDelay) {
     gInvitationsCalendarManagerObserver.mCount = 0;
     getInvitationsManager().scheduleInvitationsUpdate(firstDelay,
-                                                      repeatDelay,
                                                       gInvitationsOperationListener);
 }
 
-function rescheduleInvitationsUpdate(firstDelay, repeatDelay) {
+function rescheduleInvitationsUpdate(firstDelay) {
     getInvitationsManager().cancelInvitationsUpdate();
-    scheduleInvitationsUpdate(firstDelay, repeatDelay);
+    scheduleInvitationsUpdate(firstDelay);
 }
 
 function openInvitationsDialog() {
@@ -725,8 +736,7 @@ function openInvitationsDialog() {
     getInvitationsManager().openInvitationsDialog(
         gInvitationsOperationListener,
         function oiD_callback() {
-            scheduleInvitationsUpdate(FIRST_DELAY_RESCHEDULE,
-                                      REPEAT_DELAY);
+            scheduleInvitationsUpdate(FIRST_DELAY_RESCHEDULE);
         });
 }
 
@@ -739,3 +749,39 @@ document.getElementById("displayDeck").
     addEventListener("select", LtnObserveDisplayDeckChange, true);
 
 document.addEventListener("load", ltnOnLoad, true);
+
+/**
+ * Sets up the message pane context menu. Even though the actual context menu
+ * is in messenger-overlay-toolbar.xul, this needs to be in a file that
+ * directly overlays messenger.xul or the functions will not be defined.
+ */
+function calSetupMsgPaneContext() {
+    var hasSelection = (GetFirstSelectedMessage() != null);
+
+    // Disable the convert menu altogether
+    setElementValue("messagePaneContext-calendar-convert-menu",
+                    !hasSelection && "true",
+                    "hidden");
+
+    return calSetupMsgPaneContext.tbSetupMsgPaneContext();
+}
+calSetupMsgPaneContext.tbSetupMsgPaneContext = fillMessagePaneContextMenu;
+var fillMessagePaneContextMenu = calSetupMsgPaneContext;
+
+/**
+ * Sets up the thread pane context menu. Even though the actual context menu
+ * is in messenger-overlay-toolbar.xul, this needs to be in a file that
+ * directly overlays messenger.xul or the functions will not be defined.
+ */
+function calSetupThreadPaneContext() {
+    var hasSelection = (GetFirstSelectedMessage() != null);
+
+    // Disable the convert menu altogether
+    setElementValue("threadPaneContext-calendar-convert-menu",
+                    !hasSelection && "true",
+                    "disabled");
+
+    return calSetupThreadPaneContext.tbSetupThreadPaneContext();
+}
+calSetupThreadPaneContext.tbSetupThreadPaneContext = fillThreadPaneContextMenu;
+var fillThreadPaneContextMenu = calSetupThreadPaneContext;

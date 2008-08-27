@@ -725,7 +725,8 @@ js_IsXMLName(JSContext *cx, jsval v)
 }
 
 static JSBool
-Namespace(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+NamespaceHelper(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
+                jsval *rval)
 {
     jsval urival, prefixval;
     JSObject *uriobj;
@@ -747,7 +748,7 @@ Namespace(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     else uriobj = NULL;
 #endif
 
-    if (!(cx->fp->flags & JSFRAME_CONSTRUCTING)) {
+    if (!obj) {
         /* Namespace called as function. */
         if (argc == 1 && isNamespace) {
             /* Namespace called with one Namespace argument is identity. */
@@ -834,22 +835,32 @@ Namespace(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 }
 
 static JSBool
-QName(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+Namespace(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    return NamespaceHelper(cx,
+                           (cx->fp->flags & JSFRAME_CONSTRUCTING) ? obj : NULL,
+                           argc, argv, rval);
+}
+
+static JSBool
+QNameHelper(JSContext *cx, JSObject *obj, JSClass *clasp, uintN argc,
+            jsval *argv, jsval *rval)
 {
     jsval nameval, nsval;
     JSBool isQName, isNamespace;
     JSXMLQName *qn;
     JSString *uri, *prefix, *name;
     JSObject *nsobj;
-    JSClass *clasp;
     JSXMLNamespace *ns;
 
+    JS_ASSERT(clasp == &js_QNameClass.base ||
+              clasp == &js_AttributeNameClass);
     nameval = argv[argc > 1];
     isQName =
         !JSVAL_IS_PRIMITIVE(nameval) &&
         OBJ_GET_CLASS(cx, JSVAL_TO_OBJECT(nameval)) == &js_QNameClass.base;
 
-    if (!(cx->fp->flags & JSFRAME_CONSTRUCTING)) {
+    if (!obj) {
         /* QName called as function. */
         if (argc == 1 && isQName) {
             /* QName called with one QName argument is identity. */
@@ -858,13 +869,10 @@ QName(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
         }
 
         /*
-         * Create and return a new QName object exactly as if constructed.
-         * Use the constructor's clasp so we can be shared by AttributeName
-         * (see below after this function).
+         * Create and return a new QName or AttributeName object exactly as if
+         * constructed.
          */
-        obj = js_NewObject(cx,
-                           JS_ValueToFunction(cx, argv[-2])->clasp,
-                           NULL, NULL);
+        obj = js_NewObject(cx, clasp, NULL, NULL);
         if (!obj)
             return JS_FALSE;
         *rval = OBJECT_TO_JSVAL(obj);
@@ -959,14 +967,18 @@ out:
 }
 
 static JSBool
+QName(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
+{
+    return QNameHelper(cx, (cx->fp->flags & JSFRAME_CONSTRUCTING) ? obj : NULL,
+                       &js_QNameClass.base, argc, argv, rval);
+}
+
+static JSBool
 AttributeName(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
               jsval *rval)
 {
-    /*
-     * Since js_AttributeNameClass was initialized, obj will have that as its
-     * class, not js_QNameClass.
-     */
-    return QName(cx, obj, argc, argv, rval);
+    return QNameHelper(cx, (cx->fp->flags & JSFRAME_CONSTRUCTING) ? obj : NULL,
+                       &js_AttributeNameClass, argc, argv, rval);
 }
 
 /*
@@ -5591,21 +5603,6 @@ JS_FRIEND_DATA(JSClass) js_XMLClass = {
     NULL,              NULL,              NULL,              NULL
 };
 
-static JSObject *
-CallConstructorFunction(JSContext *cx, JSObject *obj, JSClass *clasp,
-                        uintN argc, jsval *argv)
-{
-    JSObject *tmp;
-    jsval rval;
-
-    while ((tmp = OBJ_GET_PARENT(cx, obj)) != NULL)
-        obj = tmp;
-    if (!JS_CallFunctionName(cx, obj, clasp->name, argc, argv, &rval))
-        return NULL;
-    JS_ASSERT(!JSVAL_IS_PRIMITIVE(rval));
-    return JSVAL_TO_OBJECT(rval);
-}
-
 static JSXML *
 StartNonListXMLMethod(JSContext *cx, JSObject **objp, jsval *argv)
 {
@@ -5660,25 +5657,25 @@ xml_addNamespace(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
                  jsval *rval)
 {
     JSXML *xml;
-    JSObject *nsobj;
     JSXMLNamespace *ns;
 
     NON_LIST_XML_METHOD_PROLOG;
     if (xml->xml_class != JSXML_CLASS_ELEMENT)
-        return JS_TRUE;
+        goto done;
     xml = CHECK_COPY_ON_WRITE(cx, xml, obj);
     if (!xml)
         return JS_FALSE;
-
-    nsobj = CallConstructorFunction(cx, obj, &js_NamespaceClass.base, 1, argv);
-    if (!nsobj)
+    
+    if (!NamespaceHelper(cx, NULL, 1, argv, rval))
         return JS_FALSE;
-    argv[0] = OBJECT_TO_JSVAL(nsobj);
-
-    ns = (JSXMLNamespace *) JS_GetPrivate(cx, nsobj);
+    JS_ASSERT(!JSVAL_IS_PRIMITIVE(*rval));
+    
+    ns = (JSXMLNamespace *) JS_GetPrivate(cx, JSVAL_TO_OBJECT(*rval));
     if (!AddInScopeNamespace(cx, xml, ns))
         return JS_FALSE;
     ns->declared = JS_TRUE;
+
+  done:
     *rval = OBJECT_TO_JSVAL(obj);
     return JS_TRUE;
 }
@@ -6825,40 +6822,40 @@ xml_removeNamespace(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
                     jsval *rval)
 {
     JSXML *xml;
-    JSObject *nsobj;
     JSXMLNamespace *ns;
 
     NON_LIST_XML_METHOD_PROLOG;
-    *rval = OBJECT_TO_JSVAL(obj);
     if (xml->xml_class != JSXML_CLASS_ELEMENT)
-        return JS_TRUE;
+        goto done;
     xml = CHECK_COPY_ON_WRITE(cx, xml, obj);
     if (!xml)
         return JS_FALSE;
 
-    nsobj = CallConstructorFunction(cx, obj, &js_NamespaceClass.base, 1, argv);
-    if (!nsobj)
+    if (!NamespaceHelper(cx, NULL, 1, argv, rval))
         return JS_FALSE;
-    argv[0] = OBJECT_TO_JSVAL(nsobj);
-    ns = (JSXMLNamespace *) JS_GetPrivate(cx, nsobj);
+    JS_ASSERT(!JSVAL_IS_PRIMITIVE(*rval));
+    ns = (JSXMLNamespace *) JS_GetPrivate(cx, JSVAL_TO_OBJECT(*rval));
 
     /* NOTE: remove ns from each ancestor if not used by that ancestor. */
-    return xml_removeNamespace_helper(cx, xml, ns);
+    if (!xml_removeNamespace_helper(cx, xml, ns))
+        return JS_FALSE;
+  done:
+    *rval = OBJECT_TO_JSVAL(obj);
+    return JS_TRUE;
 }
 
 static JSBool
 xml_replace(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
 {
     JSXML *xml, *vxml, *kid;
-    jsval name, value, id, junk;
+    jsval value, id, junk;
     uint32 index;
-    JSObject *nameobj;
     JSXMLQName *nameqn;
 
     NON_LIST_XML_METHOD_PROLOG;
     *rval = OBJECT_TO_JSVAL(obj);
     if (xml->xml_class != JSXML_CLASS_ELEMENT)
-        return JS_TRUE;
+        goto done;
 
     value = argv[1];
     vxml = VALUE_IS_XML(cx, value)
@@ -6879,32 +6876,39 @@ xml_replace(JSContext *cx, JSObject *obj, uintN argc, jsval *argv, jsval *rval)
     if (!xml)
         return JS_FALSE;
 
-    name = argv[0];
-    if (js_IdIsIndex(name, &index))
-        return Replace(cx, xml, name, value);
-
-    /* Call function QName per spec, not ToXMLName, to avoid attribute names. */
-    nameobj = CallConstructorFunction(cx, obj, &js_QNameClass.base, 1, &name);
-    if (!nameobj)
-        return JS_FALSE;
-    argv[0] = OBJECT_TO_JSVAL(nameobj);
-    nameqn = (JSXMLQName *) JS_GetPrivate(cx, nameobj);
-
-    id = JSVAL_VOID;
-    index = xml->xml_kids.length;
-    while (index != 0) {
-        --index;
-        kid = XMLARRAY_MEMBER(&xml->xml_kids, index, JSXML);
-        if (kid && MatchElemName(nameqn, kid)) {
-            if (!JSVAL_IS_VOID(id) && !DeleteByIndex(cx, xml, id, &junk))
-                return JS_FALSE;
-            if (!IndexToIdVal(cx, index, &id))
-                return JS_FALSE;
+    id = argv[0];
+    if (!js_IdIsIndex(id, &index)) {
+        /*
+         * Call function QName per spec, not ToXMLName, to avoid attribute
+         * names.
+         */
+        if (!QNameHelper(cx, NULL, &js_QNameClass.base, 1, argv, rval))
+            return JS_FALSE;
+        JS_ASSERT(!JSVAL_IS_PRIMITIVE(*rval));
+        nameqn = (JSXMLQName *) JS_GetPrivate(cx, JSVAL_TO_OBJECT(*rval));
+        
+        id = JSVAL_VOID;
+        index = xml->xml_kids.length;
+        while (index != 0) {
+            --index;
+            kid = XMLARRAY_MEMBER(&xml->xml_kids, index, JSXML);
+            if (kid && MatchElemName(nameqn, kid)) {
+                if (!JSVAL_IS_VOID(id) && !DeleteByIndex(cx, xml, id, &junk))
+                    return JS_FALSE;
+                if (!IndexToIdVal(cx, index, &id))
+                    return JS_FALSE;
+            }
         }
+        if (JSVAL_IS_VOID(id))
+            goto done;
     }
-    if (JSVAL_IS_VOID(id))
-        return JS_TRUE;
-    return Replace(cx, xml, id, value);
+
+    if (!Replace(cx, xml, id, value))
+        return JS_FALSE;
+
+  done:
+    *rval = OBJECT_TO_JSVAL(obj);
+    return JS_TRUE;
 }
 
 static JSBool

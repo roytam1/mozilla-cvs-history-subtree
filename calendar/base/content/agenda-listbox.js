@@ -441,7 +441,7 @@ agendaListbox.refreshCalendarQuery =
 function refreshCalendarQuery(aStart, aEnd) {
     var pendingRefresh = this.pendingRefresh;
     if (pendingRefresh) {
-        if (pendingRefresh instanceof Components.interfaces.calIOperation) {
+        if (calInstanceOf(pendingRefresh, Components.interfaces.calIOperation)) {
             this.pendingRefresh = null;
             pendingRefresh.cancel(null);
         } else {
@@ -736,6 +736,18 @@ agendaListbox.calendarObserver.onPropertyChanged = function(aCalendar, aName, aV
     switch (aName) {
         case "disabled":
             this.agendaListbox.refreshCalendarQuery();
+            break;
+        case "color":
+            for (var node = agendaListbox.agendaListboxControl.firstChild;
+                 node;
+                 node = node.nextSibling) {
+                // Change color on all nodes that don't do so themselves, which
+                // is currently only he agenda-richlist-item
+                if (node.localName != "agenda-richlist-item") {
+                    continue;
+                }
+                node.refreshColor();
+            }
             break;
     }
 };

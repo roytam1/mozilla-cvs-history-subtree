@@ -1,4 +1,3 @@
-/* -*- Mode: idl; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -12,14 +11,15 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is Oracle Corporation code.
+ * The Original Code is Sun Microsystems code.
  *
  * The Initial Developer of the Original Code is
- *  Michiel van Leeuwen <mvl@exedo.nl>
- * Portions created by the Initial Developer are Copyright (C) 2006
+ * Sun Microsystems, Inc.
+ * Portions created by the Initial Developer are Copyright (C) 2008
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
+ *   Daniel Boelzle <daniel.boelzle@sun.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -35,31 +35,17 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "nsISupports.idl"
+var common_initCustomizePage = initCustomizePage;
+var common_doCreateCalendar = doCreateCalendar;
 
-interface calIDateTime;
-
-/**
- * This interface will calculate a week title from a given datetime. This
- * will depends on the users preferences. 
- * Extensions might override the default implementation, in order to
- * generate week titles aimed at special cases (like weeknumbers for a
- * schoolyear)
- */
-[scriptable, uuid(6bcf8c57-f066-4eba-ab48-950c9fffd9ff)]
-interface calIWeekTitleService: nsISupports
-{
-  /**
-   * Return the week title. It's meant to be displayed.
-   * (Usually, will return a weeknumber, but might return a string like Q1W4)
-   *
-   * @param dateTime
-   *            The dateTime to get the weektitle for
-   * @returns
-   *            A string, representing the week title. Will usually be the
-   *            week number. Every week (7 days) should get a different string,
-   *            but the switch from one week to the next isn't necessarily
-   *            on sunday.
-   */
-  AString getWeekTitle (in calIDateTime dataTime);
+initCustomizePage = function ltn_initCustomizePage() {
+    common_initCustomizePage();
+    ltnInitMailIdentitiesRow();
 };
+
+doCreateCalendar = function ltn_doCreateCalendar() {
+    common_doCreateCalendar();
+    ltnSaveMailIdentitySelection();
+    return true;
+};
+

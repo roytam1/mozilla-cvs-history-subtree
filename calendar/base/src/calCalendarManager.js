@@ -363,16 +363,25 @@ calCalendarManager.prototype = {
 
         // Should we check the schema version to see if we need to upgrade?
         var checkSchema = true;
-        
-        // Check if the tables exists
-        if (!this.mDB.tableExists("cal_calendars")) {
-            // No table. Initialize the DB
-            for (table in sqlTables) {
-                this.mDB.createTable(table, sqlTables[table]);
+
+        this.mDB.beginTransactionAs(Components.interfaces.mozIStorageConnection.TRANSACTION_EXCLUSIVE);
+        try {
+            // Check if the tables exists
+            if (!this.mDB.tableExists("cal_calendars")) {
+                // No table. Initialize the DB
+                for (table in sqlTables) {
+                    this.mDB.createTable(table, sqlTables[table]);
+                }
+                // Store the schema version
+                this.mDB.executeSimpleSQL("INSERT INTO cal_calmgr_schema_version VALUES(" + this.DB_SCHEMA_VERSION + ")");
+                checkSchema = false;
+                this.mDB.commitTransaction();
+            } else {
+                this.mDB.rollbackTransaction();
             }
-            // Store the schema version
-            this.mDB.executeSimpleSQL("INSERT INTO cal_calmgr_schema_version VALUES(" + this.DB_SCHEMA_VERSION + ")");
-            checkSchema = false;
+        } catch (exc) {
+            this.mDB.rollbackTransaction();
+            throw exc;
         }
 
         if (checkSchema) {
@@ -657,8 +666,8 @@ calCalendarManager.prototype = {
         // providers (storage and memory). Otherwise we may nuke someone's
         // calendar stored on a server when all they really wanted to do was
         // unsubscribe.
-        if (calendar instanceof Components.interfaces.calICalendarProvider &&
-           (calendar.type == "storage" || calendar.type == "memory")) {
+        if (calInstanceOf(calendar, Components.interfaces.calICalendarProvider) &&
+            (calendar.type == "storage" || calendar.type == "memory")) {
             try {
                 calendar.deleteCalendar(calendar, null);
             } catch (e) {

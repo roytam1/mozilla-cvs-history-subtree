@@ -1905,10 +1905,6 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                 }
                 break;
 
-              case JSOP_STARTITER:
-                todo = -2;
-                break;
-
               case JSOP_PUSH:
 #if JS_HAS_DESTRUCTURING
                 sn = js_GetSrcNote(jp->script, pc);
@@ -2506,9 +2502,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                 start = ss->offsets[pos];
                 LOCAL_ASSERT(ss->sprinter.base[start] == '[' ||
                              ss->sprinter.base[start] == '#');
-                pos = blockpos;
-                while (ss->opcodes[++pos] == JSOP_STARTITER)
-                    LOCAL_ASSERT(pos < ss->top);
+                pos = blockpos + 1;
                 LOCAL_ASSERT(pos < ss->top);
                 xval = OFF2STR(&ss->sprinter, ss->offsets[pos]);
                 lval = OFF2STR(&ss->sprinter, start);
@@ -2727,7 +2721,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                 LOCAL_ASSERT(atom);
                 goto do_fornameinloop;
 
-              case JSOP_FORVAR:
+              case JSOP_FORCONST:
                 atom = GetSlotAtom(jp, js_GetLocalVariable, GET_VARNO(pc));
                 LOCAL_ASSERT(atom);
                 goto do_fornameinloop;
@@ -4437,6 +4431,10 @@ js_DecompileValueGenerator(JSContext *cx, intN spindex, jsval v,
     JSPrinter *jp;
     JSString *name;
 
+    JS_ASSERT(spindex < 0 ||
+              spindex == JSDVG_IGNORE_STACK ||
+              spindex == JSDVG_SEARCH_STACK);
+
     for (fp = cx->fp; fp && !fp->script; fp = fp->down)
         continue;
     if (!fp)
@@ -4534,19 +4532,16 @@ js_DecompileValueGenerator(JSContext *cx, intN spindex, jsval v,
 #if !JS_HAS_NO_SUCH_METHOD
             JS_ASSERT(-depth <= spindex);
 #endif
-            spindex -= depth;
-
-            base = (jsval *) cx->stackPool.current->base;
-            limit = (jsval *) cx->stackPool.current->avail;
             sp = fp->sp + spindex;
-            if (JS_UPTRDIFF(sp, base) < JS_UPTRDIFF(limit, base))
-                pc = (jsbytecode *) *sp;
+            if ((jsuword) (sp - fp->spbase) < (jsuword) depth)
+                pc = (jsbytecode *) *(sp - depth);
+
         }
     }
 
     /*
      * Again, be paranoid, this time about possibly loading an invalid pc
-     * from fp->sp[-(1+depth)].
+     * from fp->sp[spindex - script->depth)].
      */
     if (JS_UPTRDIFF(pc, script->code) >= (jsuword)script->length) {
         pc = fp->pc;

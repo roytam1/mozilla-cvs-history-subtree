@@ -1263,6 +1263,7 @@ have_fun:
     frame.varobj = NULL;
     frame.callobj = frame.argsobj = NULL;
     frame.script = script;
+    frame.callee = funobj;
     frame.fun = fun;
     frame.argc = argc;
     frame.argv = sp - argc;
@@ -1570,6 +1571,7 @@ js_Execute(JSContext *cx, JSObject *chain, JSScript *script,
         frame.callobj = down->callobj;
         frame.argsobj = down->argsobj;
         frame.varobj = down->varobj;
+        frame.callee = down->callee;
         frame.fun = down->fun;
         frame.thisp = down->thisp;
         frame.argc = down->argc;
@@ -1586,6 +1588,7 @@ js_Execute(JSContext *cx, JSObject *chain, JSScript *script,
                 obj = tmp;
         }
         frame.varobj = obj;
+        frame.callee = NULL;
         frame.fun = NULL;
         frame.thisp = chain;
         frame.argc = 0;
@@ -2696,6 +2699,7 @@ interrupt:
 
           BEGIN_CASE(JSOP_FORARG)
           BEGIN_CASE(JSOP_FORVAR)
+          BEGIN_CASE(JSOP_FORCONST)
           BEGIN_CASE(JSOP_FORLOCAL)
             /*
              * JSOP_FORARG and JSOP_FORVAR don't require any lval computation
@@ -2742,6 +2746,10 @@ interrupt:
                 slot = GET_VARNO(pc);
                 JS_ASSERT(slot < fp->fun->u.i.nvars);
                 fp->vars[slot] = rval;
+                break;
+
+              case JSOP_FORCONST:
+                /* Don't update the const slot. */
                 break;
 
               case JSOP_FORLOCAL:
@@ -3857,6 +3865,7 @@ interrupt:
                 newifp->frame.callobj = NULL;
                 newifp->frame.argsobj = NULL;
                 newifp->frame.varobj = NULL;
+                newifp->frame.callee = obj;
                 newifp->frame.script = script;
                 newifp->frame.fun = fun;
                 newifp->frame.argc = argc;
@@ -5948,8 +5957,6 @@ interrupt:
           END_CASE(JSOP_LOCALDEC)
 
 #undef FAST_LOCAL_INCREMENT_OP
-
-          EMPTY_CASE(JSOP_STARTITER)
 
           BEGIN_CASE(JSOP_ENDITER)
             JS_ASSERT(!JSVAL_IS_PRIMITIVE(sp[-1]));

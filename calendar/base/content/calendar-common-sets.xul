@@ -21,6 +21,7 @@
    -
    - Contributor(s):
    - Simon Paquet <bugzilla@babylonsounds.com>
+   - Berend Cornelius <berend.cornelius@sun.com>
    -
    - Alternatively, the contents of this file may be used under the terms of
    - either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -101,12 +102,13 @@
     <command id="calendar_toggle_orientation_command" persist="checked" oncommand="toggleOrientation()" disabled="true"/>
     <command id="calendar_toggle_workdays_only_command" persist="checked" oncommand="toggleWorkdaysOnly()"/>
     <command id="calendar_toggle_tasks_in_view_command" persist="checked" oncommand="toggleTasksInView()"/>
-	<command id="calendar_toggle_show_completed_in_view_command" persist="checked" oncommand="toggleShowCompletedInView()"/>
+    <command id="calendar_toggle_show_completed_in_view_command" persist="checked" oncommand="toggleShowCompletedInView()"/>
     <command id="calendar_toggle_minimonthpane_command" oncommand="document.getElementById('minimonth-pane').togglePane(event)"/>
     <command id="calendar_toggle_calendarlist_command" oncommand="document.getElementById('calendar-list-pane').togglePane(event)"/>
     <command id="calendar_task_filter_command" oncommand="taskViewUpdate(event.explicitOriginalTarget.getAttribute('value'))"/>
     <command id="calendar_toggle_filter_command" oncommand="document.getElementById('task-filter-pane').togglePane(event)"/>
-    <command id="calendar_toggle_todaypane_command" oncommand="document.getElementById('today-pane-panel').togglePane(event)"/>
+    <command id="calendar_toggle_todaypane_command"
+             oncommand="document.getElementById('today-pane-panel').togglePane(event); TodayPane.setTodayHeader()"/>
     <command id="calendar_toggle_invitations_command" oncommand="document.getElementById('invitations-pane').togglePane(event)"/>
     <command id="calendar_view_next_command" oncommand="moveView(1)"/>
     <command id="calendar_view_prev_command" oncommand="moveView(-1)"/>
@@ -115,17 +117,44 @@
   </commandset>
 
   <keyset id="calendar-keys">
-    <key id="calendar-day-view-key" key="&calendar.dayView.key;" observes="calendar_day-view_command" modifiers="accel"/>
-    <key id="calendar-week-view-key" key="&calendar.weekView.key;" observes="calendar_week-view_command" modifiers="accel"/>
-    <key id="calendar-multiweek-view-key" key="&calendar.multiweekView.key;" observes="calendar_multiweek-view_command" modifiers="accel"/>
-    <key id="calendar-month-view-key" key="&calendar.monthView.key;" observes="calendar_month-view_command" modifiers="accel"/>
+  #ifdef XP_MACOSX
+    // The following Mac specific code-lines are necessary, because you can't 
+    // just use the OPTION key on Mac OSX. So we will use SHIFT+OPTION on the 
+    // Mac, but just ALT on all other platforms. See bug 448946.
+    <key id="calendar-day-view-key" key="&calendar.dayView.key;" observes="calendar_day-view_command" modifiers="shift alt"/>
+    <key id="calendar-week-view-key" key="&calendar.weekView.key;" observes="calendar_week-view_command" modifiers="shift alt"/>
+    <key id="calendar-multiweek-view-key" key="&calendar.multiweekView.key;" observes="calendar_multiweek-view_command" modifiers="shift alt"/>
+    <key id="calendar-month-view-key" key="&calendar.monthView.key;" observes="calendar_month-view_command" modifiers="shift alt"/>
+  #else
+    <key id="calendar-day-view-key" key="&calendar.dayView.key;" observes="calendar_day-view_command" modifiers="alt"/>
+    <key id="calendar-week-view-key" key="&calendar.weekView.key;" observes="calendar_week-view_command" modifiers="alt"/>
+    <key id="calendar-multiweek-view-key" key="&calendar.multiweekView.key;" observes="calendar_multiweek-view_command" modifiers="alt"/>
+    <key id="calendar-month-view-key" key="&calendar.monthView.key;" observes="calendar_month-view_command" modifiers="alt"/>
+  #endif
     <key id="calendar-go-to-today-key" keycode="VK_DOWN" observes="calendar_go_to_today_command" modifiers="accel"/>
-
+    <key id="calendar-delete-item-key" keycode="VK_DELETE" observes="calendar_delete_event_command"/>
+    <key id="calendar-delete-todo-key" keycode="VK_DELETE" observes="calendar_delete_todo_command"/>
   </keyset>
 
   <popupset id="calendar-popupset">
+    <!-- Tooltips -->
+    <tooltip id="eventTreeTooltip"
+             onpopupshowing="return showToolTip(this, unifinderTreeView.getItemFromEvent(event))"
+             noautohide="true"/>
+
+    <tooltip id="taskTreeTooltip"
+             onpopupshowing="return showToolTip(this, getTaskTree().getTaskFromEvent(event))"
+             noautohide="true"/>
+
+    <tooltip id="itemTooltip"
+             noautohide="true"/>
+
     <!-- CALENDAR ITEM CONTEXT MENU -->
     <popup id="calendar-item-context-menu" onpopupshowing="return setupContextItemType(event, currentView().getSelectedItems({}));">
+      <menuitem id="calendar-item-context-menu-modify-menuitem"
+                label="&calendar.context.modifyorviewitem.label;"
+                accesskey="&calendar.context.modifyorviewitem.accesskey;"
+                observes="calendar_modify_event_command"/>
       <menuitem id="calendar-item-context-menu-newevent-menutitem"
                 label="&calendar.context.newevent.label;"
                 accesskey="&calendar.context.newevent.accesskey;"
@@ -136,14 +165,6 @@
                 accesskey="&calendar.context.newtodo.accesskey;"
                 key="calendar-new-todo-key"
                 observes="calendar_new_todo_command"/>
-      <menuitem id="calendar-item-context-menu-modify-menuitem"
-                label="&calendar.context.modifyitem.label;"
-                accesskey="&calendar.context.modifyitem.accesskey;"
-                observes="calendar_modify_event_command"/>
-      <menuitem id="calendar-item-context-menu-delete-menuitem"
-                label="&calendar.context.deleteitem.label;"
-                accesskey="&calendar.context.deleteitem.accesskey;"
-                observes="calendar_delete_event_command"/>
       <menuseparator id="calendar-item-context-menuseparator-adddeletemodify"/>
       <menuitem id="calendar-item-context-menu-cut-menuitem"
                 label="&calendar.context.cutevent.label;"
@@ -181,6 +202,12 @@
                     oncommand="calendarTaskButtonDNDObserver.onDropItems(currentView().getSelectedItems({}))"/>
         </menupopup>
       </menu>
+      <menuseparator id="calendar-menuseparator-before-delete"/>
+      <!-- the label and accesskey of the following menuitem is set during runtime,
+           and depends on wether the item is a task or an event-->
+      <menuitem id="calendar-item-context-menu-delete-menuitem"
+                key="calendar-delete-item-key"
+                observes="calendar_delete_event_command"/>
     </popup>
 
     <!-- CALENDAR VIEW CONTEXT MENU -->
@@ -234,22 +261,17 @@
 
     <!-- TASK ITEM CONTEXT MENU -->
     <menupopup id="taskitem-context-menu" onpopupshowing="changeContextMenuForTask(event);">
+      <menuitem id="task-context-menu-modify"
+                label="&calendar.context.modifyorviewtask.label;"
+                accesskey="&calendar.context.modifyorviewtask.accesskey;"
+                command="calendar_modify_todo_command"/>
       <menuitem id="task-context-menu-new"
                 label="&calendar.context.newtodo.label;"
                 accesskey="&calendar.context.newtodo.accesskey;"
                 key="calendar-new-todo-key"
                 command="calendar_new_todo_command"
                 observes="calendar_new_todo_command"/>
-      <menuitem id="task-context-menu-modify"
-                label="&calendar.context.modifytask.label;"
-                accesskey="&calendar.context.modifytask.accesskey;"
-                command="calendar_modify_todo_command"/>
-      <menuitem id="task-context-menu-delete"
-                label="&calendar.context.deletetask.label;"
-                accesskey="&calendar.context.deletetask.accesskey;"
-                command="calendar_delete_todo_command"
-                observes="calendar_delete_todo_command"/>
-      <menuseparator/>
+      <menuseparator id="calendar-menuseparator-beforemarkcompleted"/>
       <menuitem id="calendar-context-markcompleted"
                 type="checkbox"
                 label="&calendar.context.markcompleted.label;"
@@ -286,6 +308,11 @@
                     oncommand="tasksToEvents(event)"/>
         </menupopup>
       </menu>
+      <menuseparator/>
+      <menuitem id="task-context-menu-delete"
+                label="&calendar.context.deletetask.label;"
+                accesskey="&calendar.context.deletetask.accesskey;"
+                observes="calendar_delete_todo_command"/>
     </menupopup>
   </popupset>
 </overlay>

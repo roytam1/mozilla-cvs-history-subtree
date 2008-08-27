@@ -35,9 +35,92 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
+/**
+ * Gets the configured identity and account of a particular calendar instance, or null.
+ *
+ * @param aCalendar     Calendar instance
+ * @param outAccount    Optional out value for account
+ * @return              The configured identity
+ */
+function calGetEmailIdentityOfCalendar(aCalendar, outAccount) {
+    ASSERT(aCalendar, "no calendar!", Components.results.NS_ERROR_INVALID_ARG);
+    if (isSunbird()) {
+        return null;
+    }
+    var key = aCalendar.getProperty("imip.identity.key");
+    if (key !== null) {
+        if (key.length == 0) { // i.e. "None"
+            return null;
+        }
+        var identity = null;
+        calIterateEmailIdentities(
+            function(identity_, account) {
+                if (identity_.key == key) {
+                    identity = identity_;
+                    if (outAccount) {
+                        outAccount.value = account;
+                    }
+                }
+                return (identity_.key != key);
+            });
+        if (!identity) {
+            // dangling identity:
+            WARN("Calendar " + (aCalendar.uri ? aCalendar.uri.spec : aCalendar.id) +
+                 " has a dangling E-Mail identity configured.");
+        }
+        return identity;
+    } else { // take default account/identity:
+
+        var accounts = getAccountManager().accounts;
+        var account = null;
+        var identity = null;
+        try {
+            account = getAccountManager().defaultAccount;
+        } catch (exc) {}
+
+        for (var i = 0; accounts && (i < accounts.Count()) && (!account || !identity); ++i) {
+            if (!account) { // Pick an account only if none was set (i.e there is no default account)
+                account = accounts.GetElementAt(i);
+                try {
+                    account = account.QueryInterface(Components.interfaces.nsIMsgAccount);
+                } catch (exc) {
+                    account = null;
+                }
+            }
+
+            if (account && account.identities.Count()) { // Pick an identity
+                identity = account.defaultIdentity;
+                if (!identity) { // there is no default identity, use the first
+                    identity = account.identities.GetElementAt(0)
+                                                 .QueryInterface(Components.interfaces.nsIMsgIdentity);
+                }
+            } else { // If this account has no identities, continue to the next account.
+                account = null;
+            }
+        }
+
+        if (identity) {
+            // If an identity was set above, set the account out parameter
+            // and return the identity
+            if (outAccount) {
+                outAccount.value = account;
+            }
+            return identity;
+        }
+        return null;
+    }
+}
+
 function calProviderBase() {
     ASSERT("This prototype should only be inherited!");
 }
+calProviderBase.mTransientProperties = {};
+["cache.uncachedCalendar", "currentStatus",
+ "itip.transport", "imip.identity", "imip.account",
+ "organizerId", "organizerCN"].forEach(
+    function(prop) {
+        calProviderBase.mTransientProperties[prop] = true;
+    });
 
 calProviderBase.prototype = {
     QueryInterface: function cPB_QueryInterface(aIID) {
@@ -136,11 +219,6 @@ calProviderBase.prototype = {
         return false;
     },
 
-    // readonly attribute boolean sendItipInvitations;
-    get sendItipInvitations() {
-        return true;
-    },
-
     // void startBatch();
     startBatch: function cPB_startBatch() {
         this.mObservers.notify("onStartBatch");
@@ -148,10 +226,6 @@ calProviderBase.prototype = {
 
     endBatch: function cPB_endBatch() {
         this.mObservers.notify("onEndBatch");
-    },
-
-    mTransientProperties: {
-        currentStatus: true
     },
 
     notifyOperationComplete: function cPB_notifyOperationComplete(aListener,
@@ -199,19 +273,61 @@ calProviderBase.prototype = {
         this.observers.notify("onError", [this.superCalendar, aErrNo, aMessage]);
     },
 
+    mTransientPropertiesMode: false,
+    get transientProperties cPB_transientProperties() {
+        return this.mTransientPropertiesMode;
+    },
+    set transientProperties cPB_transientProperties(value) {
+        return (this.mTransientPropertiesMode = value);
+    },
+
     // nsIVariant getProperty(in AUTF8String aName);
     getProperty: function cPB_getProperty(aName) {
-        // temporary hack to get the uncached calendar instance
-        if (aName == "cache.uncachedCalendar") {
-            return this;
+        switch (aName) {
+            case "itip.transport": // itip/imip default:
+                return calGetImipTransport(this);
+            // temporary hack to get the uncached calendar instance:
+            case "cache.uncachedCalendar":
+                return this;
         }
 
         var ret = this.mProperties[aName];
         if (ret === undefined) {
             ret = null;
-            if (!this.mTransientProperties[aName] && this.id) {
-                // xxx future: return getPrefSafe("calendars." + this.id + "." + aName, null);
-                ret = getCalendarManager().getCalendarPref_(this, aName);
+            switch (aName) {
+                case "imip.identity": // we want to cache the identity object a little, because
+                                      // it is heavily used by the invitation checks
+                    ret = calGetEmailIdentityOfCalendar(this);
+                    break;
+                case "imip.account": {
+                    var outAccount = {};
+                    if (calGetEmailIdentityOfCalendar(this, outAccount)) {
+                        ret = outAccount.value;
+                    }
+                    break;
+                }
+                case "organizerId": { // itip/imip default: derived out of imip.identity
+                    var identity = this.getProperty("imip.identity");
+                    ret = (identity
+                           ? ("mailto:" + identity.QueryInterface(Components.interfaces.nsIMsgIdentity).email)
+                           : null);
+                    break;
+                }
+                case "organizerCN": { // itip/imip default: derived out of imip.identity
+                    var identity = this.getProperty("imip.identity");
+                    ret = (identity
+                           ? identity.QueryInterface(Components.interfaces.nsIMsgIdentity).fullName
+                           : null);
+                    break;
+                }
+            }
+            if ((ret === null) &&
+                !calProviderBase.mTransientProperties[aName] &&
+                !this.transientProperties) {
+                if (this.id) {
+                    // xxx future: return getPrefSafe("calendars." + this.id + "." + aName, null);
+                    ret = getCalendarManager().getCalendarPref_(this, aName);
+                }
                 if (ret !== null) {
                     // xxx todo: work around value types here unless we save into the prefs...
                     switch (aName) {
@@ -241,6 +357,7 @@ calProviderBase.prototype = {
             }
             this.mProperties[aName] = ret;
         }
+//         LOG("getProperty(\"" + aName + "\"): " + ret);
         return ret;
     },
 
@@ -249,7 +366,17 @@ calProviderBase.prototype = {
         var oldValue = this.getProperty(aName);
         if (oldValue != aValue) {
             this.mProperties[aName] = aValue;
-            if (!this.mTransientProperties[aName] && this.id) {
+            switch (aName) {
+                case "imip.identity.key": // invalidate identity and account object if key is set:
+                    delete this.mProperties["imip.identity"];
+                    delete this.mProperties["imip.account"];
+                    delete this.mProperties["organizerId"];
+                    delete this.mProperties["organizerCN"];
+                    break;
+            }
+            if (!this.transientProperties &&
+                !calProviderBase.mTransientProperties[aName] &&
+                this.id) {
                 var v = aValue;
                 // xxx todo: work around value types here unless we save into the prefs...
                 switch (aName) {
@@ -300,48 +427,23 @@ calProviderBase.prototype = {
 
     // calISchedulingSupport: Implementation corresponding to our iTIP/iMIP support
     isInvitation: function cPB_isInvitation(aItem) {
-        return this.getInvitedAttendee(aItem) != null;
-    },
-
-    // helper function to filter invitations, checks exceptions for invitations:
-    itip_checkInvitation: function cPB_itip_checkInvitation(aItem) {
-        if (this.isInvitation(aItem)) {
-            return true;
-        }
-        var recInfo = aItem.recurrenceInfo;
-        if (recInfo) {
-            var this_ = this;
-            function checkExc(rid) {
-                return this_.isInvitation(recInfo.getExceptionFor(rid, false));
+        var id = this.getProperty("organizerId");
+        if (id) {
+            var org = aItem.organizer;
+            if (!org || (org.id.toLowerCase() == id.toLowerCase())) {
+                return false;
             }
-            return recInfo.getExceptionIds({}).some(checkExc);
+            return (aItem.getAttendeeById(id) != null);
         }
         return false;
     },
 
-    itip_getInvitedAttendee: function cPB_itip_getInvitedAttendee(aItem) {
-        // This is the iTIP specific base implementation for storage and memory,
-        // it will mind what account has received the incoming message, e.g.
-//         var account = aItem.getProperty("X-MOZ-IMIP-INCOMING-ACCOUNT");
-//         if (account) {
-//             account = ("mailto:" + account);
-//             var att = aItem.getAttendeeById(account);
-//             if (att) {
-//                 // we take the existing attendee
-//                 return att;
-//             }
-//             // else user may have changed mail accounts, or we has been invited via ml
-//             // in any way, we create a new attendee to be added here, which may be
-//             // overridden by UI in case that account doesn't exist anymore:
-//             att = Components.classes["@mozilla.org/calendar/attendee;1"]
-//                             .createInstance(Components.interfaces.calIAttendee);
-//             att.participationStatus = "NEEDS-ACTION";
-//             att.id = account;
-//         }
-        // for now not impl
-        return null;
-    },
     getInvitedAttendee: function cPB_getInvitedAttendee(aItem) {
-        return this.itip_getInvitedAttendee(aItem);
+        var id = this.getProperty("organizerId");
+        return (id ? aItem.getAttendeeById(id) : null);
+    },
+
+    canNotify: function cPB_canNotify(aMethod, aItem) {
+        return false; // use outbound iTIP for all
     }
 };

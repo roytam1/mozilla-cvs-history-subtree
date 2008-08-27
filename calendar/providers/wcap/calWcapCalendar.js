@@ -66,14 +66,6 @@ calWcapCalendar.prototype = {
             case NS_ERROR_OFFLINE:
                 return;
             default:
-                if (!checkErrorCode(rc, calIErrors.WCAP_ERROR_BASE, 8) &&
-                    (getErrorModule(rc) != NS_ERROR_MODULE_NETWORK)) {
-                    msg = logError(err, context);
-                    break;
-                }
-                // fallthru intended
-            case calIErrors.CAL_IS_READONLY:
-                // don't bloat the js error console with these errors, just log:
                 msg = errorToString(err);
                 log("error: " + msg, context);
                 break;
@@ -140,17 +132,25 @@ calWcapCalendar.prototype = {
     },
 
     getProperty: function calWcapCalendar_getProperty(aName) {
+        switch (aName) {
+            case "timezones.provider":
+                return ((this.m_session && this.session.isLoggedIn) ? this.session : null);
+            case "organizerId":
+                return this.ownerId;
+            case "organizerCN":
+                return this.getCalendarProperties("X-S1CS-CALPROPS-COMMON-NAME");
+            case "cache.supported": // until bug 412914 and bug 412606 are fixed
+            case "capabilities.timezones.floating.supported":
+            case "capabilities.timezones.UTC.supported":
+            case "capabilities.attachments.supported":
+            case "capabilities.alarms.popup.supported": // CS cannot store X-props reliably
+                                                        // (thus writing X-MOZ stamps etc is not possible).
+                                                        // Popup alarms not available no matter what; wtf.
+                return false;
+        }
+
         var value = this.__proto__.__proto__.getProperty.apply(this, arguments);
         switch (aName) {
-            case "organizerId":
-                value = this.ownerId;
-                break;
-            case "organizerCN":
-                value = this.getCalendarProperties("X-S1CS-CALPROPS-COMMON-NAME");
-                break;
-            case "cache.supported":
-                value = false; // until bug 412914 and bug 412606 are fixed
-                break;
             case "readOnly":
                 if (value === null) {
                     // tweak readOnly default to true for non-owned calendars,
@@ -166,10 +166,6 @@ calWcapCalendar.prototype = {
                     value = false;
                 }
                 break;
-            case "capabilities.alarms.popup.supported":
-                // CS cannot store X-props reliably (thus writing X-MOZ stamps etc is not possible).
-                // Popup alarms not available no matter what; wtf.
-                value = false;
         }
         return value;
     },
@@ -206,10 +202,6 @@ calWcapCalendar.prototype = {
     },
     endBatch: function calWcapCalendar_endBatch() {
         this.notifyObservers("onEndBatch");
-    },
-
-    get sendItipInvitations calWcapCalendar_sendItipInvitationsGetter() {
-        return false;
     },
 
     get canRefresh calWcapCalendar_canRefreshGetter() {
@@ -339,8 +331,8 @@ calWcapCalendar.prototype = {
     getAlignedTzid: function calWcapCalendar_getAlignedTzid(tz) {
         var tzid = tz.tzid;
         // check whether it is one cs supports:
-        if (!this.session.getTimezone(tzid)) {
-            log("not a server timezone: " + tzid);
+        if (tz.isFloating || !this.session.getTimezone(tzid)) {
+            log("not a supported timezone: " + tzid);
             // bug 435436:
             // xxx todo: we could further on search for a matching region,
             //           e.g. CET (in TZNAME), but for now stick to

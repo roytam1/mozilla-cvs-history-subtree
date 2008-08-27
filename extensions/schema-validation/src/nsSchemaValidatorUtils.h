@@ -182,7 +182,9 @@ public:
 
   static PRBool ParseDateTime(const nsAString & aNodeValue,
                               nsSchemaDateTime *aResult);
-  static PRBool ParseSchemaDate(const nsAString & aStrValue, nsSchemaDate *aDate);
+  static PRBool ParseSchemaDate(const nsAString & aStrValue,
+                                PRBool aAllowTimeZone,
+                                nsSchemaDate *aDate);
   static PRBool ParseSchemaTime(const nsAString & aStrValue, nsSchemaTime *aTime);
 
   static PRBool ParseSchemaTimeZone(const nsAString & aStrValue, 
@@ -239,6 +241,14 @@ public:
                                     nsSchemaDerivedSimpleType *aDerivedSrc);
 
   static void SetToNullOrElement(nsIDOMNode *aNode, nsIDOMNode **aResultNode);
+
+  /**
+   * Determine if an xsd:date, xsd:dateTime, or xsd:time string
+   * represents a GMT (aka UTC) time. This function assumes the
+   * aDateTime string has already been validated.
+   */
+  static PRBool IsGMT(const nsAString & aDateTime);
+
 private:
   nsSchemaValidatorUtils();
   ~nsSchemaValidatorUtils();

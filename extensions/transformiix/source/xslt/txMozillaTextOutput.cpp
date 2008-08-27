@@ -153,6 +153,23 @@ void txMozillaTextOutput::createResultDocument(nsIDOMDocument* aSourceDocument,
         // Create the document
         doc = do_CreateInstance(kXMLDocumentCID, &rv);
         NS_ASSERTION(NS_SUCCEEDED(rv), "Couldn't create document");
+        nsCOMPtr<nsIDocument_MOZILLA_1_8_BRANCH3> source =
+          do_QueryInterface(aSourceDocument);
+        if (!source) {
+          return;
+        }
+        PRBool hasHadScriptObject = PR_FALSE;
+        nsIScriptGlobalObject* sgo =
+          source->GetScriptHandlingObject(hasHadScriptObject);
+        if (!sgo && hasHadScriptObject) {
+          return;
+        }
+        nsCOMPtr<nsIDocument_MOZILLA_1_8_BRANCH3> doc18 =
+          do_QueryInterface(doc);
+        if (!doc18) {
+          return;
+        }
+        doc18->SetScriptHandlingObject(sgo);
         mDocument = do_QueryInterface(doc);
     }
     else {

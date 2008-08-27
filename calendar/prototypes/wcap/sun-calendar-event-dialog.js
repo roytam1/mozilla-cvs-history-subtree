@@ -21,6 +21,8 @@
  *   Michael Buettner <michael.buettner@sun.com>
  *   Philipp Kewisch <mozilla@kewis.ch>
  *   Martin Schroeder <mschroeder@mozilla.x-home.org>
+ *   Fred Jendrzejewski <fred.jen@web.de>
+ *   Daniel Boelzle <daniel.boelzle@sun.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -48,15 +50,21 @@ var gIsReadOnly = false;
 var gUserID = null;
 var gOrganizerID = null;
 var gPrivacy = null;
-var gURL = null;
+var gAttachMap = {};
 var gPriority = 0;
 var gStatus = "NONE";
-var gDictCount = 0;
-var gPrefs = null;
 var gLastRepeatSelection = 0;
 var gIgnoreUpdate = false;
 var gShowTimeAs = null;
-var gIsSunbird = false;
+
+function canNotifyAttendees(calendar, item) {
+    try {
+        var cal = calendar.QueryInterface(Components.interfaces.calISchedulingSupport);
+        return (cal.canNotify("REQUEST", item) && cal.canNotify("CANCEL", item));
+    } catch (exc) {
+        return false;
+    }
+}
 
 // update menu items that rely on focus
 function goUpdateGlobalEditMenuItems() {
@@ -166,25 +174,12 @@ function onLoad() {
     }
     window.recurrenceInfo = parentItem.recurrenceInfo;
 
-    const kSUNBIRD_ID = "{718e30fb-e89b-41dd-9da7-e25a45638b28}";
-    var appInfo = Components.classes["@mozilla.org/xre/app-info;1"]
-                  .getService(Components.interfaces.nsIXULAppInfo);
-
-    if (appInfo.ID == kSUNBIRD_ID) {
-        gIsSunbird = true;
-    }
-
     document.getElementById("sun-calendar-event-dialog").getButton("accept")
             .setAttribute("collapsed", "true");
     document.getElementById("sun-calendar-event-dialog").getButton("cancel")
             .setAttribute("collapsed", "true");
     document.getElementById("sun-calendar-event-dialog").getButton("cancel")
             .parentNode.setAttribute("collapsed", "true");
-
-    var prefService = Components.classes["@mozilla.org/preferences-service;1"]
-                      .getService(Components.interfaces.nsIPrefService);
-
-    gPrefs = prefService.getBranch(null);
 
     loadDialog(window.calendarItem);
 
@@ -284,9 +279,19 @@ function loadDialog(item) {
 
     categoryMenuList.selectedIndex = indexToSelect;
 
-    // URL
-    gURL = item.getProperty("URL");
-    updateDocument();
+    // Attachment
+    var hasAttachments = capSupported("attachments");
+    var attachments = item.getAttachments({});
+    if (hasAttachments && attachments && attachments.length > 0) {
+        for each (var attachment in attachments) {
+            addAttachment(attachment);
+        }
+    } else {
+        updateAttachment();
+    }
+
+    // URL link
+    updateLink();
 
     // Description
     setElementValue("item-description", item.getProperty("DESCRIPTION"));
@@ -347,7 +352,16 @@ function loadDialog(item) {
     updateTitle();
 
     var sendInvitesCheckbox = document.getElementById("send-invitations-checkbox");
-    sendInvitesCheckbox.checked = (item.getProperty("X-MOZ-SEND-INVITATIONS") == "TRUE");
+    if (canNotifyAttendees(item.calendar, item)) {
+        // visualize that the server will send out mail:
+        sendInvitesCheckbox.checked = true;
+    } else {
+        var itemProp = item.getProperty("X-MOZ-SEND-INVITATIONS");
+        sendInvitesCheckbox.checked = (item.calendar.getProperty("imip.identity") &&
+                                       ((itemProp === null)
+                                        ? getPrefSafe("calendar.itip.notify", true)
+                                        : (itemProp == "TRUE")));
+    }
 
     updateAttendees();
     updateRepeat();
@@ -587,7 +601,7 @@ function loadRepeat(item) {
         }
         if (rules.length == 1) {
             var rule = rules[0];
-            if (rule instanceof Components.interfaces.calIRecurrenceRule) {
+            if (calInstanceOf(rule, Components.interfaces.calIRecurrenceRule)) {
                 switch (rule.type) {
                     case 'DAILY':
                         if (rule.interval == 1 && !rule.isFinite) {
@@ -710,8 +724,14 @@ function saveDialog(item) {
 
     setCategory(item, "item-categories");
 
-    // URL
-    setItemProperty(item, "URL", gURL, "attachments");
+    // Attachment
+    // We want the attachments to be up to date, remove all first.
+    item.removeAllAttachments();
+
+    // Now add back the new ones
+    for each (var att in gAttachMap) {
+        item.addAttachment(att);
+    }
 
     // Description
     setItemProperty(item, "DESCRIPTION", getElementValue("item-description"));
@@ -818,7 +838,7 @@ function updateStyle() {
 
     for each (var stylesheet in document.styleSheets) {
         if (stylesheet.href == kDialogStylesheet) {
-            if (gIsSunbird) {
+            if (isSunbird()) {
                 stylesheet.insertRule(".lightning-only { display: none; }", 0);
             }
             if (isEvent(window.calendarItem)) {
@@ -1005,25 +1025,24 @@ function editAttendees() {
             // In case we didn't have an organizer object before we
             // added attendees to our event we take the one created
             // by the 'invite attendee'-dialog.
-            if (!savedWindow.organizer) {
-                savedWindow.organizer = organizer.clone();
-            }
-            // The other case is that we already had an organizer object
-            // before we went throught the 'invite attendee'-dialog. In that
-            // case make sure we don't carry over attributes that have been
-            // set to their default values by the dialog but don't actually
-            // exist in the original organizer object.
-            if (!savedWindow.organizer.id) {
-                organizer.id = null;
-            }
-            if (!savedWindow.organizer.role) {
-                organizer.role = null;
-            }
-            if (!savedWindow.organizer.participationStatus) {
-                organizer.participationStatus = null;
-            }
-            if (!savedWindow.organizer.commonName) {
-                organizer.commonName = null;
+            if (savedWindow.organizer) {
+                // The other case is that we already had an organizer object
+                // before we went throught the 'invite attendee'-dialog. In that
+                // case make sure we don't carry over attributes that have been
+                // set to their default values by the dialog but don't actually
+                // exist in the original organizer object.
+                if (!savedWindow.organizer.id) {
+                    organizer.id = null;
+                }
+                if (!savedWindow.organizer.role) {
+                    organizer.role = null;
+                }
+                if (!savedWindow.organizer.participationStatus) {
+                    organizer.participationStatus = null;
+                }
+                if (!savedWindow.organizer.commonName) {
+                    organizer.commonName = null;
+                }
             }
             savedWindow.organizer = organizer;
         }
@@ -1300,30 +1319,214 @@ function updateShowTimeAs() {
                             gShowTimeAs == "TRANSPARENT" ? "true" : "false");
 }
 
-function editURL() {
+function attachURL() {
     var promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"]
                        .getService(Components.interfaces.nsIPromptService);
     if (promptService) {
         // ghost in an example...
-        if (!gURL) {
-            gURL = "http://www.example.com";
-        }
-        var result = { value: gURL };
-        if (promptService.prompt(
-            window,
-            calGetString("sun-calendar-event-dialog", "specifyLinkLocation"),
-            calGetString("sun-calendar-event-dialog", "enterLinkLocation"),
-            result,
-            null,
-            { value: 0 })) {
-            var url = result.value;
-            // The user might have just put in 'www.foo.com', correct that here
-            if (url != "" && url.indexOf( ":" ) == -1) {
-                url = "http://" + url;
+        var result = { value: "http://" };
+        if (promptService.prompt(window,
+                                 calGetString("sun-calendar-event-dialog",
+                                              "specifyLinkLocation"),
+                                 calGetString("sun-calendar-event-dialog",
+                                              "enterLinkLocation"),
+                                 result,
+                                 null,
+                                 { value: 0 })) {
+            
+            try {
+                // If something bogus was entered, makeURL may fail.
+                var attachment = createAttachment();
+                attachment.uri = makeURL(result.value);
+                addAttachment(attachment);
+            } catch (e) {
+                // TODO We might want to show a warning instead of just not
+                // adding the file
             }
-            gURL = url;
-            updateDocument();
         }
+    }
+}
+
+
+/**
+ * This function is currently unused, since we don't support attaching files as
+ * binary. This code can be used as soon as this works.
+ */
+function attachFile() {
+    var files;
+    try {
+        const nsIFilePicker = Components.interfaces.nsIFilePicker;
+        var fp = Components.classes["@mozilla.org/filepicker;1"]
+                           .createInstance(nsIFilePicker);
+        fp.init(window,
+                calGetString("sun-calendar-event-dialog", "selectAFile"),
+                nsIFilePicker.modeOpenMultiple);
+  
+        // Check for the last directory 
+        var lastDir = lastDirectory();
+        if (lastDir) {
+            fp.displayDirectory = lastDir;
+        }
+ 
+        // Get the attachment
+        if (fp.show() == nsIFilePicker.returnOK) {
+            files = fp.files;
+        }
+    } catch (ex) {
+        dump("failed to get attachments: " +ex+ "\n");  
+    }
+  
+    // Check if something has to be done
+    if (!files || !files.hasMoreElements()) {
+        return;
+    }
+
+    // Create the attachment
+    while (files.hasMoreElements()) {
+        var file = files.getNext().QueryInterface(Components.interfaces.nsILocalFile);
+
+        var fileHandler = getIOService().getProtocolHandler("file")
+                                        .QueryInterface(Components.interfaces.nsIFileProtocolHandler);
+        var uriSpec = fileHandler.getURLSpecFromFile(file);
+
+        if (!(uriSpec in gAttachMap)) {
+            // If the attachment hasn't been added, then set the last display
+            // directory.
+            lastDirectory(uriSpec);
+
+            // ... and add the attachment.
+            var attachment = createAttachment();
+            attachment.uri = makeURL(uriSpec);
+            // TODO: set the formattype, but this isn't urgent as we don't have
+            // a type sensitive dialog to start files.
+            addAttachment(attachment);
+        }
+    } 
+}
+
+function lastDirectory(aFileUri) {
+    if (aFileUri) {
+        // Act similar to a setter, save the passed uri.
+        var uri = makeURL(aFileUri);
+        var file = uri.QueryInterface(Components.interfaces.nsIFileURL).file;
+        lastDirectory.mValue = file.parent.QueryInterface(Components.interfaces.nsILocalFile);
+    }
+    
+    // In any case, return the value
+    return (lastDirectory.mValue !== undefined ? lastDirectory.mValue : null);
+}
+
+function makePrettyName(aUri){
+    var name = aUri.spec;
+    if (aUri.schemeIs("file")) {
+        name = aUri.spec.split("/").pop(); 
+    } else if (aUri.schemeIs("http")) {
+        name = aUri.spec.replace(/\/$/, "").replace(/^http:\/\//, "");
+    }
+    return name;
+}
+
+function addAttachment(attachment) {
+    if (!attachment ||
+        !attachment.uri ||
+        attachment.uri.spec in gAttachMap) {
+        return;
+    }
+
+    var documentLink = document.getElementById("attachment-link");
+    var item = documentLink.appendChild(createXULElement("listitem"));
+
+    // Set listitem attributes
+    item.setAttribute("label", makePrettyName(attachment.uri));
+    item.setAttribute("crop", "end");
+    item.setAttribute("class", "listitem-iconic");
+    if (attachment.uri.schemeIs("file")) {
+        item.setAttribute("image", "moz-icon://" + attachment.uri);
+    } else {
+        item.setAttribute("image", "moz-icon://dummy.html");
+    }
+
+    // full attachment object is stored here
+    item.attachment = attachment; 
+
+    // Update the number of rows and save our attachment globally
+    documentLink.rows = documentLink.getRowCount();
+    gAttachMap[attachment.uri.spec] = attachment;
+    updateAttachment();
+}
+
+function deleteAttachment() {
+    var documentLink = document.getElementById("attachment-link");
+    delete gAttachMap[documentLink.selectedItem.attachment.uri.spec];
+    documentLink.removeItemAt(documentLink.selectedIndex);
+    updateAttachment();
+}
+
+function deleteAllAttachments() {
+    var documentLink = document.getElementById("attachment-link");
+    var itemCount = documentLink.getRowCount();
+    var ok = (itemCount < 2);
+
+    if (itemCount > 1) {
+        var promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"]
+                                      .getService(Components.interfaces.nsIPromptService);
+        ok = promptService.confirm(window,
+                                       calGetString("sun-calendar-event-dialog",
+                                                    "removeCalendarsTitle"),
+                                       calGetString("sun-calendar-event-dialog",
+                                                    "removeCalendarsText",
+                                                    [itemCount]),
+                                       {});
+    }
+
+    if (ok) {
+        var child;  
+        var documentLink = document.getElementById("attachment-link");
+        while (documentLink.hasChildNodes()) {
+            child = documentLink.removeChild(documentLink.lastChild);
+            child.attachment = null;
+        }
+        gAttachMap = {};
+    }
+    updateAttachment();
+}
+
+function openAttachment() {
+    // Only one file has to be selected and we don't handle base64 files at all
+    var documentLink = document.getElementById("attachment-link");
+    if (documentLink.selectedItems.length == 1) {
+        var attURI = documentLink.getSelectedItem(0).attachment.uri;
+        var externalLoader = Components.classes["@mozilla.org/uriloader/external-protocol-service;1"]
+                                       .getService(Components.interfaces.nsIExternalProtocolService);
+        // TODO There should be a nicer dialog
+        externalLoader.loadUrl(attURI);   
+    }
+}
+
+function attachmentLinkKeyPress(event) {
+    const kKE = Components.interfaces.nsIDOMKeyEvent;
+    switch (event.keyCode) {
+        case kKE.DOM_VK_BACK_SPACE:
+        case kKE.DOM_VK_DELETE:
+            deleteAttachment();
+            break;
+        case kKE.DOM_VK_ENTER:
+            openAttachment();
+            break;
+    }
+}
+
+function attachmentLinkClicked(event) {
+    event.currentTarget.focus();
+
+    if (event.button != 0) {
+        return;
+    }
+
+    if (event.originalTarget.localName == "listboxbody") {
+        attachURL();
+    } else if (event.originalTarget.localName == "listitem" && event.detail == 2) {
+        openAttachment();
     }
 }
 
@@ -1332,12 +1535,9 @@ function updateCalendar() {
     var calendar = document.getElementById("item-calendar")
                            .selectedItem.calendar;
 
-    gIsReadOnly = true;
-    if (calendar) {
-        gIsReadOnly = calendar.readOnly;
-    }
+    gIsReadOnly = calendar.readOnly;
 
-    if (calendar.sendItipInvitations) {
+    if (!canNotifyAttendees(calendar, item) && calendar.getProperty("imip.identity")) {
         enableElement("send-invitations-checkbox");
     } else {
         disableElement("send-invitations-checkbox");
@@ -1682,17 +1882,17 @@ function saveItem() {
         item.organizer = window.organizer;
     }
 
+    item.removeAllAttendees();
     if (window.attendees) {
-        item.removeAllAttendees();
         for each (var attendee in window.attendees) {
            item.addAttendee(attendee);
         }
 
         var sendInvitesCheckbox = document.getElementById("send-invitations-checkbox");
-        if (sendInvitesCheckbox.checked) {
-            setItemProperty(item, "X-MOZ-SEND-INVITATIONS", "TRUE");
-        } else {
+        if (sendInvitesCheckbox.disabled || document.getElementById("event-grid-attendee-row-2").collapsed) {
             item.deleteProperty("X-MOZ-SEND-INVITATIONS");
+        } else {
+            item.setProperty("X-MOZ-SEND-INVITATIONS", sendInvitesCheckbox.checked ? "TRUE" : "FALSE");
         }
     }
 
@@ -1802,7 +2002,7 @@ function onCommandCustomize() {
     document.getElementById("cmd_customize").setAttribute("disabled", "true");
 
     var id = "event-toolbox";
-    if (gIsSunbird) {
+    if (isSunbird()) {
 #ifdef MOZILLA_1_8_BRANCH
         var newwindow = window.openDialog("chrome://calendar/content/customizeToolbar.xul",
                                           "CustomizeToolbar",
@@ -1875,6 +2075,7 @@ function editTimezone(aElementId,aDateTime,aCallback) {
     // prepare the arguments that will be passed to the dialog
     var args = new Object();
     args.time = aDateTime;
+    args.calendar = document.getElementById("item-calendar").selectedItem.calendar;
     args.onOk = aCallback;
 
     // open the dialog modally
@@ -2113,39 +2314,50 @@ function updateTimezone() {
     }
 }
 
-function updateDocument() {
+function updateAttachment() {
     var hasAttachments = capSupported("attachments");
-    setElementValue("cmd_url", !hasAttachments && "true", "disabled");
+    setElementValue("cmd_attach_url", !hasAttachments && "true", "disabled");
 
-    var documentRow = document.getElementById("event-grid-document-row");
-    if (!hasAttachments || !gURL || gURL == "") {
-        documentRow.setAttribute('collapsed', 'true');
+    var documentRow = document.getElementById("event-grid-attachment-row");
+    var attSeparator = document.getElementById("event-grid-attachment-separator");
+    if (!hasAttachments) {
+        documentRow.setAttribute("collapsed", "true");
+        attSeparator.setAttribute("collapsed", "true");
     } else {
-        documentRow.removeAttribute('collapsed');
-        var documentLink = document.getElementById("document-link");
-        var callback = function func() {
-            documentLink.setAttribute('value', gURL);
-        }
-        setTimeout(callback, 1);
+        var documentLink = document.getElementById("attachment-link");
+        setElementValue(documentRow, documentLink.getRowCount() < 1 && "true", "collapsed");
+        setElementValue(attSeparator, documentLink.getRowCount() < 1 && "true", "collapsed");
     }
 }
 
-function browseDocument() {
-    launchBrowser(gURL);
+function toggleLink() {
+    var linkCommand = document.getElementById("cmd_toggle_link");
+    var row = document.getElementById("event-grid-link-row");
+    var separator = document.getElementById("event-grid-link-separator");
+
+    var isHidden = row.hidden;
+    row.hidden = !isHidden;
+    separator.hidden = !isHidden;
+
+    linkCommand.setAttribute("checked", isHidden ? "true" : "false");
+
+    updateLink();
 }
 
 function updateAttendees() {
-    var regexp = new RegExp("^mailto:(.*)", "i");
     var attendeeRow = document.getElementById("event-grid-attendee-row");
     var attendeeRow2 = document.getElementById("event-grid-attendee-row-2");
-    if (!window.attendees || !window.attendees.length) {
-        attendeeRow.setAttribute('collapsed', 'true');
-        attendeeRow2.setAttribute('collapsed', 'true');
-    } else {
+    if (window.attendees && window.attendees.length > 0) {
         attendeeRow.removeAttribute('collapsed');
-        attendeeRow2.removeAttribute('collapsed');
+        if (isEvent(window.calendarItem)) { // sending email invitations currently only supported for events
+            attendeeRow2.removeAttribute('collapsed');
+        } else {
+            attendeeRow2.setAttribute('collapsed', 'true');
+        }
+
         var attendeeNames = "";
         var numAttendees = window.attendees.length;
+        var regexp = new RegExp("^mailto:(.*)", "i");
         for (var i = 0; i < numAttendees; i++) {
             var attendee = window.attendees[i];
             if (attendee.commonName && attendee.commonName.length) {
@@ -2161,7 +2373,7 @@ function updateAttendees() {
                 continue;
             }
             if (i + 1 < numAttendees) {
-                attendeeNames += ',';
+                attendeeNames += ', ';
             }
         }
         var attendeeList = document.getElementById("attendee-list");
@@ -2169,6 +2381,9 @@ function updateAttendees() {
             attendeeList.setAttribute('value', attendeeNames);
         }
         setTimeout(callback, 1);
+    } else {
+        attendeeRow.setAttribute('collapsed', 'true');
+        attendeeRow2.setAttribute('collapsed', 'true');
     }
 }
 
@@ -2367,7 +2582,7 @@ function sendMailToAttendees(aAttendees) {
  * Make sure all fields that may have calendar specific capabilities are updated
  */
 function updateCapabilities() {
-    updateDocument();
+    updateAttachment();
     updatePriority();
     updatePrivacy();
 }

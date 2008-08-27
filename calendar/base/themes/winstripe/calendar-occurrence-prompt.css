@@ -45,6 +45,8 @@
 
 #occurrence-prompt-header {
   height: 50px;
+  padding-left: 15px;
+  padding-right: 15px;
   border-bottom: 2px groove ThreeDFace;
   background-color: window;
   color: windowtext;
@@ -60,24 +62,36 @@
   border-bottom: 2px groove ThreeDFace;
 }
 
-#accept-buttons-box > button {
-  margin: 10px 0px;
-}
 
 .occurrence-accept-buttons {
   list-style-image: url(chrome://calendar/skin/calendar-occurrence-prompt.png);
+  margin: 10px 0px;
 }
 
-#accept-occurrence-button {
-  -moz-image-region: rect(0 25px 20px 0);
+.occurrence-accept-buttons > .button-box > .button-text {
+  margin: 0 3px !important;
 }
 
-#accept-allfollowing-button {
-  /* TODO will be taken care of in a different bug */
-  /* display: none; */
-  -moz-image-region: rect(0 46px 20px 25px);
+#accept-buttons-box[action="edit"] > #accept-occurrence-button {
+  -moz-image-region: rect(0 20px 20px 0);
 }
 
-#accept-parent-button {
-  -moz-image-region: rect(0 75px 20px 46px);
+#accept-buttons-box[action="edit"] > #accept-parent-button {
+  -moz-image-region: rect(0 40px 20px 20px);
+}
+
+#accept-buttons-box[action="edit"] > #accept-allfollowing-button {
+  -moz-image-region: rect(0 60px 20px 40px);
+}
+
+#accept-buttons-box[action="delete"] > #accept-occurrence-button {
+  -moz-image-region: rect(0 80px 20px 60px);
+}
+
+#accept-buttons-box[action="delete"] > #accept-parent-button {
+  -moz-image-region: rect(0 100px 20px 80px);
+}
+
+#accept-buttons-box[action="delete"] > #accept-allfollowing-button {
+  -moz-image-region: rect(0 120px 20px 100px);
 }

@@ -54,6 +54,7 @@
 #include "nsIHttpHeaderVisitor.h"
 #include "nsIXFormsContextInfo.h"
 #include "nsDataHashtable.h"
+#include "nsIHttpChannel.h"
 
 
 class nsIMultiplexInputStream;
@@ -228,6 +229,9 @@ private:
   nsresult SetHttpContextInfo(PRUint32 aResponse, const nsAString &aResponseText);
 
   nsresult ParseErrorResponse(nsIChannel *aChannel);
+  nsresult OverrideRequestHeaders(nsIHttpChannel *aHttpChannel);
+  nsresult ProcessHeaderElement(nsIDOMNode *aHeaderNode,
+                                nsIHttpChannel *aHttpChannel);
 };
 
 NS_HIDDEN_(nsresult)

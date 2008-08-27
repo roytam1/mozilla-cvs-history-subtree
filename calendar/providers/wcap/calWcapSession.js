@@ -41,13 +41,20 @@ function calWcapTimezone(tzProvider, tzid_, component_) {
     this.provider = tzProvider;
     this.icalComponent = component_;
     this.tzid = tzid_;
-    this.displayName = null;
     this.isUTC = false;
     this.isFloating = false;
     this.latitude = null;
     this.longitude = null;
 }
 calWcapTimezone.prototype = {
+    get displayName calWcapTimezone_get_displayName() {
+        if (this.mDisplayName === undefined) {
+            // used l10n'ed display name if available:
+            var tz = getTimezoneService().getTimezone(this.tzid);
+            this.mDisplayName = (tz ? tz.displayName : this.tzid);
+        }
+        return this.mDisplayName;
+    },
     toString: function() {
         return this.icalComponent.toString();
     }
@@ -128,10 +135,8 @@ calWcapSession.prototype = {
     m_serverTimezones: null,
     get timezoneIds calWcapSession_timezoneIdsGetter() {
         var tzids = [];
-        tzids.push("floating");
-        tzids.push("UTC");
-        for (var tz in this.m_serverTimezones) {
-            tzids.push(tz.tzid);
+        for (var tzid in this.m_serverTimezones) {
+            tzids.push(tzid);
         }
         return { // nsIUTF8StringEnumerator:
             m_index: 0,
@@ -142,8 +147,8 @@ calWcapSession.prototype = {
                 }
                 return tzids[this.m_index++];
             },
-            hasMoreElements: function() {
-                return (this.m_index < tzids);
+            hasMore: function() {
+                return (this.m_index < tzids.length);
             }
         };
     },
@@ -206,7 +211,7 @@ calWcapSession.prototype = {
             }
 
             var this_ = this;
-            this.getSessionId_(request,
+            this.getSessionId_(null, // don't couple to parent request parent may be cancelled
                                function getSessionId_resp_(err, sessionId) {
                                    log("getSessionId_resp_(): " + sessionId, this_);
                                    if (!err) {
@@ -463,7 +468,9 @@ calWcapSession.prototype = {
                 respFunc(err);
             },
             log("setupSession", this));
-        request_.attachSubRequest(request);
+        if (request_) {
+            request_.attachSubRequest(request);
+        }
 
         request.lockPending();
         try {
@@ -1006,20 +1013,10 @@ calWcapSession.prototype = {
                                 }
                                 var str = node.textContent;
                                 var slash = str.indexOf('/');
-                                var period = new CalPeriod();
-                                period.start = getDatetimeFromIcalString(str.substr(0, slash));
-                                period.end = getDatetimeFromIcalString(str.substr(slash + 1));
-                                period.makeImmutable();
-                                var fbInterval = {
-                                    QueryInterface: function fbInterval_QueryInterface(iid) {
-                                        return doQueryInterface(this, null, iid, [calIFreeBusyInterval]);
-                                        return this;
-                                    },
-                                    calId: calId,
-                                    interval: period,
-                                    freeBusyType: fbType
-                                };
-                                ret.push(fbInterval);
+                                var start =  getDatetimeFromIcalString(str.substr(0, slash));
+                                var end =  getDatetimeFromIcalString(str.substr(slash + 1));
+
+                                ret.push(new calFreeBusyInterval(calId, fbType, start, end));
                             }
                         }
                         request.execRespFunc(null, ret);

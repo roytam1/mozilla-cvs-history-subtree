@@ -46,6 +46,7 @@
  *                        drop-downs
  */
 function setElementValue(aElement, aNewValue, aPropertyName) {
+    ASSERT(aElement);
     var undefined;
 
     if (aNewValue !== undefined) {
@@ -58,14 +59,14 @@ function setElementValue(aElement, aNewValue, aPropertyName) {
                 aElement.removeAttribute(aPropertyName);
             } catch (e) {
                 dump("setFieldValue: aElement.removeAttribute couldn't remove " +
-                aPropertyName + " from " + aElement.localName + " e: " + e + "\n");
+                aPropertyName + " from " + (aElement && aElement.localName) + " e: " + e + "\n");
             }
         } else if (aPropertyName) {
             try {
                 aElement.setAttribute(aPropertyName, aNewValue);
             } catch (e) {
                 dump("setFieldValue: aElement.setAttribute couldn't set " +
-                aPropertyName + " from " + aElement.localName + " to " + aNewValue +
+                aPropertyName + " from " + (aElement && aElement.localName) + " to " + aNewValue +
                 " e: " + e + "\n");
             }
         } else {
@@ -199,7 +200,6 @@ function enableElementWithLock(elementId, lockId) {
     }
 }
 
-
 /** 
  * Unchecks the commands of the child elements of a DOM-tree-node e.g of a menu
  *
@@ -218,18 +218,33 @@ function uncheckChildNodes(aEvent) {
 }
 
 /**
- * Fills up a menu - either a menupopup or a menulist - with menuitems that refer
- * to calendars.
+ * Removes all child nodes of the given node
  *
- * @param aItem                 The event or task
- * @param aCalendarMenuParent   The direct parent of the menuitems - either a
- *                                menupopup or a menulist
- * @param aCalendarToUse        The default-calendar
- * @param aOnCommand            A string that is applied to the "oncommand" 
- *                                attribute of each menuitem
- * @return                      The index of the calendar that matches the
- *                                default-calendar. By default 0 is returned.
+ * @param aElement  The Node (or its id) to remove children from
  */
+function removeChildren(aElement) {
+    if (typeof(aElement) == "string") {
+        aElement = document.getElementById(aElement);
+    }
+
+    while (aElement.firstChild) {
+        aElement.removeChild(aElement.lastChild);
+    }
+}
+
+/**
+* Fills up a menu - either a menupopup or a menulist - with menuitems that refer
+* to calendars.
+*
+* @param aItem                 The event or task
+* @param aCalendarMenuParent   The direct parent of the menuitems - either a
+*                                menupopup or a menulist
+* @param aCalendarToUse        The default-calendar
+* @param aOnCommand            A string that is applied to the "oncommand"
+*                                attribute of each menuitem
+* @return                      The index of the calendar that matches the
+*                                default-calendar. By default 0 is returned.
+*/
 function appendCalendarItems(aItem, aCalendarMenuParent, aCalendarToUse, aOnCommand) {
     var calendarToUse = aCalendarToUse || aItem.calendar;
     var calendars = getCalendarManager().getCalendars({});
@@ -270,13 +285,9 @@ function appendCategoryItems(aItem, aCategoryMenuList, aCommand) {
 
     // insert the category already in the menulist so it doesn't get lost
     if (aItem) {
-        var itemProperty = aItem.getProperty("CATEGORIES");
-        if (itemProperty) {
-            var itemCategories = categoriesStringToArray(itemProperty);
-            for each (var itemCategory in itemCategories) {
-                if (!categoriesList.some(function(cat){ return cat == itemCategory; })){
-                    categoriesList.push(itemCategory);
-                }
+        for each (var itemCategory in aItem.getCategories({})) {
+            if (!categoriesList.some(function(cat){ return cat == itemCategory; })){
+                categoriesList.push(itemCategory);
             }
         }
         sortArrayByLocaleCollator(categoriesList);
@@ -321,6 +332,34 @@ function addMenuItem(aParent, aLabel, aValue, aCommand) {
     return item;
 }
 
+
+/**
+ * sets a given attribute value on the children of a passed node
+ *
+ * @param aParent           the parent node.
+ * @param aAttribute        the name of the attribute to be set.
+ * @param aValue            the value of the attribute.
+ * @param aFilterAttribute  OPTIONAL The name of an attribute that the child nodes carry
+ *                            and that is used to filter the childnodes.
+ * @param aFilterValue      OPTIONAL The value of the filterattribute. If set only those
+ *                            childnodes are modified that have an attribute 
+ *                            'aFilterAttribute' with the given value
+ *                            'aFilterValue' set.
+ */
+function setAttributeToChildren(aParent, aAttribute, aValue, aFilterAttribute, aFilterValue) {
+    for (var i = 0; i < aParent.childNodes.length; i++) {
+        var element = aParent.childNodes[i];
+        if (aFilterAttribute == null) {
+            setElementValue(element, aValue, aAttribute);            
+        } else if (element.hasAttribute(aFilterAttribute)) {
+            var compValue = element.getAttribute(aFilterAttribute);
+            if (compValue === aFilterValue) {
+                setElementValue(element, aValue, aAttribute);
+            }
+        }
+    }
+}
+
 /**
  * checks a radio control or a radio-menuitem.
  *
@@ -355,11 +394,11 @@ function checkRadioControl(aParent, aValue) {
 function setCategory(aItem, aMenuElement) {
     // Category
     var category = getElementValue(aMenuElement);
-
-    if (category != "NONE") {
-       setItemProperty(aItem, "CATEGORIES", categoriesArrayToString([category]));
+    // xxx todo: what about category "NONE"?
+    if (category == "NONE") {
+        aItem.setCategories(0, []);
     } else {
-       aItem.deleteProperty("CATEGORIES");
+        aItem.setCategories(1, [category]);
     }
 }
 
@@ -454,7 +493,6 @@ function createXULElement(el) {
     return document.createElementNS("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul", el);
 }
 
-
 /**
  * A helper function to calculate and add up certain css-values of a box.
  * It is required, that all css values can be converted to integers
@@ -500,7 +538,7 @@ function getOptimalMinimumWidth(aXULElement) {
 function getOptimalMinimumHeight(aXULElement) {
     // the following line of code presumes that the line-height is set to "normal" 
     // which is supposed to be a "reasonable distance" between the lines
-    var firstEntity = parseInt(1.33 * getSummarizedStyleValues(aXULElement, ["font-size"]), 10);
+    var firstEntity = parseInt(1.35 * getSummarizedStyleValues(aXULElement, ["font-size"]), 10);
     var secondEntity = getSummarizedStyleValues(aXULElement,
                                                 ["padding-bottom", "padding-top",
                                                 "margin-bottom", "margin-top",
@@ -508,3 +546,71 @@ function getOptimalMinimumHeight(aXULElement) {
     return (firstEntity + secondEntity);
 }
 
+/**
+ * Use with textfields oninput to only allow integers
+ *
+ * @param event         The event that contains the target
+ * @param lowerBound    The lower bound the number should have
+ * @param upperBound    The upper bound the number should have
+ */
+function validateIntegerRange(event, lowerBound, upperBound) {
+    validateIntegers(event);
+
+    var num = Number(event.target.value);
+
+    // Only modify the number if a value is entered, otherwise deleting the
+    // value (to maybe enter a new number) will cause the field to be set to the
+    // lower bound.
+    if (event.target.value != "" && (num < lowerBound || num > upperBound)) {
+        event.target.value = Math.min(Math.max(num, lowerBound), upperBound);
+        event.preventDefault();
+    }
+}
+
+/**
+ * Validate Integers, or rather validate numbers. Makes sure the input value is
+ * a number.
+ *
+ * @param event         The event that contains the target
+ */
+function validateIntegers(event) {
+    if (isNaN(Number(event.target.value))) {
+        var newValue = parseInt(event.target.value);
+        event.target.value = isNaN(newValue) ? "" : newValue;
+        event.preventDefault();
+    }
+}
+
+/**
+ * Make sure the number entered is 0 or more. A negative number is turned
+ * positive.
+ *
+ * @param event         The event that contains the target
+ */
+function validateNaturalNums(event) {
+    validateIntegers(event);
+    var num = event.target.value;
+    if (num < 0) {
+        event.target.value = -1 * num;
+        event.preventDefault();
+    }
+}
+
+function getOtherOrientation(aOrientation) {
+     return (aOrientation == "horizontal" ? "vertical" : "horizontal");
+}
+
+/**
+ * Setting labels on a menuitem doesn't update the label that is shown when the
+ * menuitem is selected. This function takes care by reselecting the item
+ *
+ * @param aElement  The element to update, or its id as a string
+ */
+function updateSelectedLabel(aElement) {
+    if (typeof(aElement) == "string") {
+        aElement = document.getElementById(aElement);
+    }
+    var selectedIndex = aElement.selectedIndex;
+    aElement.selectedIndex = -1;
+    aElement.selectedIndex = selectedIndex;
+}

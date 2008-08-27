@@ -77,6 +77,10 @@ calGoogleCalendar.prototype = {
         return this.mCalendarName;
     },
 
+    get isDefaultCalendar cGC_isDefaultCalendar() {
+        return !/@group\.calendar\.google\.com$/.test(this.mCalendarName);
+    },
+
     /**
      * attribute session
      * An calGoogleSession Object that handles the session requests.
@@ -148,13 +152,18 @@ calGoogleCalendar.prototype = {
         var googleUser = getCalendarPref(this, "googleUser");
         if (googleUser) {
             this.mSession = sessionMgr.getSessionByUsername(googleUser, true);
-
         } else {
             // We have no user, therefore we need to ask the user. Show a
             // user/password prompt and set the session based on those
             // values.
 
-            var username = { value: this.mCalendarName };
+            var username = { value: null };
+            if (this.isDefaultCalendar) {
+                // Only pre-fill the username if this is the default calendar,
+                // otherwise users might think the cryptic hash is the username
+                // they have to use.
+                username.value = this.mCalendarName;
+            }
             var password = { value: null };
             var persist = { value: false };
 
@@ -202,10 +211,6 @@ calGoogleCalendar.prototype = {
         return "gdata";
     },
 
-    get sendItipInvitations cGC_getSendItipInvitations() {
-        return false;
-    },
-
     get uri cGC_getUri() {
         return this.mUri;
     },
@@ -244,6 +249,7 @@ calGoogleCalendar.prototype = {
     getProperty: function cGC_getProperty(aName) {
         switch (aName) {
             // Capabilities
+            case "capabilities.timezones.floating.supported":
             case "capabilities.attachments.supported":
             case "capabilities.priority.supported":
             case "capabilities.tasks.supported":
@@ -314,8 +320,7 @@ calGoogleCalendar.prototype = {
                 }
             };
 
-            var ctz = gdataTimezoneProvider.getShortTimezone(calendarDefaultTimezone());
-            request.addQueryParameter("ctz", ctz);
+            request.addQueryParameter("ctz", calendarDefaultTimezone().tzid);
 
             this.session.asyncItemRequest(request);
             return request;
@@ -404,8 +409,7 @@ calGoogleCalendar.prototype = {
                 }
             };
 
-            var ctz = gdataTimezoneProvider.getShortTimezone(calendarDefaultTimezone());
-            request.addQueryParameter("ctz", ctz);
+            request.addQueryParameter("ctz", calendarDefaultTimezone().tzid);
 
             this.session.asyncItemRequest(request);
             return request;
@@ -508,8 +512,7 @@ calGoogleCalendar.prototype = {
             };
 
             // Request Parameters
-            var ctz = gdataTimezoneProvider.getShortTimezone(calendarDefaultTimezone());
-            request.addQueryParameter("ctz", ctz);
+            request.addQueryParameter("ctz", calendarDefaultTimezone().tzid);
             request.addQueryParameter("max-results", kMANY_EVENTS);
             request.addQueryParameter("singleevents", "false");
 
@@ -578,8 +581,7 @@ calGoogleCalendar.prototype = {
             request.itemFilter = aItemFilter;
 
             // Request Parameters
-            var ctz = gdataTimezoneProvider.getShortTimezone(calendarDefaultTimezone());
-            request.addQueryParameter("ctz", ctz);
+            request.addQueryParameter("ctz", calendarDefaultTimezone().tzid);
             request.addQueryParameter("max-results",
                                       aCount ? aCount : kMANY_EVENTS);
             request.addQueryParameter("singleevents", "false");
@@ -723,7 +725,7 @@ calGoogleCalendar.prototype = {
             // filter out the <?xml...?> part.
             var xml = new XML(aData.substring(38));
             var timezoneString = xml.gCal::timezone.@value.toString() || "UTC";
-            var timezone = gdataTimezoneProvider.getTimezone(timezoneString);
+            var timezone = gdataTimezoneService.getTimezone(timezoneString);
 
             // This line is needed, otherwise the for each () block will never
             // be entered. It may seem strange, but if you don't believe me, try
@@ -741,8 +743,10 @@ calGoogleCalendar.prototype = {
                                        gCal::uid.@value == aOperation.itemId ||
                                        gd::extendedProperty.(@name == "X-MOZ-SYNCID").@value == aOperation.itemId);
             if (itemEntry.length() == 0) {
-                // Item wasn't found. Skip onGetResult and just complete.
-                throw new Components.Exception("Item not found", Components.results.NS_ERROR_FAILURE);
+                // Item wasn't found. Skip onGetResult and just complete. Not
+                // finding an item isn't a user-important error, it may be a
+                // wanted case. (i.e itip)
+                throw new Components.Exception("Item not found", Components.results.NS_OK);
             }
             var item = XMLEntryToItem(itemEntry, timezone, this);
 
@@ -775,9 +779,7 @@ calGoogleCalendar.prototype = {
                                          item.id,
                                          null);
         } catch (e) {
-            if (!Components.isSuccessCode(e.result) && e.message != "Item not found") {
-                // Not finding an item isn't a user-important error, it may be a
-                // wanted case. (i.e itip)
+            if (!Components.isSuccessCode(e.result)) {
                 LOG("Error getting item " + aOperation.itemId + ":\n" + e);
                 Components.utils.reportError(e);
             }
@@ -822,8 +824,8 @@ calGoogleCalendar.prototype = {
             // filter out the <?xml...?> part.
             var xml = new XML(aData.substring(38));
             var timezoneString = xml.gCal::timezone.@value.toString() || "UTC";
-            var timezone = gdataTimezoneProvider.getTimezone(timezoneString);
-
+            var timezone = gdataTimezoneService.getTimezone(timezoneString);
+            
             // This line is needed, otherwise the for each () block will never
             // be entered. It may seem strange, but if you don't believe me, try
             // it!
@@ -1057,8 +1059,7 @@ calGoogleCalendar.prototype = {
         request.calendar = this;
 
         // Request Parameters
-        var ctz = gdataTimezoneProvider.getShortTimezone(calendarDefaultTimezone());
-        request.addQueryParameter("ctz", ctz);
+        request.addQueryParameter("ctz", calendarDefaultTimezone().tzid);
         request.addQueryParameter("max-results", kMANY_EVENTS);
         request.addQueryParameter("singleevents", "false");
 
@@ -1101,7 +1102,7 @@ calGoogleCalendar.prototype = {
             // filter out the <?xml...?> part.
             var xml = new XML(aData.substring(38));
             var timezoneString = xml.gCal::timezone.@value.toString() || "UTC";
-            var timezone = gdataTimezoneProvider.getTimezone(timezoneString);
+            var timezone = gdataTimezoneService.getTimezone(timezoneString);
 
             // This line is needed, otherwise the for each () block will never
             // be entered. It may seem strange, but if you don't believe me, try
@@ -1225,13 +1226,25 @@ calGoogleCalendar.prototype = {
             return false;
         }
         // The item is an invitation if the organizer is not the current
-        // session's user.
-        return (aItem.organizer.id.toLowerCase() !=
-                "mailto:" + this.session.userName.toLowerCase());
+        // session's user and listed as an attendee.
+        return ((aItem.organizer.id.toLowerCase() != "mailto:" + this.session.userName.toLowerCase()) &&
+                (this.getInvitedAttendee(aItem) !== null));
     },
 
     getInvitedAttendee: function cGC_getInvitedAttendee(aItem) {
         // The invited attendee must always be the session user.
         return aItem.getAttendeeById("MAILTO:" + this.session.userName);
+    },
+
+    canNotify: function cGC_canNotify(aMethod, aItem) {
+        // XXX needs further refinement
+        switch (aMethod) {
+            case "REQUEST":
+            case "CANCEL":
+            case "REPLY":
+                 return true;
+            default:
+                return false;
+        }
     }
 };

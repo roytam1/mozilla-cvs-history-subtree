@@ -90,13 +90,13 @@ function weekPrint_format(aStream, aStart, aEnd, aCount, aItems, aTitle) {
     var calITodo = Components.interfaces.calITodo
     function compareItems(a, b) {
         // Sort tasks before events
-        if (a instanceof calIEvent && b instanceof calITodo) {
+        if (isEvent(a) && isToDo(b)) {
             return 1;
         }
-        if (a instanceof calITodo && b instanceof calIEvent) {
+        if (isToDo(a) && isEvent(b)) {
             return -1;
         }
-        if (a instanceof calIEvent) {
+        if (isEvent(a)) {
             var startCompare = a.startDate.compare(b.startDate);
             if (startCompare != 0) {
                 return startCompare;
@@ -109,8 +109,7 @@ function weekPrint_format(aStream, aStart, aEnd, aCount, aItems, aTitle) {
     }
     var sortedList = filteredItems.sort(compareItems);
 
-    var weekFormatter = Components.classes["@mozilla.org/calendar/weektitle-service;1"]
-                                  .getService(Components.interfaces.calIWeekTitleService);
+    var weekInfo = getWeekInfoService();
 
     // Start at the beginning of the week that aStart is in, and loop until
     // we're at aEnd. In the loop we build the HTML table for each day, and
@@ -133,7 +132,7 @@ function weekPrint_format(aStream, aStart, aEnd, aCount, aItems, aTitle) {
     }
 
     while(date.compare(end) == -1) {
-        var weekno = weekFormatter.getWeekTitle(date);
+        var weekno = weekInfo.getWeekTitle(date);
         var weekTitle = calGetString("calendar", 'WeekTitle', [weekno]);
         body.appendChild(
                      <table border='0' width='100%' class='main-table'>
@@ -261,9 +260,12 @@ function weekPrint_getDayTable(aDate, aItems) {
         var pb2 = Components.classes["@mozilla.org/preferences-service;1"]
                             .getService(Components.interfaces.nsIPrefBranch2);
         var catColor;
-        try {
-            catColor = pb2.getCharPref("calendar.category.color."+item.getProperty("CATEGORIES").toLowerCase());
-        } catch(ex) {}
+        for each (var cat in item.getCategories({})) {
+            try {
+                catColor = pb2.getCharPref("calendar.category.color." + cat.toLowerCase());
+                break; // take first matching
+            } catch(ex) {}
+        }
 
         var style = 'font-size: 11px; background-color: ' + calColor + ';';
         style += ' color: ' + getContrastingTextColor(calColor);

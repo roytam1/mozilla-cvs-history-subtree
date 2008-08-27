@@ -150,7 +150,7 @@
 #include "nsIScriptError.h"
 #include "plbase64.h"
 #include "nsIObserverService.h"
-
+#include "nsIDragService.h"
 #include "nsIPrintSettings.h"
 #include "nsIPrintSettingsService.h"
 
@@ -186,6 +186,8 @@ static PRInt32              gRefCnt                    = 0;
 static PRInt32              gOpenPopupSpamCount        = 0;
 static PopupControlState    gPopupControlState         = openAbused;
 static PRInt32              gRunningTimeoutDepth       = 0;
+static PRBool               gMouseDown                 = PR_FALSE;
+static PRBool               gDragServiceDisabled       = PR_FALSE;
 
 #ifdef DEBUG_jst
 PRInt32 gTimeoutCnt                                    = 0;
@@ -1665,6 +1667,23 @@ nsGlobalWindow::HandleDOMEvent(nsPresContext* aPresContext, nsEvent* aEvent,
     }
   }
 
+  if (NS_IS_TRUSTED_EVENT(aEvent)) {
+    if (aEvent->message == NS_MOUSE_LEFT_BUTTON_DOWN) {
+      gMouseDown = PR_TRUE;
+    } else if (aEvent->message == NS_MOUSE_LEFT_BUTTON_UP) {
+      gMouseDown = PR_FALSE;
+      if (gDragServiceDisabled) {
+        nsCOMPtr<nsIDragService_1_8_BRANCH> ds18 =
+          do_GetService("@mozilla.org/widget/dragservice;1");
+        NS_WARN_IF_FALSE(ds18, "No drag service?");
+        if (ds18) {
+          gDragServiceDisabled = PR_FALSE;
+          ds18->Unsuppress();
+        }
+      }
+    }
+  }
+
   // if the window is deactivated while in full screen mode,
   // restore OS chrome, and hide it again upon re-activation
   if (outer && outer->mFullScreen && (NS_EVENT_FLAG_BUBBLE & aFlags)) {
@@ -2528,6 +2547,20 @@ nsGlobalWindow::SetName(const nsAString& aName)
   return result;
 }
 
+
+void
+MaybeSuppressDrag() {
+  if (gMouseDown && !gDragServiceDisabled) {
+    nsCOMPtr<nsIDragService_1_8_BRANCH> ds18 =
+      do_GetService("@mozilla.org/widget/dragservice;1");
+    NS_WARN_IF_FALSE(ds18, "No drag service?");
+    if (ds18) {
+      gDragServiceDisabled = PR_TRUE;
+      ds18->Suppress();
+    }
+  }
+}
+
 NS_IMETHODIMP
 nsGlobalWindow::GetInnerWidth(PRInt32* aInnerWidth)
 {
@@ -2557,6 +2590,7 @@ nsGlobalWindow::SetInnerWidth(PRInt32 aInnerWidth)
   if (!CanSetProperty("dom.disable_window_move_resize") || IsFrame()) {
     return NS_OK;
   }
+  MaybeSuppressDrag();
 
   nsCOMPtr<nsIDocShellTreeItem> docShellAsItem(do_QueryInterface(mDocShell));
   NS_ENSURE_TRUE(docShellAsItem, NS_ERROR_FAILURE);
@@ -2605,6 +2639,7 @@ nsGlobalWindow::SetInnerHeight(PRInt32 aInnerHeight)
   if (!CanSetProperty("dom.disable_window_move_resize") || IsFrame()) {
     return NS_OK;
   }
+  MaybeSuppressDrag();
 
   nsCOMPtr<nsIDocShellTreeItem> docShellAsItem(do_QueryInterface(mDocShell));
   NS_ENSURE_TRUE(docShellAsItem, NS_ERROR_FAILURE);
@@ -2659,6 +2694,7 @@ nsGlobalWindow::SetOuterWidth(PRInt32 aOuterWidth)
   if (!CanSetProperty("dom.disable_window_move_resize")) {
     return NS_OK;
   }
+  MaybeSuppressDrag();
 
   nsCOMPtr<nsIBaseWindow> treeOwnerAsWin;
   GetTreeOwner(getter_AddRefs(treeOwnerAsWin));
@@ -2711,6 +2747,7 @@ nsGlobalWindow::SetOuterHeight(PRInt32 aOuterHeight)
   if (!CanSetProperty("dom.disable_window_move_resize")) {
     return NS_OK;
   }
+  MaybeSuppressDrag();
 
   nsCOMPtr<nsIBaseWindow> treeOwnerAsWin;
   GetTreeOwner(getter_AddRefs(treeOwnerAsWin));
@@ -2758,6 +2795,7 @@ nsGlobalWindow::SetScreenX(PRInt32 aScreenX)
   if (!CanSetProperty("dom.disable_window_move_resize")) {
     return NS_OK;
   }
+  MaybeSuppressDrag();
 
   nsCOMPtr<nsIBaseWindow> treeOwnerAsWin;
   GetTreeOwner(getter_AddRefs(treeOwnerAsWin));
@@ -2806,6 +2844,7 @@ nsGlobalWindow::SetScreenY(PRInt32 aScreenY)
   if (!CanSetProperty("dom.disable_window_move_resize")) {
     return NS_OK;
   }
+  MaybeSuppressDrag();
 
   nsCOMPtr<nsIBaseWindow> treeOwnerAsWin;
   GetTreeOwner(getter_AddRefs(treeOwnerAsWin));
@@ -3853,6 +3892,7 @@ nsGlobalWindow::MoveTo(PRInt32 aXPos, PRInt32 aYPos)
   if (!CanSetProperty("dom.disable_window_move_resize") || IsFrame()) {
     return NS_OK;
   }
+  MaybeSuppressDrag();
 
   nsCOMPtr<nsIBaseWindow> treeOwnerAsWin;
   GetTreeOwner(getter_AddRefs(treeOwnerAsWin));
@@ -3880,6 +3920,7 @@ nsGlobalWindow::MoveBy(PRInt32 aXDif, PRInt32 aYDif)
   if (!CanSetProperty("dom.disable_window_move_resize") || IsFrame()) {
     return NS_OK;
   }
+  MaybeSuppressDrag();
 
   nsCOMPtr<nsIBaseWindow> treeOwnerAsWin;
   GetTreeOwner(getter_AddRefs(treeOwnerAsWin));
@@ -3911,6 +3952,7 @@ nsGlobalWindow::ResizeTo(PRInt32 aWidth, PRInt32 aHeight)
   if (!CanSetProperty("dom.disable_window_move_resize") || IsFrame()) {
     return NS_OK;
   }
+  MaybeSuppressDrag();
 
   nsCOMPtr<nsIBaseWindow> treeOwnerAsWin;
   GetTreeOwner(getter_AddRefs(treeOwnerAsWin));
@@ -3938,6 +3980,7 @@ nsGlobalWindow::ResizeBy(PRInt32 aWidthDif, PRInt32 aHeightDif)
   if (!CanSetProperty("dom.disable_window_move_resize") || IsFrame()) {
     return NS_OK;
   }
+  MaybeSuppressDrag();
 
   nsCOMPtr<nsIBaseWindow> treeOwnerAsWin;
   GetTreeOwner(getter_AddRefs(treeOwnerAsWin));
@@ -3974,6 +4017,7 @@ nsGlobalWindow::SizeToContent()
   if (!CanSetProperty("dom.disable_window_move_resize") || IsFrame()) {
     return NS_OK;
   }
+  MaybeSuppressDrag();
 
   // The content viewer does a check to make sure that it's a content
   // viewer for a toplevel docshell.
@@ -6526,20 +6570,10 @@ nsGlobalWindow::SetTimeoutOrInterval(PRBool aIsInterval, PRInt32 *aReturn)
   }
 
   nsCOMPtr<nsIPrincipal> ourPrincipal = GetPrincipal();
-  JSPrincipals *jsprins;
-  rv = ourPrincipal->GetJSPrincipals(cx, &jsprins);
-  if (NS_FAILED(rv)) {
-    timeout->Release(scx);
-
-    return rv;
-  }
-
-  // We know that ourPrincipal holds a strong ref to jsprins.
-  JSPRINCIPALS_DROP(cx, jsprins);
 
   const char *filename;
   if (nsJSUtils::GetCallingLocation(cx, &filename, &timeout->mLineNo,
-                                    jsprins)) {
+                                    ourPrincipal)) {
     timeout->mFileName = PL_strdup(filename);
 
     if (!timeout->mFileName) {

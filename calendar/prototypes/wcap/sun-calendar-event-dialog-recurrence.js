@@ -21,6 +21,7 @@
  *   Stuart Parmenter <stuart.parmenter@oracle.com>
  *   Joey Minta <jminta@gmail.com>
  *   Michael Buettner <michael.buettner@sun.com>
+ *   Hubert Gajewski <hubert@hubertgajewski.com>, Aviary.pl
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -41,6 +42,8 @@ var gStartTime = null;
 var gEndTime = null;
 
 function onLoad() {
+    changeWidgetsOrder();
+
     var args = window.arguments[0];
     var item = args.calendarEvent;
     var calendar = item.calendar;
@@ -69,12 +72,12 @@ function onLoad() {
             // Deal with the rules
             if (rules.length > 0) {
                 // We only handle 1 rule currently
-                if (rules[0] instanceof Components.interfaces.calIRecurrenceRule) {
+                if (calInstanceOf(rules[0], Components.interfaces.calIRecurrenceRule)) {
                     rule = rules[0];
                 }
             }
         } catch (ex) {
-            Component.utils.reportError(ex);
+            Components.utils.reportError(ex);
         }
     }
     if (!rule) {
@@ -570,4 +573,60 @@ function updateRecurrencePattern() {
             }
             break;
     }
+}
+
+/**
+ * @param aPropKey      The locale property key to get the order from
+ * @param aPropParams   An array of ids to be passed to the locale property.
+ *                        These should be the ids of the elements to change
+ *                        the order for.
+ */
+function changeOrderForElements(aPropKey, aPropParams) {
+    var localeOrder;
+    var parents = {};
+    var i = 0;
+
+    for (var key in aPropParams) {
+        // Save original parents so that the nodes to reorder get appended to
+        // the correct parent nodes.
+        parents[key] = document.getElementById(aPropParams[key]).parentNode;
+    }
+
+    try {
+        localeOrder = calGetString("sun-calendar-event-dialog",
+                                   aPropKey,
+                                   aPropParams);
+
+        localeOrder = localeOrder.split(" ");
+    } catch (ex) {
+        var s = "The key " + aPropKey + " in sun-calendar-event-dialog.prop" +
+                "erties has incorrect number of params. Expected " +
+                aPropParams.length + " params.";
+        Components.utils.reportError(s + " " + ex);
+        return;
+    }
+
+    // Add elements in the right order, removing them from their old parent
+    for (var i = 0; i < aPropParams.length; i++) {
+        var newEl = document.getElementById(localeOrder[i]);
+        parents[i].appendChild(newEl.parentNode.removeChild(newEl));
+
+    }
+}
+
+/**
+ * Change widget order for Edit Recurrence window
+ */
+function changeWidgetsOrder() {
+    changeOrderForElements("monthlyOrder",
+                           ["monthly-ordinal",
+                            "monthly-weekday"]);
+    changeOrderForElements("yearlyOrder",
+                           ["yearly-days",
+                            "yearly-month-ordinal"]);
+    changeOrderForElements("yearlyOrder2",
+                           ["yearly-ordinal",
+                            "yearly-weekday",
+                            "yearly-period-of-label",
+                            "yearly-month-rule"]);
 }

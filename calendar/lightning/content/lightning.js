@@ -69,11 +69,18 @@ pref("calendar.alarms.todoalarmunit", "minutes");
 pref("calendar.autorefresh.enabled", true);
 pref("calendar.autorefresh.timeout", 30);
 
+// open invitations autorefresh settings
+pref("calendar.invitations.autorefresh.enabled", true);
+pref("calendar.invitations.autorefresh.timeout", 3);
+
 // iTIP compatibility send mode
 // 0 -- Outlook 2003 and following with text/plain and application/ics (default)
 // 1 -- all Outlook, but no text/plain nor application/ics
 // We may extend the compat mode if necessary.
 pref("calendar.itip.compatSendMode", 0);
+
+// whether "notify" is checked by default when creating new events/todos with attendees
+pref("calendar.itip.notify", true);
 
 // 0=Sunday, 1=Monday, 2=Tuesday, etc.  One day we might want to move this to
 // a locale specific file.

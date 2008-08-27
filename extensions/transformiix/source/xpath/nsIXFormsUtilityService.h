@@ -53,11 +53,12 @@ class nsIDOMNode; /* forward declaration */
 class nsIXFormsModelElement; /* forward declaration */
 
 /* starting interface:    nsIXFormsUtilityService */
-#define NS_IXFORMSUTILITYSERVICE_IID_STR "2ad098f4-5ee7-4282-a9f7-584eb95e1d69"
+
+#define NS_IXFORMSUTILITYSERVICE_IID_STR "4903f4d8-df4d-454b-b9e7-7c45314af085"
 
 #define NS_IXFORMSUTILITYSERVICE_IID \
-  {0x2ad098f4, 0x5ee7, 0x4282, \
-    { 0xa9, 0xf7, 0x58, 0x4e, 0xb9, 0x5e, 0x1d, 0x69 }}
+  {0x4903f4d8, 0xdf4d, 0x454b, \
+    { 0xb9, 0xe7, 0x7c, 0x45, 0x31, 0x4a, 0xf0, 0x85 }}
 
 #define NS_XFORMS_UTILITY_CONTRACTID   "@mozilla.org/xforms-utility-service;1"
 
@@ -73,7 +74,11 @@ class nsIXFormsModelElement; /* forward declaration */
   NS_IMETHOD GetSecondsFromDateTime(const nsAString & aValue, double *aSeconds); \
   NS_IMETHOD GetDaysFromDateTime(const nsAString & aValue, PRInt32 *aDays); \
   NS_IMETHOD GetEventContextInfo(const nsAString & aContextName, nsIDOMNode *aNode, nsCOMArray<nsIDOMNode> *aResult); \
-  NS_IMETHOD GetTime(nsAString & aValue, PRBool aUTC);
+  NS_IMETHOD GetTime(nsAString & aValue, PRBool aUTC); \
+  NS_IMETHOD Context(nsIDOMNode *aResolverNode, nsIDOMNode **aResult); \
+  NS_IMETHOD IsCardNumber(const nsAString & aNumber, PRBool *aResult); \
+  NS_IMETHOD Digest(const nsAString & aData, const nsAString & aAlgorithm, const nsAString & aEncoding, nsIDOMNode *aResolverNode, nsAString & aResult); \
+  NS_IMETHOD AdjustDateTimeToTimezone(const nsAString & aDateTime, nsAString & aResult);
 
 /**
  * Private interface implemented by the nsXFormsUtilityService in XForms extension.
@@ -174,6 +179,36 @@ class NS_NO_VTABLE nsIXFormsUtilityService : public nsISupports {
    */
   /* void getTime(out DOMString, PRBool aUTC); */
   NS_IMETHOD GetTime(nsAString & aValue, PRBool aUTC) = 0;
+
+  /**
+   * Function to retrieve the context node of the node that contained
+   * the XPath context() function.
+   */
+  /* nsIDOMNode context (in nsIDOMNode aResolverNode); */
+  NS_IMETHOD Context(nsIDOMNode *aResolverNode, nsIDOMNode **aResult) = 0;
+
+  /**
+   * Function to determine if a number is a valid card number according to
+   * the Luhn algorithm.
+   */
+  /* PRBool(in DOMString); */
+  NS_IMETHOD IsCardNumber(const nsAString & aNumber, PRBool *aResult) = 0;
+
+  /**
+   * Function that applies the digest algorithm to a string.
+   * DOMString Digest(in DOMString aData, in DOMString aAlgorithm,
+   *                  in DOMString aEncoding, in nsIDOMNode aResolverNode);
+   */
+  NS_IMETHOD Digest(const nsAString & aData, const nsAString & aAlgorithm,
+                    const nsAString & aEncoding, nsIDOMNode *aResolverNode,
+                    nsAString & aResult) = 0;
+
+  /**
+   * Function that adjusts an xsd:dateTime to the local timezone of the implementation.
+   */
+  /* DOMString AdjustDateTimeToTimezone(in DOMString aDateTime); */
+  NS_IMETHOD AdjustDateTimeToTimezone(const nsAString & aDateTime,
+                                      nsAString & aResult) = 0;
 };
 
 #define NS_ERROR_XFORMS_CALCUATION_EXCEPTION \

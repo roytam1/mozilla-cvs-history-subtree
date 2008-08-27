@@ -58,6 +58,9 @@
 #include "nsIModelElementPrivate.h"
 #include "nsIXFormsActionModuleElement.h"
 #include "nsIXFormsContextInfo.h"
+#include "prmem.h"
+#include "plbase64.h"
+#include "nsICryptoHash.h"
 
 NS_IMPL_ISUPPORTS1(nsXFormsUtilityService, nsIXFormsUtilityService)
 
@@ -473,7 +476,7 @@ nsXFormsUtilityService::GetTime(nsAString & aResult, PRBool aUTC)
 
     PR_FormatTime(ctime, sizeof(ctime), "%Y-%m-%dT%H:%M:%S\0", &time);
 
-    aResult.AssignLiteral(ctime);
+    aResult.Assign(NS_ConvertASCIItoUTF16(ctime));
 
     if (aUTC) {
       aResult.AppendLiteral("Z");
@@ -567,3 +570,299 @@ nsXFormsUtilityService::GetEventContextInfo(const nsAString & aContextName,
   return NS_OK;
 }
 
+NS_IMETHODIMP
+nsXFormsUtilityService::Context(nsIDOMNode  *aResolverNode,
+                                nsIDOMNode **aResult)
+{
+
+  nsCOMPtr<nsIDOMNode> contextNode;
+  PRUint32 contextNodesetSize = 0;
+  PRInt32 contextPosition;
+  nsCOMPtr<nsIModelElementPrivate> model;
+  nsCOMPtr<nsIDOMElement> bindElement;
+  nsCOMPtr<nsIXFormsControl> parentControl;
+  PRBool outerBind;
+
+  nsCOMPtr<nsIDOMElement> element(do_QueryInterface(aResolverNode));
+  if (!element) {
+    contextNode.swap(*aResult);
+    return NS_OK;
+  }
+
+  nsresult rv =
+    nsXFormsUtils::GetNodeContext(element,
+                                  nsXFormsUtils::ELEMENT_WITH_MODEL_ATTR,
+                                  getter_AddRefs(model),
+                                  getter_AddRefs(bindElement),
+                                  &outerBind,
+                                  getter_AddRefs(parentControl),
+                                  getter_AddRefs(contextNode),
+                                  &contextPosition,
+                                  (PRInt32*)&contextNodesetSize,
+                                  PR_FALSE);
+
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  contextNode.swap(*aResult);
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsXFormsUtilityService::IsCardNumber(const nsAString& aNumber, PRBool *aResult)
+{
+  nsAutoString number(aNumber);
+
+  nsXFormsSchemaValidator validator;
+  if (!validator.ValidateString(number,
+                                NS_LITERAL_STRING("card-number"),
+                                NS_LITERAL_STRING(NS_NAMESPACE_XFORMS))) {
+    *aResult = PR_FALSE;
+    return NS_OK;
+  }
+
+  // Now check if the card number is a valid Luhn number.
+  PRInt32 sum = 0;
+  PRBool alt = false;
+  for (PRInt32 i = number.Length() - 1; i >= 0; --i) {
+    PRUnichar currentChar = number.CharAt(i);
+    PRInt32 digit = abs(currentChar - '0');
+
+    if (alt) {
+      digit *= 2;
+      if (digit > 9) {
+        digit -= 9;
+      }
+    }
+    sum += digit;
+    alt = !alt;
+  }
+
+  *aResult = (sum % 10 == 0);
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsXFormsUtilityService::Digest(const nsAString &aData,
+                               const nsAString &aAlgorithm,
+                               const nsAString &aEncoding, 
+                               nsIDOMNode *aResolverNode,
+                               nsAString &aResult)
+{
+  aResult.Truncate();
+
+  PRBool throwException = PR_FALSE;
+  
+  // Determine the hash algorithm to use.
+  PRUint32 hashAlg = 0;
+
+  if (aAlgorithm.EqualsLiteral("MD5")) {
+    hashAlg = nsICryptoHash::MD5;
+  } else if (aAlgorithm.EqualsLiteral("SHA-1")) {
+    hashAlg = nsICryptoHash::SHA1;
+  } else if (aAlgorithm.EqualsLiteral("SHA-256")) {
+    hashAlg = nsICryptoHash::SHA256;
+  } else if (aAlgorithm.EqualsLiteral("SHA-384")) {
+    hashAlg = nsICryptoHash::SHA384;
+  } else if (aAlgorithm.EqualsLiteral("SHA-512")) {
+    hashAlg = nsICryptoHash::SHA512;
+  } else {
+    // Throw exception.
+    throwException = PR_TRUE;
+  }
+
+  if (!throwException) {
+    // Perform the hash.
+    nsresult rv;
+  
+    nsCOMPtr<nsICryptoHash> hash =
+      do_CreateInstance("@mozilla.org/security/hash;1", &rv);
+    NS_ENSURE_SUCCESS(rv, rv);
+  
+    rv = hash->Init(hashAlg);
+    NS_ENSURE_SUCCESS(rv, rv);
+  
+    nsCAutoString data = NS_LossyConvertUTF16toASCII(aData);
+    rv = hash->Update(reinterpret_cast<const PRUint8*>(data.get()),
+                      data.Length());
+    NS_ENSURE_SUCCESS(rv, rv);
+ 
+    // PR_FALSE means return the raw binary data.
+    nsCAutoString result;
+    rv = hash->Finish(PR_FALSE, result);
+    NS_ENSURE_SUCCESS(rv, rv);
+
+    // Encode the result.
+    if (aEncoding.IsEmpty() || aEncoding.EqualsLiteral("base64")) {
+      char *buffer = PL_Base64Encode((char *)result.get(),
+                                     result.Length(), nsnull);
+      if (buffer) {
+        aResult = ToNewUnicode(NS_ConvertASCIItoUTF16(buffer));
+        PR_Free(buffer);
+      }
+    } else if (aEncoding.EqualsLiteral("hex")) {
+      PRUint32 length = result.Length() * 2 + 1;
+      PRUnichar *hexBuffer =
+        NS_STATIC_CAST(PRUnichar*, nsMemory::Alloc(length * sizeof(PRUnichar)));
+      NS_ENSURE_TRUE(hexBuffer, NS_ERROR_OUT_OF_MEMORY);
+      nsXFormsUtils::BinaryToHex(result.get(), result.Length(), &hexBuffer);
+      hexBuffer [result.Length() * 2] = 0;
+
+      nsAutoString hexResult(hexBuffer);
+      nsCAutoString hexLower = NS_LossyConvertUTF16toASCII(hexResult);
+      ToLowerCase(hexLower);
+      aResult = NS_ConvertASCIItoUTF16(hexLower);
+
+      nsMemory::Free(hexBuffer);
+    } else {
+      // Throw exception.
+      throwException = PR_TRUE;
+    }
+  }
+
+  if (throwException) {
+    // If the digest function appears in a computed expression (An XPath
+    // expression used by model item properties such as relevant and
+    // calculate to include dynamic functionality in XForms), an
+    // xforms-compute-exception occurs. If the digest function appears
+    // in any other attribute that contains an XPath function, an
+    // xforms-binding-exception occurs.
+    nsXFormsEvent event = eEvent_BindingException;
+    nsAutoString localName, namespaceURI;
+    aResolverNode->GetLocalName(localName);
+    if (localName.EqualsLiteral("bind")) {
+      aResolverNode->GetNamespaceURI(namespaceURI);
+      if (namespaceURI.EqualsLiteral(NS_NAMESPACE_XFORMS)) {
+        event = eEvent_ComputeException;
+      }
+    }
+
+    // Dispatch the event.
+    nsCOMPtr<nsIDOMElement> resolverElement = do_QueryInterface(aResolverNode);
+    nsCOMPtr<nsIModelElementPrivate> modelPriv =
+      nsXFormsUtils::GetModel(resolverElement);
+    nsCOMPtr<nsIDOMNode> model = do_QueryInterface(modelPriv);
+    nsXFormsUtils::DispatchEvent(model, event, nsnull, resolverElement,
+                                 nsnull);
+    return NS_ERROR_FAILURE;
+  }
+
+  return NS_OK;
+}
+
+NS_IMETHODIMP
+nsXFormsUtilityService::AdjustDateTimeToTimezone(const nsAString &aDateTime,
+                                                 nsAString &aResult)
+{
+  // We have three cases to deal with:
+  //
+  // 1. aDateTime does not include a timezone indicator: 2007-10-07T02:22:00
+  //    The schema validator will return a PRTime that was calculated using
+  //    PR_LocalTimeParameters and that PRTime value formatted as an
+  //    xsd:dateTime is the same 2007-10-07T02:22:00 that was passed in.
+  //    We just need to append the local time zone.
+  //
+  // 2. aDateTime is a UTC (aka GMT) time: 2007-10-07T21:26:43Z
+  //    The schema validator will treat aDateTime as GMT and return that as a
+  //    PRTime. We convert the GMT time to a time in the local time zone and
+  //    append the local time zone.
+  //
+  // 3. aDateTime includes a time zone component: 2007-10-07T02:22:00-07:00
+  //    The schema validator checks if the time zone component is valid, but
+  //    does not use it when calculating the PRTime value so this case is
+  //    similar to case 1 except that we have to add the given time zone
+  //    offset (to get the GMT time of the input aDateTime), convert the GMT
+  //    time to the local time zone, and append the local time zone.
+  aResult.Truncate();
+
+  nsCOMPtr<nsISchemaValidator> schemaValidator =
+    do_CreateInstance("@mozilla.org/schemavalidator;1");
+  NS_ENSURE_TRUE(schemaValidator, NS_ERROR_FAILURE);
+
+  PRTime t_dateTime;
+  nsresult rv = schemaValidator->ValidateBuiltinTypeDateTime(aDateTime,
+                                                             &t_dateTime);
+
+  if (NS_FAILED(rv)) {
+    return NS_OK;
+  }
+
+  // The dateTime is valid, so get the timeZone information. If there is time
+  // zone information we are dealing with case 3 and have a bit more work to
+  // do to convert aDateTime to the local time zone.
+  nsAutoString timeString, timeZoneString;
+  PRInt32 timeSeparator = aDateTime.FindChar(PRUnichar('T'));
+  timeString.Append(Substring(aDateTime,
+                              timeSeparator + 1,
+                              aDateTime.Length() - timeSeparator));
+  nsXFormsUtils::GetTimeZone(timeString, timeZoneString);
+
+  PRExplodedTime time;
+  char ctime[60];
+
+  if (!timeZoneString.IsEmpty()) {
+    // The time zone string will be of the form ('+' | '-') hh ':' mm
+    // For example: +05:00, -07:00
+    nsAutoString hoursString, minutesString;
+    hoursString.Append(Substring(timeZoneString, 1, 2));
+    minutesString.Append(Substring(timeZoneString, 4, 2));
+
+    PRInt32 errCode;
+    PRInt32 hours = hoursString.ToInteger(&errCode);
+    NS_ENSURE_TRUE(errCode == 0, NS_ERROR_FAILURE);
+    PRInt32 minutes = minutesString.ToInteger(&errCode);
+    NS_ENSURE_TRUE(errCode == 0, NS_ERROR_FAILURE);
+    PRInt32 tzSecs = (hours * 3600) + (minutes * 60);
+
+    if (timeZoneString.CharAt(0) == '+') {
+      // The time zone is relative to GMT so if it is positive, we need to
+      // subtract the total number of seconds represented by the time zone;
+      // likewise, we add if the time zone is negative.
+      tzSecs *= -1;
+    }
+
+    PR_ExplodeTime(t_dateTime, PR_LocalTimeParameters, &time);
+    // Zero out the gmt and dst information because we don't want
+    // PR_NormalizeTime to use the local time zone to get back to
+    // GMT before it normalizes (because it would calculate the GMT
+    // time relative to the time zone that was part of the input dateTime).
+    time.tm_params.tp_gmt_offset = 0;
+    time.tm_params.tp_dst_offset = 0;
+    // Adjust the total seconds.
+    time.tm_sec += tzSecs;
+    // Normalize the fields and apply the local time parameters to convert
+    // the time to the local time zone.
+    PR_NormalizeTime(&time, PR_LocalTimeParameters);
+    PR_FormatTime(ctime, sizeof(ctime), "%Y-%m-%dT%H:%M:%S\0", &time);
+
+  } else {
+    // This is either a GMT time or no time zone information is available.
+    PR_ExplodeTime(t_dateTime, PR_LocalTimeParameters, &time);
+    PR_FormatTime(ctime, sizeof(ctime), "%Y-%m-%dT%H:%M:%S\0", &time);
+  }
+
+  // Calculate local time zone to append to the result.
+  int gmtoffsethour = time.tm_params.tp_gmt_offset / 3600;
+  int remainder = time.tm_params.tp_gmt_offset % 3600;
+  int gmtoffsetminute = remainder ? remainder / 60 : 0;
+  // adjust gmtoffsethour for daylight savings time.
+  int dstoffset = time.tm_params.tp_dst_offset / 3600;
+  gmtoffsethour += dstoffset;
+  if (gmtoffsethour < 0) {
+    // Make the gmtoffsethour positive; we'll add the plus or minus
+    // to the time zone string.
+    gmtoffsethour *= -1;
+  }
+  
+  char zone_location[40];
+  const int zoneBufSize = sizeof(zone_location);
+  PR_snprintf(zone_location, zoneBufSize, "%c%02d:%02d\0",
+              time.tm_params.tp_gmt_offset < 0 ? '-' : '+',
+              gmtoffsethour, gmtoffsetminute);
+
+  aResult.AppendLiteral(ctime);
+  aResult.Append(NS_ConvertASCIItoUTF16(zone_location));
+
+  return NS_OK;
+}

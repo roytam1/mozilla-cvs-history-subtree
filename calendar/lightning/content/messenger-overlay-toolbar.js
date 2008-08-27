@@ -97,13 +97,18 @@ function ltnSwitch2Mail() {
     switch2task.removeAttribute("checked");
 
     gCurrentMode = 'mail';
-    document.getElementById("modeBroadcaster").setAttribute("mode", gCurrentMode);
     swapPopupMenus();
+    document.getElementById("modeBroadcaster").setAttribute("mode", gCurrentMode);
 
-    var mailToolbar = getMailBar();
     var mailToolbarMenuItem = document.getElementById("menu_showMessengerToolbar");
-    if (mailToolbarMenuItem.getAttribute("checked") == "true") {
-        mailToolbar.removeAttribute("collapsed");
+    if (mailToolbarMenuItem) {
+        if (mailToolbarMenuItem.getAttribute("checked") == "true") {
+            getMailBar().removeAttribute("collapsed");
+        }
+    } else {
+        // Bug 440700: Corresponding toolbar menu entry is currently not
+        // accessible in Thunderbird Trunk -> always restore the toolbar
+        getMailBar().removeAttribute("collapsed");
     }
 
     var calendarToolbar = document.getElementById("calendar-toolbar");
@@ -153,10 +158,9 @@ function ltnSwitch2Calendar() {
     switch2calendar.setAttribute("checked", "true");
     switch2task.removeAttribute("checked");
 
-    gCurrentMode = 'calendar';
-    document.getElementById("modeBroadcaster").setAttribute("mode", gCurrentMode);
-    
+    gCurrentMode = 'calendar';    
     swapPopupMenus();
+    document.getElementById("modeBroadcaster").setAttribute("mode", gCurrentMode);    
 
     var mailToolbar = getMailBar();
     mailToolbar.setAttribute("collapsed", "true");
@@ -203,8 +207,8 @@ function ltnSwitch2Task() {
     toggleControlDisplay("cmd_toggleCalendarToolbar", "calendar-toolbar", "calendar");
     toggleControlDisplay("cmd_toggleTaskToolbar", "task-toolbar", "task");
     gCurrentMode = 'task';
-    document.getElementById("modeBroadcaster").setAttribute("mode", gCurrentMode);    
     swapPopupMenus();
+    document.getElementById("modeBroadcaster").setAttribute("mode", gCurrentMode);    
     var mailToolbar = getMailBar();
     var calendarToolbar = document.getElementById("calendar-toolbar");
     mailToolbar.setAttribute("collapsed", "true");

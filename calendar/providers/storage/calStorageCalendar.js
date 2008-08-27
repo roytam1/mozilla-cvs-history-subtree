@@ -27,6 +27,7 @@
  *   Philipp Kewisch <mozilla@kewis.ch>
  *   Daniel Boelzle <daniel.boelzle@sun.com>
  *   Sebastian Schwieger <sebo.moz@googlemail.com>
+ *   Fred Jendrzejewski <fred.jen@web.de>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -98,6 +99,8 @@ const CAL_ITEM_FLAG_HAS_PROPERTIES = 4;
 const CAL_ITEM_FLAG_EVENT_ALLDAY = 8;
 const CAL_ITEM_FLAG_HAS_RECURRENCE = 16;
 const CAL_ITEM_FLAG_HAS_EXCEPTIONS = 32;
+const CAL_ITEM_FLAG_HAS_ATTACHMENTS = 64;
+const CAL_ITEM_FLAG_HAS_RELATIONS = 128;
 
 const USECS_PER_SECOND = 1000000;
 
@@ -294,24 +297,22 @@ calStorageCalendar.prototype = {
         cal = cal.wrappedJSObject;
 
         for (var i in this.mDeleteEventExtras) {
-            this.mDeleteEventExtras[i].params.cal_id = cal.mCalId;
             this.mDeleteEventExtras[i].execute();
             this.mDeleteEventExtras[i].reset();
         }
 
         for (var i in this.mDeleteTodoExtras) {
-            this.mDeleteTodoExtras[i].params.cal_id = cal.mCalId;
             this.mDeleteTodoExtras[i].execute();
             this.mDeleteTodoExtras[i].reset();
         }
 
-        this.mDeleteAllEvents.params.cal_id = cal.mCalId;
         this.mDeleteAllEvents.execute();
         this.mDeleteAllEvents.reset();
 
-        this.mDeleteAllTodos.params.cal_id = cal.mCalId;
         this.mDeleteAllTodos.execute();
         this.mDeleteAllTodos.reset();
+
+        this.mDeleteAllMetaData();
 
         try {
             listener.onDeleteCalendar(cal, Components.results.NS_OK, null);
@@ -381,10 +382,10 @@ calStorageCalendar.prototype = {
             this.mDBTwo = dbService.openSpecialDatabase("profile");
         }
 
-        this.initDB();
-
         this.mCalId = id;
         this.mUri = aUri;
+
+        this.initDB();
     },
 
     refresh: function() {
@@ -570,18 +571,19 @@ calStorageCalendar.prototype = {
 
         var item = this.getItemById (aId);
         if (!item) {
+            // querying by id is a valid use case, even if no item is returned:
             this.notifyOperationComplete(aListener,
-                                         Components.results.NS_ERROR_FAILURE,
+                                         Components.results.NS_OK,
                                          Components.interfaces.calIOperationListener.GET,
                                          aId,
-                                         "ID doesn't exist for getItem");
+                                         null);
             return;
         }
 
         var item_iid = null;
-        if (item instanceof Components.interfaces.calIEvent)
+        if (isEvent(item))
             item_iid = Components.interfaces.calIEvent;
-        else if (item instanceof Components.interfaces.calITodo)
+        else if (isToDo(item))
             item_iid = Components.interfaces.calITodo;
         else {
             this.notifyOperationComplete(aListener,
@@ -626,7 +628,18 @@ calStorageCalendar.prototype = {
         if (aRangeEnd)
             endTime = aRangeEnd.nativeTime;
 
-        var wantInvitations = ((aItemFilter & kCalICalendar.ITEM_FILTER_REQUEST_NEEDS_ACTION) != 0);
+        var wantUnrespondedInvitations = ((aItemFilter & kCalICalendar.ITEM_FILTER_REQUEST_NEEDS_ACTION) != 0);
+        var superCal;
+        try {
+            superCal = this.superCalendar.QueryInterface(Components.interfaces.calISchedulingSupport);
+        } catch (exc) {
+            wantUnrespondedInvitations = false;
+        }
+        function checkUnrespondedInvitation(item) {
+            var att = superCal.getInvitedAttendee(item);
+            return (att && (att.participationStatus == "NEEDS-ACTION"));
+        }
+
         var wantEvents = ((aItemFilter & kCalICalendar.ITEM_FILTER_TYPE_EVENT) != 0);
         var wantTodos = ((aItemFilter & kCalICalendar.ITEM_FILTER_TYPE_TODO) != 0);
         var asOccurrences = ((aItemFilter & kCalICalendar.ITEM_FILTER_CLASS_OCCURRENCES) != 0);
@@ -691,10 +704,10 @@ calStorageCalendar.prototype = {
                 // the range. If the item doesn't fall into the range at all,
                 // this expands to 0 items.
                 expandedItems = item.recurrenceInfo.getOccurrences(aRangeStart, aRangeEnd, 0, {});
-                if (wantInvitations) {
-                    expandedItems = expandedItems.filter(self.isInvitation, self);
+                if (wantUnrespondedInvitations) {
+                    expandedItems = expandedItems.filter(checkUnrespondedInvitation);
                 }
-            } else if ((!wantInvitations || self.itip_checkInvitation(item)) &&
+            } else if ((!wantUnrespondedInvitations || checkUnrespondedInvitation(item)) &&
                        checkIfInRange(item, aRangeStart, aRangeEnd)) {
                 // If no occurrences are wanted, check only the parent item.
                 // This will be changed with bug 416975.
@@ -737,7 +750,6 @@ calStorageCalendar.prototype = {
             // first get non-recurring events that happen to fall within the range
             //
             sp = this.mSelectNonRecurringEventsByRange.params;
-            sp.cal_id = this.mCalId;
             sp.range_start = startTime;
             sp.range_end = endTime;
             sp.start_offset = aRangeStart ? aRangeStart.timezoneOffset * USECS_PER_SECOND : 0;
@@ -774,7 +786,6 @@ calStorageCalendar.prototype = {
 
             // first get non-recurring todos that happen to fall within the range
             sp = this.mSelectNonRecurringTodosByRange.params;
-            sp.cal_id = this.mCalId;
             sp.range_start = startTime;
             sp.range_end = endTime;
             sp.start_offset = aRangeStart ? aRangeStart.timezoneOffset * USECS_PER_SECOND : 0;
@@ -843,7 +854,7 @@ calStorageCalendar.prototype = {
         this.mDB.executeSimpleSQL("INSERT INTO cal_calendar_schema_version VALUES(" + this.DB_SCHEMA_VERSION + ")");
     },
 
-    DB_SCHEMA_VERSION: 10,
+    DB_SCHEMA_VERSION: 14,
 
     /** 
      * @return      db schema version
@@ -933,7 +944,7 @@ calStorageCalendar.prototype = {
                 oldVersion = 3;
             } catch (e) {
                 dump ("+++++++++++++++++ DB Error: " + this.mDB.lastErrorString + "\n");
-                Components.utils.reportError("Upgrade failed! DB Error: " + 
+                Components.utils.reportError("Upgrade failed! DB Error: " +
                                              this.mDB.lastErrorString);
                 this.mDB.rollbackTransaction();
                 throw e;
@@ -1131,6 +1142,109 @@ calStorageCalendar.prototype = {
             }
         }
 
+        if (oldVersion < 11) {
+            this.mDB.beginTransaction();
+            try {
+                this.mDB.createTable("cal_attachments", sqlTables.cal_attachments);
+
+                // update schema
+                this.mDB.executeSimpleSQL("UPDATE cal_calendar_schema_version SET version = 11;");
+                this.mDB.commitTransaction();
+                oldVersion = 11;
+            } catch (e) {
+                ERROR("Upgrade failed! DB Error: " + this.mDB.lastErrorString);
+                this.mDB.rollbackTransaction();
+                throw e;
+            }
+        }
+
+        if (oldVersion < 12) {
+            this.mDB.beginTransaction();
+            try {
+                this.mDB.createTable("cal_metadata", sqlTables.cal_metadata);
+                addColumn(this.mDB, "cal_attendees", "is_organizer", "BOOLEAN");
+                addColumn(this.mDB, "cal_attendees", "properties", "BLOB");
+
+                // update schema
+                this.mDB.executeSimpleSQL("UPDATE cal_calendar_schema_version SET version = 12;");
+                this.mDB.commitTransaction();
+                oldVersion = 12;
+            } catch (e) {
+                ERROR("Upgrade failed! DB Error: " + this.mDB.lastErrorString);
+                this.mDB.rollbackTransaction();
+                throw e;
+            }
+        }
+
+        if (oldVersion < 13) {
+            this.mDB.beginTransaction();
+            try {
+                // reset cal_metadata's item_id to longer be UNIQUE:
+                this.mDB.executeSimpleSQL("DROP TABLE IF EXISTS old_cal_metadata");
+                this.mDB.executeSimpleSQL("ALTER TABLE cal_metadata RENAME TO old_cal_metadata");
+                this.mDB.createTable("cal_metadata", sqlTables["cal_metadata"]);
+                this.mDB.executeSimpleSQL("INSERT INTO cal_metadata"
+                                          + " (cal_id, item_id, value) "
+                                          + " SELECT cal_id, item_id, value"
+                                          + " FROM old_cal_metadata");
+                this.mDB.executeSimpleSQL("DROP TABLE old_cal_metadata");
+
+                // match item ids to cal_id:
+                var calIds = {};
+                for each (var itemTable in ["events", "todos"]) {
+                    var stmt = createStatement(this.mDB,
+                                               "SELECT id, cal_id FROM cal_" + itemTable);
+                    while (stmt.step()) {
+                        calIds[stmt.row.id] = stmt.row.cal_id;
+                    }
+                    stmt.reset();
+                }
+
+                for each (var updTable in ["cal_attendees", "cal_recurrence",
+                                           "cal_properties", "cal_attachments"]) {
+                    try { // some tables might have been created with the
+                          // required columns already, see previous upgrade pathes
+                        addColumn(this.mDB, updTable, "cal_id", "INTEGER");
+                    } catch (ace) {}
+
+                    for (var itemId in calIds) {
+                        this.mDB.executeSimpleSQL("UPDATE " + updTable +
+                                                  " SET cal_id = " + calIds[itemId] +
+                                                  " WHERE item_id = '" + itemId + "'");
+                     }
+                }
+
+                this.mDB.executeSimpleSQL("DROP INDEX IF EXISTS" +
+                                          " idx_cal_properies_item_id");
+                this.mDB.executeSimpleSQL("CREATE INDEX IF NOT EXISTS" + 
+                                          " idx_cal_properies_item_id" +
+                                          " ON cal_properties(cal_id, item_id);");
+
+                this.mDB.executeSimpleSQL("UPDATE cal_calendar_schema_version SET version = 13;");
+                this.mDB.commitTransaction();
+                oldVersion = 13;
+            } catch (e) {
+                ERROR("Upgrade failed! DB Error: " + this.mDB.lastErrorString);
+                this.mDB.rollbackTransaction();
+                throw e;
+            }
+        }
+
+        if (oldVersion < 14) {
+            this.mDB.beginTransaction();
+            try {
+                this.mDB.createTable("cal_relations", sqlTables.cal_relations);
+                // update schema
+                this.mDB.executeSimpleSQL("UPDATE cal_calendar_schema_version SET version = 14;");
+                this.mDB.commitTransaction();
+                oldVersion = 14;
+            } catch (e) {
+                ERROR("Upgrade failed! DB Error: " + this.mDB.lastErrorString);
+                this.mDB.rollbackTransaction();
+                throw e;
+            }
+        }
+
         if (oldVersion != this.DB_SCHEMA_VERSION) {
             dump ("#######!!!!! calStorageCalendar Schema Update failed -- db version: " + oldVersion + " this version: " + this.DB_SCHEMA_VERSION + "\n");
             throw Components.results.NS_ERROR_FAILURE;
@@ -1238,20 +1352,22 @@ calStorageCalendar.prototype = {
         // (Conditionally) add index
         this.mDB.executeSimpleSQL(
             "CREATE INDEX IF NOT EXISTS " + 
-            "idx_cal_properies_item_id ON cal_properties(item_id);"
+            "idx_cal_properies_item_id ON cal_properties(cal_id, item_id);"
             );
 
         this.mSelectEvent = createStatement (
             this.mDB,
             "SELECT * FROM cal_events " +
-            "WHERE id = :id AND recurrence_id IS NULL " +
+            "WHERE id = :id AND cal_id = " + this.mCalId +
+            " AND recurrence_id IS NULL " +
             "LIMIT 1"
             );
 
         this.mSelectTodo = createStatement (
             this.mDB,
             "SELECT * FROM cal_todos " +
-            "WHERE id = :id AND recurrence_id IS NULL " +
+            "WHERE id = :id AND cal_id = " + this.mCalId +
+            " AND recurrence_id IS NULL " +
             "LIMIT 1"
             );
 
@@ -1282,7 +1398,7 @@ calStorageCalendar.prototype = {
             " AND " +
             "  (("+floatingEventStart+" < :range_end + :end_offset) OR " +
             "   ("+nonFloatingEventStart+" < :range_end)) " +
-            " AND cal_id = :cal_id AND flags & 16 == 0 AND recurrence_id IS NULL"
+            " AND cal_id = " + this.mCalId + " AND flags & 16 == 0 AND recurrence_id IS NULL"
             );
        /**
         * WHERE (due > rangeStart AND start < rangeEnd) OR
@@ -1326,33 +1442,35 @@ calStorageCalendar.prototype = {
             "   ("+nonFloatingTodoDue+" >= :range_start)) AND " +
             "  (("+floatingTodoDue+" < :range_end + :end_offset) OR " +
             "   ("+nonFloatingTodoDue+" < :range_end)))) " +
-            " AND cal_id = :cal_id AND flags & 16 == 0 AND recurrence_id IS NULL"
+            " AND cal_id = " + this.mCalId + " AND flags & 16 == 0 AND recurrence_id IS NULL"
             );
 
         this.mSelectEventsWithRecurrence = createStatement(
             this.mDB,
             "SELECT * FROM cal_events " +
             " WHERE flags & 16 == 16 " +
-            "   AND cal_id = :cal_id AND recurrence_id is NULL"
+            "   AND cal_id = " + this.mCalId + " AND recurrence_id is NULL"
             );
 
         this.mSelectTodosWithRecurrence = createStatement(
             this.mDB,
             "SELECT * FROM cal_todos " +
             " WHERE flags & 16 == 16 " +
-            "   AND cal_id = :cal_id AND recurrence_id IS NULL"
+            "   AND cal_id = " + this.mCalId + " AND recurrence_id IS NULL"
             );
 
         this.mSelectEventExceptions = createStatement (
             this.mDB,
             "SELECT * FROM cal_events " +
-            "WHERE id = :id AND recurrence_id IS NOT NULL"
+            "WHERE id = :id AND cal_id = " + this.mCalId +
+            " AND recurrence_id IS NOT NULL"
             );
 
         this.mSelectTodoExceptions = createStatement (
             this.mDB,
             "SELECT * FROM cal_todos " +
-            "WHERE id = :id AND recurrence_id IS NOT NULL"
+            "WHERE id = :id AND cal_id = " + this.mCalId +
+            " AND recurrence_id IS NOT NULL"
             );
 
         // For the extra-item data, note that we use mDBTwo, so that
@@ -1360,13 +1478,16 @@ calStorageCalendar.prototype = {
         this.mSelectAttendeesForItem = createStatement(
             this.mDBTwo,
             "SELECT * FROM cal_attendees " +
-            "WHERE item_id = :item_id AND recurrence_id IS NULL"
+            "WHERE item_id = :item_id AND cal_id = " + this.mCalId +
+            " AND recurrence_id IS NULL"
             );
 
         this.mSelectAttendeesForItemWithRecurrenceId = createStatement(
             this.mDBTwo,
             "SELECT * FROM cal_attendees " +
-            "WHERE item_id = :item_id AND recurrence_id = :recurrence_id AND recurrence_id_tz = :recurrence_id_tz"
+            "WHERE item_id = :item_id AND cal_id = " + this.mCalId +
+            " AND recurrence_id = :recurrence_id" +
+            " AND recurrence_id_tz = :recurrence_id_tz"
             );
 
         this.mSelectPropertiesForItem = createStatement(
@@ -1378,15 +1499,39 @@ calStorageCalendar.prototype = {
         this.mSelectPropertiesForItemWithRecurrenceId = createStatement(
             this.mDBTwo,
             "SELECT * FROM cal_properties " +
-            "WHERE item_id = :item_id AND recurrence_id = :recurrence_id AND recurrence_id_tz = :recurrence_id_tz"
+            "WHERE item_id = :item_id AND cal_id = " + this.mCalId +
+            " AND recurrence_id = :recurrence_id" +
+            " AND recurrence_id_tz = :recurrence_id_tz"
             );
 
         this.mSelectRecurrenceForItem = createStatement(
             this.mDBTwo,
             "SELECT * FROM cal_recurrence " +
-            "WHERE item_id = :item_id " +
-            "ORDER BY recur_index"
+            "WHERE item_id = :item_id AND cal_id = " + this.mCalId +
+            " ORDER BY recur_index"
             );
+
+        this.mSelectAttachmentsForItem = createStatement(
+            this.mDBTwo,
+            "SELECT * FROM cal_attachments " +
+            "WHERE item_id = :item_id AND cal_id = " + this.mCalId
+            );
+
+        this.mSelectRelationsForItem = createStatement(
+            this.mDBTwo,
+            "SELECT * FROM cal_relations " +
+            "WHERE item_id = :item_id AND cal_id = " + this.mCalId
+            );
+
+        this.mSelectMetaData = createStatement(
+            this.mDB,
+            "SELECT * FROM cal_metadata"
+            + " WHERE item_id = :item_id AND cal_id = " + this.mCalId);
+
+        this.mSelectAllMetaData = createStatement(
+            this.mDB,
+            "SELECT * FROM cal_metadata"
+            + " WHERE cal_id = " + this.mCalId);
 
         // insert statements
         this.mInsertEvent = createStatement (
@@ -1397,7 +1542,7 @@ calStorageCalendar.prototype = {
             "   event_start, event_start_tz, event_end, event_end_tz, event_stamp, " +
             "   alarm_time, alarm_time_tz, recurrence_id, recurrence_id_tz, " +
             "   alarm_offset, alarm_related, alarm_last_ack) " +
-            "VALUES (:cal_id, :id, :time_created, :last_modified, " +
+            "VALUES (" + this.mCalId + ", :id, :time_created, :last_modified, " +
             "        :title, :priority, :privacy, :ical_status, :flags, " +
             "        :event_start, :event_start_tz, :event_end, :event_end_tz, :event_stamp, " +
             "        :alarm_time, :alarm_time_tz, :recurrence_id, :recurrence_id_tz," + 
@@ -1413,7 +1558,7 @@ calStorageCalendar.prototype = {
             "   todo_completed_tz, todo_complete, " +
             "   alarm_time, alarm_time_tz, recurrence_id, recurrence_id_tz, " +
             "   alarm_offset, alarm_related, alarm_last_ack)" +
-            "VALUES (:cal_id, :id, :time_created, :last_modified, " +
+            "VALUES (" + this.mCalId + ", :id, :time_created, :last_modified, " +
             "        :title, :priority, :privacy, :ical_status, :flags, " +
             "        :todo_entry, :todo_entry_tz, :todo_due, :todo_due_tz, " +
             "        :todo_completed, :todo_completed_tz, :todo_complete, " +
@@ -1422,46 +1567,80 @@ calStorageCalendar.prototype = {
             );
         this.mInsertProperty = createStatement (
             this.mDB,
-            "INSERT INTO cal_properties (item_id, recurrence_id, recurrence_id_tz, key, value) " +
-            "VALUES (:item_id, :recurrence_id, :recurrence_id_tz, :key, :value)"
+            "INSERT INTO cal_properties (cal_id, item_id, recurrence_id, recurrence_id_tz, key, value) " +
+            "VALUES (" + this.mCalId + ", :item_id, :recurrence_id, :recurrence_id_tz, :key, :value)"
             );
         this.mInsertAttendee = createStatement (
             this.mDB,
             "INSERT INTO cal_attendees " +
-            "  (item_id, recurrence_id, recurrence_id_tz, attendee_id, common_name, rsvp, role, status, type) " +
-            "VALUES (:item_id, :recurrence_id, :recurrence_id_tz, :attendee_id, :common_name, :rsvp, :role, :status, :type)"
+            "  (cal_id, item_id, recurrence_id, recurrence_id_tz, attendee_id, common_name, rsvp, role, status, type, is_organizer, properties) " +
+            "VALUES (" + this.mCalId + ", :item_id, :recurrence_id, :recurrence_id_tz, :attendee_id, :common_name, :rsvp, :role, :status, :type, :is_organizer, :properties)"
             );
         this.mInsertRecurrence = createStatement (
             this.mDB,
             "INSERT INTO cal_recurrence " +
-            "  (item_id, recur_index, recur_type, is_negative, dates, count, end_date, interval, second, minute, hour, day, monthday, yearday, weekno, month, setpos) " +
-            "VALUES (:item_id, :recur_index, :recur_type, :is_negative, :dates, :count, :end_date, :interval, :second, :minute, :hour, :day, :monthday, :yearday, :weekno, :month, :setpos)"
+            "  (cal_id, item_id, recur_index, recur_type, is_negative, dates, count, end_date, interval, second, minute, hour, day, monthday, yearday, weekno, month, setpos) " +
+            "VALUES (" + this.mCalId + ", :item_id, :recur_index, :recur_type, :is_negative, :dates, :count, :end_date, :interval, :second, :minute, :hour, :day, :monthday, :yearday, :weekno, :month, :setpos)"
             );
+
+        this.mInsertAttachment = createStatement (
+            this.mDB,
+            "INSERT INTO cal_attachments " + 
+            " (cal_id, item_id, data, format_type, encoding) " +
+            "VALUES (" + this.mCalId + ", :item_id, :data, :format_type, :encoding)"
+            );
+
+        this.mInsertRelation = createStatement (
+            this.mDB,
+            "INSERT INTO cal_relations " + 
+            " (cal_id, item_id, rel_type, rel_id) " +
+            "VALUES (" + this.mCalId + ", :item_id, :rel_type, :rel_id)"
+            );
+
+        this.mInsertMetaData = createStatement(
+            this.mDB,
+            "INSERT INTO cal_metadata"
+            + " (cal_id, item_id, value)"
+            + " VALUES (" + this.mCalId + ", :item_id, :value)");
 
         // delete statements
         this.mDeleteEvent = createStatement (
             this.mDB,
-            "DELETE FROM cal_events WHERE id = :id"
+            "DELETE FROM cal_events WHERE id = :id AND cal_id = " + this.mCalId
             );
         this.mDeleteTodo = createStatement (
             this.mDB,
-            "DELETE FROM cal_todos WHERE id = :id"
+            "DELETE FROM cal_todos WHERE id = :id AND cal_id = " + this.mCalId
             );
         this.mDeleteAttendees = createStatement (
             this.mDB,
-            "DELETE FROM cal_attendees WHERE item_id = :item_id"
+            "DELETE FROM cal_attendees WHERE item_id = :item_id AND cal_id = " + this.mCalId
             );
         this.mDeleteProperties = createStatement (
             this.mDB,
-            "DELETE FROM cal_properties WHERE item_id = :item_id"
+            "DELETE FROM cal_properties WHERE item_id = :item_id AND cal_id = " + this.mCalId
             );
         this.mDeleteRecurrence = createStatement (
             this.mDB,
-            "DELETE FROM cal_recurrence WHERE item_id = :item_id"
+            "DELETE FROM cal_recurrence WHERE item_id = :item_id AND cal_id = " + this.mCalId
+            );
+        this.mDeleteAttachments = createStatement (
+            this.mDB,
+            "DELETE FROM cal_attachments WHERE item_id = :item_id AND cal_id = " + this.mCalId
+            );
+        this.mDeleteRelations = createStatement (
+            this.mDB,
+            "DELETE FROM cal_relations WHERE item_id = :item_id AND cal_id = " + this.mCalId
+            );
+        this.mDeleteMetaData = createStatement(
+            this.mDB,
+            "DELETE FROM cal_metadata WHERE item_id = :item_id AND cal_id = " + this.mCalId
             );
 
         // These are only used when deleting an entire calendar
-        var extrasTables = [ "cal_attendees", "cal_properties", "cal_recurrence" ];
+        var extrasTables = [ "cal_attendees", "cal_properties",
+                             "cal_recurrence", "cal_attachments",
+                             "cal_metadata", "cal_relations" ];
 
         this.mDeleteEventExtras = new Array();
         this.mDeleteTodoExtras = new Array();
@@ -1470,12 +1649,14 @@ calStorageCalendar.prototype = {
             this.mDeleteEventExtras[table] = createStatement (
                 this.mDB,
                 "DELETE FROM " + extrasTables[table] + " WHERE item_id IN" +
-                "  (SELECT id FROM cal_events WHERE cal_id = :cal_id)"
+                "  (SELECT id FROM cal_events WHERE cal_id = " + this.mCalId + ")" +
+                " AND cal_id = " + this.mCalId
                 );
             this.mDeleteTodoExtras[table] = createStatement (
                 this.mDB,
                 "DELETE FROM " + extrasTables[table] + " WHERE item_id IN" +
-                "  (SELECT id FROM cal_todos WHERE cal_id = :cal_id)"
+                "  (SELECT id FROM cal_todos WHERE cal_id = " + this.mCalId + ")" +
+                " AND cal_id = " + this.mCalId
                 );
         }
 
@@ -1483,15 +1664,19 @@ calStorageCalendar.prototype = {
         // statements, before you delete the events themselves.
         this.mDeleteAllEvents = createStatement (
             this.mDB,
-            "DELETE from cal_events WHERE cal_id = :cal_id"
+            "DELETE from cal_events WHERE cal_id = " + this.mCalId
             );
         this.mDeleteAllTodos = createStatement (
             this.mDB,
-            "DELETE from cal_todos WHERE cal_id = :cal_id"
+            "DELETE from cal_todos WHERE cal_id = " + this.mCalId
             );
 
+        this.mDeleteAllMetaData = createStatement(
+            this.mDB,
+            "DELETE FROM cal_metadata"
+            + " WHERE cal_id = " + this.mCalId
+            );
     },
-
 
     //
     // database reading functions
@@ -1520,7 +1705,7 @@ calStorageCalendar.prototype = {
             var alarmTime = newDateTime(row.alarm_time, row.alarm_time_tz);
             var time;
             var related = Components.interfaces.calIItemBase.ALARM_RELATED_START;
-            if (item instanceof Components.interfaces.calIEvent) {
+            if (isEvent(item)) {
                 time = newDateTime(row.event_start, row.event_start_tz);
             } else { //tasks
                 if (row.todo_entry) {
@@ -1591,7 +1776,6 @@ calStorageCalendar.prototype = {
         // for recurring items, we need to query database-wide.. yuck
 
         sp = this.mSelectEventsWithRecurrence.params;
-        sp.cal_id = this.mCalId;
         while (this.mSelectEventsWithRecurrence.step()) {
             var row = this.mSelectEventsWithRecurrence.row;
             var item = this.getEventFromRow(row, {});
@@ -1600,7 +1784,6 @@ calStorageCalendar.prototype = {
         this.mSelectEventsWithRecurrence.reset();
 
         sp = this.mSelectTodosWithRecurrence.params;
-        sp.cal_id = this.mCalId;
         while (this.mSelectTodosWithRecurrence.step()) {
             var row = this.mSelectTodosWithRecurrence.row;
             var item = this.getTodoFromRow(row, {});
@@ -1700,7 +1883,11 @@ calStorageCalendar.prototype = {
 
             while (selectItem.step()) {
                 var attendee = this.getAttendeeFromRow(selectItem.row);
-                item.addAttendee(attendee);
+                if (attendee.isOrganizer) {
+                    item.organizer = attendee;
+                } else {
+                    item.addAttendee(attendee);
+                }
             }
             selectItem.reset();
         }
@@ -1720,9 +1907,18 @@ calStorageCalendar.prototype = {
             while (selectItem.step()) {
                 row = selectItem.row;
                 var name = row.key;
-                if (name != "DURATION") {
-                    // for events DTEND/DUE is enforced by calEvent/calTodo, so suppress DURATION:
-                    item.setProperty(name, row.value);
+                switch (name) {
+                    case "DURATION":
+                        // for events DTEND/DUE is enforced by calEvent/calTodo, so suppress DURATION:
+                        break;
+                    case "CATEGORIES": {
+                        var cats = categoriesStringToArray(row.value);
+                        item.setCategories(cats.length, cats);
+                        break;
+                    }
+                    default:
+                        item.setProperty(name, row.value);
+                        break;
                 }
             }
             selectItem.reset();
@@ -1825,7 +2021,7 @@ calStorageCalendar.prototype = {
 
             var rec = item.recurrenceInfo;
 
-            if (item instanceof Components.interfaces.calIEvent) {
+            if (isEvent(item)) {
                 this.mSelectEventExceptions.params.id = item.id;
                 while (this.mSelectEventExceptions.step()) {
                     var row = this.mSelectEventExceptions.row;
@@ -1833,7 +2029,7 @@ calStorageCalendar.prototype = {
                     rec.modifyException(exc, true);
                 }
                 this.mSelectEventExceptions.reset();
-            } else if (item instanceof Components.interfaces.calITodo) {
+            } else if (isToDo(item)) {
                 this.mSelectTodoExceptions.params.id = item.id;
                 while (this.mSelectTodoExceptions.step()) {
                     var row = this.mSelectTodoExceptions.row;
@@ -1844,6 +2040,29 @@ calStorageCalendar.prototype = {
             } else {
                 throw Components.results.NS_ERROR_UNEXPECTED;
             }
+        }
+
+        if (flags & CAL_ITEM_FLAG_HAS_ATTACHMENTS) {
+            var selectAttachment = this.mSelectAttachmentsForItem;
+            selectAttachment.params.item_id = item.id;
+
+            while (selectAttachment.step()) {
+                var row = selectAttachment.row;
+                var attachment = this.getAttachmentFromRow(row);
+                item.addAttachment(attachment);
+            }
+            selectAttachment.reset();
+        }
+
+        if (flags & CAL_ITEM_FLAG_HAS_RELATIONS) {
+            var selectRelation = this.mSelectRelationsForItem;
+            selectRelation.params.item_id = item.id;
+            while (selectRelation.step()) {
+                var row = selectRelation.row;
+                var relation = this.getRelationFromRow(row);
+                item.addRelation(relation);
+            }
+            selectRelation.reset();
         }
 
         // Restore the saved modification time
@@ -1859,8 +2078,34 @@ calStorageCalendar.prototype = {
         a.role = row.role;
         a.participationStatus = row.status;
         a.userType = row.type;
+        a.isOrganizer = row.is_organizer;
+        var props = row.properties;
+        if (props) {
+            for each (var pair in props.split(",")) {
+                [key, value] = pair.split(":");
+                a.setProperty(decodeURIComponent(key), decodeURIComponent(value));
+            }
+        }
 
         return a;
+    },
+
+    getAttachmentFromRow: function (row) {
+        var a = createAttachment();
+       
+        // TODO we don't support binary data here, libical doesn't either.
+        a.uri = makeURL(row.data);
+        a.formatType = row.format_type;
+        a.encoding = row.encoding;
+    
+        return a;
+    },
+
+    getRelationFromRow: function (row) {
+        var r = createRelation();
+        r.relType = row.rel_type;
+        r.relId = row.rel_id;
+        return r;
     },
 
     //
@@ -1948,10 +2193,11 @@ calStorageCalendar.prototype = {
         flags |= this.writeRecurrence(item, olditem);
         flags |= this.writeProperties(item, olditem);
         flags |= this.writeAttachments(item, olditem);
+        flags |= this.writeRelations(item, olditem);
 
-        if (item instanceof Components.interfaces.calIEvent)
+        if (isEvent(item))
             this.writeEvent(item, olditem, flags);
-        else if (item instanceof Components.interfaces.calITodo)
+        else if (isToDo(item))
             this.writeTodo(item, olditem, flags);
         else
             throw Components.results.NS_ERROR_UNEXPECTED;
@@ -1991,7 +2237,6 @@ calStorageCalendar.prototype = {
     },
 
     setupItemBaseParams: function (item, olditem, ip) {
-        ip.cal_id = this.mCalId;
         ip.id = item.id;
 
         if (item.recurrenceId)
@@ -2022,9 +2267,12 @@ calStorageCalendar.prototype = {
     },
 
     writeAttendees: function (item, olditem) {
-        // XXX how does this work for proxy stuffs?
         var attendees = item.getAttendees({});
-        if (attendees && attendees.length > 0) {
+        if (item.organizer) {
+            attendees = attendees.concat([]);
+            attendees.push(item.organizer);
+        }
+        if (attendees.length > 0) {
             for each (var att in attendees) {
                 var ap = this.mInsertAttendee.params;
                 ap.item_id = item.id;
@@ -2035,6 +2283,22 @@ calStorageCalendar.prototype = {
                 ap.role = att.role;
                 ap.status = att.participationStatus;
                 ap.type = att.userType;
+                ap.is_organizer = att.isOrganizer;
+
+                var props = "";
+                var propEnum = att.propertyEnumerator;
+                while (propEnum && propEnum.hasMoreElements()) {
+                    var prop = propEnum.getNext().QueryInterface(Components.interfaces.nsIProperty);
+                    if (props.length) {
+                        props += ",";
+                    }
+                    props += encodeURIComponent(prop.name);
+                    props += ":";
+                    props += encodeURIComponent(prop.value);
+                }
+                if (props.length) {
+                    ap.properties = props;
+                }
 
                 this.mInsertAttendee.execute();
                 this.mInsertAttendee.reset();
@@ -2046,40 +2310,43 @@ calStorageCalendar.prototype = {
         return 0;
     },
 
+    writeProperty: function stor_writeProperty(item, propName, propValue) {
+        var pp = this.mInsertProperty.params;
+        pp.key = propName;
+        if (calInstanceOf(propValue, Components.interfaces.calIDateTime)) {
+            pp.value = propValue.nativeTime;
+        } else {
+            try {
+                pp.value = propValue;
+            } catch (e) {
+                // The storage service throws an NS_ERROR_ILLEGAL_VALUE in
+                // case pval is something complex (i.e not a string or
+                // number). Swallow this error, leaving the value empty.
+                if (e.result != Components.results.NS_ERROR_ILLEGAL_VALUE) {
+                    throw e;
+                }
+            }
+        }
+        pp.item_id = item.id;
+        this.setDateParamHelper(pp, "recurrence_id", item.recurrenceId);
+        this.mInsertProperty.execute();
+        this.mInsertProperty.reset();
+    },
     writeProperties: function (item, olditem) {
         var ret = 0;
         var propEnumerator = item.propertyEnumerator;
         while (propEnumerator.hasMoreElements()) {
             ret = CAL_ITEM_FLAG_HAS_PROPERTIES;
-
             var prop = propEnumerator.getNext().QueryInterface(Components.interfaces.nsIProperty);
-
             if (item.isPropertyPromoted(prop.name))
                 continue;
+            this.writeProperty(item, prop.name, prop.value);
+        }
 
-            var pp = this.mInsertProperty.params;
-
-            pp.key = prop.name;
-            var pval = prop.value;
-            if (pval instanceof Components.interfaces.calIDateTime) {
-                pp.value = pval.nativeTime;
-            } else {
-                try {
-                    pp.value = pval;
-                } catch (e) {
-                    // The storage service throws an NS_ERROR_ILLEGAL_VALUE in
-                    // case pval is something complex (i.e not a string or
-                    // number). Swallow this error, leaving the value empty.
-                    if (e.result != Components.results.NS_ERROR_ILLEGAL_VALUE) {
-                        throw e;
-                    }
-                }
-            }
-            pp.item_id = item.id;
-            this.setDateParamHelper(pp, "recurrence_id", item.recurrenceId);
-
-            this.mInsertProperty.execute();
-            this.mInsertProperty.reset();
+        var cats = item.getCategories({});
+        if (cats.length > 0) {
+            ret = CAL_ITEM_FLAG_HAS_PROPERTIES;
+            this.writeProperty(item, "CATEGORIES", categoriesArrayToString(cats));
         }
 
         return ret;
@@ -2098,13 +2365,11 @@ calStorageCalendar.prototype = {
                 ap.item_id = item.id;
                 ap.recur_index = i;
                 ap.is_negative = ritem.isNegative;
-                if (ritem instanceof kCalIRecurrenceDate) {
-                    ritem = ritem.QueryInterface(kCalIRecurrenceDate);
+                if (calInstanceOf(ritem, kCalIRecurrenceDate)) {
                     ap.recur_type = "x-date";
                     ap.dates = dateToText(getInUtcOrKeepFloating(ritem.date));
 
-                } else if (ritem instanceof kCalIRecurrenceDateSet) {
-                    ritem = ritem.QueryInterface(kCalIRecurrenceDateSet);
+                } else if (calInstanceOf(ritem, kCalIRecurrenceDateSet)) {
                     ap.recur_type = "x-dateset";
 
                     var rdates = ritem.getDates({});
@@ -2118,8 +2383,7 @@ calStorageCalendar.prototype = {
 
                     ap.dates = datestr;
 
-                } else if (ritem instanceof kCalIRecurrenceRule) {
-                    ritem = ritem.QueryInterface(kCalIRecurrenceRule);
+                } else if (calInstanceOf(ritem, kCalIRecurrenceRule)) {
                     ap.recur_type = ritem.type;
 
                     if (ritem.isByCount)
@@ -2174,9 +2438,39 @@ calStorageCalendar.prototype = {
     },
 
     writeAttachments: function (item, olditem) {
-        // XXX write me?
+        var attachments = item.getAttachments({});
+        if (attachments && attachments.length > 0) {
+            for each (att in attachments) {
+                var ap = this.mInsertAttachment.params;
+                ap.item_id = item.id;
+                ap.data = att.uri.spec;
+                ap.format_type = att.formatType;
+                ap.encoding = att.encoding;
+
+                this.mInsertAttachment.execute();
+                this.mInsertAttachment.reset();
+            }
+            return CAL_ITEM_FLAG_HAS_ATTACHMENTS;
+        }
         return 0;
     },
+
+    writeRelations: function (item, olditem) {
+        var relations = item.getRelations({});
+        if (relations && relations.length > 0) {
+            for each (var rel in relations) {
+                var rp = this.mInsertRelation.params;
+                rp.item_id = item.id;
+                rp.rel_type = rel.relType;
+                rp.rel_id = rel.relId;
+
+                this.mInsertRelation.execute();
+                this.mInsertRelation.reset();
+            }
+            return CAL_ITEM_FLAG_HAS_RELATIONS;
+        }
+        return 0;
+    },          
 
     //
     // delete the item with the given uid
@@ -2191,6 +2485,8 @@ calStorageCalendar.prototype = {
             this.mDeleteRecurrence(aID);
             this.mDeleteEvent(aID);
             this.mDeleteTodo(aID);
+            this.mDeleteAttachments(aID);
+            this.mDeleteMetaData(aID);
             if (!hasGuardingTransaction) {
                 this.mDB.commitTransaction();
             }
@@ -2205,8 +2501,58 @@ calStorageCalendar.prototype = {
         delete this.mItemCache[aID];
         delete this.mRecEventCache[aID];
         delete this.mRecTodoCache[aID];
+    },
+
+    //
+    // calISyncCalendar interface
+    //
+
+    setMetaData: function stor_setMetaData(id, value) {
+        this.mDeleteMetaData(id);
+        var sp = this.mInsertMetaData.params;
+        sp.item_id = id;
+        sp.value = value;
+        this.mInsertMetaData.execute();
+        this.mInsertMetaData.reset();
+    },
+
+    deleteMetaData: function stor_deleteMetaData(id) {
+        this.mDeleteMetaData(id);
+    },
+
+    getMetaData: function stor_getMetaData(id) {
+        var query = this.mSelectMetaData;
+        query.params.item_id = id;
+        var value = null;
+        try {
+            if (query.step()) {
+                value = query.row.value;
+            }
+        } finally {
+            query.reset();
+        }
+        return value;
+    },
+
+    getAllMetaData: function stor_getAllMetaData(out_count,
+                                                 out_ids,
+                                                 out_values) {
+        var query = this.mSelectAllMetaData;
+        var ids = [];
+        var values = [];
+        try {
+            while (query.step()) {
+                ids.push(query.row.item_id);
+                values.push(query.row.value);
+            }
+        } finally {
+            query.reset();
+        }
+        out_count.value = ids.length;
+        out_ids.value = ids;
+        out_values.value = values;
     }
-}
+};
 
 //
 // sqlTables generated from schema.sql via makejsschema.pl
@@ -2214,135 +2560,161 @@ calStorageCalendar.prototype = {
 
 var sqlTables = {
   cal_calendar_schema_version:
-    "	version	INTEGER" +
+    "   version INTEGER" +
     "",
 
   cal_tz_version:
-    "	version	TEXT" +
+    "   version TEXT" +
     "",
 
   cal_events:
-    /* 	REFERENCES cal_calendars.id, */
-    "	cal_id		INTEGER, " +
+    /*  REFERENCES cal_calendars.id, */
+    "   cal_id          INTEGER, " +
     /*  ItemBase bits */
-    "	id		TEXT," +
-    "	time_created	INTEGER," +
-    "	last_modified	INTEGER," +
-    "	title		TEXT," +
-    "	priority	INTEGER," +
-    "	privacy		TEXT," +
-    "	ical_status	TEXT," +
-    "	recurrence_id	INTEGER," +
-    "	recurrence_id_tz	TEXT," +
+    "   id              TEXT," +
+    "   time_created    INTEGER," +
+    "   last_modified   INTEGER," +
+    "   title           TEXT," +
+    "   priority        INTEGER," +
+    "   privacy         TEXT," +
+    "   ical_status     TEXT," +
+    "   recurrence_id   INTEGER," +
+    "   recurrence_id_tz TEXT," +
     /*  CAL_ITEM_FLAG_PRIVATE = 1 */
     /*  CAL_ITEM_FLAG_HAS_ATTENDEES = 2 */
     /*  CAL_ITEM_FLAG_HAS_PROPERTIES = 4 */
     /*  CAL_ITEM_FLAG_EVENT_ALLDAY = 8 */
     /*  CAL_ITEM_FLAG_HAS_RECURRENCE = 16 */
     /*  CAL_ITEM_FLAG_HAS_EXCEPTIONS = 32 */
-    "	flags		INTEGER," +
+    /*  CAL_ITEM_FLAG_HAS_ATTACHMENTS = 64 */
+    "   flags           INTEGER," +
     /*  Event bits */
-    "	event_start	INTEGER," +
-    "	event_start_tz	TEXT," +
-    "	event_end	INTEGER," +
-    "	event_end_tz	TEXT," +
-    "	event_stamp	INTEGER," +
+    "   event_start     INTEGER," +
+    "   event_start_tz  TEXT," +
+    "   event_end       INTEGER," +
+    "   event_end_tz    TEXT," +
+    "   event_stamp     INTEGER," +
     /*  alarm time */
-    "	alarm_time	INTEGER," +
-    "	alarm_time_tz	TEXT," +
-    "	alarm_offset	INTEGER," +
-    "	alarm_related	INTEGER," +
-    "	alarm_last_ack	INTEGER" +
+    "   alarm_time      INTEGER," +
+    "   alarm_time_tz   TEXT," +
+    "   alarm_offset    INTEGER," +
+    "   alarm_related   INTEGER," +
+    "   alarm_last_ack  INTEGER" +
     "",
 
   cal_todos:
-    /* 	REFERENCES cal_calendars.id, */
-    "	cal_id		INTEGER, " +
+    /*  REFERENCES cal_calendars.id, */
+    "   cal_id          INTEGER, " +
     /*  ItemBase bits */
-    "	id		TEXT," +
-    "	time_created	INTEGER," +
-    "	last_modified	INTEGER," +
-    "	title		TEXT," +
-    "	priority	INTEGER," +
-    "	privacy		TEXT," +
-    "	ical_status	TEXT," +
-    "	recurrence_id	INTEGER," +
-    "	recurrence_id_tz	TEXT," +
+    "   id              TEXT," +
+    "   time_created    INTEGER," +
+    "   last_modified   INTEGER," +
+    "   title           TEXT," +
+    "   priority        INTEGER," +
+    "   privacy         TEXT," +
+    "   ical_status     TEXT," +
+    "   recurrence_id   INTEGER," +
+    "   recurrence_id_tz        TEXT," +
     /*  CAL_ITEM_FLAG_PRIVATE = 1 */
     /*  CAL_ITEM_FLAG_HAS_ATTENDEES = 2 */
     /*  CAL_ITEM_FLAG_HAS_PROPERTIES = 4 */
     /*  CAL_ITEM_FLAG_EVENT_ALLDAY = 8 */
     /*  CAL_ITEM_FLAG_HAS_RECURRENCE = 16 */
     /*  CAL_ITEM_FLAG_HAS_EXCEPTIONS = 32 */
-    "	flags		INTEGER," +
+    "   flags           INTEGER," +
     /*  Todo bits */
     /*  date the todo is to be displayed */
-    "	todo_entry	INTEGER," +
-    "	todo_entry_tz	TEXT," +
+    "   todo_entry      INTEGER," +
+    "   todo_entry_tz   TEXT," +
     /*  date the todo is due */
-    "	todo_due	INTEGER," +
-    "	todo_due_tz	TEXT," +
+    "   todo_due        INTEGER," +
+    "   todo_due_tz     TEXT," +
     /*  date the todo is completed */
-    "	todo_completed	INTEGER," +
-    "	todo_completed_tz TEXT," +
+    "   todo_completed  INTEGER," +
+    "   todo_completed_tz TEXT," +
     /*  percent the todo is complete (0-100) */
-    "	todo_complete	INTEGER," +
+    "   todo_complete   INTEGER," +
     /*  alarm time */
-    "	alarm_time	INTEGER," +
-    "	alarm_time_tz	TEXT," +
-    "	alarm_offset	INTEGER," +
-    "	alarm_related	INTEGER," +
-    "	alarm_last_ack	INTEGER" +
+    "   alarm_time      INTEGER," +
+    "   alarm_time_tz   TEXT," +
+    "   alarm_offset    INTEGER," +
+    "   alarm_related   INTEGER," +
+    "   alarm_last_ack  INTEGER" +
     "",
 
   cal_attendees:
-    "	item_id         TEXT," +
-    "	recurrence_id	INTEGER," +
-    "	recurrence_id_tz	TEXT," +
-    "	attendee_id	TEXT," +
-    "	common_name	TEXT," +
-    "	rsvp		INTEGER," +
-    "	role		TEXT," +
-    "	status		TEXT," +
-    "	type		TEXT" +
+    "   cal_id          INTEGER, " +
+    "   item_id         TEXT," +
+    "   recurrence_id   INTEGER," +
+    "   recurrence_id_tz        TEXT," +
+    "   attendee_id     TEXT," +
+    "   common_name     TEXT," +
+    "   rsvp            INTEGER," +
+    "   role            TEXT," +
+    "   status          TEXT," +
+    "   type            TEXT," +
+    "   is_organizer    BOOLEAN," +
+    "   properties      BLOB" +
     "",
 
   cal_recurrence:
-    "	item_id		TEXT," +
+    "   cal_id          INTEGER, " +
+    "   item_id         TEXT," +
     /*  the index in the recurrence array of this thing */
-    "	recur_index	INTEGER, " +
+    "   recur_index     INTEGER, " +
     /*  values from calIRecurrenceInfo; if null, date-based. */
-    "	recur_type	TEXT, " +
-    "	is_negative	BOOLEAN," +
+    "   recur_type      TEXT, " +
+    "   is_negative     BOOLEAN," +
     /*  */
     /*  these are for date-based recurrence */
     /*  */
     /*  comma-separated list of dates */
-    "	dates		TEXT," +
+    "   dates           TEXT," +
     /*  */
     /*  these are for rule-based recurrence */
     /*  */
-    "	count		INTEGER," +
-    "	end_date	INTEGER," +
-    "	interval	INTEGER," +
+    "   count           INTEGER," +
+    "   end_date        INTEGER," +
+    "   interval        INTEGER," +
     /*  components, comma-separated list or null */
-    "	second		TEXT," +
-    "	minute		TEXT," +
-    "	hour		TEXT," +
-    "	day		TEXT," +
-    "	monthday	TEXT," +
-    "	yearday		TEXT," +
-    "	weekno		TEXT," +
-    "	month		TEXT," +
-    "	setpos		TEXT" +
+    "   second          TEXT," +
+    "   minute          TEXT," +
+    "   hour            TEXT," +
+    "   day             TEXT," +
+    "   monthday        TEXT," +
+    "   yearday         TEXT," +
+    "   weekno          TEXT," +
+    "   month           TEXT," +
+    "   setpos          TEXT" +
     "",
 
   cal_properties:
-    "	item_id		TEXT," +
-    "	recurrence_id	INTEGER," +
-    "	recurrence_id_tz	TEXT," +
-    "	key		TEXT," +
-    "	value		BLOB" +
-    ""
+    "   cal_id          INTEGER, " +
+    "   item_id         TEXT," +
+    "   recurrence_id   INTEGER," +
+    "   recurrence_id_tz TEXT," +
+    "   key             TEXT," +
+    "   value           BLOB" +
+    "",
 
+  cal_attachments:
+    "   cal_id          INTEGER, " +
+    "   item_id         TEXT," +
+    "   data            BLOB," +
+    "   format_type     TEXT," +
+    "   encoding        TEXT" +
+    "",  
+  
+  cal_relations:
+    "   cal_id          INTEGER," +
+    "   item_id         TEXT," +
+    "   rel_type        TEXT," +
+    "   rel_id          TEXT" +
+    "",
+
+  cal_metadata:
+    "   cal_id          INTEGER, " +
+    "   item_id         TEXT," + 
+    "   value           BLOB" + 
+    ""
 };

@@ -21,6 +21,7 @@
 #   Mike Shaver <shaver@off.net>
 #   Matthew Willis <lilmatt@mozilla.com>
 #   Philipp Kewisch <mozilla@kewis.ch>
+#   Dan Mosedale <dmose@mozilla.org>
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -54,18 +55,23 @@ STRIP_XPI = 1
 DIST_FILES = install.rdf
 PREF_JS_EXPORTS = $(srcdir)/content/lightning.js
 LIGHTNING_VERSION := $(shell cat $(srcdir)/../sunbird/config/version.txt)
+THUNDERBIRD_VERSION := $(shell cat $(topsrcdir)/mail/config/version.txt)
+SEAMONKEY_VERSION := $(shell cat $(topsrcdir)/suite/config/version.txt)
+ifdef LIGHTNING_FIREFOX
+FIREFOX_VERSION := $(shell cat $(MOZILLA_SRCDIR)/browser/config/version.txt)
+endif
 
-# don't install by default, it causes problems on tinderboxes
-# (for example, see bug 406441)
-ifdef INSTALL_LIGHTNING
+# installing lightning in a thunderbird build causes problems on tinderboxes
+# (see bug 406441 and bug 440017), so we need to provide a hook for the
+# tinderboxen to disable that.
+ifndef DISABLE_LIGHTNING_INSTALL
 ifndef MOZ_SUNBIRD
 # install Lightning as a global extension in dist/bin/extensions/
 INSTALL_EXTENSION_ID   = {e2fda1a4-762b-4020-b5ad-a41df1933103}
 endif
 endif
 
-DIRS = ../../extensions/webdav \
-       ../libical \
+DIRS = ../libical \
        ../locales \
        ../base \
        ../providers \

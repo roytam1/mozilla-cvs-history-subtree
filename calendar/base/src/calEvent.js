@@ -46,7 +46,6 @@
 // constructor
 //
 function calEvent() {
-    this.wrappedJSObject = this;
     this.initItemBase();
 
     this.eventPromotedProps = {
@@ -56,9 +55,6 @@ function calEvent() {
         __proto__: this.itemBasePromotedProps
     }
 }
-
-// var trickery to suppress lib-as-component errors from loader
-var calItemBase;
 
 var calEventClassInfo = {
     getInterfaces: function (count) {
@@ -88,14 +84,7 @@ calEvent.prototype = {
     __proto__: calItemBase.prototype,
 
     QueryInterface: function (aIID) {
-        if (aIID.equals(Components.interfaces.calIEvent) ||
-            aIID.equals(Components.interfaces.calIInternalShallowCopy))
-            return this;
-
-        if (aIID.equals(Components.interfaces.nsIClassInfo))
-            return calEventClassInfo;
-
-        return this.__proto__.__proto__.QueryInterface.call(this, aIID);
+        return doQueryInterface(this, calEvent.prototype, aIID, null, calEventClassInfo);
     },
 
     cloneShallow: function (aNewParent) {
@@ -140,9 +129,6 @@ calEvent.prototype = {
     get icalString() {
         var calcomp = getIcsService().createIcalComponent("VCALENDAR");
         calSetProdidVersion(calcomp);
-        if (this.hasProperty("METHOD")) {
-            calcomp.method = this.getProperty("METHOD");
-        }
         calcomp.addSubcomponent(this.icalComponent);
         return calcomp.serializeToICS();
     },

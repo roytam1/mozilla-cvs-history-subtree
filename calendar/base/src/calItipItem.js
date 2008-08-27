@@ -22,6 +22,7 @@
  *   Clint Talbert <ctalbert.moz@gmail.com>
  *   Matthew Willis <lilmatt@mozilla.com>
  *   Philipp Kewisch <mozilla@kewis.ch>
+ *   Daniel Boelzle <daniel.boelzle@sun.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or 
@@ -178,6 +179,20 @@ calItipItem.prototype = {
         this.mItemList = parser.getItems({});
         this.mPropertiesList = parser.getProperties({});
 
+        // User specific alarms as well as X-MOZ- properties are irrelevant w.r.t. iTIP messages,
+        // should not be sent out and should not be relevant for incoming messages,
+        // so clean them out:
+        for each (var item in this.mItemList) {
+            item.alarmOffset = null;
+            var propEnum = item.propertyEnumerator;
+            while (propEnum.hasMoreElements()) {
+                var prop = propEnum.getNext().QueryInterface(Components.interfaces.nsIProperty);
+                if (prop.name.substr(0, "X-MOZ-".length) == "X-MOZ-") {
+                    item.deleteProperty(prop.name);
+                }
+            }
+        }
+
         // We set both methods now for safety's sake. It's the ItipProcessor's
         // responsibility to properly ascertain what the correct response
         // method is (using user feedback, prefs, etc.) for the given
@@ -187,6 +202,7 @@ calItipItem.prototype = {
         for each (var prop in this.mPropertiesList) {
             if (prop.propertyName == "METHOD") {
                 method = prop.value;
+                break;
             }
         }
         this.mReceivedMethod = method;
@@ -216,6 +232,7 @@ calItipItem.prototype = {
         newItem.responseMethod = this.responseMethod;
         newItem.autoResponse = this.autoResponse;
         newItem.targetCalendar = this.targetCalendar;
+        newItem.identity = this.identity;
         newItem.localStatus = this.localStatus;
         newItem.isSend = this.isSend;
 
@@ -260,13 +277,13 @@ calItipItem.prototype = {
      */
     setAttendeeStatus: function ciiSAS(aAttendeeId, aStatus) {
         // Append "mailto:" to the attendee if it is missing it.
-        var attId = aAttendeeId.toLowerCase();
-        if (!attId.match(/mailto:/i)) {
-            attId = "mailto:" + attId;
+        aAttendeeId = aAttendeeId.toLowerCase();
+        if (!aAttendeeId.match(/mailto:/i)) {
+            aAttendeeId = ("mailto:" + aAttendeeId);
         }
 
         for each (var item in this.mItemList) {
-            var attendee = item.getAttendeeById(attId);
+            var attendee = item.getAttendeeById(aAttendeeId);
             if (attendee) {
                 // XXX BUG 351589: workaround for updating an attendee
                 item.removeAttendee(attendee);

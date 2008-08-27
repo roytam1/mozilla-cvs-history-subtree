@@ -294,37 +294,16 @@ nsXMLDocument::OnChannelRedirect(nsIChannel *aOldChannel,
 {
   NS_PRECONDITION(aNewChannel, "Redirecting to null channel?");
 
-  nsCOMPtr<nsIURI> newLocation;
-  nsresult rv = aNewChannel->GetURI(getter_AddRefs(newLocation)); // The redirected URI
-  if (NS_FAILED(rv)) 
-    return rv;
+  nsCOMPtr<nsIURI> oldURI;
+  nsresult rv = aOldChannel->GetURI(getter_AddRefs(oldURI));
+  NS_ENSURE_SUCCESS(rv, rv);
 
-  nsIScriptSecurityManager *secMan = nsContentUtils::GetSecurityManager();
+  nsCOMPtr<nsIURI> newURI;
+  rv = aNewChannel->GetURI(getter_AddRefs(newURI));
+  NS_ENSURE_SUCCESS(rv, rv);
 
-  if (mScriptContext && !mCrossSiteAccessEnabled) {
-    nsCOMPtr<nsIJSContextStack> stack(do_GetService("@mozilla.org/js/xpc/ContextStack;1", & rv));
-    if (NS_FAILED(rv))
-      return rv;
-
-    JSContext *cx = (JSContext *)mScriptContext->GetNativeContext();
-    if (!cx)
-      return NS_ERROR_UNEXPECTED;
-
-    stack->Push(cx);
-
-    rv = secMan->CheckSameOrigin(nsnull, newLocation);
-
-    stack->Pop(&cx);
-  
-    if (NS_FAILED(rv)) {
-      // The security manager set a pending exception.  Since we're
-      // running under the event loop, we need to report it.
-      ::JS_ReportPendingException(cx);
-      return rv;
-    }
-  }
-
-  return secMan->GetCodebasePrincipal(newLocation, getter_AddRefs(mPrincipal));
+  return nsContentUtils::GetSecurityManager()->
+    CheckSameOriginURI(oldURI, newURI);
 }
 
 NS_IMETHODIMP
@@ -466,17 +445,6 @@ nsXMLDocument::Load(const nsAString& aUrl, PRBool *aReturn)
   // (because we need it there)
 
   mScriptContext = callingContext;
-
-  // Find out if UniversalBrowserRead privileges are enabled - we will
-  // need this in case of a redirect
-  PRBool crossSiteAccessEnabled;
-  rv = secMan->IsCapabilityEnabled("UniversalBrowserRead",
-                                   &crossSiteAccessEnabled);
-  if (NS_FAILED(rv)) {
-    return rv;
-  }
-
-  mCrossSiteAccessEnabled = crossSiteAccessEnabled;
 
   // Create a channel
   // When we are called from JS we can find the load group for the page,

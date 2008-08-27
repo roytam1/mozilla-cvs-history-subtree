@@ -407,6 +407,21 @@ NSString* const CertificateChangedNotificationName = @"CertificateChangedNotific
   return [self stringForDate:[self expiresDate]];
 }
 
+- (NSString*)shortExpiresString
+{
+  NSDate* expiration = [self expiresDate];
+  if (!expiration) {
+    return @"";
+  }
+
+  CmDateFormatter* dateFormatter = [[CmDateFormatter alloc] init];
+  [dateFormatter setDateStyle:NSDateFormatterShortStyle];
+  [dateFormatter setTimeStyle:NSDateFormatterNoStyle];
+  NSString* string = [dateFormatter stringFromDate:expiration];
+  [dateFormatter release];
+  return string;
+}
+
 - (NSDate*)validFromDate
 {
   nsCOMPtr<nsIX509CertValidity> certValidity;

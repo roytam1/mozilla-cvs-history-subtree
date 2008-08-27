@@ -255,7 +255,7 @@ public:
   void            GetMsgWindow(nsIMsgWindow **aMsgWindow);
   nsresult EndMsgDownload();
 
-  nsresult AppendMsgFromFile(nsIOFileStream *fileStream, PRInt32 offset, 
+  nsresult AppendMsgFromFile(nsIOFileStream *fileStream, PRUint32 offset, 
                              PRUint32 length, nsFileSpec &destFileSpec);
 
   virtual void	ApplyFilters(PRBool *pMoved, nsIMsgWindow *msgWindow, 

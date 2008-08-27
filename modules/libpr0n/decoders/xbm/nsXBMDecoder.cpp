@@ -219,6 +219,8 @@ nsresult nsXBMDecoder::ProcessData(const char* aData, PRUint32 aCount) {
           return NS_ERROR_OUT_OF_MEMORY;
         }
 
+        memset(mAlphaRow, 0, abpr);
+
         mState = RECV_SEEK;
 
         mCurRow = 0;

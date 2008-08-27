@@ -942,7 +942,19 @@ nsresult nsEudoraWin32::GetAttachmentInfo( const char *pFileName, nsIFileSpec *p
 		if (mimeType.IsEmpty())
 			mimeType = "application/octet-stream";
 
-    aAttachmentName = name; // use the leaf name of the attachment file url as the attachment name
+        // Convert description to unicode.
+        nsCOMPtr<nsIImportService> impSvc = do_GetService(NS_IMPORTSERVICE_CONTRACTID);
+        NS_ASSERTION(NS_SUCCEEDED(rv), "failed to get import service");
+        if (NS_SUCCEEDED(rv)) {
+            nsAutoString description;
+            rv = impSvc->SystemStringToUnicode(name.get(), description);
+            NS_ASSERTION(NS_SUCCEEDED(rv), "failed to convert system string to unicode");
+            if (NS_SUCCEEDED(rv))
+                aAttachmentName = NS_ConvertUTF16toUTF8(description);
+        }
+
+        if (aAttachmentName.IsEmpty())
+            aAttachmentName = name;
 
 		return( NS_OK);
 	}

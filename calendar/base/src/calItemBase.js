@@ -54,13 +54,8 @@ calItemBase.prototype = {
     mIsProxy: false,
 
     QueryInterface: function (aIID) {
-        if (!aIID.equals(Components.interfaces.nsISupports) &&
-            !aIID.equals(Components.interfaces.calIItemBase))
-        {
-            throw Components.results.NS_ERROR_NO_INTERFACE;
-        }
-
-        return this;
+        return doQueryInterface(this, calItemBase.prototype, aIID,
+                                [Components.interfaces.calIItemBase]);
     },
 
     mHashId: null,
@@ -94,6 +89,14 @@ calItemBase.prototype = {
         return this.setProperty("RECURRENCE-ID", rid);
     },
 
+    get recurrenceInfo() {
+        return this.mRecurrenceInfo;
+    },
+    set recurrenceInfo(value) {
+        this.modify();
+        return (this.mRecurrenceInfo = calTryWrappedJSObject(value));
+    },
+
     mParentItem: null,
     get parentItem() {
         if (this.mParentItem)
@@ -104,7 +107,7 @@ calItemBase.prototype = {
     set parentItem(value) {
         if (this.mImmutable)
             throw Components.results.NS_ERROR_OBJECT_IS_IMMUTABLE;
-        this.mParentItem = value;
+        return (this.mParentItem = calTryWrappedJSObject(value));
     },
 
     initializeProxy: function (aParentItem) {
@@ -114,6 +117,7 @@ calItemBase.prototype = {
         if (this.mParentItem != null)
             throw Components.results.NS_ERROR_FAILURE;
 
+        aParentItem = calTryWrappedJSObject(aParentItem);
         this.mParentItem = aParentItem;
         this.mCalendar = aParentItem.mCalendar;
         this.mIsProxy = true;
@@ -192,6 +196,7 @@ calItemBase.prototype = {
 
     // initialize this class's members
     initItemBase: function () {
+        this.wrappedJSObject = this;
         var now = jsDateToDateTime(new Date());
 
         this.mProperties = new calPropertyBag();
@@ -206,6 +211,8 @@ calItemBase.prototype = {
         this.mRecurrenceInfo = null;
 
         this.mAttachments = null;
+
+        this.mRelations = null;
     },
 
     clone: function () {
@@ -219,11 +226,11 @@ calItemBase.prototype = {
 
         m.mImmutable = false;
         m.mIsProxy = this.mIsProxy;
-        m.mParentItem = aNewParent || this.mParentItem;
+        m.mParentItem = (calTryWrappedJSObject(aNewParent) || this.mParentItem);
         m.mHashId = this.mHashId;
         m.mCalendar = this.mCalendar;
         if (this.mRecurrenceInfo) {
-            m.mRecurrenceInfo = this.mRecurrenceInfo.clone();
+            m.mRecurrenceInfo = calTryWrappedJSObject(this.mRecurrenceInfo.clone());
             m.mRecurrenceInfo.item = m;
         }
 
@@ -264,8 +271,17 @@ calItemBase.prototype = {
 
         m.mDirty = false;
 
-        // these need fixing
-        m.mAttachments = this.mAttachments;
+        if (this.mAttachments) {
+            m.mAttachments = this.mAttachments.concat([]);
+        }
+
+        if (this.mRelations) {
+            m.mRelations = this.mRelations.concat([]);
+        }
+
+        if (this.mCategories) {
+            m.mCategories = this.mCategories.concat([]);
+        }
 
         // Clone any alarm info that exists, set it to null if it doesn't
         if (this.alarmOffset) {
@@ -475,6 +491,78 @@ calItemBase.prototype = {
         this.modify();
         this.mAttendees = this.getAttendees({});
         this.mAttendees.push(attendee);
+        // XXX ensure that the attendee isn't already there?
+    },
+
+    getAttachments: function cIB_getAttachments(aCount) {
+        if (!this.mAttachments && this.mIsProxy && this.mParentItem) {
+            this.mAttachments = this.mParentItem.getAttachments(aCount);
+        }
+        if (this.mAttachments) {
+            aCount.value = this.mAttachments.length;
+            return this.mAttachments.concat([]); // clone
+        } else {
+            aCount.value = 0;
+            return [];
+        }
+    },
+
+    removeAttachment: function (aAttachment) {
+        this.modify();
+        for (var attIndex in this.mAttachments) {
+            if (this.mAttachments[attIndex].uri.spec == aAttachment.uri.spec) {
+                this.modify();
+                this.mAttachments.splice(attIndex, 1);
+                break;
+            }
+        }
+    },
+
+    addAttachment: function (attachment) {
+        this.modify();
+        this.mAttachments = this.getAttachments({});
+        this.mAttachments.push(attachment);
+        // XXX ensure that the attachment isn't already there?
+    },
+
+    removeAllAttachments: function () {
+        this.modify();
+        this.mAttachments = [];
+    },
+
+    getRelations: function cIB_getRelations(aCount) {
+        if (this.mRelations) {
+            aCount.value = this.mRelations.length;
+            return this.mRelations.concat([]);
+        } else {
+            aCount.value = 0;
+            return [];
+        }
+    },
+
+    removeRelation: function (aRelation) {
+        this.modify();
+        for (var attIndex in this.mRelations) {
+            // Could we have the same item as parent and as child ?
+            if (this.mRelations[attIndex].relId == aRelation.relId &&
+                this.mRelations[attIndex].relType == aRelation.relType) {
+                this.modify();
+                this.mRelations.splice(attIndex, 1);
+                break;
+            }
+        }
+    },
+
+    addRelation: function (aRelation) {
+        this.modify();
+        this.mRelations = this.getRelations({});
+        this.mRelations.push(aRelation);
+        // XXX ensure that the relation isn't already there?
+    },
+
+    removeAllRelations: function () {
+        this.modify();
+        this.mRelations = [];
     },
 
     mCalendar: null,
@@ -507,6 +595,23 @@ calItemBase.prototype = {
         this.mOrganizer = v;
     },
 
+    getCategories: function cib_getCategories(aCount) {
+        if (!this.mCategories && this.mIsProxy && this.mParentItem) {
+            this.mCategories = this.mParentItem.getCategories(aCount);
+        }
+        if (this.mCategories) {
+            aCount.value = this.mCategories.length;
+            return this.mCategories.concat([]); // clone
+        } else {
+            aCount.value = 0;
+            return [];
+        }
+    },
+
+    setCategories: function cib_setCategories(aCount, aCategories) {
+        this.mCategories = aCategories.concat([]);
+    },
+
     /* MEMBER_ATTR(mIcalString, "", icalString), */
     get icalString() {
         throw Components.results.NS_ERROR_NOT_IMPLEMENTED;
@@ -525,7 +630,6 @@ calItemBase.prototype = {
         "LAST-MODIFIED": true,
         "SUMMARY": true,
         "PRIORITY": true,
-        "METHOD": true,
         "STATUS": true,
         "CLASS": true,
         "DTSTAMP": true,
@@ -533,6 +637,8 @@ calItemBase.prototype = {
         "EXDATE": true,
         "RDATE": true,
         "ATTENDEE": true,
+        "ATTACH": true,
+        "CATEGORIES": true,
         "ORGANIZER": true,
         "RECURRENCE-ID": true
     },
@@ -574,10 +680,28 @@ calItemBase.prototype = {
         for (var attprop = icalcomp.getFirstProperty("ATTENDEE");
              attprop;
              attprop = icalcomp.getNextProperty("ATTENDEE")) {
-            
+
             var att = new CalAttendee();
             att.icalProperty = attprop;
             this.addAttendee(att);
+        }
+
+        for (var attprop = icalcomp.getFirstProperty("ATTACH");
+             attprop;
+             attprop = icalcomp.getNextProperty("ATTACH")) {
+
+            var att = createAttachment();
+            att.icalProperty = attprop;
+            this.addAttachment(att);
+        }
+
+        for (var relprop = icalcomp.getFirstProperty("RELATED-TO");
+             relprop;
+             relprop = icalcomp.getNextProperty("RELATED-TO")) {
+
+            var rel = createRelation();
+            rel.icalProperty = relprop;
+            this.addRelation(rel);
         }
 
         var orgprop = icalcomp.getFirstProperty("ORGANIZER");
@@ -586,6 +710,13 @@ calItemBase.prototype = {
             org.icalProperty = orgprop;
             org.isOrganizer = true;
             this.mOrganizer = org;
+        }
+
+        this.mCategories = [];
+        for (var catprop = icalcomp.getFirstProperty("CATEGORIES");
+             catprop;
+             catprop = icalcomp.getNextProperty("CATEGORIES")) {
+            this.mCategories.push(catprop.value);
         }
 
         // find recurrence properties
@@ -610,7 +741,7 @@ calItemBase.prototype = {
             ritem.icalProperty = recprop;
 
             if (!rec) {
-                rec = new CalRecurrenceInfo();
+                rec = new calRecurrenceInfo();
                 rec.item = this;
             }
 
@@ -709,13 +840,27 @@ calItemBase.prototype = {
           }
         }
 
+        for each (var att in this.mAttachments) {
+            icalcomp.addProperty(att.icalProperty);
+        }
+
+        for (var relIndex in this.mRelations) {
+            icalcomp.addProperty(this.mRelations[relIndex].icalProperty);
+        }
+
         if (this.mRecurrenceInfo) {
             var ritems = this.mRecurrenceInfo.getRecurrenceItems({});
             for (i in ritems) {
                 icalcomp.addProperty(ritems[i].icalProperty);
             }
         }
-        
+
+        for each (var cat in this.getCategories({})) {
+            var catprop = getIcsService().createIcalProperty("CATEGORIES");
+            catprop.value = cat;
+            icalcomp.addProperty(catprop);
+        }
+
         if (this.alarmOffset) {
             var icssvc = getIcsService();
             var alarmComp = icssvc.createIcalComponent("VALARM");
@@ -755,7 +900,7 @@ calItemBase.prototype = {
             icalcomp.addProperty(lastAck);
         }
     },
-    
+
     getOccurrencesBetween: function cIB_getOccurrencesBetween(aStartDate, aEndDate, aCount) {
         if (this.recurrenceInfo) {
             return this.recurrenceInfo.getOccurrences(aStartDate, aEndDate, 0, aCount);
@@ -778,8 +923,6 @@ makeMemberAttr(calItemBase, "CLASS", "PUBLIC", "privacy", true);
 makeMemberAttr(calItemBase, "STATUS", null, "status", true);
 makeMemberAttr(calItemBase, "ALARMTIME", null, "alarmTime", true);
 
-makeMemberAttr(calItemBase, "mRecurrenceInfo", null, "recurrenceInfo");
-makeMemberAttr(calItemBase, "mAttachments", null, "attachments");
 makeMemberAttr(calItemBase, "mProperties", null, "properties");
 
 function makeMemberAttr(ctor, varname, dflt, attr, asProperty)

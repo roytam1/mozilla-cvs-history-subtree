@@ -20,7 +20,7 @@
  *
  * Contributor(s):
  *   Joey Minta <jminta@gmail.com>
- *   Axel Zechner <axel.zechner@googlemail.com> - category support 
+ *   Axel Zechner <axel.zechner@googlemail.com> - category support
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -127,62 +127,6 @@ function getCalendarCredentials(aCalendarName,
                              aSavePassword);
 }
 
-var gdataTimezoneProvider = {
-    QueryInterface: function gTP_QueryInterface(aIID) {
-        return doQueryInterface(this,
-                                gdataTimezoneProvider.prototype,
-                                aIID,
-                                [Components.interfaces.nsISupports,
-                                 Components.interfaces.calITimezoneProvider]);
-    },
-
-    get timezoneIds gTP_getTimezoneIds() {
-        // I hope we can lazily get away with not implementing this, otherwise
-        // we would have to strip the tzPrefix from each timezone the timezone
-        // service provides.
-        throw Components.results.NS_ERROR_NOT_IMPLEMENTED;
-    },
-
-    /**
-     * getTimzone
-     * Returns a calITimezone from the timezone service that corresponds to the
-     * given short timezone passed.
-     */
-    getTimezone: function gTP_getTimezone(aTzid) {
-        ASSERT(aTzid, "No timezone passed", true);
-        if (aTzid== "floating") {
-            return floating();
-        } else if (aTzid == "UTC") {
-            return UTC();
-        }
-
-        var tzService = getTimezoneService();
-        var tz = tzService.getTimezone(aTzid);
-        return tz || floating();
-    },
-
-    /**
-     * getShortTimezone
-     * Returns the last two components of the passed timezone's tzid. If the
-     * timezone is UTC or floating, Europe/London will be returned
-     *
-     * @param aLongTZ   A Vendor specific timezone
-     * @return          The short representation of the timezone
-     */
-    getShortTimezone: function gTP_getShortTimezone(aLongTZ) {
-        if (!aLongTZ || aLongTZ.isUTC || aLongTZ.isFloating) {
-            // We require a shortname that works with google's ICS. UTC and floating
-            // don't work, so we will just take London.
-            return "Europe/London";
-        }
-
-        // Return the last two components from the TZID
-        var re = new RegExp("([^/]+/[^/]+)$");
-        var matches = re.exec(aLongTZ.tzid);
-        return (matches ? matches[1] : null);
-    }
-};
-
 /**
  * Gets the date and time that Google's http server last sent us. Note the
  * passed argument is modified. This might not be the exact server time (i.e it
@@ -200,6 +144,43 @@ function getCorrectedDate(aDate) {
     return aDate;
 }
 
+
+/**
+ * The timezone service to translate Google timezones.
+ */
+var gdataTimezoneService = {
+    ctz: getTimezoneService(),
+
+    get floating gTS_get_floating() {
+        return this.ctz.floating;
+    },
+
+    get UTC gTS_get_UTC() {
+        return this.ctz.UTC;
+    },
+
+    get version gTS_get_version() {
+        return this.ctz.version;
+    },
+
+    get defaultTimezone gTS_get_defaultTimezone() {
+        return this.ctz.defaultTimezone;
+    },
+
+    getTimezone: function gTS_getTimezone(aTzid) {
+        if (aTzid == "Etc/GMT") {
+            // Most timezones are covered by the timezone service, there is one
+            // exception I've found out about. GMT without DST is pretty close
+            // to UTC, lets take it.
+            return UTC();
+        }
+
+        var baseTZ = this.ctz.getTimezone(aTzid);
+        ASSERT(baseTZ, "Unknown Timezone requested: " + aTzid);
+        return baseTZ;
+    }
+};
+
 /**
  * fromRFC3339
  * Convert a RFC3339 compliant Date string to a calIDateTime.
@@ -212,6 +193,7 @@ function fromRFC3339(aStr, aTimezone) {
 
     // XXX I have not covered leapseconds (matches[8]), this might need to
     // be done. The only reference to leap seconds I found is bug 227329.
+    //
 
     // Create a DateTime instance (calUtils.js)
     var dateTime = createDateTime();
@@ -594,13 +576,11 @@ function ItemToXMLEntry(aItem, aAuthorEmail, aAuthorName) {
     // categories
     // Google does not support categories natively, but allows us to store data
     // as an "extendedProperty", so we do here
-    var categories = aItem.getProperty("CATEGORIES");
-    if (categories) {
-        var gdCategories = <gd:extendedProperty xmlns:gd={gd}/>;
-        gdCategories.@name = "X-MOZ-CATEGORIES";
-        gdCategories.@value = categories;
-        entry.gd::extendedProperty += gdCategories;
-    }
+    var categories = aItem.getCategories({});
+    var gdCategories = <gd:extendedProperty xmlns:gd={gd}/>;
+    gdCategories.@name = "X-MOZ-CATEGORIES";
+    gdCategories.@value = categoriesArrayToString(categories);
+    entry.gd::extendedProperty += gdCategories;
 
     // gd:recurrence
     if (aItem.recurrenceInfo) {
@@ -610,8 +590,8 @@ function ItemToXMLEntry(aItem, aAuthorEmail, aAuthorName) {
             var recurrenceItems = aItem.recurrenceInfo.getRecurrenceItems({});
 
             // Dates of the master event
-            var startTZID = gdataTimezoneProvider.getShortTimezone(aItem.startDate.timezone);
-            var endTZID = gdataTimezoneProvider.getShortTimezone(aItem.endDate.timezone);
+            var startTZID = aItem.startDate.timezone.tzid;
+            var endTZID = aItem.endDate.timezone.tzid;
             icalString = "DTSTART;TZID=" + startTZID
                          + ":" + aItem.startDate.icalString + kNEWLINE
                          + "DTEND;TZID=" + endTZID
@@ -620,7 +600,7 @@ function ItemToXMLEntry(aItem, aAuthorEmail, aAuthorName) {
             // Add all recurrence items to the ical string
             for each (var ritem in recurrenceItems) {
                 var prop = ritem.icalProperty;
-                if (ritem instanceof Components.interfaces.calIRecurrenceDate) {
+                if (calInstanceOf(ritem, Components.interfaces.calIRecurrenceDate)) {
                     // EXDATES require special casing, since they might contain
                     // a TZID. To avoid the need for conversion of TZID strings,
                     // convert to UTC before serialization.
@@ -692,13 +672,21 @@ function relevantFieldsMatch(a, b) {
 
     // Properties
     const kPROPERTIES = ["DESCRIPTION", "TRANSP", "X-GOOGLE-EDITURL",
-                         "LOCATION", "CATEGORIES", "X-MOZ-SNOOZE-TIME"];
+                         "LOCATION", "X-MOZ-SNOOZE-TIME"];
 
     for each (var p in kPROPERTIES) {
         // null and an empty string should be handled as non-relevant
         if ((a.getProperty(p) || "") != (b.getProperty(p) || "")) {
             return false;
         }
+    }
+
+    // categories
+    var aCat = a.getCategories({});
+    var bCat = b.getCategories({});
+    if ((aCat.length != bCat.length) ||
+        aCat.some(function notIn(cat) { return (bCat.indexOf(cat) == -1); })) {
+        return false;
     }
 
     // attendees and organzier
@@ -812,7 +800,7 @@ function XMLEntryToItem(aXMLEntry, aTimezone, aCalendar, aReferenceItem) {
         // id
         item.id = getIdFromEntry(aXMLEntry);
 
-        // link
+        // link (edit url)
         // Since Google doesn't set the edit url to be https if the request is
         // https, we need to work around this here.
         var editUrl = aXMLEntry.link.(@rel == 'edit').@href.toString();
@@ -820,6 +808,13 @@ function XMLEntryToItem(aXMLEntry, aTimezone, aCalendar, aReferenceItem) {
             editUrl = editUrl.replace(/^http:/, "https:");
         }
         item.setProperty("X-GOOGLE-EDITURL", editUrl);
+
+        // link (alternative representation, html)
+        var htmlUrl = aXMLEntry.link.(@rel == 'alternate').@href.toString();
+        if (aCalendar.uri.schemeIs("https")) {
+            htmlUrl = htmlUrl.replace(/^http:/, "https:");
+        }
+        item.setProperty("URL", htmlUrl);
 
         // title
         item.title = aXMLEntry.title.(@type == 'text');
@@ -943,7 +938,7 @@ function XMLEntryToItem(aXMLEntry, aTimezone, aCalendar, aReferenceItem) {
             vevent = "BEGIN:VEVENT\n" + vevent + "END:VEVENT";
             var icsService = getIcsService();
 
-            var rootComp = icsService.parseICS(vevent, gdataTimezoneProvider);
+            var rootComp = icsService.parseICS(vevent, gdataTimezoneService);
             var prop = rootComp.getFirstProperty("ANY");
             var i = 0;
             var hasRecurringRules = false;
@@ -1105,11 +1100,8 @@ function XMLEntryToItem(aXMLEntry, aTimezone, aCalendar, aReferenceItem) {
         var gdCategories = aXMLEntry.gd::extendedProperty
                                     .(@name == "X-MOZ-CATEGORIES")
                                     .@value.toString();
-        if (gdCategories) {
-            item.setProperty("CATEGORIES", gdCategories);
-        } else {
-            item.deleteProperty("CATEGORIES");
-        }
+        var categories = categoriesStringToArray(gdCategories);
+        item.setCategories(categories.length, categories);
 
         // published
         item.setProperty("CREATED", fromRFC3339(aXMLEntry.published,
@@ -1242,4 +1234,18 @@ function LOGattendee(aAttendee, asString) {
          "\n\t\t\tIs Organizer: " +  (aAttendee.isOrganizer ? "yes" : "no") +
          "\n\t\t\tRole: " + aAttendee.role +
          "\n\t\t\tStatus: " + aAttendee.participationStatus);
+}
+
+function LOGinterval(aInterval) {
+    const fbtypes = Components.interfaces.calIFreeBusyInterval;
+    if (aInterval.freeBusyType == fbtypes.FREE) {
+        type = "FREE";
+    } else if (aInterval.freeBusyType == fbtypes.BUSY) {
+        type = "BUSY";
+    } else {
+        type = aInterval.freeBusyType + "(UNKNOWN)";
+    }
+
+    LOG("Interval from " + aInterval.interval.start + " to "
+                         + aInterval.interval.end + " is " + type);
 }

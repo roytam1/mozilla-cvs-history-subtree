@@ -27,6 +27,7 @@
  *                 ArentJan Banck <ajbanck@planet.nl>
  *                 Eric Belhaire <belhaire@ief.u-psud.fr>
  *                 Philipp Kewisch <mozilla@kewis.ch>
+ *                 Berend Cornelius <berend.cornelius@sun.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -62,50 +63,27 @@ function onMouseOverItem( occurrenceBoxMouseEvent )
 {
   if ("occurrence" in occurrenceBoxMouseEvent.currentTarget) {
     // occurrence of repeating event or todo
-    var occurrence = occurrenceBoxMouseEvent.currentTarget.occurrence;
-
-    const toolTip = document.getElementById("itemTooltip");
-
-    var holderBox;
-    if (isEvent(occurrence)) {
-      holderBox = getPreviewForEvent(occurrence, occurrence.startDate, occurrence.endDate);
-    } else if (isToDo(occurrence)) {
-      holderBox = getPreviewForTask(occurrence);
-    }
-    if (holderBox) {
-      setToolTipContent(toolTip, holderBox);
-      return true;
-    } 
+      var occurrence = occurrenceBoxMouseEvent.currentTarget.occurrence;
+      const toolTip = document.getElementById("itemTooltip");
+      return showToolTip(toolTip, occurrence);
   }
   return false;
 }
 
-/** For all instances of an event, as displayed by unifinder. **/
-function onMouseOverEventTree( toolTip, mouseEvent )
-{
-  var item = unifinderTreeView.getItemFromEvent(mouseEvent);
-  if (isEvent(item)) {
-    var holderBox = getPreviewForEvent(item);
-    if (holderBox) {
-      setToolTipContent(toolTip, holderBox);
-      return true;
-    } 
-  }
-  return false;
-}
-
-/** For all instances of a task, as displayed by unifinderToDo. **/
-function onMouseOverTaskTree( toolTip, mouseEvent )
-{
-  var item = getToDoFromEvent( mouseEvent );
-  if (isToDo(item)) {
-    var holderBox = getPreviewForTask(item);
-    if (holderBox) {
-      setToolTipContent(toolTip, holderBox);
-      return true;
+function showToolTip(aToolTip, aItem) {
+    if (aItem) {
+        var holderBox;
+        if (isEvent(aItem)) {
+            holderBox = getPreviewForEvent(aItem);
+        } else if (isToDo(aItem)) {
+            holderBox = getPreviewForTask(aItem);
+        }
+        if (holderBox) {
+            setToolTipContent(aToolTip, holderBox);
+            return true;
+        }
     }
-  }
-  return false;
+    return false;
 }
 
 /**
@@ -133,6 +111,9 @@ function setToolTipContent(toolTip, holderBox)
   // tooltip border disappears if wrapped description below header grid.
   height += 1 + 2 + 2 + 1;
 
+  // workaround bug 390313 (aspect: tooltip width too short)
+  width += 6;
+
   toolTip.sizeTo(width, height);
 }
 
@@ -152,7 +133,7 @@ function getPreviewForTask( toDoItem )
     boxInitializeHeaderGrid(vbox);
 
     var hasHeader = false;
-         
+
     if (toDoItem.title)
     {
       boxAppendLabeledText(vbox, "tooltipTitle", toDoItem.title);
@@ -165,18 +146,18 @@ function getPreviewForTask( toDoItem )
       boxAppendLabeledText(vbox, "tooltipLocation", location);
       hasHeader = true;
     }
-   
+
     if (toDoItem.entryDate && toDoItem.entryDate.isValid)
     {
       boxAppendLabeledDateTime(vbox, "tooltipStart", toDoItem.entryDate);
       hasHeader = true;
     }
-   
+
     if (toDoItem.dueDate && toDoItem.dueDate.isValid)
     {
       boxAppendLabeledDateTime(vbox, "tooltipDue", toDoItem.dueDate);
       hasHeader = true;
-    }   
+    }
 
     if (toDoItem.priority && toDoItem.priority != 0)
     {
@@ -210,9 +191,9 @@ function getPreviewForTask( toDoItem )
     {
       if (toDoItem.completedDate == null) {
         boxAppendLabeledText(vbox, "tooltipPercent", "100%");
-      } else { 
+      } else {
         boxAppendLabeledDateTime(vbox, "tooltipCompleted", toDoItem.completedDate);
-      } 
+      }
       hasHeader = true;
     }
 
@@ -227,7 +208,7 @@ function getPreviewForTask( toDoItem )
     }
 
     return ( vbox );
-  } 
+  }
   else
   {
     return null;
@@ -241,8 +222,8 @@ function getPreviewForTask( toDoItem )
  *  (recurring or multiday events may be displayed by more than one event box
  *  for different days), or null if should compute next instance from now.
  */
-function getPreviewForEvent( event, instStartDate, instEndDate )
-{
+function getPreviewForEvent( aEvent) {
+  var event = aEvent;
   const vbox = document.createElement( "vbox" );
   vbox.setAttribute("class", "tooltipBox");
   // tooltip appears above or below pointer, so may have as little as
@@ -250,54 +231,36 @@ function getPreviewForEvent( event, instStartDate, instEndDate )
   vbox.maxHeight = Math.floor(screen.height / 2);
   boxInitializeHeaderGrid(vbox);
 
-  if (event)
-  {
-    if (event.title)
-    {
-      boxAppendLabeledText(vbox, "tooltipTitle", event.title);
+  if (event) {
+    if (event.title) {
+      boxAppendLabeledText(vbox, "tooltipTitle", aEvent.title);
     }
 
     var location = event.getProperty("LOCATION");
-    if (location)
-    {
+    if (location) {
       boxAppendLabeledText(vbox, "tooltipLocation", location);
     }
-
-    if (event.startDate || instStartDate)
-    {
-      var startDate, endDate;
-      if (instStartDate && instEndDate) {
-        startDate = instStartDate;
-        endDate = instEndDate;
-      } else {
+    if (!(event.startDate && event.endDate)) {
         // Event may be recurrent event.   If no displayed instance specified,
         // use next instance, or previous instance if no next instance.
-        var occ = getCurrentNextOrPreviousRecurrence(event);
-        startDate = instStartDate || occ.startDate;
-        endDate = occ.endDate;
-      }
-      boxAppendLabeledDateTimeInterval(vbox, "tooltipDate", startDate, endDate);
+        event = getCurrentNextOrPreviousRecurrence(event);
     }
+    boxAppendLabeledDateTimeInterval(vbox, "tooltipDate", event);
 
-    if (event.status && event.status != "NONE")
-    {
+    if (event.status && event.status != "NONE") {
       var statusString = getEventStatusString(event);
       boxAppendLabeledText(vbox, "tooltipStatus", statusString);
     }
 
     var description = event.getProperty("DESCRIPTION");
-    if (description)
-    {
+    if (description) {
       boxAppendBodySeparator(vbox);
       // display wrapped description lines, like body of message below headers
       boxAppendBody(vbox, description);
     }
-
     return ( vbox );
-  }
-  else
-  {
-    return null;
+  } else {
+      return null;
   }
 }
 
@@ -314,7 +277,7 @@ function getEventStatusString(calendarEvent)
       return calGetString('calendar', "statusConfirmed");
     case "CANCELLED":
       return calGetString('calendar', "statusCancelled");
-     default: 
+     default:
         return "";
   }
 }
@@ -333,7 +296,7 @@ function getToDoStatusString(iCalToDo)
       return calGetString('calendar', "statusCancelled");
     case "COMPLETED":
       return calGetString('calendar', "statusCompleted");
-     default: 
+     default:
         return "";
   }
 }
@@ -370,10 +333,8 @@ function boxAppendBody(box, textString)
  */
 function boxAppendLabeledDateTime(box, labelProperty, date)
 {
-  var dateFormatter = Components.classes["@mozilla.org/calendar/datetime-formatter;1"]
-                                .getService(Components.interfaces.calIDateTimeFormatter);
   date = date.getInTimezone(calendarDefaultTimezone());
-  var formattedDateTime = dateFormatter.formatDateTime(date);
+  var formattedDateTime = getDateFormatter().formatDateTime(date);
   boxAppendLabeledText(box, labelProperty, formattedDateTime);
 }
 
@@ -382,23 +343,12 @@ function boxAppendLabeledDateTime(box, labelProperty, date)
  * and to header grid append a row containing localized Label: interval.
  * @param box               contains header grid.
  * @param labelProperty     name of property for localized field label.
- * @param start             calDateTime of start of time interval.
- * @param end               calDateTime of end of time interval.
+ * @param item              the event or task
  */
-function boxAppendLabeledDateTimeInterval(box, labelProperty, start, end)
+function boxAppendLabeledDateTimeInterval(box, labelProperty, item)
 {
-  var dateFormatter = Components.classes["@mozilla.org/calendar/datetime-formatter;1"]
-                                .getService(Components.interfaces.calIDateTimeFormatter);
-  var startString = new Object();
-  var endString = new Object();
-  start = start.getInTimezone(calendarDefaultTimezone());
-  end = end.getInTimezone(calendarDefaultTimezone());
-  dateFormatter.formatInterval(start, end, startString, endString);
-  if (endString.value != "") {
-    boxAppendLabeledText(box, labelProperty, startString.value + ' - ' + endString.value);
-  } else {
-    boxAppendLabeledText(box, labelProperty, startString.value);
-  }
+  var dateString = getDateFormatter().formatItemInterval(item);
+  boxAppendLabeledText(box, labelProperty, dateString);
 }
 
 /**
@@ -438,7 +388,7 @@ function boxAppendLabeledText(box, labelProperty, textString)
 {
   var labelText = calGetString('calendar', labelProperty);
   var rows = box.getElementsByTagNameNS(box.namespaceURI, "rows")[0];
-  { 
+  {
     var row = document.createElement("row");
     {
       row.appendChild(createTooltipHeaderLabel(labelText));

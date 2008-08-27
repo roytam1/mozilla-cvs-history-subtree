@@ -90,6 +90,7 @@
 #endif
 #include "nsIDOMLoadListener.h"
 #include "nsIDOMEventGroup.h"
+#include "nsDocument.h"
 
 // Static IIDs/CIDs. Try to minimize these.
 static NS_DEFINE_CID(kXMLDocumentCID,             NS_XMLDOCUMENT_CID);
@@ -371,6 +372,10 @@ nsXBLStreamListener::Load(nsIDOMEvent* aEvent)
     NS_WARNING("XBL load did not complete until after document went away! Modal dialog bug?\n");
   }
   else {
+    // Clear script handling object on asynchronously loaded XBL documents.
+    NS_STATIC_CAST(nsDocument*, NS_STATIC_CAST(nsIDocument*, doc.get()))->
+      ClearScriptHandlingObject();
+
     // We have to do a flush prior to notification of the document load.
     // This has to happen since the HTML content sink can be holding on
     // to notifications related to our children (e.g., if you bind to the
@@ -1224,6 +1229,11 @@ nsXBLService::FetchBindingDocument(nsIContent* aBoundElement, nsIDocument* aBoun
       return NS_OK;
   }
   NS_ENSURE_SUCCESS(rv, rv);
+
+  nsCOMPtr<nsIDocument> doc = do_QueryInterface(domDoc);
+  // Clear script handling object on synchronously loaded XBL documents.
+  NS_STATIC_CAST(nsDocument*, NS_STATIC_CAST(nsIDocument*, doc.get()))->
+    ClearScriptHandlingObject();
 
   return CallQueryInterface(domDoc, aResult);
 }

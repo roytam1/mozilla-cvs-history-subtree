@@ -660,6 +660,20 @@ public:
    */
   static NS_HIDDEN_(PRInt32) waitLimit;
 
+  static NS_HIDDEN_(void) BinaryToHex(const char *aBuffer, PRUint32 aCount,
+                                      PRUnichar **aHexString);
+
+   /**
+    * Get the time zone information from an xsd:time. This function assumes
+    * that aTime is a valid xsd:time.
+    *
+    * @param aTime               A valid xsd:time
+    * @param aResult             Result string containing the time zone or an
+    *                            empty string if none is found.
+    */
+   static NS_HIDDEN_(nsresult) GetTimeZone(const nsAString &aTime,
+                                           nsAString &aResult);
+
 private:
   /**
    * Do same origin checks on aBaseDocument and aTestURI. Hosts can be

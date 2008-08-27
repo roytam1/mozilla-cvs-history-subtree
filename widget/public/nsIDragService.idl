@@ -84,6 +84,16 @@ interface nsIDragService : nsISupports
   
 };
 
+[scriptable, uuid(b6ba2c09-4a12-40d6-ad7e-aa4190e78403)]
+interface nsIDragService_1_8_BRANCH : nsIDragService
+{
+  /**
+   * Increase/decrease dragging suppress level by one.
+   * If level is greater than one, dragging is disabled.
+   */
+  void suppress();
+  void unsuppress();
+};
 
 %{ C++
 

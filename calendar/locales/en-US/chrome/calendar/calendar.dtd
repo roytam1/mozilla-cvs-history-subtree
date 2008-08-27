@@ -101,6 +101,7 @@
 <!ENTITY calendar.unifinder.tree.location.label      "Location">
 <!ENTITY calendar.unifinder.tree.status.label        "Status">
 <!ENTITY calendar.unifinder.tree.calendarname.label  "Calendar Name">
+<!ENTITY calendar.unifinder.tree.duration.label      "Due in">
 <!ENTITY calendar.unifinder.close.tooltip            "Close event search and event list">
 <!ENTITY calendar.find.key  "F">
 
@@ -195,10 +196,10 @@
 <!ENTITY calendar.task.filter.overdue.accesskey     "O">
 <!ENTITY calendar.task.filter.completed.label       "Completed Tasks">
 <!ENTITY calendar.task.filter.completed.accesskey   "C">
+<!ENTITY calendar.task.filter.open.label            "Incomplete Tasks">
+<!ENTITY calendar.task.filter.open.accesskey        "m">
 
 <!ENTITY calendar.task.details.title.label           "Title:">
-<!ENTITY calendar.task.details.entrydate.label       "Start Date:">
-<!ENTITY calendar.task.details.duedate.label         "Due Date:">
 <!ENTITY calendar.task.details.organizer.label       "From:">
 <!ENTITY calendar.task.details.priority2.label       "Priority:">
 <!ENTITY calendar.task.details.priority.low.label    "Low">
@@ -213,11 +214,6 @@
 <!ENTITY calendar.task.priority.button.tooltip  "Change the priority">
 <!ENTITY calendar.task.delete.button.tooltip    "Delete the selected task">
 
-<!ENTITY calendar.miniday.today.button.tooltip    "Display events for today">
-<!ENTITY calendar.miniday.next.button.tooltip     "Display events for next day">
-<!ENTITY calendar.miniday.previous.button.tooltip "Display events for previous day">
-<!ENTITY calendar.miniday.dropdown.button.tooltip "Display events for selected day">
-
 <!-- Statusbar -->
 <!ENTITY statusText.label            "Document: Done">
 
@@ -230,18 +226,32 @@
 <!ENTITY calendar.maintoolbar.accesskey               "M">
 
 <!-- Context Menu -->
+<!ENTITY calendar.context.modifyorviewitem.label      "Open">
+<!ENTITY calendar.context.modifyorviewitem.accesskey  "O">
+<!ENTITY calendar.context.modifyorviewtask.label      "Open Task…">
+<!ENTITY calendar.context.modifyorviewtask.accesskey  "O">
 <!ENTITY calendar.context.newevent.label              "New Event…">
 <!ENTITY calendar.context.newevent.accesskey          "N">
 <!ENTITY calendar.context.newtodo.label               "New Task…">
 <!ENTITY calendar.context.newtodo.accesskey           "k">
 <!ENTITY calendar.context.modifytask.label            "Edit Task…">
 <!ENTITY calendar.context.modifytask.accesskey        "E">
-<!ENTITY calendar.context.modifyitem.label            "Edit Item">
+<!ENTITY calendar.context.modifyitem.label            "Edit Item…">
 <!ENTITY calendar.context.modifyitem.accesskey        "E">
 <!ENTITY calendar.context.deletetask.label            "Delete Task">
 <!ENTITY calendar.context.deletetask.accesskey        "l">
-<!ENTITY calendar.context.deleteitem.label            "Delete Item">
+<!ENTITY calendar.context.deleteitem.label            "Delete">
 <!ENTITY calendar.context.deleteitem.accesskey        "l">
+<!ENTITY calendar.context.deleteevent.label           "Delete Event">
+<!ENTITY calendar.context.deleteevent.accesskey       "l">
+<!ENTITY calendar.context.deletethisevent.label       "This Event">
+<!ENTITY calendar.context.deletethisevent.accesskey   "T">
+<!ENTITY calendar.context.deletecompleteseries.label  "Complete Series">
+<!ENTITY calendar.context.deletecompleteseries.accesskey   "S">
+<!ENTITY calendar.context.deletefutureevents.label     "All Future Events">
+<!ENTITY calendar.context.deletefutureevents.accesskey "F">
+<!ENTITY calendar.context.deletefuturetasks.label     "All Future Tasks">
+<!ENTITY calendar.context.deletefuturetasks.accesskey "F">
 <!ENTITY calendar.context.cutevent.label              "Cut">
 <!ENTITY calendar.context.cutevent.accesskey          "t">
 <!ENTITY calendar.context.copyevent.label             "Copy">

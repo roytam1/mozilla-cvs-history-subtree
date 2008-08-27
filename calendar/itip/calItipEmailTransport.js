@@ -70,6 +70,8 @@ calItipEmailTransport.prototype = {
     mDefaultAccount: null,
     mDefaultSmtpServer: null,
 
+    // we need to reconsider whether we should tie the used identity/account to the itip transport
+
     mDefaultIdentity: null,
     get defaultIdentity() {
         return this.mDefaultIdentity.email;
@@ -91,83 +93,73 @@ calItipEmailTransport.prototype = {
         return "email";
     },
 
-    /**
-     * Pass the transport an itipItem and have it figure out what to do with
-     * it based on the itipItem's methods.
-     */
-    simpleSendResponse: function cietSSR(aItem) {
-        var sbs = Components.classes["@mozilla.org/intl/stringbundle;1"].
-                  getService(Components.interfaces.nsIStringBundleService);
-        var sb = sbs.createBundle("chrome://lightning/locale/lightning.properties");
-
-        var itemList = aItem.getItemList({ });
-
-        // Get my participation status
-        var myPartStat;
-        var foundMyself = false;
-        var attendee = itemList[0].getAttendeeById("mailto:" +
-                                                   this.mDefaultIdentity.email);
-        if (attendee) {
-            myPartStat = attendee.participationStatus;
-            foundMyself = true;
-        }
-
-        if (!foundMyself) {
-            // I didn't find myself in the attendee list.
-            //
-            // This can happen when invitations are sent to email aliases
-            // instead of mDefaultIdentity.email (ex: lilmatt vs. mwillis),
-            // or if an invitation is sent to a listserv.
-            //
-            // We'll need to make more decisions regarding how to handle this
-            // in the future. (ex: Prompt? Find myself in list?)  For now, we
-            // just don't send a response.
-            return;
-        }
-
-        var name = this.mDefaultIdentity.email;
-        if (this.mDefaultIdentity.fullName) {
-            name = this.mDefaultIdentity.fullName + " <" + name + ">";
-        }
-
-        var summary;
-        if (itemList[0].getProperty("SUMMARY")) {
-            summary = itemList[0].getProperty("SUMMARY");
-        } else {
-            summary = "";
-        }
-        var subj = sb.formatStringFromName("itipReplySubject", [summary], 1);
-
-        // Generate proper body from my participation status
-        var body;
-        dump("\n\nthis is partstat: " + myPartStat + "\n");
-        if (myPartStat == "DECLINED") {
-            body = sb.formatStringFromName("itipReplyBodyDecline",
-                                           [name], 1);
-        } else {
-            body = sb.formatStringFromName("itipReplyBodyAccept",
-                                           [name], 1);
-        }
-
-        var recipients = [itemList[0].organizer];
-
-        this.sendItems(recipients.length, recipients, subj, body, aItem);
-    },
-
-    sendItems: function cietSI(aCount, aRecipients, aSubject, aBody, aItem) {
-        LOG("sendItems: Sending Email...");
+    sendItems: function cietSI(aCount, aRecipients, aItipItem) {
         if (this.mHasXpcomMail) {
-            this._sendXpcomMail(aRecipients, aSubject, aBody, aItem);
+            LOG("sendItems: Sending Email...");
+
+            var item = aItipItem.getItemList({})[0];
+
+            // Get ourselves some default text - when we handle organizer properly
+            // We'll need a way to configure the Common Name attribute and we should
+            // use it here rather than the email address
+
+            var summary = (item.getProperty("SUMMARY") || "");
+            var aSubject = "";
+            var aBody = "";
+            switch (aItipItem.responseMethod) {
+                case 'REQUEST':
+                    aSubject = calGetString("lightning",
+                                            "itipRequestSubject",
+                                            [summary],
+                                            "lightning");
+                    aBody = calGetString("lightning",
+                                         "itipRequestBody",
+                                         [item.organizer ? item.organizer.toString() : "", summary],
+                                         "lightning");
+                    break;
+                case 'CANCEL':
+                    aSubject = calGetString("lightning",
+                                            "itipCancelSubject",
+                                            [summary],
+                                            "lightning");
+                    aBody = calGetString("lightning",
+                                         "itipCancelBody",
+                                         [item.organizer ? item.organizer.toString() : "", summary],
+                                         "lightning");
+                    break;
+                case 'REPLY': {
+                    // Get my participation status
+                    var att = (calInstanceOf(aItipItem.targetCalendar, Components.interfaces.calISchedulingSupport)
+                               ? aItipItem.targetCalendar.getInvitedAttendee(item) : null);
+                    if (!att && aItipItem.identity) {
+                        att = item.getAttendeeById("mailto:" + aItipItem.identity);
+                    }
+                    if (!att) { // should not happen anymore
+                        return;
+                    }
+
+                    // work around BUG 351589, the below just removes RSVP:
+                    aItipItem.setAttendeeStatus(att.id, att.participationStatus);
+                    var myPartStat = att.participationStatus;
+                    var name = att.toString();
+
+                    // Generate proper body from my participation status
+                    aSubject = calGetString("lightning",
+                                            "itipReplySubject",
+                                            [summary],
+                                            "lightning");
+                    aBody = calGetString("lightning",
+                                         (myPartStat == "DECLINED") ? "itipReplyBodyDecline"
+                                                                    : "itipReplyBodyAccept",
+                                         [name],
+                                         "lightning");
+                    break;
+                }
+            }
+
+            this._sendXpcomMail(aRecipients, aSubject, aBody, aItipItem);
         } else {
             // Sunbird case: Call user's default mailer on system.
-            throw Components.results.NS_ERROR_NOT_IMPLEMENTED;
-        }
-    },
-
-    checkForInvitations: function cietCFI(searchStart) {
-        // We only need to do trigger a check for incoming invitations if we
-        // are not Thunderbird.
-        if (!this.mHasXpcomMail) {
             throw Components.results.NS_ERROR_NOT_IMPLEMENTED;
         }
     },
@@ -209,6 +201,37 @@ calItipEmailTransport.prototype = {
     },
 
     _sendXpcomMail: function cietSXM(aToList, aSubject, aBody, aItem) {
+        var identity = null;
+        var account;
+        if (aItem.targetCalendar) {
+            identity = aItem.targetCalendar.getProperty("imip.identity");
+            if (identity) {
+                identity = identity.QueryInterface(Components.interfaces.nsIMsgIdentity);
+                account = aItem.targetCalendar.getProperty("imip.account")
+                                              .QueryInterface(Components.interfaces.nsIMsgAccount);
+            } else {
+                WARN("No email identity configured for calendar " + aItem.targetCalendar.name);
+            }
+        }
+        if (!identity) {
+            if (aItem.identity) {
+                // try to find proper identity/account for the itipItem's identity:
+                var itipIdentity = aItem.identity.toLowerCase();
+                calIterateEmailIdentities(
+                    function(identity_, account_) {
+                        if (identity_.email.toLowerCase() == itipIdentity) {
+                            identity = identity_;
+                            account = account_;
+                            return false;
+                        }
+                        return true;
+                    });
+            } else { // use some default identity/account:
+                identity = this.mDefaultIdentity;
+                account = this.mDefaultAccount;
+            }
+        }
+
         var compatMode = 0;
         switch (aItem.autoResponse) {
             case (Components.interfaces.calIItipItem.USER): {
@@ -218,9 +241,6 @@ calItipEmailTransport.prototype = {
                     "This will disable OL (up to 2003) to consume the mail as an iTIP invitation showing\n" +
                     "the usual calendar buttons.");
                 // To somehow have a last resort before sending spam, the user can choose to send the mail.
-                // XXX todo: We should consider a more sophisticated dialiog,
-                //           so the user could choose the account for sending.
-                // i.e. bug 432660
                 var promptService = Components.classes["@mozilla.org/embedcomp/prompt-service;1"]
                                               .getService(Components.interfaces.nsIPromptService);
                 var prefCompatMode = getPrefSafe("calendar.itip.compatSendMode", 0);
@@ -250,7 +270,7 @@ calItipEmailTransport.prototype = {
                     // Add this recipient id to the list.
                     toList += rId;
                 }
-                var mailFile = this._createTempImipFile(compatMode, toList, aSubject, aBody, aItem);
+                var mailFile = this._createTempImipFile(compatMode, toList, aSubject, aBody, aItem, identity);
                 if (mailFile) {
 #ifdef MOZILLA_1_8_BRANCH
                     var mailFileURL = getIOService().newFileURI(mailFile).spec;
@@ -263,8 +283,8 @@ calItipEmailTransport.prototype = {
                                                   .createInstance(Components.interfaces.nsIMsgCompFields);
                     composeFields.characterSet = "UTF-8";
                     composeFields.to = toList;
-                    composeFields.from = this.mDefaultIdentity.email;
-                    composeFields.replyTo = this.mDefaultIdentity.replyTo;
+                    composeFields.from = identity.email;
+                    composeFields.replyTo = identity.replyTo;
 
                     // xxx todo: add send/progress UI, maybe recycle
                     //           "@mozilla.org/messengercompose/composesendlistener;1"
@@ -272,13 +292,14 @@ calItipEmailTransport.prototype = {
                     // i.e. bug 432662
                     var msgSend = Components.classes["@mozilla.org/messengercompose/send;1"]
                                             .createInstance(Components.interfaces.nsIMsgSend);
-                    msgSend.sendMessageFile(this.mDefaultIdentity,
-                                            this.mDefaultAccount.key,
+                    msgSend.sendMessageFile(identity,
+                                            account.key,
                                             composeFields,
                                             mailFile,
                                             true  /* deleteSendFileOnCompletion */,
                                             false /* digest_p */,
-                                            Components.interfaces.nsIMsgSend.nsMsgDeliverNow,
+                                            (getIOService().offline ? Components.interfaces.nsIMsgSend.nsMsgQueueForLater
+                                                                    : Components.interfaces.nsIMsgSend.nsMsgDeliverNow),
                                             null  /* nsIMsgDBHdr msgToReplace */,
                                             null  /* nsIMsgSendListener aListener */,
                                             null  /* nsIMsgStatusFeedback aStatusFeedback */,
@@ -299,7 +320,7 @@ calItipEmailTransport.prototype = {
         }
     },
 
-    _createTempImipFile: function cietCTIF(compatMode, aToList, aSubject, aBody, aItem) {
+    _createTempImipFile: function cietCTIF(compatMode, aToList, aSubject, aBody, aItem, aIdentity) {
         try {
             function encodeUTF8(text) {
                 return convertFromUnicode("UTF-8", text).replace(/(\r\n)|\n/g, "\r\n");
@@ -311,29 +332,22 @@ calItipEmailTransport.prototype = {
             }
 
             var itemList = aItem.getItemList({});
-            var calText = "";
-            for (var i = 0; i < itemList.length; i++) {
-                var item = itemList[i].clone();
-                // This is a workaround until bug 353369 is fixed.
-                // Without it, we cannot roundtrip the METHOD property, so we must
-                // re-add it to the ICS data as we serialize it.
-                //
-                // Look at the implicit assumption in the code at:
-                // http://lxr.mozilla.org/seamonkey/source/calendar/base/src/calEvent.js#162
-                // and it's easy to see why.
-                item.setProperty("METHOD", aItem.responseMethod);
-                // xxx todo: should we consider to include exceptional/overridden items?
-                calText += item.icalString;
-            }
+            var serializer = Components.classes["@mozilla.org/calendar/ics-serializer;1"]
+                                       .createInstance(Components.interfaces.calIIcsSerializer);
+            serializer.addItems(itemList, itemList.length);
+            var methodProp = getIcsService().createIcalProperty("METHOD");
+            methodProp.value = aItem.responseMethod;
+            serializer.addProperty(methodProp);
+            var calText = serializer.serializeToString();
             var utf8CalText = encodeUTF8(calText);
 
             // Home-grown mail composition; I'd love to use nsIMimeEmitter, but it's not clear to me whether
             // it can cope with nested attachments,
             // like multipart/alternative with enclosed text/calendar and text/plain.
             var mailText = ("MIME-version: 1.0\r\n" +
-                            (this.mDefaultIdentity.replyTo
-                             ? "Return-path: " + this.mDefaultIdentity.replyTo + "\r\n" : "") +
-                            "From: " + this.mDefaultIdentity.email + "\r\n" +
+                            (aIdentity.replyTo
+                             ? "Return-path: " + aIdentity.replyTo + "\r\n" : "") +
+                            "From: " + aIdentity.email + "\r\n" +
                             "To: " + aToList + "\r\n" +
                             encodeMimeHeader("Subject: " + aSubject) + "\r\n");
             switch (compatMode) {
@@ -357,7 +371,7 @@ calItipEmailTransport.prototype = {
                                  "Content-transfer-encoding: 8BIT\r\n" +
                                  "\r\n" +
                                  encodeUTF8(aBody) +
-                                 "\r\n\r\n" +
+                                 "\r\n\r\n\r\n" +
                                  "--Boundary_(ID_ryU4ZdJoASiZ+Jo21dCbwA)\r\n" +
                                  "Content-type: text/calendar; method=" + aItem.responseMethod + "; charset=UTF-8\r\n" +
                                  "Content-transfer-encoding: 8BIT\r\n" +
@@ -488,12 +502,3 @@ function NSGetModule(compMgr, fileSpec) {
     return calItipEmailTransportModule;
 }
 
-function LOG(aString) {
-    if (!getPrefSafe("calendar.itip.email.log", false)) {
-        return;
-    }
-    var consoleService = Components.classes["@mozilla.org/consoleservice;1"].
-                         getService(Components.interfaces.nsIConsoleService);
-    consoleService.logStringMessage(aString);
-    dump(aString + "\n");
-}

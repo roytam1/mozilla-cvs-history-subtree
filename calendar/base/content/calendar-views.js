@@ -147,7 +147,7 @@ var calendarViewController = {
 
             if (aNewStartTime || aNewEndTime) {
                 // Yay for variable names that make this next line look silly
-                if (instance instanceof Components.interfaces.calIEvent) {
+                if (isEvent(instance)) {
                     if (aNewStartTime && instance.startDate) {
                         instance.startDate = aNewStartTime;
                     }
@@ -162,11 +162,6 @@ var calendarViewController = {
                         instance.dueDate = aNewEndTime;
                     }
                 }
-            }
-
-            // If the item contains attendees then they need to be notified
-            if (instance.getProperty("X-MOZ-SEND-INVITATIONS") == "TRUE") {
-               sendItipInvitation(instance, 'REQUEST', []);
             }
 
             doTransaction('modify', instance, instance.calendar, aOccurrence, null);
@@ -197,8 +192,11 @@ var calendarViewController = {
 
         // Make sure we are modifying a copy of aOccurrences, otherwise we will
         // run into race conditions when the view's doDeleteItem removes the
-        // array elements while we are iterating through them.
-        var occurrences = aOccurrences.slice(0);
+        // array elements while we are iterating through them. While we are at
+        // it, filter out any items that have readonly calendars, so that
+        // checking for one total item below also works out if all but one item
+        // are readonly.
+        var occurrences = aOccurrences.filter(function(item) { return isCalendarWritable(item.calendar); });
 
         for each (var itemToDelete in occurrences) {
             if (aUseParentItems) {
@@ -229,12 +227,6 @@ var calendarViewController = {
                 // Dont start the transaction yet. Do so later, in case the
                 // parent item gets modified more than once.
             } else {
-                // Add sending ITIP IMIP cancelation
-                // If the item contains attendees then they need to be notified
-                if (itemToDelete.hasProperty("X-MOZ-SEND-INVITATIONS") &&
-                (itemToDelete.getProperty("X-MOZ-SEND-INVITATIONS") == "TRUE")) {
-                    sendItipInvitation(itemToDelete,'CANCEL', []);
-                }
                 doTransaction('delete', itemToDelete, itemToDelete.calendar, null, null);
             }
         }
@@ -382,7 +374,6 @@ function scheduleMidnightUpdate(aRefreshCallback) {
     // stuck in an infinite loop.
     var udCallback = {
         notify: function(timer) {
-            LOG("scheduleMidnightUpdate -- timer shot.");
             aRefreshCallback();
         }
     };
@@ -391,7 +382,6 @@ function scheduleMidnightUpdate(aRefreshCallback) {
         // Observer for wake after sleep/hibernate/standby to create new timers and refresh UI
         var wakeObserver = {
            observe: function(aSubject, aTopic, aData) {
-               LOG("scheduleMidnightUpdate -- wakeObserver: " + aTopic);
                if (aTopic == "wake_notification") {
                    // postpone refresh for another couple of seconds to get netwerk ready:
                    if (this.mTimer) {
@@ -421,7 +411,6 @@ function scheduleMidnightUpdate(aRefreshCallback) {
     } else {
         gMidnightTimer.cancel();
     }
-    LOG("scheduleMidnightUpdate -- init timer.");
     gMidnightTimer.initWithCallback(udCallback, msUntilTomorrow, gMidnightTimer.TYPE_ONE_SHOT);
 }
 
@@ -636,7 +625,8 @@ function getLastCalendarView() {
 }
 
 /**
- *  Deletes items currently selected in the view.
+ *  Deletes items currently selected in the view 
+ *  and clears selection.
  */
 function deleteSelectedEvents() {
     var selectedItems = currentView().getSelectedItems({});
@@ -644,6 +634,8 @@ function deleteSelectedEvents() {
                                              selectedItems,
                                              false,
                                              false);
+    // clear selection
+    currentView().setSelectedItems(0, [], true);
 }
 
 /**

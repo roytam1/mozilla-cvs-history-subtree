@@ -21,6 +21,7 @@
  * Contributor(s):
  *   Philipp Kewisch <mozilla@kewis.ch>
  *   Daniel Boelzle <daniel.boelzle@sun.com>
+ *   Berend Cornelius <berend.cornelius@sun.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -54,11 +55,24 @@ function createTodo() {
 }
 
 /* Returns a clean new calIDateTime */
-function createDateTime() {
-    return Components.classes["@mozilla.org/calendar/datetime;1"].
-           createInstance(Components.interfaces.calIDateTime);
+function createDateTime(aIcalString) {
+    var dt = Components.classes["@mozilla.org/calendar/datetime;1"]
+                       .createInstance(Components.interfaces.calIDateTime);
+    if (aIcalString) {
+        dt.icalString = aIcalString;
+    }
+    return dt;
 }
 
+/* Returns a clean new calIDuration */
+function createDuration(aIcalString) {
+    var dur = Components.classes["@mozilla.org/calendar/duration;1"]
+                        .createInstance(Components.interfaces.calIDuration);
+    if (aIcalString) {
+        dur.icalString = aIcalString;
+    }
+    return dur;
+}
 /* Returns a clean new calIRecurrenceInfo */
 function createRecurrenceInfo(aItem) {
     var recInfo = Components.classes["@mozilla.org/calendar/recurrence-info;1"].
@@ -79,6 +93,24 @@ function createAttendee() {
            createInstance(Components.interfaces.calIAttendee);
 }
 
+/* Returns a clean new calIAttachment */
+function createAttachment() {
+    return Components.classes["@mozilla.org/calendar/attachment;1"].
+           createInstance(Components.interfaces.calIAttachment);
+}
+
+/* Returns a clean new calIAlarm*/
+function createAlarm() {
+    return Components.classes["@mozilla.org/calendar/alarm;1"].
+           createInstance(Components.interfaces.calIAlarm);
+}
+
+/* Returns a clean new calIRelation */
+function createRelation() {
+    return Components.classes["@mozilla.org/calendar/relation;1"].
+           createInstance(Components.interfaces.calIRelation);
+}
+
 /* Shortcut to the console service */
 function getConsoleService() {
     if (getConsoleService.mObject === undefined) {
@@ -88,7 +120,16 @@ function getConsoleService() {
     return getConsoleService.mObject;
 }
 
-/* Shortcut to the io service */
+/* Shortcut to the account manager service */
+function getAccountManager() {
+    if (getAccountManager.mObject === undefined) {
+        getAccountManager.mObject = Components.classes["@mozilla.org/messenger/account-manager;1"]
+                                              .getService(Components.interfaces.nsIMsgAccountManager);
+    }
+    return getAccountManager.mObject;
+}
+
+/* Shortcut to the IO service */
 function getIOService() {
     if (getIOService.mObject === undefined) {
         getIOService.mObject = Components.classes["@mozilla.org/network/io-service;1"]
@@ -131,6 +172,34 @@ function getCalendarSearchService() {
                                                      .getService(Components.interfaces.calICalendarSearchProvider);
     }
     return getCalendarSearchService.mObject;
+}
+
+/* Shortcut to the freebusy service */
+function getFreeBusyService() {
+    if (getFreeBusyService.mObject === undefined) {
+        getFreeBusyService.mObject =
+            Components.classes["@mozilla.org/calendar/freebusy-service;1"]
+                      .getService(Components.interfaces.calIFreeBusyService);
+    }
+    return getFreeBusyService.mObject;
+}
+
+/* Shortcut to week info service */
+function getWeekInfoService() {
+    if (getWeekInfoService.mObject === undefined) {
+        getWeekInfoService.mObject = Components.classes["@mozilla.org/calendar/weekinfo-service;1"]
+                                               .getService(Components.interfaces.calIWeekInfoService);
+    }
+    return getWeekInfoService.mObject;
+}
+
+/* Shortcut to date formatter service */
+function getDateFormatter() {
+    if (getDateFormatter.mObject === undefined) {
+        getDateFormatter.mObject = Components.classes["@mozilla.org/calendar/datetime-formatter;1"]
+                                             .getService(Components.interfaces.calIDateTimeFormatter);
+    }
+    return getDateFormatter.mObject;
 }
 
 /// @return the UTC timezone.
@@ -365,13 +434,33 @@ function isItemSupported(aItem, aCalendar) {
 }
 
 /**
+ * (At least on branch 1.8), the js instanceof operator does not work to test
+ * interfaces on direct implementation objects, i.e. non-wrapped objects.
+ * This function falla back to using QueryInterface to check whether the interface
+ * is implemented.
+ */
+function calInstanceOf(aObject, aInterface) {
+    // We first try instanceof which is assumed to be faster than querying the object:
+    if (!(aObject instanceof aInterface)) {
+        // if the passed object in not wrapped (but a plain implementation),
+        // instanceof won't check QueryInterface.
+        try {
+            aObject.QueryInterface(aInterface);
+        } catch (exc) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/**
  * Determines whether or not the aObject is a calIEvent
  *
  * @param aObject  the object to test
  * @returns        true if the object is a calIEvent, false otherwise
  */
 function isEvent(aObject) {
-    return aObject instanceof Components.interfaces.calIEvent;
+    return calInstanceOf(aObject, Components.interfaces.calIEvent);
 }
 
 /**
@@ -381,7 +470,7 @@ function isEvent(aObject) {
  * @returns        true if the object is a calITodo, false otherwise
  */
 function isToDo(aObject) {
-    return aObject instanceof Components.interfaces.calITodo;
+    return calInstanceOf(aObject, Components.interfaces.calITodo);
 }
 
 /**
@@ -593,6 +682,25 @@ function calGetString(aBundleName, aStringName, aParams, aComponent) {
     }
 }
 
+/**
+ * Gets the value of a the fiels of a string array in a .properties file from the calendar bundle
+ *
+ * @param aBundleName  the name of the properties file. It is assumed that the
+ *                     file lives in chrome://calendar/locale/
+ * @param aStringNames the array with the name of the strings within the properties file
+ * @param aParams      optional array of parameters to format the string
+ * @param aComponent   optional stringbundle component name
+ */
+
+function calGetStringArray(aBundleName, aStringNames, aParams, aComponent) {
+    var retArray = [];
+    for (var i = 0; i < aStringNames.length; ++i) {
+        retArray.push(calGetString(aBundleName, aStringNames[i], aParams, aComponent));
+    }
+    return retArray;
+}
+
+
 /** Returns a best effort at making a UUID.  If we have the UUIDGenerator
  * service available, we'll use that.  If we're somewhere where it doesn't
  * exist, like Lightning in TB 1.5, we'll just use the current time.
@@ -628,6 +736,16 @@ function compareItems(aItem, aOtherItem) {
     sip2.data = aOtherItem;
     sip2.dataIID = Components.interfaces.calIItemBase;
     return sip1.data == sip2.data;
+}
+
+/**
+ * Tries to get rid of wrappers. This is used to avoid cyclic references, and thus leaks.
+ */
+function calTryWrappedJSObject(obj) {
+    if (obj && obj.wrappedJSObject) {
+        obj = obj.wrappedJSObject;
+    }
+    return obj;
 }
 
 /**
@@ -876,6 +994,7 @@ function STACK(aDepth) {
  * @param aMessage    the message to report in the case the assert fails
  * @param aCritical   if true, throw an error to stop current code execution
  *                    if false, code flow will continue
+ *                    may be a result code
  */
 function ASSERT(aCondition, aMessage, aCritical) {
     if (aCondition) {
@@ -884,7 +1003,8 @@ function ASSERT(aCondition, aMessage, aCritical) {
 
     var string = "Assert failed: " + aMessage + '\n' + STACK();
     if (aCritical) {
-        throw new Error(string);
+        throw new Components.Exception(string,
+                                       aCritical === true ? Components.results.NS_ERROR_UNEXPECTED : aCritical);
     } else {
         Components.utils.reportError(string);
     }
@@ -1302,6 +1422,26 @@ function sameDay(date1, date2) {
 }
 
 /**
+ * Iterates all components inside the passed ical component and calls the passed function.
+ * If the called function returns false, iteration is stopped.
+ */
+function calIterateIcalComponent(icalComp, func) {
+    if (icalComp) {
+        if (icalComp.componentType != "VCALENDAR") {
+            return func(icalComp);
+        }
+        for (var subComp = icalComp.getFirstSubcomponent("ANY");
+             subComp;
+             subComp = icalComp.getNextSubcomponent("ANY")) {
+            if (!calIterateIcalComponent(subComp, func)) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+/**
  * Centralized funtions for accessing prodid and version
  */
 function calGetProductId() {
@@ -1321,7 +1461,7 @@ function calGetProductVersion() {
  */
 function calSetProdidVersion(aIcalComponent) {
     // Throw for an invalid parameter
-    if (!(aIcalComponent instanceof Components.interfaces.calIIcalComponent)) {
+    if (!calInstanceOf(aIcalComponent, Components.interfaces.calIIcalComponent)) {
         throw Components.results.NS_ERROR_INVALID_ARG;
     }
     // Set the prodid and version
@@ -1582,6 +1722,16 @@ calPropertyBag.prototype = {
         }
         return aValue;
     },
+    getAllProperties: function cpb_getAllProperties(aOutKeys, aOutValues) {
+        var keys = [];
+        var values = [];
+        for (var key in this.mData) {
+            keys.push(key);
+            values.push(this.mData[key]);
+        }
+        aOutKeys.value = keys;
+        aOutValues.value = values;
+    },
     deleteProperty: function cpb_deleteProperty(aName) {
         delete this.mData[aName];
     },
@@ -1631,102 +1781,22 @@ calPropertyBagEnumerator.prototype = {
     }
 };
 
-// Send iTIP invitation
-function sendItipInvitation(aItem, aTypeOfInvitation, aRecipientsList) {
-    // XXX Until we rethink attendee support and until such support
-    // is worked into the event dialog (which has been done in the prototype
-    // dialog to a degree) then we are going to simply hack in some attendee
-    // support so that we can round-trip iTIP invitations.
-    var transportType = aItem.calendar.getProperty("itip.transportType") || "email";
-
-    var transport = Components.classes["@mozilla.org/calendar/itip-transport;1?type=" + transportType]
-                           .getService(Components.interfaces.calIItipTransport);
-
-    var itipItem = Components.classes["@mozilla.org/calendar/itip-item;1"]
-                             .createInstance(Components.interfaces.calIItipItem);
-
-    var sb = calGetStringBundle("chrome://lightning/locale/lightning.properties");
-    var recipients = [];
-
-    // We have to modify our item a little, so we clone it.
-    var item = aItem.clone();
-
-    if (aRecipientsList.length == 0) {
-        // Fix up our attendees for invitations using some good defaults
-        var itemAtt = item.getAttendees({});
-        item.removeAllAttendees();
-        for each (var attendee in itemAtt) {
-            attendee = attendee.clone();
-            attendee.role = "REQ-PARTICIPANT";
-            attendee.participationStatus = "NEEDS-ACTION";
-            attendee.rsvp = true;
-            item.addAttendee(attendee);
-            recipients.push(attendee);
+/**
+ * Iterates all email identities and calls the passed function with identity and account.
+ * If the called function returns false, iteration is stopped.
+ */
+function calIterateEmailIdentities(func) {
+    var accounts = getAccountManager().accounts;
+    for (var i = 0; i < accounts.Count(); ++i) {
+        var account = accounts.GetElementAt(i).QueryInterface(Components.interfaces.nsIMsgAccount);
+        var identities = account.identities;
+        for (var j = 0; j < identities.Count(); ++j) {
+            var identity = identities.GetElementAt(j).QueryInterface(Components.interfaces.nsIMsgIdentity);
+            if (!func(identity, account)) {
+                break;
+            }
         }
-    } else {
-        recipients = aRecipientsList;
     }
-
-    // XXX The event dialog has no means to set us as the organizer
-    // since we defaulted to email above, we know we need to prepend
-    // mailto when we convert it to an attendee
-    // This also means that when we are Updating an event, we will be making
-    // a blatant assumption that you (the updater) are the organizer of the event.
-    // This is probably ok since we don't support the iTIP COUNTER method,
-    // but it would be better if we didn't allow you to modify an event that you
-    // are not the organizer of and send out invitations to it as if you were.
-    // For this support, we'll need a real invitation manager component.
-    var organizer = Components.classes["@mozilla.org/calendar/attendee;1"]
-                              .createInstance(Components.interfaces.calIAttendee);
-    organizer.id = transport.scheme + ":" + transport.defaultIdentity;
-    organizer.role = "REQ-PARTICIPANT";
-    organizer.participationStatus = "ACCEPTED";
-    organizer.isOrganizer = true;
-
-    // Add our organizer to the item. Again, the event dialog really doesn't
-    // have a mechanism for creating an item with a method, so let's add
-    // that too while we're at it.  We'll also fake Sequence ID support.
-    item.organizer = organizer;
-    item.setProperty("METHOD", aTypeOfInvitation);
-    item.setProperty("SEQUENCE", item.generation);
-
-    var summary
-    if (item.getProperty("SUMMARY")) {
-        summary = item.getProperty("SUMMARY");
-    } else {
-        summary = "";
-    }
-
-    // Initialize and set our properties on the item
-    itipItem.init(item.icalString);
-    itipItem.isSend = true;
-    itipItem.receivedMethod = aTypeOfInvitation;
-    itipItem.autoResponse = Components.interfaces.calIItipItem.USER;
-
-    // Get ourselves some default text - when we handle organizer properly
-    // We'll need a way to configure the Common Name attribute and we should
-    // use it here rather than the email address
-    var subjectStringId = "";
-    var bodyStringId = "";
-    switch (aTypeOfInvitation) {
-        case 'REQUEST':
-            subjectStringId = "itipRequestSubject";
-            bodyStringId = "itipRequestBody";
-            break;
-        case 'CANCEL':
-            subjectStringId = "itipCancelSubject";
-            bodyStringId = "itipCancelBody";
-            break;
-    }
-
-    var subject = sb.formatStringFromName(subjectStringId,
-                                          [summary], 1);
-    var body = sb.formatStringFromName(bodyStringId,
-                                       [transport.defaultIdentity, summary],
-                                       2);
-
-    // Send it!
-    transport.sendItems(recipients.length, recipients, subject, body, itipItem);
 }
 
 function compareItemContent(aFirstItem, aSecondItem) {
@@ -1742,7 +1812,6 @@ function compareItemContent(aFirstItem, aSecondItem) {
     var secondIcalString = hashItem(aSecondItem);
     return (firstIcalString == secondIcalString);
 }
-
 
 /**
  * Use the binary search algorithm to search for an item in an array.

@@ -1,4 +1,3 @@
-/* -*- Mode: javascript; tab-width: 20; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
@@ -38,38 +37,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/* use with textfields oninput to only allow integers */
-function validateIntegerRange(event, lowerBound, upperBound) {
-    validateIntegers(event);
-
-    var num = Number(event.target.value);
-
-    // Only modify the number if a value is entered, otherwise deleting the
-    // value (to maybe enter a new number) will cause the field to be set to the
-    // lower bound.
-    if (event.target.value != "" && (num < lowerBound || num > upperBound)) {
-        event.target.value = Math.min(Math.max(num, lowerBound), upperBound);
-        event.preventDefault();
-    }
-}
-
-function validateIntegers(event) {
-    if (isNaN(Number(event.target.value))) {
-        var newValue = parseInt(event.target.value);
-        event.target.value = isNaN(newValue) ? "" : newValue;
-        event.preventDefault();
-    }
-}
-
-function validateNaturalNums(event) {
-    validateIntegers(event);
-    var num = event.target.value;
-    if (num < 0) {
-        event.target.value = -1 * num;
-        event.preventDefault();
-    }
-}
-
 /**
  * This function takes the recurrence info passed as argument and creates a
  * literal string representing the repeat pattern in natural language.
@@ -84,7 +51,7 @@ function recurrenceRule2String(recurrenceInfo, startDate, endDate, allDay) {
     if (rrules[0].length == 1) {
         var rule = rrules[0][0];
         // currently we don't allow for any BYxxx-rules.
-        if (rule instanceof Components.interfaces.calIRecurrenceRule &&
+        if (calInstanceOf(rule, Components.interfaces.calIRecurrenceRule) &&
             !checkRecurrenceRule(rule, ['BYSECOND',
                                         'BYMINUTE',
                                         //'BYDAY',
@@ -540,12 +507,12 @@ function updateReminderDetails() {
             case 'START':
                 relationString = calGetString(
                     "sun-calendar-event-dialog",
-                    "reminderCustomRelationStart");
+                    "reminderCustomRelationBefore");
                 break;
             case 'END':
                 relationString = calGetString(
                     "sun-calendar-event-dialog",
-                    "reminderCustomRelationEnd");
+                    "reminderCustomRelationAfter");
                 break;
         }
 
@@ -553,11 +520,11 @@ function updateReminderDetails() {
         if (reminder.origin && reminder.origin < 0) {
             originString = calGetString(
                 "sun-calendar-event-dialog",
-                "reminderCustomOriginEnd");
+                "reminderCustomOriginEndEvent");
         } else {
             originString = calGetString(
                 "sun-calendar-event-dialog",
-                "reminderCustomOriginBegin");
+                "reminderCustomOriginBeginEvent");
         }
 
         var detailsString = calGetString(
@@ -814,4 +781,53 @@ function commonUpdateReminder() {
     }
 
     updateReminderDetails();
+}
+
+function updateLink() {
+    var itemUrlString = (window.calendarItem || window.item).getProperty("URL") || "";
+    var linkCommand = document.getElementById("cmd_toggle_link");
+
+    function hideOrShow(aBool) {
+        setElementValue("event-grid-link-row", !aBool && "true", "hidden");
+        var separator = document.getElementById("event-grid-link-separator");
+        if (separator) {
+            // The separator is not there in the summary dialog
+            setElementValue("event-grid-link-separator", !aBool && "true", "hidden");
+        }
+    }
+
+    if (linkCommand) {
+        // Disable if there is no url
+        setElementValue(linkCommand,
+                        !itemUrlString.length && "true",
+                        "disabled");
+    }
+        
+    if ((linkCommand && linkCommand.getAttribute("checked") != "true") ||
+        !itemUrlString.length) {
+        // Hide if there is no url, or the menuitem was chosen so that the url
+        // should be hidden
+        hideOrShow(false);
+    } else {
+        var handler, uri;
+        try {
+            uri = makeURL(itemUrlString);
+            handler = getIOService().getProtocolHandler(uri.scheme);
+        } catch (e) {
+            // No protocol handler for the given protocol, or invalid uri
+            hideOrShow(false);
+            return;
+        }
+
+        // Only show if its either an internal protcol handler, or its external
+        // and there is an external app for the scheme
+        hideOrShow(!calInstanceOf(handler, Components.interfaces.nsIExternalProtocolHandler) ||
+                   handler.externalAppExistsForScheme(uri.scheme));
+
+        setTimeout(function() {
+          // HACK the url-link doesn't crop when setting the value in onLoad
+          setElementValue("url-link", itemUrlString);
+          setElementValue("url-link", itemUrlString, "href");
+        }, 0);
+    }
 }

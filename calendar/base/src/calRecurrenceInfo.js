@@ -169,6 +169,7 @@ calRecurrenceInfo.prototype = {
     set item cRI_set_item(value) {
         this.ensureMutable();
 
+        value = calTryWrappedJSObject(value);
         this.mBaseItem = value;
         // patch exception's parentItem:
         for each (exitem in this.mExceptionMap) {
@@ -348,7 +349,7 @@ calRecurrenceInfo.prototype = {
             // If in a loop at least one rid is valid (i.e not an exception, not
             // an exdate, is after aTime), then remember the lowest one.
             for (var i = 0; i < this.mPositiveRules.length; i++) {
-                if (this.mPositiveRules[i] instanceof Components.interfaces.calIRecurrenceDate) {
+                if (calInstanceOf(this.mPositiveRules[i], Components.interfaces.calIRecurrenceDate)) {
                     // RDATEs are special. there is only one date in this rule,
                     // so no need to search anything.
                     var rdate = this.mPositiveRules[i].date;
@@ -363,7 +364,7 @@ calRecurrenceInfo.prototype = {
                     }
                     // TODO What about calIRecurrenceDateSet? Multi-value date
                     // sets are parsed into multiple calIRecurrenceDates, iirc.
-                } else if (this.mPositiveRules[i] instanceof Components.interfaces.calIRecurrenceRule) {
+                } else if (calInstanceOf(this.mPositiveRules[i], Components.interfaces.calIRecurrenceRule)) {
                     // RRULEs must not start searching before |startDate|, since
                     // the pattern is only valid afterwards. If an occurrence
                     // was found in a previous round, we can go ahead and start
@@ -648,7 +649,7 @@ calRecurrenceInfo.prototype = {
             var duration = null;
 
             var name = "DTEND";
-            if (this.mBaseItem instanceof Components.interfaces.calITodo)
+            if (isToDo(this.mBaseItem))
                 name = "DUE";
 
             if (this.mBaseItem.hasProperty(name)) {
@@ -690,7 +691,7 @@ calRecurrenceInfo.prototype = {
         this.ensureSortedRecurrenceRules();
 
         for (var i = 0; i < this.mRecurrenceItems.length; i++) {
-            if (this.mRecurrenceItems[i] instanceof Components.interfaces.calIRecurrenceDate) {
+            if (calInstanceOf(this.mRecurrenceItems[i], Components.interfaces.calIRecurrenceDate)) {
                 var rd = this.mRecurrenceItems[i].QueryInterface(Components.interfaces.calIRecurrenceDate);
                 if (rd.isNegative && rd.date.compare(aRecurrenceId) == 0) {
                     return this.deleteRecurrenceItemAt(i);
@@ -735,6 +736,8 @@ calRecurrenceInfo.prototype = {
     //
     modifyException: function cRI_modifyException(anItem, aTakeOverOwnership) {
         this.ensureBaseItem();
+
+        anItem = calTryWrappedJSObject(anItem);
 
         if (anItem.parentItem.calendar != this.mBaseItem.calendar &&
             anItem.parentItem.id != this.mBaseItem.id)
@@ -849,6 +852,36 @@ calRecurrenceInfo.prototype = {
             return;
         }
 
+        var rdates = {};
+
+        // take RDATE's and EXDATE's into account.
+        const kCalIRecurrenceDate = Components.interfaces.calIRecurrenceDate;
+        const kCalIRecurrenceDateSet = Components.interfaces.calIRecurrenceDateSet;
+        var ritems = this.getRecurrenceItems({});
+        for each (var ritem in ritems) {
+            if (calInstanceOf(ritem, kCalIRecurrenceDate)) {
+                ritem = ritem.QueryInterface(kCalIRecurrenceDate);
+                var date = ritem.date;
+                date.addDuration(timeDiff);
+                if (!ritem.isNegative) {
+                    rdates[getRidKey(date)] = date;
+                }
+                ritem.date = date;
+            } else if (calInstanceOf(ritem, kCalIRecurrenceDateSet)) {
+                ritem = ritem.QueryInterface(kCalIRecurrenceDateSet);
+                var rdates = ritem.getDates({});
+                for each (var date in rdates) {
+                    date.addDuration(timeDiff);
+                    if (!ritem.isNegative) {
+                        rdates[getRidKey(date)] = date;
+                    }
+                }
+                ritem.setDates(rdates.length,rdates);
+            }
+        }
+
+        var startTimezone = aNewStartTime.timezone;
+
         // convert both dates to UTC since subtractDate is not timezone aware.
         aOldStartTime = aOldStartTime.getInTimezone(UTC());
         aNewStartTime = aNewStartTime.getInTimezone(UTC());
@@ -859,8 +892,14 @@ calRecurrenceInfo.prototype = {
             var ex = this.getExceptionFor(exid, false);
             if (ex) {
                 ex = ex.clone();
-                // xxx todo: isn't the below questionable w.r.t DST changes?
-                ex.recurrenceId.addDuration(timeDiff);
+                // track RECURRENCE-IDs in DTSTART's or RDATE's timezone,
+                // otherwise those won't match any longer w.r.t DST:
+                var rid = ex.recurrenceId;
+                rid = rid.getInTimezone(rdates[getRidKey(rid)]
+                                        ? origRdates[getRidKey(rid)].timezone
+                                        : startTimezone);
+                rid.addDuration(timeDiff);
+                ex.recurrenceId = rid;
 
                 modifiedExceptions.push(ex);
                 this.removeExceptionFor(exid);
@@ -868,25 +907,6 @@ calRecurrenceInfo.prototype = {
         }
         for each (var modifiedEx in modifiedExceptions) {
             this.modifyException(modifiedEx, true);
-        }
-
-        // also take RDATE's and EXDATE's into account.
-        const kCalIRecurrenceDate = Components.interfaces.calIRecurrenceDate;
-        const kCalIRecurrenceDateSet = Components.interfaces.calIRecurrenceDateSet;
-        var ritems = this.getRecurrenceItems({});
-        for (var i in ritems) {
-            var ritem = ritems[i];
-            if (ritem instanceof kCalIRecurrenceDate) {
-                ritem = ritem.QueryInterface(kCalIRecurrenceDate);
-                ritem.date.addDuration(timeDiff);
-            } else if (ritem instanceof kCalIRecurrenceDateSet) {
-                ritem = ritem.QueryInterface(kCalIRecurrenceDateSet);
-                var rdates = ritem.getDates({});
-                for each (var date in rdates) {
-                    date.addDuration(timeDiff);
-                }
-                ritem.setDates(rdates.length,rdates);
-            }
         }
     }
 };

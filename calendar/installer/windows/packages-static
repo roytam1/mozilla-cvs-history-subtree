@@ -177,8 +177,6 @@ bin\components\uriloader.xpt
 bin\components\urlformatter.xpt
 bin\components\webBrowser_core.xpt
 bin\components\webbrowserpersist.xpt
-bin\components\webdav.dll
-bin\components\webdav.xpt
 bin\components\webshell_idls.xpt
 bin\components\websrvcs.xpt
 bin\components\widget.xpt
@@ -264,6 +262,7 @@ bin\js\calOutlookCSVImportExport.js
 bin\js\calProtocolHandler.js
 bin\js\calProviderBase.js
 bin\js\calRecurrenceInfo.js
+bin\js\calRelation.js
 bin\js\calStorageCalendar.js
 bin\js\calTodo.js
 bin\js\calTransactionManager.js
@@ -272,8 +271,9 @@ bin\js\calCalendarSearchService.js
 bin\js\calTimezoneService.js
 bin\js\calUtils.js
 bin\js\calAuthUtils.js
+bin\js\calProviderUtils.js
+bin\js\calWeekInfoService.js
 bin\js\calWeekPrinter.js
-bin\js\calWeekTitleService.js
 bin\js\calWcapCalendar.js
 bin\js\calWcapCalendarItems.js
 bin\js\calWcapErrors.js

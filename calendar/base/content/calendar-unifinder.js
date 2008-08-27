@@ -366,10 +366,14 @@ function unifinderKeyPress(aEvent) {
         case 13:
             // Enter, edit the event
             editSelectedEvents();
+            aEvent.stopPropagation();
+            aEvent.preventDefault();
             break;
         case kKE.DOM_VK_BACK_SPACE:
         case kKE.DOM_VK_DELETE:
             deleteSelectedEvents();
+            aEvent.stopPropagation();
+            aEvent.preventDefault();
             break;
     }
 }
@@ -592,10 +596,9 @@ var unifinderTreeView = {
         }
 
         // Task categories
-        var categories = categoriesStringToArray(item.getProperty("CATEGORIES"));
-        categories.map(formatStringForCSSRule)
-                  .map(getAtomFromService)
-                  .forEach(aProps.AppendElement, aProps);
+        item.getCategories({}).map(formatStringForCSSRule)
+                              .map(getAtomFromService)
+                              .forEach(aProps.AppendElement, aProps);
     },
     getColumnProperties: function uTV_getColumnProperties(aCol, aProps) {},
 
@@ -664,7 +667,7 @@ var unifinderTreeView = {
                 return formatUnifinderEventDateTime(eventEndDate);
 
             case "unifinder-search-results-tree-col-categories":
-                return calendarEvent.getProperty("CATEGORIES");
+                return calendarEvent.getCategories({}).join(", ");
 
             case "unifinder-search-results-tree-col-location":
                 return calendarEvent.getProperty("LOCATION");
@@ -744,7 +747,7 @@ function getEventSortKey(calEvent) {
             return nativeTimeOrNow(calEvent.endDate);
 
         case "unifinder-search-results-tree-col-categories":
-            return calEvent.getProperty("CATEGORIES") || "";
+            return calEvent.getCategories({}).join(", ");
 
         case "unifinder-search-results-tree-col-location":
             return calEvent.getProperty("LOCATION") || "";
@@ -876,7 +879,6 @@ function refreshEventTree() {
 
     gStartDate = StartDate  ? jsDateToDateTime(StartDate, calendarDefaultTimezone()) : null;
     gEndDate = EndDate ? jsDateToDateTime(EndDate, calendarDefaultTimezone()) : null;
-            LOG("Getting between " + gStartDate +  " and " + gEndDate + "\n");
     if (StartDate && EndDate) {
         filter |= ccalendar.ITEM_FILTER_CLASS_OCCURRENCES;
     }
@@ -960,7 +962,7 @@ function isItemInFilter(aItem) {
         return true;
     }
 
-    const fieldsToSearch = ["SUMMARY", "DESCRIPTION", "LOCATION", "CATEGORIES", "URL"];
+    const fieldsToSearch = ["SUMMARY", "DESCRIPTION", "LOCATION", "URL"];
     if (!fixAlldayDates(aItem)) {
         return false;
     }
@@ -971,7 +973,11 @@ function isItemInFilter(aItem) {
             return true;
         }
     }
-    return false;
+
+    return aItem.getCategories({}).some(
+        function someFunc(cat) {
+            return (cat.toLowerCase().indexOf(searchText) != -1);
+        });
 }
 
 function focusSearch() {

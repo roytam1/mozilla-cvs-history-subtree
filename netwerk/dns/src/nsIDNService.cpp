@@ -151,6 +151,9 @@ nsIDNService::~nsIDNService()
 /* ACString ConvertUTF8toACE (in AUTF8String input); */
 NS_IMETHODIMP nsIDNService::ConvertUTF8toACE(const nsACString & input, nsACString & ace)
 {
+  // protect against bogus input
+  NS_ENSURE_TRUE(IsUTF8(input), NS_ERROR_UNEXPECTED);
+
   nsresult rv;
   NS_ConvertUTF8toUCS2 ustr(input);
 

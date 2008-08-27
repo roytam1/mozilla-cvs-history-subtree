@@ -64,7 +64,7 @@
 
 JSBool
 nsJSUtils::GetCallingLocation(JSContext* aContext, const char* *aFilename,
-                              PRUint32* aLineno, JSPrincipals* aPrincipals)
+                              PRUint32* aLineno, nsIPrincipal* aPrincipal)
 {
   // Get the current filename and line number
   JSStackFrame* frame = nsnull;
@@ -80,32 +80,26 @@ nsJSUtils::GetCallingLocation(JSContext* aContext, const char* *aFilename,
   if (script) {
     // If aPrincipals is non-null then our caller is asking us to ensure
     // that the filename we return does not have elevated privileges.
-    if (aPrincipals) {
-      // The principals might not be in the script, but we can always
-      // find the right principals in the frame's callee.
-      JSPrincipals* scriptPrins = JS_GetScriptPrincipals(aContext, script);
-      if (!scriptPrins) {
-        JSObject *callee = JS_GetFrameCalleeObject(aContext, frame);
-        nsCOMPtr<nsIPrincipal> prin;
+    if (aPrincipal) {
+      uint32 flags = JS_GetScriptFilenameFlags(script);
+
+      // Use the principal for the filename if it shouldn't be receiving
+      // implicit XPCNativeWrappers.
+      if (flags & JSFILENAME_SYSTEM) {
         nsIScriptSecurityManager *ssm = nsContentUtils::GetSecurityManager();
-        if (NS_FAILED(ssm->GetObjectPrincipal(aContext, callee,
-                                              getter_AddRefs(prin))) ||
-            !prin) {
-          return JS_FALSE;
+
+        nsCOMPtr<nsIPrincipal> sysPrin;
+        ssm->GetSystemPrincipal(getter_AddRefs(sysPrin));
+
+        if (aPrincipal != sysPrin) {
+          JSPrincipals* jsprins;
+          aPrincipal->GetJSPrincipals(aContext, &jsprins);
+
+          *aFilename = jsprins->codebase;
+          *aLineno = 0;
+          JSPRINCIPALS_DROP(aContext, jsprins);
+          return JS_TRUE;
         }
-
-        prin->GetJSPrincipals(aContext, &scriptPrins);
-
-        // The script has a reference to the principals.
-        JSPRINCIPALS_DROP(aContext, scriptPrins);
-      }
-
-      // Return the weaker of the two principals if they differ.
-      if (scriptPrins != aPrincipals &&
-          scriptPrins->subsume(scriptPrins, aPrincipals)) {
-        *aFilename = aPrincipals->codebase;
-        *aLineno = 0;
-        return JS_TRUE;
       }
     }
 

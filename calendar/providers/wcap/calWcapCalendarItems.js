@@ -63,21 +63,6 @@ function calWcapCalendar_encodeAttendee(att) {
     return encodeAttr(att.id, null, params);
 };
 
-calWcapCalendar.prototype.encodeNscpTzid =
-function calWcapCalendar_encodeNscpTzid(dateTime) {
-    var params = "X-NSCP-ORIGINAL-OPERATION=X-NSCP-WCAP-PROPERTY-";
-    if (!dateTime || !dateTime.isValid || dateTime.timezone.isUTC) {
-        params += "DELETE^";
-    } else if (dateTime.timezone.isFloating) {
-        // cs cannot cope with floating, always enforces server tz,
-        // better use user's tz then:
-        params += ("REPLACE^" + encodeURIComponent(this.defaultTimezone));
-    } else {
-        params += ("REPLACE^" + encodeURIComponent(this.getAlignedTzid(dateTime.timezone)));
-    }
-    return params;
-};
-
 calWcapCalendar.prototype.getRecurrenceParams =
 function calWcapCalendar_getRecurrenceParams(item, out_rrules, out_rdates, out_exrules, out_exdates) {
     // recurrences:
@@ -89,14 +74,14 @@ function calWcapCalendar_getRecurrenceParams(item, out_rrules, out_rdates, out_e
         var rItems = item.recurrenceInfo.getRecurrenceItems({});
         for each (var rItem in rItems) {
             var isNeg = rItem.isNegative;
-            if (rItem instanceof Components.interfaces.calIRecurrenceRule) {
+            if (calInstanceOf(rItem, Components.interfaces.calIRecurrenceRule)) {
                 var rule = ("\"" + encodeURIComponent(rItem.icalProperty.valueAsIcalString) + "\"");
                 if (isNeg) {
                     out_exrules.value.push(rule);
                 } else {
                     out_rrules.value.push(rule);
                 }
-            } else if (rItem instanceof Components.interfaces.calIRecurrenceDateSet) {
+            } else if (calInstanceOf(rItem, Components.interfaces.calIRecurrenceDateSet)) {
                 var d = rItem.getDates({});
                 for each (var d in rdates) {
                     // cs does not accept DATEs here:
@@ -106,7 +91,7 @@ function calWcapCalendar_getRecurrenceParams(item, out_rrules, out_rdates, out_e
                         out_rdates.value.push(getIcalUTC(ensureDateTime(d.date)));
                     }
                 }
-            } else if (rItem instanceof Components.interfaces.calIRecurrenceDate) {
+            } else if (calInstanceOf(rItem, Components.interfaces.calIRecurrenceDate)) {
                 // cs does not accept DATEs here:
                 if (isNeg) {
                     out_exdates.value.push(getIcalUTC(ensureDateTime(rItem.date)));
@@ -246,20 +231,44 @@ function calWcapCalendar_isInvitation(item) {
     if (!this.session.isLoggedIn) {
         return false; // don't know
     }
-    var orgCalId = getCalId(item.organizer);
-    if (!orgCalId) {
-        return false;
-    }
     var calId = this.calId;
+    var orgCalId = getCalId(item.organizer);
     if (orgCalId == calId) {
         return false;
     }
-    return (getAttendeeByCalId(item.getAttendees({}), calId) != null);
+    return (this.getInvitedAttendee(item) != null);
 };
 
 calWcapCalendar.prototype.getInvitedAttendee =
 function calWcapCalendar_getInvitedAttendee(item) {
-    return getAttendeeByCalId(item.getAttendees({}), this.calId);
+    var att = getAttendeeByCalId(item.getAttendees({}), this.calId);
+    if (!att) { // try to find mail address
+        var ar = this.session.getUserPreferences("X-NSCP-WCAP-PREF-mail");
+        if (ar.length > 0 && ar[0].length > 0) {
+            att = item.getAttendeeById("mailto:" + ar[0]);
+        }
+    }
+    return att;
+};
+
+calWcapCalendar.prototype.canNotify =
+function calWcapCalendar_canNotify(method, item) {
+    if (!this.session.isLoggedIn) {
+        return false;
+    }
+    var calId = this.calId;
+    switch (method) {
+        case "REQUEST":
+        case "CANCEL":
+            // when creating new items, mind that organizer's id
+            return (!item.organizer || // might yet not be set
+                    (item.organizer.id == calId) || // or is set to raw calId
+                    (getCalId(item.organizer) == calId));
+        case "REPLY": // only if we we're invited from cs, and find matching X-S1CS-CALID:
+            return (getAttendeeByCalId(item.getAttendees({}), calId) != null);
+        default:
+            return false;
+    }
 };
 
 function equalDatetimes(one, two) {
@@ -346,10 +355,8 @@ function calWcapCalendar_storeItem(bAddItem, item, oldItem, request) {
             bIsAllDay = (dtstart.isDate && dtend.isDate);
             if (!oldItem || !identicalDatetimes(dtstart, oldItem.startDate)
                          || !identicalDatetimes(dtend, oldItem.endDate)) {
-                params += ("&dtstart=" + getIcalUTC(dtstart));
-                params += ("&X-NSCP-DTSTART-TZID=" + this.encodeNscpTzid(dtstart));
+                params += ("&dtstart=" + getIcalUTC(dtstart)); // timezone will be set with tzid param
                 params += ("&dtend=" + getIcalUTC(dtend));
-                params += ("&X-NSCP-DTEND-TZID=" + this.encodeNscpTzid(dtend));
                 params += (bIsAllDay ? "&isAllDay=1" : "&isAllDay=0");
 
                 if (bIsParent && item.recurrenceInfo) {
@@ -370,10 +377,8 @@ function calWcapCalendar_storeItem(bAddItem, item, oldItem, request) {
             bIsAllDay = (dtstart && dtstart.isDate);
             if (!oldItem || !identicalDatetimes(dtstart, oldItem.entryDate)
                          || !identicalDatetimes(dtend, oldItem.dueDate)) {
-                params += ("&dtstart=" + getIcalUTC(dtstart));
-                params += ("&X-NSCP-DTSTART-TZID=" + this.encodeNscpTzid(dtstart));
-                params += ("&due=" + getIcalUTC(dtend));
-                params += ("&X-NSCP-DUE-TZID=" + this.encodeNscpTzid(dtend));
+                params += ("&dtstart=" + getIcalUTC(dtstart)); // timezone will be set with tzid param
+                params += ("&due=" + getIcalUTC(dtend)); // timezone will be set with tzid param
                 params += (bIsAllDay ? "&isAllDay=1" : "&isAllDay=0");
 
                 if (bIsParent && item.recurrenceInfo) {
@@ -448,11 +453,21 @@ function calWcapCalendar_storeItem(bAddItem, item, oldItem, request) {
         if (!oldItem || val != oldItem.title) {
             params += ("&summary=" + encodeURIComponent(val));
         }
-        // xxx todo: missing relatedTos= in cal api
-        val = diffProperty(item, oldItem, "CATEGORIES");
-        if (val !== null) { // xxx todo: check whether ;-separated:
-            params += ("&categories=" + encodeURIComponent( val.replace(/,/g, ";") ));
+
+        params += "&categories=";
+        var categories = item.getCategories({});
+        if (categories.length > 0) {
+            function encodeCategories(cats) {
+                cats = cats.concat([]);
+                cats.sort();
+                return cats.join(";");
+            }
+            var catParam = encodeCategories(categories);
+            if (!oldItem || catParam != encodeCategories(oldItem.getCategories({}))) {
+                params += catParam;
+            }
         }
+
         val = diffProperty(item, oldItem, "DESCRIPTION");
         if (val !== null) {
             params += ("&desc=" + encodeURIComponent(val));
@@ -528,7 +543,7 @@ function calWcapCalendar_storeItem(bAddItem, item, oldItem, request) {
                 for each (var att in attachements) {
                     if (typeof(att) == "string") {
                         strings.push(encodeURIComponent(att));
-                    } else if (att instanceof Components.interfaces.calIAttachment) {
+                    } else if (calInstanceOf(att, Components.interfaces.calIAttachment)) {
                         strings.push(encodeURIComponent(att.uri.spec));
                     } else { // xxx todo
                         logError("only URLs supported as attachment, not: " + att, this_);
@@ -561,13 +576,10 @@ function calWcapCalendar_storeItem(bAddItem, item, oldItem, request) {
         }
         request.execRespFunc(null, item);
     } else {
+        // cs does not support separate timezones for start and end, just pick one for tzid param:
         var someDate = (item.startDate || item.entryDate || item.dueDate);
-        if (someDate) {
-            someTz = someDate.timezone;
-            if (!someTz.isUTC && !someTz.isFloating) {
-                // provide some tzid: eMail notification dates are influenced by this parameter
-                params += ("&tzid=" + encodeURIComponent(this.getAlignedTzid(someTz)));
-            }
+        if (someDate && !someDate.timezone.isUTC) {
+            params += ("&tzid=" + encodeURIComponent(this.getAlignedTzid(someDate.timezone)));
         }
 
         if (item.id) {
@@ -828,6 +840,35 @@ function calWcapCalendar_deleteItem(item, listener) {
     return request;
 };
 
+calWcapCalendar.prototype.patchTimezone = function calWcapCalendar_patchTimezone(subComp, attr, xpropOrTz) {
+    var dt = subComp[attr];
+    // if TZID parameter present (all-day items), it takes precedence:
+    if (dt && (dt.timezone.isUTC || dt.timezone.isFloating)) {
+        if (LOG_LEVEL > 2) {
+            log(attr + " is " + dt, this);
+        }
+        var tz;
+        if (typeof(xpropOrTz) == "string") {
+            var tzid = subComp.getFirstProperty(xpropOrTz);
+            if (tzid) {
+                tz = this.session.getTimezone(tzid.value);
+                ASSERT(tz, "timezone not found: " + tzid);
+            }
+        } else {
+            tz = xpropOrTz;
+        }
+        if (tz) {
+            if (LOG_LEVEL > 2) {
+                log("patching " + xpropOrTz + ": from " +
+                    dt + " to " + dt.getInTimezone(tz), this);
+            }
+            dt = dt.getInTimezone(tz);
+            subComp[attr] = dt;
+        }
+    }
+    return dt;
+}
+
 calWcapCalendar.prototype.parseItems = function calWcapCalendar_parseItems(
     icalRootComp, itemFilter, maxResults, rangeStart, rangeEnd, bLeaveMutable) {
     var items = [];
@@ -851,32 +892,6 @@ calWcapCalendar.prototype.parseItems = function calWcapCalendar_parseItems(
     forEachIcalComponent(
         icalRootComp, componentType,
         function(subComp) {
-
-            function patchTimezone(subComp, attr, xprop) {
-                var dt = subComp[attr];
-                // if TZID parameter present (all-day items), it takes precedence:
-                if (dt && (dt.timezone.isUTC || dt.timezone.isFloating)) {
-                    if (LOG_LEVEL > 2) {
-                        log(attr + " is " + dt, this_);
-                    }
-                    var tzid = subComp.getFirstProperty(xprop);
-                    if (tzid) {
-                        var tz = this_.session.getTimezone(tzid.value);
-                        ASSERT(tz, "timezone not found: " + tzid);
-                        if (tz) {
-                            subComp[attr] = dt.getInTimezone(tz);
-                            if (LOG_LEVEL > 2) {
-                                log("patching " + xprop + ": from " +
-                                    dt + " to " + subComp[attr], this_);
-                            }
-                        }
-                    }
-                }
-            }
-
-            patchTimezone(subComp, "startTime", "X-NSCP-DTSTART-TZID");
-            patchTimezone(subComp, "recurrenceId", "X-NSCP-DTSTART-TZID");
-
             var organizer = subComp.getFirstProperty("ORGANIZER");
             if (organizer && organizer.getParameter("SENT-BY")) { // has SENT-BY
                 // &emailorcalid=1 sets wrong email, workaround setting calid...
@@ -886,16 +901,18 @@ calWcapCalendar.prototype.parseItems = function calWcapCalendar_parseItems(
                 }
             }
 
+            var dtstart = this_.patchTimezone(subComp, "startTime", "X-NSCP-DTSTART-TZID");
+
             var item = null;
             switch (subComp.componentType) {
                 case "VEVENT": {
-                    patchTimezone(subComp, "endTime", "X-NSCP-DTEND-TZID");
+                    this_.patchTimezone(subComp, "endTime", dtstart ? dtstart.timezone : "X-NSCP-DTEND-TZID");
                     item = createEvent();
                     item.icalComponent = subComp;
                     break;
                 }
                 case "VTODO": {
-                    patchTimezone(subComp, "dueTime", "X-NSCP-DUE-TZID");
+                    this_.patchTimezone(subComp, "dueTime", dtstart ? dtstart.timezone : "X-NSCP-DUE-TZID");
                     item = createTodo();
                     item.icalComponent = subComp;
                     switch (itemFilter & calICalendar.ITEM_FILTER_COMPLETED_ALL) {
@@ -932,6 +949,8 @@ calWcapCalendar.prototype.parseItems = function calWcapCalendar_parseItems(
                 item.calendar = this_.superCalendar;
                 var rid = item.recurrenceId;
                 if (rid) {
+                    rid = rid.getInTimezone(dtstart.timezone);
+                    item.recurrenceId = rid;
                     item.recurrenceInfo = null;
                     if (LOG_LEVEL > 1) {
                         log("exception item: " + item.title +
@@ -943,7 +962,8 @@ calWcapCalendar.prototype.parseItems = function calWcapCalendar_parseItems(
                 } else if (item.recurrenceInfo) {
                     unexpandedItems.push(item);
                     uid2parent[item.id] = item;
-                } else if (maxResults == 0 || items.length < maxResults) {
+                } else if ((maxResults == 0 || items.length < maxResults) &&
+                           checkIfInRange(item, rangeStart, rangeEnd)) {
                     if (LOG_LEVEL > 2) {
                         log("item: " + item.title + "\n" + item.icalString, this_);
                     }
@@ -998,12 +1018,12 @@ calWcapCalendar.prototype.parseItems = function calWcapCalendar_parseItems(
             var recItems = item.recurrenceInfo.getRecurrenceItems({});
             for each (var recItem in recItems) {
                 // cs bug: workaround missing COUNT
-                if (recItem instanceof Components.interfaces.calIRecurrenceRule) {
+                if (calInstanceOf(recItem, Components.interfaces.calIRecurrenceRule)) {
                     if (!recItem.isFinite && !recItem.isNegative) {
                         recItem.count = recurrenceBound;
                     }
                 } else if (recStartDate &&
-                           (recItem instanceof Components.interfaces.calIRecurrenceDate)) {
+                           calInstanceOf(recItem, Components.interfaces.calIRecurrenceDate)) {
                     // cs bug: always uses DATE-TIME even though the master item is all-day DATE:
                     //         get into startDate's timezone before cutting:
                     var date = recItem.date.getInTimezone(recStartDate.timezone);
@@ -1060,6 +1080,11 @@ function calWcapCalendar_getItem(id, listener) {
     var this_ = this;
     var request = new calWcapRequest(
         function getItem_resp(request, err, item) {
+            if (checkErrorCode(err, calIWcapErrors.WCAP_FETCH_EVENTS_BY_ID_FAILED) ||
+                checkErrorCode(err, calIWcapErrors.WCAP_COMPONENT_NOT_FOUND)) {
+                // querying by id is a valid use case, even if no item is returned:
+                err = NS_OK;
+            }
             this_.notifyOperationComplete(listener,
                                           getResultCode(err),
                                           calIOperationListener.GET,

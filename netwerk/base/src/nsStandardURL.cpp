@@ -2258,6 +2258,7 @@ nsStandardURL::SetRef(const nsACString &input)
     
     if (mRef.mLen < 0) {
         mSpec.Append('#');
+        ++mPath.mLen;  // Include the # in the path.
         mRef.mPos = mSpec.Length();
         mRef.mLen = 0;
     }

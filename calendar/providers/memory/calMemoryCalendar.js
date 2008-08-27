@@ -63,7 +63,8 @@ calMemoryCalendar.prototype = {
 
     initMemoryCalendar: function() {
         this.mObservers = new calListenerBag(Components.interfaces.calIObserver);
-        this.mItems = { };
+        this.mItems = {};
+        this.mMetaData = new calPropertyBag();
     },
 
     //
@@ -84,6 +85,7 @@ calMemoryCalendar.prototype = {
     deleteCalendar: function mem_deleteCal(cal, listener) {
         cal = cal.wrappedJSObject;
         cal.mItems = {};
+        cal.mMetaData = new calPropertyBag();
 
         try {
             listener.onDeleteCalendar(cal, Components.results.NS_OK, null);
@@ -213,7 +215,7 @@ calMemoryCalendar.prototype = {
             var storedOldItem = this.mItems[aOldItem.id];
 
             // compareItems is not suitable here. See bug 418805.
-            if (storedOldItem.icalString != aOldItem.icalString) {
+            if (!compareItemContent(storedOldItem, aOldItem)) {
                 return reportError("old item mismatch in modifyItem");
             }
 
@@ -266,6 +268,7 @@ calMemoryCalendar.prototype = {
         }
 
         delete this.mItems[aItem.id];
+        this.mMetaData.deleteProperty(aItem.id);
 
         this.notifyOperationComplete(aListener,
                                      Components.results.NS_OK,
@@ -282,20 +285,21 @@ calMemoryCalendar.prototype = {
             return;
 
         if (aId == null || this.mItems[aId] == null) {
+            // querying by id is a valid use case, even if no item is returned:
             this.notifyOperationComplete(aListener,
-                                         Components.results.NS_ERROR_FAILURE,
+                                         Components.results.NS_OK,
                                          Components.interfaces.calIOperationListener.GET,
-                                         null,
-                                         "IID doesn't exist for getItem");
+                                         aId,
+                                         null);
             return;
         }
 
         var item = this.mItems[aId];
         var iid = null;
 
-        if (item instanceof Components.interfaces.calIEvent) {
+        if (isEvent(item)) {
             iid = Components.interfaces.calIEvent;
-        } else if (item instanceof Components.interfaces.calITodo) {
+        } else if (isToDo(item)) {
             iid = Components.interfaces.calITodo;
         } else {
             this.notifyOperationComplete(aListener,
@@ -336,7 +340,17 @@ calMemoryCalendar.prototype = {
         // filters
         //
 
-        var wantInvitations = ((aItemFilter & calICalendar.ITEM_FILTER_REQUEST_NEEDS_ACTION) != 0);
+        var wantUnrespondedInvitations = ((aItemFilter & calICalendar.ITEM_FILTER_REQUEST_NEEDS_ACTION) != 0);
+        var superCal;
+        try {
+            superCal = this.superCalendar.QueryInterface(Components.interfaces.calISchedulingSupport);
+        } catch (exc) {
+            wantUnrespondedInvitations = false;
+        }
+        function checkUnrespondedInvitation(item) {
+            var att = superCal.getInvitedAttendee(item);
+            return (att && (att.participationStatus == "NEEDS-ACTION"));
+        }
 
         // item base type
         var wantEvents = ((aItemFilter & calICalendar.ITEM_FILTER_TYPE_EVENT) != 0);
@@ -392,14 +406,14 @@ calMemoryCalendar.prototype = {
             if (itemReturnOccurrences && item.recurrenceInfo) {
                 var occurrences = item.recurrenceInfo.getOccurrences(
                     aRangeStart, aRangeEnd, aCount ? aCount - itemsFound.length : 0, {});
-                if (wantInvitations) {
-                    occurrences = occurrences.filter(this.isInvitation, this);
+                if (wantUnrespondedInvitations) {
+                    occurrences = occurrences.filter(checkUnrespondedInvitation);
                 }
                 if (!isEvent_) {
                     occurrences = occurrences.filter(checkCompleted);
                 }
                 itemsFound = itemsFound.concat(occurrences);
-            } else if ((!wantInvitations || this.itip_checkInvitation(item)) &&
+            } else if ((!wantUnrespondedInvitations || checkUnrespondedInvitation(item)) &&
                        (isEvent_ || checkCompleted(item)) &&
                        checkIfInRange(item, aRangeStart, aRangeEnd)) {
                 // This needs fixing for recurring items, e.g. DTSTART of parent may occur before aRangeStart.
@@ -423,5 +437,24 @@ calMemoryCalendar.prototype = {
                                      Components.interfaces.calIOperationListener.GET,
                                      null,
                                      null);
+    },
+
+    //
+    // calISyncCalendar interface
+    //
+    setMetaData: function memory_setMetaData(id, value) {
+        this.mMetaData.setProperty(id, value);
+    },
+    deleteMetaData: function memory_deleteMetaData(id) {
+        this.mMetaData.deleteProperty(id);
+    },
+    getMetaData: function memory_getMetaData(id) {
+        return this.mMetaData.getProperty(id);
+    },
+    getAllMetaData: function memory_getAllMetaData(out_count,
+                                                   out_ids,
+                                                   out_values) {
+        this.mMetaData.getAllProperties(out_ids, out_values);
+        out_count.value = out_ids.value.length;
     }
 };
