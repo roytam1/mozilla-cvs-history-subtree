@@ -453,12 +453,12 @@ static void Measure(void (*func)(void), const char *msg)
 
 int main(int argc, char **argv)
 {
-#if defined(XP_UNIX) || defined(XP_OS2)
+#if defined(XP_UNIX) || defined(XP_OS2_EMX)
 	int opt;
 	PR_IMPORT_DATA(char *) optarg;
 #endif
 
-#if defined(XP_UNIX) || defined(XP_OS2)
+#if defined(XP_UNIX) || defined(XP_OS2_EMX)
 	while ( (opt = getopt(argc, argv, "c:s:i:t:v")) != EOF) {
 		switch(opt) {
 			case 'i':

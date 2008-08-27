@@ -46,9 +46,15 @@
 #include "utilrename.h"
 
 /*
- * define XP_WIN, XP_BEOS, or XP_UNIX, in case they are not defined
+ * define XP_MAC, XP_WIN, XP_BEOS, or XP_UNIX, in case they are not defined
  * by anyone else
  */
+#ifdef macintosh
+# ifndef XP_MAC
+# define XP_MAC 1
+# endif
+#endif
+
 #ifdef _WINDOWS
 # ifndef XP_WIN
 # define XP_WIN
@@ -83,6 +89,9 @@
 #if defined(_WIN32_WCE)
 #include <windef.h>
 #include <types.h>
+#elif defined( XP_MAC ) 
+#include <types.h>
+#include <time.h> /* for time_t below */
 #else
 #include <sys/types.h>
 #endif

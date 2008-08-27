@@ -1243,7 +1243,7 @@ tools are selected during the Xcode/Developer Tools installation.])
     AC_DEFINE(FREEBSD)
     AC_DEFINE(HAVE_BSD_FLOCK)
     CFLAGS="$CFLAGS $(DSO_CFLAGS) -ansi -Wall"
-    MOZ_OBJFORMAT=`test -x /usr/bin/objformat && /usr/bin/objformat || echo elf`
+    MOZ_OBJFORMAT=`test -x /usr/bin/objformat && /usr/bin/objformat || echo aout`
     if test "$MOZ_OBJFORMAT" = "elf"; then
         DLL_SUFFIX=so
     else
@@ -2169,7 +2169,7 @@ dnl ========================================================
 dnl Checks for library functions.
 dnl ========================================================
 AC_PROG_GCC_TRADITIONAL
-AC_CHECK_FUNCS(lchown strerror getaddrinfo getnameinfo)
+AC_CHECK_FUNCS(lchown strerror)
 
 dnl AC_FUNC_MEMCMP
 dnl AC_FUNC_MMAP
@@ -2643,7 +2643,5 @@ dnl since configure won't handle 2 levels of directory
 dnl structure for us..
 mkdir ldap > /dev/null 2>&1
 mkdir ldap/clients > /dev/null 2>&1
-
-echo $MAKEFILES > unallmakefiles
 
 AC_OUTPUT([$MAKEFILES])
