@@ -2160,7 +2160,7 @@ nsresult nsParseNewMailState::EndMsgDownload()
 }
 
 nsresult nsParseNewMailState::AppendMsgFromFile(nsIOFileStream *fileStream, 
-                                                PRInt32 offset, PRUint32 length,
+                                                PRUint32 offset, PRUint32 length,
                                                 nsFileSpec &destFileSpec)
 {
   fileStream->seek(PR_SEEK_SET, offset);
