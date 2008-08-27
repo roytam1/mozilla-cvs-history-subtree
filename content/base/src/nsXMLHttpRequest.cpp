@@ -1293,6 +1293,8 @@ nsXMLHttpRequest::OnStartRequest(nsIRequest *request, nsISupports *ctxt)
   nsCOMPtr<nsIChannel> channel(do_QueryInterface(request));
   NS_ENSURE_TRUE(channel, NS_ERROR_UNEXPECTED);
 
+  mChannel->SetOwner(mPrincipal);
+
   mReadRequest = request;
   mContext = ctxt;
   mState |= XML_HTTP_REQUEST_PARSEBODY;
@@ -1326,6 +1328,9 @@ nsXMLHttpRequest::OnStartRequest(nsIRequest *request, nsISupports *ctxt)
                                       nsnull,
                                       getter_AddRefs(mDocument));
   if (NS_FAILED(rv)) return NS_ERROR_FAILURE;
+
+  nsCOMPtr<nsIDocument> doc(do_QueryInterface(mDocument));
+  doc->SetPrincipal(mPrincipal);
 
   // Reset responseBody
   mResponseBody.Truncate();
