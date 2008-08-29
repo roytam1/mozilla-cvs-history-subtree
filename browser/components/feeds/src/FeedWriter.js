@@ -986,15 +986,15 @@ FeedWriter.prototype = {
     else {
       switch (selectedItem.id) {
         case "selectedAppMenuItem":
-          prefs.setCharPref(PREF_SELECTED_READER, "client");
           prefs.setComplexValue(PREF_SELECTED_APP, Ci.nsILocalFile, 
                                 this._selectedApp);
+          prefs.setCharPref(PREF_SELECTED_READER, "client");
           break;
 #ifdef XP_WIN
         case "defaultHandlerMenuItem":
-          prefs.setCharPref(PREF_SELECTED_READER, "client");
           prefs.setComplexValue(PREF_SELECTED_APP, Ci.nsILocalFile, 
                                 this._defaultSystemReader);
+          prefs.setCharPref(PREF_SELECTED_READER, "client");
           break;
 #endif
         case "liveBookmarksMenuItem":
