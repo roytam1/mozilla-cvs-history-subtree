@@ -34,10 +34,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#calendar-properties-grid {
-    margin-left: 20px;
-}
-
-#calendar-properties-rows > row {
+#customize-rows > row {
     min-height: 26px;
 }

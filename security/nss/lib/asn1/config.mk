@@ -1,3 +1,4 @@
+# 
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
 #
@@ -11,11 +12,11 @@
 # for the specific language governing rights and limitations under the
 # License.
 #
-# The Original Code is mozilla.org code.
+# The Original Code is the Netscape security libraries.
 #
 # The Initial Developer of the Original Code is
 # Netscape Communications Corporation.
-# Portions created by the Initial Developer are Copyright (C) 2001
+# Portions created by the Initial Developer are Copyright (C) 1994-2000
 # the Initial Developer. All Rights Reserved.
 #
 # Contributor(s):
@@ -33,19 +34,19 @@
 # the terms of any one of the MPL, the GPL or the LGPL.
 #
 # ***** END LICENSE BLOCK *****
+CONFIG_CVS_ID = "@(#) $RCSfile$ $Revision$ $Date$"
 
-DEPTH		= ..
-topsrcdir	= @top_srcdir@
-srcdir		= @srcdir@
-VPATH		= @srcdir@
-
-include $(DEPTH)/config/autoconf.mk
-
-MODULE	= calendar
-DIRS = libical resources base providers import-export locales
-
-ifdef ENABLE_TESTS
-DIRS += test
+ifdef BUILD_IDG
+DEFINES += -DNSSDEBUG
 endif
 
-include $(topsrcdir)/config/rules.mk
+#
+#  Override TARGETS variable so that only static libraries
+#  are specifed as dependencies within rules.mk.
+#
+
+TARGETS        = $(LIBRARY)
+SHARED_LIBRARY =
+IMPORT_LIBRARY =
+PROGRAM        =
+

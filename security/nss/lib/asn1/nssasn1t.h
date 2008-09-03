@@ -11,11 +11,11 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is Sun Microsystems code.
+ * The Original Code is the Netscape security libraries.
  *
  * The Initial Developer of the Original Code is
- *   Philipp Kewisch <mozilla@kewis.ch>
- * Portions created by the Initial Developer are Copyright (C) 2008
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1994-2000
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -34,10 +34,37 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#calendar-properties-grid {
-    margin-left: 20px;
-}
+#ifndef NSSASN1T_H
+#define NSSASN1T_H
 
-#calendar-properties-rows > row {
-    min-height: 26px;
-}
+#ifdef DEBUG
+static const char NSSASN1T_CVS_ID[] = "@(#) $RCSfile$ $Revision$ $Date$";
+#endif /* DEBUG */
+
+/*
+ * nssasn1t.h
+ *
+ * This file contains the public types related to our ASN.1 encoder 
+ * and decoder.
+ */
+
+PR_BEGIN_EXTERN_C
+
+/*
+ * NSSASN1EncodingType
+ *
+ * This type enumerates specific types of ASN.1 encodings.
+ */
+
+typedef enum {
+  NSSASN1BER,               /* Basic Encoding Rules */
+  NSSASN1CER,               /* Canonical Encoding Rules */
+  NSSASN1DER,               /* Distinguished Encoding Rules */
+  NSSASN1LWER,              /* LightWeight Encoding Rules */
+  NSSASN1PER,               /* Packed Encoding Rules */
+  NSSASN1UnknownEncoding = -1
+} NSSASN1EncodingType;
+
+PR_END_EXTERN_C
+
+#endif /* NSSASN1T_H */

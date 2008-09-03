@@ -78,6 +78,8 @@
                 accesskey="&calendar.context.properties.accesskey;"
                 observes="calendar_edit_calendar_command"/>
     </popup>
+    <tooltip id="calendar-list-tooltip"
+             onpopupshowing="return calendarListTreeView.onTooltipShowing(event)"/>
   </popupset>
 
   <tree id="calendar-list-tree-widget"
@@ -86,7 +88,6 @@
         onkeypress="calendarListTreeView.onKeyPress(event);"
         ondblclick="calendarListTreeView.onDoubleClick(event);"
         onselect="calendarListTreeView.onSelect(event);"
-        onmousemove="calendarListTreeView.onMouseMove(event);"
         context="list-calendars-context-menu">
       <treecols id="calendar-treecols" hideheader="true">
           <treecol id="calendar-list-tree-checkbox"
@@ -95,14 +96,28 @@
                    hideheader="true"
                    width="17"/>
           <treecol id="calendar-list-tree-color"
-                   cycler="true"
                    hideheader="true"
                    width="16"/>
           <treecol id="calendar-list-tree-calendar"
                    hideheader="true"
                    label="&calendar.unifinder.tree.calendarname.label;"
                    flex="1"/>
+          <treecol id="calendar-list-tree-status"
+                   hideheader="true"
+                   width="18"/>
+          <treecol id="calendar-list-tree-scrollbar-spacer"
+                   fixed="true"
+                   hideheader="true">
+            <!-- This is a very elegant workaround to make sure the last column
+                 is not covered by the scrollbar in case of an overflow. This
+                 treecol needs to be here last, so if you decide to insert
+                 columns please do so before this treecol -->
+            <slider id="calendar-list-tree-scrollbar-slider" orient="vertical"/>
+          </treecol>
         </treecols>
-     <treechildren id="calendar-treechildren"/>
+     <treechildren id="calendar-treechildren"
+                   tooltip="calendar-list-tooltip"
+                   onoverflow="document.getElementById('calendar-list-tree-scrollbar-spacer').collapsed = false;"
+                   onunderflow="document.getElementById('calendar-list-tree-scrollbar-spacer').collapsed = true;"/>
    </tree>
 </overlay>

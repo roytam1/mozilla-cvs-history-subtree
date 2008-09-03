@@ -1100,6 +1100,8 @@ calendar/providers/Makefile
 calendar/providers/memory/Makefile
 calendar/providers/storage/Makefile
 calendar/providers/composite/Makefile
+calendar/timezones/Makefile
+calendar/timezones/locales/Makefile
 "
 
 MAKEFILES_sunbird="

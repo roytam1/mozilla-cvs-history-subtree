@@ -144,7 +144,6 @@ function getCorrectedDate(aDate) {
     return aDate;
 }
 
-
 /**
  * The timezone service to translate Google timezones.
  */
@@ -359,6 +358,20 @@ function passwordManagerRemove(aUsername) {
  */
 function ItemToXMLEntry(aItem, aAuthorEmail, aAuthorName) {
 
+    var selfIsOrganizer = (aItem.organizer.id == "mailto:" + aAuthorEmail);
+
+    function addExtendedProperty(aName, aValue) {
+        if (!selfIsOrganizer) {
+            // We can't set extended properties if we are not the organizer,
+            // discard.
+            return;
+        }
+        var gdExtendedProp = <gd:extendedProperty xmlns:gd={gd}/>;
+        gdExtendedProp.@name = aName;
+        gdExtendedProp.@value = aValue || "";
+        entry.gd::extendedProperty += gdExtendedProp;
+    }
+
     if (!aItem) {
         throw new Components.Exception("", Components.results.NS_ERROR_INVALID_ARG);
     }
@@ -443,7 +456,7 @@ function ItemToXMLEntry(aItem, aAuthorEmail, aAuthorName) {
             var xmlAttendee = <gd:who xmlns:gd={gd}/>;
 
             // Strip "mailto:" part
-            xmlAttendee.@email = attendee.id.substring(7);
+            xmlAttendee.@email = attendee.id.replace(/^mailto:/, "");
 
             if (attendee.isOrganizer) {
                 xmlAttendee.@rel = kEVENT_SCHEMA + "organizer";
@@ -461,7 +474,7 @@ function ItemToXMLEntry(aItem, aAuthorEmail, aAuthorName) {
             }
 
             if (attendeeStatusMap[attendee.participationStatus]) {
-                xmlAttendee.gd::attendeeStatus.@value = kEVENT_SCHEMA + 
+                xmlAttendee.gd::attendeeStatus.@value = kEVENT_SCHEMA +
                     attendeeStatusMap[attendee.participationStatus];
             }
 
@@ -470,8 +483,7 @@ function ItemToXMLEntry(aItem, aAuthorEmail, aAuthorName) {
     }
 
     // Don't notify attendees by default. Use a preference in case the user
-    // wants this to be turned on. Support on a per event basis will be taken
-    // care of later.
+    // wants this to be turned on.
     var notify = getPrefSafe("calendar.google.sendEventNotifications", false);
     entry.gCal::sendEventNotifications.@value = (notify ? "true" : "false");
 
@@ -481,7 +493,7 @@ function ItemToXMLEntry(aItem, aAuthorEmail, aAuthorName) {
     entry.gd::when.@endTime = toRFC3339(aItem.endDate);
 
     // gd:reminder
-    if (aItem.alarmOffset) {
+    if (aItem.alarmOffset && selfIsOrganizer) {
         var gdReminder = <gd:reminder xmlns:gd={gd}/>;
         var alarmOffset = aItem.alarmOffset.clone();
 
@@ -490,20 +502,7 @@ function ItemToXMLEntry(aItem, aAuthorEmail, aAuthorName) {
             alarmOffset.addDuration(duration);
         }
 
-        // Google only accepts certain alarm values. Snap to them. See
-        // http://code.google.com/p/google-gdata/issues/detail?id=55
-        const alarmValues = [ 300, 600, 900, 1200, 1500, 1800, 2700, 3600, 7200,
-                            10800, 86400, 172800, 604800 ];
-        var discreteValue = alarmValues[alarmValues.length - 1] / 60;
-
-        for (var i = 0; i < alarmValues.length; i++) {
-            if (-aItem.alarmOffset.inSeconds <= alarmValues[i]) {
-                discreteValue = alarmValues[i] / 60;
-                break;
-            }
-        }
-
-        gdReminder.@minutes = discreteValue;
+        gdReminder.@minutes = -aItem.alarmOffset.inSeconds / 60;
         gdReminder.@method = "alert";
 
         if (aItem.recurrenceInfo) {
@@ -513,6 +512,9 @@ function ItemToXMLEntry(aItem, aAuthorEmail, aAuthorName) {
             // Otherwise, its a child of the gd:when element
             entry.gd::when.gd::reminder += gdReminder;
         }
+    } else if (aItem.alarmOffset) {
+        // We need to reset this so the item gets returned correctly.
+        aItem.alarmOffset = null;
     }
 
     // saved alarms
@@ -522,14 +524,11 @@ function ItemToXMLEntry(aItem, aAuthorEmail, aAuthorName) {
     }
 
     // gd:extendedProperty (alarmLastAck)
-    var gdAlarmLastAck = <gd:extendedProperty xmlns:gd={gd}/>;
-    gdAlarmLastAck.@name = "X-MOZ-LASTACK";
-    gdAlarmLastAck.@value = toRFC3339(aItem.alarmLastAck);
-    entry.gd::extendedProperty += gdAlarmLastAck;
+    addExtendedProperty("X-MOZ-LASTACK", toRFC3339(aItem.alarmLastAck));
 
-    // XXX Google now supports multiple alarms, but since the valid alarms are
-    // restricted to discrete values, using a normal alarm to snooze is pretty
-    // pointless.
+    // XXX While Google now supports multiple alarms and alarm values, we still
+    // need to fix bug 353492 first so we can better take care of finding out
+    // what alarm is used for snoozing.
 
     // gd:extendedProperty (snooze time)
     var gdAlarmSnoozeTime = <gd:extendedProperty xmlns:gd={gd}/>;
@@ -540,9 +539,7 @@ function ItemToXMLEntry(aItem, aAuthorEmail, aAuthorName) {
         icalSnoozeTime = createDateTime();
         icalSnoozeTime.icalString = itemSnoozeTime;
     }
-    gdAlarmSnoozeTime.@name = "X-MOZ-SNOOZE-TIME";
-    gdAlarmSnoozeTime.@value = toRFC3339(icalSnoozeTime);
-    entry.gd::extendedProperty += gdAlarmSnoozeTime;
+    addExtendedProperty("X-MOZ-SNOOZE-TIME", toRFC3339(icalSnoozeTime));
 
     // gd:extendedProperty (snooze recurring alarms)
     var snoozeValue = "";
@@ -564,10 +561,7 @@ function ItemToXMLEntry(aItem, aAuthorEmail, aAuthorName) {
     }
     // Now save the snooze object in source format as an extended property. Do
     // so always, since its currently impossible to unset extended properties.
-    var gdAlarmRecurSnooze = <gd:extendedProperty xmlns:gd={gd}/>;
-    gdAlarmRecurSnooze.@name = "X-GOOGLE-SNOOZE-RECUR";
-    gdAlarmRecurSnooze.@value = snoozeValue;
-    entry.gd::extendedProperty += gdAlarmRecurSnooze;
+    addExtendedProperty("X-GOOGLE-SNOOZE-RECUR", snoozeValue);
 
     // gd:visibility
     var privacy = aItem.privacy || "default";
@@ -576,11 +570,8 @@ function ItemToXMLEntry(aItem, aAuthorEmail, aAuthorName) {
     // categories
     // Google does not support categories natively, but allows us to store data
     // as an "extendedProperty", so we do here
-    var categories = aItem.getCategories({});
-    var gdCategories = <gd:extendedProperty xmlns:gd={gd}/>;
-    gdCategories.@name = "X-MOZ-CATEGORIES";
-    gdCategories.@value = categoriesArrayToString(categories);
-    entry.gd::extendedProperty += gdCategories;
+    addExtendedProperty("X-MOZ-CATEGORIES",
+                        categoriesArrayToString(aItem.getCategories({})));
 
     // gd:recurrence
     if (aItem.recurrenceInfo) {
@@ -622,6 +613,11 @@ function ItemToXMLEntry(aItem, aAuthorEmail, aAuthorName) {
         entry.gd::originalEvent.gd::when.@startTime =
             toRFC3339(aItem.recurrenceId.getInTimezone(UTC()));
     }
+
+    // While it may sometimes not work out, we can always try to set the uid and
+    // sequence properties
+    entry.gCal::sequence.@value = aItem.getProperty("SEQUENCE") || 0;
+    entry.gCal::uid.@value = aItem.id || "";
 
     // TODO gd:comments: Enhancement tracked in bug 362653
 
@@ -800,6 +796,10 @@ function XMLEntryToItem(aXMLEntry, aTimezone, aCalendar, aReferenceItem) {
         // id
         item.id = getIdFromEntry(aXMLEntry);
 
+        // sequence
+        item.setProperty("SEQUENCE",
+                         aXMLEntry.gCal::sequence.@value.toString() || 0);
+
         // link (edit url)
         // Since Google doesn't set the edit url to be https if the request is
         // https, we need to work around this here.
@@ -844,6 +844,12 @@ function XMLEntryToItem(aXMLEntry, aTimezone, aCalendar, aReferenceItem) {
          * @param reminderTags      The tagset to parse.
          */
         function parseReminders(reminderTags) {
+            if (aXMLEntry.gd::who.(@rel.substring(33) == "event.organizer")
+                         .@email.toString() != aCalendar.session.userName) {
+                // We are not the organizer, so its not smart to set alarms on
+                // this event.
+                return;
+            }
             var lastAlarm;
             var otherAlarms = [];
             // Go through all reminder tags given and pick the best alarm.
@@ -1117,7 +1123,7 @@ function XMLEntryToItem(aXMLEntry, aTimezone, aCalendar, aReferenceItem) {
         // http://code.google.com/p/google-gdata/issues/detail?id=52
         // for details.
     } catch (e) {
-        LOG("Error parsing XML stream" + e);
+        ERROR("Error parsing XML stream" + e);
         throw e;
     }
     return item;

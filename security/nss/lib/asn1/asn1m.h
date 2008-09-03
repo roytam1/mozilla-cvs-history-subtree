@@ -11,11 +11,11 @@
  * for the specific language governing rights and limitations under the
  * License.
  *
- * The Original Code is Sun Microsystems code.
+ * The Original Code is the Netscape security libraries.
  *
  * The Initial Developer of the Original Code is
- *   Philipp Kewisch <mozilla@kewis.ch>
- * Portions created by the Initial Developer are Copyright (C) 2008
+ * Netscape Communications Corporation.
+ * Portions created by the Initial Developer are Copyright (C) 1994-2000
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -34,10 +34,50 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#calendar-properties-grid {
-    margin-left: 20px;
-}
+#ifndef ASN1M_H
+#define ASN1M_H
 
-#calendar-properties-rows > row {
-    min-height: 26px;
-}
+#ifdef DEBUG
+static const char ASN1M_CVS_ID[] = "@(#) $RCSfile$ $Revision$ $Date$";
+#endif /* DEBUG */
+
+/*
+ * asn1m.h
+ *
+ * This file contains the ASN.1 encoder/decoder routines available
+ * only within the ASN.1 module itself.
+ */
+
+#ifndef ASN1_H
+#include "asn1.h"
+#endif /* ASN1_H */
+
+PR_BEGIN_EXTERN_C
+
+/*
+ * nssasn1_number_length
+ *
+ */
+
+NSS_EXTERN PRUint32
+nssasn1_length_length
+(
+  PRUint32 number
+);
+
+/*
+ * nssasn1_get_subtemplate
+ *
+ */
+
+NSS_EXTERN const nssASN1Template *
+nssasn1_get_subtemplate
+(
+  const nssASN1Template template[],
+  void *thing,
+  PRBool encoding
+);
+
+PR_END_EXTERN_C
+
+#endif /* ASN1M_H */
