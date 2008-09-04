@@ -239,8 +239,8 @@ $BuildLocalesArgs = "ZIP_IN=/home/calbld/tb-lightning-soli/Sunbird1.8-l10n/SunOS
 $BuildTree  = 'Mozilla1.8-l10n';
 
 #$BuildName = '';
-$BuildTag = 'MOZILLA_1_8_BRANCH';
-#$BuildTag = 'SUNBIRD_0_8_BRANCH';
+#$BuildTag = 'MOZILLA_1_8_BRANCH';
+$BuildTag = 'SUNBIRD_0_9_BRANCH';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
