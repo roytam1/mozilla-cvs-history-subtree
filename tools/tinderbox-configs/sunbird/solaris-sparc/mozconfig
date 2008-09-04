@@ -22,8 +22,8 @@ ac_add_options --disable-shared
 
 # for release mode
 # no update for tinderboxes outside mozilla.org possible atm
-#ac_add_options --enable-update-channel="release"
-#ac_add_options --enable-official-branding
+ac_add_options --enable-update-channel="release"
+ac_add_options --enable-official-branding
 
 # custom settings
 #ac_add_options --enable-extensions=default,lightning,inspector

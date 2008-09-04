@@ -30,6 +30,6 @@ ac_add_options --x-libraries=$SYSBASE/usr/sfw/lib
 
 # for release mode
 # no update for tinderboxes outside mozilla.org possible atm
-#ac_add_options --enable-update-channel="release"
-#ac_add_options --enable-official-branding
+ac_add_options --enable-update-channel="release"
+ac_add_options --enable-official-branding
 

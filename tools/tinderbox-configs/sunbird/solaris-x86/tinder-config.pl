@@ -213,8 +213,8 @@ $BuildNameExtra = 'Sb-Release';
 $BuildTree  = 'Sunbird-Mozilla1.8';
 
 #$BuildName = '';
-$BuildTag = 'MOZILLA_1_8_BRANCH';
-#$BuildTag = 'SUNBIRD_0_8_BRANCH';
+#$BuildTag = 'MOZILLA_1_8_BRANCH';
+$BuildTag = 'SUNBIRD_0_9_BRANCH';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
