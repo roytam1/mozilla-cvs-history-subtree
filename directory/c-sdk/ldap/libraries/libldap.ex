@@ -177,10 +177,6 @@
 150	ber_sockbuf_free
 151	ber_get_next_buffer_ext
 152	ber_svecfree
-153	ber_get_buf_datalen
-154	ber_get_buf_databegin
-155	ber_stack_init
-156	ber_sockbuf_free_data
 
 200	ldap_memfree
 201	ldap_ber_free
@@ -251,8 +247,6 @@
 487	ldap_sasl_bind
 488	ldap_sasl_bind_s
 489	ldap_parse_sasl_bind_result
-490	ldap_sasl_interactive_bind_s
-491	ldap_sasl_interactive_bind_ext_s
 # LDAPv3 simple paging controls are not supported by Netscape at this time.
 # 490	ldap_create_page_control
 # 491	ldap_parse_page_control
@@ -301,38 +295,7 @@
 533	ldap_x_calloc
 534	ldap_x_realloc
 535	ldap_x_free
-#
-536 ldap_create_proxiedauth_control
-#
-537 ldap_create_geteffectiveRights_control 
-#
-538 ldap_find_control
-#
-539 ldap_url_parse_no_defaults
-#
-550 ldap_create_userstatus_control
-551 ldap_parse_userstatus_control
-#
-560 ldap_create_passwordpolicy_control
-561 ldap_create_passwordpolicy_control_ext
-562 ldap_parse_passwordpolicy_control
-563 ldap_parse_passwordpolicy_control_ext
-564 ldap_passwordpolicy_err2txt
-#
-570 ldap_passwd
-571 ldap_parse_passwd
-573 ldap_passwd_s
-#
-580 ldap_delete_result_entry
-581 ldap_add_result_entry
-#
-590 ldap_whoami
-591 ldap_parse_whoami
-592 ldap_whoami_s
-#
-600 ldap_create_authzid_control
-601 ldap_parse_authzid_control
-#
+536     ldap_create_proxiedauth_control
 1000	ldap_memcache_init
 1001	ldap_memcache_set
 1002	ldap_memcache_get
