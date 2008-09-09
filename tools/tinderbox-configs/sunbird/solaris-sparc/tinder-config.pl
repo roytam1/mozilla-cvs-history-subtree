@@ -325,14 +325,15 @@ $archive       = 1;
 
 # updates for l10n in release mode
 # no pushing for l10n
-#$update_package = 1;
-#$update_product = "Sunbird";
-#$update_version = "branch";
-##TODO: need a better string before going public
-#$update_platform = "Solaris_sparc-ss12";
-#$update_hash = "sha1";
-#$update_filehost = "ftp.mozilla.org";
-#$update_ver_file = "calendar/sunbird/config/version.txt";
+$update_package = 1;
+$update_product = "Sunbird";
+$update_version = "branch";
+#TODO: need a better string before going public
+$update_platform = "Solaris_sparc-ss12";
+$update_hash = "sha1";
+$update_filehost = "ftp.mozilla.org";
+$update_ver_file = "calendar/sunbird/config/version.txt";
+$update_pushinfo = 0;
 
 # fetched from linux l10n box
 $ReleaseBuild  = 1;
