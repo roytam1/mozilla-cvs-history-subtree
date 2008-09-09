@@ -40,7 +40,12 @@ make_add_instruction() {
     # Use the subdirectory of the extensions folder as the file to test
     # before performing this add instruction.
     testdir=$(echo "$f" | sed 's/\(extensions\/[^\/]*\)\/.*/\1/')
-    echo "add-if \"$testdir\" \"$f\""
+	is_exception=$(echo "$f" | grep -c 'calendar-timezones@mozilla.org')
+    if [ $is_exception = "1" ]; then
+      echo "add \"$testdir\" \"$f\""
+	else
+      echo "add-if \"$testdir\" \"$f\""
+	fi
   else
     echo "add \"$f\""
   fi
