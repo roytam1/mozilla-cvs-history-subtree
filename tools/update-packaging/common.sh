@@ -42,7 +42,7 @@ make_add_instruction() {
     testdir=$(echo "$f" | sed 's/\(extensions\/[^\/]*\)\/.*/\1/')
 	is_exception=$(echo "$f" | grep -c 'calendar-timezones@mozilla.org')
     if [ $is_exception = "1" ]; then
-      echo "add \"$testdir\" \"$f\""
+      echo "add \"$f\""
 	else
       echo "add-if \"$testdir\" \"$f\""
 	fi
