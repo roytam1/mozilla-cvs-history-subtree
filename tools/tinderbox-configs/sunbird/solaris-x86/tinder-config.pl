@@ -299,7 +299,7 @@ $update_package = 1;
 $update_product = "Sunbird";
 $update_version = "branch";
 #TODO: need a better string before going public
-$update_platform = "Solaris_Sparc-ss12";
+$update_platform = "Solaris_i386-ss12";
 $update_hash = "sha1";
 $update_filehost = "ftp.mozilla.org";
 $update_ver_file = "calendar/sunbird/config/version.txt";
