@@ -305,12 +305,13 @@
 // This method lets "tab's URL" be a read/write property.
 - (void)setCurrentURI:(NSString *)newURI
 {
-  // Don't allow javascript: or data: URLs for security reasons.
-  NSString *scheme = [[[NSURL URLWithString:newURI] scheme] lowercaseString];
+  NSString *scheme = [[[newURI componentsSeparatedByString:@":"] objectAtIndex:0] lowercaseString];
+
+  // Don't allow javascript: or data: URIs for security reasons.
   if ([scheme isEqualToString:@"javascript"] ||
       [scheme isEqualToString:@"data"]) {
     [[NSScriptCommand currentCommand] setScriptErrorNumber:NSArgumentsWrongScriptError];
-    [[NSScriptCommand currentCommand] setScriptErrorString:[NSString stringWithFormat:@"Can't set URL of tab to a '%@:' URL.", scheme]];
+    [[NSScriptCommand currentCommand] setScriptErrorString:[NSString stringWithFormat:@"Can't set URL of tab to a '%@:' URI.", scheme]];
     return;
   }
 
