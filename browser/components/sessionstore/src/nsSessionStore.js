@@ -924,7 +924,7 @@ SessionStoreService.prototype = {
                                   wrappedTextarea.name;
     if (!id
       || !(wrappedTextarea instanceof Ci.nsIDOMHTMLTextAreaElement 
-      || wrappedTextarea instanceof Ci.nsIDOMHTMLInputElement)) {
+      || wrappedTextarea instanceof Ci.nsIDOMHTMLInputElement && wrappedTextarea.type != "password")) {
       return false; // nothing to save
     }
     
