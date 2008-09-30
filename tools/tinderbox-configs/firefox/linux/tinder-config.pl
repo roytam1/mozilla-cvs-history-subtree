@@ -192,7 +192,7 @@ $BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Fx-Trunk-l10n/Linux_2.6.18-53.1.19
 
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
-$BuildTree  = 'Mozilla-l10n';
+$BuildTree  = 'MozillaTest';
 
 #$BuildName = '';
 #$BuildTag = '';
@@ -227,8 +227,8 @@ $ssh_user      = "ffxbld";
 $ssh_key       = "'$ENV{HOME}/.ssh/ffxbld_dsa'";
 $ssh_server    = "stage-old.mozilla.org";
 $ReleaseGroup  = "firefox";
-$ftp_path      = "/home/ftp/pub/firefox/nightly";
-$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly";
+$ftp_path      = "/home/ftp/pub/firefox/nightly/old-l10n";
+$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/old-l10n";
 $tbox_ftp_path = "/home/ftp/pub/firefox/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/firefox/tinderbox-builds";
 $milestone     = "mozilla1.9.0-l10n";
