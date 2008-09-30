@@ -190,7 +190,7 @@ main(int argc, char **argv)
     char *progName;
     FILE *outFile;
     PRFileDesc *inFile;
-    char *keyName = NULL;
+    char *keyName;
     CERTCertDBHandle *certHandle;
     CERTCertificate *cert;
     PRBool encapsulated = PR_FALSE;
@@ -238,7 +238,7 @@ main(int argc, char **argv)
 	    break;
 
 	  case 'o':
-	    outFile = fopen(optstate->value, "wb");
+	    outFile = fopen(optstate->value, "w");
 	    if (!outFile) {
 		fprintf(stderr, "%s: unable to open \"%s\" for writing\n",
 			progName, optstate->value);
@@ -261,7 +261,7 @@ main(int argc, char **argv)
     rv = NSS_Init(SECU_ConfigDirectory(NULL));
     if (rv != SECSuccess) {
 	SECU_PrintPRandOSError(progName);
-	goto loser;
+	return -1;
     }
 
     PK11_SetPasswordFunc (MyPK11PasswordFunc);
@@ -269,8 +269,7 @@ main(int argc, char **argv)
     /* open cert database */
     certHandle = CERT_GetDefaultCertDB();
     if (certHandle == NULL) {
-	rv = SECFailure;
-	goto loser;
+	return -1;
     }
 
     /* find cert */
@@ -279,36 +278,17 @@ main(int argc, char **argv)
 	SECU_PrintError(progName,
 		        "the corresponding cert for key \"%s\" does not exist",
 			keyName);
-	rv = SECFailure;
-	goto loser;
+	return -1;
     }
 
     if (SignFile(outFile, inFile, cert, encapsulated)) {
 	SECU_PrintError(progName, "problem signing data");
-	rv = SECFailure;
-	goto loser;
+	return -1;
     }
 
-loser:
-    if (KeyDbPassword) {
-        PORT_Free(KeyDbPassword);
-    }
-    if (keyName) {
-        PORT_Free(keyName);
-    }
-    if (cert) {
-        CERT_DestroyCertificate(cert);
-    }
-    if (inFile && inFile != PR_STDIN) {
-        PR_Close(inFile);
-    }
-    if (outFile && outFile != stdout) {
-        fclose(outFile);
-    }
     if (NSS_Shutdown() != SECSuccess) {
-        SECU_PrintError(progName, "NSS shutdown:");
         exit(1);
     }
 
-    return (rv != SECSuccess);
+    return 0;
 }
