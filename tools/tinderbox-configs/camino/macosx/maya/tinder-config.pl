@@ -1,6 +1,6 @@
 #
-## hostname: maya
-## uname: Darwin maya 8.10.0 Darwin Kernel Version 8.10.0: Wed May 23 16:50:59 PDT 2007; root:xnu-792.21.3~1/RELEASE_PPC Power Macintosh powerpc
+## hostname: cb-minimaya01
+## uname: Darwin cb-minimaya01.sj.mozilla.com 8.11.0 Darwin Kernel Version 8.11.0: Wed Oct 10 18:26:00 PDT 2007; root:xnu-792.24.17~1/RELEASE_PPC Power Macintosh powerpc
 #
 
 #- tinder-config.pl - Tinderbox configuration file.
@@ -73,8 +73,8 @@ $RegxpcomTest             = 0;
 #$EmbedCodesizeTest        = 0;  # mZ, require mozilla/tools/codesigns
 #$MailBloatTest            = 0;
 #$EmbedTest                = 0;  # Assumes you wanted $BuildEmbed=1
-$LayoutPerformanceTest    = 1;  # Tp
-$DHTMLPerformanceTest     = 1;  # Tdhtml
+#$LayoutPerformanceTest    = 1;  # Tp
+#$DHTMLPerformanceTest     = 1;  # Tdhtml
 #$QATest                   = 0;  
 #$XULWindowOpenTest        = 0;  # Txul
 $StartupPerformanceTest   = 1;  # Ts
@@ -120,7 +120,7 @@ $LayoutPerformanceTestTimeout     = 450;  # entire test, seconds
 $DHTMLPerformanceTestTimeout      = 225;  # entire test, seconds
 #$QATestTimeout                    = 1200;   # entire test, seconds
 #$LayoutPerformanceTestPageTimeout = 30000; # each page, ms
-$StartupPerformanceTestTimeout    = 5;    # seconds
+$StartupPerformanceTestTimeout    = 20;    # seconds
 #$NeckoUnitTestTimeout             = 30;    # seconds
 $XULWindowOpenTestTimeout	      = 30;   # seconds
 #$RenderTestTimeout                = 1800;  # seconds
@@ -197,6 +197,13 @@ $BinaryName = 'Camino';
 #$NSPRArgs = '';
 #$ShellOverride = '';
 
+# UsePrebuiltTalkback:
+# If set to a filepath, tinderbox will use the file contents (presumed to be a bz2
+# archive of a compatible Talkback extension) rather than compiling Talkback
+# from source. 
+$UsePrebuiltTalkback = "/builds/tinderbox/Cm1.6-M1.8/talkback-camino-1.8-mac.tar.bz2";
+
+
 # Release build options
 #$ReleaseBuild  = 1;
 #$clean_objdir = 1; # remove objdir when starting release cycle?
@@ -205,7 +212,7 @@ $BinaryName = 'Camino';
 #$shiptalkback  = 1;
 #$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
 #$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
-$OfficialBuildMachinery = 0; # Allow official clobber nightlies.  When false, 
+#$OfficialBuildMachinery = 0; # Allow official clobber nightlies.  When false, 
 #$ReleaseGroup = ''; # group to set uploaded files to (if non-empty)
 $build_hour    = "22";
 $package_creation_path = "/camino/installer";
