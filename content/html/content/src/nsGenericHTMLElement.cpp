@@ -3760,7 +3760,7 @@ nsGenericHTMLElement::RemoveFocus(nsPresContext *aPresContext)
     return;
 
   if (IsContentOfType(eHTML_FORM_CONTROL)) {
-    nsIFormControlFrame* formControlFrame = GetFormControlFrame(PR_FALSE);
+    nsIFormControlFrame* formControlFrame = GetFormControlFrame(PR_TRUE);
     if (formControlFrame) {
       formControlFrame->SetFocus(PR_FALSE, PR_FALSE);
     }
