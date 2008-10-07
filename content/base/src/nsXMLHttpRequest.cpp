@@ -84,6 +84,7 @@
 #include "nsContentErrors.h"
 #include "nsLayoutStatics.h"
 #include "nsIScriptObjectPrincipal.h"
+#include "nsIMultiPartChannel.h"
 
 static const char* kLoadAsData = "loadAsData";
 #define LOADSTR NS_LITERAL_STRING("load")
