@@ -86,7 +86,7 @@ nsresult nsTextAddress::ImportAddresses( PRBool *pAbort, const PRUnichar *pName,
         return( rv);
     }
     
-    PRInt32    loc;
+    PRUint32   loc;
     PRInt32    lineLen = 0;
     PRBool     skipRecord = PR_FALSE;
 

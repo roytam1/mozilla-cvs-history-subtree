@@ -155,7 +155,7 @@ interface nsIFileSpec : nsISupports
 	void flush();
 	
 	void seek(in long offset);
-	long tell();
+	unsigned long tell();
 	void endLine();
 	attribute AString unicodePath;
 	

@@ -736,7 +736,7 @@ NS_IMETHODIMP nsFileSpecImpl::Seek(PRInt32 offset)
 }
 
 //----------------------------------------------------------------------------------------
-NS_IMETHODIMP nsFileSpecImpl::Tell(PRInt32 *_retval)
+NS_IMETHODIMP nsFileSpecImpl::Tell(PRUint32 *_retval)
 //----------------------------------------------------------------------------------------
 {
 	TEST_OUT_PTR(_retval)
