@@ -457,7 +457,7 @@ NS_IMETHODIMP nsFileSpecImpl::Delete(PRBool aRecursive)
 	return mFileSpec.Error();
 }
 //----------------------------------------------------------------------------------------
-NS_IMETHODIMP nsFileSpecImpl::Truncate(PRInt32 aNewLength)
+NS_IMETHODIMP nsFileSpecImpl::Truncate(PRUint32 aNewLength)
 //----------------------------------------------------------------------------------------
 {
 	return mFileSpec.Truncate(aNewLength);

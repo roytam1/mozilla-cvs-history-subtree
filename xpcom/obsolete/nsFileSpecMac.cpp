@@ -991,7 +991,7 @@ void nsFileSpec::RecursiveCopy(nsFileSpec newDir) const
 } // nsFileSpec::RecursiveCopy
 
 //----------------------------------------------------------------------------------------
-nsresult nsFileSpec::Truncate(PRInt32 aNewLength) const
+nsresult nsFileSpec::Truncate(PRUint32 aNewLength) const
 //----------------------------------------------------------------------------------------
 {
     short   refNum;

@@ -485,7 +485,7 @@ class NS_COM_OBSOLETE nsFileSpec
         void                    CreateDir(int mode = 0775) { CreateDirectory(mode); }
                                    // workaround for yet another VC++ bug with long identifiers.
         void                    Delete(PRBool inRecursive) const;
-        nsresult                Truncate(PRInt32 aNewLength) const;
+        nsresult                Truncate(PRUint32 aNewLength) const;
         void                    RecursiveCopy(nsFileSpec newDir) const;
         
         nsresult                Rename(const char* inNewName); // not const: gets updated
