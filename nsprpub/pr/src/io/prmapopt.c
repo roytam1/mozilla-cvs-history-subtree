@@ -70,7 +70,7 @@
 #include <netinet/in_systm.h>  /* n_short, n_long, n_time */
 #endif
 
-#ifdef HAVE_NETINET_TCP_H
+#if defined(XP_UNIX) || defined(OS2) || (defined(XP_BEOS) && defined(BONE_VERSION))
 #include <netinet/tcp.h>  /* TCP_NODELAY, TCP_MAXSEG */
 #endif
 

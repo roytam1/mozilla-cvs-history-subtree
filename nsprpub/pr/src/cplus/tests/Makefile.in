@@ -109,13 +109,22 @@ ifeq ($(OS_ARCH), SunOS)
         endif
     endif
 
-# SunOS 5.5 needs to link with -lpthread, even though we already
-# linked with this system library when we built libnspr.so.
-    ifeq ($(OS_RELEASE), 5.5)
-        ifdef USE_PTHREADS
-            EXTRA_LIBS = -lpthread
+    ifneq ($(LOCAL_THREADS_ONLY),1)
+# SunOS 5.4 and 5.5 need to link with -lthread or -lpthread,
+# even though we already linked with these system libraries
+# when we built libnspr.so.
+        ifeq ($(OS_RELEASE), 5.4)
+            EXTRA_LIBS = -lthread
         endif
-    endif
+
+        ifeq ($(OS_RELEASE), 5.5)
+            ifdef USE_PTHREADS
+                EXTRA_LIBS = -lpthread
+            else
+                EXTRA_LIBS = -lthread
+            endif
+        endif
+    endif # LOCAL_THREADS_ONLY
 endif # SunOS
 
 ifeq ($(OS_ARCH), WINNT)
@@ -130,7 +139,13 @@ endif
 endif
 
 ifeq ($(OS_ARCH),OS2)
-LDOPTS += -Zomf -Zlinker /PM:VIO -lstdcpp
+  ifeq ($(MOZ_OS2_TOOLS),VACPP)
+    LDOPTS = -NOE -DEBUG -nologo -PMTYPE:VIO
+    LIBPR = $(dist_libdir)/nspr$(MOD_MAJOR_VERSION).lib
+    LIBPLC = $(dist_libdir)/plc$(MOD_MAJOR_VERSION).lib
+  else
+    LDOPTS += -Zomf -Zlinker /PM:VIO -lstdcpp
+  endif
 endif
 
 ifneq ($(OS_ARCH), WINNT)
