@@ -1966,6 +1966,7 @@ ParseXMLSource(JSContext *cx, JSString *src)
 {
     jsval nsval;
     JSXMLNamespace *ns;
+    JSString *uri;
     size_t urilen, srclen, length, offset, dstlen;
     jschar *chars;
     const jschar *srcp, *endp;
@@ -1979,8 +1980,8 @@ ParseXMLSource(JSContext *cx, JSString *src)
     JSXMLArray nsarray;
     uintN flags;
 
-    static const char prefix[] = "<parent xmlns='";
-    static const char middle[] = "'>";
+    static const char prefix[] = "<parent xmlns=\"";
+    static const char middle[] = "\">";
     static const char suffix[] = "</parent>";
 
 #define constrlen(constr)   (sizeof(constr) - 1)
@@ -1988,8 +1989,9 @@ ParseXMLSource(JSContext *cx, JSString *src)
     if (!js_GetDefaultXMLNamespace(cx, &nsval))
         return NULL;
     ns = (JSXMLNamespace *) JS_GetPrivate(cx, JSVAL_TO_OBJECT(nsval));
+    uri = js_EscapeAttributeValue(cx, ns->uri, JS_FALSE);
 
-    urilen = JSSTRING_LENGTH(ns->uri);
+    urilen = JSSTRING_LENGTH(uri);
     srclen = JSSTRING_LENGTH(src);
     length = constrlen(prefix) + urilen + constrlen(middle) + srclen +
              constrlen(suffix);
@@ -2001,7 +2003,7 @@ ParseXMLSource(JSContext *cx, JSString *src)
     dstlen = length;
     js_InflateStringToBuffer(cx, prefix, constrlen(prefix), chars, &dstlen);
     offset = dstlen;
-    js_strncpy(chars + offset, JSSTRING_CHARS(ns->uri), urilen);
+    js_strncpy(chars + offset, JSSTRING_CHARS(uri), urilen);
     offset += urilen;
     dstlen = length - offset + 1;
     js_InflateStringToBuffer(cx, middle, constrlen(middle), chars + offset,
