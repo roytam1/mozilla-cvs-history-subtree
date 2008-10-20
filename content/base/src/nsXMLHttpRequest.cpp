@@ -879,6 +879,9 @@ nsXMLHttpRequest::NotifyEventListeners(nsIDOMEventListener* aHandler,
     for (PRInt32 i = 0, i_end = aListeners->Count(); i < i_end; ++i) {
       nsIDOMEventListener *listener = aListeners->ObjectAt(i);
       if (listener) {
+        if (NS_FAILED(CheckInnerWindowCorrectness())) {
+          break;
+        }
         listener->HandleEvent(aEvent);
       }
     }
