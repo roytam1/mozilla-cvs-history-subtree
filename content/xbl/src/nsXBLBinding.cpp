@@ -1240,7 +1240,25 @@ nsXBLBinding::AllowScripts()
 
   PRBool canExecute;
   nsresult rv = mgr->CanExecuteScripts(cx, principal, &canExecute);
-  return NS_SUCCEEDED(rv) && canExecute;
+  if (NS_FAILED(rv) || !canExecute) {
+    return PR_FALSE;
+  }
+
+  // Now one last check: make sure that we're not allowing a privilege
+  // escalation here.
+  PRBool haveCert;
+  nsIPrincipal* targetDocPrincipal = doc->GetPrincipal();
+  if (!targetDocPrincipal) {
+    return PR_FALSE;
+  }
+  targetDocPrincipal->GetHasCertificate(&haveCert);
+  if (!haveCert) {
+    return PR_TRUE;
+  }
+
+  PRBool subsumes;
+  rv = principal->Subsumes(targetDocPrincipal, &subsumes);
+  return NS_SUCCEEDED(rv) && subsumes;
 }
 
 PR_STATIC_CALLBACK(PRBool)
