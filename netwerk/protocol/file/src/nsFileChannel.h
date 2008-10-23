@@ -51,6 +51,8 @@
 #include "nsCOMPtr.h"
 #include "nsString.h"
 #include "nsHashPropertyBag.h"
+#include "plevent.h"
+#include "nsAutoPtr.h"
 
 class nsFileChannel : public nsHashPropertyBag
                     , public nsIFileChannel
@@ -73,8 +75,26 @@ public:
 
     nsresult Init(nsIURI *uri);
 
-private:
+    class RedirectRunnable : public PLEvent
+    {
+    public:
+        RedirectRunnable(nsFileChannel* originalChannel,
+                         nsIChannel* newChannel);
+        ~RedirectRunnable();
+  
+        PR_STATIC_CALLBACK(void*) Handle(PLEvent* aEvent);
+        PR_STATIC_CALLBACK(void) Destroy(PLEvent* aEvent);
 
+    private:
+        nsRefPtr<nsFileChannel> mOriginalChannel;
+        nsCOMPtr<nsIChannel> mNewChannel;
+    };
+
+private:
+    friend class RedirectRunnable;
+
+    void HandleRedirect(nsIChannel* newChannel);
+    
     nsresult GetClonedFile(nsIFile **);
     nsresult EnsureStream();
 
@@ -95,8 +115,9 @@ private:
 
     nsCOMPtr<nsIRequest>            mRequest;
     nsCOMPtr<nsIInputStream>        mStream;
-    PRBool                          mIsDir;
-    PRBool                          mUploading;
+    PRPackedBool                    mIsDir;
+    PRPackedBool                    mUploading;
+    PRPackedBool                    mWaitingOnAsyncRedirect;
 };
 
 #endif // !nsFileChannel_h__
