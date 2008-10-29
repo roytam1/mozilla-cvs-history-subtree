@@ -278,7 +278,7 @@ PRBool ImportOutFile::SetMarker( int markerID)
 	}
 
 	if (markerID < kMaxMarkers) {
-		PRInt32 pos = 0;
+		PRUint32 pos = 0;
 		nsresult rv;
 		if (m_pFile) {
 			rv = m_pFile->Tell( &pos);
@@ -307,7 +307,7 @@ PRBool ImportOutFile::WriteStrAtMarker( int markerID, const char *pStr)
 	if (!Flush())
 		return( PR_FALSE);
 	nsresult	rv;
-	PRInt32		pos;
+	PRUint32	pos;
 	rv = m_pFile->Tell( &pos);
 	if (NS_FAILED( rv))
 		return( PR_FALSE);

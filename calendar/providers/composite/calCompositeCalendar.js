@@ -359,9 +359,6 @@ calCompositeCalendar.prototype = {
             this.mStatusObserver.startMeteors(Components.interfaces.calIStatusObserver.DETERMINED_PROGRESS, this.mCalendars.length);
         }
         for each (cal in this.enabledCalendars) {
-            if (cal.getProperty("disabled")) {
-                continue;
-            }
             try {
                 if (cal.canRefresh) {
                     this.mObserverHelper.pendingLoads[cal.id] = true;
@@ -466,7 +463,9 @@ calCompositeCalendar.prototype = {
 
     setStatusObserver: function(aStatusObserver, aWindow){
         this.mStatusObserver = aStatusObserver;
-        this.mStatusObserver.initialize(aWindow);
+        if (this.mStatusObserver) {
+            this.mStatusObserver.initialize(aWindow);
+        }
     }
 };
 

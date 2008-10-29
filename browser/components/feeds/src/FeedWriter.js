@@ -230,33 +230,6 @@ FeedWriter.prototype = {
     Cu.evalInSandbox(codeStr, this._contentSandbox);
   },
 
-  // For setting and getting the file expando property, we need to keep a
-  // reference to an explict XPCNativeWrapper around the associated menuitems
-  _selectedApplicationItemWrapped: null,
-  get selectedApplicationItemWrapped() {
-    if (!this._selectedApplicationItemWrapped) {
-      this._selectedApplicationItemWrapped =
-        XPCNativeWrapper(this._document.getElementById("selectedAppMenuItem"));
-    }
-
-    return this._selectedApplicationItemWrapped;
-  },
-
-#ifdef XP_WIN
-  _defaultSystemReaderItemWrapped: null,
-  get defaultSystemReaderItemWrapped() {
-    if (!this._defaultSystemReaderItemWrapped) {
-      // Unlike the selected application item, this might not exist at all,
-      // see _initSubscriptionUI
-      var menuItem = this._document.getElementById("defaultHandlerMenuItem");
-      if (menuItem)
-        this._defaultSystemReaderItemWrapped = XPCNativeWrapper(menuItem);
-    }
-
-    return this._defaultSystemReaderItemWrapped;
-  },
-#endif
-
   /**
    * Writes the feed title into the preview document.
    * @param   container
@@ -664,33 +637,31 @@ FeedWriter.prototype = {
         break;
       }
       case "client": {
-        var selectedAppMenuItem = this.selectedApplicationItemWrapped;
-        if (selectedAppMenuItem) {
-          try {
-            this._selectedApp =
-             prefs.getComplexValue(getPrefAppForType(feedType), Ci.nsILocalFile);
-          }
-          catch(ex) {
-            this._selectedApp = null;
-          }
+        try {
+          this._selectedApp =
+           prefs.getComplexValue(PREF_SELECTED_APP, Ci.nsILocalFile);
+        }
+        catch(ex) {
+          this._selectedApp = null;
+        }
 
-          if (this._selectedApp) {
-            this._initMenuItemWithFile(selectedAppMenuItem, this._selectedApp);
-            var codeStr = "selectedAppMenuItem.hidden = false; " +
-                          "selectedAppMenuItem.doCommand(); ";
+        if (this._selectedApp) {
+          this._initMenuItemWithFile(this._contentSandbox.selectedAppMenuItem,
+                                     this._selectedApp);
+          var codeStr = "selectedAppMenuItem.hidden = false; " +
+                        "selectedAppMenuItem.doCommand(); ";
 
 #ifdef XP_WIN
-            // Only show the default reader menuitem if the default reader
-            // isn't the selected application
-            if (this._defaultSystemReader) {
-              var shouldHide =
-                this._defaultSystemReader.path == this._selectedApp.path;
-              codeStr += "defaultHandlerMenuItem.hidden = " + shouldHide + ";"
-            }
-#endif
-            Cu.evalInSandbox(codeStr, this._contentSandbox);
-            break;
+          // Only show the default reader menuitem if the default reader
+          // isn't the selected application
+          if (this._defaultSystemReader) {
+            var shouldHide =
+              this._defaultSystemReader.path == this._selectedApp.path;
+            codeStr += "defaultHandlerMenuItem.hidden = " + shouldHide + ";"
           }
+#endif
+          Cu.evalInSandbox(codeStr, this._contentSandbox);
+          break;
         }
       }
       case "bookmarks":
@@ -724,7 +695,7 @@ FeedWriter.prototype = {
     try {
       var prefs = Cc["@mozilla.org/preferences-service;1"].
                   getService(Ci.nsIPrefBranch);
-      this._selectedApp = prefs.getComplexValue(getPrefAppForType(feedType),
+      this._selectedApp = prefs.getComplexValue(PREF_SELECTED_APP,
                                                 Ci.nsILocalFile);
 
       if (this._selectedApp.exists())
@@ -1015,15 +986,15 @@ FeedWriter.prototype = {
     else {
       switch (selectedItem.id) {
         case "selectedAppMenuItem":
-          prefs.setCharPref(PREF_SELECTED_READER, "client");
           prefs.setComplexValue(PREF_SELECTED_APP, Ci.nsILocalFile, 
-                                this.selectedApplicationItemWrapped.file);
+                                this._selectedApp);
+          prefs.setCharPref(PREF_SELECTED_READER, "client");
           break;
 #ifdef XP_WIN
         case "defaultHandlerMenuItem":
-          prefs.setCharPref(PREF_SELECTED_READER, "client");
           prefs.setComplexValue(PREF_SELECTED_APP, Ci.nsILocalFile, 
-                                this.defaultSystemReaderItemWrapped.file);
+                                this._defaultSystemReader);
+          prefs.setCharPref(PREF_SELECTED_READER, "client");
           break;
 #endif
         case "liveBookmarksMenuItem":

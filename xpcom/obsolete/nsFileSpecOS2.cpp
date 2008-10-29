@@ -583,7 +583,7 @@ void nsFileSpec::RecursiveCopy(nsFileSpec newDir) const
 
 //----------------------------------------------------------------------------------------
 nsresult
-nsFileSpec::Truncate(PRInt32 aNewFileLength) const
+nsFileSpec::Truncate(PRUint32 aNewFileLength) const
 //----------------------------------------------------------------------------------------
 {
 #ifdef XP_OS2

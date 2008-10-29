@@ -520,11 +520,11 @@ void nsFileSpec::RecursiveCopy(nsFileSpec newDir) const
 
 //----------------------------------------------------------------------------------------
 nsresult
-nsFileSpec::Truncate(PRInt32 aNewFileLength) const
+nsFileSpec::Truncate(PRUint32 aNewFileLength) const
 //----------------------------------------------------------------------------------------
 {
-    DWORD status;
     HANDLE hFile;
+    LARGE_INTEGER li;
 
     // Leave it to Microsoft to open an existing file with a function
     // named "CreateFile".
@@ -539,8 +539,12 @@ nsFileSpec::Truncate(PRInt32 aNewFileLength) const
         return NS_FILE_FAILURE;
 
     // Seek to new, desired end of file
-    status = SetFilePointer(hFile, aNewFileLength, NULL, FILE_BEGIN);
-    if (status == 0xffffffff)
+    li.QuadPart = aNewFileLength;
+    li.LowPart = SetFilePointer(hFile,
+                                li.LowPart,
+                                &li.HighPart,
+                                FILE_BEGIN);
+    if (0xffffffff == li.LowPart && GetLastError() != NO_ERROR)
         goto error;
 
     // Truncate file at current cursor position

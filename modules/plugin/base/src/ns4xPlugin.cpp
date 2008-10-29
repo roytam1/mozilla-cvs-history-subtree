@@ -1072,6 +1072,8 @@ MakeNew4xStreamInternal(NPP npp, const char *relativeURL, const char *target,
   if (!npp)
     return NPERR_INVALID_INSTANCE_ERROR;
 
+  PluginDestructionGuard guard(npp);
+
   nsIPluginInstance *inst = (nsIPluginInstance *) npp->ndata;
 
   NS_ASSERTION(inst != NULL, "null instance");
@@ -1120,6 +1122,8 @@ _geturl(NPP npp, const char* relativeURL, const char* target)
   ("NPN_GetURL: npp=%p, target=%s, url=%s\n", (void *)npp, target,
    relativeURL));
 
+  PluginDestructionGuard guard(npp);
+
   // Block Adobe Acrobat from loading URLs that are not http:, https:,
   // or ftp: URLs if the given target is null.
   if (target == nsnull && relativeURL &&
@@ -1149,6 +1153,8 @@ _geturlnotify(NPP npp, const char* relativeURL, const char* target,
     ("NPN_GetURLNotify: npp=%p, target=%s, notify=%p, url=%s\n", (void*)npp,
      target, notifyData, relativeURL));
 
+  PluginDestructionGuard guard(npp);
+
   return MakeNew4xStreamInternal (npp, relativeURL, target,
                                   eNPPStreamTypeInternal_Get, PR_TRUE,
                                   notifyData);
@@ -1166,6 +1172,8 @@ _posturlnotify(NPP npp, const char *relativeURL, const char *target,
                   (void*)npp, target, len, file, notifyData, relativeURL,
                   buf));
 
+  PluginDestructionGuard guard(npp);
+
   return MakeNew4xStreamInternal(npp, relativeURL, target,
                                  eNPPStreamTypeInternal_Post, PR_TRUE,
                                  notifyData, len, buf, file);
@@ -1182,9 +1190,11 @@ _posturl(NPP npp, const char *relativeURL, const char *target,
                   "buf=%s\n",
                   (void*)npp, target, file, len, relativeURL, buf));
 
- return MakeNew4xStreamInternal(npp, relativeURL, target,
-                                eNPPStreamTypeInternal_Post, PR_FALSE, nsnull,
-                                len, buf, file);
+  PluginDestructionGuard guard(npp);
+
+  return MakeNew4xStreamInternal(npp, relativeURL, target,
+                                 eNPPStreamTypeInternal_Post, PR_FALSE, nsnull,
+                                 len, buf, file);
 }
 
 
@@ -1248,6 +1258,9 @@ _newstream(NPP npp, NPMIMEType type, const char* target, NPStream* *result)
   NPError err = NPERR_INVALID_INSTANCE_ERROR;
   if (npp && npp->ndata) {
     nsIPluginInstance *inst = (nsIPluginInstance *) npp->ndata;
+
+    PluginDestructionGuard guard(inst);
+
     nsCOMPtr<nsIOutputStream> stream;
     nsCOMPtr<nsIPluginInstancePeer> peer;
     if (NS_SUCCEEDED(inst->GetPeer(getter_AddRefs(peer))) &&
@@ -1281,6 +1294,8 @@ _write(NPP npp, NPStream *pstream, int32 len, void *buffer)
   if (!npp)
     return -1;
 
+  PluginDestructionGuard guard(npp);
+
   ns4xStreamWrapper* wrapper = (ns4xStreamWrapper*) pstream->ndata;
   NS_ASSERTION(wrapper != NULL, "null stream");
 
@@ -1311,6 +1326,8 @@ _destroystream(NPP npp, NPStream *pstream, NPError reason)
 
   if (!npp)
     return NPERR_INVALID_INSTANCE_ERROR;
+
+  PluginDestructionGuard guard(npp);
 
   nsCOMPtr<nsIPluginStreamListener> listener =
     do_QueryInterface((nsISupports *)pstream->ndata);
@@ -1355,6 +1372,8 @@ _status(NPP npp, const char *message)
   }
 
   nsIPluginInstance *inst = (nsIPluginInstance *) npp->ndata;
+
+  PluginDestructionGuard guard(inst);
 
   nsCOMPtr<nsIPluginInstancePeer> peer;
   if (NS_SUCCEEDED(inst->GetPeer(getter_AddRefs(peer))) && peer) {
@@ -1414,6 +1433,8 @@ _invalidaterect(NPP npp, NPRect *invalidRect)
 
   nsIPluginInstance *inst = (nsIPluginInstance *) npp->ndata;
 
+  PluginDestructionGuard guard(inst);
+
   nsCOMPtr<nsIPluginInstancePeer> peer;
   if (NS_SUCCEEDED(inst->GetPeer(getter_AddRefs(peer))) && peer) {
     nsCOMPtr<nsIWindowlessPluginInstancePeer> wpeer(do_QueryInterface(peer));
@@ -1440,6 +1461,8 @@ _invalidateregion(NPP npp, NPRegion invalidRegion)
 
   nsIPluginInstance *inst = (nsIPluginInstance *) npp->ndata;
 
+  PluginDestructionGuard guard(inst);
+
   nsCOMPtr<nsIPluginInstancePeer> peer;
   if (NS_SUCCEEDED(inst->GetPeer(getter_AddRefs(peer))) && peer) {
     nsCOMPtr<nsIWindowlessPluginInstancePeer> wpeer(do_QueryInterface(peer));
@@ -1464,6 +1487,8 @@ _forceredraw(NPP npp)
 
   nsIPluginInstance *inst = (nsIPluginInstance *) npp->ndata;
 
+  PluginDestructionGuard guard(inst);
+
   nsCOMPtr<nsIPluginInstancePeer> peer;
   if (NS_SUCCEEDED(inst->GetPeer(getter_AddRefs(peer))) && peer) {
     nsCOMPtr<nsIWindowlessPluginInstancePeer> wpeer(do_QueryInterface(peer));
@@ -1480,6 +1505,8 @@ GetJSContextFromNPP(NPP npp)
 
   ns4xPluginInstance *inst = (ns4xPluginInstance *)npp->ndata;
   NS_ENSURE_TRUE(inst, nsnull);
+
+  PluginDestructionGuard guard(inst);
 
   nsCOMPtr<nsIPluginInstancePeer> pip;
   inst->GetPeer(getter_AddRefs(pip));
@@ -1651,6 +1678,8 @@ _createobject(NPP npp, NPClass* aClass)
     return nsnull;
   }
 
+  PluginDestructionGuard guard(npp);
+
   if (!aClass) {
     NS_ERROR("Null class passed to _createobject()!");
 
@@ -1671,6 +1700,9 @@ _createobject(NPP npp, NPClass* aClass)
     npobj->_class = aClass;
     npobj->referenceCount = 1;
   }
+
+  NPN_PLUGIN_LOG(PLUGIN_LOG_NOISY,
+                 ("Created NPObject %p, NPClass %p\n", npobj, aClass));
 
   return npobj;
 }
@@ -1709,8 +1741,14 @@ _invoke(NPP npp, NPObject* npobj, NPIdentifier method, const NPVariant *args,
   if (!npp || !npobj || !npobj->_class || !npobj->_class->invoke)
     return false;
 
+  PluginDestructionGuard guard(npp);
+
   NPPExceptionAutoHolder nppExceptionHolder;
   NPPAutoPusher nppPusher(npp);
+
+  NPN_PLUGIN_LOG(PLUGIN_LOG_NOISY,
+                 ("NPN_Invoke(npp %p, npobj %p, method %p, args %d\n", npp,
+                  npobj, method, argCount));
 
   return npobj->_class->invoke(npobj, method, args, argCount, result);
 }
@@ -1724,6 +1762,10 @@ _invokeDefault(NPP npp, NPObject* npobj, const NPVariant *args,
 
   NPPExceptionAutoHolder nppExceptionHolder;
   NPPAutoPusher nppPusher(npp);
+
+  NPN_PLUGIN_LOG(PLUGIN_LOG_NOISY,
+                 ("NPN_InvokeDefault(npp %p, npobj %p, args %d\n", npp,
+                  npobj, argCount));
 
   return npobj->_class->invokeDefault(npobj, args, argCount, result);
 }
@@ -1771,6 +1813,10 @@ _evaluate(NPP npp, NPObject* npobj, NPString *script, NPVariant *result)
   nsIPrincipal *principal = nsnull;
   // XXX: Get the principal from the security stack (TBD)
 
+  NPN_PLUGIN_LOG(PLUGIN_LOG_NOISY,
+                 ("NPN_Evaluate(npp %p, npobj %p, script <<<%s>>>) called\n",
+                  npp, npobj, script->utf8characters));
+
   nsresult rv = scx->EvaluateStringWithValue(utf16script, obj, principal,
                                              nsnull, 0, nsnull, rval, nsnull);
 
@@ -1788,6 +1834,10 @@ _getproperty(NPP npp, NPObject* npobj, NPIdentifier property,
   NPPExceptionAutoHolder nppExceptionHolder;
   NPPAutoPusher nppPusher(npp);
 
+  NPN_PLUGIN_LOG(PLUGIN_LOG_NOISY,
+                 ("NPN_GetProperty(npp %p, npobj %p, property %p) called\n",
+                  npp, npobj, property));
+
   return npobj->_class->getProperty(npobj, property, result);
 }
 
@@ -1801,6 +1851,10 @@ _setproperty(NPP npp, NPObject* npobj, NPIdentifier property,
   NPPExceptionAutoHolder nppExceptionHolder;
   NPPAutoPusher nppPusher(npp);
 
+  NPN_PLUGIN_LOG(PLUGIN_LOG_NOISY,
+                 ("NPN_SetProperty(npp %p, npobj %p, property %p) called\n",
+                  npp, npobj, property));
+
   return npobj->_class->setProperty(npobj, property, value);
 }
 
@@ -1812,6 +1866,10 @@ _removeproperty(NPP npp, NPObject* npobj, NPIdentifier property)
 
   NPPExceptionAutoHolder nppExceptionHolder;
   NPPAutoPusher nppPusher(npp);
+
+  NPN_PLUGIN_LOG(PLUGIN_LOG_NOISY,
+                 ("NPN_RemoveProperty(npp %p, npobj %p, property %p) called\n",
+                  npp, npobj, property));
 
   return npobj->_class->removeProperty(npobj, property);
 }
@@ -1825,6 +1883,10 @@ _hasproperty(NPP npp, NPObject* npobj, NPIdentifier propertyName)
   NPPExceptionAutoHolder nppExceptionHolder;
   NPPAutoPusher nppPusher(npp);
 
+  NPN_PLUGIN_LOG(PLUGIN_LOG_NOISY,
+                 ("NPN_HasProperty(npp %p, npobj %p, property %p) called\n",
+                  npp, npobj, propertyName));
+
   return npobj->_class->hasProperty(npobj, propertyName);
 }
 
@@ -1836,6 +1898,10 @@ _hasmethod(NPP npp, NPObject* npobj, NPIdentifier methodName)
 
   NPPExceptionAutoHolder nppExceptionHolder;
   NPPAutoPusher nppPusher(npp);
+
+  NPN_PLUGIN_LOG(PLUGIN_LOG_NOISY,
+                 ("NPN_HasMethod(npp %p, npobj %p, property %p) called\n",
+                  npp, npobj, methodName));
 
   return npobj->_class->hasProperty(npobj, methodName);
 }
@@ -1936,6 +2002,8 @@ _getvalue(NPP npp, NPNVariable variable, void *result)
                                      (void*)npp, (int)variable));
 
   nsresult res;
+
+  PluginDestructionGuard guard(npp);
 
   switch(variable) {
 #if defined(XP_UNIX) && !defined(XP_MACOSX)
@@ -2118,6 +2186,8 @@ _setvalue(NPP npp, NPPVariable variable, void *result)
 
   if (inst == NULL)
     return NPERR_INVALID_INSTANCE_ERROR;
+
+  PluginDestructionGuard guard(inst);
 
   switch (variable) {
 

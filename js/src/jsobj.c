@@ -1243,8 +1243,10 @@ js_ComputeFilename(JSContext *cx, JSStackFrame *caller,
 {
     uint32 flags;
 
+    JS_ASSERT(principals || !cx->runtime->findObjectPrincipals);
     flags = JS_GetScriptFilenameFlags(caller->script);
     if ((flags & JSFILENAME_SYSTEM) &&
+        principals &&
         strcmp(principals->codebase, "[System Principal]")) {
         *linenop = 0;
         return principals->codebase;
@@ -3287,13 +3289,13 @@ js_LookupPropertyWithFlags(JSContext *cx, JSObject *obj, jsid id, uintN flags,
                         /* Resolved: juggle locks and lookup id again. */
                         if (obj2 != obj) {
                             JS_UNLOCK_OBJ(cx, obj);
-                            JS_LOCK_OBJ(cx, obj2);
+                            if (OBJ_IS_NATIVE(obj2))
+                                JS_LOCK_OBJ(cx, obj2);
                         }
                         scope = OBJ_SCOPE(obj2);
                         if (!MAP_IS_NATIVE(&scope->map)) {
                             /* Whoops, newresolve handed back a foreign obj2. */
                             JS_ASSERT(obj2 != obj);
-                            JS_UNLOCK_OBJ(cx, obj2);
                             ok = OBJ_LOOKUP_PROPERTY(cx, obj2, id, objp, propp);
                             if (!ok || *propp)
                                 goto cleanup;
@@ -3314,7 +3316,8 @@ js_LookupPropertyWithFlags(JSContext *cx, JSObject *obj, jsid id, uintN flags,
                             JS_ASSERT(obj2 == scope->object);
                             obj = obj2;
                         } else if (obj2 != obj) {
-                            JS_UNLOCK_OBJ(cx, obj2);
+                            if (OBJ_IS_NATIVE(obj2))
+                                JS_UNLOCK_OBJ(cx, obj2);
                             JS_LOCK_OBJ(cx, obj);
                         }
                     }

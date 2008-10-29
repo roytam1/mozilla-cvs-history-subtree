@@ -273,6 +273,8 @@ PRBool gSkipPluginSafeCalls = PR_FALSE;
 
 nsIFile *nsPluginHostImpl::sPluginTempDir;
 
+nsPluginHostImpl *gPluginHost = nsnull;
+
 ////////////////////////////////////////////////////////////////////////
 // flat file reg funcs
 static
@@ -2634,6 +2636,10 @@ nsPluginHostImpl::~nsPluginHostImpl()
   printf("nsPluginHostImpl dtor\n");
 #endif
   Destroy();
+
+  if (gPluginHost == this) {
+    gPluginHost = nsnull;
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -2653,14 +2659,17 @@ nsPluginHostImpl::Create(nsISupports* aOuter, REFNSIID aIID, void** aResult)
   if (aOuter)
     return NS_ERROR_NO_AGGREGATION;
 
-  nsPluginHostImpl* host = new nsPluginHostImpl();
-  if (! host)
-    return NS_ERROR_OUT_OF_MEMORY;
+  if (!gPluginHost) {
+    gPluginHost = new nsPluginHostImpl();
+    if (!gPluginHost)
+      return NS_ERROR_OUT_OF_MEMORY;
+  }
 
-  nsresult rv;
-  NS_ADDREF(host);
-  rv = host->QueryInterface(aIID, aResult);
-  NS_RELEASE(host);
+  gPluginHost->AddRef();
+  nsresult rv = gPluginHost->QueryInterface(aIID, aResult);
+  // Can't use the macros here since they null out the pointer you
+  // release.
+  gPluginHost->Release();
   return rv;
 }
 
@@ -5947,6 +5956,10 @@ nsPluginHostImpl::AddHeadersToChannel(const char *aHeadersData,
 NS_IMETHODIMP
 nsPluginHostImpl::StopPluginInstance(nsIPluginInstance* aInstance)
 {
+  if (PluginDestructionGuard::DelayDestroy(aInstance)) {
+    return NS_OK;
+  }
+
   PLUGIN_LOG(PLUGIN_LOG_NORMAL,
   ("nsPluginHostImpl::StopPluginInstance called instance=%p\n",aInstance));
 
@@ -6877,4 +6890,161 @@ nsPluginStreamInfo::SetStreamComplete(const PRBool complete)
 
     SetRequest(nsnull);
   }
+}
+
+
+// Event that does an async destroy of a plugin.
+
+class nsPluginDestroyEvent : public PLEvent,
+                             public PRCList
+{
+public:
+  nsPluginDestroyEvent(nsIPluginInstance *aInstance)
+    : mInstance(aInstance)
+  {
+    MOZ_COUNT_CTOR(nsPluginDestroyEvent);
+    PL_InitEvent(this, aInstance, Handle, Destroy);
+
+    PR_INIT_CLIST(this);
+    PR_APPEND_LINK(this, &sEventListHead);
+  }
+
+  ~nsPluginDestroyEvent()
+  {
+    MOZ_COUNT_DTOR(nsPluginDestroyEvent);
+    PR_REMOVE_LINK(this);
+  }
+
+  PR_STATIC_CALLBACK(void*) Handle(PLEvent* aEvent);
+  PR_STATIC_CALLBACK(void) Destroy(PLEvent* aEvent);
+
+protected:
+  nsCOMPtr<nsIPluginInstance> mInstance;
+
+  static PRCList sEventListHead;
+};
+
+// static
+void *
+nsPluginDestroyEvent::Handle(PLEvent* aEvent)
+{
+  nsPluginDestroyEvent* evt =
+    NS_STATIC_CAST(nsPluginDestroyEvent*, aEvent);
+
+  nsCOMPtr<nsIPluginInstance> instance;
+
+  // Null out mInstance to make sure this code in another runnable
+  // will do the right thing even if someone was holding on to this
+  // runnable longer than we expect.
+  instance.swap(evt->mInstance);
+
+  if (PluginDestructionGuard::DelayDestroy(instance)) {
+    // It's still not safe to destroy the plugin, it's now up to the
+    // outermost guard on the stack to take care of the destruction.
+
+    return nsnull;
+  }
+
+  nsPluginDestroyEvent *r =
+    static_cast<nsPluginDestroyEvent*>(PR_NEXT_LINK(&sEventListHead));
+
+  while (r != &sEventListHead) {
+    if (r != evt && r->mInstance == instance) {
+      // There's another event scheduled to tear down
+      // instance. Let it do the job.
+ 
+      return nsnull;
+    }
+
+    r = static_cast<nsPluginDestroyEvent*>(PR_NEXT_LINK(r));
+  }
+
+  PLUGIN_LOG(PLUGIN_LOG_NORMAL,
+             ("Doing delayed destroy of instance %p\n", instance.get()));
+
+  instance->Stop();
+
+  if (gPluginHost) {
+    gPluginHost->StopPluginInstance(instance);
+  }
+
+  PLUGIN_LOG(PLUGIN_LOG_NORMAL,
+             ("Done with delayed destroy of instance %p\n", instance.get()));
+
+  return nsnull;
+}
+
+// static
+void PR_CALLBACK
+nsPluginDestroyEvent::Destroy(PLEvent* aEvent)
+{
+  nsPluginDestroyEvent* evt =
+    NS_STATIC_CAST(nsPluginDestroyEvent*, aEvent);
+  delete evt;
+}
+
+PRCList nsPluginDestroyEvent::sEventListHead =
+  PR_INIT_STATIC_CLIST(&nsPluginDestroyEvent::sEventListHead);
+
+PRCList PluginDestructionGuard::sListHead =
+  PR_INIT_STATIC_CLIST(&PluginDestructionGuard::sListHead);
+
+PluginDestructionGuard::~PluginDestructionGuard()
+{
+  PR_REMOVE_LINK(this);
+
+  if (mDelayedDestroy) {
+    // We've attempted to destroy the plugin instance we're holding on
+    // to while we were guarding it. Do the actual destroy now, off of
+    // a runnable.
+
+    nsresult rv;
+    nsCOMPtr<nsIEventQueueService> eventQService =
+      do_GetService("@mozilla.org/event-queue-service;1", &rv);
+
+    nsCOMPtr<nsIEventQueue> eventQ;
+    if (eventQService) {
+      rv = eventQService->
+        GetSpecialEventQueue(nsIEventQueueService::UI_THREAD_EVENT_QUEUE,
+                             getter_AddRefs(eventQ));
+    }
+
+    if (eventQ) {
+      nsPluginDestroyEvent *evt =
+        new nsPluginDestroyEvent(mInstance);
+
+      if (evt) {
+        rv = eventQ->PostEvent(evt);
+
+        if (NS_FAILED(rv)) {
+          PL_DestroyEvent(evt);
+        }
+      }
+    }
+  }
+}
+
+// static
+PRBool
+PluginDestructionGuard::DelayDestroy(nsIPluginInstance *aInstance)
+{
+  NS_ASSERTION(aInstance, "Uh, I need an instance!");
+
+  // Find the first guard on the stack and make it do a delayed
+  // destroy upon destruction.
+
+  PluginDestructionGuard *g =
+    static_cast<PluginDestructionGuard*>(PR_LIST_HEAD(&sListHead));
+
+  while (g != &sListHead) {
+    if (g->mInstance == aInstance) {
+      g->mDelayedDestroy = PR_TRUE;
+
+      return PR_TRUE;
+    }
+
+    g = static_cast<PluginDestructionGuard*>(PR_NEXT_LINK(g));    
+  }
+
+  return PR_FALSE;
 }

@@ -51,6 +51,9 @@
 #include "nsIPrefService.h"
 #include "nsIPrefBranch.h"
 #include "nsURLHelper.h"
+#include "nsIChannelEventSink.h"
+#include "nsIOService.h"
+#include "nsIScriptSecurityManager.h"
 
 static NS_DEFINE_CID(kStreamConverterServiceCID, NS_STREAMCONVERTERSERVICE_CID);
 static NS_DEFINE_CID(kStreamTransportServiceCID, NS_STREAMTRANSPORTSERVICE_CID);
@@ -64,6 +67,7 @@ nsFileChannel::nsFileChannel()
     , mStatus(NS_OK)
     , mIsDir(PR_FALSE)
     , mUploading(PR_FALSE)
+    , mWaitingOnAsyncRedirect(PR_FALSE)
 {
 }
 
@@ -75,6 +79,79 @@ nsFileChannel::Init(nsIURI *uri)
         return rv;
     mURL = do_QueryInterface(uri, &rv);
     return rv;
+}
+
+static PLDHashOperator
+CopyProperties(const nsAString &key, nsIVariant *data, void *closure)
+{
+  nsIWritablePropertyBag *bag =
+      static_cast<nsIWritablePropertyBag *>(closure);
+
+  bag->SetProperty(key, data);
+  return PL_DHASH_NEXT;
+}
+
+void
+nsFileChannel::HandleRedirect(nsIChannel* newChannel)
+{
+    if (NS_SUCCEEDED(mStatus)) {
+        nsIURI* originalURI = mOriginalURI;
+        if (!originalURI)
+            originalURI = mURL;
+    
+        newChannel->SetOriginalURI(originalURI);
+        newChannel->SetLoadGroup(mLoadGroup);
+        newChannel->SetNotificationCallbacks(mCallbacks);
+        newChannel->SetLoadFlags(mLoadFlags | LOAD_REPLACE);
+
+        nsCOMPtr<nsIWritablePropertyBag> bag = do_QueryInterface(newChannel);
+        if (bag)
+            mPropertyHash.EnumerateRead(CopyProperties, bag.get());
+
+        // Notify consumer, giving chance to cancel redirect.
+        PRInt32 redirectFlags = nsIChannelEventSink::REDIRECT_INTERNAL;
+
+        // Global observers. These come first so that other observers don't see
+        // redirects that get aborted for security reasons anyway.
+        nsresult rv = gIOService->OnChannelRedirect(this, newChannel,
+                                                    redirectFlags);
+        if (NS_SUCCEEDED(rv)) {
+            nsCOMPtr<nsIChannelEventSink> channelEventSink;
+            // Give our consumer a chance to observe/block this redirect.
+            NS_QueryNotificationCallbacks(mCallbacks, mLoadGroup,
+                                          channelEventSink);
+            if (channelEventSink) {
+                rv = channelEventSink->OnChannelRedirect(this, newChannel,
+                                                         redirectFlags);
+                if (NS_SUCCEEDED(rv)) {
+                    rv = newChannel->AsyncOpen(mListener, mListenerContext);
+                }
+            }
+        }
+
+        if (NS_FAILED(rv))
+            Cancel(rv);
+    }
+
+    mWaitingOnAsyncRedirect = PR_FALSE;
+
+    if (NS_FAILED(mStatus)) {
+        // Notify our consumer ourselves        
+        mListener->OnStartRequest(this, mListenerContext);
+        mListener->OnStopRequest(this, mListenerContext, mStatus);
+    } else {
+        // close down this channel
+        Cancel(NS_BINDING_REDIRECTED);
+    }
+
+    mListener = nsnull;
+    mListenerContext = nsnull;
+    
+    if (mLoadGroup)
+        mLoadGroup->RemoveRequest(this, nsnull, mStatus);
+
+    // Drop notification callbacks to prevent cycles.
+    mCallbacks = nsnull;
 }
 
 nsresult
@@ -102,13 +179,15 @@ nsFileChannel::EnsureStream()
     if (NS_FAILED(rv)) return rv;
 
     // we accept that this might result in a disk hit to stat the file
-    rv = file->IsDirectory(&mIsDir);
+    PRBool isDir;
+    rv = file->IsDirectory(&isDir);
     if (NS_FAILED(rv)) {
         // canonicalize error message
         if (rv == NS_ERROR_FILE_TARGET_DOES_NOT_EXIST)
             rv = NS_ERROR_FILE_NOT_FOUND;
         return rv;
     }
+    mIsDir = isDir;
 
     if (mIsDir)
         rv = nsDirectoryIndexStream::Create(file, getter_AddRefs(mStream));
@@ -153,7 +232,7 @@ nsFileChannel::GetName(nsACString &result)
 NS_IMETHODIMP
 nsFileChannel::IsPending(PRBool *result)
 {
-    *result = (mRequest != nsnull);
+    *result = mRequest || mWaitingOnAsyncRedirect;
     return NS_OK;
 }
 
@@ -170,9 +249,10 @@ nsFileChannel::GetStatus(nsresult *status)
 NS_IMETHODIMP
 nsFileChannel::Cancel(nsresult status)
 {
-    NS_ENSURE_TRUE(mRequest, NS_ERROR_UNEXPECTED);
     mStatus = status;
-    return mRequest->Cancel(status);
+    if (mRequest)
+        return mRequest->Cancel(status);
+    return NS_OK;
 }
 
 NS_IMETHODIMP
@@ -368,14 +448,102 @@ nsFileChannel::Open(nsIInputStream **result)
     return NS_OK;
 }
 
+nsFileChannel::RedirectRunnable::RedirectRunnable(nsFileChannel* originalChannel,
+                                                  nsIChannel* newChannel) :
+    mOriginalChannel(originalChannel),
+    mNewChannel(newChannel)
+{
+    MOZ_COUNT_CTOR(nsFileChannel::RedirectRunnable);
+    PL_InitEvent(this, nsnull, Handle, Destroy);
+}    
+
+nsFileChannel::RedirectRunnable::~RedirectRunnable()
+{
+    MOZ_COUNT_DTOR(nsFileChannel::RedirectRunnable);
+}
+
+/* static */ void * PR_CALLBACK
+nsFileChannel::RedirectRunnable::Handle(PLEvent* aEvent)
+{
+  nsFileChannel::RedirectRunnable* evt =
+    NS_STATIC_CAST(nsFileChannel::RedirectRunnable*, aEvent);
+
+  evt->mOriginalChannel->HandleRedirect(evt->mNewChannel);
+
+  return nsnull;
+}
+
+/* static */ void PR_CALLBACK
+nsFileChannel::RedirectRunnable::Destroy(PLEvent* aEvent)
+{
+  nsFileChannel::RedirectRunnable* evt =
+    NS_STATIC_CAST(nsFileChannel::RedirectRunnable*, aEvent);
+  delete evt;
+}
+
 NS_IMETHODIMP
 nsFileChannel::AsyncOpen(nsIStreamListener *listener, nsISupports *ctx)
 {
     NS_ENSURE_TRUE(!mRequest, NS_ERROR_IN_PROGRESS);
 
+    // This file may be a url file
+    nsCOMPtr<nsIFile> file;
+    nsresult rv = mURL->GetFile(getter_AddRefs(file));
+    if (NS_SUCCEEDED(rv)) {
+        nsCOMPtr<nsIFileProtocolHandler> fileHandler;
+        rv = NS_GetFileProtocolHandler(getter_AddRefs(fileHandler));
+        NS_ENSURE_SUCCESS(rv, rv);
+
+        nsCOMPtr<nsIURI> uri;
+        rv = fileHandler->ReadURLFile(file, getter_AddRefs(uri));
+        if (NS_SUCCEEDED(rv)) {
+            // Make sure this is OK to load
+            nsCOMPtr<nsIScriptSecurityManager> securityManager = 
+                do_GetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID);
+            if (securityManager) {
+                rv = securityManager->CheckLoadURI(mURL, uri,
+                                                   nsIScriptSecurityManager::DISALLOW_FROM_MAIL |
+                                                   nsIScriptSecurityManager::DISALLOW_SCRIPT_OR_DATA);
+                if (NS_FAILED(rv)) return rv;
+            }
+ 
+            nsCOMPtr<nsIChannel> newChannel;
+            rv = NS_NewChannel(getter_AddRefs(newChannel), uri);
+            if (NS_SUCCEEDED(rv)) {
+                nsCOMPtr<nsIEventQueueService> eventQService =
+                    do_GetService("@mozilla.org/event-queue-service;1", &rv);
+                NS_ENSURE_TRUE(eventQService, rv);
+                
+                nsCOMPtr<nsIEventQueue> eventQ;
+                rv = eventQService->
+                    GetSpecialEventQueue(nsIEventQueueService::UI_THREAD_EVENT_QUEUE,
+                                         getter_AddRefs(eventQ));
+                NS_ENSURE_TRUE(eventQ, rv);
+
+                RedirectRunnable* evt =
+                    new RedirectRunnable(this, newChannel);
+                NS_ENSURE_TRUE(evt, NS_ERROR_OUT_OF_MEMORY);
+
+                rv = eventQ->PostEvent(evt);
+
+                if (NS_FAILED(rv)) {
+                    PL_DestroyEvent(evt);
+                } else {
+                    mWaitingOnAsyncRedirect = PR_TRUE;
+
+                    if (mLoadGroup)
+                        mLoadGroup->AddRequest(this, nsnull);
+
+                    mListener = listener;
+                    mListenerContext = ctx;
+                }
+                return rv;
+            }
+        }
+    }
+
     nsCOMPtr<nsIStreamListener> grip;
     nsCOMPtr<nsIEventQueue> currentEventQ;
-    nsresult rv;
 
     rv = NS_GetCurrentEventQ(getter_AddRefs(currentEventQ));
     if (NS_FAILED(rv)) return rv;

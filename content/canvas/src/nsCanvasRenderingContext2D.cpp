@@ -2159,9 +2159,25 @@ nsCanvasRenderingContext2D::CairoSurfaceFromElement(nsIDOMElement *imgElt,
         if ((status & imgIRequest::STATUS_LOAD_COMPLETE) == 0)
             return NS_ERROR_NOT_AVAILABLE;
 
+        // Get the "current" current URI if it's available - the one we get to
+        // after all redirects
         nsCOMPtr<nsIURI> uri;
-        rv = imageLoader->GetCurrentURI(uriOut);
+        nsCOMPtr<imgIRequest> currentRequest;
+        rv = imageLoader->GetRequest(nsIImageLoadingContent::CURRENT_REQUEST,
+                                     getter_AddRefs(currentRequest));
         NS_ENSURE_SUCCESS(rv, rv);
+        if (currentRequest) {
+            nsCOMPtr<imgIRequest_MOZILLA_1_8_BRANCH> req = do_QueryInterface(currentRequest);
+            if (req)
+                req->GetCurrentURI(getter_AddRefs(uri));
+        }
+
+        if (!uri) {
+          rv = imageLoader->GetCurrentURI(getter_AddRefs(uri));
+          NS_ENSURE_SUCCESS(rv, rv);
+        }
+
+        NS_IF_ADDREF(*uriOut = uri);
 
         *forceWriteOnlyOut = PR_FALSE;
 

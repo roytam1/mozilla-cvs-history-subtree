@@ -46,6 +46,9 @@
 #include "nsCRT.h"
 #include "nsCOMPtr.h"
 #include "prlink.h"
+#include "prclist.h"
+#include "npapi.h"
+#include "ns4xPluginInstance.h"
 
 #include "nsIPlugin.h"
 #include "nsIPluginTagInfo2.h"
@@ -515,6 +518,40 @@ private:
   nsWeakPtr mCurrentDocument; // weak reference, we use it to id document only
 
   static nsIFile *sPluginTempDir;
+};
+
+class PluginDestructionGuard : protected PRCList
+{
+public:
+  PluginDestructionGuard(nsIPluginInstance *aInstance)
+    : mInstance(aInstance)
+  {
+    Init();
+  }
+
+  PluginDestructionGuard(NPP npp)
+    : mInstance(npp ? static_cast<ns4xPluginInstance*>(npp->ndata) : nsnull)
+  {
+    Init();
+  }
+
+  ~PluginDestructionGuard();
+
+  static PRBool DelayDestroy(nsIPluginInstance *aInstance);
+
+protected:
+  void Init()
+  {
+    mDelayedDestroy = PR_FALSE;
+
+    PR_INIT_CLIST(this);
+    PR_INSERT_BEFORE(this, &sListHead);
+  }
+
+  nsCOMPtr<nsIPluginInstance> mInstance;
+  PRBool mDelayedDestroy;
+
+  static PRCList sListHead;
 };
 
 #endif

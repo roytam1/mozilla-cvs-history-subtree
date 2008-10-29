@@ -165,7 +165,7 @@ int MOZ_XMLTranslateEntity(const char* ptr, const char* end, const char** next,
   if (tok == XML_TOK_CHAR_REF) {
     int n = XmlCharRefNumber(enc, ptr);
 
-    // We could get away with just < 0, but better safe than sorry.
+    /* We could get away with just < 0, but better safe than sorry. */
     if (n <= 0) {
       return 0;
     }

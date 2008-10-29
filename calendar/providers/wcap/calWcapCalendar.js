@@ -139,7 +139,8 @@ calWcapCalendar.prototype = {
                 return this.ownerId;
             case "organizerCN":
                 return this.getCalendarProperties("X-S1CS-CALPROPS-COMMON-NAME");
-            case "cache.supported": // until bug 412914 and bug 412606 are fixed
+            case "itip.disableRevisionChecks":
+                return true;
             case "capabilities.timezones.floating.supported":
             case "capabilities.timezones.UTC.supported":
             case "capabilities.attachments.supported":

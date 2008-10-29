@@ -173,6 +173,8 @@ nsresult ns4xPluginStreamListener::CleanUpStream(NPReason reason)
   if(!mInst || !mInst->IsStarted())
     return rv;
 
+  PluginDestructionGuard guard(mInst);
+
   const NPPluginFuncs *callbacks = nsnull;
   mInst->GetCallbacks(&callbacks);
   if(!callbacks)
@@ -217,6 +219,8 @@ void ns4xPluginStreamListener::CallURLNotify(NPReason reason)
   if(!mCallNotify || !mInst || !mInst->IsStarted())
     return;
 
+  PluginDestructionGuard guard(mInst);
+
   mCallNotify = PR_FALSE; // only do this ONCE and prevent recursion
 
   const NPPluginFuncs *callbacks = nsnull;
@@ -253,6 +257,8 @@ ns4xPluginStreamListener::OnStartBinding(nsIPluginStreamInfo* pluginInfo)
 {
   if(!mInst)
     return NS_ERROR_FAILURE;
+
+  PluginDestructionGuard guard(mInst);
 
   NPP npp;
   const NPPluginFuncs *callbacks = nsnull;
@@ -400,6 +406,8 @@ ns4xPluginStreamListener::OnDataAvailable(nsIPluginStreamInfo* pluginInfo,
 {
   if (!mInst || !mInst->IsStarted())
     return NS_ERROR_FAILURE;
+
+  PluginDestructionGuard guard(mInst);
 
   // Just in case the caller switches plugin info on us.
   mStreamInfo = pluginInfo;
@@ -660,6 +668,8 @@ ns4xPluginStreamListener::OnFileAvailable(nsIPluginStreamInfo* pluginInfo,
 {
   if(!mInst || !mInst->IsStarted())
     return NS_ERROR_FAILURE;
+
+  PluginDestructionGuard guard(mInst);
 
   const NPPluginFuncs *callbacks = nsnull;
   mInst->GetCallbacks(&callbacks);
@@ -942,6 +952,12 @@ NS_IMETHODIMP ns4xPluginInstance::Stop(void)
   if(!mStarted)
     return NS_OK;
 
+  // If there's code from this plugin instance on the stack, delay the
+  // destroy.
+  if (PluginDestructionGuard::DelayDestroy(this)) {
+    return NS_OK;
+  }
+
   if (fCallbacks->destroy == NULL)
     return NS_ERROR_FAILURE; // XXX right error?
 
@@ -1019,6 +1035,8 @@ nsresult ns4xPluginInstance::InitializePlugin(nsIPluginInstancePeer* peer)
   nsCOMPtr<nsIPluginTagInfo2> taginfo = do_QueryInterface(peer);
   NS_ENSURE_TRUE(taginfo, NS_ERROR_NO_INTERFACE);
   
+  PluginDestructionGuard guard(this);
+
   PRUint16 count = 0;
   const char* const* names = nsnull;
   const char* const* values = nsnull;
@@ -1400,6 +1418,8 @@ NS_IMETHODIMP ns4xPluginInstance::SetWindow(nsPluginWindow* window)
 #endif // MOZ_WIDGET
 
   if (fCallbacks->setwindow) {
+    PluginDestructionGuard guard(this);
+
     // XXX Turns out that NPPluginWindow and NPWindow are structurally
     // identical (on purpose!), so there's no need to make a copy.
 
@@ -1466,6 +1486,8 @@ NS_IMETHODIMP ns4xPluginInstance::Print(nsPluginPrint* platformPrint)
 {
   NS_ENSURE_TRUE(platformPrint, NS_ERROR_NULL_POINTER);
 
+  PluginDestructionGuard guard(this);
+
   NPPrint* thePrint = (NPPrint *)platformPrint;
 
   // to be compatible with the older SDK versions and to match what
@@ -1516,6 +1538,8 @@ NS_IMETHODIMP ns4xPluginInstance::HandleEvent(nsPluginEvent* event, PRBool* hand
   if (event == nsnull)
     return NS_ERROR_FAILURE;
 
+  PluginDestructionGuard guard(this);
+
   PRInt16 result = 0;
   
   if (fCallbacks->event) {
@@ -1550,6 +1574,7 @@ nsresult ns4xPluginInstance::GetValueInternal(NPPVariable variable, void* value)
 {
   nsresult  res = NS_OK;
   if(fCallbacks->getvalue && mStarted) {
+    PluginDestructionGuard guard(this);
 
     NS_TRY_SAFE_CALL_RETURN(res, 
                             CallNPP_GetValueProc(fCallbacks->getvalue, 

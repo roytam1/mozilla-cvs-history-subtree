@@ -134,8 +134,6 @@ calICSCalendar.prototype = {
         } else {
             this.mHooks = new dummyHooks();
         }
-
-        this.refresh();
     },
 
     getProperty: function calICSCalendar_getProperty(aName) {

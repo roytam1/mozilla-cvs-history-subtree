@@ -56,7 +56,9 @@
 #include "nspr.h"
 
 
-NS_IMPL_THREADSAFE_ISUPPORTS3(imgRequestProxy, imgIRequest, nsIRequest,
+NS_IMPL_THREADSAFE_ISUPPORTS4(imgRequestProxy, imgIRequest,
+                              imgIRequest_MOZILLA_1_8_BRANCH,
+                              nsIRequest,
                               nsISupportsPriority)
 
 imgRequestProxy::imgRequestProxy() :
@@ -532,3 +534,14 @@ void imgRequestProxy::OnStopRequest(nsIRequest *request, nsISupports *ctxt,
   }
 }
 
+/* imgIRequest_MOZILLA_1_8_BRANCH interface */
+
+/* readonly attribute nsIURI currentURI; */
+NS_IMETHODIMP imgRequestProxy::GetCurrentURI(nsIURI **aURI)
+{
+  if (!mOwner)
+    return NS_ERROR_FAILURE;
+
+  nsAutoLock lock(mLock);
+  return mOwner->GetCurrentURI(aURI);
+}

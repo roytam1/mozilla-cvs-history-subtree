@@ -2176,7 +2176,7 @@ nsresult nsParseNewMailState::AppendMsgFromFile(nsIOFileStream *fileStream,
   }
   
   destFile->seek(PR_SEEK_END, 0);
-  PRInt32 newMsgPos = destFile->tell();
+  PRUint32 newMsgPos = destFile->tell();
   
   if (!m_ibuffer)
     m_ibuffer_size = 10240;

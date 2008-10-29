@@ -2721,6 +2721,7 @@ Decompile(SprintStack *ss, jsbytecode *pc, intN nb)
                 LOCAL_ASSERT(atom);
                 goto do_fornameinloop;
 
+              case JSOP_FORVAR:
               case JSOP_FORCONST:
                 atom = GetSlotAtom(jp, js_GetLocalVariable, GET_VARNO(pc));
                 LOCAL_ASSERT(atom);

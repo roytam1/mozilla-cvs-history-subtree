@@ -863,24 +863,33 @@
            */
           var blobs = new Array();
           var currentBlob = new Array();
-
           function sortByStart(a, b) {
+              function assureFloating(aDateTime) {
+                  if (aDateTime.timezone.isFloating) {
+                      aDateTime = aDateTime.getInTimezone(self.mTimezone);
+                  }
+                  return aDateTime;
+              }
               // If you pass in tasks without both entry and due dates, I will
               // kill you
               var aStart = a.event.startDate || a.event.entryDate;
+              aStart = assureFloating(aStart);
               var bStart = b.event.startDate || b.event.entryDate;
+              bStart = assureFloating(bStart);
               var startComparison = aStart.compare(bStart);
               if (startComparison != 0) {
                   return startComparison;
               } else {
                   var aEnd = a.event.endDate || a.event.dueDate;
+                  aEnd = assureFloating(aEnd);
                   var bEnd = b.event.endDate || b.event.dueDate;
+                  bEnd = assureFloating(bEnd);
                   // If the items start at the same time, return the longer one
                   // first
                   return bEnd.compare(aEnd);
               }
           }
-
+          var self = this;
           this.mEvents.sort(sortByStart);
 
           // The end time of the last ending event in the entire blob
@@ -1976,7 +1985,7 @@
                    </xul:hbox>
                    <xul:calendar-category-box anonid="category-box" xbl:inherits="categories" pack="end"/>
                  </xul:hbox>
-                <xul:box xbl:inherits="orient" flex="1">
+                <xul:box xbl:inherits="orient">
                   <xul:calendar-event-gripbar anonid="gripbar1"
                                               class="calendar-event-box-grippy-top"
                                               whichside="start"
@@ -2036,9 +2045,9 @@
       <method name="getOptimalMinSize">
         <body><![CDATA[
           if (this.getAttribute("orient") == "vertical") {
-              var minHeight = getOptimalMinimumHeight(this.eventNameLabel) + 
-                          getSummarizedStyleValues(document.getAnonymousElementByAttribute(this, "anonid", "calendar-event-details"), ["margin-bottom", "margin-top"]) +
-                          getSummarizedStyleValues(this, ["border-bottom-width", "border-top-width"]);
+              var minHeight = getOptimalMinimumHeight(this.eventNameLabel) +
+                              getSummarizedStyleValues(document.getAnonymousElementByAttribute(this, "anonid", "eventbox"), ["margin-bottom", "margin-top"]) +
+                              getSummarizedStyleValues(this, ["border-bottom-width", "border-top-width"]);
               this.setAttribute("minheight", minHeight);
               this.setAttribute("minwidth", "1");
               return minHeight;

@@ -76,6 +76,7 @@ CLEAN :
 	-@erase "$(INTDIR)\jsfun.obj"
 	-@erase "$(INTDIR)\jsgc.obj"
 	-@erase "$(INTDIR)\jshash.obj"
+	-@erase "$(INTDIR)\jsiter.obj"
 	-@erase "$(INTDIR)\jsinterp.obj"
 	-@erase "$(INTDIR)\jslock.obj"
 	-@erase "$(INTDIR)\jslog2.obj"
@@ -171,6 +172,7 @@ LINK32_OBJS= \
 	"$(INTDIR)\jsfun.obj" \
 	"$(INTDIR)\jsgc.obj" \
 	"$(INTDIR)\jshash.obj" \
+	"$(INTDIR)\jsiter.obj" \
 	"$(INTDIR)\jsinterp.obj" \
 	"$(INTDIR)\jslock.obj" \
 	"$(INTDIR)\jslog2.obj" \
@@ -230,6 +232,7 @@ CLEAN :
 	-@erase "$(INTDIR)\jsfun.obj"
 	-@erase "$(INTDIR)\jsgc.obj"
 	-@erase "$(INTDIR)\jshash.obj"
+	-@erase "$(INTDIR)\jsiter.obj"
 	-@erase "$(INTDIR)\jsinterp.obj"
 	-@erase "$(INTDIR)\jslock.obj"
 	-@erase "$(INTDIR)\jslog2.obj"
@@ -327,6 +330,7 @@ LINK32_OBJS= \
 	"$(INTDIR)\jsfun.obj" \
 	"$(INTDIR)\jsgc.obj" \
 	"$(INTDIR)\jshash.obj" \
+	"$(INTDIR)\jsiter.obj" \
 	"$(INTDIR)\jsinterp.obj" \
 	"$(INTDIR)\jslock.obj" \
 	"$(INTDIR)\jslog2.obj" \
@@ -895,6 +899,7 @@ DEP_CPP_JSAPI=\
 	".\jsfun.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -950,6 +955,7 @@ DEP_CPP_JSAPI=\
 	".\jsfun.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -1059,6 +1065,7 @@ DEP_CPP_JSARR=\
 	".\jsfun.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -1101,6 +1108,7 @@ DEP_CPP_JSARR=\
 	".\jsfun.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -1149,6 +1157,7 @@ DEP_CPP_JSATO=\
 	".\jscpucfg.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -1192,6 +1201,7 @@ DEP_CPP_JSATO=\
 	".\jscpucfg.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -1244,6 +1254,7 @@ DEP_CPP_JSBOO=\
 	".\jscpucfg.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -1286,6 +1297,7 @@ DEP_CPP_JSBOO=\
 	".\jscpucfg.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -1337,6 +1349,7 @@ DEP_CPP_JSCNT=\
 	".\jsexn.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -1383,6 +1396,7 @@ DEP_CPP_JSCNT=\
 	".\jsexn.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -1437,6 +1451,7 @@ DEP_CPP_JSDAT=\
 	".\jsdtoa.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -1481,6 +1496,7 @@ DEP_CPP_JSDAT=\
 	".\jsdtoa.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -1533,6 +1549,7 @@ DEP_CPP_JSDBG=\
 	".\jsfun.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -1577,6 +1594,7 @@ DEP_CPP_JSDBG=\
 	".\jsfun.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -1733,6 +1751,7 @@ DEP_CPP_JSEMI=\
 	".\jsfun.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -1780,7 +1799,7 @@ DEP_CPP_JSEMI=\
 	".\jsemit.h"\
 	".\jsfun.h"\
 	".\jsgc.h"\
-	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -1837,6 +1856,7 @@ DEP_CPP_JSEXN=\
 	".\jsfun.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -1879,6 +1899,7 @@ DEP_CPP_JSEXN=\
 	".\jsfun.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -1929,6 +1950,7 @@ DEP_CPP_JSFUN=\
 	".\jsfun.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -1977,6 +1999,7 @@ DEP_CPP_JSFUN=\
 	".\jsfun.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -2032,6 +2055,7 @@ DEP_CPP_JSGC_=\
 	".\jsfun.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -2075,7 +2099,7 @@ DEP_CPP_JSGC_=\
 	".\jscpucfg.h"\
 	".\jsfun.h"\
 	".\jsgc.h"\
-	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -2161,6 +2185,114 @@ NODEP_CPP_JSHAS=\
 ################################################################################
 # Begin Source File
 
+SOURCE=.\jsiter.c
+
+!IF  "$(CFG)" == "js - Win32 Release"
+
+DEP_CPP_JSINT=\
+	".\js.msg"\
+	".\jsapi.h"\
+	".\jsarena.h"\
+	".\jsarray.h"\
+	".\jsatom.h"\
+	".\jsbool.h"\
+	".\jsclist.h"\
+	".\jscntxt.h"\
+	".\jscompat.h"\
+	".\jsconfig.h"\
+	".\jscpucfg.h"\
+	".\jsdbgapi.h"\
+	".\jsfun.h"\
+	".\jsgc.h"\
+	".\jshash.h"\
+	".\jsiter.h"\
+	".\jsinterp.h"\
+	".\jslock.h"\
+	".\jslong.h"\
+	".\jsnum.h"\
+	".\jsobj.h"\
+	".\jsopcode.h"\
+	".\jsopcode.tbl"\
+	".\jsosdep.h"\
+	".\jsotypes.h"\
+	".\jsprf.h"\
+	".\jsprvtd.h"\
+	".\jspubtd.h"\
+	".\jsregexp.h"\
+	".\jsscope.h"\
+	".\jsscript.h"\
+	".\jsstddef.h"\
+	".\jsstr.h"\
+	".\jstypes.h"\
+	".\jsutil.h"\
+	".\jsxml.h"\
+	{$(INCLUDE)}"\sys\types.h"\
+	
+NODEP_CPP_JSINT=\
+	".\jsautocfg.h"\
+	".\prcvar.h"\
+	".\prlock.h"\
+	
+
+"$(INTDIR)\jsiter.obj" : $(SOURCE) $(DEP_CPP_JSINT) "$(INTDIR)"
+
+
+!ELSEIF  "$(CFG)" == "js - Win32 Debug"
+
+DEP_CPP_JSINT=\
+	".\js.msg"\
+	".\jsapi.h"\
+	".\jsarena.h"\
+	".\jsarray.h"\
+	".\jsatom.h"\
+	".\jsbool.h"\
+	".\jsclist.h"\
+	".\jscntxt.h"\
+	".\jscompat.h"\
+	".\jsconfig.h"\
+	".\jscpucfg.h"\
+	".\jsdbgapi.h"\
+	".\jsfun.h"\
+	".\jsgc.h"\
+	".\jshash.h"\
+	".\jsiter.h"\
+	".\jsinterp.h"\
+	".\jslock.h"\
+	".\jslong.h"\
+	".\jsnum.h"\
+	".\jsobj.h"\
+	".\jsopcode.h"\
+	".\jsopcode.tbl"\
+	".\jsosdep.h"\
+	".\jsotypes.h"\
+	".\jsprf.h"\
+	".\jsprvtd.h"\
+	".\jspubtd.h"\
+	".\jsregexp.h"\
+	".\jsscope.h"\
+	".\jsscript.h"\
+	".\jsstddef.h"\
+	".\jsstr.h"\
+	".\jstypes.h"\
+	".\jsutil.h"\
+	".\jsxml.h"\
+	{$(INCLUDE)}"\sys\types.h"\
+	
+NODEP_CPP_JSINT=\
+	".\jsautocfg.h"\
+	".\prcvar.h"\
+	".\prlock.h"\
+	
+
+"$(INTDIR)\jsiter.obj" : $(SOURCE) $(DEP_CPP_JSINT) "$(INTDIR)"
+
+
+!ENDIF 
+
+# End Source File
+################################################################################
+# Begin Source File
+
 SOURCE=.\jsinterp.c
 
 !IF  "$(CFG)" == "js - Win32 Release"
@@ -2181,6 +2313,7 @@ DEP_CPP_JSINT=\
 	".\jsfun.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -2230,6 +2363,7 @@ DEP_CPP_JSINT=\
 	".\jsfun.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -2283,6 +2417,7 @@ DEP_CPP_JSLOC=\
 	".\jscpucfg.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -2324,6 +2459,7 @@ DEP_CPP_JSLOC=\
 	".\jscpucfg.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -2457,6 +2593,7 @@ DEP_CPP_JSMAT=\
 	".\jscpucfg.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslibmath.h"\
 	".\jslock.h"\
@@ -2499,6 +2636,7 @@ DEP_CPP_JSMAT=\
 	".\jscpucfg.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslibmath.h"\
 	".\jslock.h"\
@@ -2550,6 +2688,7 @@ DEP_CPP_JSNUM=\
 	".\jsdtoa.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -2594,6 +2733,7 @@ DEP_CPP_JSNUM=\
 	".\jsdtoa.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -2648,6 +2788,7 @@ DEP_CPP_JSOBJ=\
 	".\jsfun.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -2696,6 +2837,7 @@ DEP_CPP_JSOBJ=\
 	".\jsfun.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -2754,6 +2896,7 @@ DEP_CPP_JSOPC=\
 	".\jsfun.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -2802,6 +2945,7 @@ DEP_CPP_JSOPC=\
 	".\jsfun.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -2855,6 +2999,7 @@ DEP_CPP_JSPAR=\
 	".\jsfun.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -2902,6 +3047,7 @@ DEP_CPP_JSPAR=\
 	".\jsfun.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -3003,6 +3149,7 @@ DEP_CPP_JSREG=\
 	".\jsfun.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -3048,6 +3195,7 @@ DEP_CPP_JSREG=\
 	".\jsfun.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -3101,6 +3249,7 @@ DEP_CPP_JSSCA=\
 	".\jsexn.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -3150,6 +3299,7 @@ DEP_CPP_JSSCA=\
 	".\jsexn.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -3244,6 +3394,7 @@ DEP_CPP_JSSCO=\
 	".\jscpucfg.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -3284,6 +3435,7 @@ DEP_CPP_JSSCO=\
 	".\jscpucfg.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -3335,6 +3487,7 @@ DEP_CPP_JSSCR=\
 	".\jsfun.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -3383,6 +3536,7 @@ DEP_CPP_JSSCR=\
 	".\jsfun.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -3438,6 +3592,7 @@ DEP_CPP_JSSTR=\
 	".\jscpucfg.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -3483,6 +3638,7 @@ DEP_CPP_JSSTR=\
 	".\jscpucfg.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -3578,6 +3734,7 @@ DEP_CPP_JSXDR=\
 	".\jscpucfg.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -3619,6 +3776,7 @@ DEP_CPP_JSXDR=\
 	".\jscpucfg.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\
@@ -3831,6 +3989,7 @@ DEP_CPP_JS_C42=\
 	".\jsfun.h"\
 	".\jsgc.h"\
 	".\jshash.h"\
+	".\jsiter.h"\
 	".\jsinterp.h"\
 	".\jslock.h"\
 	".\jslong.h"\

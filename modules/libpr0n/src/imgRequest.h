@@ -48,6 +48,8 @@
 
 #include "nsICacheEntryDescriptor.h"
 #include "nsIChannel.h"
+#include "nsIChannelEventSink.h"
+#include "nsIInterfaceRequestor.h"
 #include "nsIProperties.h"
 #include "nsIStreamListener.h"
 #include "nsIURI.h"
@@ -73,7 +75,9 @@ enum {
 class imgRequest : public imgILoad,
                    public imgIDecoderObserver,
                    public nsIStreamListener,
-                   public nsSupportsWeakReference
+                   public nsSupportsWeakReference,
+                   public nsIChannelEventSink,
+                   public nsIInterfaceRequestor
 {
 public:
   imgRequest();
@@ -115,6 +119,7 @@ private:
   inline nsresult GetResultFromImageStatus(PRUint32 aStatus) const;
   void Cancel(nsresult aStatus);
   nsresult GetURI(nsIURI **aURI);
+  nsresult GetCurrentURI(nsIURI **aURI);
   void RemoveFromCache();
   inline const char *GetMimeType() const {
     return mContentType.get();
@@ -141,10 +146,13 @@ public:
   NS_DECL_IMGICONTAINEROBSERVER
   NS_DECL_NSISTREAMLISTENER
   NS_DECL_NSIREQUESTOBSERVER
+  NS_DECL_NSICHANNELEVENTSINK
+  NS_DECL_NSIINTERFACEREQUESTOR
 
 private:
   nsCOMPtr<nsIChannel> mChannel;
   nsCOMPtr<nsIURI> mURI;
+  nsCOMPtr<nsIURI> mCurrentURI;
   nsCOMPtr<imgIContainer> mImage;
   nsCOMPtr<imgIDecoder> mDecoder;
   nsCOMPtr<nsIProperties> mProperties;

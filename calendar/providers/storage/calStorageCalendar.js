@@ -104,6 +104,9 @@ const CAL_ITEM_FLAG_HAS_RELATIONS = 128;
 
 const USECS_PER_SECOND = 1000000;
 
+var gTransCount = {};
+var gTransErr = {};
+
 //
 // Storage helpers
 //
@@ -262,7 +265,6 @@ calStorageCalendar.prototype = {
     // private members
     //
     mDB: null,
-    mDBTwo: null,
     mCalId: 0,
     mItemCache: null,
     mRecItemCacheInited: false,
@@ -375,11 +377,9 @@ calStorageCalendar.prototype = {
             // open the database
             dbService = Components.classes[kStorageServiceContractID].getService(kStorageServiceIID);
             this.mDB = dbService.openDatabase(fileURL.file);
-            this.mDBTwo = dbService.openDatabase(fileURL.file);
         } else if (aUri.scheme == "moz-profile-calendar") {
             dbService = Components.classes[kStorageServiceContractID].getService(kStorageServiceIID);
             this.mDB = dbService.openSpecialDatabase("profile");
-            this.mDBTwo = dbService.openSpecialDatabase("profile");
         }
 
         this.mCalId = id;
@@ -1473,17 +1473,19 @@ calStorageCalendar.prototype = {
             " AND recurrence_id IS NOT NULL"
             );
 
-        // For the extra-item data, note that we use mDBTwo, so that
-        // these can be executed while a selectItems is running!
+        // For the extra-item data, we used to use mDBTwo, so that
+        // these could be executed while a selectItems was running.
+        // This no longer seems to be needed and actually causes
+        // havoc when transactions are in use.
         this.mSelectAttendeesForItem = createStatement(
-            this.mDBTwo,
+            this.mDB,
             "SELECT * FROM cal_attendees " +
             "WHERE item_id = :item_id AND cal_id = " + this.mCalId +
             " AND recurrence_id IS NULL"
             );
 
         this.mSelectAttendeesForItemWithRecurrenceId = createStatement(
-            this.mDBTwo,
+            this.mDB,
             "SELECT * FROM cal_attendees " +
             "WHERE item_id = :item_id AND cal_id = " + this.mCalId +
             " AND recurrence_id = :recurrence_id" +
@@ -1491,13 +1493,13 @@ calStorageCalendar.prototype = {
             );
 
         this.mSelectPropertiesForItem = createStatement(
-            this.mDBTwo,
+            this.mDB,
             "SELECT * FROM cal_properties " +
             "WHERE item_id = :item_id AND recurrence_id IS NULL"
             );
 
         this.mSelectPropertiesForItemWithRecurrenceId = createStatement(
-            this.mDBTwo,
+            this.mDB,
             "SELECT * FROM cal_properties " +
             "WHERE item_id = :item_id AND cal_id = " + this.mCalId +
             " AND recurrence_id = :recurrence_id" +
@@ -1505,20 +1507,20 @@ calStorageCalendar.prototype = {
             );
 
         this.mSelectRecurrenceForItem = createStatement(
-            this.mDBTwo,
+            this.mDB,
             "SELECT * FROM cal_recurrence " +
             "WHERE item_id = :item_id AND cal_id = " + this.mCalId +
             " ORDER BY recur_index"
             );
 
         this.mSelectAttachmentsForItem = createStatement(
-            this.mDBTwo,
+            this.mDB,
             "SELECT * FROM cal_attachments " +
             "WHERE item_id = :item_id AND cal_id = " + this.mCalId
             );
 
         this.mSelectRelationsForItem = createStatement(
-            this.mDBTwo,
+            this.mDB,
             "SELECT * FROM cal_relations " +
             "WHERE item_id = :item_id AND cal_id = " + this.mCalId
             );
@@ -1862,9 +1864,8 @@ calStorageCalendar.prototype = {
     // after we get the base item, we need to check if we need to pull in
     // any extra data from other tables.  We do that here.
 
-    // note that we use mDBTwo for this, so this can be run while a
-    // select is executing; don't use any statements that aren't
-    // against mDBTwo in here!
+    // We used to use mDBTwo for this, so this can be run while a
+    // select is executing but this no longer seems to be required.
     
     getAdditionalDataForItem: function (item, flags) {
         // This is needed to keep the modification time intact.
@@ -2163,18 +2164,15 @@ calStorageCalendar.prototype = {
     flushItem: function (item, olditem) {
         ASSERT(!item.recurrenceId, "no parent item passed!", true);
 
-        this.mDB.beginTransaction();
+        this.acquireTransaction();
         try {
-            this.deleteItemById(olditem ? olditem.id : item.id, true /* hasGuardingTransaction */);
+            this.deleteItemById(olditem ? olditem.id : item.id);
             this.writeItem(item, olditem);
-            this.mDB.commitTransaction();
         } catch (e) {
-            dump("flushItem DB error: " + this.mDB.lastErrorString + "\n");
-            Components.utils.reportError("flushItem DB error: " +
-                                         this.mDB.lastErrorString);
-            this.mDB.rollbackTransaction();
+            this.releaseTransaction(e);
             throw e;
         }
+        this.releaseTransaction();
 
         this.cacheItem(item);
     },
@@ -2475,10 +2473,8 @@ calStorageCalendar.prototype = {
     //
     // delete the item with the given uid
     //
-    deleteItemById: function stor_deleteItemById(aID, hasGuardingTransaction) {
-        if (!hasGuardingTransaction) {
-            this.mDB.beginTransaction();
-        }
+    deleteItemById: function stor_deleteItemById(aID) {
+        this.acquireTransaction();
         try {
             this.mDeleteAttendees(aID);
             this.mDeleteProperties(aID);
@@ -2487,20 +2483,54 @@ calStorageCalendar.prototype = {
             this.mDeleteTodo(aID);
             this.mDeleteAttachments(aID);
             this.mDeleteMetaData(aID);
-            if (!hasGuardingTransaction) {
-                this.mDB.commitTransaction();
-            }
         } catch (e) {
-            Components.utils.reportError("deleteItemById DB error: " + this.mDB.lastErrorString);
-            if (!hasGuardingTransaction) {
-                this.mDB.rollbackTransaction();
-            }
+            this.releaseTransaction(e);
             throw e;
         }
+        this.releaseTransaction();
 
         delete this.mItemCache[aID];
         delete this.mRecEventCache[aID];
         delete this.mRecTodoCache[aID];
+    },
+
+    acquireTransaction: function stor_acquireTransaction() {
+        var uriKey = this.uri.spec;
+        if (!(uriKey in gTransCount)) {
+            gTransCount[uriKey] = 0;
+        }
+        if (gTransCount[uriKey]++ == 0) {
+            this.mDB.beginTransaction();
+        }
+    },
+    releaseTransaction: function stor_releaseTransaction(err) {
+        var uriKey = this.uri.spec;
+        if (err) {
+            ERROR("DB error: " + this.mDB.lastErrorString + "\nexc: " + err);
+            gTransErr[uriKey] = exc;
+        }
+
+        if (gTransCount[uriKey] > 0) {
+            if (--gTransCount[uriKey] == 0) {
+                if (gTransErr[uriKey]) {
+                    this.mDB.rollbackTransaction();
+                    delete gTransErr[uriKey];
+                } else {
+                    this.mDB.commitTransaction();
+                }
+            }
+        } else {
+            ASSERT(gTransCount[uriKey] > 0, "unexepcted batch count!");
+        }
+    },
+
+    startBatch: function stor_startBatch() {
+        this.acquireTransaction();
+        this.__proto__.__proto__.startBatch.apply(this, arguments);
+    },
+    endBatch: function stor_endBatch() {
+        this.releaseTransaction();
+        this.__proto__.__proto__.endBatch.apply(this, arguments);
     },
 
     //
@@ -2511,7 +2541,16 @@ calStorageCalendar.prototype = {
         this.mDeleteMetaData(id);
         var sp = this.mInsertMetaData.params;
         sp.item_id = id;
-        sp.value = value;
+        try { 
+            sp.value = value;
+        } catch (e) {
+            // The storage service throws an NS_ERROR_ILLEGAL_VALUE in
+            // case pval is something complex (i.e not a string or
+            // number). Swallow this error, leaving the value empty.
+            if (e.result != Components.results.NS_ERROR_ILLEGAL_VALUE) {
+                throw e;
+            }
+        }
         this.mInsertMetaData.execute();
         this.mInsertMetaData.reset();
     },

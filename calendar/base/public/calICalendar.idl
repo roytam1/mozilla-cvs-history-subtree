@@ -142,7 +142,19 @@ interface calICalendar : nsISupports
    *   [nsresult] currentStatus      The current error status of the calendar (transient).
    *
    *   [calIItipTransport] itip.transport    If the provider implements a custom calIItipTransport (transient)
+   *                                           If null, then Email Scheduling will effectively be
+   *                                           disabled. This means for example, the calendar will
+   *                                           not show up in the list of calendars to store an
+   *                                           invitation in.
+   *   [boolean] itip.disableRevisionChecks  If true, the iTIP handling code disables revision checks
+   *                                            against SEQUENCE and DTSTAMP, and will never reject an
+   *                                            iTIP message as outdated
    *   [nsIMsgIdentity] imip.identity        If provided, this is the email identity used for
+   *                                           scheduling purposes
+   *   [boolean] imip.identity.disabled      If true, this calendar doesn't support switching imip
+   *                                           identities. This for example means that the
+   *                                           dropdown of identities will not be shown in the
+   *                                           calendar properties dialog. (transient)
    *                                           scheduling purposes
    *   [nsIMsgAccount] imip.account          If provided, this is the email account used for
    *                                           scheduling purposes
@@ -163,6 +175,7 @@ interface calICalendar : nsISupports
    *   capabilities.events.supported       Supports tasks
    *   capabilities.tasks.supported        Supports events
    *   capabilities.alarms.popup.supported Supports popup alarms
+   *   capabilities.alarms.oninviations.supported Supports alarms on inviations.
    *   capabilities.timezones.floating.supported Supports local time
    *   capabilities.timezones.UTC.supported      Supports UTC/GMT timezone
    *

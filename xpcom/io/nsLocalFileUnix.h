@@ -127,6 +127,8 @@ protected:
 
     nsresult CreateAndKeepOpen(PRUint32 type, PRIntn flags,
                                PRUint32 permissions, PRFileDesc **_retval);
+
+    PRBool IsDesktopFile();
 };
 
 #endif /* _nsLocalFileUNIX_H_ */

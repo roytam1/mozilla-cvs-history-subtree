@@ -51,6 +51,9 @@ REQUIRES	= xpcom \
 		  mimetype \
 		  pref \
 		  uconv \
+		  caps \
+		  xpconnect \
+		  js \
 		  $(NULL)
 
 CPPSRCS		= \

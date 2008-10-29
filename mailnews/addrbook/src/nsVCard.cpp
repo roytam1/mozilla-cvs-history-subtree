@@ -1249,7 +1249,7 @@ VObject* parse_MIME(const char *input, unsigned long len)
 VObject* parse_MIME_FromFile(nsInputFileStream *file)
 {
   VObject *result;	
-  long startPos;
+  unsigned long startPos;
   
   initLex(0,(unsigned long)-1,file);
   startPos = file->tell();

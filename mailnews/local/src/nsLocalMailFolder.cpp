@@ -4071,7 +4071,7 @@ nsresult nsMsgLocalMailFolder::ChangeKeywordForMessages(nsISupportsArray *aMessa
         while (!done)
         {
           lineBuff[0] = '\0';
-          PRInt32 lineStartPos = fileStream->tell();
+          PRUint32 lineStartPos = fileStream->tell();
           // readLine won't return line termination chars.
           if (fileStream->readline(lineBuff, sizeof(lineBuff)))
           {

@@ -72,10 +72,11 @@
 PRLogModuleInfo *gImgLog = PR_NewLogModule("imgRequest");
 #endif
 
-NS_IMPL_THREADSAFE_ISUPPORTS6(imgRequest, imgILoad,
+NS_IMPL_THREADSAFE_ISUPPORTS8(imgRequest, imgILoad,
                               imgIDecoderObserver, imgIContainerObserver,
                               nsIStreamListener, nsIRequestObserver,
-                              nsISupportsWeakReference)
+                              nsISupportsWeakReference, nsIChannelEventSink,
+                              nsIInterfaceRequestor)
 
 imgRequest::imgRequest() : 
   mObservers(0),
@@ -106,6 +107,7 @@ nsresult imgRequest::Init(nsIChannel *aChannel,
     return NS_ERROR_OUT_OF_MEMORY;
 
   mChannel = aChannel;
+  mChannel->SetNotificationCallbacks(this);
 
   /* set our loading flag to true here.
      Setting it here lets checks to see if the load is in progress
@@ -304,6 +306,23 @@ nsresult imgRequest::GetURI(nsIURI **aURI)
 
   if (mURI) {
     *aURI = mURI;
+    NS_ADDREF(*aURI);
+    return NS_OK;
+  }
+
+  return NS_ERROR_FAILURE;
+}
+
+nsresult
+imgRequest::GetCurrentURI(nsIURI **aURI)
+{
+  LOG_FUNC(gImgLog, "imgRequest::GetCurrentURI");
+
+  if (mChannel)
+    return mChannel->GetURI(aURI);
+
+  if (mCurrentURI) {
+    *aURI = mCurrentURI;
     NS_ADDREF(*aURI);
     return NS_OK;
   }
@@ -740,6 +759,8 @@ NS_IMETHODIMP imgRequest::OnStopRequest(nsIRequest *aRequest, nsISupports *ctxt,
   // XXXldb What if this is a non-last part of a multipart request?
   if (mChannel) {
     mChannel->GetOriginalURI(getter_AddRefs(mURI));
+    mChannel->GetURI(getter_AddRefs(mCurrentURI));
+    mChannel->SetNotificationCallbacks(nsnull);
     mChannel = nsnull; // we no longer need the channel
   }
 
@@ -931,3 +952,40 @@ imgRequest::SniffMimeType(const char *buf, PRUint32 len)
 {
   imgLoader::GetMimeTypeFromContent(buf, len, mContentType);
 }
+
+/** nsIInterfaceRequestor methods **/
+
+NS_IMETHODIMP
+imgRequest::GetInterface(const nsIID & aIID, void **aResult)
+{
+  return QueryInterface(aIID, aResult);
+}
+
+/** nsIChannelEventSink methods **/
+
+/* void onChannelRedirect (in nsIChannel oldChannel, in nsIChannel newChannel, in unsigned long flags); */
+NS_IMETHODIMP
+imgRequest::OnChannelRedirect(nsIChannel *oldChannel, nsIChannel *newChannel, PRUint32 flags)
+{
+  NS_ASSERTION(mChannel, "Got an OnChannelRedirect after we nulled out mChannel!");
+  NS_ASSERTION(mChannel == oldChannel, "Got a channel redirect for an unknown channel!");
+  NS_ASSERTION(newChannel, "Got a redirect to a NULL channel!");
+
+  RemoveFromCache();
+
+  nsCOMPtr<nsIURI> uri;
+  if (NS_SUCCEEDED(newChannel->GetURI(getter_AddRefs(uri))) && uri)
+    mCurrentURI = uri;
+
+  oldChannel->SetNotificationCallbacks(nsnull);
+  mChannel = newChannel;
+  mChannel->SetNotificationCallbacks(this);
+
+  // If we don't still have a cache entry, we don't want to refresh the cache.
+  if (uri && mCacheEntry) {
+    imgCache::Put(uri, this, getter_AddRefs(mCacheEntry));
+  }
+
+  return NS_OK;
+}
+

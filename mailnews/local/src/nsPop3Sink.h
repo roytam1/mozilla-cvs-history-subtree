@@ -73,7 +73,7 @@ protected:
     nsresult HandleTempDownloadFailed(nsIMsgWindow *msgWindow);
 
     PRBool m_authed;
-    PRInt64 m_msgOffset;
+    PRUint32 m_msgOffset;
     char* m_accountUrl;
     PRUint32 m_biffState;
     PRInt32 m_numNewMessages;

@@ -60,11 +60,12 @@
     {0x8f, 0x65, 0x9c, 0x46, 0x2e, 0xe2, 0xbc, 0x95} \
 }
 
-class imgRequestProxy : public imgIRequest, public nsISupportsPriority
+class imgRequestProxy : public imgIRequest, public imgIRequest_MOZILLA_1_8_BRANCH, public nsISupportsPriority
 {
 public:
   NS_DECL_ISUPPORTS
   NS_DECL_IMGIREQUEST
+  NS_DECL_IMGIREQUEST_MOZILLA_1_8_BRANCH
   NS_DECL_NSIREQUEST
   NS_DECL_NSISUPPORTSPRIORITY
 
