@@ -80,6 +80,11 @@ interface imgIRequest : nsIRequest
    */
   readonly attribute unsigned long imageStatus;
 
+  /**
+   * The URI the image load was started with.  Note that this might not be the
+   * actual URI for the image (e.g. if HTTP redirects happened during the
+   * load).
+   */
   readonly attribute nsIURI URI;
 
   readonly attribute imgIDecoderObserver decoderObserver;
@@ -93,5 +98,23 @@ interface imgIRequest : nsIRequest
    * for this image load.
    */
   imgIRequest clone(in imgIDecoderObserver aObserver);
+};
+
+/**
+ * Extension to the imgIRequest interface - only for 1.8 branch, not present in
+ * any later release.
+ *
+ * @author Joe Drew <joe@mozilla.com>
+ * @version 0.1
+ * @see imgIRequest
+ */
+[scriptable, uuid(a6f7785d-cb0c-4db7-95ea-c8ed520da98b)]
+interface imgIRequest_MOZILLA_1_8_BRANCH : nsISupports
+{
+  /**
+   * The URI the image load currently has, after following redirects, etc.
+   * Contrast with @imgIRequest::URI.
+   */
+  readonly attribute nsIURI currentURI;
 };
 
