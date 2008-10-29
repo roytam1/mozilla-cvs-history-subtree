@@ -46,9 +46,15 @@
 #include "utilrename.h"
 
 /*
- * define XP_WIN, XP_BEOS, or XP_UNIX, in case they are not defined
+ * define XP_MAC, XP_WIN, XP_BEOS, or XP_UNIX, in case they are not defined
  * by anyone else
  */
+#ifdef macintosh
+# ifndef XP_MAC
+# define XP_MAC 1
+# endif
+#endif
+
 #ifdef _WINDOWS
 # ifndef XP_WIN
 # define XP_WIN
@@ -83,6 +89,9 @@
 #if defined(_WIN32_WCE)
 #include <windef.h>
 #include <types.h>
+#elif defined( XP_MAC ) 
+#include <types.h>
+#include <time.h> /* for time_t below */
 #else
 #include <sys/types.h>
 #endif
@@ -213,7 +222,7 @@ PRBool PORT_ISO88591_UTF8Conversion(const unsigned char *inBuf,
 			unsigned int inBufLen, unsigned char *outBuf,
 			unsigned int maxOutBufLen, unsigned int *outBufLen);
 
-extern PRBool
+PR_EXTERN(PRBool)
 sec_port_ucs4_utf8_conversion_function
 (
   PRBool toUnicode,
@@ -224,7 +233,7 @@ sec_port_ucs4_utf8_conversion_function
   unsigned int *outBufLen
 );
 
-extern PRBool
+PR_EXTERN(PRBool)
 sec_port_ucs2_utf8_conversion_function
 (
   PRBool toUnicode,

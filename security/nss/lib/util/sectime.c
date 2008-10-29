@@ -96,13 +96,10 @@ CERT_UTCTime2FormattedAscii (int64 utcTime, char *format)
     /* Converse time to local time and decompose it into components */
     PR_ExplodeTime(utcTime, PR_LocalTimeParameters, &printableTime);
     
-    timeString = (char *)PORT_Alloc(256);
+    timeString = (char *)PORT_Alloc(100);
 
     if ( timeString ) {
-        if ( ! PR_FormatTime( timeString, 256, format, &printableTime )) {
-            PORT_Free(timeString);
-            timeString = NULL;
-        }
+        PR_FormatTime( timeString, 100, format, &printableTime );
     }
     
     return (timeString);
@@ -116,14 +113,10 @@ char *CERT_GenTime2FormattedAscii (int64 genTime, char *format)
     /* Decompose time into components */
     PR_ExplodeTime(genTime, PR_GMTParameters, &printableTime);
     
-    timeString = (char *)PORT_Alloc(256);
+    timeString = (char *)PORT_Alloc(100);
 
     if ( timeString ) {
-        if ( ! PR_FormatTime( timeString, 256, format, &printableTime )) {
-            PORT_Free(timeString);
-            timeString = NULL;
-            PORT_SetError(SEC_ERROR_OUTPUT_LEN);
-        }
+        PR_FormatTime( timeString, 100, format, &printableTime );
     }
     
     return (timeString);

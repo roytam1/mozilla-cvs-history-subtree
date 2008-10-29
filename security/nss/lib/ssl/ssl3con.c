@@ -59,6 +59,7 @@
 
 #include "pk11func.h"
 #include "secmod.h"
+#include "ec.h"
 #include "blapi.h"
 
 #include <stdio.h>

@@ -194,9 +194,6 @@ void _MD_unix_map_default_error(int err)
             prError = PR_INSUFFICIENT_RESOURCES_ERROR;
             break;
 #endif
-        case ENOSYS:
-            prError = PR_NOT_IMPLEMENTED_ERROR;
-            break;
         case ENOTCONN:
             prError = PR_NOT_CONNECTED_ERROR;
             break;
