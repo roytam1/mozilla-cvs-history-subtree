@@ -53,6 +53,7 @@
 #include "nsURLHelper.h"
 #include "nsIChannelEventSink.h"
 #include "nsIOService.h"
+#include "nsIScriptSecurityManager.h"
 
 static NS_DEFINE_CID(kStreamConverterServiceCID, NS_STREAMCONVERTERSERVICE_CID);
 static NS_DEFINE_CID(kStreamTransportServiceCID, NS_STREAMTRANSPORTSERVICE_CID);
@@ -496,6 +497,16 @@ nsFileChannel::AsyncOpen(nsIStreamListener *listener, nsISupports *ctx)
         nsCOMPtr<nsIURI> uri;
         rv = fileHandler->ReadURLFile(file, getter_AddRefs(uri));
         if (NS_SUCCEEDED(rv)) {
+            // Make sure this is OK to load
+            nsCOMPtr<nsIScriptSecurityManager> securityManager = 
+                do_GetService(NS_SCRIPTSECURITYMANAGER_CONTRACTID);
+            if (securityManager) {
+                rv = securityManager->CheckLoadURI(mURL, uri,
+                                                   nsIScriptSecurityManager::DISALLOW_FROM_MAIL |
+                                                   nsIScriptSecurityManager::DISALLOW_SCRIPT_OR_DATA);
+                if (NS_FAILED(rv)) return rv;
+            }
+ 
             nsCOMPtr<nsIChannel> newChannel;
             rv = NS_NewChannel(getter_AddRefs(newChannel), uri);
             if (NS_SUCCEEDED(rv)) {
