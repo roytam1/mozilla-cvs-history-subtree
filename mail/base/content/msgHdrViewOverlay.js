@@ -1134,6 +1134,7 @@ function onShowAttachmentContextMenu()
   var selectedAttachments = attachmentList.selectedItems;
   var openMenu = document.getElementById('context-openAttachment');
   var saveMenu = document.getElementById('context-saveAttachment');
+  var saveAllMenu = document.getElementById('context-saveAllAttachments');
   var detachMenu = document.getElementById('context-detachAttachment');
   var deleteMenu = document.getElementById('context-deleteAttachment');
   var detachAllMenu = document.getElementById('context-detachAllAttachments');
@@ -1163,14 +1164,13 @@ function onShowAttachmentContextMenu()
   for (var i = 0; i < currentAttachments.length && !anyDetached; i++)
     anyDetached = currentAttachments[i].isExternalAttachment;
 
-  openMenu.setAttribute('hidden', selectNone);
-  saveMenu.setAttribute('hidden', selectNone);
-  detachMenu.setAttribute('hidden', selectNone);
-  deleteMenu.setAttribute('hidden', selectNone);
-  menuSeparator.setAttribute('hidden', selectNone);
-  saveAllMenu.setAttribute('hidden', !selectNone);
-  detachAllMenu.setAttribute('hidden', !selectNone);
-  deleteAllMenu.setAttribute('hidden', !selectNone);
+  openMenu.setAttribute('disabled', selectNone);
+  saveMenu.setAttribute('disabled', selectNone);
+  detachMenu.setAttribute('disabled', selectNone);
+  deleteMenu.setAttribute('disabled', selectNone);
+  saveAllMenu.setAttribute('disabled', !selectNone);
+  detachAllMenu.setAttribute('disabled', !selectNone);
+  deleteAllMenu.setAttribute('disabled', !selectNone);
 
   if (!selectNone)
   {
