@@ -269,6 +269,14 @@ nsMediaDocument::StartLayout()
   for (PRUint32 i = 0; i < numberOfShells; i++) {
     nsIPresShell *shell = GetShellAt(i);
 
+    PRBool didInitialReflow = PR_FALSE;
+    shell->GetDidInitialReflow(&didInitialReflow);
+    if (didInitialReflow) {
+      // Don't mess with this presshell: someone has already handled
+      // its initial reflow.
+      continue;
+    }
+    
     // Make shell an observer for next time.
     shell->BeginObservingDocument();
 
