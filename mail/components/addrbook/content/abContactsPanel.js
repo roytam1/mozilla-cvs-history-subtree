@@ -140,7 +140,7 @@ function AbPanelOnComposerClose()
 
 function AbPanelOnComposerReOpen()
 {
-  SetAbView(GetSelectedDirectory(), true);
+  ChangeDirectoryByURI(GetSelectedDirectory());
 }
 
 function AbPanelLoad() 
@@ -218,5 +218,5 @@ function onEnterInSearchBar()
   if (gSearchInput.value != "")
     searchURI += gQueryURIFormat.replace(/@V/g, encodeURIComponent(gSearchInput.value));
 
-  SetAbView(searchURI, true, sortColumn, sortDirection);
+  SetAbView(searchURI, gSearchInput.value != "", sortColumn, sortDirection);
 }
