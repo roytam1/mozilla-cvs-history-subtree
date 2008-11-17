@@ -1026,7 +1026,7 @@ nsScriptLoader::OnStreamComplete(nsIStreamLoader* aLoader,
   }
 
   nsCOMPtr<nsIChannel> channel = do_QueryInterface(req);
-  NS_GetFinalChannelURI(channel, getter_AddRefs(aRequest->mFinalURI));
+  NS_GetFinalChannelURI(channel, getter_AddRefs(request->mFinalURI));
   if (stringLen) {
     // Check the charset attribute to determine script charset.
     nsAutoString hintCharset;
