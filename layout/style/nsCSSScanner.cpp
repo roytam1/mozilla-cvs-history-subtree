@@ -871,19 +871,33 @@ nsCSSScanner::ParseAndAppendEscape(nsresult& aErrorCode, nsString& aOutput)
       ch = Peek(aErrorCode);
       if ((0 <= ch) && (ch <= 255) && 
           ((lexTable[ch] & IS_WHITESPACE) != 0)) {
-        ch = Read(aErrorCode);
-        // special case: if trailing whitespace is CR/LF, eat both chars (not part of spec, but should be)
-        if (ch == '\r') {
-          ch = Peek(aErrorCode);
-          if (ch == '\n') {
-            ch = Read(aErrorCode);
-          }
+        (void) Read(aErrorCode);
+        // special case: if trailing whitespace is CR/LF, eat both chars.
+        if (ch == '\r' && Peek(aErrorCode) == '\n') {
+          (void) Read(aErrorCode);
+          // if we hit the "\0" special case below, we'll push back
+          // only the '\r', but that's okay, because '\r' by itself
+          // is still a newline.
         }
       }
     }
     NS_ASSERTION(rv >= 0, "How did rv become negative?");
+    // "[at most six hexadecimal digits following a backslash] stand
+    // for the ISO 10646 character with that number, which must not be
+    // zero. (It is undefined in CSS 2.1 what happens if a style sheet
+    // does contain a character with Unicode codepoint zero.)"
+    //   -- CSS2.1 section 4.1.3
+    //
+    // Silently deleting \0 opens a content-filtration loophole (see
+    // bug 228856), so what we do instead is pretend the "cancels the
+    // meaning of special characters" rule applied.
     if (rv > 0) {
       AppendUCS4ToUTF16(ENSURE_VALID_CHAR(rv), aOutput);
+    } else {
+      while (i--)
+        aOutput.Append('0');
+      if ((0 <= ch) && (ch <= 255) && ((lexTable[ch] & IS_WHITESPACE) != 0))
+        Pushback(ch);
     }
     return;
   } else {
