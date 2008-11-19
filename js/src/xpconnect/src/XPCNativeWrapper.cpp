@@ -198,7 +198,7 @@ JS_STATIC_DLL_CALLBACK(JSBool)
 XPC_NW_toString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
                 jsval *rval);
 
-JS_STATIC_DLL_CALLBACK(JSBool)
+JSBool JS_DLL_CALLBACK
 XPCNativeWrapperCtor(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
                      jsval *rval);
 
@@ -1121,7 +1121,7 @@ MirrorWrappedNativeParent(JSContext *cx, XPCWrappedNative *wrapper,
   return JS_TRUE;
 }
 
-JS_STATIC_DLL_CALLBACK(JSBool)
+JSBool JS_DLL_CALLBACK
 XPCNativeWrapperCtor(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
                      jsval *rval)
 {
