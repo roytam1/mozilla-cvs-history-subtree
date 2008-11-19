@@ -71,6 +71,7 @@
 #include "nsIXPConnect.h"
 #include "nsIScriptContext.h"
 #include "nsCRT.h"
+#include "nsPIDOMWindow.h"
 
 // Event listeners
 #include "nsIEventListenerManager.h"
@@ -893,8 +894,10 @@ nsXBLBinding::ChangeDocument(nsIDocument* aOldDocument, nsIDocument* aNewDocumen
         mPrototypeBinding->GetImmediateChild(nsXBLAtoms::implementation);
 
       if (interfaceElement) { 
-        nsIScriptGlobalObject *global = aOldDocument->GetScriptGlobalObject();
-        if (global) {
+        nsCOMPtr<nsPIDOMWindow> pwin =
+            do_QueryInterface(aOldDocument->GetScriptGlobalObject());
+        nsCOMPtr<nsIScriptGlobalObject> global;
+        if (pwin && pwin->IsInnerWindow() && (global = do_QueryInterface(pwin))) {
           nsIScriptContext *context = global->GetContext();
           if (context) {
             JSContext *jscontext = (JSContext *)context->GetNativeContext();
