@@ -243,7 +243,7 @@ nsXMLElement::MaybeTriggerAutoLink(nsIDocShell *aShell)
         if (uri) {
           nsCOMPtr<nsPresContext> pc;
           rv = DocShellToPresContext(aShell, getter_AddRefs(pc));
-          if (NS_SUCCEEDED(rv)) {
+          if (NS_SUCCEEDED(rv) && pc) {
             rv = TriggerLink(pc, verb, uri, EmptyString(), PR_TRUE, PR_FALSE);
 
             return SpecialAutoLoadReturn(rv, verb);
