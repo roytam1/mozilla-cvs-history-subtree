@@ -3023,6 +3023,8 @@ NS_IMETHODIMP
 nsDocument::LoadBindingDocument(const nsAString& aURI,
                                 nsIDOMDocument** aResult)
 {
+  *aResult = nsnull;
+
   nsCOMPtr<nsIURI> uri;
   nsresult rv = NS_NewURI(getter_AddRefs(uri), aURI,
                           mCharacterSet.get(),
@@ -3032,10 +3034,6 @@ nsDocument::LoadBindingDocument(const nsAString& aURI,
   
   nsCOMPtr<nsIDocument> doc;
   mBindingManager->LoadBindingDocument(this, uri, getter_AddRefs(doc));
-
-  if (doc) {
-    CallQueryInterface(doc, aResult);
-  }
   
   return NS_OK;
 }

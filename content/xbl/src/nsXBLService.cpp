@@ -507,6 +507,16 @@ nsXBLService::~nsXBLService(void)
   }
 }
 
+static PRBool
+IsSystemPrincipal(nsIPrincipal* aPrincipal)
+{
+  nsCOMPtr<nsIPrincipal> sys;
+  nsresult rv = nsContentUtils::GetSecurityManager()->
+    GetSystemPrincipal(getter_AddRefs(sys));
+  return NS_SUCCEEDED(rv) && sys && sys == aPrincipal;
+  
+}
+
 // This function loads a particular XBL file and installs all of the bindings
 // onto the element.
 NS_IMETHODIMP
@@ -546,43 +556,53 @@ nsXBLService::LoadBindings(nsIContent* aContent, nsIURI* aURL, PRBool aAugmentFl
     }
   }
 
-  // Security check - remote pages can't load local bindings, except from chrome
-  nsIURI *docURI = document->GetDocumentURI();
-  PRBool isChrome = PR_FALSE;
-  rv = docURI->SchemeIs("chrome", &isChrome);
+  // Security check - remote pages can't load local or cross-site bindings,
+  // except from chrome
+  nsCOMPtr<nsIPrincipal> loadDocPrincipal = document->GetPrincipal();
+  if (!IsSystemPrincipal(loadDocPrincipal)) {
+    nsIURI *docURI = document->GetDocumentURI();
+    PRBool isChrome = PR_FALSE;
+    rv = docURI->SchemeIs("chrome", &isChrome);
 
-  // Not everything with a chrome URI has a system principal.  See bug 160042.
-  if (NS_FAILED(rv) || !isChrome) {
-    nsIScriptSecurityManager *secMan = nsContentUtils::GetSecurityManager();
+    // Not everything with a chrome URI has a system principal.  See bug 160042.
+    if (NS_FAILED(rv) || !isChrome) {
+      nsIScriptSecurityManager *secMan = nsContentUtils::GetSecurityManager();
 
-    rv = secMan->
-      CheckLoadURIWithPrincipal(document->GetPrincipal(), aURL,
-                                nsIScriptSecurityManager::ALLOW_CHROME);
+      rv = secMan->
+        CheckLoadURIWithPrincipal(loadDocPrincipal, aURL,
+                                  nsIScriptSecurityManager::ALLOW_CHROME);
+      if (NS_FAILED(rv))
+        return rv;
+    }
+
+    // Content policy check.  We have to be careful to not pass aContent as the
+    // context here.  Otherwise, if there is a JS-implemented content policy, we
+    // will attempt to wrap the content node, which will try to load XBL bindings
+    // for it, if any.  Since we're not done loading this binding yet, that will
+    // reenter this method and we'll end up creating a binding and then
+    // immediately clobbering it in our table.  That makes things very confused,
+    // leading to misbehavior and crashes.
+    PRInt16 decision = nsIContentPolicy::ACCEPT;
+    rv = NS_CheckContentLoadPolicy(nsIContentPolicy::TYPE_XBL,
+                                   aURL,
+                                   docURI,
+                                   document,        // context
+                                   EmptyCString(),  // mime guess
+                                   nsnull,          // extra
+                                   &decision);
+
+    if (NS_SUCCEEDED(rv) && !NS_CP_ACCEPTED(decision))
+      rv = NS_ERROR_NOT_AVAILABLE;
     if (NS_FAILED(rv))
       return rv;
+
+    PRBool chrome;
+    if (NS_FAILED(aURL->SchemeIs("chrome", &chrome)) || !chrome) {
+      rv = nsContentUtils::GetSecurityManager()->
+        CheckSameOriginURI(docURI, aURL);
+      NS_ENSURE_SUCCESS(rv, rv);
+    }
   }
-
-  // Content policy check.  We have to be careful to not pass aContent as the
-  // context here.  Otherwise, if there is a JS-implemented content policy, we
-  // will attempt to wrap the content node, which will try to load XBL bindings
-  // for it, if any.  Since we're not done loading this binding yet, that will
-  // reenter this method and we'll end up creating a binding and then
-  // immediately clobbering it in our table.  That makes things very confused,
-  // leading to misbehavior and crashes.
-  PRInt16 decision = nsIContentPolicy::ACCEPT;
-  rv = NS_CheckContentLoadPolicy(nsIContentPolicy::TYPE_OTHER,
-                                 aURL,
-                                 docURI,
-                                 document,        // context
-                                 EmptyCString(),  // mime guess
-                                 nsnull,          // extra
-                                 &decision);
-
-  if (NS_SUCCEEDED(rv) && !NS_CP_ACCEPTED(decision))
-    rv = NS_ERROR_NOT_AVAILABLE;
-
-  if (NS_FAILED(rv))
-    return rv;
 
   PRBool ready;
   nsRefPtr<nsXBLBinding> newBinding;
@@ -1035,6 +1055,14 @@ nsXBLService::LoadBindingDocumentInfo(nsIContent* aBoundElement,
   NS_ENSURE_TRUE(documentURI, rv);
 
   documentURI->SetRef(EmptyCString());
+
+  if (aBoundDocument) {
+    rv = nsContentUtils::GetSecurityManager()->
+      CheckLoadURIWithPrincipal(aBoundDocument->GetPrincipal(), aBindingURI,
+                                nsIScriptSecurityManager::ALLOW_CHROME);
+    if (NS_FAILED(rv))
+      return rv;
+  }
 
 #ifdef MOZ_XUL
   // We've got a file.  Check our XBL document cache.
