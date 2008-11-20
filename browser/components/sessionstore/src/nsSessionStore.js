@@ -927,6 +927,10 @@ SessionStoreService.prototype = {
       || wrappedTextarea instanceof Ci.nsIDOMHTMLInputElement && wrappedTextarea.type != "password")) {
       return false; // nothing to save
     }
+    if (/^(?:\d+\|)+/.test(id)) {
+      // text could be restored into a subframe, so skip it (see bug 463206)
+      return false;
+    }
     
     if (!aPanel.__SS_text) {
       aPanel.__SS_text = [];
