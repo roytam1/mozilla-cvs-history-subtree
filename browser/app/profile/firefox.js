@@ -494,7 +494,7 @@ pref("browser.feeds.handler", "ask");
 
 #ifdef MOZ_SAFE_BROWSING
 // Safe browsing does nothing unless both these prefs are set.
-pref("browser.safebrowsing.enabled", true);
+pref("browser.safebrowsing.enabled", false);
 pref("browser.safebrowsing.remoteLookups", false);
 
 // Non-enhanced mode (local url lists) URL list to check for updates

@@ -71,6 +71,9 @@ const MOZ_PARAM_VERSION = /\{moz:version\}/g;
 function PROT_DataProvider() {
   this.prefs_ = new G_Preferences();
 
+  this.prefs_.prefs_.lockPref("browser.safebrowsing.enabled");
+  this.prefs_.prefs_.lockPref("browser.safebrowsing.remoteLookups");
+
   this.loadDataProviderPrefs_();
   
   // Watch for changes in the data provider and update accordingly.
