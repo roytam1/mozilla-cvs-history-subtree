@@ -156,6 +156,7 @@ private:
   nsCOMPtr<imgIContainer> mImage;
   nsCOMPtr<imgIDecoder> mDecoder;
   nsCOMPtr<nsIProperties> mProperties;
+  nsCOMPtr<nsIInterfaceRequestor> mPrevChannelSink;
 
   nsVoidArray mObservers;
 
