@@ -2052,8 +2052,8 @@ nsXMLHttpRequest::OnChannelRedirect(nsIChannel *aOldChannel,
 
     rv = secMan->CheckSameOriginURI(oldURI, newURI);
     if (NS_FAILED(rv)) {
-      return rv;
       mDenyResponseDataAccess = PR_TRUE;
+      return rv;
     }
   }
 
