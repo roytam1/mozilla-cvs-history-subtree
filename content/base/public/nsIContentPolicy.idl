@@ -100,6 +100,12 @@ interface nsIContentPolicy : nsISupports
    */
   const unsigned long TYPE_REFRESH     = 8;
 
+  /**
+   * Indicates an XBL binding request, triggered either by -moz-binding CSS
+   * property or Document.addBinding method.
+   */
+  const unsigned long TYPE_XBL         = 9;
+
 
   //////////////////////////////////////////////////////////////////////
 

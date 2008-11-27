@@ -84,6 +84,7 @@
 #include "nsHTMLAtoms.h"
 #include "nsIBoxObject.h"
 #include "nsIDOMNSDocument.h"
+#include "nsPIDOMWindow.h"
 
 static NS_DEFINE_CID(kDOMScriptObjectFactoryCID,
                      NS_DOM_SCRIPT_OBJECT_FACTORY_CID);
@@ -447,11 +448,13 @@ nsXBLPrototypeHandler::ExecuteHandler(nsIDOMEventReceiver* aReceiver,
         return NS_OK;
     }
 
-    boundGlobal = boundDocument->GetScriptGlobalObject();
+    nsCOMPtr<nsPIDOMWindow> pwin =
+        do_QueryInterface(boundDocument->GetScriptGlobalObject());
+    if (pwin && pwin->IsInnerWindow()) {
+        boundGlobal = do_QueryInterface(pwin);
+    }
   }
 
-  // If we still don't have a 'boundGlobal', we're doomed. bug 95465.
-  NS_ASSERTION(boundGlobal, "failed to get the nsIScriptGlobalObject. bug 95465?");
   if (!boundGlobal)
     return NS_OK;
 

@@ -399,12 +399,7 @@ FeedWriter.prototype = {
       container.title;
     }
     catch (e) {
-      LOG("Subscribe Preview: An error occurred in parsing! Fortunately, you can still subscribe...");
-      var feedError = this._document.getElementById("feedError");
-      feedError.removeAttribute("style");
-      var feedBody = this._document.getElementById("feedBody");
-      feedBody.setAttribute("style", "display:none;");
-      this._setContentText("errorCode", e);
+      LOG("Subscribe Preview: no result.doc? Why didn't the original reload?");
       return null;
     }
     return container;
@@ -632,7 +627,7 @@ FeedWriter.prototype = {
             return;
           }
 
-          handlers[0].doCommand();
+          this._safeDoCommand(handlers[0]);
         }
         break;
       }

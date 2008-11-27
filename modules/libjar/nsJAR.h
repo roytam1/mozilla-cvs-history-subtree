@@ -133,15 +133,13 @@ class nsJAR : public nsIZipReader, public nsIJAR
     PRFileDesc*              mFd;
     
     //-- Private functions
-    nsresult ParseManifest(nsISignatureVerifier* verifier);
+    nsresult ParseManifest();
     void     ReportError(const char* aFilename, PRInt16 errorCode);
     nsresult LoadEntry(const char* aFilename, char** aBuf, 
                        PRUint32* aBufLen = nsnull);
     PRInt32  ReadLine(const char** src); 
-    nsresult ParseOneFile(nsISignatureVerifier* verifier,
-                          const char* filebuf, PRInt16 aFileType);
-    nsresult VerifyEntry(nsISignatureVerifier* verifier,
-                         nsJARManifestItem* aEntry, const char* aEntryData, 
+    nsresult ParseOneFile(const char* filebuf, PRInt16 aFileType);
+    nsresult VerifyEntry(nsJARManifestItem* aEntry, const char* aEntryData, 
                          PRUint32 aLen);
 
     nsresult CalculateDigest(const char* aInBuf, PRUint32 aInBufLen,

@@ -93,6 +93,7 @@ public:
   nsString mScriptText;              // Holds script for loaded scripts
   const char* mJSVersion;            // We don't own this string
   nsCOMPtr<nsIURI> mURI;
+  nsCOMPtr<nsIURI> mFinalURI;
   PRInt32 mLineNo;
 };
 
@@ -746,11 +747,10 @@ nsScriptLoader::EvaluateScript(nsScriptLoadRequest* aRequest,
 
   nsCAutoString url;
 
-  if (aRequest->mURI) {
-    rv = aRequest->mURI->GetSpec(url);
-    if (NS_FAILED(rv)) {
-      return rv;
-    }
+  nsIURI* uri = aRequest->mFinalURI ? aRequest->mFinalURI : aRequest->mURI;
+  rv = uri->GetSpec(url);
+  if (NS_FAILED(rv)) {
+    return rv;
   }
 
   PRBool oldProcessingScriptTag = context->GetProcessingScriptTag();
@@ -954,6 +954,28 @@ nsScriptLoader::ConvertToUTF16(nsIChannel* aChannel, const PRUint8* aData,
   return rv;
 }
 
+/**
+ * Get the "final" URI for a channel.  This is either the same as GetURI or
+ * GetOriginalURI, depending on whether this channel has
+ * nsIChanel::LOAD_REPLACE set.  For channels without that flag set, the final
+ * URI is the original URI, while for ones with the flag the final URI is the
+ * channel URI.
+ */
+static nsresult
+NS_GetFinalChannelURI(nsIChannel* channel, nsIURI** uri)
+{
+    *uri = nsnull;
+    nsLoadFlags loadFlags = 0;
+    nsresult rv = channel->GetLoadFlags(&loadFlags);
+    NS_ENSURE_SUCCESS(rv, rv);
+    
+    if (loadFlags & nsIChannel::LOAD_REPLACE) {
+        return channel->GetURI(uri);
+    }
+    
+    return channel->GetOriginalURI(uri);
+}
+
 NS_IMETHODIMP
 nsScriptLoader::OnStreamComplete(nsIStreamLoader* aLoader,
                                  nsISupports* aContext,
@@ -1004,6 +1026,7 @@ nsScriptLoader::OnStreamComplete(nsIStreamLoader* aLoader,
   }
 
   nsCOMPtr<nsIChannel> channel = do_QueryInterface(req);
+  NS_GetFinalChannelURI(channel, getter_AddRefs(request->mFinalURI));
   if (stringLen) {
     // Check the charset attribute to determine script charset.
     nsAutoString hintCharset;
@@ -1041,28 +1064,6 @@ nsScriptLoader::OnStreamComplete(nsIStreamLoader* aLoader,
   ProcessPendingReqests();
 
   return NS_OK;
-}
-
-/**
- * Get the "final" URI for a channel.  This is either the same as GetURI or
- * GetOriginalURI, depending on whether this channel has
- * nsIChanel::LOAD_REPLACE set.  For channels without that flag set, the final
- * URI is the original URI, while for ones with the flag the final URI is the
- * channel URI.
- */
-static nsresult
-NS_GetFinalChannelURI(nsIChannel* channel, nsIURI** uri)
-{
-    *uri = nsnull;
-    nsLoadFlags loadFlags = 0;
-    nsresult rv = channel->GetLoadFlags(&loadFlags);
-    NS_ENSURE_SUCCESS(rv, rv);
-    
-    if (loadFlags & nsIChannel::LOAD_REPLACE) {
-        return channel->GetURI(uri);
-    }
-    
-    return channel->GetOriginalURI(uri);
 }
 
 static nsresult

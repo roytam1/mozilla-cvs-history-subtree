@@ -41,6 +41,7 @@
 #include "xpcprivate.h"
 #include "XPCNativeWrapper.h"
 #include "jsdbgapi.h"
+#include "nsJSPrincipals.h"
 
 JS_STATIC_DLL_CALLBACK(JSBool)
 XPC_NW_AddProperty(JSContext *cx, JSObject *obj, jsval id, jsval *vp);
@@ -198,7 +199,7 @@ JS_STATIC_DLL_CALLBACK(JSBool)
 XPC_NW_toString(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
                 jsval *rval);
 
-JS_STATIC_DLL_CALLBACK(JSBool)
+JSBool JS_DLL_CALLBACK
 XPCNativeWrapperCtor(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
                      jsval *rval);
 
@@ -429,7 +430,7 @@ RewrapIfDeepWrapper(JSContext *cx, JSObject *obj, jsval v, jsval *rval)
     // GetWrappedNativeOfJSObject will give the right thing -- the unique deep
     // implicit wrapper associated with wrappedNative.
     JSObject* wrapperObj = XPCNativeWrapper::GetNewOrUsed(cx, wrappedNative,
-                                                          nsnull);
+                                                          nsnull, nsnull);
     if (!wrapperObj) {
       return JS_FALSE;
     }
@@ -1114,14 +1115,14 @@ MirrorWrappedNativeParent(JSContext *cx, XPCWrappedNative *wrapper,
     XPCWrappedNative *parent_wrapper =
       XPCWrappedNative::GetWrappedNativeOfJSObject(cx, wn_parent);
 
-    *result = XPCNativeWrapper::GetNewOrUsed(cx, parent_wrapper, nsnull);
+    *result = XPCNativeWrapper::GetNewOrUsed(cx, parent_wrapper, nsnull, nsnull);
     if (!*result)
       return JS_FALSE;
   }
   return JS_TRUE;
 }
 
-JS_STATIC_DLL_CALLBACK(JSBool)
+JSBool JS_DLL_CALLBACK
 XPCNativeWrapperCtor(JSContext *cx, JSObject *obj, uintN argc, jsval *argv,
                      jsval *rval)
 {
@@ -1497,18 +1498,31 @@ XPCNativeWrapper::AttachNewConstructorObject(XPCCallContext &ccx,
 // static
 JSObject *
 XPCNativeWrapper::GetNewOrUsed(JSContext *cx, XPCWrappedNative *wrapper,
-                               JSObject *callee)
+                               JSObject *callee, JSScript *script)
 {
-  if (callee) {
+  if (callee || script) {
     nsCOMPtr<nsIPrincipal> prin;
 
     nsCOMPtr<nsIScriptSecurityManager> ssm = GetSecurityManager(cx);
-    nsresult rv = ssm
-                  ? ssm->GetObjectPrincipal(cx, callee, getter_AddRefs(prin))
-                  : NS_ERROR_FAILURE;
-    if (NS_SUCCEEDED(rv) && prin) {
+    if (ssm) {
+      if (callee) {
+        if (NS_FAILED(ssm->GetObjectPrincipal(cx, callee, getter_AddRefs(prin)))) {
+          prin = nsnull;
+        }
+      } else {
+        JSPrincipals *scriptPrincipal =
+            JS_GetScriptPrincipals(cx, script);
+        if (scriptPrincipal) {
+            nsJSPrincipals *nsjsp =
+                static_cast<nsJSPrincipals *>(scriptPrincipal);
+            prin = nsjsp->nsIPrincipalPtr;
+        }
+      }
+    }
+
+    if (prin) {
       nsCOMPtr<nsIPrincipal> sysprin;
-      rv = ssm->GetSystemPrincipal(getter_AddRefs(sysprin));
+      nsresult rv = ssm->GetSystemPrincipal(getter_AddRefs(sysprin));
       if (NS_SUCCEEDED(rv) && sysprin != prin) {
         jsval v = OBJECT_TO_JSVAL(wrapper->GetFlatJSObject());
         if (!XPCNativeWrapperCtor(cx, JSVAL_TO_OBJECT(v), 1, &v, &v))

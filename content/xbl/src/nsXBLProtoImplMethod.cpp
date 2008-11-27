@@ -49,6 +49,7 @@
 #include "nsIScriptContext.h"
 #include "nsContentUtils.h"
 #include "nsIScriptSecurityManager.h"
+#include "nsPIDOMWindow.h"
 
 MOZ_DECL_CTOR_COUNTER(nsXBLProtoImplMethod)
 
@@ -137,11 +138,13 @@ nsXBLProtoImplMethod::InstallMember(nsIScriptContext* aContext,
   JSContext* cx = (JSContext*) aContext->GetNativeContext();
 
   nsIDocument *ownerDoc = aBoundElement->GetOwnerDoc();
-  nsIScriptGlobalObject *sgo;
+  nsCOMPtr<nsPIDOMWindow> pwin;
+  nsCOMPtr<nsIScriptGlobalObject> sgo;
 
-  if (!ownerDoc || !(sgo = ownerDoc->GetScriptGlobalObject())) {
-    NS_ERROR("Can't find global object for bound content!");
- 
+  if (!ownerDoc ||
+      !(pwin = do_QueryInterface(ownerDoc->GetScriptGlobalObject())) ||
+      pwin->IsOuterWindow() ||
+      !(sgo = do_QueryInterface(pwin))) {
     return NS_ERROR_UNEXPECTED;
   }
 

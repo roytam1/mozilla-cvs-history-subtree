@@ -392,15 +392,8 @@ nsJAR::GetCertificatePrincipal(const char* aFilename, nsIPrincipal** aPrincipal)
     return NS_ERROR_NULL_POINTER;
   *aPrincipal = nsnull;
 
-  //-- Get the signature verifier service
-  nsresult rv;
-  nsCOMPtr<nsISignatureVerifier> verifier = 
-           do_GetService(SIGNATURE_VERIFIER_CONTRACTID, &rv);
-  if (NS_FAILED(rv)) // No signature verifier available
-    return NS_OK;
-
   //-- Parse the manifest
-  rv = ParseManifest(verifier);
+  nsresult rv = ParseManifest();
   if (NS_FAILED(rv)) return rv;
   if (mGlobalStatus == nsIJAR::NO_MANIFEST)
     return NS_OK;
@@ -420,7 +413,7 @@ nsJAR::GetCertificatePrincipal(const char* aFilename, nsIPrincipal** aPrincipal)
       PRUint32 entryDataLen;
       rv = LoadEntry(aFilename, getter_Copies(entryData), &entryDataLen);
       if (NS_FAILED(rv)) return rv;
-      rv = VerifyEntry(verifier, manItem, entryData, entryDataLen);
+      rv = VerifyEntry(manItem, entryData, entryDataLen);
       if (NS_FAILED(rv)) return rv;
     }
     requestedStatus = manItem->status;
@@ -533,7 +526,7 @@ nsJAR::ReadLine(const char** src)
 #define JAR_SF_HEADER (const char*)"Signature-Version: 1.0"
 
 nsresult
-nsJAR::ParseManifest(nsISignatureVerifier* verifier)
+nsJAR::ParseManifest()
 {
   //-- Verification Step 1
   if (mParsedManifest)
@@ -571,7 +564,7 @@ nsJAR::ParseManifest(nsISignatureVerifier* verifier)
   if (NS_FAILED(rv)) return rv;
 
   //-- Parse it
-  rv = ParseOneFile(verifier, manifestBuffer, JAR_MF);
+  rv = ParseOneFile(manifestBuffer, JAR_MF);
   if (NS_FAILED(rv)) return rv;
 
   //-- (2)Signature (SF) file
@@ -618,6 +611,16 @@ nsJAR::ParseManifest(nsISignatureVerifier* verifier)
     return NS_OK;
   }
 
+  //-- Get the signature verifier service
+  nsCOMPtr<nsISignatureVerifier> verifier = 
+           do_GetService(SIGNATURE_VERIFIER_CONTRACTID, &rv);
+  if (NS_FAILED(rv)) // No signature verifier available
+  {
+    mGlobalStatus = nsIJAR::NO_MANIFEST;
+    mParsedManifest = PR_TRUE;
+    return NS_OK;
+  }
+
   //-- Verify that the signature file is a valid signature of the SF file
   PRInt32 verifyError;
   rv = verifier->VerifySignature(sigBuffer, sigLen, manifestBuffer, manifestLen, 
@@ -634,15 +637,14 @@ nsJAR::ParseManifest(nsISignatureVerifier* verifier)
   // is null, and ParseOneFile will mark the relevant entries as invalid.
   // if ParseOneFile fails, then it has no effect, and we can safely 
   // continue to the next SF file, or return. 
-  ParseOneFile(verifier, manifestBuffer, JAR_SF);
+  ParseOneFile(manifestBuffer, JAR_SF);
   mParsedManifest = PR_TRUE;
 
   return NS_OK;
 }
 
 nsresult
-nsJAR::ParseOneFile(nsISignatureVerifier* verifier,
-                    const char* filebuf, PRInt16 aFileType)
+nsJAR::ParseOneFile(const char* filebuf, PRInt16 aFileType)
 {
   //-- Check file header
   const char* nextLineStart = filebuf;
@@ -828,8 +830,7 @@ nsJAR::ParseOneFile(nsISignatureVerifier* verifier,
 } //ParseOneFile()
 
 nsresult
-nsJAR::VerifyEntry(nsISignatureVerifier* verifier,
-                   nsJARManifestItem* aManItem, const char* aEntryData,
+nsJAR::VerifyEntry(nsJARManifestItem* aManItem, const char* aEntryData,
                    PRUint32 aLen)
 {
   if (aManItem->status == nsIJAR::VALID)

@@ -1151,7 +1151,7 @@ XPCConvert::NativeInterface2JSObject(XPCCallContext& ccx,
 #endif
 
                     JSObject *nativeWrapper =
-                        XPCNativeWrapper::GetNewOrUsed(ccx, wrapper, callee);
+                        XPCNativeWrapper::GetNewOrUsed(ccx, wrapper, callee, script);
 
                     if (nativeWrapper)
                     {

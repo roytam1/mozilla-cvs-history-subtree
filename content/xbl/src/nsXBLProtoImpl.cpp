@@ -47,6 +47,7 @@
 #include "nsIServiceManager.h"
 #include "nsIXBLDocumentInfo.h"
 #include "nsIDOMNode.h"
+#include "nsPIDOMWindow.h"
 
 nsresult NS_DOMClassInfo_PreserveNodeWrapper(nsIXPConnectWrappedNative *aWrapper);
 
@@ -65,7 +66,11 @@ nsXBLProtoImpl::InstallImplementation(nsXBLPrototypeBinding* aBinding, nsIConten
   nsIDocument* document = aBoundElement->GetOwnerDoc();
   if (!document) return NS_OK;
 
-  nsIScriptGlobalObject *global = document->GetScriptGlobalObject();
+  nsCOMPtr<nsPIDOMWindow> pwin =
+      do_QueryInterface(document->GetScriptGlobalObject());
+  if (!pwin || pwin->IsOuterWindow()) return NS_OK;
+
+  nsCOMPtr<nsIScriptGlobalObject> global = do_QueryInterface(pwin);
   if (!global) return NS_OK;
 
   nsCOMPtr<nsIScriptContext> context = global->GetContext();
@@ -115,11 +120,13 @@ nsXBLProtoImpl::InitTargetObjects(nsXBLPrototypeBinding* aBinding,
   }
 
   nsIDocument *ownerDoc = aBoundElement->GetOwnerDoc();
-  nsIScriptGlobalObject *sgo;
+  nsCOMPtr<nsPIDOMWindow> pwin;
+  nsCOMPtr<nsIScriptGlobalObject> sgo;
 
-  if (!ownerDoc || !(sgo = ownerDoc->GetScriptGlobalObject())) {
-    NS_ERROR("Can't find global object for bound content!");
-
+  if (!ownerDoc ||
+      !(pwin = do_QueryInterface(ownerDoc->GetScriptGlobalObject())) ||
+      pwin->IsOuterWindow() ||
+      !(sgo = do_QueryInterface(pwin))) {
     return NS_ERROR_UNEXPECTED;
   }
 

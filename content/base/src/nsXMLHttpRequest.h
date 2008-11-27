@@ -226,6 +226,8 @@ protected:
   nsCOMPtr<nsIProgressEventSink> mProgressEventSink;
 
   PRUint32 mState;
+
+  PRPackedBool mDenyResponseDataAccess;
 };
 
 

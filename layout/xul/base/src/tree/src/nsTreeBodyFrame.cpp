@@ -795,7 +795,8 @@ nsTreeBodyFrame::UpdateScrollbar(const ScrollParts& aParts)
   if (aParts.mVScrollbar) {
     nsAutoString curPos;
     curPos.AppendInt(mTopRowIndex*rowHeightAsPixels);
-    aParts.mVScrollbarContent->SetAttr(kNameSpaceID_None, nsXULAtoms::curpos, curPos, PR_TRUE);
+    nsCOMPtr<nsIContent> vScrollbar = aParts.mVScrollbarContent;
+    vScrollbar->SetAttr(kNameSpaceID_None, nsXULAtoms::curpos, curPos, PR_TRUE);
   }
 }
 

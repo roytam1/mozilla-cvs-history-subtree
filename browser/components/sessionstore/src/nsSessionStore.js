@@ -927,6 +927,10 @@ SessionStoreService.prototype = {
       || wrappedTextarea instanceof Ci.nsIDOMHTMLInputElement && wrappedTextarea.type != "password")) {
       return false; // nothing to save
     }
+    if (/^(?:\d+\|)+/.test(id)) {
+      // text could be restored into a subframe, so skip it (see bug 463206)
+      return false;
+    }
     
     if (!aPanel.__SS_text) {
       aPanel.__SS_text = [];
@@ -1487,10 +1491,16 @@ SessionStoreService.prototype = {
       return;
     }
     
+    // XSS note: always call this before injecting content into a document!
+    function hasExpectedURL(aDocument, aURL) {
+      return !aURL || aURL.replace(/#.*/, "") == aDocument.location.href.replace(/#.*/, "");
+    }
+    
     var textArray = this.__SS_restore_text ? this.__SS_restore_text.split(" ") : [];
-    function restoreTextData(aContent, aPrefix) {
+    function restoreTextData(aContent, aPrefix, aURL) {
       textArray.forEach(function(aEntry) {
-        if (/^((?:\d+\|)*)(#?)([^\s=]+)=(.*)$/.test(aEntry) && (!RegExp.$1 || RegExp.$1 == aPrefix)) {
+        if (/^((?:\d+\|)*)(#?)([^\s=]+)=(.*)$/.test(aEntry) &&
+            RegExp.$1 == aPrefix && hasExpectedURL(aContent.document, aURL)) {
           var document = aContent.document;
           var node = RegExp.$2 ? document.getElementById(RegExp.$3) : document.getElementsByName(RegExp.$3)[0] || null;
           if (node && "value" in node) {
@@ -1504,33 +1514,37 @@ SessionStoreService.prototype = {
       });
     }
     
+    var window = this.ownerDocument.defaultView;
     function restoreTextDataAndScrolling(aContent, aData, aPrefix) {
-      restoreTextData(aContent, aPrefix);
+      restoreTextData(aContent, aPrefix, aData.url);
       if (aData.innerHTML) {
-        aContent.setTimeout(
-              function(aHTML) {
-                if (aContent.document.designMode == "on") {
-                  aContent.document.body.innerHTML = aHTML;
-                }
-              }, 0, aData.innerHTML);
+        window.setTimeout(function() {
+          if (aContent.document.designMode == "on" &&
+              hasExpectedURL(aContent.document, aData.url)) {
+            aContent.document.body.innerHTML = aData.innerHTML;
+          }
+        }, 0);
       }
       if (aData.scroll && /(\d+),(\d+)/.test(aData.scroll)) {
         aContent.scrollTo(RegExp.$1, RegExp.$2);
       }
       for (var i = 0; i < aContent.frames.length; i++) {
-        if (aData.children && aData.children[i]) {
-          restoreTextDataAndScrolling(aContent.frames[i], aData.children[i], i + "|" + aPrefix);
+        if (aData.children && aData.children[i] &&
+          hasExpectedURL(aContent.document, aData.url)) {
+          restoreTextDataAndScrolling(aContent.frames[i], aData.children[i], aPrefix + i + "|");
         }
       }
     }
     
-    var content = XPCNativeWrapper(aEvent.originalTarget).defaultView;
-    if (this.currentURI.spec == "about:config") {
-      // unwrap the document for about:config because otherwise the properties
-      // of the XBL bindings - as the textbox - aren't accessible (see bug 350718)
-      content = content.wrappedJSObject;
+    if (hasExpectedURL(aEvent.originalTarget, this.__SS_restore_data.url)) {
+      var content = XPCNativeWrapper(aEvent.originalTarget).defaultView;
+      if (this.currentURI.spec == "about:config") {
+        // unwrap the document for about:config because otherwise the properties
+        // of the XBL bindings - as the textbox - aren't accessible (see bug 350718)
+        content = content.wrappedJSObject;
+      }
+      restoreTextDataAndScrolling(content, this.__SS_restore_data, "");
     }
-    restoreTextDataAndScrolling(content, this.__SS_restore_data, "");
     
     // notify the tabbrowser that this document has been completely restored
     var event = this.ownerDocument.createEvent("Events");

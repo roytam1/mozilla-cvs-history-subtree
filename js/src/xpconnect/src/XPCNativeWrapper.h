@@ -47,7 +47,7 @@ public:
                                            JSObject *aGlobalObject);
 
   static JSObject *GetNewOrUsed(JSContext *cx, XPCWrappedNative *wrapper,
-                                JSObject *callee);
+                                JSObject *callee, JSScript *script);
 
   static PRBool IsNativeWrapperClass(JSClass *clazz)
   {

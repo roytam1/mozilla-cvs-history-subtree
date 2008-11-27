@@ -59,6 +59,7 @@
 #include "nsIHttpChannel.h"
 
 #include "nsIComponentManager.h"
+#include "nsIInterfaceRequestorUtils.h"
 #include "nsIProxyObjectManager.h"
 #include "nsIServiceManager.h"
 #include "nsISupportsPrimitives.h"
@@ -107,6 +108,11 @@ nsresult imgRequest::Init(nsIChannel *aChannel,
     return NS_ERROR_OUT_OF_MEMORY;
 
   mChannel = aChannel;
+  mChannel->GetNotificationCallbacks(getter_AddRefs(mPrevChannelSink));
+
+  NS_ASSERTION(mPrevChannelSink != this,
+               "Initializing with a channel that already calls back to us!");
+
   mChannel->SetNotificationCallbacks(this);
 
   /* set our loading flag to true here.
@@ -645,8 +651,13 @@ NS_IMETHODIMP imgRequest::OnStartRequest(nsIRequest *aRequest, nsISupports *ctxt
   if (!mChannel) {
     if (mpchan)
       mpchan->GetBaseChannel(getter_AddRefs(mChannel));
-    else
+    else {
       mChannel = do_QueryInterface(aRequest);
+      if (mChannel) {
+        mChannel->GetNotificationCallbacks(getter_AddRefs(mPrevChannelSink));
+        mChannel->SetNotificationCallbacks(this);
+      }
+    }
   }
 
   if (mpchan)
@@ -760,8 +771,10 @@ NS_IMETHODIMP imgRequest::OnStopRequest(nsIRequest *aRequest, nsISupports *ctxt,
   if (mChannel) {
     mChannel->GetOriginalURI(getter_AddRefs(mURI));
     mChannel->GetURI(getter_AddRefs(mCurrentURI));
+
     mChannel->SetNotificationCallbacks(nsnull);
-    mChannel = nsnull; // we no longer need the channel
+    mChannel = nsnull;
+    mPrevChannelSink = nsnull;
   }
 
   // If mImage is still null, we didn't properly load the image.
@@ -958,7 +971,12 @@ imgRequest::SniffMimeType(const char *buf, PRUint32 len)
 NS_IMETHODIMP
 imgRequest::GetInterface(const nsIID & aIID, void **aResult)
 {
-  return QueryInterface(aIID, aResult);
+  if (!mPrevChannelSink || aIID.Equals(NS_GET_IID(nsIChannelEventSink)))
+    return QueryInterface(aIID, aResult);
+
+  NS_ASSERTION(mPrevChannelSink != this, 
+               "Infinite recursion - don't keep track of channel sinks that are us!");  
+  return mPrevChannelSink->GetInterface(aIID, aResult);
 }
 
 /** nsIChannelEventSink methods **/
@@ -971,21 +989,28 @@ imgRequest::OnChannelRedirect(nsIChannel *oldChannel, nsIChannel *newChannel, PR
   NS_ASSERTION(mChannel == oldChannel, "Got a channel redirect for an unknown channel!");
   NS_ASSERTION(newChannel, "Got a redirect to a NULL channel!");
 
+  nsresult rv = NS_OK;
+  nsCOMPtr<nsIChannelEventSink> sink(do_GetInterface(mPrevChannelSink));
+  if (sink) {
+    rv = sink->OnChannelRedirect(oldChannel, newChannel, flags);
+
+    if (NS_FAILED(rv))
+      return rv;
+  }
+
   RemoveFromCache();
 
   nsCOMPtr<nsIURI> uri;
   if (NS_SUCCEEDED(newChannel->GetURI(getter_AddRefs(uri))) && uri)
     mCurrentURI = uri;
 
-  oldChannel->SetNotificationCallbacks(nsnull);
   mChannel = newChannel;
-  mChannel->SetNotificationCallbacks(this);
 
   // If we don't still have a cache entry, we don't want to refresh the cache.
   if (uri && mCacheEntry) {
     imgCache::Put(uri, this, getter_AddRefs(mCacheEntry));
   }
 
-  return NS_OK;
+  return rv;
 }
 
