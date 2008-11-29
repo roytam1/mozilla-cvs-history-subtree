@@ -35,81 +35,37 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#include "prbit.h"
-#include "prsystem.h"
-
-#ifdef XP_UNIX
-#include <unistd.h>
-#endif
-#ifdef SUNOS4
-#include "md/sunos4.h"
-#endif
-#ifdef _WIN32
-#include <windows.h>
-#endif 
-#ifdef XP_BEOS
-#include <OS.h>
-#endif
-
-PRInt32 _pr_pageShift;
-PRInt32 _pr_pageSize;
+	.text
 
 /*
-** Get system page size
-*/
-static void GetPageSize(void)
-{
-	PRInt32 pageSize;
+ * sol_getsp()
+ *
+ * Return the current sp (for debugging)
+ */
+	.global sol_getsp
+sol_getsp:
+	retl
+   	mov     %sp, %o0
 
-    /* Get page size */
-#ifdef XP_UNIX
-#if defined SUNOS4 || defined BSDI || defined AIX \
-        || defined LINUX || defined __GNU__ || defined __GLIBC__ \
-        || defined FREEBSD || defined NETBSD || defined OPENBSD \
-        || defined DARWIN || defined NEXTSTEP
-    _pr_pageSize = getpagesize();
-#elif defined(HPUX)
-    /* I have no idea. Don't get me started. --Rob */
-    _pr_pageSize = sysconf(_SC_PAGE_SIZE);
-#else
-    _pr_pageSize = sysconf(_SC_PAGESIZE);
-#endif
-#endif /* XP_UNIX */
 
-#ifdef XP_MAC
-    _pr_pageSize = 4096;
-#endif /* XP_MAC */
+/*
+ * sol_curthread()
+ *
+ * Return a unique identifier for the currently active thread.
+ */
+	.global sol_curthread
+sol_curthread:
+    retl
+    mov %g7, %o0
+                  
 
-#ifdef XP_BEOS
-    _pr_pageSize = B_PAGE_SIZE;
-#endif
+	.global __MD_FlushRegisterWindows
+	.global _MD_FlushRegisterWindows
 
-#ifdef XP_PC
-#ifdef _WIN32
-    SYSTEM_INFO info;
-    GetSystemInfo(&info);
-    _pr_pageSize = info.dwPageSize;
-#else
-    _pr_pageSize = 4096;
-#endif
-#endif /* XP_PC */
+__MD_FlushRegisterWindows:
+_MD_FlushRegisterWindows:
 
-	pageSize = _pr_pageSize;
-	PR_CEILING_LOG2(_pr_pageShift, pageSize);
-}
+	ta	3
+	ret
+	restore
 
-PR_IMPLEMENT(PRInt32) PR_GetPageShift(void)
-{
-    if (!_pr_pageSize) {
-	GetPageSize();
-    }
-    return _pr_pageShift;
-}
-
-PR_IMPLEMENT(PRInt32) PR_GetPageSize(void)
-{
-    if (!_pr_pageSize) {
-	GetPageSize();
-    }
-    return _pr_pageSize;
-}

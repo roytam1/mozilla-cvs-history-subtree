@@ -74,12 +74,9 @@ ifdef USE_ABI32_FPU
 	DEFINES += -DNSS_USE_ABI32_FPU
 endif
 
-ifdef FREEBL_NO_DEPEND
-	DEFINES += -DFREEBL_NO_DEPEND
-endif
-# some codes want _X86_ defined for intel CPUs.
+# des.c wants _X86_ defined for intel CPUs.  
 # coreconf does this for windows, but not for Linux, FreeBSD, etc.
-ifeq (,$(filter-out x86 x86_64,$(CPU_ARCH)))
+ifeq ($(CPU_ARCH),x86)
 ifneq (,$(filter-out WIN%,$(OS_TARGET)))
 	OS_REL_CFLAGS += -D_X86_
 endif

@@ -1,4 +1,4 @@
-#!/bin/bash
+#! /bin/sh
 #
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
@@ -82,7 +82,6 @@ memleak_init()
 	TMP_SORTED="${HOSTDIR}/sorted$$"
 	TMP_COUNT="${HOSTDIR}/count$$"
 	TMP_DBX="${HOSTDIR}/dbx$$"
-	TMP_DBXERR="${HOSTDIR}/dbxerr$$"
 	
 	PORT=${PORT:-8443}
 	
@@ -329,12 +328,10 @@ run ${ATTR}
 	echo "${SCRIPTNAME}: -------- DBX commands:"
 	echo "${DBX_CMD}"
 	
-	echo "${DBX_CMD}" | ${DBX} ${COMMAND} 2> ${TMP_DBXERR} | grep -v Reading > ${TMP_DBX}
+	echo "${DBX_CMD}" | ${DBX} ${COMMAND} 2>/dev/null | grep -v Reading > ${TMP_DBX}
 	cat ${TMP_DBX} 1>&2
-	cat ${TMP_DBXERR}
-
-	grep "exit code is" ${TMP_DBX}
-	grep "exit code is 0" ${TMP_DBX} > /dev/null
+	
+	grep "exit code is 0" ${TMP_DBX}
 	return $?
 }
 
@@ -865,55 +862,34 @@ run_ocsp()
 	stat_print "Ocspclnt"
 }
 
-############################## run_chains ##############################
-# local shell function to run PKIX certificate chains tests
+############################### run_pkix ###############################
+# local shell function to run ocsp tests
 ########################################################################
-run_chains()
+run_pkix()
 {
-    stat_clear
-
-    LOGNAME="chains"
-    LOGFILE=${LOGDIR}/chains.log
-
-    . ${QADIR}/chains/chains.sh
-
-    stat_print "Chains"
-}
-
-############################## run_chains ##############################
-# local shell function to run memory leak tests
-#
-# NSS_MEMLEAK_TESTS - list of tests to run, if not defined before,
-# then is redefined to default list 
-########################################################################
-memleak_run_tests()
-{
-    nss_memleak_tests="ssl_server ssl_client chains ocsp"
-    NSS_MEMLEAK_TESTS="${NSS_MEMLEAK_TESTS:-$nss_memleak_tests}"
-
-    for MEMLEAK_TEST in ${NSS_MEMLEAK_TESTS}
-    do
-        case "${MEMLEAK_TEST}" in
-        "ssl_server")
-            run_ciphers_server
-            ;;
-        "ssl_client")
-            run_ciphers_client
-            ;;
-        "chains")
-            run_chains
-            ;;
-        "ocsp")
-            run_ocsp
-            ;;
-        esac
-    done
+         [ -z "$PKIX_OBJECT_LEAK_TEST" ] && return
+	stat_clear
+	
+	cd ${QADIR}/libpkix
+	. ./libpkix.sh
+	
+	stat_print "Libpkix"
 }
 
 ################################# main #################################
 
 memleak_init
-memleak_run_tests
+
+# Can not run pkix object/memory leak tests with server/client tests.
+# Pkix test is single-threaded by design. OCSP tests are ok.
+if [ -z "$PKIX_OBJECT_LEAK_TEST" ]; then
+   run_ciphers_server
+   run_ciphers_client
+else
+   run_pkix
+fi
+run_ocsp
+
 cnt_total
 memleak_cleanup
 
