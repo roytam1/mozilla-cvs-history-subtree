@@ -336,6 +336,7 @@ _PR_MD_WRITE(PRFileDesc *fd, const void *buf, PRInt32 len)
     PROsfd f = fd->secret->md.osfd;
     PRInt32 bytes;
     int rv;
+    PRThread *me = _PR_MD_CURRENT_THREAD();
     
     rv = WriteFile((HANDLE)f,
             buf,

@@ -50,7 +50,7 @@ dnl = Defaults
 dnl ========================================================
 MOD_MAJOR_VERSION=4
 MOD_MINOR_VERSION=7
-MOD_PATCH_VERSION=4
+MOD_PATCH_VERSION=1
 NSPR_MODNAME=nspr20
 _HAVE_PTHREADS=
 USE_PTHREADS=
@@ -384,7 +384,7 @@ if test -n "$MOZ_DEBUG"; then
     beos*)
         DEFINES="$DEFINES -DDEBUG_${USER}"
         ;;
-    msvc*|mks*|cygwin*|mingw*|wince*|os2*)
+    msvc*|mks*|cygwin*|mingw*|os2*)
         DEFINES="$DEFINES -DDEBUG_`echo ${USERNAME} | sed -e 's| |_|g'`"
         ;;
     *) 
@@ -651,7 +651,6 @@ if test -n "$CROSS_COMPILE"; then
         linux*)       OS_ARCH=Linux ;;
         solaris*)     OS_ARCH=SunOS OS_RELEASE=5 ;;
         mingw*)       OS_ARCH=WINNT ;;
-        wince*)       OS_ARCH=WINCE ;;
         darwin*)      OS_ARCH=Darwin ;;
     esac
 else
@@ -818,7 +817,7 @@ case "$host" in
 *-mingw*)
     NSINSTALL=nsinstall
     ;;
-*-cygwin*|*-msvc*|*-mks*|*-wince*)
+*-cygwin*|*-msvc*|*-mks*)
     NSINSTALL='$(CYGWIN_WRAPPER) nsinstall'
     if test `echo "${PATH}" | grep -c \;` = 0; then
         CYGWIN_WRAPPER='sh $(topsrcdir)/build/cygwin-wrapper'
@@ -997,19 +996,17 @@ case "$target" in
     AC_DEFINE(XP_UNIX)
     AC_DEFINE(DARWIN)
     AC_DEFINE(HAVE_BSD_FLOCK)
-    AC_DEFINE(HAVE_SOCKLEN_T)
     CFLAGS="$CFLAGS -Wmost -fno-common"
     case "${target_cpu}" in
         i*86*)
-            if test -n "$USE_64"; then
-                CPU_ARCH=x86_64
-                CC="$CC -arch x86_64"
-            else        
-                CPU_ARCH=i386
-            fi
+            AC_DEFINE(i386)
+            CPU_ARCH=i386
+            PR_MD_ASFILES=os_Darwin_x86.s
             ;;
         *)
+            AC_DEFINE(ppc)
             CPU_ARCH=ppc
+            PR_MD_ASFILES=os_Darwin_ppc.s
             ;;
     esac
     DSO_CFLAGS=-fPIC
@@ -1020,7 +1017,6 @@ case "$target" in
     USE_PTHREADS=1
     MDCPUCFG_H=_darwin.cfg
     PR_MD_CSRCS=darwin.c
-    PR_MD_ASFILES=os_Darwin.s
 
     # Add Mac OS X support for loading CFM & CFBundle plugins
     if test -f /System/Library/Frameworks/Carbon.framework/Carbon; then
@@ -1170,7 +1166,7 @@ tools are selected during the Xcode/Developer Tools installation.])
     AC_DEFINE(HAVE_BSD_FLOCK)
     AC_DEFINE(HAVE_SOCKLEN_T)
     CFLAGS="$CFLAGS $(DSO_CFLAGS) -ansi -Wall"
-    MOZ_OBJFORMAT=`test -x /usr/bin/objformat && /usr/bin/objformat || echo elf`
+    MOZ_OBJFORMAT=`test -x /usr/bin/objformat && /usr/bin/objformat || echo aout`
     if test "$MOZ_OBJFORMAT" = "elf"; then
         DLL_SUFFIX=so
     else
@@ -1319,7 +1315,7 @@ tools are selected during the Xcode/Developer Tools installation.])
     if test "$DEFAULT_IMPL_STRATEGY" = "_EMU"; then
         USE_NSPR_THREADS=1
         USE_PTHREADS=
-        USE_USER_PTHREADS=
+        USE_USER_THREADS=
     elif test "$DEFAULT_IMPL_STRATEGY" = "_PTH"; then
         USE_PTHREADS=1
         if test "$USE_NSPR_THREADS"; then
@@ -1685,31 +1681,6 @@ tools are selected during the Xcode/Developer Tools installation.])
 
     ;;
 
-*-wince*)
-    AC_DEFINE(XP_PC)
-    AC_DEFINE(WIN32)
-    AC_DEFINE(WINCE)
-    AC_DEFINE(_PR_GLOBAL_THREADS_ONLY)
-
-    AR='lib -NOLOGO -OUT:"$@"'
-    AR_FLAGS=
-
-    OBJ_SUFFIX=obj
-    LIB_SUFFIX=lib
-    DLL_SUFFIX=dll
-    MKSHLIB='$(LD) -DLL $(DSO_LDOPTS) -OUT:$@'
-
-    PR_MD_ARCH_DIR=windows
-    RESOLVE_LINK_SYMBOLS=1
-
-    MDCPUCFG_H=_win95.cfg
-    LIBNSPR='$(dist_libdir)/nspr$(MOD_MAJOR_VERSION).$(LIB_SUFFIX)'
-    LIBPLC='$(dist_libdir)/plc$(MOD_MAJOR_VERSION).$(LIB_SUFFIX)'
-
-    DLLFLAGS='-OUT:"$@"'
-    _DEBUG_FLAGS=-Zi
-    ;;
-
 *-ncr-sysv*)
     AC_DEFINE(XP_UNIX)
     AC_DEFINE(SVR4)
@@ -1755,9 +1726,7 @@ mips-nec-sysv*)
     AC_DEFINE(XP_UNIX)
     AC_DEFINE(NETBSD)
     AC_DEFINE(HAVE_BSD_FLOCK)
-    if test -z "$USE_NSPR_THREADS"; then
-        USE_PTHREADS=1
-    fi
+    USE_NSPR_THREADS=1
     MDCPUCFG_H=_netbsd.cfg
     PR_MD_CSRCS=netbsd.c
 
@@ -2001,7 +1970,7 @@ mips-sony-newsos*)
     ;;
 
 *-solaris*)
-    if test -z "$USE_NSPR_THREADS"; then
+    if test -z "$USE_USER_THREADS" && test -z "$USE_NATIVE_THREADS"; then
         USE_PTHREADS=1
     fi
     AC_DEFINE(XP_UNIX)
@@ -2011,35 +1980,20 @@ mips-sony-newsos*)
     AC_DEFINE(__svr4__)
     AC_DEFINE(SOLARIS)
     AC_DEFINE(HAVE_FCNTL_FILE_LOCKING)
-    CPU_ARCH=`uname -p`
     MDCPUCFG_H=_solaris.cfg
     PR_MD_CSRCS=solaris.c
     LD=/usr/ccs/bin/ld
     MKSHLIB='$(CC) $(DSO_LDOPTS) -o $@'
     RESOLVE_LINK_SYMBOLS=1
-    case "${OS_RELEASE}" in
-    5.8|5.9)
-        ;;
-    *)
-        # It is safe to use the -Bdirect linker flag on Solaris 10 or later.
-        USE_B_DIRECT=1
-        ;;
-    esac
     if test -n "$GNU_CC"; then
         DSO_CFLAGS=-fPIC
         if `$CC -print-prog-name=ld` -v 2>&1 | grep -c GNU >/dev/null; then
             GCC_USE_GNU_LD=1
         fi
         DSO_LDOPTS='-shared -Wl,-h,$(notdir $@),-z,combreloc,-z,defs,-z,ignore' 
-        if test -n "$USE_B_DIRECT"; then
-            DSO_LDOPTS="$DSO_LDOPTS,-Bdirect"
-        fi
     else
         DSO_CFLAGS=-KPIC
         DSO_LDOPTS='-G -h $(notdir $@) -z combreloc -z defs -z ignore'
-        if test -n "$USE_B_DIRECT"; then
-            DSO_LDOPTS="$DSO_LDOPTS -Bdirect"
-        fi
     fi
     if test -n "$GNU_CC"; then
         CFLAGS="$CFLAGS -Wall"
@@ -2134,8 +2088,8 @@ mips-sony-newsos*)
         AC_DEFINE(_PR_INET6)
         ;;
     esac
-    if test "$CPU_ARCH" = "sparc"; then
-        # 64-bit Solaris SPARC requires V9 architecture, so the following
+    if test "$OS_TEST" = "sun4u"; then
+        # 64-bit Solaris requires SPARC V9 architecture, so the following
         # is not needed.
         if test -z "$USE_64"; then
             ULTRASPARC_LIBRARY=nspr_flt
@@ -2184,31 +2138,74 @@ mips-sony-newsos*)
     MDCPUCFG_H=_os2.cfg
     RESOLVE_LINK_SYMBOLS=1
 
-    AC_DEFINE(OS2)
-    AR=emxomfar
-    AR_FLAGS='r $@'
-    CFLAGS="$CFLAGS -Wall -Zomf"
-    CXXFLAGS="$CFLAGS -Wall -Zomf"
-    MKSHLIB='$(CC) $(DSO_LDOPTS) -o $@'
-    DSO_CFLAGS=
-    DSO_LDOPTS='-Zomf -Zdll -Zmap'
-    LDFLAGS='-Zmap'
-    _OPTIMIZE_FLAGS="-O2 -s"
-    _DEBUG_FLAGS="-g -fno-inline"
-    if test -n "$MOZ_OPTIMIZE"; then
-      DSO_LDOPTS="$DSO_LDOPTS -Zlinker /EXEPACK:2 -Zlinker /PACKCODE -Zlinker /PACKDATA"
-    fi
-    OS_LIBS="-lsocket"
-    IMPLIB='emximp -o'
-    FILTER='emxexp -o'
-    if test -n "$MOZ_OS2_HIGH_MEMORY"; then
-      DSO_LDOPTS="$DSO_LDOPTS -Zhigh-mem"
-      LDFLAGS="$LDFLAGS -Zhigh-mem"
-      AC_DEFINE(MOZ_OS2_HIGH_MEMORY)
-    fi
+    # EMX/GCC build
+    if test -n "$GNU_CC"; then
+        AC_DEFINE(XP_OS2_EMX)
+        AC_DEFINE(OS2)
+        AR=emxomfar
+        AR_FLAGS='r $@'
+        CFLAGS="$CFLAGS -Wall -Zomf"
+        CXXFLAGS="$CFLAGS -Wall -Zomf"
+        MKSHLIB='$(CC) $(DSO_LDOPTS) -o $@'
+        DSO_CFLAGS=
+        DSO_LDOPTS='-Zomf -Zdll -Zmap'
+        LDFLAGS='-Zmap'
+        _OPTIMIZE_FLAGS="-O2 -s"
+        _DEBUG_FLAGS="-g -fno-inline"
+        if test -n "$MOZ_OPTIMIZE"; then
+          DSO_LDOPTS="$DSO_LDOPTS -Zlinker /EXEPACK:2 -Zlinker /PACKCODE -Zlinker /PACKDATA"
+        fi
+        OS_LIBS="-lsocket"
+        IMPLIB='emximp -o'
+        FILTER='emxexp -o'
+        if test -n "$MOZ_OS2_HIGH_MEMORY"; then
+          DSO_LDOPTS="$DSO_LDOPTS -Zhigh-mem"
+          LDFLAGS="$LDFLAGS -Zhigh-mem"
+          AC_DEFINE(MOZ_OS2_HIGH_MEMORY)
+        fi
 
-    # GCC for OS/2 currently predefines these, but we don't want them
-    DEFINES="$DEFINES -Uunix -U__unix -U__unix__"
+        # GCC for OS/2 currently predefines these, but we don't want them
+        DEFINES="$DEFINES -Uunix -U__unix -U__unix__"
+
+    # Visual Age C++ build
+    elif test "$VACPP" = "yes"; then
+        AC_DEFINE(XP_OS2_VACPP)
+        AC_DEFINE(OS2,4)
+        AC_DEFINE(_X86_)
+        OBJ_SUFFIX=obj
+        AS=alp
+        ASFLAGS='-Mb'
+        ASM_SUFFIX=asm
+        AR=-ilib
+        AR_FLAGS='/NOL /NOI /O:$(subst /,\\,$@)'
+        CFLAGS='/Q /qlibansi /Gd+ /Gm+ /Su4 /Mp /Tl9'
+        HOST_CFLAGS="$CFLAGS"
+        OS_CFLAGS='/Q /qlibansi /Gd+ /Gm+ /Su4 /Mp /Tl9'
+        OS_EXE_CFLAGS='/Q /qlibansi /Gd+ /Gm+ /Su4 /Mp /Tl9'
+        CXXFLAGS='/Q /qlibansi /Gd+ /Gm+ /Su4 /Mp /Tl9'
+        OS_LIBS='so32dll.lib tcp32dll.lib'
+        LD='-ilink'
+        MKSHLIB='$(LD) $(DSO_LDOPTS)'
+        IMPLIB='implib -nologo -noignorecase'
+        FILTER='cppfilt -q -B -P'
+        _OPTIMIZE_FLAGS='/O+ /Gl+ /qtune=pentium /qarch=pentium'
+        _DEBUG_FLAGS='/Ti+ '
+        LDFLAGS='/NOL /M /L'
+        DLLFLAGS="$DLLFLAGS /O:\$@ /DLL /INC:_dllentry /MAP:\$(@:.dll=.map) /L /NOL"
+        EXEFLAGS='/OUT:$@ /PMTYPE:VIO /MAP:$(@:.exe=.map) /L /NOL'
+        if test -n "$MOZ_DEBUG"; then
+          LDFLAGS="$LDFLAGS /DE"
+          DLLFLAGS="$DLLFLAGS /DE"
+          EXEFLAGS="$EXEFLAGS /DE"
+        fi
+        if test -n "$MOZ_OPTIMIZE"; then
+          LDFLAGS="$LDFLAGS /OPTFUNC /EXEPACK:2 /PACKCODE /PACKDATA"
+          DLLFLAGS="$DLLFLAGS /OPTFUNC /EXEPACK:2 /PACKCODE /PACKDATA"
+          EXEFLAGS="$EXEFLAGS /OPTFUNC /EXEPACK:2 /PACKCODE /PACKDATA"
+        fi
+        LIBNSPR='$(dist_libdir)/nspr$(MOD_MAJOR_VERSION).$(LIB_SUFFIX)'
+        LIBPLC='$(dist_libdir)/plc$(MOD_MAJOR_VERSION).$(LIB_SUFFIX)'
+    fi
     ;;
 
 *)
@@ -2451,6 +2448,17 @@ case "$target" in
 	        USE_PTHREADS=
 	    fi])
     ;;
+
+*-solaris*)
+    AC_ARG_WITH(native-threads,
+    [  --with-native-threads   Use native system threads as thread subsystem
+                          (Solaris only)],
+    [ if test "$withval" = "yes"; then
+	    USE_NATIVE_THREADS=1
+	    USE_USER_PTHREADS=
+	    USE_PTHREADS=
+	  fi])
+    ;;
 esac
 
 fi # SKIP_LIBRARY_CHECKS
@@ -2636,8 +2644,8 @@ case "$target" in
         AC_DEFINE(_PR_LOCAL_THREADS_ONLY)
     fi
     ;;
-*-mingw*|*-cygwin*|*-msvc*|*-mks*|*-wince*|*-os2*|*-beos*)
-    dnl win32, wince, os2 & beos cannot use pthreads
+*-mingw*|*-cygwin*|*-msvc*|*-mks*|*-os2*|*-beos*)
+    dnl win32, os2 & beos cannot use pthreads
     USE_PTHREADS=
     _PTHREAD_LDFLAGS=
     USE_USER_PTHREADS=
@@ -2660,10 +2668,14 @@ case "$target" in
     fi
     ;;
 *-solaris*)
-    if test -n "$USE_NSPR_THREADS"; then
-        AC_DEFINE(_PR_LOCAL_THREADS_ONLY)
+    if test -n "$USE_NATIVE_THREADS"; then
+        AC_DEFINE(_PR_GLOBAL_THREADS_ONLY)
+    else
+        if test -n "$USE_NSPR_THREADS"; then
+            AC_DEFINE(_PR_LOCAL_THREADS_ONLY)
+        fi
     fi
-    if test -n "$USE_PTHREADS"; then
+    if test -z "$USE_NSPR_THREADS"; then
         AC_DEFINE(_REENTRANT)
         AC_DEFINE(HAVE_POINTER_LOCALTIME_R)
         if test "$OS_TEST" = "i86pc"; then
@@ -2675,6 +2687,9 @@ case "$target" in
         else
             if test -n "$USE_64"; then
                 PR_MD_ASFILES=os_SunOS_sparcv9.s
+            fi
+            if test -n "$USE_NATIVE_THREADS"; then
+                PR_MD_ASFILES="$PR_MD_ASFILES os_SunOS.s"
             fi
         fi
     fi
@@ -2765,6 +2780,7 @@ AC_SUBST(ENABLE_STRIP)
 AC_SUBST(USE_PTHREADS)
 AC_SUBST(USE_BTHREADS)
 AC_SUBST(USE_USER_PTHREADS)
+AC_SUBST(USE_NATIVE_THREADS)
 AC_SUBST(USE_NSPR_THREADS)
 
 AC_SUBST(LIBNSPR)

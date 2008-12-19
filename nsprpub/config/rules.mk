@@ -106,13 +106,13 @@ endif
 #
 
 ifdef LIBRARY_NAME
-ifeq (,$(filter-out WINNT WINCE OS2,$(OS_ARCH)))
+ifeq (,$(filter-out WINNT OS2,$(OS_ARCH)))
 
 #
 # Win95, Win16, and OS/2 require library names conforming to the 8.3 rule.
 # other platforms do not.
 #
-ifeq (,$(filter-out WIN95 WINCE OS2,$(OS_TARGET)))
+ifeq (,$(filter-out WIN95 OS2,$(OS_TARGET)))
 LIBRARY		= $(OBJDIR)/$(LIBRARY_NAME)$(LIBRARY_VERSION)_s.$(LIB_SUFFIX)
 SHARED_LIBRARY	= $(OBJDIR)/$(LIBRARY_NAME)$(LIBRARY_VERSION).$(DLL_SUFFIX)
 IMPORT_LIBRARY	= $(OBJDIR)/$(LIBRARY_NAME)$(LIBRARY_VERSION).$(LIB_SUFFIX)
@@ -139,7 +139,7 @@ endif
 endif
 
 ifndef TARGETS
-ifeq (,$(filter-out WINNT WINCE OS2,$(OS_ARCH)))
+ifeq (,$(filter-out WINNT OS2,$(OS_ARCH)))
 TARGETS		= $(LIBRARY) $(SHARED_LIBRARY) $(IMPORT_LIBRARY)
 ifndef BUILD_OPT
 ifdef MSC_VER
@@ -162,6 +162,10 @@ endif
 ifndef OBJS
 OBJS		= $(addprefix $(OBJDIR)/,$(CSRCS:.c=.$(OBJ_SUFFIX))) \
 		  $(addprefix $(OBJDIR)/,$(ASFILES:.$(ASM_SUFFIX)=.$(OBJ_SUFFIX)))
+endif
+
+ifeq ($(MOZ_OS2_TOOLS),VACPP)
+EXTRA_LIBS := $(patsubst -l%,$(DIST)/lib/%.$(LIB_SUFFIX),$(EXTRA_LIBS))
 endif
 
 ALL_TRASH		= $(TARGETS) $(OBJS) $(RES) $(filter-out . .., $(OBJDIR)) LOGS TAGS $(GARBAGE) \
@@ -302,7 +306,11 @@ ifdef MT
 	fi
 endif	# MSVC with manifest tool
 else	# WINNT && !GCC
+ifeq ($(MOZ_OS2_TOOLS),VACPP)
+	$(CC) $(OBJS) -Fe$@ $(LDFLAGS) $(OS_LIBS) $(EXTRA_LIBS)
+else
 	$(CC) -o $@ $(CFLAGS) $(OBJS) $(LDFLAGS)
+endif
 endif	# WINNT && !GCC
 ifdef ENABLE_STRIP
 	$(STRIP) $@
@@ -311,7 +319,11 @@ endif
 $(LIBRARY): $(OBJS)
 	@$(MAKE_OBJDIR)
 	rm -f $@
+ifeq ($(MOZ_OS2_TOOLS),VACPP)
+	$(AR) $(subst /,\\,$(OBJS)) $(AR_FLAGS)
+else
 	$(AR) $(AR_FLAGS) $(OBJS) $(AR_EXTRA_ARGS)
+endif
 	$(RANLIB) $@
 
 ifeq ($(OS_TARGET), OS2)
@@ -341,6 +353,9 @@ ifdef MT
 	fi
 endif	# MSVC with manifest tool
 else	# WINNT && !GCC
+ifeq ($(MOZ_OS2_TOOLS),VACPP)
+	$(LINK_DLL) $(DLLBASE) $(OBJS) $(OS_LIBS) $(EXTRA_LIBS) $(MAPFILE)
+else	# !os2 vacpp
 ifeq ($(OS_TARGET), OpenVMS)
 	@if test ! -f $(VMS_SYMVEC_FILE); then \
 	  if test -f $(VMS_SYMVEC_FILE_MODULE); then \
@@ -350,6 +365,7 @@ ifeq ($(OS_TARGET), OpenVMS)
 	fi
 endif	# OpenVMS
 	$(MKSHLIB) $(OBJS) $(RES) $(EXTRA_LIBS)
+endif   # OS2 vacpp
 endif	# WINNT && !GCC
 endif	# AIX 4.1
 ifdef ENABLE_STRIP
@@ -380,10 +396,15 @@ ifeq ($(OS_ARCH),OS2)
 	echo CODE    LOADONCALL MOVEABLE DISCARDABLE >> $@
 	echo DATA    PRELOAD MOVEABLE MULTIPLE NONSHARED >> $@
 	echo EXPORTS >> $@
+ifeq ($(MOZ_OS2_TOOLS),VACPP)
+	grep -v ';+' $< | grep -v ';-' | \
+	sed -e 's; DATA ;;' -e 's,;;,,' -e 's,;.*,,' >> $@
+else
 	grep -v ';+' $< | grep -v ';-' | \
 	sed -e 's; DATA ;;' -e 's,;;,,' -e 's,;.*,,' -e 's,\([\t ]*\),\1_,' | \
 	awk 'BEGIN {ord=1;} { print($$0 " @" ord " RESIDENTNAME"); ord++;}'	>> $@
 	$(ADD_TO_DEF_FILE)
+endif
 endif
 
 #
@@ -409,8 +430,8 @@ $(OBJDIR)/%.$(OBJ_SUFFIX): %.cpp
 ifeq ($(NS_USE_GCC)_$(OS_ARCH),_WINNT)
 	$(CCC) -Fo$@ -c $(CCCFLAGS) $(call abspath,$<)
 else
-ifeq ($(NS_USE_GCC)_$(OS_ARCH),_WINCE)
-	$(CCC) -Fo$@ -c $(CCCFLAGS) $<
+ifeq ($(MOZ_OS2_TOOLS),VACPP)
+	$(CCC) -Fo$@ -c $(CCCFLAGS) $(call abspath,$<)
 else
 ifdef NEED_ABSOLUTE_PATH
 	$(CCC) -o $@ -c $(CCCFLAGS) $(call abspath,$<)
@@ -428,8 +449,8 @@ $(OBJDIR)/%.$(OBJ_SUFFIX): %.c
 ifeq ($(NS_USE_GCC)_$(OS_ARCH),_WINNT)
 	$(CC) -Fo$@ -c $(CFLAGS) $(call abspath,$<)
 else
-ifeq ($(NS_USE_GCC)_$(OS_ARCH),_WINCE)
-	$(CC) -Fo$@ -c $(CFLAGS) $<
+ifeq ($(MOZ_OS2_TOOLS),VACPP)
+	$(CC) -Fo$@ -c $(CFLAGS) $(call abspath,$<)
 else
 ifdef NEED_ABSOLUTE_PATH
 	$(CC) -o $@ -c $(CFLAGS) $(call abspath,$<)
@@ -443,6 +464,12 @@ endif
 $(OBJDIR)/%.$(OBJ_SUFFIX): %.s
 	@$(MAKE_OBJDIR)
 	$(AS) -o $@ $(ASFLAGS) -c $<
+
+ifeq ($(MOZ_OS2_TOOLS),VACPP)
+$(OBJDIR)/%.$(OBJ_SUFFIX): %.asm
+	@$(MAKE_OBJDIR)
+	$(AS) -Fdo:./$(OBJDIR) $(ASFLAGS) $<
+endif
 
 %.i: %.c
 	$(CC) -C -E $(CFLAGS) $< > $*.i

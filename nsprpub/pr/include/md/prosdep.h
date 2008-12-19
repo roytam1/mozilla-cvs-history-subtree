@@ -51,7 +51,7 @@ PR_BEGIN_EXTERN_C
 #ifdef WINNT
 #include "md/_winnt.h"
 #include "md/_win32_errors.h"
-#elif defined(WIN95) || defined(WINCE)
+#elif defined(WIN95)
 #include "md/_win95.h"
 #include "md/_win32_errors.h"
 #elif defined(WIN16)
@@ -140,9 +140,6 @@ PR_BEGIN_EXTERN_C
 
 #elif defined(RISCOS)
 #include "md/_riscos.h"
-
-#elif defined(SYMBIAN)
-#include "md/_symbian.h"
 
 #else
 #error unknown Unix flavor
