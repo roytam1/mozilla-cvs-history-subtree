@@ -213,8 +213,12 @@ clobber::
 	rm -rf $(OBJS) $(TARGETS) $(filter-out . ..,$(OBJDIR)) $(GARBAGE) so_locations $(NOSUCHFILE)
 	+$(LOOP_OVER_DIRS)
 
-realclean clobber_all distclean::
+realclean clobber_all::
 	rm -rf $(wildcard *.OBJ *.OBJD) dist $(ALL_TRASH)
+	+$(LOOP_OVER_DIRS)
+
+distclean::
+	rm -rf $(wildcard *.OBJ *.OBJD) dist $(ALL_TRASH) $(DIST_GARBAGE)
 	+$(LOOP_OVER_DIRS)
 
 real_install:: $(RELEASE_BINS) $(RELEASE_HEADERS) $(RELEASE_LIBS)
@@ -293,17 +297,25 @@ $(PROGRAM): $(OBJS)
 ifeq ($(OS_ARCH)_$(NS_USE_GCC),WINNT_)
 	$(CC) $(OBJS) -Fe$@ -link $(LDFLAGS) $(OS_LIBS) $(EXTRA_LIBS)
 else
+ifeq ($(MOZ_OS2_TOOLS),VACPP)
+	$(CC) $(OBJS) -Fe$@ $(LDFLAGS) $(OS_LIBS) $(EXTRA_LIBS)
+else
 	$(CC) -o $@ $(CFLAGS) $(OBJS) $(LDFLAGS)
+endif
 endif
 
 $(LIBRARY): $(OBJS)
 	@$(MAKE_OBJDIR)
 	rm -f $@
+ifeq ($(MOZ_OS2_TOOLS),VACPP)
+	$(AR) $(subst /,\\,$(OBJS)) $(AR_EXTRA_ARGS)
+else
 ifdef USE_AUTOCONF
 	$(AR) $(AR_FLAGS) $(OBJS) $(AR_EXTRA_ARGS)
 else
 	$(AR) $(OBJS) $(AR_EXTRA_ARGS)
 endif # USE_AUTOCONF
+endif
 	$(RANLIB) $@
 
 ifeq ($(OS_TARGET), WIN16)
@@ -362,7 +374,11 @@ else	# WIN16
 	$(LINK_DLL) -MAP $(DLLBASE) $(OS_LIBS) $(EXTRA_LIBS) $(OBJS)
 endif # WINNT
 else
+ifeq ($(MOZ_OS2_TOOLS),VACPP)
+	$(LINK_DLL) $(DLLBASE) $(OBJS) $(OS_LIBS) $(EXTRA_LIBS) $(DEF_FILE)
+else	# !os2 vacpp
 	$(MKSHLIB) -o $@ $(OBJS) $(EXTRA_LIBS) $(OS_LIBS) $(DEF_FILE)
+endif   # OS2 vacpp
 endif	# WINNT
 endif	# AIX 4.1
 endif   # USE_AUTOCONF
@@ -389,7 +405,11 @@ $(OBJDIR)/%.$(OBJ_SUFFIX): %.cpp
 ifeq ($(OS_ARCH)_$(NS_USE_GCC), WINNT_)
 	$(CCC) -Fo$@ -c $(CCCFLAGS) $<
 else
+ifeq ($(MOZ_OS2_TOOLS),VACPP)
+	$(CCC) -Fo$@ -c $(CCCFLAGS) $<
+else
 	$(CCC) -o $@ -c $(CCCFLAGS) $<
+endif
 endif
 
 WCCFLAGS1 = $(subst /,\\,$(CFLAGS))
@@ -407,7 +427,11 @@ else
 	$(CC) -Fo$@ -c $(CFLAGS) $<
 endif
 else
+ifeq ($(MOZ_OS2_TOOLS),VACPP)
+	$(CC) -Fo$@ -c $(CFLAGS) $<
+else
 	$(CC) -o $@ -c $(CFLAGS) $<
+endif
 endif
 
 

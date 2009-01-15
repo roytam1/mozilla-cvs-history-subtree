@@ -155,8 +155,6 @@ SECITEM_CompareItem(const SECItem *a, const SECItem *b)
     unsigned m;
     SECComparison rv;
 
-    if (a == b)
-    	return SECEqual;
     if (!a || !a->len || !a->data) 
         return (!b || !b->len || !b->data) ? SECEqual : SECLessThan;
     if (!b || !b->len || !b->data) 
