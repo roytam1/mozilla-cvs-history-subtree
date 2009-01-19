@@ -262,9 +262,11 @@ nsFileControlFrame::ScrollIntoView(nsPresContext* aPresContext)
 /**
  * This is called when our browse button is clicked
  */
-nsresult 
-nsFileControlFrame::MouseClick(nsIDOMEvent* aMouseEvent)
+NS_IMETHODIMP
+nsFileControlFrame::MouseListener::MouseClick(nsIDOMEvent* aMouseEvent)
 {
+  NS_ASSERTION(mFrame, "We should have been unregistered");
+
   // only allow the left button
   nsCOMPtr<nsIDOMMouseEvent> mouseEvent = do_QueryInterface(aMouseEvent);
   if (mouseEvent) {
@@ -280,7 +282,7 @@ nsFileControlFrame::MouseClick(nsIDOMEvent* aMouseEvent)
   nsresult result;
 
   // Get parent nsIDOMWindowInternal object.
-  nsIContent* content = GetContent();
+  nsIContent* content = mFrame->GetContent();
   if (!content)
     return NS_ERROR_FAILURE;
 
@@ -309,7 +311,7 @@ nsFileControlFrame::MouseClick(nsIDOMEvent* aMouseEvent)
 
   // Set default directry and filename
   nsAutoString defaultName;
-  GetProperty(nsHTMLAtoms::value, defaultName);
+  mFrame->GetProperty(nsHTMLAtoms::value, defaultName);
 
   nsCOMPtr<nsILocalFile> currentFile = do_CreateInstance("@mozilla.org/file/local;1");
   if (currentFile && !defaultName.IsEmpty()) {
@@ -333,7 +335,7 @@ nsFileControlFrame::MouseClick(nsIDOMEvent* aMouseEvent)
   }
 
   // Tell our textframe to remember the currently focused value
-  mTextFrame->InitFocusedValue();
+  mFrame->mTextFrame->InitFocusedValue();
 
   // Open dialog
   PRInt16 mode;
@@ -343,7 +345,7 @@ nsFileControlFrame::MouseClick(nsIDOMEvent* aMouseEvent)
   if (mode == nsIFilePicker::returnCancel)
     return NS_OK;
 
-  if (!mTextFrame) {
+  if (!mFrame) {
     // We got destroyed while the filepicker was up.  Don't do anything here.
     return NS_OK;
   }
@@ -355,14 +357,14 @@ nsFileControlFrame::MouseClick(nsIDOMEvent* aMouseEvent)
     nsAutoString unicodePath;
     result = localFile->GetPath(unicodePath);
     if (!unicodePath.IsEmpty()) {
-      mTextFrame->SetProperty(mPresContext, nsHTMLAtoms::value, unicodePath);
-      nsCOMPtr<nsIFileControlElement> fileControl = do_QueryInterface(mContent);
+      mFrame->mTextFrame->SetProperty(mFrame->mPresContext, nsHTMLAtoms::value, unicodePath);
+      nsCOMPtr<nsIFileControlElement> fileControl = do_QueryInterface(content);
       if (fileControl) {
         fileControl->SetFileName(unicodePath, PR_FALSE);
       }
       
       // May need to fire an onchange here
-      mTextFrame->CheckFireOnChange();
+      mFrame->mTextFrame->CheckFireOnChange();
       return NS_OK;
     }
   }
@@ -664,14 +666,4 @@ nsFileControlFrame::OnContentReset()
 // Mouse listener implementation
 
 NS_IMPL_ISUPPORTS1(nsFileControlFrame::MouseListener, nsIDOMMouseListener)
-
-NS_IMETHODIMP
-nsFileControlFrame::MouseListener::MouseClick(nsIDOMEvent* aMouseEvent)
-{
-  if (mFrame) {
-    return mFrame->MouseClick(aMouseEvent);
-  }
-
-  return NS_OK;
-}
 
