@@ -581,7 +581,7 @@ nsInlineFrame::ReflowFrames(nsPresContext* aPresContext,
       // complete we'll fail when deleting its next-in-flow which is no longer
       // needed. This scenario doesn't happen often, but it can happen
       nsIFrame* nextInFlow = frame->GetNextInFlow();
-      while (nextInFlow) {
+      for ( ; nextInFlow; nextInFlow = nextInFlow->GetNextInFlow()) {
         // Since we only do lazy setting of parent pointers for the frame's
         // initial reflow, this frame can't have a next-in-flow. That means
         // the continuing child frame must be in our child list as well. If
@@ -591,7 +591,32 @@ nsInlineFrame::ReflowFrames(nsPresContext* aPresContext,
           ReparentFloatsForInlineChild(irs.mLineContainer, nextInFlow, PR_FALSE);
         }
         nextInFlow->SetParent(this);
-        nextInFlow = nextInFlow->GetNextInFlow();
+      }
+
+      // Fix the parent pointer for ::first-letter child frame next-in-flows,
+      // so nsFirstLetterFrame::Reflow can destroy them safely (bug 401042).
+      nsIFrame* realFrame = nsPlaceholderFrame::GetRealFrameFor(frame);
+      if (realFrame->GetType() == nsLayoutAtoms::letterFrame) {
+        nsIFrame* child = realFrame->GetFirstChild(nsnull);
+        if (child) {
+          nsIFrame* nextInFlow = child->GetNextInFlow();
+          for ( ; nextInFlow; nextInFlow = nextInFlow->GetNextInFlow()) {
+            if (mFrames.ContainsFrame(nextInFlow)) {
+              nextInFlow->SetParent(this);
+            }
+            else {
+#ifdef DEBUG              
+              // Once we find a next-in-flow that isn't ours none of the
+              // remaining next-in-flows should be either.
+              for ( ; nextInFlow; nextInFlow = nextInFlow->GetNextInFlow()) {
+                NS_ASSERTION(!mFrames.ContainsFrame(nextInFlow),
+                             "unexpected letter frame flow");
+              }
+#endif
+              break;
+            }
+          }
+        }
       }
     }
     rv = ReflowInlineFrame(aPresContext, aReflowState, irs, frame, aStatus);
