@@ -113,6 +113,7 @@
 #include "nsXULAtoms.h"
 #include "nsBoxFrame.h"
 #include "nsIBoxLayout.h"
+#include "nsDOMError.h"
 
 static NS_DEFINE_CID(kEventQueueServiceCID,   NS_EVENTQUEUESERVICE_CID);
 
@@ -4481,8 +4482,12 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsFrameConstructorState& aState,
     nsRefPtr<nsXBLBinding> binding;
     rv = xblService->LoadBindings(aDocElement, display->mBinding, PR_FALSE,
                                   getter_AddRefs(binding), &resolveStyle);
-    if (NS_FAILED(rv))
-      return NS_OK; // Binding will load asynchronously.
+    if (NS_FAILED(rv)) {
+      if (rv != NS_ERROR_DOM_BAD_URI) {
+        return NS_OK; // Binding will load asynchronously.
+      }
+      resolveStyle = PR_FALSE;
+    }
 
     if (binding) {
       mDocument->BindingManager()->AddToAttachedQueue(binding);
@@ -7826,8 +7831,12 @@ nsCSSFrameConstructor::ConstructFrameInternal( nsFrameConstructorState& aState,
       rv = xblService->LoadBindings(aContent, display->mBinding, PR_FALSE,
                                     getter_AddRefs(binding.mBinding),
                                     &resolveStyle);
-      if (NS_FAILED(rv))
-        return NS_OK;
+      if (NS_FAILED(rv)) {
+        if (rv != NS_ERROR_DOM_BAD_URI) {
+          return NS_OK;
+        }
+        resolveStyle = PR_FALSE;
+      }
 
       if (resolveStyle) {
         styleContext = ResolveStyleContext(aParentFrame, aContent);
