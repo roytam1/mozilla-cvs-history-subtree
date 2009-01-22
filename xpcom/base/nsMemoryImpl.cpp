@@ -333,6 +333,8 @@ extern "C" NS_EXPORT void*
 NS_Alloc(PRSize size)
 {
     NS_ASSERTION(size, "NS_Alloc of size 0");
+    if (size > PR_INT32_MAX)
+        return nsnull;
 
     void* result = MALLOC1(size);
     if (! result) {
@@ -346,6 +348,9 @@ extern "C" NS_EXPORT void*
 NS_Realloc(void* ptr, PRSize size)
 {
     NS_ASSERTION(size, "NS_Realloc of size 0");
+    if (size > PR_INT32_MAX)
+        return nsnull;
+
     void* result = REALLOC1(ptr, size);
     if (! result) {
         // Request an asynchronous flush
