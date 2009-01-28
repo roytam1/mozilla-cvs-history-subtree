@@ -41,10 +41,6 @@ include $(CORE_DEPTH)/coreconf/config.mk
 include config.mk
 include $(CORE_DEPTH)/coreconf/rules.mk
 
-ifdef MOZILLA_CLIENT
-NSS_BUILD_CAPI = 1
-endif
-
 # This'll need some help from a build person.
 
 # The generated files are checked in, and differ from what ckapi.perl
@@ -60,13 +56,3 @@ endif
 
 export:: private_export
 
-# can't do this in manifest.mn because OS_TARGET isn't defined there.
-ifeq (,$(filter-out WIN%,$(OS_TARGET)))
-ifdef NSS_BUILD_CAPI
-DIRS += capi
-endif
-endif
-
-ifeq ($(OS_ARCH), Darwin)
-DIRS += nssmkey
-endif

@@ -62,7 +62,6 @@ _OPTIMIZE_FLAGS=-O
 _DEBUG_FLAGS=-g
 MOZ_DEBUG=1
 MOZ_OPTIMIZE=
-MFLAGS=
 OBJDIR=.
 OBJDIR_NAME=.
 NSINSTALL='$(MOD_DEPTH)/config/$(OBJDIR_NAME)/nsinstall'
@@ -210,18 +209,6 @@ AC_ARG_ENABLE(mdupdate,
       fi ])
 
 dnl ========================================================
-dnl = build the optional command-line utilities such as
-dnl = ldapsearch and ldapmodify.
-dnl ========================================================
-AC_ARG_ENABLE(clu,
-   [  --enable-clu            Enable building the command-line utilities],
-   [ if test "$enableval" = "yes"; then
-           BUILDCLU=1
-           AC_SUBST(BUILDCLU)
-     fi ],
-   []) 
-
-dnl ========================================================
 dnl = svrcore gives the command line tools secure PIN management
 dnl = for client cert based authentication
 dnl ========================================================
@@ -236,7 +223,6 @@ AC_ARG_WITH(system-svrcore,
             HAVE_SVRCORE=1
             SVRCORE_LIBS=-lsvrcore
             AC_SUBST(SVRCORE_LIBS)
-            AC_SUBST(HAVE_SVRCORE)
 dnl svrcore implies both nspr and nss
             USE_NSS=1
             no_nspr=no
@@ -254,8 +240,6 @@ if test -z "$_SYSTEM_SVRCORE" ; then
    if test -n "$HAVE_SVRCORE" ; then
 dnl svrcore implies both nspr and nss
        USE_NSS=1
-       HAVE_SVRCORE=1
-       AC_SUBST(HAVE_SVRCORE)
        no_nspr=no
        if test -z "$SVRCORE_CFLAGS" -o -z "$SVRCORE_LIBS" ; then
            if test -n "$_SYSTEM_SVRCORE"; then
@@ -272,7 +256,7 @@ dnl svrcore implies both nspr and nss
    fi
 fi
 
-if test -n "$HAVE_SVRCORE" -a -z "$_SYSTEM_SVRCORE" ; then
+if test -n "$HAVE_SVRCORE" ; then
    if test -z "$SVRCORE_CFLAGS" -o -z "$SVRCORE_LIBS"; then
       AC_MSG_ERROR([--with-svrcore specified, but no svrcore could be found])
    fi
@@ -550,11 +534,9 @@ if test -n "$MOZ_DEBUG"; then
         DEFINES="$MOZ_DEBUG_ENABLE_DEFS -DDEBUG_`$WHOAMI`"
         ;;
     esac
-    MFLAGS="BUILD_DEBUG=full"
 else
     AC_DEFINE(NDEBUG)
     DEFINES="$DEFINES -UDEBUG"
-    MFLAGS="BUILD_DEBUG=optimize"
 fi
 
 dnl Use mozilla's nsinstall
@@ -566,29 +548,7 @@ if test -z "$SKIP_COMPILER_CHECKS"; then
 dnl ========================================================
 dnl Checks for compilers.
 dnl ========================================================
-dnl NOTE that according to the latest autoconf 2.5x manual
-dnl "Now, configure enters cross-compilation mode if and only if `--host' is passed."
-dnl However, the mozilla build system expects us to assume different target and host
-dnl means cross compiling.  But, %configure in many linux RPM build systems sets the
-dnl following:
-dnl ./configure --build=i686-redhat-linux-gnu --host=i686-redhat-linux-gnu --target=i386-redhat-linux-gnu ...
-dnl which means that the system is an i686, but we want to produce code which will run on i386 - in
-dnl this case, we _do not_ want to cross compile
-dnl So, additional logic:
-dnl if $host = $build, do not cross compile
-dnl otherwise, cross compile if host is given
-cross_compiling=no
-dnl host must be specified to cross compile
-if test -n "$host" ; then
-dnl host == build - do not cross compile
-    if test "$host" = "$build" ; then
-        cross_compiling=no
-dnl host != build or host != target - do cross compile
-    elif test "$host" != "$target" -o "$host" != "$build" ; then
-        cross_compiling=yes
-    fi
-fi
-if test "$cross_compiling" = "no"; then
+if test "$target" = "$host"; then
     AC_PROG_CXX
     if test "$CXX" = "cl" -a -z "$CC"; then
         CC=$CXX
@@ -610,6 +570,7 @@ if test "$cross_compiling" = "no"; then
     fi
 else
     echo "cross compiling from $host to $target"
+    cross_compiling=yes
 
     _SAVE_CC="$CC"
     _SAVE_CFLAGS="$CFLAGS"
@@ -917,17 +878,6 @@ AC_ARG_WITH(macos-sdk,
 dnl ========================================================
 
 dnl ========================================================
-dnl Enable high-memory support on OS/2, disabled by default
-dnl ========================================================
-AC_ARG_ENABLE(os2-high-mem,
-    [  --enable-os2-high-mem Enable high-memory support on OS/2],
-    [ if test "$enableval" = "yes"; then
-        MOZ_OS2_HIGH_MEMORY=1
-      else
-        MOZ_OS2_HIGH_MEMORY=
-      fi ])
-
-dnl ========================================================
 dnl Override of system specific host options
 dnl ========================================================
 case "$host" in
@@ -936,9 +886,7 @@ case "$host" in
     WIN_TOP_SRC=`cd $srcdir && pwd -W`
     ;;
 *-cygwin*|*-msvc*|*-mks*)
-# don't really need cygwin_wrapper anymore
-    CYGWIN_WRAPPER=
-#    CYGWIN_WRAPPER='sh $(topsrcdir)/config/cygwin-wrapper'
+    CYGWIN_WRAPPER='sh $(topsrcdir)/config/cygwin-wrapper'
     NSINSTALL='$(CYGWIN_WRAPPER) nsinstall'
     if test "`${PERL} -v | grep -c cygwin  2>/dev/null`" = 0; then
         PERL='$(CYGWIN_WRAPPER) perl'
@@ -956,18 +904,15 @@ case "$host" in
 esac
 
 dnl ========================================================
-dnl Check for --with-rpath and user supplied rpath
+dnl Enable high-memory support on OS/2, disabled by default
 dnl ========================================================
-DEFAULT_RPATHFLAG=..:../lib:../../lib:../../../lib:../../../../lib
-AC_ARG_WITH(rpath,
-    [  --with-rpath[[=dir]]    Build the shared libs and cmd lines progs with an RPATH (default dir is ..:../lib:../../lib:../../../lib:../../../../lib)],
-[
-    if test "$withval" = "yes" ; then # set default
-       RPATHFLAG="$DEFAULT_RPATHFLAG"
-    elif test -n "$withval" ; then # user supplied
-       RPATHFLAG="$withval"
-    fi
-])
+AC_ARG_ENABLE(os2-high-mem,
+    [  --enable-os2-high-mem Enable high-memory support on OS/2],
+    [ if test "$enableval" = "yes"; then
+        MOZ_OS2_HIGH_MEMORY=1
+      else
+        MOZ_OS2_HIGH_MEMORY=
+      fi ])
 
 dnl ========================================================
 dnl Override of system specific target options
@@ -1370,13 +1315,6 @@ tools are selected during the Xcode/Developer Tools installation.])
         DEFAULT_IMPL_STRATEGY=_PTH
     fi
 
-    if test "$DEFAULT_RPATHFLAG" = "$RPATHFLAG" ; then
-       if test "$OS_RELEASE" = "B.11.23" -o "$OS_RELEASE" = "B.11.11" ; then
-          # add ORIGIN to default rpath
-          RPATHFLAG="\\\$\$ORIGIN/../lib:\\\$\$ORIGIN/../../lib:$RPATHFLAG"
-       fi
-    fi
-
     if test "$DEFAULT_IMPL_STRATEGY" = "_EMU"; then
         USE_NSPR_THREADS=1
         USE_PTHREADS=
@@ -1552,9 +1490,7 @@ tools are selected during the Xcode/Developer Tools installation.])
         # Use temp file for windres (bug 213281)
         RC="$WINDRES -O coff --use-temp-file"
     else
-# don't really need cygwin_wrapper anymore
-#        CYGWIN_WRAPPER='sh $(topsrcdir)/config/cygwin-wrapper'
-        CYGWIN_WRAPPER=
+        CYGWIN_WRAPPER='sh $(topsrcdir)/config/cygwin-wrapper'
         CC=cl
         CXX=cl
         LD=link
@@ -1565,7 +1501,6 @@ tools are selected during the Xcode/Developer Tools installation.])
         else
             AR='$(LD) /lib -NOLOGO -OUT:"$@"'
         fi
-
         AR_FLAGS=
         RANLIB='echo not_ranlib'
         STRIP='echo not_strip'
@@ -2016,23 +1951,15 @@ mips-sony-newsos*)
     	DSO_LDOPTS='-G -h $(notdir $@)'
         DSO_CFLAGS=-KPIC
     	if test -n "$USE_64"; then
-    		if test "$OS_TEST" = "i86pc"; then
-    			CC="$CC -xarch=amd64"
-            	CXX="$CXX -xarch=amd64"
-            else
-            	CC="$CC -xarch=v9"
-            	CXX="$CXX -xarch=v9"
-            fi
+            CC="$CC -xarch=v9"
+            CXX="$CXX -xarch=v9"
         fi
         CC="$CC -xstrconst"
+        CXX="$CXX -Qoption cg -xstrconst"
         if test -z "$MOZ_OPTIMIZE"; then
             CFLAGS="$CFLAGS -xs"
             CXXFLAGS="$CXXFLAGS -xs"
         fi
-    fi
-    if test "$DEFAULT_RPATHFLAG" = "$RPATHFLAG" ; then
-       # add origin stuff
-       RPATHFLAG="\\\$\$ORIGIN/../lib:\\\$\$ORIGIN/../../lib:$RPATHFLAG"
     fi
     if test -z "$GNU_AS"; then
         ASFLAGS="$ASFLAGS -Wa,-P"
@@ -2316,13 +2243,6 @@ AC_ARG_ENABLE(ipv6,
     [ if test "$enableval" = "yes"; then
 	    USE_IPV6=1
       fi])
-
-dnl ========================================================
-dnl = check for sasl options
-dnl = This has to come after we set all of the platform specific
-dnl = compiler and linker flags
-dnl ========================================================
-AM_PATH_GIVEN_SASL()
 
 if test -n "$USE_PTHREADS"; then
    dnl See if -pthread is supported.
@@ -2616,9 +2536,6 @@ AC_SUBST(OS_DLLFLAGS)
 AC_SUBST(CYGWIN_WRAPPER)
 AC_SUBST(WIN_TOP_SRC)
 AC_SUBST(NEXT_ROOT)
-AC_SUBST(RPATHFLAG)
-
-AC_SUBST(MFLAGS)
 
 dnl ========================================================
 dnl Generate output files.
