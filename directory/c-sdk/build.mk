@@ -45,7 +45,7 @@ COMPVERSIONDIR = $(DEPTH)/directory/c-sdk
 endif
 
 DEFAULT_VENDOR_NAME=mozilla.org
-DEFAULT_VENDOR_VERSION=606
+DEFAULT_VENDOR_VERSION=604
 
 ifndef VENDOR_NAME
 VENDOR_NAME	= $(DEFAULT_VENDOR_NAME)
@@ -241,7 +241,6 @@ ifdef NS_USE_GCC
 OFFLAG=-o #
 else
 OFFLAG=/Fo
-MT = mt.exe
 endif
 else
 OFFLAG=-o
@@ -460,13 +459,7 @@ endif
 LINK_EXE        = $(CYGWIN_WRAPPER) link $(DEBUG_LINK_OPT) -OUT:"$@" -MAP $(ALDFLAGS) $(LDFLAGS) $(ML_DEBUG) \
     $(LCFLAGS) -NOLOGO $(DEBUG_FLAGS) -INCREMENTAL:NO \
     -NODEFAULTLIB:MSVCRTD -SUBSYSTEM:$(SUBSYSTEM) $(DEPLIBS) \
-    $(filter %.$(OBJ_SUFFIX),$^) $(OBJS) $(EXTRA_LIBS) $(PLATFORMLIBS) msvcrt.lib
-
-ifdef MT
-LINK_EXE += ; if test -f $@.manifest ; then \
-$(MT) -NOLOGO -MANIFEST $@.manifest -OUTPUTRESOURCE:$@\;1; \
-rm -f $@.manifest ; fi
-endif # MSVC with manifest tool - from NSS rules.mk
+    $(filter %.$(OBJ_SUFFIX),$^) $(OBJS) $(EXTRA_LIBS) $(PLATFORMLIBS)
 
 # AR is set when doing an autoconf build
 ifdef AR
@@ -490,8 +483,12 @@ else # WINNT
 ifeq ($(OS_ARCH),OS2)
 LINK_LIB        = -$(RM) $@ && $(AR) $(AR_FLAGS) $(OBJS) && $(RANLIB) $@
 LINK_LIB2       = -$(RM) $@ && $(AR) $@ $(OBJS2) && $(RANLIB) $@
+ifeq ($(MOZ_OS2_TOOLS),VACPP)
+LINK_DLL        = $(LD) $(OS_DLLFLAGS) $(DLLFLAGS) $(OBJS)
+else
 LINK_DLL        = $(LD) $(DSO_LDOPTS) $(ALDFLAGS) $(DLL_LDFLAGS) $(DLL_EXPORT_FLAGS) \
                         -o $@ $(OBJS)
+endif
 
 else
 

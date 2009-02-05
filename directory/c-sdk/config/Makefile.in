@@ -108,9 +108,13 @@ ifeq ($(OS_ARCH), OpenVMS)
     XLDOPTS += $(LDFLAGS)
 endif
 
-ifeq ($(OS_ARCH),OS2)
+ifeq ($(MOZ_OS2_TOOLS),EMX)
 XCFLAGS = $(OS_EXE_CFLAGS)
 XLDOPTS = -Zomf -Zlinker -PM:VIO
+endif
+
+ifeq ($(MOZ_OS2_TOOLS),VACPP)
+OS_CFLAGS = $(OS_EXE_CFLAGS)
 endif
 
 include $(topsrcdir)/config/rules.mk
@@ -140,4 +144,8 @@ export:: $(TARGETS)
 
 $(OBJDIR)/%$(PROG_SUFFIX): $(OBJDIR)/%.$(OBJ_SUFFIX)
 	@$(MAKE_OBJDIR)
+ifeq ($(MOZ_OS2_TOOLS),VACPP)
+	$(LD) $(EXEFLAGS) $<
+else
 	$(CC) $(XCFLAGS) $< $(XLDOPTS) $(OUTOPTION)$@
+endif

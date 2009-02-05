@@ -9,11 +9,10 @@
 #define YY_FLEX_MINOR_VERSION 5
 
 #include <stdio.h>
-#ifdef _WIN32
-#include <io.h>
-#else
+#ifndef _WIN32
 #include <unistd.h>
 #endif
+
 
 /* cfront 1.2 defines "c_plusplus" instead of "__cplusplus" */
 #ifdef c_plusplus
@@ -21,6 +20,7 @@
 #define __cplusplus
 #endif
 #endif
+
 
 #ifdef __cplusplus
 

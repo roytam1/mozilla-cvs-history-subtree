@@ -1,6 +1,4 @@
 /<unistd.h>/ {
-        i #ifdef _WIN32
-	i #include <io.h>
-	i #else
+        i #ifndef _WIN32
         a #endif
 }

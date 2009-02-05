@@ -719,7 +719,7 @@ PR_IMPLEMENT(PRStatus) PR_CreatePipe(
 #pragma unused (readPipe, writePipe)
 #endif
 
-#if defined(WIN32) && !defined(WINCE)
+#ifdef WIN32
     HANDLE readEnd, writeEnd;
     SECURITY_ATTRIBUTES pipeAttributes;
 

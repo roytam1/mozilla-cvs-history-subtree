@@ -175,11 +175,6 @@
 #define CAMELLIA_ENCRYPT_OID MITSUBISHI_ALG,1
 #define CAMELLIA_WRAP_OID    MITSUBISHI_ALG,3
 
-/* for SEED : iso(1) member-body(2) korea(410)
- *    kisa(200004) algorithm(1)
- */
-#define SEED_OID		 0x2a,0x83,0x1a,0x8c,0x9a,0x44,0x01
-
 #define CONST_OID static const unsigned char
 
 CONST_OID md2[]        				= { DIGEST, 0x02 };
@@ -571,8 +566,6 @@ CONST_OID secgECsect409k1[] = {SECG_OID, 0x24 };
 CONST_OID secgECsect409r1[] = {SECG_OID, 0x25 };
 CONST_OID secgECsect571k1[] = {SECG_OID, 0x26 };
 CONST_OID secgECsect571r1[] = {SECG_OID, 0x27 };
-
-CONST_OID seed_CBC[]				= { SEED_OID, 4 };
 
 #define OI(x) { siDEROID, (unsigned char *)x, sizeof x }
 #ifndef SECOID_NO_STRINGS
@@ -1581,10 +1574,6 @@ const static SECOidData oids[] = {
 	"ISO SHA1 with RSA Signature", 
 	CKM_INVALID_MECHANISM, INVALID_CERT_EXTENSION ),
 
-    /* SEED algorithm OIDs */
-    OD( seed_CBC, SEC_OID_SEED_CBC,
-	"SEED-CBC", CKM_SEED_CBC, INVALID_CERT_EXTENSION),
-
 };
 
 /*
@@ -1931,11 +1920,6 @@ SECOID_FindOIDTagDescription(SECOidTag tagnum)
   return oidData ? oidData->desc : 0;
 }
 
-/* for now, this is only used in a single place, so it can remain static */
-static PRBool parentForkedAfterC_Initialize;
-
-#define SKIP_AFTER_FORK(x) if (!parentForkedAfterC_Initialize) x
-
 /*
  * free up the oid tables.
  */
@@ -1956,7 +1940,7 @@ SECOID_Shutdown(void)
     ** the destruction of data that probably isn't initialized anyway.
     */
     if (dynOidLock) {
-	SKIP_AFTER_FORK(NSSRWLock_LockWrite(dynOidLock));
+	NSSRWLock_LockWrite(dynOidLock);
 	if (dynOidHash) {
 	    PL_HashTableDestroy(dynOidHash);
 	    dynOidHash = NULL;
@@ -1972,8 +1956,8 @@ SECOID_Shutdown(void)
 	dynOidEntriesAllocated = 0;
 	dynOidEntriesUsed = 0;
 
-	SKIP_AFTER_FORK(NSSRWLock_UnlockWrite(dynOidLock));
-	SKIP_AFTER_FORK(NSSRWLock_Destroy(dynOidLock));
+	NSSRWLock_UnlockWrite(dynOidLock);
+	NSSRWLock_Destroy(dynOidLock);
 	dynOidLock = NULL;
     } else {
     	/* Since dynOidLock doesn't exist, then all the data it protects
@@ -1990,10 +1974,3 @@ SECOID_Shutdown(void)
     }
     return SECSuccess;
 }
-
-void UTIL_SetForkState(PRBool forked)
-{
-    parentForkedAfterC_Initialize = forked;
-}
-
-
