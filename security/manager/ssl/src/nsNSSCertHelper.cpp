@@ -986,6 +986,8 @@ ProcessGeneralName(PRArenaPool *arena,
 		   nsAString &text,
 		   nsINSSComponent *nssComponent)
 {
+  NS_ENSURE_ARG_POINTER(current);
+
   nsAutoString key;
   nsXPIDLString value;
   nsresult rv = NS_OK;
