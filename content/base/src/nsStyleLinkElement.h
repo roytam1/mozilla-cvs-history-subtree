@@ -80,12 +80,15 @@ protected:
                                  nsAString& aMedia,
                                  PRBool* aIsAlternate) = 0;
 
+  nsIStyleSheet* GetStyleSheet() { return mStyleSheet; }
 
-  nsCOMPtr<nsIStyleSheet> mStyleSheet;
   nsCOMPtr<nsIParser> mParser;
   PRPackedBool mDontLoadStyle;
   PRPackedBool mUpdatesEnabled;
   PRUint32 mLineNumber;
+
+private:
+  nsCOMPtr<nsIStyleSheet> mStyleSheet;
 };
 
 #endif /* nsStyleLinkElement_h___ */
