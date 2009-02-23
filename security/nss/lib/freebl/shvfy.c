@@ -36,10 +36,6 @@
  * ***** END LICENSE BLOCK ***** */
 /* $Id$ */
 
-#ifdef FREEBL_NO_DEPEND
-#include "stubs.h"
-#endif
-
 #include "shsign.h"
 #include "prlink.h"
 #include "prio.h"
@@ -47,7 +43,6 @@
 #include "seccomon.h"
 #include "stdio.h"
 #include "prmem.h"
-
 
 /* #define DEBUG_SHVERIFY 1 */
 

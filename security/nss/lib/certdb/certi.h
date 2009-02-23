@@ -257,10 +257,6 @@ SECStatus AcquireDPCache(CERTCertificate* issuer, SECItem* subject,
                          SECItem* dp, int64 t, void* wincx,
                          CRLDPCache** dpcache, PRBool* writeLocked);
 
-/* check if a particular SN is in the CRL cache and return its entry */
-SECStatus DPCache_Lookup(CRLDPCache* cache, SECItem* sn,
-                         CERTCrlEntry** returned);
-
 /* release a DPCache object that was previously acquired */
 void ReleaseDPCache(CRLDPCache* dpcache, PRBool writeLocked);
 
