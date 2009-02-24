@@ -215,6 +215,7 @@ protected:
     LoadOverlayInternal(nsIURI* aURI, PRBool aIsDynamic, PRBool* aShouldReturn);
 
     nsresult ApplyPersistentAttributes();
+    nsresult ApplyPersistentAttributesInternal();
     nsresult ApplyPersistentAttributesToElements(nsIRDFResource* aResource,
                                                  nsISupportsArray* aElements);
 
@@ -250,6 +251,9 @@ protected:
     static nsIXULPrototypeCache* gXULCache;
 
     static PRLogModuleInfo* gXULLog;
+
+    PRBool
+    IsCapabilityEnabled(const char* aCapabilityLabel);
 
     nsresult
     Persist(nsIContent* aElement, PRInt32 aNameSpaceID, nsIAtom* aAttribute);
