@@ -61,3 +61,12 @@ CPPSRCS		= nsPNGDecoder.cpp
 
 include $(topsrcdir)/config/rules.mk
 
+#ifeq (png,$(filter png,$(MOZ_IMG_DECODERS)))
+ifdef MOZ_IMG_DECODERS
+DEFINES		+= -DMOZ_PNG_READ
+endif
+
+#ifeq (png,$(filter png,$(MOZ_IMG_ENCODERS)))
+ifdef MOZ_IMG_ENCODERS
+DEFINES		+= -DMOZ_PNG_WRITE
+endif
