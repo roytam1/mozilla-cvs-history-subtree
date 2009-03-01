@@ -237,7 +237,10 @@ public:
   static PRInt32 gRefCnt;
 #endif
 
-  nsXBLStreamListener(nsXBLService* aXBLService, nsIStreamListener* aInner, nsIDocument* aDocument, nsIDocument* aBindingDocument);
+  nsXBLStreamListener(nsXBLService* aXBLService,
+                      nsIDocument* aBoundDocument,
+                      nsIXMLContentSink* aSink,
+                      nsIDocument* aBindingDocument);
   virtual ~nsXBLStreamListener();
   
   void AddRequest(nsXBLBindingRequest* aRequest) { mBindingRequests.AppendElement(aRequest); };
@@ -248,8 +251,9 @@ private:
 
   nsCOMPtr<nsIStreamListener> mInner;
   nsAutoVoidArray mBindingRequests;
-  
-  nsCOMPtr<nsIWeakReference> mDocument;
+
+  nsCOMPtr<nsIWeakReference> mBoundDocument;
+  nsCOMPtr<nsIXMLContentSink> mSink; // Only set until OnStartRequest
   nsCOMPtr<nsIDocument> mBindingDocument;
 };
 
@@ -262,14 +266,14 @@ PRInt32 nsXBLStreamListener::gRefCnt = 0;
 NS_IMPL_ISUPPORTS4(nsXBLStreamListener, nsIStreamListener, nsIRequestObserver, nsIDOMLoadListener, nsIDOMEventListener)
 
 nsXBLStreamListener::nsXBLStreamListener(nsXBLService* aXBLService,
-                                         nsIStreamListener* aInner, nsIDocument* aDocument,
+                                         nsIDocument* aBoundDocument,
+                                         nsIXMLContentSink* aSink,
                                          nsIDocument* aBindingDocument)
+: mSink(aSink), mBindingDocument(aBindingDocument)
 {
   /* member initializers and constructor code */
   mXBLService = aXBLService;
-  mInner = aInner;
-  mDocument = do_GetWeakReference(aDocument);
-  mBindingDocument = aBindingDocument;
+  mBoundDocument = do_GetWeakReference(aBoundDocument);
 #ifdef MOZ_XUL
   gRefCnt++;
   if (gRefCnt == 1) {
@@ -303,10 +307,31 @@ nsXBLStreamListener::OnDataAvailable(nsIRequest *request, nsISupports* aCtxt, ns
 NS_IMETHODIMP
 nsXBLStreamListener::OnStartRequest(nsIRequest* request, nsISupports* aCtxt)
 {
-  if (mInner)
-    return mInner->OnStartRequest(request, aCtxt);
-    
-  return NS_ERROR_FAILURE;
+  // Make sure we don't hold on to the sink and binding document past this point
+  nsCOMPtr<nsIXMLContentSink> sink;
+  mSink.swap(sink);
+
+  nsCOMPtr<nsIChannel> channel = do_QueryInterface(request);
+  NS_ENSURE_TRUE(channel, NS_ERROR_UNEXPECTED);
+
+  nsCOMPtr<nsILoadGroup> group;
+  request->GetLoadGroup(getter_AddRefs(group));
+
+  nsresult rv = mBindingDocument->StartDocumentLoad("loadAsInteractiveData",
+                                                     channel,
+                                                     group,
+                                                     nsnull,
+                                                     getter_AddRefs(mInner),
+                                                     PR_TRUE,
+                                                     sink);
+  NS_ENSURE_SUCCESS(rv, rv);
+
+  // Make sure to add ourselves as a listener after StartDocumentLoad,
+  // since that resets the event listners on the document.
+  nsCOMPtr<nsIDOMEventTarget> target(do_QueryInterface(mBindingDocument));
+  target->AddEventListener(NS_LITERAL_STRING("load"), this, PR_FALSE);
+  
+  return mInner->OnStartRequest(request, aCtxt);
 }
 
 NS_IMETHODIMP 
@@ -336,7 +361,7 @@ nsXBLStreamListener::OnStopRequest(nsIRequest* request, nsISupports* aCtxt, nsre
     }
 
     mBindingRequests.Clear();
-    mDocument = nsnull;
+    mBoundDocument = nsnull;
     mBindingDocument = nsnull;
   }
 
@@ -367,7 +392,7 @@ nsXBLStreamListener::Load(nsIDOMEvent* aEvent)
   PRUint32 count = mBindingRequests.Count();
   
   // See if we're still alive.
-  nsCOMPtr<nsIDocument> doc(do_QueryReferent(mDocument));
+  nsCOMPtr<nsIDocument> doc(do_QueryReferent(mBoundDocument));
   if (!doc) {
     NS_WARNING("XBL load did not complete until after document went away! Modal dialog bug?\n");
   }
@@ -438,7 +463,7 @@ nsXBLStreamListener::Load(nsIDOMEvent* aEvent)
   rec->RemoveEventListener(NS_LITERAL_STRING("load"), (nsIDOMLoadListener*)this, PR_FALSE);
 
   mBindingRequests.Clear();
-  mDocument = nsnull;
+  mBoundDocument = nsnull;
   mBindingDocument = nsnull;
 
   return rv;
@@ -1195,29 +1220,15 @@ nsXBLService::FetchBindingDocument(nsIContent* aBoundElement, nsIDocument* aBoun
     rv = NS_NewChannel(getter_AddRefs(channel), aDocumentURI, nsnull, loadGroup);
     if (NS_FAILED(rv)) return rv;
 
-    nsCOMPtr<nsIStreamListener> listener;
     nsCOMPtr<nsIXMLContentSink> xblSink;
     NS_NewXBLContentSink(getter_AddRefs(xblSink), doc, aDocumentURI, nsnull);
     if (!xblSink)
       return NS_ERROR_FAILURE;
 
-    if (NS_FAILED(rv = doc->StartDocumentLoad("loadAsInteractiveData", 
-                                              channel, 
-                                              loadGroup, 
-                                              nsnull, 
-                                              getter_AddRefs(listener),
-                                              PR_TRUE,
-                                              xblSink))) {
-      NS_ERROR("Failure to init XBL doc prior to load.");
-      return rv;
-    }
-
     // We can be asynchronous
-    nsXBLStreamListener* xblListener = new nsXBLStreamListener(this, listener, aBoundDocument, doc);
+    nsXBLStreamListener* xblListener =
+      new nsXBLStreamListener(this, aBoundDocument, xblSink, doc);
     NS_ENSURE_TRUE(xblListener,NS_ERROR_OUT_OF_MEMORY);
-
-    nsCOMPtr<nsIDOMEventReceiver> rec(do_QueryInterface(doc));
-    rec->AddEventListener(NS_LITERAL_STRING("load"), (nsIDOMLoadListener*)xblListener, PR_FALSE);
 
     // Add ourselves to the list of loading docs.
     nsIBindingManager *bindingManager;
