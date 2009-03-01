@@ -1431,7 +1431,8 @@ nsScriptSecurityManager::CheckLoadURIWithPrincipal(nsIPrincipal* aPrincipal,
                 {
                     // resource: and chrome: are equivalent, securitywise
                     if (sourceScheme.EqualsLiteral("chrome") ||
-                        sourceScheme.EqualsLiteral("resource"))
+                        sourceScheme.EqualsLiteral("resource") ||
+                        sourceScheme.EqualsLiteral("about"))
                         return NS_OK;
 
                     // Now check capability policies
@@ -1457,7 +1458,8 @@ nsScriptSecurityManager::CheckLoadURIWithPrincipal(nsIPrincipal* aPrincipal,
                     return NS_OK;
                 // resource: and chrome: are equivalent, securitywise
                 if (sourceScheme.EqualsLiteral("chrome") ||
-                    sourceScheme.EqualsLiteral("resource"))
+                    sourceScheme.EqualsLiteral("resource") ||
+                    sourceScheme.EqualsLiteral("about"))
                     return NS_OK;
                 ReportError(nsnull, errorTag, sourceURI, aTargetURI);
                 return NS_ERROR_DOM_BAD_URI;
