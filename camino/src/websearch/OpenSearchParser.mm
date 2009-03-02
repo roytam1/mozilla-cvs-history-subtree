@@ -36,6 +36,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 #import "OpenSearchParser.h"
+#import "NSWorkspace+Utils.h"
 
 #define MIN_PARAMETER_LENGTH 2
 
@@ -121,6 +122,16 @@ static NSString *const kDefaultLanguage = @"*"; // '*' is defined in OS spec to 
     {
       NSMutableString *searchURLTemplate = [NSMutableString stringWithString:[attributeDict objectForKey:@"template"]];
       [self insertValuesForParametersInURLTemplate:searchURLTemplate];
+
+      if (![NSWorkspace isTigerOrHigher]) {
+        // Fix for bug 469236: A bug in NSXMLParser on Mac OS X 10.3.x incorrectly parses
+        // ampersands as "&#38;".  Fixed by Apple on 10.4+.
+        [searchURLTemplate replaceOccurrencesOfString:@"&#38;"
+                                           withString:@"&"
+                                              options:0
+                                                range:NSMakeRange(0, [searchURLTemplate length])];
+      }
+
       [self setSearchEngineURL:searchURLTemplate];
       [self setSearchEngineURLRequestMethod:method];
     }

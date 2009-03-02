@@ -924,7 +924,8 @@ SessionStoreService.prototype = {
                                   wrappedTextarea.name;
     if (!id
       || !(wrappedTextarea instanceof Ci.nsIDOMHTMLTextAreaElement 
-      || wrappedTextarea instanceof Ci.nsIDOMHTMLInputElement && wrappedTextarea.type != "password")) {
+      || wrappedTextarea instanceof Ci.nsIDOMHTMLInputElement &&
+         wrappedTextarea.type != "password" && wrappedTextarea.type != "file")) {
       return false; // nothing to save
     }
     if (/^(?:\d+\|)+/.test(id)) {
@@ -1503,7 +1504,7 @@ SessionStoreService.prototype = {
             RegExp.$1 == aPrefix && hasExpectedURL(aContent.document, aURL)) {
           var document = aContent.document;
           var node = RegExp.$2 ? document.getElementById(RegExp.$3) : document.getElementsByName(RegExp.$3)[0] || null;
-          if (node && "value" in node) {
+          if (node && "value" in node && node.type != "file") {
             node.value = decodeURI(RegExp.$4);
             
             var event = document.createEvent("UIEvents");

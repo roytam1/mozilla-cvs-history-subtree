@@ -113,6 +113,7 @@
 #include "nsXULAtoms.h"
 #include "nsBoxFrame.h"
 #include "nsIBoxLayout.h"
+#include "nsDOMError.h"
 
 static NS_DEFINE_CID(kEventQueueServiceCID,   NS_EVENTQUEUESERVICE_CID);
 
@@ -4481,8 +4482,12 @@ nsCSSFrameConstructor::ConstructDocElementFrame(nsFrameConstructorState& aState,
     nsRefPtr<nsXBLBinding> binding;
     rv = xblService->LoadBindings(aDocElement, display->mBinding, PR_FALSE,
                                   getter_AddRefs(binding), &resolveStyle);
-    if (NS_FAILED(rv))
-      return NS_OK; // Binding will load asynchronously.
+    if (NS_FAILED(rv)) {
+      if (rv != NS_ERROR_DOM_BAD_URI) {
+        return NS_OK; // Binding will load asynchronously.
+      }
+      resolveStyle = PR_FALSE;
+    }
 
     if (binding) {
       mDocument->BindingManager()->AddToAttachedQueue(binding);
@@ -7826,8 +7831,12 @@ nsCSSFrameConstructor::ConstructFrameInternal( nsFrameConstructorState& aState,
       rv = xblService->LoadBindings(aContent, display->mBinding, PR_FALSE,
                                     getter_AddRefs(binding.mBinding),
                                     &resolveStyle);
-      if (NS_FAILED(rv))
-        return NS_OK;
+      if (NS_FAILED(rv)) {
+        if (rv != NS_ERROR_DOM_BAD_URI) {
+          return NS_OK;
+        }
+        resolveStyle = PR_FALSE;
+      }
 
       if (resolveStyle) {
         styleContext = ResolveStyleContext(aParentFrame, aContent);
@@ -9907,7 +9916,9 @@ nsCSSFrameConstructor::ContentRemoved(nsIContent*     aContainer,
   nsIFrame* childFrame;
   mPresShell->GetPrimaryFrameFor(aChild, &childFrame);
 
-  if (! childFrame) {
+  if (!childFrame || childFrame->GetContent() != aChild) {
+    // XXXbz the GetContent() != aChild check is needed due to bug 135040.
+    // Remove it once that's fixed.
     frameManager->ClearUndisplayedContentIn(aChild, aContainer);
   }
 
@@ -9996,7 +10007,9 @@ nsCSSFrameConstructor::ContentRemoved(nsIContent*     aContainer,
 
       // Recover childFrame and parentFrame
       mPresShell->GetPrimaryFrameFor(aChild, &childFrame);
-      if (!childFrame) {
+      if (!childFrame || childFrame->GetContent() != aChild) {
+        // XXXbz the GetContent() != aChild check is needed due to bug 135040.
+        // Remove it once that's fixed.
         frameManager->ClearUndisplayedContentIn(aChild, aContainer);
         return NS_OK;
       }
@@ -10507,6 +10520,14 @@ nsCSSFrameConstructor::ProcessRestyledFrames(nsStyleChangeList& aChangeList)
     nsIContent* content;
     nsChangeHint hint;
     aChangeList.ChangeAt(index, frame, content, hint);
+    if (frame && frame->GetContent() != content) {
+      // XXXbz this is due to image maps messing with the primary frame map.
+      // See bug 135040.  Remove this block once that's fixed.
+      frame = nsnull;
+      if (!(hint & nsChangeHint_ReconstructFrame)) {
+        continue;
+      }
+    }
 
     // skip any frame that has been destroyed due to a ripple effect
     if (frame) {
@@ -10572,6 +10593,11 @@ nsCSSFrameConstructor::RestyleElement(nsIContent     *aContent,
                                       nsIFrame       *aPrimaryFrame,
                                       nsChangeHint   aMinHint)
 {
+  if (aPrimaryFrame && aPrimaryFrame->GetContent() != aContent) {
+    // XXXbz this is due to image maps messing with the primary frame mapping.
+    // See bug 135040.  We can remove this block once that's fixed.
+    aPrimaryFrame = nsnull;
+  }
 #ifdef ACCESSIBILITY
   nsIAtom *prevRenderedFrameType = nsnull;
   if (mPresShell->IsAccessibilityActive()) {

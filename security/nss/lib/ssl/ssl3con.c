@@ -60,7 +60,6 @@
 
 #include "pk11func.h"
 #include "secmod.h"
-#include "nsslocks.h"
 #include "ec.h"
 #include "blapi.h"
 
@@ -3889,13 +3888,24 @@ typedef struct {
 static PZLock *          symWrapKeysLock = NULL;
 static ssl3SymWrapKey    symWrapKeys[SSL_NUM_WRAP_MECHS];
 
+SECStatus ssl_FreeSymWrapKeysLock(void)
+{
+    if (symWrapKeysLock) {
+        PZ_DestroyLock(symWrapKeysLock);
+        symWrapKeysLock = NULL;
+        return SECSuccess;
+    }
+    PORT_SetError(SEC_ERROR_NOT_INITIALIZED);
+    return SECFailure;
+}
+
 SECStatus
 SSL3_ShutdownServerCache(void)
 {
     int             i, j;
 
     if (!symWrapKeysLock)
-    	return SECSuccess;	/* was never initialized */
+    	return SECSuccess;	/* lock was never initialized */
     PZ_Lock(symWrapKeysLock);
     /* get rid of all symWrapKeys */
     for (i = 0; i < SSL_NUM_WRAP_MECHS; ++i) {
@@ -3910,14 +3920,14 @@ SSL3_ShutdownServerCache(void)
     }
 
     PZ_Unlock(symWrapKeysLock);
+    ssl_FreeSessionCacheLocks();
     return SECSuccess;
 }
 
-void ssl_InitSymWrapKeysLock(void)
+SECStatus ssl_InitSymWrapKeysLock(void)
 {
-    /* atomically initialize the lock */
-    if (!symWrapKeysLock)
-	nss_InitLock(&symWrapKeysLock, nssILockOther);
+    symWrapKeysLock = PZ_NewLock(nssILockOther);
+    return symWrapKeysLock ? SECSuccess : SECFailure;
 }
 
 /* Try to get wrapping key for mechanism from in-memory array.
@@ -3956,7 +3966,7 @@ getWrappingKey( sslSocket *       ss,
 
     pSymWrapKey = &symWrapKeys[symWrapMechIndex].symWrapKey[exchKeyType];
 
-    ssl_InitSymWrapKeysLock();
+    ssl_InitSessionCacheLocks(PR_TRUE);
 
     PZ_Lock(symWrapKeysLock);
 
@@ -5504,6 +5514,8 @@ ssl3_HandleClientHello(sslSocket *ss, SSL3Opaque *b, PRUint32 length)
 	return rv;		/* error code is set. */
     }
 
+    memset(&ss->serverExtensionSenders[0], 0,
+           sizeof ss->serverExtensionSenders);
     rv = ssl3_InitState(ss);
     if (rv != SECSuccess) {
 	return rv;		/* ssl3_InitState has set the error code. */
@@ -5947,6 +5959,9 @@ ssl3_HandleV2ClientHello(sslSocket *ss, unsigned char *buffer, int length)
     PORT_Assert( ss->opt.noLocks || ssl_HaveRecvBufLock(ss) );
 
     ssl_GetSSL3HandshakeLock(ss);
+
+    memset(&ss->serverExtensionSenders[0], 0,
+           sizeof ss->serverExtensionSenders);
 
     rv = ssl3_InitState(ss);
     if (rv != SECSuccess) {

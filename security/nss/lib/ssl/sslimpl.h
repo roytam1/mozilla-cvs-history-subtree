@@ -128,14 +128,12 @@ extern int Debug;
 #define SSL_DBG(b)
 #endif
 
-#if defined (DEBUG)
 #ifdef macintosh
 #include "pprthred.h"
 #else
 #include "private/pprthred.h"	/* for PR_InMonitor() */
 #endif
 #define ssl_InMonitor(m) PZ_InMonitor(m)
-#endif
 
 #define LSB(x) ((unsigned char) (x & 0xff))
 #define MSB(x) ((unsigned char) (((unsigned)(x)) >> 8))
@@ -1445,9 +1443,14 @@ ssl_SetWrappingKey(SSLWrappedSymWrappingKey *wswk);
 /* get rid of the symmetric wrapping key references. */
 extern SECStatus SSL3_ShutdownServerCache(void);
 
-extern void ssl_InitClientSessionCacheLock(void);
+extern SECStatus ssl_InitSymWrapKeysLock(void);
 
-extern void ssl_InitSymWrapKeysLock(void);
+extern SECStatus ssl_FreeSymWrapKeysLock(void);
+
+extern SECStatus ssl_InitSessionCacheLocks(PRBool lazyInit);
+
+extern SECStatus ssl_FreeSessionCacheLocks(void);
+
 
 /********************** misc calls *********************/
 

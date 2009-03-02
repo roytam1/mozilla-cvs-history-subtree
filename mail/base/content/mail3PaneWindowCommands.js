@@ -1079,8 +1079,11 @@ function SetFocusThreadPane()
 
 function SetFocusMessagePane()
 {
-  // messagePaneFrame.focus() fails to blur the currently focused element
-  document.commandDispatcher.advanceFocusIntoSubtree(GetMessagePane());
+  // Calling .focus() on content doesn't blur the previously focused chrome
+  // element, so we shift focus to the XUL pane first, to not leave another
+  // pane looking like it has focus.
+  GetMessagePane().focus();
+  GetMessagePaneFrame().focus();
 }
 
 function is_collapsed(element)

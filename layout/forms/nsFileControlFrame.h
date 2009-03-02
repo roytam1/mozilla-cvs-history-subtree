@@ -147,8 +147,6 @@ protected:
     nsFileControlFrame* mFrame;
   };
   
-  nsresult MouseClick(nsIDOMEvent* aMouseEvent);
-
   virtual PRIntn GetSkipSides() const;
 
   /**

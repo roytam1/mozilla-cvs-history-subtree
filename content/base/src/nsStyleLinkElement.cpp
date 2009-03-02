@@ -63,10 +63,7 @@ nsStyleLinkElement::nsStyleLinkElement()
 
 nsStyleLinkElement::~nsStyleLinkElement()
 {
-  nsCOMPtr<nsICSSStyleSheet> cssSheet = do_QueryInterface(mStyleSheet);
-  if (cssSheet) {
-    cssSheet->SetOwningNode(nsnull);
-  }
+  nsStyleLinkElement::SetStyleSheet(nsnull);
 }
 
 NS_IMETHODIMP 
@@ -199,7 +196,7 @@ nsStyleLinkElement::UpdateStyleSheet(nsIDocument *aOldDocument,
     aOldDocument->BeginUpdate(UPDATE_STYLE);
     aOldDocument->RemoveStyleSheet(mStyleSheet);
     aOldDocument->EndUpdate(UPDATE_STYLE);
-    mStyleSheet = nsnull;
+    nsStyleLinkElement::SetStyleSheet(nsnull);
   }
 
   if (mDontLoadStyle || !mUpdatesEnabled) {
@@ -245,7 +242,7 @@ nsStyleLinkElement::UpdateStyleSheet(nsIDocument *aOldDocument,
     doc->BeginUpdate(UPDATE_STYLE);
     doc->RemoveStyleSheet(mStyleSheet);
     doc->EndUpdate(UPDATE_STYLE);
-    mStyleSheet = nsnull;
+    nsStyleLinkElement::SetStyleSheet(nsnull);
   }
 
   if (!uri && !isInline) {
