@@ -99,7 +99,7 @@ enum StatusPriority {
 - (void)ensureContentClickListeners;
 
 - (void)setPendingActive:(BOOL)active;
-- (void)registerNotificationListener;
+- (void)registerNotificationListeners;
 
 - (void)clearStatusStrings;
 
@@ -125,6 +125,8 @@ enum StatusPriority {
 
 - (void)addFindBarViewAndDisplay;
 - (void)removeFindBarViewAndDisplay;
+
+- (void)xpcomTerminate:(NSNotification*)aNotification;
 
 @end
 
@@ -190,7 +192,7 @@ enum StatusPriority {
     
     mDetectedSearchPlugins = [[NSMutableArray alloc] initWithCapacity:1];
 
-    [self registerNotificationListener];
+    [self registerNotificationListeners];
   }
   return self;
 }
@@ -230,6 +232,13 @@ enum StatusPriority {
   [mBlockedPopupView release];
   
   [super dealloc];
+}
+
+- (void)xpcomTerminate:(NSNotification*)aNotification
+{
+  // Make sure we release core objects before XPCOM shuts down; by the time we
+  // get to dealloc it may already be too late.
+  NS_IF_RELEASE(mBlockedPopups);  // NULLs out the pointer
 }
 
 - (BOOL)isFlipped
@@ -1113,12 +1122,17 @@ enum StatusPriority {
   mPendingURI = [inURI retain];
 }
 
-- (void)registerNotificationListener
+- (void)registerNotificationListeners
 {
   [[NSNotificationCenter defaultCenter] addObserver:self
                                            selector:@selector(imageLoadedNotification:)
                                                name:SiteIconLoadNotificationName
                                              object:self];
+
+  [[NSNotificationCenter defaultCenter] addObserver:self
+                                           selector:@selector(xpcomTerminate:)
+                                               name:XPCOMShutDownNotificationName
+                                             object:nil];
 }
 
 // called when [[SiteIconProvider sharedFavoriteIconProvider] fetchFavoriteIconForPage:...] completes
