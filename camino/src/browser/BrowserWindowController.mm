@@ -2500,6 +2500,12 @@ public:
 
 - (void)loadSourceForFrame:(BOOL)forFrame inBackground:(BOOL)loadInBackground
 {
+  // We could have gotten here from a context menu on a page that disappeared
+  // out from under the menu (see bug 480797), and we'll end up showing a blank page.
+  // If mDataOwner is null, just bail.
+  if (!mDataOwner)
+    return;
+
   // First, to get a descriptor so we can load the source from cache
   nsCOMPtr<nsISupports> desc = [[mBrowserView browserView] pageDescriptorByFocus:forFrame];
   // If that somehow fails, we'll do it by URL
@@ -2777,7 +2783,7 @@ public:
 
 - (IBAction)sendURLFromLink:(id)aSender
 {
-  if (!mDataOwner->mContextMenuNode)
+  if (!mDataOwner || !mDataOwner->mContextMenuNode)
     return;
 
   nsCOMPtr<nsIDOMElement> linkContent;
@@ -3030,7 +3036,7 @@ public:
 
 - (IBAction)addBookmarkForLink:(id)aSender
 {
-  if (!mDataOwner->mContextMenuNode)
+  if (!mDataOwner || !mDataOwner->mContextMenuNode)
     return;
 
   nsCOMPtr<nsIDOMElement> linkContent;
@@ -3275,7 +3281,8 @@ public:
 
 - (NSString*)contextMenuNodeDocumentURL
 {
-  if (!mDataOwner->mContextMenuNode) return @"";
+  if (!mDataOwner || !mDataOwner->mContextMenuNode)
+    return @"";
 
   nsCOMPtr<nsIDOMDocument> ownerDoc;
   mDataOwner->mContextMenuNode->GetOwnerDocument(getter_AddRefs(ownerDoc));
@@ -3953,7 +3960,7 @@ public:
 // link or we couldn't work out the href for some other reason.
 - (NSString*)contextMenuNodeHrefText
 {
-  if (!mDataOwner->mContextMenuNode)
+  if (!mDataOwner || !mDataOwner->mContextMenuNode)
     return @"";
 
   nsCOMPtr<nsIDOMElement> linkContent;
@@ -4051,7 +4058,7 @@ public:
 
 - (NSMenu*)getContextMenu
 {
-  if (!mDataOwner->mGotOnContextMenu)
+  if (!mDataOwner || !mDataOwner->mGotOnContextMenu)
     return nil;
 
   BOOL showFrameItems = NO;
@@ -4664,6 +4671,9 @@ public:
 
 - (IBAction)saveImageAs:(id)aSender
 {
+  if (!mDataOwner || !mDataOwner->mContextMenuNode)
+    return;
+
   nsCOMPtr<nsIDOMHTMLImageElement> imgElement(do_QueryInterface(mDataOwner->mContextMenuNode));
   if (imgElement) {
       nsAutoString text;
@@ -4705,6 +4715,9 @@ public:
 
 - (IBAction)viewOnlyThisImage:(id)aSender
 {
+  if (!mDataOwner || !mDataOwner->mContextMenuNode)
+    return;
+
   nsCOMPtr<nsIDOMHTMLImageElement> imgElement(do_QueryInterface(mDataOwner->mContextMenuNode));
   if (imgElement) {
     nsAutoString url;
