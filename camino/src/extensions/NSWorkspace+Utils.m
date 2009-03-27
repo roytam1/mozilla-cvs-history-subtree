@@ -114,11 +114,14 @@ OSStatus _LSSaveAndRefresh();
 
 - (NSURL*)defaultBrowserURL
 {
+  NSURL *returnValue = nil;
   NSURL *currSetURL = nil;
   if (_LSCopyDefaultSchemeHandlerURL(@"http", &currSetURL) == noErr)
-    return [currSetURL autorelease];
+    returnValue = [currSetURL autorelease];
+  if (!returnValue)
+    returnValue = [self urlOfApplicationWithIdentifier:@"com.apple.safari"];
 
-  return nil;
+  return returnValue;
 }
 
 - (NSURL*)defaultFeedViewerURL
