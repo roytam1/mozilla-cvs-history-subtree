@@ -182,7 +182,30 @@ nsSVGScriptElement::Init()
 //----------------------------------------------------------------------
 // nsIDOMNode methods
 
-NS_IMPL_DOM_CLONENODE_WITH_INIT(nsSVGScriptElement)
+nsresult
+nsSVGScriptElement::CloneNode(PRBool aDeep, nsIDOMNode** aReturn)
+{
+  *aReturn = nsnull;
+
+  nsSVGScriptElement* it = new nsSVGScriptElement(mNodeInfo);
+  if (!it) {
+    return NS_ERROR_OUT_OF_MEMORY;
+  }
+
+  nsCOMPtr<nsIDOMNode> kungFuDeathGrip(it);
+
+  CopyInnerTo(it, aDeep);
+
+  // The clone should be marked evaluated if we are.  It should also be marked
+  // evaluated if we're evaluating, to handle the case when this script node's
+  // script clones the node.
+  it->mIsEvaluated = mIsEvaluated || mEvaluating;
+  it->mLineNumber = mLineNumber;
+
+  kungFuDeathGrip.swap(*aReturn);
+
+  return NS_OK;
+}
 
 //----------------------------------------------------------------------
 // nsIDOMSVGScriptElement methods
