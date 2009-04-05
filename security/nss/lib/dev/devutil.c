@@ -148,7 +148,9 @@ nssSlotArray_Clone (
     if (count > 0) {
 	rvSlots = nss_ZNEWARRAY(NULL, NSSSlot *, count + 1);
 	if (rvSlots) {
-	    for (sp = slots, count = 0; *sp; sp++) {
+	    sp = slots;
+	    count = 0;
+	    for (sp = slots; *sp; sp++) {
 		rvSlots[count++] = nssSlot_AddRef(*sp);
 	    }
 	}
@@ -374,7 +376,7 @@ create_object (
 )
 {
     PRUint32 j;
-    NSSArena *arena = NULL;
+    NSSArena *arena;
     NSSSlot *slot = NULL;
     nssSession *session = NULL;
     nssCryptokiObjectAndAttributes *rvCachedObject = NULL;

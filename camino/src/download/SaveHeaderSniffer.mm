@@ -280,9 +280,11 @@ nsHeaderSniffer::PerformSave(nsIURI* inOriginalURI)
     }
     
     // One last case to handle about:blank and other fruity untitled pages.
-    if (defaultFileName.IsEmpty())
-        defaultFileName = NS_LITERAL_STRING("untitled");		// XXX localize
-        
+    if (defaultFileName.IsEmpty()) {
+        NSString* localizedUntitledFilename = NSLocalizedString(@"UntitledPageTitle", nil);
+        CopyUTF8toUTF16([localizedUntitledFilename UTF8String], defaultFileName);
+    }
+
     // Validate the file name to ensure legality.
     for (PRUint32 i = 0; i < defaultFileName.Length(); i++)
         if (defaultFileName[i] == ':' || defaultFileName[i] == '/')
@@ -433,7 +435,9 @@ nsHeaderSniffer::InitiateDownload(nsISupports* inSourceData, nsString& inFileNam
       PRInt32 index = nameMinusExt.RFind(".");
       if (index >= 0)
           nameMinusExt.Left(nameMinusExt, index);
-      nameMinusExt += NS_LITERAL_STRING(" Files"); // XXXdwh needs to be localizable!
+      NSString* htmlCompleteFolderName = [NSString stringWithFormat:NSLocalizedString(@"HTMLCompleteFolderSuffixString", nil),
+                                                     [NSString stringWith_nsAString:nameMinusExt]];
+      CopyUTF8toUTF16([htmlCompleteFolderName UTF8String], nameMinusExt);
       filesFolder->SetLeafName(nameMinusExt);
       PRBool exists = PR_FALSE;
       filesFolder->Exists(&exists);

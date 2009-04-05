@@ -195,22 +195,4 @@ CK_RV lg_PutMetaData(SDB *sdb, const char *id,
 
 SEC_END_PROTOS
 
-#ifndef XP_UNIX
-
-#define NO_CHECK_FORK
-
-#endif
-
-#ifndef NO_CHECK_FORK
-
-extern PRBool parentForkedAfterC_Initialize;
-#define SKIP_AFTER_FORK(x) if (!parentForkedAfterC_Initialize) x
-
-#else
-
-#define SKIP_AFTER_FORK(x) x
-
-#endif /* NO_CHECK_FORK */
-
 #endif /* _LGDB_H_ */
-

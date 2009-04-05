@@ -37,6 +37,7 @@
  * ***** END LICENSE BLOCK ***** */
 
 #import <Cocoa/Cocoa.h>
+#import "TransientBar.h"
 
 //
 // FindBarView
@@ -44,7 +45,7 @@
 // Handles custom drawing for the find bar
 //
 
-@interface FindBarView : NSView
+@interface FindBarView : TransientBar
 {
 }
 

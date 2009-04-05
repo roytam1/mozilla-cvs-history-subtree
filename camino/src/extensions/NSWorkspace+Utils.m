@@ -68,24 +68,33 @@
 
 - (NSString*)defaultBrowserIdentifier
 {
-  return [self identifierForBundle:[self defaultBrowserURL]];
+  NSString* defaultBundleId = [(NSString*)LSCopyDefaultHandlerForURLScheme(CFSTR("http")) autorelease];
+  // Sometimes LaunchServices likes to pretend there's no default browser.
+  // If that happens, we'll assume it's probably Safari.
+  if (!defaultBundleId)
+    defaultBundleId = @"com.apple.safari";
+  return defaultBundleId;
 }
 
 - (NSString*)defaultFeedViewerIdentifier
 {
-  return [self identifierForBundle:[self defaultFeedViewerURL]];
+  return [(NSString*)LSCopyDefaultHandlerForURLScheme(CFSTR("feed")) autorelease];
 }
 
 - (NSURL*)defaultBrowserURL
 {
-  NSString* defaultBundleId = [(NSString*)LSCopyDefaultHandlerForURLScheme(CFSTR("http")) autorelease];
-  return [self urlOfApplicationWithIdentifier:defaultBundleId];
+  NSString* defaultBundleId = [self defaultBrowserIdentifier];
+  if (defaultBundleId)
+    return [self urlOfApplicationWithIdentifier:defaultBundleId];
+  return nil;
 }
 
 - (NSURL*)defaultFeedViewerURL
 {
-  NSString* defaultBundleId = [(NSString*)LSCopyDefaultHandlerForURLScheme(CFSTR("feed")) autorelease];
-  return [self urlOfApplicationWithIdentifier:defaultBundleId];
+  NSString* defaultBundleId = [self defaultFeedViewerIdentifier];
+  if (defaultBundleId)
+    return [self urlOfApplicationWithIdentifier:defaultBundleId];
+  return nil;
 }
 
 - (void)setDefaultBrowserWithIdentifier:(NSString*)bundleID

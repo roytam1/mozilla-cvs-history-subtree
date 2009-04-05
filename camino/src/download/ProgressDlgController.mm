@@ -75,6 +75,8 @@ static NSString* const kProgressWindowFrameSaveName = @"ProgressWindow";
 -(BOOL)shouldRemoveDownloadsOnQuit;
 -(NSString*)downloadsPlistPath;
 -(void)setToolTipForToolbarItem:(NSToolbarItem*)theItem;
+-(void)saveProgressViewControllers;
+-(void)loadProgressViewControllers;
 
 @end
 
@@ -100,28 +102,12 @@ static id gSharedProgressController = nil;
 
 -(id)init
 {
-  if ((self = [super initWithWindowNibName:@"ProgressDialog"]))
-  {
+  if ((self = [super initWithWindowNibName:@"ProgressDialog"])) {
+    // Load the saved instances to mProgressViewControllers array.
     mProgressViewControllers = [[NSMutableArray alloc] init];
-    mDefaultWindowSize = [[self window] frame].size;
-    // it would be nice if we could get the frame from the name, and then
-    // mess with it before setting it.
-    [[self window] setFrameUsingName:kProgressWindowFrameSaveName];
+    [self loadProgressViewControllers];
 
-    // these 2 bools prevent the app from locking up when the termination modal sheet
-    // is running and a download completes
-    mAwaitingTermination = NO;
-    mShouldCloseWindow   = NO;
-
-    // we "know" that the superview of the stack view is a CHFlippedShrinkWrapView
-    // (it has to be, because NSScrollViews have to contain a flipped view)
-    if ([[mStackView superview] respondsToSelector:@selector(setNoIntrinsicPadding)])
-      [(CHShrinkWrapView*)[mStackView superview] setNoIntrinsicPadding];
-
-    // We provide the views for the stack view, from mProgressViewControllers
-    [mStackView setShowsSeparators:YES];
-    [mStackView setDataSource:self];
-
+    mFileChangeWatcher = [[FileChangeWatcher alloc] init];
     mSelectionPivotIndex = -1;
   }
   return self;
@@ -129,16 +115,37 @@ static id gSharedProgressController = nil;
 
 -(void)awakeFromNib
 {
+  mDefaultWindowSize = [[self window] frame].size;
+  // it would be nice if we could get the frame from the name, and then
+  // mess with it before setting it.
+  [[self window] setFrameUsingName:kProgressWindowFrameSaveName];
+  
+  // we "know" that the superview of the stack view is a CHFlippedShrinkWrapView
+  // (it has to be, because NSScrollViews have to contain a flipped view)
+  if ([[mStackView superview] respondsToSelector:@selector(setNoIntrinsicPadding)])
+    [(CHShrinkWrapView*)[mStackView superview] setNoIntrinsicPadding];
+  
+  // We provide the views for the stack view, from mProgressViewControllers
+  [mStackView setShowsSeparators:YES];
+  [mStackView setDataSource:self];
+  
   NSToolbar *toolbar = [[NSToolbar alloc] initWithIdentifier:@"dlmanager1"]; // so pause/resume button will show
   [toolbar setDelegate:self];
   [toolbar setAllowsUserCustomization:YES];
   [toolbar setAutosavesConfiguration:YES];
   [[self window] setToolbar:toolbar];
 
-  mFileChangeWatcher = [[FileChangeWatcher alloc] init];
+  // Scroll to last selected download, or to the end if no downloads are selected.
+  NSArray* currentlySelectedDownloads = [self selectedProgressViewControllers];
+  if ([currentlySelectedDownloads count] > 0) {
+    [self scrollIntoView:[currentlySelectedDownloads lastObject]];
+  }
+  else {
+    [self scrollIntoView:[mProgressViewControllers lastObject]];
+    [(ProgressViewController*)[mProgressViewControllers lastObject] setSelected:YES];
+  }
 
-  // load the saved instances to mProgressViewControllers array
-  [self loadProgressViewControllers];
+  [self rebuildViews];
 }
 
 -(void)dealloc
@@ -769,32 +776,32 @@ static id gSharedProgressController = nil;
 
   NSEnumerator* downloadsEnum = [mProgressViewControllers objectEnumerator];
   ProgressViewController* curController;
-  while ((curController = [downloadsEnum nextObject]))
-  {
+  while ((curController = [downloadsEnum nextObject])) {
     [downloadArray addObject:[curController downloadInfoDictionary]];
   }
 
-  // now save the array
+  // Now save the array.
   [downloadArray writeToFile:[self downloadsPlistPath] atomically: YES];
 }
 
 -(void)loadProgressViewControllers
 {
-  NSArray*  downloads = [NSArray arrayWithContentsOfFile:[self downloadsPlistPath]];
+  NSArray* downloads = [NSArray arrayWithContentsOfFile:[self downloadsPlistPath]];
 
-  if (downloads)
-  {
+  if (downloads) {
     NSEnumerator* downloadsEnum = [downloads objectEnumerator];
     NSDictionary* downloadsDictionary;
-    while((downloadsDictionary = [downloadsEnum nextObject]))
-    {
+    while((downloadsDictionary = [downloadsEnum nextObject])) {
       ProgressViewController* curController = [[ProgressViewController alloc] initWithDictionary:downloadsDictionary
                                                                              andWindowController:self];
       [mProgressViewControllers addObject:curController];
       [curController release];
     }
 
-    [self rebuildViews];
+    NSArray* selectedDownloads = [self selectedProgressViewControllers];
+    if ([selectedDownloads count] > 0) {
+      mSelectionPivotIndex = [mProgressViewControllers indexOfObject:[selectedDownloads lastObject]];
+    }
   }
 }
 
