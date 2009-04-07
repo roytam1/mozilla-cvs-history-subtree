@@ -90,6 +90,17 @@
 #define NS_CRYPTO_HASH_CONTRACTID "@mozilla.org/security/hash;1"
 #define NS_CRYPTO_HASH_CID {0x36a1d3b3, 0xd886, 0x4317, {0x96, 0xff, 0x87, 0xb0, 0x00, 0x5c, 0xfe, 0xf7}}
 
+enum EnsureNSSOperator
+{
+  nssLoading = 0,
+  nssInitSucceeded = 1,
+  nssInitFailed = 2,
+  nssShutdown = 3,
+  nssEnsure = 4
+};
+
+extern PRBool EnsureNSSInitialized(EnsureNSSOperator op);
+
 //--------------------------------------------
 // Now we need a content listener to register 
 //--------------------------------------------
@@ -251,6 +262,7 @@ private:
   nsresult ConfigureInternalPKCS11Token();
   nsresult RegisterPSMContentListener();
   nsresult RegisterObservers();
+  nsresult DeregisterObservers();
   nsresult DownloadCrlSilently();
   nsresult PostCRLImportEvent(nsCAutoString *urlString, PSMContentDownloader *psmDownloader);
   nsresult getParamsForNextCrlToDownload(nsAutoString *url, PRTime *time, nsAutoString *key);
