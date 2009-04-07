@@ -140,20 +140,18 @@ static nsresult ConvertCommon(const char * aSrc,
     ucs4 =  aIsLE ? LE_STRING_TO_UCS4(src) : BE_STRING_TO_UCS4(src); 
     if (ucs4 < 0x10000L)  // BMP
     {
-      // XXX Do we have to convert surrogate code points to the replacement
-      // character (0xfffd)?  
-      *dest++= PRUnichar(ucs4);
+      *dest++= IS_SURROGATE(ucs4) ? UCS2_REPLACEMENT_CHAR : PRUnichar(ucs4);
     }
     else if (ucs4 < 0x110000L)  // plane 1 through plane 16 
     {
       if (destEnd - dest < 2) 
         break;
       // ((ucs4 - 0x10000) >> 10) + 0xd800;
-      *dest++= PRUnichar((ucs4 >> 10) + 0xd7c0); 
-      *dest++= PRUnichar(ucs4 & 0x3ffL | 0xdc00);
+      *dest++= H_SURROGATE(ucs4);
+      *dest++= L_SURROGATE(ucs4);
     }       
     else                       // plane 17 and higher
-      *dest++ = 0xfffd;
+      *dest++ = UCS2_REPLACEMENT_CHAR;
   }
 
   //output not finished, output buffer too short
