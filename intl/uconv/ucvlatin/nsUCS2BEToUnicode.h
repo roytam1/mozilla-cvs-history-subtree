@@ -46,7 +46,7 @@ class nsUTF16ToUnicodeBase : public nsBasicDecoderSupport
 {
 protected:
   // ctor accessible only by child classes
-  nsUTF16ToUnicodeBase() { Reset();};
+  nsUTF16ToUnicodeBase() { Reset();}
 
 public: 
   //--------------------------------------------------------------------
@@ -58,7 +58,10 @@ public:
 
 protected:
   PRUint8 mState;
-  PRUint8 mData;
+  // to store an odd byte left over between runs
+  PRUint8 mOddByte;
+  // to store an odd high surrogate left over between runs
+  PRUnichar mOddHighSurrogate;
 };
 
 // UTF-16 big endian
@@ -84,6 +87,7 @@ class nsUTF16ToUnicode : public nsUTF16ToUnicodeBase
 {
 public:
 
+  nsUTF16ToUnicode() { Reset();}
   NS_IMETHOD Convert(const char * aSrc, PRInt32 * aSrcLength,
       PRUnichar * aDest, PRInt32 * aDestLength); 
 
