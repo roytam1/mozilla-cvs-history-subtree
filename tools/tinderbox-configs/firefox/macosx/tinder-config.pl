@@ -57,7 +57,7 @@ $ProductName              = 'BonEcho';
 $MacOSProductName         = 'BonEcho';
 $VendorName               = "";
 
-$RunMozillaTests          = 1;  # Allow turning off of all tests if needed.
+$RunMozillaTests          = 0;  # Allow turning off of all tests if needed.
 $RegxpcomTest             = 1;
 $AliveTest                = 1;
 #$JavaTest                 = 0;
