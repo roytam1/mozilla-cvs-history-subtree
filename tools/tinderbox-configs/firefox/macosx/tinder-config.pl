@@ -37,7 +37,7 @@ $BuildDebug        = 1;      # Debug or Opt (Darwin)
 # Tests
 $CleanProfile             = 1;
 #$ResetHomeDirForTests     = 1;
-$ProductName               = "Minefield";
+$ProductName               = "GranParadiso";
 $VendorName                = "";
 $ENV{NO_EM_RESTART}        = '1';
 
