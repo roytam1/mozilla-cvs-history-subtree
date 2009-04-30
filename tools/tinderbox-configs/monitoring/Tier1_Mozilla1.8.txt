@@ -1,3 +1,0 @@
-crazyhorse|Tb-Nightly
-bm-xserve02|Tb-Nightly
-patrocles|Tb-Nightly
