@@ -127,7 +127,7 @@ nssCKFWMutex_Create
   NSSCKFWMutex *mutex;
   
   mutex = nss_ZNEW(arena, NSSCKFWMutex);
-  if (!mutex) {
+  if( (NSSCKFWMutex *)NULL == mutex ) {
     *pError = CKR_HOST_MEMORY;
     return (NSSCKFWMutex *)NULL;
   }

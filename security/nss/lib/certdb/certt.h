@@ -1059,7 +1059,7 @@ typedef enum {
 /*
  * Defines the behavior if we are unable to obtain fresh information.
  * INGORE means:
- *      Return "cert status unknown"
+ *        Return "test succeded, not revoked"
  * FAIL means:
  *      Return "cert revoked".
  */
@@ -1111,8 +1111,6 @@ typedef enum {
  *     After the individual tests have been executed, we must have
  *     been able to find fresh information using at least one method.
  *     If we were unable to find fresh info, it's a failure.
- *     This setting overrides the CERT_REV_M_FAIL_ON_MISSING_FRESH_INFO
- *     flag on all methods.
  */
 #define CERT_REV_MI_NO_OVERALL_INFO_REQUIREMENT       0L
 #define CERT_REV_MI_REQUIRE_SOME_FRESH_INFO_AVAILABLE 2L
@@ -1254,12 +1252,6 @@ typedef enum CertStrictnessLevels {
  */
 #define CERT_ENABLE_LDAP_FETCH          1
 #define CERT_ENABLE_HTTP_FETCH          2
-
-/* This functin pointer type may be used for any function that takes
- * a CERTCertificate * and returns an allocated string, which must be
- * freed by a call to PORT_Free.
- */
-typedef char * (*CERT_StringFromCertFcn)(CERTCertificate *cert);
 
 /* XXX Lisa thinks the template declarations belong in cert.h, not here? */
 

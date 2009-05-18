@@ -76,7 +76,6 @@ CERT_VerifySignedDataWithPublicKey(CERTSignedData *sd,
 {
     SECStatus        rv;
     SECItem          sig;
-    SECOidTag        hashAlg = SEC_OID_UNKNOWN;
 
     if ( !pubKey || !sd ) {
 	PORT_SetError(PR_INVALID_ARGUMENT_ERROR);
@@ -89,18 +88,9 @@ CERT_VerifySignedDataWithPublicKey(CERTSignedData *sd,
     DER_ConvertBitString(&sig);
 
     rv = VFY_VerifyDataWithAlgorithmID(sd->data.data, sd->data.len, pubKey, 
-			&sig, &sd->signatureAlgorithm, &hashAlg, wincx);
-    if (rv == SECSuccess) {
-        /* Are we honoring signatures for this algorithm?  */
-	PRUint32 policyFlags = 0;
-	rv = NSS_GetAlgorithmPolicy(hashAlg, &policyFlags);
-	if (rv == SECSuccess && 
-	    !(policyFlags & NSS_USE_ALG_IN_CERT_SIGNATURE)) {
-	    PORT_SetError(SEC_ERROR_INVALID_ALGORITHM);
-	    rv = SECFailure;
-	}
-    }
-    return rv;
+			&sig, &sd->signatureAlgorithm, NULL, wincx);
+
+    return rv ? SECFailure : SECSuccess;
 }
 
 /*
@@ -537,7 +527,6 @@ cert_VerifyCertChainOld(CERTCertDBHandle *handle, CERTCertificate *cert,
       case certUsageEmailRecipient:
       case certUsageObjectSigner:
       case certUsageVerifyCA:
-      case certUsageAnyCA:
       case certUsageStatusResponder:
 	if ( CERT_TrustFlagsForCACertUsage(certUsage, &requiredFlags,
 					   &trustType) != SECSuccess ) {
@@ -746,7 +735,7 @@ cert_VerifyCertChainOld(CERTCertDBHandle *handle, CERTCertificate *cert,
 	        certUsage != certUsageStatusResponder) {
 
 	        /*
-	         * XXX This choice of trustType seems arbitrary.
+	         * check the trust parms of the issuer
 	         */
 	        if ( certUsage == certUsageVerifyCA ) {
 	            if ( subjectCert->nsCertType & NS_CERT_TYPE_EMAIL_CA ) {
@@ -759,12 +748,13 @@ cert_VerifyCertChainOld(CERTCertDBHandle *handle, CERTCertificate *cert,
 	        }
 
 	        flags = SEC_GET_TRUST_FLAGS(issuerCert->trust, trustType);
-	        if (( flags & requiredFlags ) == requiredFlags) {
-	            /* we found a trusted one, so return */
-	            rv = rvFinal; 
-	            goto done;
-	        }
+
 	        if (flags & CERTDB_VALID_CA) {
+	            if ( ( flags & requiredFlags ) == requiredFlags) {
+	                /* we found a trusted one, so return */
+	                rv = rvFinal; 
+	                goto done;
+	            }
 	            validCAOverride = PR_TRUE;
 	        }
 	    } else {
@@ -1014,12 +1004,13 @@ CERT_VerifyCACertForUsage(CERTCertDBHandle *handle, CERTCertificate *cert,
 	 * check the trust parms of the issuer
 	 */
 	flags = SEC_GET_TRUST_FLAGS(cert->trust, trustType);
-	if ( ( flags & requiredFlags ) == requiredFlags) {
-	    /* we found a trusted one, so return */
-	    rv = rvFinal; 
-	    goto done;
-	}
+	    
 	if (flags & CERTDB_VALID_CA) {
+	    if ( ( flags & requiredFlags ) == requiredFlags) {
+		/* we found a trusted one, so return */
+		rv = rvFinal; 
+		goto done;
+	    }
 	    validCAOverride = PR_TRUE;
 	}
     }
@@ -1386,7 +1377,6 @@ CERT_VerifyCert(CERTCertDBHandle *handle, CERTCertificate *cert,
 	}
 	break;
       case certUsageVerifyCA:
-      case certUsageAnyCA:
 	requiredKeyUsage = KU_KEY_CERT_SIGN;
 	requiredCertType = NS_CERT_TYPE_CA;
 	if ( ! ( certType & NS_CERT_TYPE_CA ) ) {
@@ -1957,7 +1947,6 @@ CERTCertList *
 CERT_GetCertChainFromCert(CERTCertificate *cert, int64 time, SECCertUsage usage)
 {
     CERTCertList *chain = NULL;
-    int count = 0;
 
     if (NULL == cert) {
         return NULL;
@@ -1975,7 +1964,7 @@ CERT_GetCertChainFromCert(CERTCertificate *cert, int64 time, SECCertUsage usage)
         return NULL;
     }
 
-    while (cert != NULL && ++count <= CERT_MAX_CERT_CHAIN) {
+    while (cert != NULL) {
 	if (SECSuccess != CERT_AddCertToListTail(chain, cert)) {
             /* return partial chain */
             PORT_SetError(SEC_ERROR_NO_MEMORY);

@@ -147,7 +147,7 @@ nssCKFWFindObjects_Create
   mdInstance = nssCKFWInstance_GetMDInstance(fwInstance);
 
   fwFindObjects = nss_ZNEW(NULL, NSSCKFWFindObjects);
-  if (!fwFindObjects) {
+  if( (NSSCKFWFindObjects *)NULL == fwFindObjects ) {
     *pError = CKR_HOST_MEMORY;
     goto loser;
   }
@@ -162,7 +162,7 @@ nssCKFWFindObjects_Create
   fwFindObjects->mdInstance = mdInstance;
 
   fwFindObjects->mutex = nssCKFWInstance_CreateMutex(fwInstance, NULL, pError);
-  if (!fwFindObjects->mutex) {
+  if( (NSSCKFWMutex *)NULL == fwFindObjects->mutex ) {
     goto loser;
   }
 
@@ -222,8 +222,8 @@ nssCKFWFindObjects_Destroy
 
   (void)nssCKFWMutex_Destroy(fwFindObjects->mutex);
 
-  if (fwFindObjects->mdfo1) {
-    if (fwFindObjects->mdfo1->Final) {
+  if( (NSSCKMDFindObjects *)NULL != fwFindObjects->mdfo1 ) {
+    if( (void *)NULL != (void *)fwFindObjects->mdfo1->Final ) {
       fwFindObjects->mdFindObjects = fwFindObjects->mdfo1;
       fwFindObjects->mdfo1->Final(fwFindObjects->mdfo1, fwFindObjects,
         fwFindObjects->mdSession, fwFindObjects->fwSession, 
@@ -232,8 +232,8 @@ nssCKFWFindObjects_Destroy
     }
   }
 
-  if (fwFindObjects->mdfo2) {
-    if (fwFindObjects->mdfo2->Final) {
+  if( (NSSCKMDFindObjects *)NULL != fwFindObjects->mdfo2 ) {
+    if( (void *)NULL != (void *)fwFindObjects->mdfo2->Final ) {
       fwFindObjects->mdFindObjects = fwFindObjects->mdfo2;
       fwFindObjects->mdfo2->Final(fwFindObjects->mdfo2, fwFindObjects,
         fwFindObjects->mdSession, fwFindObjects->fwSession, 
@@ -287,7 +287,7 @@ nssCKFWFindObjects_Next
   NSSArena *objArena;
 
 #ifdef NSSDEBUG
-  if (!pError) {
+  if( (CK_RV *)NULL == pError ) {
     return (NSSCKFWObject *)NULL;
   }
 
@@ -302,15 +302,15 @@ nssCKFWFindObjects_Next
     return (NSSCKFWObject *)NULL;
   }
 
-  if (fwFindObjects->mdfo1) {
-    if (fwFindObjects->mdfo1->Next) {
+  if( (NSSCKMDFindObjects *)NULL != fwFindObjects->mdfo1 ) {
+    if( (void *)NULL != (void *)fwFindObjects->mdfo1->Next ) {
       fwFindObjects->mdFindObjects = fwFindObjects->mdfo1;
       mdObject = fwFindObjects->mdfo1->Next(fwFindObjects->mdfo1,
         fwFindObjects, fwFindObjects->mdSession, fwFindObjects->fwSession,
         fwFindObjects->mdToken, fwFindObjects->fwToken, 
         fwFindObjects->mdInstance, fwFindObjects->fwInstance,
         arenaOpt, pError);
-      if (!mdObject) {
+      if( (NSSCKMDObject *)NULL == mdObject ) {
         if( CKR_OK != *pError ) {
           goto done;
         }
@@ -327,15 +327,15 @@ nssCKFWFindObjects_Next
     }
   }
 
-  if (fwFindObjects->mdfo2) {
-    if (fwFindObjects->mdfo2->Next) {
+  if( (NSSCKMDFindObjects *)NULL != fwFindObjects->mdfo2 ) {
+    if( (void *)NULL != (void *)fwFindObjects->mdfo2->Next ) {
       fwFindObjects->mdFindObjects = fwFindObjects->mdfo2;
       mdObject = fwFindObjects->mdfo2->Next(fwFindObjects->mdfo2,
         fwFindObjects, fwFindObjects->mdSession, fwFindObjects->fwSession,
         fwFindObjects->mdToken, fwFindObjects->fwToken, 
         fwFindObjects->mdInstance, fwFindObjects->fwInstance,
         arenaOpt, pError);
-      if (!mdObject) {
+      if( (NSSCKMDObject *)NULL == mdObject ) {
         if( CKR_OK != *pError ) {
           goto done;
         }
@@ -373,7 +373,7 @@ nssCKFWFindObjects_Next
    * but it depends on nssCKFWObject_Create caching all objects.
    */
   objArena = nssCKFWToken_GetArena(fwFindObjects->fwToken, pError);
-  if (!objArena) {
+  if( (NSSArena *)NULL == objArena ) {
     if( CKR_OK == *pError ) {
       *pError = CKR_HOST_MEMORY;
     }
@@ -383,7 +383,7 @@ nssCKFWFindObjects_Next
   fwObject = nssCKFWObject_Create(objArena, mdObject,
                NULL, fwFindObjects->fwToken, 
                fwFindObjects->fwInstance, pError);
-  if (!fwObject) {
+  if( (NSSCKFWObject *)NULL == fwObject ) {
     if( CKR_OK == *pError ) {
       *pError = CKR_GENERAL_ERROR;
     }

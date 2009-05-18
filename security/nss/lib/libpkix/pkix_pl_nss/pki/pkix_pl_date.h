@@ -51,7 +51,7 @@ extern "C" {
 #endif
 
 struct PKIX_PL_DateStruct{
-        PRTime nssTime;
+        SECItem nssTime;
 };
 
 /* see source file for function documentation */

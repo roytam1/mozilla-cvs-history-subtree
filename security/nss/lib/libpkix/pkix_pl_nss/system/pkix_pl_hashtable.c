@@ -277,9 +277,10 @@ PKIX_PL_HashTable_Add(
                 plContext),
                 PKIX_PRIMHASHTABLEADDFAILED);
 
+        PKIX_MUTEX_UNLOCK(ht->tableLock);
+
         PKIX_INCREF(key);
         PKIX_INCREF(value);
-        PKIX_MUTEX_UNLOCK(ht->tableLock);
 
         /*
          * we don't call PKIX_PL_InvalidateCache here b/c we have
@@ -403,9 +404,9 @@ PKIX_PL_HashTable_Lookup(
                 plContext),
                 PKIX_PRIMHASHTABLELOOKUPFAILED);
 
-        PKIX_INCREF(result);
         PKIX_MUTEX_UNLOCK(ht->tableLock);
 
+        PKIX_INCREF(result);
         *pResult = result;
 
 cleanup:

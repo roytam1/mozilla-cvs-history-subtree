@@ -261,12 +261,11 @@ mp_digit MPI_ASM_DECL s_mpv_mul_add_vec64(mp_digit*, const mp_digit*, mp_size, m
 
 /* c = a * b */
 #define s_mpv_mul_d(a, a_len, b, c) \
-	((mp_digit *)c)[a_len] = s_mpv_mul_set_vec64(c, a, a_len, b)
+	((unsigned long*)c)[a_len] = s_mpv_mul_set_vec64(c, a, a_len, b)
 
 /* c += a * b */
 #define s_mpv_mul_d_add(a, a_len, b, c) \
-	((mp_digit *)c)[a_len] = s_mpv_mul_add_vec64(c, a, a_len, b)
-
+	((unsigned long*)c)[a_len] = s_mpv_mul_add_vec64(c, a, a_len, b)
 
 #else
 

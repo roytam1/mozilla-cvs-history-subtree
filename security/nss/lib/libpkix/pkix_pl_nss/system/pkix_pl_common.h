@@ -87,7 +87,6 @@
 #include "pkix_pl_certpolicyinfo.h"
 #include "pkix_pl_certpolicymap.h"
 #include "pkix_pl_certpolicyqualifier.h"
-#include "pkix_pl_crldp.h"
 #include "pkix_pl_crl.h"
 #include "pkix_pl_crlentry.h"
 #include "pkix_pl_nameconstraints.h"
@@ -103,6 +102,7 @@
 #include "pkix_pl_httpdefaultclient.h"
 #include "pkix_pl_infoaccess.h"
 #include "pkix_sample_modules.h"
+#include "pkix_pl_ekuchecker.h"
 
 #define MAX_DIGITS_32 (PKIX_UInt32) 10
 
@@ -152,7 +152,7 @@ pkix_pl_oidBytes2Ascii(
 
 PKIX_Error *
 pkix_UTF16_to_EscASCII(
-        const void *utf16String,
+        void *utf16String,
         PKIX_UInt32 utf16Length,
         PKIX_Boolean debug,
         char **pDest,
@@ -161,7 +161,7 @@ pkix_UTF16_to_EscASCII(
 
 PKIX_Error *
 pkix_EscASCII_to_UTF16(
-        const char *escAsciiString,
+        char *escAsciiString,
         PKIX_UInt32 escAsciiLen,
         PKIX_Boolean debug,
         void **pDest,
@@ -170,7 +170,7 @@ pkix_EscASCII_to_UTF16(
 
 PKIX_Error *
 pkix_UTF16_to_UTF8(
-        const void *utf16String,
+        void *utf16String,
         PKIX_UInt32 utf16Length,
         PKIX_Boolean null_Term,
         void **pDest,
@@ -179,7 +179,7 @@ pkix_UTF16_to_UTF8(
 
 PKIX_Error *
 pkix_UTF8_to_UTF16(
-        const void *utf8Source,
+        void *utf8Source,
         PKIX_UInt32 utf8Length,
         void **pDest,
         PKIX_UInt32 *pLength,

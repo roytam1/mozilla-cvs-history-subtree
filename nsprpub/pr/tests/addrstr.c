@@ -71,7 +71,7 @@ const char *badaddrs[] = {
 
 int failed_already = 0;
 
-int main(int argc, char **argv)
+int main()
 {
     const char **nexttestaddr = testaddrs;
     const char **nextbadaddr = badaddrs;

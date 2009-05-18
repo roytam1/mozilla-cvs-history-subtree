@@ -104,7 +104,7 @@ nssCKFWHash_Create
   nssCKFWHash *rv;
 
 #ifdef NSSDEBUG
-  if (!pError) {
+  if( (CK_RV *)NULL == pError ) {
     return (nssCKFWHash *)NULL;
   }
 
@@ -115,13 +115,13 @@ nssCKFWHash_Create
 #endif /* NSSDEBUG */
 
   rv = nss_ZNEW(arena, nssCKFWHash);
-  if (!rv) {
+  if( (nssCKFWHash *)NULL == rv ) {
     *pError = CKR_HOST_MEMORY;
     return (nssCKFWHash *)NULL;
   }
 
   rv->mutex = nssCKFWInstance_CreateMutex(fwInstance, arena, pError);
-  if (!rv->mutex) {
+  if( (NSSCKFWMutex *)NULL == rv->mutex ) {
     if( CKR_OK == *pError ) {
       *pError = CKR_GENERAL_ERROR;
     }
@@ -130,7 +130,7 @@ nssCKFWHash_Create
 
   rv->plHashTable = PL_NewHashTable(0, nss_ckfw_identity_hash, 
     PL_CompareValues, PL_CompareValues, &nssArenaHashAllocOps, arena);
-  if (!rv->plHashTable) {
+  if( (PLHashTable *)NULL == rv->plHashTable ) {
     (void)nssCKFWMutex_Destroy(rv->mutex);
     (void)nss_ZFreeIf(rv);
     *pError = CKR_HOST_MEMORY;
@@ -178,7 +178,7 @@ nssCKFWHash_Add
   }
   
   he = PL_HashTableAdd(hash->plHashTable, key, (void *)value);
-  if (!he) {
+  if( (PLHashEntry *)NULL == he ) {
     error = CKR_HOST_MEMORY;
   } else {
     hash->count++;
@@ -259,7 +259,7 @@ nssCKFWHash_Exists
 
   (void)nssCKFWMutex_Unlock(hash->mutex);
 
-  if (!value) {
+  if( (void *)NULL == value ) {
     return CK_FALSE;
   } else {
     return CK_TRUE;

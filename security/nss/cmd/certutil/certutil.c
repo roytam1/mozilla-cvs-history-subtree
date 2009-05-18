@@ -177,26 +177,19 @@ AddCert(PK11SlotInfo *slot, CERTCertDBHandle *handle, char *name, char *trusts,
 	    GEN_BREAK(SECFailure);
 	}
 
-	rv =  PK11_ImportCert(slot, cert, CK_INVALID_HANDLE, name, PR_FALSE);
-	if (rv != SECSuccess) {
-	    /* sigh, PK11_Import Cert and CERT_ChangeCertTrust should have 
-	     * been coded to take a password arg. */
-	    if (PORT_GetError() == SEC_ERROR_TOKEN_NOT_LOGGED_IN) {
-		rv = PK11_Authenticate(slot, PR_TRUE, pwdata);
-		if (rv != SECSuccess) {
-                    SECU_PrintError(progName, 
-				"could not authenticate to token %s.",
-				PK11_GetTokenName(slot));
-		    GEN_BREAK(SECFailure);
-		}
-		rv = PK11_ImportCert(slot, cert, CK_INVALID_HANDLE, 
-				     name, PR_FALSE);
-	    }
+	if (PK11_IsFIPS() || !PK11_IsInternal(slot)) {
+	    rv = PK11_Authenticate(slot, PR_TRUE, pwdata);
 	    if (rv != SECSuccess) {
-		SECU_PrintError(progName, 
-			"could not add certificate to token or database");
+		SECU_PrintError(progName, "could not authenticate to token %s.",
+                                PK11_GetTokenName(slot));
 		GEN_BREAK(SECFailure);
 	    }
+	}
+
+	rv =  PK11_ImportCert(slot, cert, CK_INVALID_HANDLE, name, PR_FALSE);
+	if (rv != SECSuccess) {
+	    SECU_PrintError(progName, "could not add certificate to token or database");
+	    GEN_BREAK(SECFailure);
 	}
 
 	rv = CERT_ChangeCertTrust(handle, cert, trust);
@@ -204,9 +197,8 @@ AddCert(PK11SlotInfo *slot, CERTCertDBHandle *handle, char *name, char *trusts,
 	    if (PORT_GetError() == SEC_ERROR_TOKEN_NOT_LOGGED_IN) {
 		rv = PK11_Authenticate(slot, PR_TRUE, pwdata);
 		if (rv != SECSuccess) {
-                    SECU_PrintError(progName, 
-				"could not authenticate to token %s.",
-				PK11_GetTokenName(slot));
+                    SECU_PrintError(progName, "could not authenticate to token %s.",
+                                    PK11_GetTokenName(slot));
 		    GEN_BREAK(SECFailure);
 		}
 		rv = CERT_ChangeCertTrust(handle, cert, trust);
@@ -811,7 +803,7 @@ ListKeysInSlot(PK11SlotInfo *slot, const char *nickName, KeyType keyType,
 	    keyName = NULL;
 	    cert = PK11_GetCertFromPrivateKey(node->key);
 	    if (cert) {
-		if (cert->nickname && cert->nickname[0]) {
+		if (cert->nickname && !cert->nickname[0]) {
 		    keyName = PORT_Strdup(cert->nickname);
 		} else if (cert->emailAddr && cert->emailAddr[0]) {
 		    keyName = PORT_Strdup(cert->emailAddr);
@@ -948,11 +940,8 @@ Usage(char *progName)
     FPS "\t%s -B -i batch-file\n", progName);
     FPS "\t%s -C [-c issuer-name | -x] -i cert-request-file -o cert-file\n"
 	"\t\t [-m serial-number] [-w warp-months] [-v months-valid]\n"
-        "\t\t [-f pwfile] [-d certdir] [-P dbprefix]\n"
-        "\t\t [-1 | --keyUsage [keyUsageKeyword,..]] [-2] [-3] [-4]\n"
-        "\t\t [-5 | --nsCertType [nsCertTypeKeyword,...]]\n"
-        "\t\t [-6 | --extKeyUsage [extKeyUsageKeyword,...]] [-7 emailAddrs]\n"
-        "\t\t [-8 dns-names] [-a]\n",
+        "\t\t [-f pwfile] [-d certdir] [-P dbprefix] [-1] [-2] [-3] [-4] [-5]\n"
+	"\t\t [-6] [-7 emailAddrs] [-8 dns-names] [-a]\n",
 	progName);
     FPS "\t%s -D -n cert-name [-d certdir] [-P dbprefix]\n", progName);
     FPS "\t%s -E -n cert-name -t trustargs [-d certdir] [-P dbprefix] [-a] [-i input]\n", 
@@ -1060,29 +1049,18 @@ static void LongUsage(char *progName)
 	"   -d certdir");
     FPS "%-20s Cert & Key database prefix\n",
 	"   -P dbprefix");
-    FPS "%-20s \n"
-              "%-20s Create key usage extension. Possible keywords:\n"
-              "%-20s \"digitalSignature\", \"nonRepudiation\", \"keyEncipherment\",\n"
-              "%-20s \"dataEncipherment\", \"keyAgreement\", \"certSigning\",\n"
-              "%-20s \"crlSigning\", \"critical\"\n",
-        "   -1 | --keyUsage keyword,keyword,...", "", "", "", "");
+    FPS "%-20s Create key usage extension\n",
+	"   -1 ");
     FPS "%-20s Create basic constraint extension\n",
 	"   -2 ");
     FPS "%-20s Create authority key ID extension\n",
 	"   -3 ");
     FPS "%-20s Create crl distribution point extension\n",
 	"   -4 ");
-    FPS "%-20s \n"
-              "%-20s Create netscape cert type extension. Possible keywords:\n"
-              "%-20s \"sslClient\", \"sslServer\", \"smime\", \"objectSigning\",\n"
-              "%-20s \"sslCA\", \"smimeCA\", \"objectSigningCA\", \"critical\".\n",
-        "   -5 | -nsCertType keyword,keyword,... ", "", "", "");
-    FPS "%-20s \n"
-              "%-20s Create extended key usage extension. Possible keywords:\n"
-              "%-20s \"serverAuth\", \"clientAuth\",\"codeSigning\",\n"
-              "%-20s \"emailProtection\", \"timeStamp\",\"ocspResponder\",\n"
-              "%-20s \"stepUp\", \"critical\"\n",
-	"   -6 | --extKeyUsage keyword,keyword,...", "", "", "", "");
+    FPS "%-20s Create netscape cert type extension\n",
+	"   -5 ");
+    FPS "%-20s Create extended key usage extension\n",
+	"   -6 ");
     FPS "%-20s Create an email subject alt name extension\n",
 	"   -7 emailAddrs");
     FPS "%-20s Create an dns subject alt name extension\n",
@@ -1825,9 +1803,6 @@ enum certutilOpts {
     opt_AddPolicyConstrExt,
     opt_AddInhibAnyExt,
     opt_AddSubjectKeyIDExt,
-    opt_AddCmdKeyUsageExt,
-    opt_AddCmdNSCertTypeExt,
-    opt_AddCmdExtKeyUsageExt,
     opt_SourceDir,
     opt_SourcePrefix,
     opt_UpgradeID,
@@ -1913,13 +1888,6 @@ secuCommandFlag options_init[] =
 	{ /* opt_AddInhibAnyExt      */  0,   PR_FALSE, 0, PR_FALSE, "extIA" },
 	{ /* opt_AddSubjectKeyIDExt  */  0,   PR_FALSE, 0, PR_FALSE, 
 						   "extSKID" },
-	{ /* opt_AddCmdKeyUsageExt   */  0,   PR_TRUE,  0, PR_FALSE,
-                                                   "keyUsage" },
-	{ /* opt_AddCmdNSCertTypeExt */   0,   PR_TRUE,  0, PR_FALSE,
-                                                   "nsCertType" },
-	{ /* opt_AddCmdExtKeyUsageExt*/  0,   PR_TRUE,  0, PR_FALSE,
-                                                   "extKeyUsage" },
-
 	{ /* opt_SourceDir           */  0,   PR_TRUE,  0, PR_FALSE,
                                                    "source-dir"},
 	{ /* opt_SourcePrefix        */  0,   PR_TRUE,  0, PR_FALSE, 
@@ -2583,6 +2551,14 @@ merge_fail:
     }
     /*  Modify trust attribute for cert (-M)  */
     if (certutil.commands[cmd_ModifyCertTrust].activated) {
+	if (PK11_IsFIPS() || !PK11_IsFriendly(slot)) {
+	    rv = PK11_Authenticate(slot, PR_TRUE, &pwdata);
+	    if (rv != SECSuccess) {
+		SECU_PrintError(progName, "could not authenticate to token %s.",
+                                PK11_GetTokenName(slot));
+		goto shutdown;
+	    }
+	}
 	rv = ChangeTrustAttributes(certHandle, slot, name, 
 	                           certutil.options[opt_Trust].arg, &pwdata);
 	goto shutdown;
@@ -2700,54 +2676,31 @@ merge_fail:
     if (certutil.commands[cmd_CertReq].activated ||
         certutil.commands[cmd_CreateAndAddCert].activated ||
         certutil.commands[cmd_CreateNewCert].activated) {
-        certutil_extns[ext_keyUsage].activated =
-            certutil.options[opt_AddCmdKeyUsageExt].activated;
-        if (!certutil_extns[ext_keyUsage].activated) {
-            certutil_extns[ext_keyUsage].activated =
-                certutil.options[opt_AddKeyUsageExt].activated;
-        } else {
-            certutil_extns[ext_keyUsage].arg =
-                certutil.options[opt_AddCmdKeyUsageExt].arg;
-        }
-        certutil_extns[ext_basicConstraint].activated =
+        certutil_extns[ext_keyUsage] =
+				certutil.options[opt_AddKeyUsageExt].activated;
+        certutil_extns[ext_basicConstraint] =
 				certutil.options[opt_AddBasicConstraintExt].activated;
-        certutil_extns[ext_authorityKeyID].activated =
+        certutil_extns[ext_authorityKeyID] =
 				certutil.options[opt_AddAuthorityKeyIDExt].activated;
-        certutil_extns[ext_subjectKeyID].activated =
+        certutil_extns[ext_subjectKeyID] =
 				certutil.options[opt_AddSubjectKeyIDExt].activated;
-        certutil_extns[ext_CRLDistPts].activated =
+        certutil_extns[ext_CRLDistPts] =
 				certutil.options[opt_AddCRLDistPtsExt].activated;
-        certutil_extns[ext_NSCertType].activated =
-            certutil.options[opt_AddCmdNSCertTypeExt].activated;
-        if (!certutil_extns[ext_NSCertType].activated) {
-            certutil_extns[ext_NSCertType].activated =
-                certutil.options[opt_AddNSCertTypeExt].activated;
-        } else {
-            certutil_extns[ext_NSCertType].arg =
-                certutil.options[opt_AddCmdNSCertTypeExt].arg;
-        }
-
-        certutil_extns[ext_extKeyUsage].activated =
-            certutil.options[opt_AddCmdExtKeyUsageExt].activated;
-        if (!certutil_extns[ext_extKeyUsage].activated) {
-            certutil_extns[ext_extKeyUsage].activated =
-                certutil.options[opt_AddExtKeyUsageExt].activated;
-        } else {
-            certutil_extns[ext_extKeyUsage].arg =
-                certutil.options[opt_AddCmdExtKeyUsageExt].arg;
-        }
-
-        certutil_extns[ext_authInfoAcc].activated =
+        certutil_extns[ext_NSCertType] =
+				certutil.options[opt_AddNSCertTypeExt].activated;
+        certutil_extns[ext_extKeyUsage] =
+				certutil.options[opt_AddExtKeyUsageExt].activated;
+        certutil_extns[ext_authInfoAcc] =
 				certutil.options[opt_AddAuthInfoAccExt].activated;
-        certutil_extns[ext_subjInfoAcc].activated =
+        certutil_extns[ext_subjInfoAcc] =
 				certutil.options[opt_AddSubjInfoAccExt].activated;
-        certutil_extns[ext_certPolicies].activated =
+        certutil_extns[ext_certPolicies] =
 				certutil.options[opt_AddCertPoliciesExt].activated;
-        certutil_extns[ext_policyMappings].activated =
+        certutil_extns[ext_policyMappings] =
 				certutil.options[opt_AddPolicyMapExt].activated;
-        certutil_extns[ext_policyConstr].activated =
+        certutil_extns[ext_policyConstr] =
 				certutil.options[opt_AddPolicyConstrExt].activated;
-        certutil_extns[ext_inhibitAnyPolicy].activated =
+        certutil_extns[ext_inhibitAnyPolicy] =
 				certutil.options[opt_AddInhibAnyExt].activated;
     }
     /*
@@ -2777,7 +2730,7 @@ merge_fail:
      *  and output the cert to another file.
      */
     if (certutil.commands[cmd_CreateAndAddCert].activated) {
-	static certutilExtnList nullextnlist = {{PR_FALSE, NULL}};
+	static certutilExtnList nullextnlist = {PR_FALSE};
 	rv = CertReq(privkey, pubkey, keytype, hashAlgTag, subject,
 	             certutil.options[opt_PhoneNumber].arg,
 	             certutil.options[opt_ASCIIForIO].activated,

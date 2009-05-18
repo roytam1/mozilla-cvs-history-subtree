@@ -49,8 +49,7 @@
 
 #define BUF_SIZE 128
 
-int main(int argc, char **argv)
-{
+int main() {
     PRInt16 i16;
     PRIntn n;
     PRInt32 i32;

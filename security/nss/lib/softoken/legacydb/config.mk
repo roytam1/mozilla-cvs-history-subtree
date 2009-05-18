@@ -37,12 +37,16 @@
 
 # $(PROGRAM) has explicit dependencies on $(EXTRA_LIBS)
 CRYPTOLIB=$(DIST)/lib/$(LIB_PREFIX)freebl.$(LIB_SUFFIX)
-
-EXTRA_LIBS +=	$(CRYPTOLIB) 
-
-ifndef NSS_DISABLE_DBM
-EXTRA_LIBS +=	$(DIST)/lib/$(LIB_PREFIX)dbm.$(LIB_SUFFIX) 
+CRYPTODIR=../freebl
+ifdef MOZILLA_SECURITY_BUILD
+	CRYPTOLIB=$(DIST)/lib/$(LIB_PREFIX)crypto.$(LIB_SUFFIX)
+	CRYPTODIR=../crypto
 endif
+
+EXTRA_LIBS += \
+	$(CRYPTOLIB) \
+	$(DIST)/lib/$(LIB_PREFIX)dbm.$(LIB_SUFFIX) \
+	$(NULL)
 
 # can't do this in manifest.mn because OS_TARGET isn't defined there.
 ifeq (,$(filter-out WIN%,$(OS_TARGET)))
@@ -57,7 +61,6 @@ RESNAME = $(LIBRARY_NAME).rc
 ifdef NS_USE_GCC
 EXTRA_SHARED_LIBS += \
 	-L$(DIST)/lib \
-	-L$(NSSUTIL_LIB_DIR) \
 	-lnssutil3 \
 	-L$(NSPR_LIB_DIR) \
 	-lplc4 \
@@ -80,7 +83,6 @@ else
 # $(EXTRA_SHARED_LIBS) come before $(OS_LIBS), except on AIX.
 EXTRA_SHARED_LIBS += \
 	-L$(DIST)/lib \
-	-L$(NSSUTIL_LIB_DIR) \
 	-lnssutil3 \
 	-L$(NSPR_LIB_DIR) \
 	-lplc4 \
@@ -94,15 +96,6 @@ ifeq ($(OS_TARGET),SunOS)
 # dependencies in the same directory where it resides.
 MKSHLIB += -R '$$ORIGIN'
 OS_LIBS += -lbsm 
-endif
-
-ifeq ($(OS_ARCH), HP-UX) 
-ifneq ($(OS_TEST), ia64)
-# pa-risc
-ifeq ($(USE_64), 1)
-MKSHLIB += +b '$$ORIGIN'
-endif
-endif
 endif
 
 ifeq ($(OS_TARGET),WINCE)

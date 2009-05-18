@@ -164,6 +164,7 @@ struct prldap_errormap_entry {
 #endif /* macintosh */
 
 #ifdef XP_OS2
+#ifdef XP_OS2_EMX
 #define SOCBASEERR      0
 #endif
 #ifndef ENOTSUP
@@ -213,6 +214,7 @@ struct prldap_errormap_entry {
 #endif
 #ifndef EROFS
 #define EROFS           (SOCBASEERR+30)
+#endif
 #endif
 
 #ifdef BEOS

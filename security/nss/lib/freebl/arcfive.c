@@ -38,10 +38,6 @@
  * ***** END LICENSE BLOCK ***** */
 /* $Id$ */
 
-#ifdef FREEBL_NO_DEPEND
-#include "stubs.h"
-#endif
-
 #include "blapi.h"
 #include "prerror.h"
 

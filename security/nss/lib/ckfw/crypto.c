@@ -101,7 +101,7 @@ nssCKFWCryptoOperation_Create(
 {
   NSSCKFWCryptoOperation *fwOperation;
   fwOperation = nss_ZNEW(NULL, NSSCKFWCryptoOperation);
-  if (!fwOperation) {
+  if ((NSSCKFWCryptoOperation *)NULL == fwOperation) {
     *pError = CKR_HOST_MEMORY;
     return (NSSCKFWCryptoOperation *)NULL;
   }
@@ -126,7 +126,7 @@ nssCKFWCryptoOperation_Destroy
 )
 {
   if ((NSSCKMDCryptoOperation *) NULL != fwOperation->mdOperation) {
-    if (fwOperation->mdOperation->Destroy) {
+    if ((void *) NULL != (void *)fwOperation->mdOperation->Destroy) {
       fwOperation->mdOperation->Destroy(
                                 fwOperation->mdOperation,
                                 fwOperation,
@@ -171,7 +171,7 @@ nssCKFWCryptoOperation_GetFinalLength
   CK_RV *pError
 )
 {
-  if (!fwOperation->mdOperation->GetFinalLength) {
+  if ((void *) NULL == (void *)fwOperation->mdOperation->GetFinalLength) {
     *pError = CKR_FUNCTION_FAILED;
     return 0;
   }
@@ -198,7 +198,7 @@ nssCKFWCryptoOperation_GetOperationLength
   CK_RV *pError
 )
 {
-  if (!fwOperation->mdOperation->GetOperationLength) {
+  if ((void *) NULL == (void *)fwOperation->mdOperation->GetOperationLength) {
     *pError = CKR_FUNCTION_FAILED;
     return 0;
   }
@@ -225,7 +225,7 @@ nssCKFWCryptoOperation_Final
   NSSItem *outputBuffer
 )
 {
-  if (!fwOperation->mdOperation->Final) {
+  if ((void *) NULL == (void *)fwOperation->mdOperation->Final) {
     return CKR_FUNCTION_FAILED;
   }
   return fwOperation->mdOperation->Final(
@@ -251,7 +251,7 @@ nssCKFWCryptoOperation_Update
   NSSItem *outputBuffer
 )
 {
-  if (!fwOperation->mdOperation->Update) {
+  if ((void *) NULL == (void *)fwOperation->mdOperation->Update) {
     return CKR_FUNCTION_FAILED;
   }
   return fwOperation->mdOperation->Update(
@@ -277,7 +277,7 @@ nssCKFWCryptoOperation_DigestUpdate
   NSSItem *inputBuffer
 )
 {
-  if (!fwOperation->mdOperation->DigestUpdate) {
+  if ((void *) NULL == (void *)fwOperation->mdOperation->DigestUpdate) {
     return CKR_FUNCTION_FAILED;
   }
   return fwOperation->mdOperation->DigestUpdate(
@@ -304,7 +304,7 @@ nssCKFWCryptoOperation_DigestKey
 {
   NSSCKMDObject *mdObject;
 
-  if (!fwOperation->mdOperation->DigestKey) {
+  if ((void *) NULL == (void *)fwOperation->mdOperation->DigestKey) {
     return CKR_FUNCTION_FAILED;
   }
   mdObject = nssCKFWObject_GetMDObject(fwObject);
@@ -330,7 +330,7 @@ nssCKFWCryptoOperation_UpdateFinal
   NSSItem *outputBuffer
 )
 {
-  if (!fwOperation->mdOperation->UpdateFinal) {
+  if ((void *) NULL == (void *)fwOperation->mdOperation->UpdateFinal) {
     return CKR_FUNCTION_FAILED;
   }
   return fwOperation->mdOperation->UpdateFinal(
@@ -358,7 +358,7 @@ nssCKFWCryptoOperation_UpdateCombo
   NSSItem *outputBuffer
 )
 {
-  if (!fwOperation->mdOperation->UpdateCombo) {
+  if ((void *) NULL == (void *)fwOperation->mdOperation->UpdateCombo) {
     return CKR_FUNCTION_FAILED;
   }
   return fwOperation->mdOperation->UpdateCombo(

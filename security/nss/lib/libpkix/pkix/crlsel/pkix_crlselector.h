@@ -66,6 +66,7 @@ pkix_CRLSelector_Select(
 	PKIX_List *before,
 	PKIX_List **pAfter,
 	void *plContext);
+
 #ifdef __cplusplus
 }
 #endif

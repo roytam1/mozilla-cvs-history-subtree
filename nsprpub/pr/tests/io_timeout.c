@@ -57,6 +57,12 @@
 #include <stdio.h>
 #include "nspr.h"
 
+#ifdef XP_MAC
+#include "prlog.h"
+#define printf PR_LogPrint
+extern void SetupMacPrintfLog(char *logFile);
+#endif
+
 #define NUM_THREADS 1
 #define BASE_PORT   8000
 #define DEFAULT_ACCEPT_TIMEOUT 2
@@ -269,6 +275,11 @@ int main(int argc, char **argv)
 
     PR_Init(PR_USER_THREAD, PR_PRIORITY_LOW, 0);
     PR_STDIO_INIT();
+
+#ifdef XP_MAC
+	SetupMacPrintfLog("io_timeout.log");
+	debug_mode = 1;
+#endif
 
     printf("test with global bound thread\n");
     thread_test(PR_GLOBAL_BOUND_THREAD, num_threads);

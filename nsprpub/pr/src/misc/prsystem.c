@@ -226,6 +226,12 @@ PR_IMPLEMENT(PRInt32) PR_GetNumberOfProcessors( void )
 
     GetSystemInfo( &info );
     numCpus = info.dwNumberOfProcessors;
+#elif defined(XP_MAC)
+/* Hard-code the number of processors to 1 on the Mac
+** MacOS/9 will always be 1. The MPProcessors() call is for
+** MacOS/X, when issued. Leave it commented out for now. */
+/*  numCpus = MPProcessors(); */
+    numCpus = 1;
 #elif defined(BEOS)
     system_info sysInfo;
 
@@ -307,7 +313,7 @@ PR_IMPLEMENT(PRUint64) PR_GetPhysicalMemorySize(void)
 
     /* Try to use the newer GlobalMemoryStatusEx API for Windows 2000+. */
     GlobalMemoryStatusExFn globalMemory = (GlobalMemoryStatusExFn) NULL;
-    HMODULE module = GetModuleHandleW(L"kernel32.dll");
+    HMODULE module = GetModuleHandle("kernel32.dll");
 
     if (module) {
         globalMemory = (GlobalMemoryStatusExFn)GetProcAddress(module, "GlobalMemoryStatusEx");

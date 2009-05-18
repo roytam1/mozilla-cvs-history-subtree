@@ -60,9 +60,7 @@ endif
 # To create a loadable module on Darwin, we must use -bundle.
 #
 ifeq ($(OS_TARGET),Darwin)
-ifndef USE_64
 DSO_LDOPTS = -bundle
-endif
 endif
 
 ifeq ($(OS_TARGET),SunOS)
@@ -71,11 +69,3 @@ ifeq ($(OS_TARGET),SunOS)
 MKSHLIB += -R '$$ORIGIN'
 endif
 
-ifeq ($(OS_ARCH), HP-UX) 
-ifneq ($(OS_TEST), ia64)
-# pa-risc
-ifeq ($(USE_64), 1)
-MKSHLIB += +b '$$ORIGIN'
-endif
-endif
-endif

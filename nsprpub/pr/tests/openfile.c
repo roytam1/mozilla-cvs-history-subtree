@@ -49,7 +49,7 @@
 
 #define TEMPLATE_FILE_NAME "template.txt"
 
-int main(int argc, char **argv)
+int main()
 {
     FILE *template;
     char buf[32];

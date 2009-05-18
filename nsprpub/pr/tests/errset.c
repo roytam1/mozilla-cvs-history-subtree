@@ -138,7 +138,8 @@ struct errinfo errcodes[] = {
 {PR_HOST_UNREACHABLE_ERROR,			"PR_HOST_UNREACHABLE_ERROR"}
 };
 
-int main(int argc, char **argv)
+int
+main(int argc, char **argv)
 {
 
 	int count, errnum;

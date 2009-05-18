@@ -221,14 +221,10 @@ pkix_Throw(
 #ifdef PKIX_OBJECT_LEAK_TEST        
         noErrorState = PKIX_TRUE;
         if (pkixLog) {
-#ifdef PKIX_ERROR_DESCRIPTION            
             PR_LOG(pkixLog, 4, ("Error in function \"%s\":\"%s\" with cause \"%s\"\n",
                                 funcName, PKIX_ErrorText[errorCode],
                                 (cause ? PKIX_ErrorText[cause->errCode] : "null")));
-#else
-            PR_LOG(pkixLog, 4, ("Error in function \"%s\": error code \"%d\"\n",
-                                funcName, errorCode));
-#endif /* PKIX_ERROR_DESCRIPTION */
+
             PORT_Assert(strcmp(funcName, "PKIX_PL_Object_DecRef"));
         }
 #endif /* PKIX_OBJECT_LEAK_TEST */
@@ -968,10 +964,10 @@ pkix_CacheCert_Lookup(
         PKIX_PL_Date *cacheValidUntilDate = NULL;
         PKIX_CertSelector *certSel = NULL;
         PKIX_Error *cachedCertError = NULL;
-        PKIX_Error *selectorError = NULL;
         PKIX_CertSelector_MatchCallback selectorMatch = NULL;
         PKIX_Int32 cmpValidTimeResult = PKIX_FALSE;
         PKIX_Int32 cmpCacheTimeResult = 0;
+        PKIX_Boolean certMatch = PKIX_FALSE;
         PKIX_UInt32 numItems = 0;
         PKIX_UInt32 i;
 
@@ -1095,16 +1091,22 @@ pkix_CacheCert_Lookup(
                             goto cleanup;
                         }
 
-                        selectorError = selectorMatch(certSel, cert, plContext);
-                        if (!selectorError){
+                        PKIX_CHECK(selectorMatch
+                                    (certSel,
+                                    cert,
+                                    &certMatch,
+                                    plContext),
+                                    PKIX_SELECTORMATCHFAILED);
+
+                        if (certMatch){
                             /* put on the return list */
                             PKIX_CHECK(PKIX_List_AppendItem
                                    (selCertList,
                                    (PKIX_PL_Object *)cert,
                                    plContext),
                                   PKIX_LISTAPPENDITEMFAILED);
-                        } else {
-                            PKIX_DECREF(selectorError);
+
+                            *pFound = PKIX_TRUE;
                         }
 
                         PKIX_DECREF(cert);
@@ -1143,7 +1145,6 @@ cleanup:
         PKIX_DECREF(selCertList);
         PKIX_DECREF(invalidAfterDate);
         PKIX_DECREF(cachedCertError);
-        PKIX_DECREF(selectorError);
 
         PKIX_RETURN(BUILD);
 }
@@ -1535,7 +1536,6 @@ pkix_CheckForGeneratedError(PKIX_StdVars * stdVars,
     while(fnStackNameArr[pos]) {
         strLen += PORT_Strlen(fnStackNameArr[pos++]) + 1;
     }
-    strLen += 1; /* end of line. */
     pos = 0;
     errorFnStackString = PORT_ZAlloc(strLen);
     while(fnStackNameArr[pos]) {

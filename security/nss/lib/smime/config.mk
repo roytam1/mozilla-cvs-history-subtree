@@ -50,7 +50,6 @@ ifdef NS_USE_GCC
 EXTRA_SHARED_LIBS += \
 	-L$(DIST)/lib \
 	-lnss3 \
-	-L$(NSSUTIL_LIB_DIR) \
 	-lnssutil3 \
 	-L$(NSPR_LIB_DIR) \
 	-lplc4 \
@@ -72,7 +71,6 @@ else
 EXTRA_SHARED_LIBS += \
 	-L$(DIST)/lib \
 	-lnss3 \
-	-L$(NSSUTIL_LIB_DIR) \
 	-lnssutil3 \
 	-L$(NSPR_LIB_DIR) \
 	-lplc4 \
@@ -98,13 +96,3 @@ ifeq ($(OS_TARGET),SunOS)
 # dependencies in the same directory where it resides.
 MKSHLIB += -R '$$ORIGIN'
 endif
-
-ifeq ($(OS_ARCH), HP-UX) 
-ifneq ($(OS_TEST), ia64)
-# pa-risc
-ifeq ($(USE_64), 1)
-MKSHLIB += +b '$$ORIGIN'
-endif
-endif
-endif
-

@@ -44,7 +44,11 @@
 #  (xp) include paths
 #
 
-INCLUDES += -I$(SOURCE_MDHEADERS_DIR) -I$(SOURCE_XPHEADERS_DIR)
+INCLUDES  += -I$(SOURCE_MDHEADERS_DIR) 
+
+ifneq ($(OS_TARGET),WIN16)
+    INCLUDES  += -I$(SOURCE_XPHEADERS_DIR)
+endif
 
 #
 #  Only append source-side private cross-platform include paths for

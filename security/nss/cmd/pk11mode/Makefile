@@ -56,8 +56,6 @@ include $(CORE_DEPTH)/coreconf/config.mk
 # (4) Include "local" platform-dependent assignments (OPTIONAL).      #
 #######################################################################
 
-include ../platlibs.mk
-
 ifeq ($(OS_ARCH), WINNT)
 
 EXTRA_LIBS += \
@@ -92,6 +90,4 @@ include $(CORE_DEPTH)/coreconf/rules.mk
 #######################################################################
 # (7) Execute "local" rules. (OPTIONAL).                              #
 #######################################################################
-
-include ../platrules.mk
 

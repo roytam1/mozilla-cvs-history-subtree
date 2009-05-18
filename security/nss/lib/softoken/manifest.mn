@@ -52,7 +52,12 @@ INCLUDES += -I$(DIST)/include/sqlite3
 endif
 
 EXPORTS = \
-	secmodt.h \
+	pkcs11.h \
+	pkcs11f.h \
+	pkcs11p.h \
+	pkcs11t.h \
+	pkcs11n.h \
+	pkcs11u.h \
 	$(NULL)
 
 PRIVATE_EXPORTS = \
@@ -66,7 +71,6 @@ PRIVATE_EXPORTS = \
 	softkver.h \
 	sdb.h \
 	sftkdbt.h \
-	pk11init.h \
 	$(NULL)
 
 CSRCS = \

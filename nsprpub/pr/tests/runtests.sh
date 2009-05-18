@@ -147,7 +147,6 @@ libfilename
 lltest
 lock
 lockfile
-logfile
 logger
 many_cv
 multiwait
@@ -162,7 +161,6 @@ op_filnf
 op_filok
 op_nofil
 parent
-parsetm
 peek
 perf
 pipeping
@@ -177,7 +175,6 @@ provider
 prpollml
 ranfile
 randseed
-reinit
 rwlocktest
 sel_spd
 selct_er

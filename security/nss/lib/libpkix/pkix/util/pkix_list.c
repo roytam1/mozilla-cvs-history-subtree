@@ -107,7 +107,6 @@ pkix_List_Destroy(
         void *plContext)
 {
         PKIX_List *list = NULL;
-        PKIX_List *nextItem = NULL;
 
         PKIX_ENTER(LIST, "pkix_List_Destroy");
         PKIX_NULLCHECK_ONE(object);
@@ -120,11 +119,7 @@ pkix_List_Destroy(
 
         /* We have a valid list. DecRef its item and recurse on next */
         PKIX_DECREF(list->item);
-        while (nextItem = list->next) {
-            list->next = nextItem->next;
-            nextItem->next = NULL;
-            PKIX_DECREF(nextItem);
-        }      
+        PKIX_DECREF(list->next);
         list->immutable = PKIX_FALSE;
         list->length = 0;
         list->isHeader = PKIX_FALSE;
@@ -889,12 +884,13 @@ pkix_List_MergeLists(
         }
 
         *pMergedList = list;
-        list = NULL;
 
 cleanup:
-        PKIX_DECREF(list);
-        PKIX_DECREF(item);
- 
+
+        if (PKIX_ERROR_RECEIVED){
+                PKIX_DECREF(list);
+        }
+
         PKIX_RETURN(LIST);
 }
 
@@ -1224,10 +1220,7 @@ pkix_List_BubbleSort(
 
         PKIX_ENTER(BUILD, "pkix_List_BubbleSort");
         PKIX_NULLCHECK_THREE(fromList, comparator, pSortedList);
-        
-        if (fromList->immutable) {
-            PKIX_ERROR(PKIX_CANNOTSORTIMMUTABLELIST);
-        }
+
         PKIX_CHECK(pkix_List_Duplicate
                 ((PKIX_PL_Object *) fromList,
                 (PKIX_PL_Object **) &sortedList,
@@ -1279,10 +1272,9 @@ pkix_List_BubbleSort(
         }
 
         *pSortedList = sortedList;
-        sortedList = NULL;
+
 cleanup:
 
-        PKIX_DECREF(sortedList);
         PKIX_DECREF(leastObj);
         PKIX_DECREF(cmpObj);
 
@@ -1493,37 +1485,36 @@ PKIX_List_InsertItem(
                 PKIX_ERROR(PKIX_INPUTLISTMUSTBEHEADER);
         }
 
+        PKIX_CHECK(pkix_List_GetElement(list, index, &element, plContext),
+                    PKIX_LISTGETELEMENTFAILED);
+
         /* Create a new list object */
         PKIX_CHECK(pkix_List_Create_Internal(PKIX_FALSE, &newElem, plContext),
                     PKIX_LISTCREATEINTERNALFAILED);
 
-        if (list->length) {
-            PKIX_CHECK(pkix_List_GetElement(list, index, &element, plContext),
-                       PKIX_LISTGETELEMENTFAILED);
-            /* Copy the old element's contents into the new element */
-            newElem->item = element->item;
-            /* Add new item to the list */
-            PKIX_INCREF(item);
-            element->item = item;
-            /* Set the new element's next pointer to the old element's next */
-            newElem->next = element->next;
-            /* Set the old element's next pointer to the new element */
-            element->next = newElem;
-            newElem = NULL;
-        } else {
-            PKIX_INCREF(item);
-            newElem->item = item;
-            newElem->next = NULL;
-            list->next = newElem;
-            newElem = NULL;
-        }
-        list->length++;
+        /* Copy the old element's contents into the new element */
+        newElem->item = element->item;
+
+        /* Set the new element's next pointer to the old element's next */
+        newElem->next = element->next;
+
+        /* Set the old element's next pointer to the new element */
+        element->next = newElem;
+
+        PKIX_INCREF(item);
+        element->item = item;
 
         PKIX_CHECK(PKIX_PL_Object_InvalidateCache
                     ((PKIX_PL_Object *)list, plContext),
                     PKIX_OBJECTINVALIDATECACHEFAILED);
+
+        list->length = list->length + 1;
+
 cleanup:
-        PKIX_DECREF(newElem);
+
+        if (PKIX_ERROR_RECEIVED){
+                PKIX_DECREF(newElem);
+        }
 
         PKIX_RETURN(LIST);
 }
