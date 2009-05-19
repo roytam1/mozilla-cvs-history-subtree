@@ -409,11 +409,11 @@ MODULES_all :=                                  \
 #
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
-#MOZ_CO_TAG          = <tag>
-NSPR_CO_TAG          = NSPR_4_7_3_RTM
-NSS_CO_TAG           = NSS_3_12_2_WITH_CKBI_1_73_RTM
-LDAPCSDK_CO_TAG      = LDAPCSDK_6_0_3_CLIENT_BRANCH
-LOCALES_CO_TAG       =
+MOZ_CO_TAG           = FIREFOX_3_0_11_RELEASE
+NSPR_CO_TAG          = FIREFOX_3_0_11_RELEASE
+NSS_CO_TAG           = FIREFOX_3_0_11_RELEASE
+LDAPCSDK_CO_TAG      = FIREFOX_3_0_11_RELEASE
+LOCALES_CO_TAG       = FIREFOX_3_0_11_RELEASE
 
 #######################################################################
 # Defines
