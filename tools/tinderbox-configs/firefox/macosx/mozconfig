@@ -23,6 +23,7 @@ ac_add_options --disable-tests
 ac_add_options --enable-update-packaging
 ac_add_options --enable-libxul
 ac_add_options --enable-shark
+export MOZ_PKG_SPECIAL="shark"
 ac_add_options --enable-debugger-info-modules
 #ac_add_options --enable-dtrace
 
