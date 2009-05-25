@@ -175,7 +175,6 @@ Page custom preShortcuts leaveShortcuts
 !insertmacro MUI_PAGE_INSTFILES
 
 ; Finish Page
-!define MUI_FINISHPAGE_NOREBOOTSUPPORT
 !define MUI_FINISHPAGE_TITLE_3LINES
 !define MUI_FINISHPAGE_RUN
 !define MUI_FINISHPAGE_RUN_FUNCTION LaunchApp
@@ -342,6 +341,30 @@ Section "-Application" Section1
   StrCpy $R0 "$EXEDIR\nonlocalized"
   StrCpy $R1 "$INSTDIR"
   Call DoCopyFiles
+
+  ; The MAPI DLL's are copied and the copies are then registered to lessen
+  ; file in use errors on application update.
+  ClearErrors
+  ${DeleteFile} "$INSTDIR\MapiProxy_InUse.dll"
+  ${If} ${Errors}
+    ; Clear the way for the new file and delete the old file on reboot
+    Rename "$INSTDIR\MapiProxy_InUse.dll" "$INSTDIR\MapiProxy_InUse.dll.moz-delete"
+    Delete /REBOOTOK "$INSTDIR\MapiProxy_InUse.dll.moz-delete"
+  ${EndIf}
+  CopyFiles /SILENT "$EXEDIR\nonlocalized\MapiProxy.dll" "$INSTDIR\MapiProxy_InUse.dll"
+  ${LogMsg} "Installed File: $INSTDIR\MapiProxy_InUse.dll"
+  ${LogUninstall} "File: \MapiProxy_InUse.dll"
+
+  ClearErrors
+  ${DeleteFile} "$INSTDIR\mozMapi32_InUse.dll"
+  ${If} ${Errors}
+    ; Clear the way for the new file and delete the old file on reboot
+    Rename "$INSTDIR\mozMapi32_InUse.dll" "$INSTDIR\mozMapi32_InUse.dll.moz-delete"
+    Delete /REBOOTOK "$INSTDIR\mozMapi32_InUse.dll.moz-delete"
+  ${EndIf}
+  CopyFiles /SILENT "$EXEDIR\nonlocalized\mozMapi32.dll" "$INSTDIR\mozMapi32_InUse.dll"
+  ${LogMsg} "Installed File: $INSTDIR\mozMapi32_InUse.dll"
+  ${LogUninstall} "File: \mozMapi32_InUse.dll"
 
   ; Register DLLs
   ; XXXrstrong - AccessibleMarshal.dll can be used by multiple applications but
@@ -1098,6 +1121,9 @@ Function .onInit
   ${GetSize} "$EXEDIR\nonlocalized\" "/S=0K" $1 $8 $9
   ${GetSize} "$EXEDIR\localized\" "/S=0K" $2 $8 $9
   IntOp $0 $1 + $2
+  ; Add 1024 Kb to the diskspace requirement since the installer makes a copy
+  ; of the MAPI dll's (around 20 Kb)... also, see Bug 434338.
+  IntOp $0 $0 + 1024
   SectionSetSize 0 $0
 
   ${If} ${FileExists} "$EXEDIR\optional\extensions\inspector@mozilla.org"
