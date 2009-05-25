@@ -311,6 +311,8 @@ void *JAR_JAR_end_hash (int alg, void *cookie)
 int JAR_JAR_sign_archive 
       (char *nickname, char *password, char *sf, char *outsig)
   {
+  char *out_fn;
+
   int status = JAR_ERR_GENERAL;
   JAR_FILE sf_fp; 
   JAR_FILE out_fp;
@@ -320,11 +322,6 @@ int JAR_JAR_sign_archive
 
   CERTCertificate *cert;
 
-  if (PORT_Strlen (sf) < 5)
-    {
-    return JAR_ERR_GENERAL;
-    }
-
   /* open cert and key databases */
 
   certdb = JAR_open_database();
@@ -333,10 +330,12 @@ int JAR_JAR_sign_archive
 
   keydb = jar_open_key_database();
   if (keydb == NULL)
-    {
-    JAR_close_database(certdb);
     return JAR_ERR_GENERAL;
-    }
+
+  out_fn = PORT_Strdup (sf);
+
+  if (out_fn == NULL || PORT_Strlen (sf) < 5)
+    return JAR_ERR_GENERAL;
 
   sf_fp = JAR_FOPEN (sf, "rb");
   out_fp = JAR_FOPEN (outsig, "wb");

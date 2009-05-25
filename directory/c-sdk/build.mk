@@ -45,7 +45,7 @@ COMPVERSIONDIR = $(DEPTH)/directory/c-sdk
 endif
 
 DEFAULT_VENDOR_NAME=mozilla.org
-DEFAULT_VENDOR_VERSION=602
+DEFAULT_VENDOR_VERSION=517
 
 ifndef VENDOR_NAME
 VENDOR_NAME	= $(DEFAULT_VENDOR_NAME)
@@ -154,11 +154,6 @@ else
 SVRCORE_LINK = $(SVRCORE_LIBS) -l$(SVRCORE_LIBNAME)
 endif
 
-# sasl library
-ifdef SASL_LIBS
-SASL_LINK = $(SASL_LIBS)
-endif
-
 #
 # NSPR library
 #
@@ -195,6 +190,33 @@ PLC_LIBNAME=$(PLCBASE)
 PLDS_LIBNAME=$(PLDSBASE)
 NSPR_LIBNAME=$(NSPRBASE)
 
+#
+# NLS library
+#
+ifeq ($(OS_ARCH), WINNT)
+NSCNV_LIBNAME	=nscnv32$(NLS_LIBVERSION).$(LIB_SUFFIX)
+NSJPN_LIBNAME	=nsjpn32$(NLS_LIBVERSION).$(LIB_SUFFIX)
+NSCCK_LIBNAME	=nscck32$(NLS_LIBVERSION).$(LIB_SUFFIX)
+NSSB_LIBNAME	=nssb32$(NLS_LIBVERSION).$(LIB_SUFFIX)
+else
+NSCNV_LIBNAME	=libnscnv$(NLS_LIBVERSION).$(LIB_SUFFIX)
+NSJPN_LIBNAME	=libnsjpn$(NLS_LIBVERSION).$(LIB_SUFFIX)
+NSCCK_LIBNAME	=libnscck$(NLS_LIBVERSION).$(LIB_SUFFIX)
+NSSB_LIBNAME	=libnssb$(NLS_LIBVERSION).$(LIB_SUFFIX)
+endif
+
+LIBNLS_INCLUDES_LOC = $(LIBNLS_RELEASE_TREE)/libnls$(NLS_LIBVERSION)/$(LIBNLS_RELDATE)/$(OBJDIR_NAME)/include
+LIBNLS_LIB_LOC	    = $(LIBNLS_RELEASE_TREE)/libnls$(NLS_LIBVERSION)/$(LIBNLS_RELDATE)/$(OBJDIR_NAME)/lib
+
+LIBNLS_DIR	    = ../../../../../dist/libnls$(NLS_LIBVERSION)
+ifeq ($(COMPONENT_PULL_METHOD), FTP)
+LIBNLS_INCLUDES =../../../../../dist/libnls$(NLS_LIBVERSION)/$(OBJDIR_NAME)/include
+LIBNLS_LIBDIR	=../../../../../dist/libnls$(NLS_LIBVERSION)/$(OBJDIR_NAME)/lib
+else
+LIBNLS_INCLUDES =../../../../../dist/public/libnls
+LIBNLS_LIBDIR	=../../../../../dist/$(OBJDIR_NAME)/libnls
+endif
+
 RM              = rm -f
 SED             = sed
 
@@ -211,6 +233,11 @@ else
 LDAP_DEBUG	= -DLDAP_DEBUG
 endif
 
+ifdef HAVE_LIBNLS
+HAVELIBNLS	= -DHAVE_LIBNLS
+else
+HAVELIBNLS	=
+endif
 
 ifdef BUILD_CLU
 BUILDCLU	= 1
@@ -221,7 +248,7 @@ endif
 #
 # DEFS are included in CFLAGS
 #
-DEFS            = $(PLATFORMCFLAGS) $(LDAP_DEBUG) \
+DEFS            = $(PLATFORMCFLAGS) $(LDAP_DEBUG) $(HAVELIBNLS) \
                   $(CLDAP) $(DEFNETSSL) $(NOLIBLCACHE) \
                   $(LDAP_REFERRALS) $(LDAP_DNS) $(STR_TRANSLATION) \
                   $(LIBLDAP_CHARSETS) $(LIBLDAP_DEF_CHARSET) \
@@ -293,9 +320,7 @@ endif
 
 ifeq ($(OS_ARCH),ReliantUNIX)
 DL=-ldl
-ifdef RPATHFLAG
 USE_LD_RUN_PATH=1
-endif
 USE_CCC_TO_LINK=1
 CCC=$(CXX)
 endif
@@ -304,34 +329,30 @@ ifeq ($(OS_ARCH),UnixWare)
 DL=
 endif
 
+RPATHFLAG = ..:../lib:../../lib:../../../lib:../../../../lib
+
 ifeq ($(OS_ARCH), SunOS)
+# include $ORIGIN in run time library path (works on Solaris 8 10/01 and later)
+RPATHFLAG := \$$ORIGIN/../lib:\$$ORIGIN/../../lib:$(RPATHFLAG)
 
 # flag to pass to cc when linking to set runtime shared library search path
 # this is used like this, for example:   $(RPATHFLAG_PREFIX)../..
 # Also, use the C++ compiler to link for 64-bit builds.
 ifeq ($(USE_64), 1)
 USE_CCC_TO_LINK=1
-ifdef RPATHFLAG
 RPATHFLAG_PREFIX=-R:
-endif
 else
-ifdef RPATHFLAG
 RPATHFLAG_PREFIX=-Wl,-R,
-endif
 endif
 
 ifdef NS_USE_GCC
 USE_CCC_TO_LINK=1
-ifdef RPATHFLAG
 RPATHFLAG_PREFIX=-Wl,-R,
-endif
 endif
 
 # flag to pass to ld when linking to set runtime shared library search path
 # this is used like this, for example:   $(LDRPATHFLAG_PREFIX)../..
-ifdef RPATHFLAG
 LDRPATHFLAG_PREFIX=-R
-endif
 
 # OS network libraries
 PLATFORMLIBS+=-lresolv -lsocket -lnsl -lgen -ldl -lposix4
@@ -343,13 +364,11 @@ USE_CCC_TO_LINK=1
 
 # flag to pass to cc when linking to set runtime shared library search path
 # this is used like this, for example:   $(RPATHFLAG_PREFIX)../..
-ifdef RPATHFLAG
 RPATHFLAG_PREFIX=-Wl,-rpath,
 
 # flag to pass to ld when linking to set runtime shared library search path
 # this is used like this, for example:   $(LDRPATHFLAG_PREFIX)../..
 LDRPATHFLAG_PREFIX=-rpath
-endif
 
 # allow for unresolved symbols
 DLL_LDFLAGS += -expect_unresolved "*"
@@ -358,15 +377,12 @@ endif # OSF1
 ifeq ($(OS_ARCH), AIX)
 # Flags to set runtime shared library search path.  For example:
 # $(CC) $(RPATHFLAG_PREFIX)../..$(RPATHFLAG_EXTRAS)
-ifdef RPATHFLAG
 RPATHFLAG_PREFIX=-blibpath:
 RPATHFLAG_EXTRAS=:/usr/lib:/lib
 
 # flag to pass to ld when linking to set runtime shared library search path
 # this is used like this, for example:   $(LDRPATHFLAG_PREFIX)../..
 LDRPATHFLAG_PREFIX=-blibpath:/usr/lib:/lib:
-endif
-
 DLL_LDFLAGS= -bM:SRE -bnoentry \
     -L.:/usr/lib/threads:/usr/lpp/xlC/lib:/usr/lib:/lib
 DLL_EXTRA_LIBS= -bI:/usr/lib/lowsys.exp -lC_r -lC -lpthreads -lc_r -lm \
@@ -379,7 +395,14 @@ ifeq ($(OS_ARCH), HP-UX)
 # Use the C++ compiler to link
 USE_CCC_TO_LINK=1
 
-ifdef RPATHFLAG
+# include $ORIGIN in run time library path (works on HP-UX 11.11 with latest patches and later)
+ifeq ($(OS_RELEASE), B.11.11)
+RPATHFLAG := \$$ORIGIN/../lib:\$$ORIGIN/../../lib:$(RPATHFLAG)
+endif
+ifeq ($(OS_RELEASE), B.11.23)
+RPATHFLAG := \$$ORIGIN/../lib:\$$ORIGIN/../../lib:$(RPATHFLAG)
+endif
+
 # flag to pass to cc when linking to set runtime shared library search path
 # this is used like this, for example:   $(RPATHFLAG_PREFIX)../..
 RPATHFLAG_PREFIX=-Wl,+s,+b,
@@ -387,7 +410,6 @@ RPATHFLAG_PREFIX=-Wl,+s,+b,
 # flag to pass to ld when linking to set runtime shared library search path
 # this is used like this, for example:   $(LDRPATHFLAG_PREFIX)../..
 LDRPATHFLAG_PREFIX=+s +b
-endif
 
 # we need to link in the rt library to get sem_*()
 PLATFORMLIBS += -lrt
@@ -401,21 +423,18 @@ USE_CCC_TO_LINK=1
 
 # flag to pass to cc when linking to set runtime shared library search path
 # this is used like this, for example:   $(RPATHFLAG_PREFIX)../..
-ifdef RPATHFLAG
 RPATHFLAG_PREFIX=-Wl,-rpath,
 
 # flag to pass to ld when linking to set runtime shared library search path
 # this is used like this, for example:   $(LDRPATHFLAG_PREFIX)../..
 # note, there is a trailing space
 LDRPATHFLAG_PREFIX=-rpath
-endif # RPATHFLAG
 endif # Linux
 
 ifeq ($(OS_ARCH), Darwin)
 # Darwin doesn't use RPATH.
-#ifdef RPATHFLAG
 RPATHFLAG_PREFIX=
-#endif
+RPATHFLAG=
 
 # Use the C++ compiler to link
 USE_CCC_TO_LINK=1
@@ -494,27 +513,13 @@ else
 
 LINK_LIB        = $(RM) $@; $(AR) $(AR_FLAGS) $(OBJS); $(RANLIB) $@
 LINK_LIB2       = $(RM) $@; $(AR) $@ $(OBJS2); $(RANLIB) $@
-ifneq ($(LD),$(CC))
 ifdef SONAMEFLAG_PREFIX
-LINK_DLL        = $(LD) $(DSO_LDOPTS) $(LDRPATHFLAG_PREFIX)$(RPATHFLAG) $(ALDFLAGS) \
-                        $(DLL_LDFLAGS) $(DLL_EXPORT_FLAGS) \
+LINK_DLL        = $(LD) $(DSO_LDOPTS) $(ALDFLAGS) $(DLL_LDFLAGS) $(DLL_EXPORT_FLAGS) \
                         -o $@ $(SONAMEFLAG_PREFIX)$(notdir $@) $(OBJS)
 else # SONAMEFLAG_PREFIX
-LINK_DLL        = $(LD) $(DSO_LDOPTS) $(LDRPATHFLAG_PREFIX)$(RPATHFLAG) $(ALDFLAGS) \
-                        $(DLL_LDFLAGS) $(DLL_EXPORT_FLAGS) \
+LINK_DLL        = $(LD) $(DSO_LDOPTS) $(ALDFLAGS) $(DLL_LDFLAGS) $(DLL_EXPORT_FLAGS) \
                         -o $@ $(OBJS)
 endif # SONAMEFLAG_PREFIX
-else  # $(CC) is used to link libs
-ifdef SONAMEFLAG_PREFIX
-LINK_DLL        = $(LD) $(DSO_LDOPTS) $(RPATHFLAG_PREFIX)$(RPATHFLAG) $(ALDFLAGS) \
-                        $(DLL_LDFLAGS) $(DLL_EXPORT_FLAGS) \
-                        -o $@ $(SONAMEFLAG_PREFIX)$(notdir $@) $(OBJS)
-else # SONAMEFLAG_PREFIX
-LINK_DLL        = $(LD) $(DSO_LDOPTS) $(RPATHFLAG_PREFIX)$(RPATHFLAG) $(ALDFLAGS) \
-                        $(DLL_LDFLAGS) $(DLL_EXPORT_FLAGS) \
-                        -o $@ $(OBJS)
-endif # SONAMEFLAG_PREFIX
-endif # LD!CC
 endif #!os2
 
 ifeq ($(OS_ARCH), OSF1)

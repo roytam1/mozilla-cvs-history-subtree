@@ -52,31 +52,31 @@
 #
 
 # For Solaris (32 bit)
-# EXTRACFLAGS=
-# EXTRALDFLAGS=-lsocket -lnsl 
-# EXTRANSPRLDFLAGS=-mt
-# SLDAPLIB=ldap60 -lssldap60 -lssl3 -lnss3 
-# LDAPLIB=ldap60
-# LDAPPRLIB=prldap60
-# NSPRLIB=nspr4
-# CC=cc
+EXTRACFLAGS=
+EXTRALDFLAGS=-lsocket -lnsl 
+EXTRANSPRLDFLAGS=-mt
+SLDAPLIB=ldap50 -lssldap50 -lssl3 -lnss3 
+LDAPLIB=ldap50
+LDAPPRLIB=prldap50
+NSPRLIB=nspr4
+CC=cc
 
 # For Solaris (64 bit)
 #EXTRACFLAGS=
 #EXTRALDFLAGS=-lsocket -lnsl 
 #EXTRANSPRLDFLAGS=-mt
-#SLDAPLIB=ldap60 -lssldap60 -lssl3 -lnss3 
-#LDAPLIB=ldap60
-#LDAPPRLIB=prldap60
+#SLDAPLIB=ldap50 -lssldap50 -lssl3 -lnss3 
+#LDAPLIB=ldap50
+#LDAPPRLIB=prldap50
 #NSPRLIB=nspr4
 #CC=cc -xarch=v9
 
 # For HP/UX (32 bit)
 #EXTRACFLAGS=-Dhpux -D_HPUX_SOURCE -D_REENTRANT -Aa
 #EXTRALDFLAGS=-Wl,+s+b
-#SLDAPLIB=ldap60 -lssldap60 -lssl3 -lnss3 
-#LDAPLIB=ldap60
-#LDAPPRLIB=prldap60
+#SLDAPLIB=ldap50 -lssldap50 -lssl3 -lnss3 
+#LDAPLIB=ldap50
+#LDAPPRLIB=prldap50
 #NSPRLIB=nspr4
 #CC=cc
 
@@ -84,9 +84,9 @@
 #EXTRACFLAGS=-DHPUX11 -DIS_64 +e +DA2.0W +DChpux +DS2.0 
 #EXTRACFLAGS+=-D_LARGEFILE64_SOURCE -D_PR_HAVE_OFF64_T
 #EXTRALDFLAGS=-lpthread +DA2.0W +DS2.0
-#SLDAPLIB=ldap60 -lssldap60 -lssl3 -lnss3 
-#LDAPLIB=ldap60
-#LDAPPRLIB=prldap60
+#SLDAPLIB=ldap50 -lssldap50 -lssl3 -lnss3 
+#LDAPLIB=ldap50
+#LDAPPRLIB=prldap50
 #NSPRLIB=nspr4
 #CC=/opt/ansic/bin/cc
 
@@ -94,38 +94,38 @@
 # For IRIX
 #EXTRACFLAGS=
 #EXTRALDFLAGS=
-#SLDAPLIB=ldap60 -lssldap60 -lssl3 -lnss3 
-#LDAPLIB=ldap60
-#LDAPPRLIB=prldap60
+#SLDAPLIB=ldap50 -lssldap50 -lssl3 -lnss3 
+#LDAPLIB=ldap50
+#LDAPPRLIB=prldap50
 #NSPRLIB=nspr4
 #CC=cc
 
 # For AIX
 #EXTRACFLAGS=
 #EXTRALDFLAGS=-brtl
-#SLDAPLIB=ldap60 -lssldap60 -lssl3 -lnss3 
-#LDAPLIB=ldap60
-#LDAPPRLIB=prldap60
+#SLDAPLIB=ldap50 -lssldap50 -lssl3 -lnss3 
+#LDAPLIB=ldap50
+#LDAPPRLIB=prldap50
 #NSPRLIB=nspr4
 #CC=cc
 
 # For Digital UNIX 4.0
 #EXTRACFLAGS=
 #EXTRALDFLAGS=-taso -rpath ../lib
-#SLDAPLIB=ldap60 -lssldap60 -lssl3 -lnss3 
-#LDAPLIB=ldap60
-#LDAPPRLIB=prldap60
+#SLDAPLIB=ldap50 -lssldap50 -lssl3 -lnss3 
+#LDAPLIB=ldap50
+#LDAPPRLIB=prldap50
 #NSPRLIB=nspr4
 #CC=cc
 
 # For Linux 2.2
-EXTRACFLAGS=-I/usr/include/sasl -I/usr/include/nspr4
-EXTRALDFLAGS=-lsasl2 -lpthread
-LDAPLIB=ldapssl60
-LDAPLIB=ldap60
-LDAPPRLIB=prldap60
-NSPRLIB=nspr4
-CC=gcc
+#EXTRACFLAGS=
+#EXTRALDFLAGS=-lpthread
+#LDAPLIB=ldapssl50
+#LDAPLIB=ldap50
+#LDAPPRLIB=prldap50
+#NSPRLIB=nspr4
+#CC=gcc
 
 ###############################################################################
 # You should not need to change anything below here....
@@ -285,26 +285,6 @@ nsprio:		nsprio.o
 		$(CC) -o nsprio nsprio.o $(LIBS) $(NSPRLIBS)
 
 nsprio.o:	examples.h
-
-sasl:		sasl.o
-		$(CC) -o $@ $^ $(LIBS) $(NSPRLIBS)
-
-sasl.o:	examples.h
-
-nsprsasl:		nsprsasl.o
-		$(CC) -o $@ $^ $(LIBS) $(NSPRLIBS)
-
-nsprsasl.o:	examples.h
-
-saslsearch:		saslsearch.o
-		$(CC) -o $@ $^ $(LIBS) $(NSPRLIBS)
-
-saslsearch.o:	examples.h
-
-nsprsaslsearch:		nsprsaslsearch.o
-		$(CC) -o $@ $^ $(LIBS) $(NSPRLIBS)
-
-nsprsaslsearch.o:	examples.h
 
 runall:		$(PROGS)
 		@for i in $(PROGS); do \

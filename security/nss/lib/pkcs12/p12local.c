@@ -920,7 +920,6 @@ sec_pkcs12_convert_item_to_unicode(PRArenaPool *arena, SECItem *dest,
 {
     PRBool success = PR_FALSE;
     if(!src || !dest) {
-	PORT_SetError(SEC_ERROR_INVALID_ARGS);
 	return PR_FALSE;
     }
 
