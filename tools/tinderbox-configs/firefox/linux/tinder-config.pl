@@ -9,6 +9,9 @@
 #$ENV{PATH} = "/usr/local/binutils-2.13.2.1/bin:/usr/local/gcc-3.4.3/bin:" . $ENV{PATH};
 
 $ENV{MOZ_CRASHREPORTER_NO_REPORT} = '1';
+# Disable the Gnome Bug Buddy so that it doesn't block us getting stacks
+$ENV{GNOME_DISABLE_CRASH_DIALOG} = '1';
+
 
 #- PLEASE FILL THIS IN WITH YOUR PROPER EMAIL ADDRESS
 #$BuildAdministrator = "$ENV{USER}\@$ENV{HOST}";
