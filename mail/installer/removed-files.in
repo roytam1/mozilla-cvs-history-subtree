@@ -157,6 +157,9 @@ components/xuldoc.xpt
 components/xultmpl.xpt
 components/downloadmanager.xpt
 #endif
+#ifdef XP_UNIX
+components/thunderbird.xpt
+#endif
 components/nsUnsetDefaultMail.js
 components/nsBackgroundUpdateService.js
 components/nsDownloadProgressListener.js
