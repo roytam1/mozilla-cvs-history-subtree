@@ -557,6 +557,7 @@ nsSafeFileOutputStream::Close()
 NS_IMETHODIMP
 nsSafeFileOutputStream::Finish()
 {
+    Flush();
     nsresult rv = nsFileOutputStream::Close();
 
     // if there is no temp file, don't try to move it over the original target.
