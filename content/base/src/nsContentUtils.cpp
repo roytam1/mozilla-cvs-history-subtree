@@ -2331,6 +2331,7 @@ nsCxPusher::Push(nsISupports *aCurrentTarget)
 
   if (content) {
     document = content->GetOwnerDoc();
+    NS_ENSURE_TRUE(document, PR_FALSE);
   }
 
   if (!document) {
