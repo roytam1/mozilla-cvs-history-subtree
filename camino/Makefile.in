@@ -59,7 +59,8 @@ CM_APP_VERSION_FILE = $(srcdir)/config/version.txt
 CM_APP_VERSION := $(shell cat $(CM_APP_VERSION_FILE))
 CM_COPYRIGHT_YEAR_FILE = $(srcdir)/config/year.txt
 CM_COPYRIGHT_YEAR := $(shell cat $(CM_COPYRIGHT_YEAR_FILE))
-FOX_APP_VERSION_FILE = $(topsrcdir)/browser/config/version.txt
+# use the Tb version now that Fx no longer has a non-pre version on relbranches
+FOX_APP_VERSION_FILE = $(topsrcdir)/mail/config/version.txt
 FOX_APP_VERSION := $(shell cat $(FOX_APP_VERSION_FILE))
 PLATFORM_VERSION_FILE = $(topsrcdir)/config/milestone.txt
 PLATFORM_VERSION := $(shell egrep "^[^\#]+" $(PLATFORM_VERSION_FILE))
