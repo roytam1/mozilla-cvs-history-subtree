@@ -7890,6 +7890,16 @@ nsHTMLDocumentSH::DocumentAllGetProperty(JSContext *cx, JSObject *obj,
     return JS_TRUE;
   }
 
+  while (JS_GET_CLASS(cx, obj) != &sHTMLDocumentAllClass) {
+    obj = JS_GetPrototype(cx, obj);
+
+    if (!obj) {
+      NS_ERROR("The JS engine lies!");
+
+      return JS_TRUE;
+    }
+  }
+
   nsIHTMLDocument *doc = (nsIHTMLDocument *)::JS_GetPrivate(cx, obj);
   nsCOMPtr<nsIDOMHTMLDocument> domdoc(do_QueryInterface(doc));
   nsCOMPtr<nsISupports> result;
