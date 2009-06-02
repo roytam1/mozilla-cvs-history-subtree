@@ -126,6 +126,16 @@ JS_GetPositiveInfinityValue(JSContext *cx)
     return DOUBLE_TO_JSVAL(cx->runtime->jsPositiveInfinity);
 }
 
+JS_PUBLIC_API(JSObject *)
+JS_GetGlobalForObject(JSContext *cx, JSObject *obj)
+{
+    JSObject *parent;
+
+    while ((parent = OBJ_GET_PARENT(cx, obj)) != NULL)
+        obj = parent;
+    return obj;
+}
+
 JS_PUBLIC_API(jsval)
 JS_GetEmptyStringValue(JSContext *cx)
 {

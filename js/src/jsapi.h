@@ -801,6 +801,9 @@ JS_DumpNamedRoots(JSRuntime *rt,
                   void *data);
 #endif
 
+extern JS_PUBLIC_API(JSObject *)
+JS_GetGlobalForObject(JSContext *cx, JSObject *obj);
+
 /*
  * Call JS_MapGCRoots to map the GC's roots table using map(rp, name, data).
  * The root is pointed at by rp; if the root is unnamed, name is null; data is
