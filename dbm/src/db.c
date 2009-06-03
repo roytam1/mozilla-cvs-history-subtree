@@ -33,6 +33,8 @@
 static char sccsid[] = "@(#)db.c	8.4 (Berkeley) 2/21/94";
 #endif /* LIBC_SCCS and not lint */
 
+#include "watcomfx.h"
+
 #ifndef __DBINTERFACE_PRIVATE
 #define __DBINTERFACE_PRIVATE
 #endif

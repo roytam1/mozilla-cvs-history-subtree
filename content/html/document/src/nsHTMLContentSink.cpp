@@ -1661,7 +1661,6 @@ HTMLContentSink::Init(nsIDocument* aDoc,
   }
 
   aDoc->AddObserver(this);
-  mIsDocumentObserver = PR_TRUE;
   CallQueryInterface(aDoc, &mHTMLDocument);
 
   mObservers = nsnull;
@@ -1839,10 +1838,8 @@ HTMLContentSink::DidBuildModel(void)
   // our notifications out, so there's no need to do anything else here.
 
   // XXXbz I wonder whether we could End() our contexts here too, or something,
-  // just to make sure we no longer notify...  Or is the mIsDocumentObserver
-  // thing sufficient?
+  // just to make sure we no longer notify...
   mDocument->RemoveObserver(this);
-  mIsDocumentObserver = PR_FALSE;
   
   mDocument->EndLoad();
 
@@ -3206,15 +3203,11 @@ HTMLContentSink::FlushPendingNotifications(mozFlushType aType)
   // Only flush tags if we're not doing the notification ourselves
   // (since we aren't reentrant)
   if (!mInNotification) {
-    // Only flush if we're still a document observer (so that our child counts
-    // should be correct).
-    if (mIsDocumentObserver) {
-      if (aType >= Flush_ContentAndNotify) {
-        FlushTags();
-      }
-      else if (mCurrentContext) {
-        mCurrentContext->FlushText();
-      }
+    if (aType >= Flush_ContentAndNotify) {
+      FlushTags();
+    }
+    else if (mCurrentContext) {
+      mCurrentContext->FlushText();
     }
     if (aType >= Flush_Layout) {
       // Make sure that layout has started so that the reflow flush

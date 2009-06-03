@@ -49,15 +49,6 @@
 #include "nsContentUtils.h"
 #include "nsIDOMClassInfo.h"
 
-#define NS_ENSURE_NATIVE_TRANSFORM(obj, retval)                    \
-  {                                                                \
-    nsresult rv;                                                   \
-    if (retval)                                                    \
-      *retval = nsnull;                                            \
-    nsCOMPtr<nsISVGValue> transform = do_QueryInterface(obj, &rv); \
-    NS_ENSURE_SUCCESS(rv, NS_ERROR_DOM_SVG_WRONG_TYPE_ERR);        \
-  }
-
 nsresult
 nsSVGTransformList::Create(nsIDOMSVGTransformList** aResult)
 {
@@ -84,7 +75,8 @@ nsSVGTransformList::ReleaseTransforms()
   for (PRInt32 i = 0; i < count; ++i) {
     nsIDOMSVGTransform* transform = ElementAt(i);
     nsCOMPtr<nsISVGValue> val = do_QueryInterface(transform);
-    val->RemoveObserver(this);
+    if (val)
+      val->RemoveObserver(this);
     NS_RELEASE(transform);
   }
   mTransforms.Clear();
@@ -103,7 +95,8 @@ nsSVGTransformList::AppendElement(nsIDOMSVGTransform* aElement)
   if (rv) {
     NS_ADDREF(aElement);
     nsCOMPtr<nsISVGValue> val = do_QueryInterface(aElement);
-    val->AddObserver(this);
+    if (val)
+      val->AddObserver(this);
   }
 
   return rv;
@@ -251,16 +244,18 @@ NS_IMETHODIMP nsSVGTransformList::Clear()
 NS_IMETHODIMP nsSVGTransformList::Initialize(nsIDOMSVGTransform *newItem,
                                              nsIDOMSVGTransform **_retval)
 {
-  NS_ENSURE_NATIVE_TRANSFORM(newItem, _retval);
+  *_retval = newItem;
+  if (!newItem)
+    return NS_ERROR_DOM_SVG_WRONG_TYPE_ERR;
 
   nsSVGValueAutoNotifier autonotifier(this);
 
   ReleaseTransforms();
   if (!AppendElement(newItem)) {
+    *_retval = nsnull;
     return NS_ERROR_OUT_OF_MEMORY;
   }
 
-  *_retval = newItem;
   NS_ADDREF(*_retval);
   return NS_OK;
 }
@@ -283,21 +278,24 @@ NS_IMETHODIMP nsSVGTransformList::InsertItemBefore(nsIDOMSVGTransform *newItem,
                                                    PRUint32 index,
                                                    nsIDOMSVGTransform **_retval)
 {
-  NS_ENSURE_NATIVE_TRANSFORM(newItem, _retval);
+  *_retval = newItem;
+  if (!newItem)
+    return NS_ERROR_DOM_SVG_WRONG_TYPE_ERR;
 
   nsSVGValueAutoNotifier autonotifier(this);
 
   PRUint32 count = mTransforms.Count();
 
   if (!mTransforms.InsertElementAt((void*)newItem, (index < count)? index: count)) {
+    *_retval = nsnull;
     return NS_ERROR_OUT_OF_MEMORY;
   }
 
   NS_ADDREF(newItem);
   nsCOMPtr<nsISVGValue> val = do_QueryInterface(newItem);
-  val->AddObserver(this);
+  if (val)
+    val->AddObserver(this);
 
-  *_retval = newItem;
   NS_ADDREF(*_retval);
   return NS_OK;
 }
@@ -307,7 +305,10 @@ NS_IMETHODIMP nsSVGTransformList::ReplaceItem(nsIDOMSVGTransform *newItem,
                                               PRUint32 index,
                                               nsIDOMSVGTransform **_retval)
 {
-  NS_ENSURE_NATIVE_TRANSFORM(newItem, _retval);
+  if (!newItem)
+    return NS_ERROR_DOM_SVG_WRONG_TYPE_ERR;
+
+  *_retval = nsnull;
 
   nsSVGValueAutoNotifier autonotifier(this);
 
@@ -322,10 +323,12 @@ NS_IMETHODIMP nsSVGTransformList::ReplaceItem(nsIDOMSVGTransform *newItem,
   }
 
   nsCOMPtr<nsISVGValue> val = do_QueryInterface(oldItem);
-  val->RemoveObserver(this);
+  if (val)
+    val->RemoveObserver(this);
   NS_RELEASE(oldItem);
   val = do_QueryInterface(newItem);
-  val->AddObserver(this);
+  if (val)
+    val->AddObserver(this);
   NS_ADDREF(newItem);
 
   *_retval = newItem;
@@ -352,7 +355,8 @@ NS_IMETHODIMP nsSVGTransformList::RemoveItem(PRUint32 index, nsIDOMSVGTransform 
   }
 
   nsCOMPtr<nsISVGValue> val = do_QueryInterface(*_retval);
-  val->RemoveObserver(this);
+  if (val)
+    val->RemoveObserver(this);
 
   // don't NS_ADDREF(*_retval)
   return NS_OK;
@@ -362,15 +366,17 @@ NS_IMETHODIMP nsSVGTransformList::RemoveItem(PRUint32 index, nsIDOMSVGTransform 
 NS_IMETHODIMP nsSVGTransformList::AppendItem(nsIDOMSVGTransform *newItem,
                                              nsIDOMSVGTransform **_retval)
 {
-  NS_ENSURE_NATIVE_TRANSFORM(newItem, _retval);
+  *_retval = newItem;
+  if (!newItem)
+    return NS_ERROR_DOM_SVG_WRONG_TYPE_ERR;
 
   nsSVGValueAutoNotifier autonotifier(this);
 
   if (!AppendElement(newItem)) {
+    *_retval = nsnull;
     return NS_ERROR_OUT_OF_MEMORY;
   }
 
-  *_retval = newItem;
   NS_ADDREF(*_retval);
   return NS_OK;
 }

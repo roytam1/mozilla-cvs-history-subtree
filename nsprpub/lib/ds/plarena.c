@@ -108,6 +108,10 @@ static void UnlockArena( void )
 PR_IMPLEMENT(void) PL_InitArenaPool(
     PLArenaPool *pool, const char *name, PRUint32 size, PRUint32 align)
 {
+#if defined(XP_MAC)
+#pragma unused (name)
+#endif
+
     /*
      * Look-up table of PR_BITMASK(PR_CeilingLog2(align)) values for
      * align = 1 to 32.
@@ -341,6 +345,17 @@ PR_IMPLEMENT(void) PL_FinishArenaPool(PLArenaPool *pool)
 
 PR_IMPLEMENT(void) PL_CompactArenaPool(PLArenaPool *ap)
 {
+#if XP_MAC
+#pragma unused (ap)
+#if 0
+    PRArena *curr = &(ap->first);
+    while (curr) {
+        reallocSmaller(curr, curr->avail - (uprword_t)curr);
+        curr->limit = curr->avail;
+        curr = curr->next;
+    }
+#endif
+#endif
 }
 
 PR_IMPLEMENT(void) PL_ArenaFinish(void)

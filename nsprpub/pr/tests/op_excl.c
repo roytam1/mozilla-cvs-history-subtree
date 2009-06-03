@@ -71,7 +71,7 @@ static void Help( void )
 
 
 
-int main(int argc, char **argv)
+PRIntn main(PRIntn argc, char *argv[])
 {
     PRFileDesc  *fd;
     PRStatus    rv;

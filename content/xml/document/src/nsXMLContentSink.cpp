@@ -168,7 +168,6 @@ nsXMLContentSink::Init(nsIDocument* aDoc,
   NS_ENSURE_SUCCESS(rv, rv);
 
   aDoc->AddObserver(this);
-  mIsDocumentObserver = PR_TRUE;
 
   if (!mDocShell) {
     mPrettyPrintXML = PR_FALSE;
@@ -249,7 +248,6 @@ nsXMLContentSink::MaybePrettyPrint()
 
   // stop observing in order to avoid crashing when replacing content
   mDocument->RemoveObserver(this);
-  mIsDocumentObserver = PR_FALSE;
 
   // Reenable the CSSLoader so that the prettyprinting stylesheets can load
   if (mCSSLoader) {
@@ -318,7 +316,6 @@ nsXMLContentSink::DidBuildModel()
   if (mXSLTProcessor) {
     // stop observing in order to avoid crashing when replacing content
     mDocument->RemoveObserver(this);
-    mIsDocumentObserver = PR_FALSE;
 
     // Check for xslt-param and xslt-param-namespace PIs
     PRUint32 i;
@@ -377,7 +374,6 @@ nsXMLContentSink::DidBuildModel()
     }
 
     mDocument->RemoveObserver(this);
-    mIsDocumentObserver = PR_FALSE;
 
     mDocument->EndLoad();
   }
@@ -1459,7 +1455,6 @@ nsXMLContentSink::ReportError(const PRUnichar* aErrorText,
 
   // stop observing in order to avoid crashing when removing content
   mDocument->RemoveObserver(this);
-  mIsDocumentObserver = PR_FALSE;
 
   // Clear the current content and
   // prepare to set <parsererror> as the document root
@@ -1623,15 +1618,11 @@ nsXMLContentSink::FlushPendingNotifications(mozFlushType aType)
   // Only flush tags if we're not doing the notification ourselves
   // (since we aren't reentrant)
   if (!mInNotification) {
-    if (mIsDocumentObserver) {
-      // Only flush if we're still a document observer (so that our child
-      // counts should be correct).
-      if (aType >= Flush_ContentAndNotify) {
-        FlushTags();
-      }
-      else {
-        FlushText(PR_FALSE);
-      }
+    if (aType >= Flush_ContentAndNotify) {
+      FlushTags();
+    }
+    else {
+      FlushText(PR_FALSE);
     }
     if (aType >= Flush_Layout) {
       // Make sure that layout has started so that the reflow flush

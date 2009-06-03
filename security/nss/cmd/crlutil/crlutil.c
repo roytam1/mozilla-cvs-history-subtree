@@ -360,14 +360,15 @@ CreateModifiedCRLCopy(PRArenaPool *arena, CERTCertDBHandle *certHandle,
                 PRFileDesc *inFile, PRInt32 decodeOptions,
                 PRInt32 importOptions)
 {
-    SECItem crlDER = {0, NULL, 0};
+    SECItem crlDER;
     CERTSignedCrl *signCrl = NULL;
     CERTSignedCrl *modCrl = NULL;
     PRArenaPool *modArena = NULL;
     SECStatus rv = SECSuccess;
 
+    PORT_Assert(arena != NULL && certHandle != NULL &&
+                certNickName != NULL);
     if (!arena || !certHandle || !certNickName) {
-        PORT_SetError(SEC_ERROR_INVALID_ARGS);
         SECU_PrintError(progName, "CreateModifiedCRLCopy: invalid args\n");
         return NULL;
     }
@@ -443,9 +444,7 @@ CreateModifiedCRLCopy(PRArenaPool *arena, CERTCertDBHandle *certHandle,
     signCrl->arena = arena;
 
   loser:
-    if (crlDER.data) {
-        SECITEM_FreeItem(&crlDER, PR_FALSE);
-    }
+    SECITEM_FreeItem(&crlDER, PR_FALSE);
     if (modCrl)
         SEC_DestroyCrl(modCrl);
     if (rv != SECSuccess && signCrl) {
@@ -467,8 +466,8 @@ CreateNewCrl(PRArenaPool *arena, CERTCertDBHandle *certHandle,
 
     /* if the CERTSignedCrl structure changes, this function will need to be
        updated as well */
+    PORT_Assert(cert != NULL);
     if (!cert || !arena) {
-        PORT_SetError(SEC_ERROR_INVALID_ARGS);
         SECU_PrintError(progName, "invalid args for function "
                         "CreateNewCrl\n");
         return NULL;
@@ -532,8 +531,8 @@ UpdateCrl(CERTSignedCrl *signCrl, PRFileDesc *inCrlInitFile)
     CRLGENGeneratorData *crlGenData = NULL;
     SECStatus rv;
     
+    PORT_Assert(signCrl != NULL && inCrlInitFile != NULL);
     if (!signCrl || !inCrlInitFile) {
-        PORT_SetError(SEC_ERROR_INVALID_ARGS);
         SECU_PrintError(progName, "invalid args for function "
                         "CreateNewCrl\n");
         return SECFailure;

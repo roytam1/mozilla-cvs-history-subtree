@@ -57,6 +57,10 @@
 # ifndef XP_WIN32
 # define XP_WIN32
 # endif
+#else
+# ifndef XP_WIN16
+# define XP_WIN16
+# endif
 #endif
 #endif
 
@@ -70,6 +74,10 @@
 # ifndef XP_UNIX
 # define XP_UNIX
 # endif
+#endif
+
+#if defined(__WATCOMC__) || defined(__WATCOM_CPLUSPLUS__)
+#include "watcomfx.h"
 #endif
 
 #if defined(_WIN32_WCE)
@@ -146,7 +154,7 @@ SEC_END_PROTOS
 
 /* Please, keep these defines sorted alphabetically.  Thanks! */
 
-#define PORT_Atoi(buff)	(int)strtol(buff, NULL, 10)
+#define PORT_Atoi 	atoi
 
 #define PORT_Memcmp 	memcmp
 #define PORT_Memcpy 	memcpy

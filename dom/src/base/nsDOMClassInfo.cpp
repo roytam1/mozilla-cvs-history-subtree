@@ -6033,14 +6033,7 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 
     if (!win->IsChromeWindow()) {
       rv = sXPConnect->GetXOWForObject(cx, scope, JSVAL_TO_OBJECT(v), &v);
-
-      if (NS_FAILED(rv)) {
-        NS_WARNING("Failed to get XOW for window object!");
-
-        sDoSecurityCheckInAddProperty = doSecurityCheckInAddProperty;
-
-        return rv;
-      }
+      NS_ENSURE_SUCCESS(rv, rv);
     }
 
     JSAutoRequest ar(cx);
@@ -6149,15 +6142,8 @@ nsWindowSH::NewResolve(nsIXPConnectWrappedNative *wrapper, JSContext *cx,
 
         rv = sXPConnect->GetXOWForObject(cx, scope, JSVAL_TO_OBJECT(winVal),
                                          &winVal);
-        if (NS_FAILED(rv)) {
-          NS_WARNING("Failed to get XOW for window object!");
-
-          sDoSecurityCheckInAddProperty = doSecurityCheckInAddProperty;
-
-          return rv;
-        }
+        NS_ENSURE_SUCCESS(rv, rv);
       }
-
       PRBool ok =
         ::JS_DefineUCProperty(cx, obj, ::JS_GetStringChars(str),
                               ::JS_GetStringLength(str),
@@ -7992,16 +7978,6 @@ nsHTMLDocumentSH::DocumentAllGetProperty(JSContext *cx, JSObject *obj,
   // document.all.item(), etc.
   if (id == sItem_id || id == sNamedItem_id) {
     return JS_TRUE;
-  }
-
-  while (STOBJ_GET_CLASS(obj) != &sHTMLDocumentAllClass) {
-    obj = STOBJ_GET_PROTO(obj);
-
-    if (!obj) {
-      NS_ERROR("The JS engine lies!");
-
-      return JS_TRUE;
-    }
   }
 
   nsIHTMLDocument *doc = (nsIHTMLDocument *)::JS_GetPrivate(cx, obj);

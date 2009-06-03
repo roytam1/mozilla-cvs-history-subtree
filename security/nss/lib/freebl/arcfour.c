@@ -38,10 +38,6 @@
 
 /* See NOTES ON UMRs, Unititialized Memory Reads, below. */
 
-#ifdef FREEBL_NO_DEPEND
-#include "stubs.h"
-#endif
-
 #include "prerr.h"
 #include "secerr.h"
 
@@ -50,18 +46,17 @@
 
 /* Architecture-dependent defines */
 
-#if defined(SOLARIS) || defined(HPUX) || defined(i386) || defined(IRIX) || \
-    defined(_WIN64)
+#if defined(SOLARIS) || defined(HPUX) || defined(i386) || defined(IRIX)
 /* Convert the byte-stream to a word-stream */
 #define CONVERT_TO_WORDS
 #endif
 
 #if defined(AIX) || defined(OSF1) || defined(NSS_BEVAND_ARCFOUR)
-/* Treat array variables as words, not bytes, on CPUs that take 
- * much longer to write bytes than to write words, or when using 
+/* Treat array variables as longs, not bytes, on CPUs that take 
+ * much longer to write bytes than to write longs, or when using 
  * assembler code that required it.
  */
-#define USE_WORD
+#define USE_LONG
 #endif
 
 #if defined(_WIN32_WCE)
@@ -69,15 +64,15 @@
 #define WORD ARC4WORD
 #endif
 
-#if (defined(IS_64))
-typedef PRUint64 WORD;
+#if defined(IS_64) && !defined(__sparc) && !defined(NSS_USE_64) 
+typedef unsigned long long WORD;
 #else
-typedef PRUint32 WORD;
+typedef unsigned long WORD;
 #endif
 #define WORDSIZE sizeof(WORD)
 
-#if defined(USE_WORD)
-typedef WORD Stype;
+#ifdef USE_LONG
+typedef unsigned long Stype;
 #else
 typedef PRUint8 Stype;
 #endif
@@ -160,7 +155,6 @@ RC4_InitContext(RC4Context *cx, const unsigned char *key, unsigned int len,
 	PRUint8 j, tmp;
 	PRUint8 K[256];
 	PRUint8 *L;
-
 	/* verify the key length. */
 	PORT_Assert(len > 0 && len < ARCFOUR_STATE_SIZE);
 	if (len < 0 || len >= ARCFOUR_STATE_SIZE) {
@@ -222,7 +216,7 @@ RC4_DestroyContext(RC4Context *cx, PRBool freeit)
 }
 
 #if defined(NSS_BEVAND_ARCFOUR)
-extern void ARCFOUR(RC4Context *cx, WORD inputLen, 
+extern void ARCFOUR(RC4Context *cx, unsigned long inputLen, 
 	const unsigned char *input, unsigned char *output);
 #else
 /*
@@ -266,10 +260,9 @@ rc4_no_opt(RC4Context *cx, unsigned char *output,
 	cx->j = tmpj;
 	return SECSuccess;
 }
+#endif
 
-#else
-/* !CONVERT_TO_WORDS */
-
+#ifndef CONVERT_TO_WORDS
 /*
  * Byte-at-a-time ARCFOUR, unrolling the loop into 8 pieces.
  */
@@ -643,4 +636,4 @@ SECStatus RC4_Decrypt(RC4Context *cx, unsigned char *output,
 }
 
 #undef CONVERT_TO_WORDS
-#undef USE_WORD
+#undef USE_LONG

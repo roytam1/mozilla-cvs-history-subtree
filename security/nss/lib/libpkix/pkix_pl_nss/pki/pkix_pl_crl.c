@@ -42,7 +42,6 @@
  */
 
 #include "pkix_pl_crl.h"
-#include "certxutl.h"
 
 extern PKIX_PL_HashTable *cachedCrlSigTable;
 
@@ -82,7 +81,7 @@ pkix_pl_CRL_GetVersion(
 
         PKIX_ENTER(CRL, "pkix_pl_CRL_GetVersion");
         PKIX_NULLCHECK_THREE(crl, crl->nssSignedCrl, pVersion);
-      
+
         PKIX_NULLCHECK_ONE(crl->nssSignedCrl->crl.version.data);
 
         myVersion = *(crl->nssSignedCrl->crl.version.data);
@@ -116,9 +115,6 @@ PKIX_PL_CRL_GetCRLNumber(
 
         PKIX_ENTER(CRL, "PKIX_PL_CRL_GetCRLNumber");
         PKIX_NULLCHECK_THREE(crl, crl->nssSignedCrl, pCrlNumber);
-
-        /* Can call this function only with der been adopted. */
-        PORT_Assert(crl->adoptedDerCrl);
 
         if (!crl->crlNumberAbsent && crl->crlNumber == NULL) {
 
@@ -211,36 +207,54 @@ pkix_pl_CRL_GetSignatureAlgId(
         PKIX_PL_OID **pSignatureAlgId,
         void *plContext)
 {
+        CERTCrl *nssCrl = NULL;
         PKIX_PL_OID *signatureAlgId = NULL;
+        SECAlgorithmID algorithm;
+        SECItem algBytes;
+        char *asciiOID = NULL;
 
         PKIX_ENTER(CRL, "pkix_pl_CRL_GetSignatureAlgId");
         PKIX_NULLCHECK_THREE(crl, crl->nssSignedCrl, pSignatureAlgId);
 
         /* if we don't have a cached copy from before, we create one */
         if (crl->signatureAlgId == NULL){
-                PKIX_OBJECT_LOCK(crl);
-                if (crl->signatureAlgId == NULL){
-                    CERTCrl *nssCrl = &(crl->nssSignedCrl->crl);
-                    SECAlgorithmID *algorithm = &nssCrl->signatureAlg;
-                    SECItem *algBytes = &algorithm->algorithm;
 
-                    if (!algBytes->data || !algBytes->len) {
-                        PKIX_ERROR(PKIX_OIDBYTESLENGTH0);
-                    }
-                    PKIX_CHECK(PKIX_PL_OID_CreateBySECItem
-                               (algBytes, &signatureAlgId, plContext),
-                               PKIX_OIDCREATEFAILED);
-                    
-                    /* save a cached copy in case it is asked for again */
-                    crl->signatureAlgId = signatureAlgId;
-                    signatureAlgId = NULL;
+                PKIX_OBJECT_LOCK(crl);
+
+                if (crl->signatureAlgId == NULL){
+
+                        nssCrl = &(crl->nssSignedCrl->crl);
+                        algorithm = nssCrl->signatureAlg;
+                        algBytes = algorithm.algorithm;
+
+                        PKIX_NULLCHECK_ONE(algBytes.data);
+                        if (algBytes.len == 0) {
+                                PKIX_ERROR_FATAL(PKIX_OIDBYTESLENGTH0);
+                        }
+
+                        PKIX_CHECK(pkix_pl_oidBytes2Ascii
+                                    (&algBytes, &asciiOID, plContext),
+                                    PKIX_OIDBYTES2ASCIIFAILED);
+
+                        PKIX_CHECK(PKIX_PL_OID_Create
+                                    (asciiOID, &signatureAlgId, plContext),
+                                    PKIX_OIDCREATEFAILED);
+
+                        /* save a cached copy in case it is asked for again */
+                        crl->signatureAlgId = signatureAlgId;
                 }
+
                 PKIX_OBJECT_UNLOCK(crl);
+
         }
+
         PKIX_INCREF(crl->signatureAlgId);
         *pSignatureAlgId = crl->signatureAlgId;
+
 cleanup:
-        PKIX_DECREF(signatureAlgId);
+
+        PKIX_FREE(asciiOID);
+
         PKIX_RETURN(CRL);
 }
 
@@ -330,15 +344,11 @@ pkix_pl_CRL_Destroy(
 
         crl = (PKIX_PL_CRL*)object;
 
+        PKIX_NULLCHECK_ONE(crl->nssSignedCrl);
+
         PKIX_CRL_DEBUG("\t\tCalling CERT_DestroyCrl\n");
-        if (crl->nssSignedCrl) {
-            CERT_DestroyCrl(crl->nssSignedCrl);
-        }
-        if (crl->adoptedDerCrl) {
-            SECITEM_FreeItem(crl->adoptedDerCrl, PR_TRUE);
-        }
+        CERT_DestroyCrl(crl->nssSignedCrl);
         crl->nssSignedCrl = NULL;
-        crl->adoptedDerCrl = NULL;
         crl->crlNumberAbsent = PKIX_FALSE;
 
         PKIX_DECREF(crl->issuer);
@@ -346,9 +356,6 @@ pkix_pl_CRL_Destroy(
         PKIX_DECREF(crl->crlNumber);
         PKIX_DECREF(crl->crlEntryList);
         PKIX_DECREF(crl->critExtOids);
-        if (crl->derGenName) {
-            SECITEM_FreeItem(crl->derGenName, PR_TRUE);
-        }
 
 cleanup:
 
@@ -562,9 +569,10 @@ pkix_pl_CRL_Hashcode(
         void *plContext)
 {
         PKIX_PL_CRL *crl = NULL;
+        unsigned char *derBytes = NULL;
+        PKIX_UInt32 derLength;
         PKIX_UInt32 certHash;
-        SECItem *crlDer = NULL;
-        
+
         PKIX_ENTER(CRL, "pkix_pl_CRL_Hashcode");
         PKIX_NULLCHECK_TWO(object, pHashcode);
 
@@ -572,16 +580,15 @@ pkix_pl_CRL_Hashcode(
                     PKIX_OBJECTNOTCRL);
 
         crl = (PKIX_PL_CRL *)object;
-        if (crl->adoptedDerCrl) {
-            crlDer = crl->adoptedDerCrl;
-        } else if (crl->nssSignedCrl && crl->nssSignedCrl->derCrl) { 
-            crlDer = crl->nssSignedCrl->derCrl;
-        }
 
-        if (crlDer->data)
-            PKIX_CHECK(pkix_hash(crlDer->data, crlDer->len,
-                                 &certHash, plContext),
-                       PKIX_ERRORINHASH);
+        PKIX_NULLCHECK_TWO(crl->nssSignedCrl, crl->nssSignedCrl->derCrl);
+
+        derBytes = (crl->nssSignedCrl->derCrl)->data;
+        derLength = (crl->nssSignedCrl->derCrl)->len;
+
+        PKIX_NULLCHECK_ONE(derBytes);
+        PKIX_CHECK(pkix_hash(derBytes, derLength, &certHash, plContext),
+                    PKIX_ERRORINHASH);
 
         *pHashcode = certHash;
 
@@ -603,7 +610,6 @@ pkix_pl_CRL_Equals(
 {
         PKIX_PL_CRL *firstCrl = NULL;
         PKIX_PL_CRL *secondCrl = NULL;
-        SECItem *crlDerOne = NULL, *crlDerTwo = NULL;
         PKIX_UInt32 secondType;
 
         PKIX_ENTER(CRL, "pkix_pl_CRL_Equals");
@@ -635,20 +641,19 @@ pkix_pl_CRL_Equals(
                     PKIX_COULDNOTGETTYPEOFSECONDARGUMENT);
         if (secondType != PKIX_CRL_TYPE) goto cleanup;
 
-        if (firstCrl->adoptedDerCrl) {
-            crlDerOne = firstCrl->adoptedDerCrl;
-        } else if (firstCrl->nssSignedCrl && firstCrl->nssSignedCrl->derCrl) {
-            crlDerOne = firstCrl->nssSignedCrl->derCrl;
-        }
+        /* Compare DER Bytes */
+        PKIX_NULLCHECK_TWO
+                (firstCrl->nssSignedCrl,
+                firstCrl->nssSignedCrl->derCrl);
 
-        if (secondCrl->adoptedDerCrl) {
-            crlDerTwo = secondCrl->adoptedDerCrl;
-        } else if (secondCrl->nssSignedCrl && secondCrl->nssSignedCrl->derCrl) {
-            crlDerTwo = secondCrl->nssSignedCrl->derCrl;
-        }
+        PKIX_NULLCHECK_TWO
+                (secondCrl->nssSignedCrl,
+                secondCrl->nssSignedCrl->derCrl);
 
-        if (SECITEM_CompareItem(crlDerOne, crlDerTwo) == SECEqual) {
-            *pResult = PKIX_TRUE;
+        PKIX_CRL_DEBUG("\t\tCalling SECITEM_CompareItem on derCrl\n");
+        if (SECITEM_CompareItem(firstCrl->nssSignedCrl->derCrl,
+                                secondCrl->nssSignedCrl->derCrl) == SECEqual) {
+                *pResult = PKIX_TRUE;
         }
 
 cleanup:
@@ -672,18 +677,23 @@ cleanup:
 PKIX_Error *
 pkix_pl_CRL_RegisterSelf(void *plContext)
 {
+
         extern pkix_ClassTable_Entry systemClasses[PKIX_NUMTYPES];
-        pkix_ClassTable_Entry *entry = &systemClasses[PKIX_CRL_TYPE];
+        pkix_ClassTable_Entry entry;
 
         PKIX_ENTER(CRL, "pkix_pl_CRL_RegisterSelf");
 
-        entry->description = "CRL";
-        entry->typeObjectSize = sizeof(PKIX_PL_CRL);
-        entry->destructor = pkix_pl_CRL_Destroy;
-        entry->equalsFunction = pkix_pl_CRL_Equals;
-        entry->hashcodeFunction = pkix_pl_CRL_Hashcode;
-        entry->toStringFunction = pkix_pl_CRL_ToString;
-        entry->duplicateFunction = pkix_duplicateImmutable;
+        entry.description = "CRL";
+        entry.objCounter = 0;
+        entry.typeObjectSize = sizeof(PKIX_PL_CRL);
+        entry.destructor = pkix_pl_CRL_Destroy;
+        entry.equalsFunction = pkix_pl_CRL_Equals;
+        entry.hashcodeFunction = pkix_pl_CRL_Hashcode;
+        entry.toStringFunction = pkix_pl_CRL_ToString;
+        entry.comparator = NULL;
+        entry.duplicateFunction = pkix_duplicateImmutable;
+
+        systemClasses[PKIX_CRL_TYPE] = entry;
 
         PKIX_RETURN(CRL);
 }
@@ -709,11 +719,13 @@ PKIX_PL_CRL_VerifyUpdateTime(
         PKIX_ENTER(CRL, "PKIX_PL_CRL_VerifyUpdateTime");
         PKIX_NULLCHECK_FOUR(crl, crl->nssSignedCrl, date, pResult);
 
-        /* Can call this function only with der been adopted. */
-        PORT_Assert(crl->adoptedDerCrl);
-
         nssCrl = &(crl->nssSignedCrl->crl);
-        timeToCheck = date->nssTime;
+
+        PKIX_CRL_DEBUG("\t\tCalling DER_DecodeTimeChoice on date\n");
+        status = DER_DecodeTimeChoice(&timeToCheck, &(date->nssTime));
+        if (status != SECSuccess) {
+                PKIX_ERROR(PKIX_DERDECODETIMECHOICEFAILED);
+        }
 
         /* nextUpdate can be NULL. Checking before using it */
         nextUpdateDer = &nssCrl->nextUpdate;
@@ -757,9 +769,6 @@ cleanup:
  * PARAMETERS:
  *  "nssSignedCrl"
  *      Address of CERTSignedCrl. Must be non-NULL.
- *  "adoptedDerCrl"
- *      SECItem ponter that if not NULL is indicating that memory used
- *      for der should be adopted by crl that is about to be created.
  *  "pCRL"
  *      Address where object pointer will be stored. Must be non-NULL.
  *  "plContext"
@@ -774,15 +783,14 @@ cleanup:
 PKIX_Error *
 pkix_pl_CRL_CreateWithSignedCRL(
         CERTSignedCrl *nssSignedCrl,
-        SECItem *adoptedDerCrl,
-        SECItem *derGenName,
         PKIX_PL_CRL **pCrl,
         void *plContext)
 {
+        SECStatus status;
         PKIX_PL_CRL *crl = NULL;
 
         PKIX_ENTER(CRL, "pkix_pl_CRL_CreateWithSignedCRL");
-        PKIX_NULLCHECK_ONE(pCrl);
+        PKIX_NULLCHECK_TWO(nssSignedCrl, pCrl);
 
         /* create a PKIX_PL_CRL object */
         PKIX_CHECK(PKIX_PL_Object_Alloc
@@ -794,20 +802,20 @@ pkix_pl_CRL_CreateWithSignedCRL(
 
         /* populate the nssSignedCrl field */
         crl->nssSignedCrl = nssSignedCrl;
-        crl->adoptedDerCrl = adoptedDerCrl;
+
+        PKIX_CRL_DEBUG("\t\tCalling CERT_CompleteCRLDecodeEntries\n");
+        status = CERT_CompleteCRLDecodeEntries(crl->nssSignedCrl);
+
+        if (status != SECSuccess) {
+                PKIX_ERROR(PKIX_CERTCOMPLETECRLDECODEDENTRIESFAILED);
+        }
+
         crl->issuer = NULL;
         crl->signatureAlgId = NULL;
         crl->crlNumber = NULL;
         crl->crlNumberAbsent = PKIX_FALSE;
         crl->crlEntryList = NULL;
         crl->critExtOids = NULL;
-        if (derGenName) {
-            crl->derGenName =
-                SECITEM_DupItem(derGenName);
-            if (!crl->derGenName) {
-                PKIX_ERROR(PKIX_ALLOCERROR);
-            }
-        }
 
         *pCrl = crl;
 
@@ -816,6 +824,67 @@ cleanup:
         if (PKIX_ERROR_RECEIVED){
                 PKIX_DECREF(crl);
         }
+
+        PKIX_RETURN(CRL);
+}
+
+/*
+ * FUNCTION: pkix_pl_CRL_CreateToList
+ * DESCRIPTION:
+ *
+ *  This function decodes a DER-encoded Certificate Revocation List pointed to
+ *  by "derCrlItem", adding the resulting PKIX_PL_CRL, if the decoding was
+ *  successful, to the List (possibly empty) pointed to by "crlList".
+ *
+ * PARAMETERS:
+ *  "derCrlItem"
+ *      The address of the SECItem containing the DER-encoded Certificate
+ *      Revocation List. Must be non-NULL.
+ *  "crlList"
+ *      The address of the List to which the decoded CRL is added. May be
+ *      empty, but must be non-NULL.
+ *  "plContext"
+ *      Platform-specific context pointer.
+ * THREAD SAFETY:
+ *  Thread Safe (see Thread Safety Definitions in Programmer's Guide)
+ * RETURNS:
+ *  Returns NULL if the function succeeds.
+ *  Returns a CertStore Error if the function fails in a non-fatal way.
+ *  Returns a Fatal Error if the function fails in an unrecoverable way.
+ */
+PKIX_Error *
+pkix_pl_CRL_CreateToList(
+        SECItem *derCrlItem,
+        PKIX_List *crlList,
+        void *plContext)
+{
+        CERTSignedCrl *nssCrl = NULL;
+        PKIX_PL_CRL *crl = NULL;
+
+        PKIX_ENTER(CRL, "pkix_pl_CRL_CreateToList");
+        PKIX_NULLCHECK_TWO(derCrlItem, crlList);
+
+        nssCrl = CERT_DecodeDERCrl(NULL, derCrlItem, SEC_CRL_TYPE);
+        if (nssCrl == NULL) {
+            goto cleanup;
+        }
+
+        PKIX_CHECK(pkix_pl_CRL_CreateWithSignedCRL
+                   (nssCrl, &crl, plContext),
+                   PKIX_CRLCREATEWITHSIGNEDCRLFAILED);
+        
+        nssCrl = NULL;
+
+        PKIX_CHECK(PKIX_List_AppendItem
+                   (crlList, (PKIX_PL_Object *) crl, plContext),
+                   PKIX_LISTAPPENDITEMFAILED);
+
+cleanup:
+        if (nssCrl) {
+            SEC_DestroyCrl(nssCrl);
+        }
+
+        PKIX_DECREF(crl);
 
         PKIX_RETURN(CRL);
 }
@@ -832,44 +901,66 @@ PKIX_PL_CRL_Create(
         void *plContext)
 {
         CERTSignedCrl *nssSignedCrl = NULL;
-        SECItem derItem, *derCrl = NULL;
+        SECItem *derCrlItem = NULL;
+        void *derBytes = NULL;
+        PKIX_UInt32 derLength;
         PKIX_PL_CRL *crl = NULL;
 
         PKIX_ENTER(CRL, "PKIX_PL_CRL_Create");
         PKIX_NULLCHECK_TWO(byteArray, pCrl);
 
-        if (byteArray->length == 0){
-            PKIX_ERROR(PKIX_ZEROLENGTHBYTEARRAYFORCRLENCODING);
+        PKIX_CHECK(PKIX_PL_ByteArray_GetLength
+                    (byteArray, &derLength, plContext),
+                    PKIX_BYTEARRAYGETLENGTHFAILED);
+
+        if (derLength == 0){
+                PKIX_ERROR(PKIX_ZEROLENGTHBYTEARRAYFORCRLENCODING);
         }
-        derItem.type = siBuffer;
-        derItem.data = byteArray->array;
-        derItem.len = byteArray->length;
-        derCrl = SECITEM_DupItem(&derItem);
-        if (!derCrl) {
-            PKIX_ERROR(PKIX_ALLOCERROR);
+
+        PKIX_CHECK(PKIX_PL_ByteArray_GetPointer
+                    (byteArray, &derBytes, plContext),
+                    PKIX_BYTEARRAYGETPOINTERFAILED);
+
+        PKIX_CRL_DEBUG("\t\tCalling SECITEM_AllocItem\n");
+        derCrlItem = SECITEM_AllocItem(NULL, NULL, derLength);
+        if (derCrlItem == NULL){
+                PKIX_ERROR(PKIX_OUTOFMEMORY);
         }
-        nssSignedCrl =
-            CERT_DecodeDERCrlWithFlags(NULL, derCrl, SEC_CRL_TYPE,
-                                       CRL_DECODE_DONT_COPY_DER |
-                                       CRL_DECODE_SKIP_ENTRIES);
-        if (!nssSignedCrl) {
-            PKIX_ERROR(PKIX_CERTDECODEDERCRLFAILED);
+
+        PKIX_CRL_DEBUG("\t\tCalling PORT_Memcpy\n");
+        (void) PORT_Memcpy(derCrlItem->data, derBytes, derLength);
+
+        PKIX_CRL_DEBUG("\t\tCalling CERT_DecodeDERCrl\n");
+        nssSignedCrl = CERT_DecodeDERCrl(NULL, derCrlItem, SEC_CRL_TYPE);
+        if (nssSignedCrl == NULL){
+                PKIX_ERROR(PKIX_CERTDECODEDERCRLFAILED);
         }
-        PKIX_CHECK(
-            pkix_pl_CRL_CreateWithSignedCRL(nssSignedCrl, derCrl, NULL,
-                                            &crl, plContext),
-            PKIX_CRLCREATEWITHSIGNEDCRLFAILED);
-        nssSignedCrl = NULL;
-        derCrl = NULL;
+
+        PKIX_CHECK(pkix_pl_CRL_CreateWithSignedCRL
+                (nssSignedCrl, &crl, plContext),
+                PKIX_CRLCREATEWITHSIGNEDCRLFAILED);
+
         *pCrl = crl;
 
 cleanup:
-        if (derCrl) {
-            SECITEM_FreeItem(derCrl, PR_TRUE);
+
+        if (derCrlItem != NULL){
+                PKIX_CRL_DEBUG("\t\tCalling SECITEM_FreeItem\n");
+                SECITEM_FreeItem(derCrlItem, PKIX_TRUE);
+                derCrlItem = NULL;
         }
-        if (nssSignedCrl) {
-            SEC_DestroyCrl(nssSignedCrl);
-        } 
+
+        if (PKIX_ERROR_RECEIVED){
+                if (nssSignedCrl != NULL) {
+                        PKIX_CRL_DEBUG("\t\tCalling CERT_DestroyCrl\n");
+                        CERT_DestroyCrl(nssSignedCrl);
+                        nssSignedCrl = NULL;
+                }
+
+                PKIX_DECREF(crl);
+        }
+
+        PKIX_FREE(derBytes);
 
         PKIX_RETURN(CRL);
 }
@@ -890,9 +981,6 @@ PKIX_PL_CRL_GetIssuer(
 
         PKIX_ENTER(CRL, "PKIX_PL_CRL_GetIssuer");
         PKIX_NULLCHECK_THREE(crl, crl->nssSignedCrl, pCRLIssuer);
-
-        /* Can call this function only with der been adopted. */
-        PORT_Assert(crl->adoptedDerCrl);
 
         /* if we don't have a cached copy from before, we create one */
         if (crl->issuer == NULL){
@@ -948,9 +1036,6 @@ PKIX_PL_CRL_GetCriticalExtensionOIDs(
         PKIX_ENTER(CRL, "PKIX_PL_CRL_GetCriticalExtensionOIDs");
         PKIX_NULLCHECK_THREE(crl, crl->nssSignedCrl, pExtensions);
 
-        /* Can call this function only with der been adopted. */
-        PORT_Assert(crl->adoptedDerCrl);
-
         /* if we don't have a cached copy from before, we create one */
         if (crl->critExtOids == NULL) {
 
@@ -981,6 +1066,76 @@ cleanup:
         PKIX_RETURN(CRL);
 }
 
+
+/*
+ * FUNCTION: PKIX_PL_CRL_GetCRLEntryForSerialNumber
+ * (see comments in pkix_pl_pki.h)
+ */
+PKIX_Error *
+PKIX_PL_CRL_GetCRLEntryForSerialNumber(
+        PKIX_PL_CRL *crl,
+        PKIX_PL_BigInt *serialNumber,
+        PKIX_PL_CRLEntry **pCRLEntry,
+        void *plContext)
+{
+        PKIX_PL_CRLEntry *crlEntry = NULL;
+        PKIX_List *crlEntryList = NULL;
+        PKIX_UInt32 numEntries = 0;
+        PKIX_UInt32 i = 0;
+        PKIX_Boolean cmpResult = PKIX_FALSE;
+
+        PKIX_ENTER(CRL, "PKIX_PL_CRL_GetCRLEntryForSerialNumber");
+        PKIX_NULLCHECK_THREE(crl, serialNumber, pCRLEntry);
+
+        /* Assume there is no entry for Serial Number at start */
+        *pCRLEntry = NULL;
+
+        PKIX_CHECK(pkix_pl_CRL_GetCRLEntries(crl, &crlEntryList, plContext),
+                    PKIX_CRLGETCRLENTRIESFAILED);
+
+        if (crlEntryList == NULL) {
+                goto cleanup;
+        }
+
+        PKIX_CHECK(PKIX_List_GetLength(crlEntryList, &numEntries, plContext),
+                    PKIX_LISTGETLENGTHFAILED);
+
+        for (i = 0; i < numEntries; i++){
+
+                PKIX_CHECK(PKIX_List_GetItem
+                            (crlEntryList,
+                            i,
+                            (PKIX_PL_Object **)&crlEntry,
+                            plContext),
+                            PKIX_LISTGETITEMFAILED);
+
+                PKIX_CHECK(PKIX_PL_Object_Equals
+                            ((PKIX_PL_Object *)crlEntry->serialNumber,
+                            (PKIX_PL_Object *)serialNumber,
+                            &cmpResult,
+                            plContext),
+                            PKIX_OBJECTEQUALSFAILED);
+
+                /* Found the entry for Serial Number */
+                if (cmpResult == PKIX_TRUE) {
+                        *pCRLEntry = crlEntry;
+                        goto cleanup;
+                }
+
+                PKIX_DECREF(crlEntry);
+        }
+
+cleanup:
+
+        PKIX_DECREF(crlEntryList);
+
+        if (PKIX_ERROR_RECEIVED){
+                PKIX_DECREF(crlEntry);
+        }
+
+        PKIX_RETURN(CRL);
+}
+
 /*
  * FUNCTION: PKIX_PL_CRL_VerifySignature (see comments in pkix_pl_pki.h)
  */
@@ -1003,9 +1158,6 @@ PKIX_PL_CRL_VerifySignature(
 
         PKIX_ENTER(CRL, "PKIX_PL_CRL_VerifySignature");
         PKIX_NULLCHECK_THREE(crl, crl->nssSignedCrl, pubKey);
-
-        /* Can call this function only with der been adopted. */
-        PORT_Assert(crl->adoptedDerCrl);
 
         verifySig = PKIX_PL_HashTable_Lookup
                 (cachedCrlSigTable,
@@ -1069,30 +1221,4 @@ cleanup:
         PKIX_DECREF(cachedSig);
 
         PKIX_RETURN(CRL);
-}
-
-PKIX_Error*
-PKIX_PL_CRL_ReleaseDerCrl(PKIX_PL_CRL *crl,
-                         SECItem **derCrl,
-                         void *plContext)
-{
-    PKIX_ENTER(CRL, "PKIX_PL_CRL_ReleaseDerCrl");
-    *derCrl = crl->adoptedDerCrl;
-    crl->adoptedDerCrl = NULL;
-        
-    PKIX_RETURN(CRL);
-}
-
-PKIX_Error*
-PKIX_PL_CRL_AdoptDerCrl(PKIX_PL_CRL *crl,
-                         SECItem *derCrl,
-                         void *plContext)
-{
-    PKIX_ENTER(CRL, "PKIX_PL_CRL_AquireDerCrl");
-    if (crl->adoptedDerCrl) {
-        PKIX_ERROR(PKIX_CANNOTAQUIRECRLDER);
-    }
-    crl->adoptedDerCrl = derCrl;
-cleanup:        
-    PKIX_RETURN(CRL);
 }

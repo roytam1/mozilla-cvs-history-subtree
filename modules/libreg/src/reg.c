@@ -925,7 +925,7 @@ static REGERR nr_ReadName(REGFILE *reg, REGDESC *desc, uint32 buflen, char *buf)
     XP_ASSERT(buflen > 0);
     XP_ASSERT(buf);
 
-    if ( buflen == 0 || desc->namelen > buflen )
+    if ( desc->namelen > buflen )
         return REGERR_BUFTOOSMALL;
 
     err = nr_ReadFile(reg->fh, desc->name, desc->namelen, buf);
@@ -1292,8 +1292,6 @@ static REGERR nr_NextName(const char *pPath, char *buf, uint32 bufsize, const ch
 
     /* initialization and validation */
     XP_ASSERT(buf);
-    if ( bufsize == 0 )
-        return REGERR_BUFTOOSMALL;
 
     *newPath = NULL;
     *buf = '\0';
@@ -1316,8 +1314,9 @@ static REGERR nr_NextName(const char *pPath, char *buf, uint32 bufsize, const ch
     /* copy first path segment into return buf */
     while ( *pPath != '\0' && *pPath != PATHDEL )
     {
-        if ( len == bufsize-1 ) {
-            return REGERR_NAMETOOLONG;
+        if ( len == bufsize ) {
+            err = REGERR_NAMETOOLONG;
+            break;
         }
         if ( *pPath < ' ' && *pPath > 0 )
             return REGERR_BADNAME;
@@ -1392,7 +1391,7 @@ static REGERR nr_ReplaceName(REGFILE *reg, REGOFF node, char *path, uint32 bufsi
     XP_ASSERT(path);
 
     len = XP_STRLEN(path);
-    if ( len >= bufsize )
+    if ( len > bufsize )
         return REGERR_PARAM;
 
     if ( len > 0 ) {
@@ -3440,7 +3439,7 @@ VR_INTERFACE(REGERR) NR_RegEnumSubkeys( HREG hReg, RKEY key, REGENUM *state,
     if ( err != REGERR_OK )
         return err;
 
-    if ( key == 0 || state == NULL || buffer == NULL  || bufsize == 0 )
+    if ( key == 0 || state == NULL || buffer == NULL )
         return REGERR_PARAM;
 
     reg = ((REGHANDLE*)hReg)->pReg;
@@ -3655,7 +3654,7 @@ VR_INTERFACE(REGERR) NR_RegEnumEntries( HREG hReg, RKEY key, REGENUM *state,
     if ( err != REGERR_OK )
         return err;
 
-    if ( key == 0 || state == NULL || buffer == NULL  || bufsize == 0 )
+    if ( key == 0 || state == NULL || buffer == NULL )
         return REGERR_PARAM;
 
     reg = ((REGHANDLE*)hReg)->pReg;
