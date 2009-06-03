@@ -606,6 +606,8 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
 - (NSDate*)pageLastModifiedDate
 {
   nsCOMPtr<nsIDOMWindow> domWindow = [self contentWindow];
+  if (!domWindow)
+    return nil;
 
   nsCOMPtr<nsIDOMDocument> domDocument;
   domWindow->GetDocument(getter_AddRefs(domDocument));
@@ -1062,7 +1064,9 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
 - (BOOL)isTextBasedContent
 {
   nsCOMPtr<nsIDOMWindow> domWindow = [self contentWindow];
-  
+  if (!domWindow)
+    return NO;
+
   nsCOMPtr<nsIDOMDocument> domDocument;
   domWindow->GetDocument(getter_AddRefs(domDocument));
   if (!domDocument)
@@ -1079,6 +1083,8 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
   if ([mimeType hasPrefix:@"text/"] ||
       [mimeType hasSuffix:@"+xml"] ||
       [mimeType isEqualToString:@"application/x-javascript"] ||
+      [mimeType isEqualToString:@"application/javascript"] ||
+      [mimeType isEqualToString:@"application/ecmascript"] ||
       [mimeType isEqualToString:@"application/xml"])
   {
     return YES;
@@ -1416,7 +1422,8 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
 {
   nsIDocShell* docShell = [self docShell];
   nsIContentViewer* cv = NULL;
-  docShell->GetContentViewer(&cv);		// addrefs
+  if (docShell)
+    docShell->GetContentViewer(&cv);		// addrefs
   return cv;
 }
 

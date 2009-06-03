@@ -538,8 +538,10 @@ void nsSSLIOLayerHelpers::Cleanup()
   if (mSharedPollableEvent)
     PR_DestroyPollableEvent(mSharedPollableEvent);
 
-  if (mutex)
+  if (mutex) {
     PR_DestroyLock(mutex);
+    mutex = NULL;
+  }
 }
 
 static nsresult
@@ -1351,6 +1353,7 @@ nsSSLIOLayerWrite(PRFileDesc* fd, const void* buf, PRInt32 amount)
   return nsSSLThread::requestWrite(socketInfo, buf, amount);
 }
 
+PRBool nsSSLIOLayerHelpers::nsSSLIOLayerInitialized = PR_FALSE;
 PRDescIdentity nsSSLIOLayerHelpers::nsSSLIOLayerIdentity;
 PRIOMethods nsSSLIOLayerHelpers::nsSSLIOLayerMethods;
 PRLock *nsSSLIOLayerHelpers::mutex = nsnull;
@@ -1487,40 +1490,43 @@ static PRStatus PR_CALLBACK PSMConnectcontinue(PRFileDesc *fd, PRInt16 out_flags
 
 nsresult nsSSLIOLayerHelpers::Init()
 {
-  nsSSLIOLayerIdentity = PR_GetUniqueIdentity("NSS layer");
-  nsSSLIOLayerMethods  = *PR_GetDefaultIOMethods();
+  if (!nsSSLIOLayerInitialized) {
+    nsSSLIOLayerInitialized = PR_TRUE;
+    nsSSLIOLayerIdentity = PR_GetUniqueIdentity("NSS layer");
+    nsSSLIOLayerMethods  = *PR_GetDefaultIOMethods();
 
-  nsSSLIOLayerMethods.available = (PRAvailableFN)_PSM_InvalidInt;
-  nsSSLIOLayerMethods.available64 = (PRAvailable64FN)_PSM_InvalidInt64;
-  nsSSLIOLayerMethods.fsync = (PRFsyncFN)_PSM_InvalidStatus;
-  nsSSLIOLayerMethods.seek = (PRSeekFN)_PSM_InvalidInt;
-  nsSSLIOLayerMethods.seek64 = (PRSeek64FN)_PSM_InvalidInt64;
-  nsSSLIOLayerMethods.fileInfo = (PRFileInfoFN)_PSM_InvalidStatus;
-  nsSSLIOLayerMethods.fileInfo64 = (PRFileInfo64FN)_PSM_InvalidStatus;
-  nsSSLIOLayerMethods.writev = (PRWritevFN)_PSM_InvalidInt;
-  nsSSLIOLayerMethods.accept = (PRAcceptFN)_PSM_InvalidDesc;
-  nsSSLIOLayerMethods.bind = (PRBindFN)_PSM_InvalidStatus;
-  nsSSLIOLayerMethods.listen = (PRListenFN)_PSM_InvalidStatus;
-  nsSSLIOLayerMethods.shutdown = (PRShutdownFN)_PSM_InvalidStatus;
-  nsSSLIOLayerMethods.recvfrom = (PRRecvfromFN)_PSM_InvalidInt;
-  nsSSLIOLayerMethods.sendto = (PRSendtoFN)_PSM_InvalidInt;
-  nsSSLIOLayerMethods.acceptread = (PRAcceptreadFN)_PSM_InvalidInt;
-  nsSSLIOLayerMethods.transmitfile = (PRTransmitfileFN)_PSM_InvalidInt;
-  nsSSLIOLayerMethods.sendfile = (PRSendfileFN)_PSM_InvalidInt;
+    nsSSLIOLayerMethods.available = (PRAvailableFN)_PSM_InvalidInt;
+    nsSSLIOLayerMethods.available64 = (PRAvailable64FN)_PSM_InvalidInt64;
+    nsSSLIOLayerMethods.fsync = (PRFsyncFN)_PSM_InvalidStatus;
+    nsSSLIOLayerMethods.seek = (PRSeekFN)_PSM_InvalidInt;
+    nsSSLIOLayerMethods.seek64 = (PRSeek64FN)_PSM_InvalidInt64;
+    nsSSLIOLayerMethods.fileInfo = (PRFileInfoFN)_PSM_InvalidStatus;
+    nsSSLIOLayerMethods.fileInfo64 = (PRFileInfo64FN)_PSM_InvalidStatus;
+    nsSSLIOLayerMethods.writev = (PRWritevFN)_PSM_InvalidInt;
+    nsSSLIOLayerMethods.accept = (PRAcceptFN)_PSM_InvalidDesc;
+    nsSSLIOLayerMethods.bind = (PRBindFN)_PSM_InvalidStatus;
+    nsSSLIOLayerMethods.listen = (PRListenFN)_PSM_InvalidStatus;
+    nsSSLIOLayerMethods.shutdown = (PRShutdownFN)_PSM_InvalidStatus;
+    nsSSLIOLayerMethods.recvfrom = (PRRecvfromFN)_PSM_InvalidInt;
+    nsSSLIOLayerMethods.sendto = (PRSendtoFN)_PSM_InvalidInt;
+    nsSSLIOLayerMethods.acceptread = (PRAcceptreadFN)_PSM_InvalidInt;
+    nsSSLIOLayerMethods.transmitfile = (PRTransmitfileFN)_PSM_InvalidInt;
+    nsSSLIOLayerMethods.sendfile = (PRSendfileFN)_PSM_InvalidInt;
 
-  nsSSLIOLayerMethods.getsockname = PSMGetsockname;
-  nsSSLIOLayerMethods.getpeername = PSMGetpeername;
-  nsSSLIOLayerMethods.getsocketoption = PSMGetsocketoption;
-  nsSSLIOLayerMethods.setsocketoption = PSMSetsocketoption;
-  nsSSLIOLayerMethods.recv = PSMRecv;
-  nsSSLIOLayerMethods.send = PSMSend;
-  nsSSLIOLayerMethods.connectcontinue = PSMConnectcontinue;
+    nsSSLIOLayerMethods.getsockname = PSMGetsockname;
+    nsSSLIOLayerMethods.getpeername = PSMGetpeername;
+    nsSSLIOLayerMethods.getsocketoption = PSMGetsocketoption;
+    nsSSLIOLayerMethods.setsocketoption = PSMSetsocketoption;
+    nsSSLIOLayerMethods.recv = PSMRecv;
+    nsSSLIOLayerMethods.send = PSMSend;
+    nsSSLIOLayerMethods.connectcontinue = PSMConnectcontinue;
 
-  nsSSLIOLayerMethods.connect = nsSSLIOLayerConnect;
-  nsSSLIOLayerMethods.close = nsSSLIOLayerClose;
-  nsSSLIOLayerMethods.write = nsSSLIOLayerWrite;
-  nsSSLIOLayerMethods.read = nsSSLIOLayerRead;
-  nsSSLIOLayerMethods.poll = nsSSLIOLayerPoll;
+    nsSSLIOLayerMethods.connect = nsSSLIOLayerConnect;
+    nsSSLIOLayerMethods.close = nsSSLIOLayerClose;
+    nsSSLIOLayerMethods.write = nsSSLIOLayerWrite;
+    nsSSLIOLayerMethods.read = nsSSLIOLayerRead;
+    nsSSLIOLayerMethods.poll = nsSSLIOLayerPoll;
+  }
 
   mutex = PR_NewLock();
   if (!mutex)

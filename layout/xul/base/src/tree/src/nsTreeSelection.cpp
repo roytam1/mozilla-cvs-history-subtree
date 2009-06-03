@@ -265,6 +265,8 @@ nsTreeSelection::nsTreeSelection(nsITreeBoxObject* aTree)
 nsTreeSelection::~nsTreeSelection()
 {
   delete mFirstRange;
+  if (mSelectTimer)
+    mSelectTimer->Cancel();
 }
 
 // QueryInterface implementation for nsBoxObject

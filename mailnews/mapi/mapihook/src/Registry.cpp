@@ -41,7 +41,11 @@
 #include "nsString.h"
 #include "Registry.h"
 
+#ifdef MOZ_THUNDERBIRD
+#define MAPI_PROXY_DLL_NAME   "MapiProxy_InUse.dll"
+#else
 #define MAPI_PROXY_DLL_NAME   "MapiProxy.dll"
+#endif
 #define MAPI_STARTUP_ARG      " /MAPIStartUp"
 #define MAX_SIZE              2048
 

@@ -406,16 +406,19 @@ nsresult txXSLKey::testNode(const txXPathNode& aNode,
     {
         Key* key = (Key*)iter.next();
         if (key->matchPattern->matches(aNode, &aEs)) {
-            txSingleNodeContext evalContext(aNode, &aEs);
-            nsresult rv = aEs.pushEvalContext(&evalContext);
+            txSingleNodeContext *evalContext =
+                new txSingleNodeContext(aNode, &aEs);
+            NS_ENSURE_TRUE(evalContext, NS_ERROR_OUT_OF_MEMORY);
+
+            nsresult rv = aEs.pushEvalContext(evalContext);
             NS_ENSURE_SUCCESS(rv, rv);
 
             nsRefPtr<txAExprResult> exprResult;
-            rv = key->useExpr->evaluate(&evalContext,
+            rv = key->useExpr->evaluate(evalContext,
                                         getter_AddRefs(exprResult));
             NS_ENSURE_SUCCESS(rv, rv);
 
-            aEs.popEvalContext();
+            delete aEs.popEvalContext();
 
             if (exprResult->getResultType() == txAExprResult::NODESET) {
                 txNodeSet* res = NS_STATIC_CAST(txNodeSet*,

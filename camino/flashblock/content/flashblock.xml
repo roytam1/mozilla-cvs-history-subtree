@@ -54,7 +54,10 @@ function flashblockShowPlaceholder() {
 }
 
 // Show the original animation
-function flashblockShowFlash() {
+function flashblockShowFlash(event) {
+    if( event.type == "keypress" && event.keyCode != KeyEvent.DOM_VK_RETURN)
+      return false;
+	event.stopPropagation();
 	if(placeholder.flashblock == "frame") {
 		current.height = current.prevHeight;
 		current.width = current.prevWidth;
@@ -254,6 +257,11 @@ function(event) { event.target.style.background = event.target.getAttribute("bgI
 // Replace the placeholder with the flash document.
 placeholder.addEventListener("click", flashblockShowFlash, "false");
 
+// Accessibility
+placeholder.setAttribute("tabindex", "0");
+placeholder.setAttribute("role", "button");
+placeholder.addEventListener("keypress", flashblockShowFlash, "false");
+
         ]]>
     </constructor>
   </implementation>
@@ -323,7 +331,10 @@ function flashblockShowPlaceholder() {
 }
 
 // Show the original animation
-function flashblockShowFlash() {
+function flashblockShowFlash(event) {
+    if( event.type == "keypress" && event.keyCode != KeyEvent.DOM_VK_RETURN)
+      return false;
+	event.stopPropagation();
 	if(placeholder.flashblock == "frame") {
 		current.height = current.prevHeight;
 		current.width = current.prevWidth;
@@ -542,6 +553,11 @@ function(event) { event.target.style.background = event.target.getAttribute("bgI
 
 // Replace the placeholder with the flash document.
 placeholder.addEventListener("click", flashblockShowFlash, "false");
+
+// Accessibility
+placeholder.setAttribute("tabindex", "0");
+placeholder.setAttribute("role", "button");
+placeholder.addEventListener("keypress", flashblockShowFlash, "false");
 
         ]]>
     </constructor>

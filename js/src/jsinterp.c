@@ -4727,11 +4727,11 @@ interrupt:
              * by the JSOP_*GVAR opcodes.
              */
             if (atomIndex < script->numGlobalVars &&
-                (attrs & JSPROP_PERMANENT) &&
                 obj2 == obj &&
                 OBJ_IS_NATIVE(obj)) {
                 sprop = (JSScopeProperty *) prop;
-                if (SPROP_HAS_VALID_SLOT(sprop, OBJ_SCOPE(obj)) &&
+                if ((sprop->attrs & JSPROP_PERMANENT) &&
+                    SPROP_HAS_VALID_SLOT(sprop, OBJ_SCOPE(obj)) &&
                     SPROP_HAS_STUB_GETTER(sprop) &&
                     SPROP_HAS_STUB_SETTER(sprop)) {
                     /*

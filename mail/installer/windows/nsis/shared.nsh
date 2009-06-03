@@ -49,6 +49,9 @@
   ; Remove uninstall entries that point to our install location
   ${RegCleanUninstall}
 
+  ; Upgrade the copies of the MAPI DLLs
+  ${UpgradeMapiDLLs}
+
   ; Add Software\Mozilla\ registry entries
   ${SetAppKeys}
 
@@ -161,7 +164,7 @@
 !macro SetClientsMail
   GetFullPathName $8 "$INSTDIR\${FileMainEXE}"
   GetFullPathName $7 "$INSTDIR\uninstall\helper.exe"
-  GetFullPathName $6 "$INSTDIR\mozMapi32.dll"
+  GetFullPathName $6 "$INSTDIR\mozMapi32_InUse.dll"
 
   StrCpy $0 "Software\Clients\Mail\${BrandFullNameInternal}"
 
@@ -169,8 +172,9 @@
   WriteRegStr HKLM "$0\DefaultIcon" "" "$8,0"
   WriteRegStr HKLM "$0" "DLLPath" "$6"
 
-  ; MapiProxy.dll can exist in multiple installs of the application. Registration
-  ; occurs as follows with the last action to occur being the one that wins:
+  ; The MapiProxy dll can exist in multiple installs of the application.
+  ; Registration occurs as follows with the last action to occur being the one
+  ; that wins:
   ; On install and software update when helper.exe runs with the /PostUpdate
   ; argument. On setting the application as the system's default application 
   ; using Window's "Set program access and defaults".
@@ -179,13 +183,13 @@
     ${LogHeader} "DLL Registration"
   !endif
   ClearErrors
-  RegDLL "$INSTDIR\MapiProxy.dll"
+  RegDLL "$INSTDIR\MapiProxy_InUse.dll"
   !ifndef NO_LOG  
     ${If} ${Errors}
-      ${LogMsg} "** ERROR Registering: $INSTDIR\MapiProxy.dll **"
+      ${LogMsg} "** ERROR Registering: $INSTDIR\MapiProxy_InUse.dll **"
     ${Else}
-      ${LogUninstall} "DLLReg: \MapiProxy.dll"
-      ${LogMsg} "Registered: $INSTDIR\MapiProxy.dll"
+      ${LogUninstall} "DLLReg: \MapiProxy_InUse.dll"
+      ${LogMsg} "Registered: $INSTDIR\MapiProxy_InUse.dll"
     ${EndIf}
   !endif
 
@@ -336,6 +340,29 @@
   ${WriteRegStr2} $TmpVal "$0" "CurrentVersion" "${AppVersion} (${AB_CD})" 0
 !macroend
 !define SetAppKeys "!insertmacro SetAppKeys"
+
+; The MAPI DLL's are copied and the copies are used for the MAPI registration
+; to lessen file in use errors on application update.
+!macro UpgradeMapiDLLs
+  ClearErrors
+  ${DeleteFile} "$INSTDIR\MapiProxy_InUse.dll"
+  ${If} ${Errors}
+    ${DeleteFile} "$INSTDIR\MapiProxy_InUse.dll.moz-delete" ; shouldn't exist
+    Rename "$INSTDIR\MapiProxy_InUse.dll" "$INSTDIR\MapiProxy_InUse.dll.moz-delete"
+    Delete /REBOOTOK "$INSTDIR\MapiProxy_InUse.dll.moz-delete"
+  ${EndIf}
+  CopyFiles /SILENT "$INSTDIR\MapiProxy.dll" "$INSTDIR\MapiProxy_InUse.dll"
+
+  ClearErrors
+  ${DeleteFile} "$INSTDIR\mozMapi32_InUse.dll"
+  ${If} ${Errors}
+    ${DeleteFile} "$INSTDIR\mozMapi32_InUse.dll.moz-delete" ; shouldn't exist
+    Rename "$INSTDIR\mozMapi32_InUse.dll" "$INSTDIR\mozMapi32_InUse.dll.moz-delete"
+    Delete /REBOOTOK "$INSTDIR\mozMapi32_InUse.dll.moz-delete"
+  ${EndIf}
+  CopyFiles /SILENT "$INSTDIR\mozMapi32.dll" "$INSTDIR\mozMapi32_InUse.dll"
+!macroend
+!define UpgradeMapiDLLs "!insertmacro UpgradeMapiDLLs"
 
 !macro SetUninstallKeys
   ; Write the uninstall registry keys

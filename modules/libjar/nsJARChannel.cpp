@@ -47,6 +47,7 @@
 #include "nsIScriptSecurityManager.h"
 #include "nsIPrincipal.h"
 #include "nsIFileURL.h"
+#include "nsIViewSourceChannel.h"
 #include "nsIJAR.h"
 
 static NS_DEFINE_CID(kZipReaderCID, NS_ZIPREADER_CID);
@@ -730,8 +731,11 @@ nsJARChannel::OnDownloadComplete(nsIDownloader *downloader,
             nsCAutoString charset;
             NS_ParseContentType(header, contentType, charset);
 
-            mIsUnsafe = !contentType.EqualsLiteral("application/java-archive") &&
-                        !contentType.EqualsLiteral("application/x-jar");
+            nsCAutoString channelContentType;
+            channel->GetContentType(channelContentType);
+            mIsUnsafe = !(contentType.Equals(channelContentType) &&
+                          (contentType.EqualsLiteral("application/java-archive") ||
+                           contentType.EqualsLiteral("application/x-jar")));
         } else {
             nsCOMPtr<nsIJARChannel_MOZILLA_1_8_BRANCH> innerJARChannel(do_QueryInterface(channel));
             if (innerJARChannel) {
@@ -752,6 +756,14 @@ nsJARChannel::OnDownloadComplete(nsIDownloader *downloader,
         }
 
         if (!allowUnpack) {
+            status = NS_ERROR_UNSAFE_CONTENT_TYPE;
+        }
+    }
+
+    if (NS_SUCCEEDED(status)) {
+        // Refuse to unpack view-source: jars even if open-unsafe-types is set.
+        nsCOMPtr<nsIViewSourceChannel> viewSource = do_QueryInterface(channel);
+        if (viewSource) {
             status = NS_ERROR_UNSAFE_CONTENT_TYPE;
         }
     }
