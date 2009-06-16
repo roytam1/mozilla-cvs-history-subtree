@@ -444,11 +444,16 @@ static const float kScrollButtonInterval = 0.15;  // time (in seconds) between f
 
   // check to see whether or not the tabs will fit without the overflows
   float widthOfATab = floor(NSWidth([self tabsRectWithOverflow:NO]) / numberOfTabs);
-  mOverflowTabs = widthOfATab < kMinTabWidth;
+  // We check numberOfTabs > 1 because a window can end up so small that it
+  // can't hold even one min-width tab (e.g., due to JS).
+  mOverflowTabs = widthOfATab < kMinTabWidth && numberOfTabs > 1;
 
   if (mOverflowTabs) {
     float widthOfTabBar = NSWidth([self tabsRect]);
     mNumberOfVisibleTabs = (int)floor(widthOfTabBar / kMinTabWidth);
+    // Even in absurdly small windows, show at least one tab.
+    if (mNumberOfVisibleTabs == 0)
+      mNumberOfVisibleTabs = 1;
     widthOfATab = floor(widthOfTabBar / mNumberOfVisibleTabs);
     if (mNumberOfVisibleTabs + mLeftMostVisibleTabIndex > numberOfTabs)
       [self setLeftMostVisibleTabIndex:(numberOfTabs - mNumberOfVisibleTabs)];

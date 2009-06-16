@@ -261,25 +261,26 @@ const char kDirServiceContractID[] = "@mozilla.org/file/directory_service;1";
 
     nsCOMPtr<nsIDOMWindow> contentWindow = [self contentWindow];
     nsCOMPtr<nsPIDOMWindow> piWindow(do_QueryInterface(contentWindow));
-    nsIChromeEventHandler *chromeHandler = piWindow->GetChromeEventHandler();
-    nsCOMPtr<nsIDOMEventReceiver> rec(do_QueryInterface(chromeHandler));
-    if (rec) {
-      rec->AddEventListenerByIID((nsIDOMMouseListener*)selectHandler, NS_GET_IID(nsIDOMMouseListener));
-      rec->AddEventListenerByIID((nsIDOMKeyListener*)selectHandler, NS_GET_IID(nsIDOMKeyListener));
-    }
+    if (piWindow) {
+      nsIChromeEventHandler *chromeHandler = piWindow->GetChromeEventHandler();
+      nsCOMPtr<nsIDOMEventReceiver> rec(do_QueryInterface(chromeHandler));
+      if (rec) {
+        rec->AddEventListenerByIID((nsIDOMMouseListener*)selectHandler, NS_GET_IID(nsIDOMMouseListener));
+        rec->AddEventListenerByIID((nsIDOMKeyListener*)selectHandler, NS_GET_IID(nsIDOMKeyListener));
+      }
 
-    // register the CHBrowserListener as an event listener for popup-blocking events,
-    // and link-added events.
-    nsCOMPtr<nsIDOMEventTarget> eventTarget = do_QueryInterface(rec);
-    if (eventTarget)
-    {
-      rv = eventTarget->AddEventListener(NS_LITERAL_STRING("DOMPopupBlocked"),
-                                         NS_STATIC_CAST(nsIDOMEventListener*, _listener), PR_FALSE);
-      NS_ASSERTION(NS_SUCCEEDED(rv), "AddEventListener failed");
+      // register the CHBrowserListener as an event listener for popup-blocking events,
+      // and link-added events.
+      nsCOMPtr<nsIDOMEventTarget> eventTarget = do_QueryInterface(rec);
+      if (eventTarget) {
+        rv = eventTarget->AddEventListener(NS_LITERAL_STRING("DOMPopupBlocked"),
+                                           NS_STATIC_CAST(nsIDOMEventListener*, _listener), PR_FALSE);
+        NS_ASSERTION(NS_SUCCEEDED(rv), "AddEventListener failed");
 
-      rv = eventTarget->AddEventListener(NS_LITERAL_STRING("DOMLinkAdded"),
-                                         NS_STATIC_CAST(nsIDOMEventListener*, _listener), PR_FALSE);
-      NS_ASSERTION(NS_SUCCEEDED(rv), "AddEventListener failed");
+        rv = eventTarget->AddEventListener(NS_LITERAL_STRING("DOMLinkAdded"),
+                                           NS_STATIC_CAST(nsIDOMEventListener*, _listener), PR_FALSE);
+        NS_ASSERTION(NS_SUCCEEDED(rv), "AddEventListener failed");
+      }
     }
   }
   return self;

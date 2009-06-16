@@ -452,13 +452,15 @@ enum StatusPriority {
     ContentClickListener* clickListener = new ContentClickListener([mWindow delegate]);
     if (!clickListener)
       return;
-    
+
     nsCOMPtr<nsIDOMWindow> contentWindow = [[self browserView] contentWindow];
     nsCOMPtr<nsPIDOMWindow> piWindow(do_QueryInterface(contentWindow));
-    nsIChromeEventHandler *chromeHandler = piWindow->GetChromeEventHandler();
-    nsCOMPtr<nsIDOMEventReceiver> rec(do_QueryInterface(chromeHandler));
-    if ( rec )
-      rec->AddEventListenerByIID(clickListener, NS_GET_IID(nsIDOMMouseListener));
+    if (piWindow) {
+      nsIChromeEventHandler *chromeHandler = piWindow->GetChromeEventHandler();
+      nsCOMPtr<nsIDOMEventReceiver> rec(do_QueryInterface(chromeHandler));
+      if (rec)
+        rec->AddEventListenerByIID(clickListener, NS_GET_IID(nsIDOMMouseListener));
+    }
   }
 }
 
