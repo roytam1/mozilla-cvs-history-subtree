@@ -1,5 +1,5 @@
 #
-## hostname: patrocles
+## hostname: production-patrocles
 ## uname: WINNT PATROCLES 5.0 2195 xx I386
 #
 
@@ -7,7 +7,6 @@
 #-    Uncomment the variables you need to set.
 #-    The default values are the same as the commented variables.
 
-$ENV{CVSROOT}=":ext:tbirdbld\@cvs.mozilla.org:/cvsroot";
 $ENV{MOZ_INSTALLER_USE_7ZIP}="1";
 $ENV{MOZ_PACKAGE_MSI} = 0;
 
@@ -110,7 +109,8 @@ $use_blat       = 1;
 # Note that win32 may not need \@, depends on ' or ".
 # :pserver:$ENV{USER}%netscape.com@cvs.mozilla.org:/cvsroot
 
-$moz_cvsroot   = $ENV{CVSROOT};
+# CONFIG: $moz_cvsroot   = '%mozillaCvsroot%';
+$moz_cvsroot   = ":ext:tbirdbld\@cvs.mozilla.org:/cvsroot";
 
 #- Set these proper values for your tinderbox server
 #$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
@@ -137,6 +137,7 @@ $BuildNameExtra = 'Tb-Nightly';
 
 #- Until you get the script working. When it works,
 #- change to the tree you're actually building
+# CONFIG: $BuildTree  = '%buildTree%';
 $BuildTree  = 'Mozilla1.8';
 
 #$BuildName = '';
@@ -167,8 +168,11 @@ $build_hour    = "3";
 $package_creation_path = "/mail/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
 $ssh_version   = "2";
+# CONFIG: $ssh_user      = "%sshUser%";
 $ssh_user      = "tbirdbld";
+# CONFIG: $ssh_key       = "$ENV{HOME}/.ssh/%sshUser%_dsa";
 $ssh_key       = "'$ENV{HOME}/.ssh/tbirdbld_dsa'";
+# CONFIG: $ssh_server    = "%sshServer%";
 $ssh_server    = "stage-old.mozilla.org";
 $ftp_path      = "/home/ftp/pub/thunderbird/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly";
