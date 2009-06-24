@@ -138,7 +138,7 @@ $AliveTest                = 1;
 
 #$moz_cvsroot   = $ENV{CVSROOT};
 # CONFIG: $moz_cvsroot   = '%mozillaCvsroot%';
-$moz_cvsroot   = ':ext:ffxbld@cvs.mozilla.org:/cvsroot';
+$moz_cvsroot   = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 
 #- Set these proper values for your tinderbox server
 #$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
@@ -205,7 +205,7 @@ $ssh_user      = "tbirdbld";
 # CONFIG: $ssh_key       = "'$ENV{HOME}/.ssh/%sshUser%_dsa'";
 $ssh_key       = "'$ENV{HOME}/.ssh/tbirdbld_dsa'";
 # CONFIG: $ssh_server    = "%sshServer%";
-$ssh_server    = "stage.mozilla.org";
+$ssh_server    = "stage-old.mozilla.org";
 $ftp_path      = "/home/ftp/pub/thunderbird/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly";
 $tbox_ftp_path = "/home/ftp/pub/thunderbird/tinderbox-builds";
