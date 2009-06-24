@@ -119,6 +119,7 @@ $VendorName               = 'Mozilla';
 # Note that win32 may not need \@, depends on ' or ".
 # :pserver:$ENV{USER}%netscape.com@cvs.mozilla.org:/cvsroot
 
+# CONFIG: $moz_cvsroot   = '%mozillaCvsroot%';
 $moz_cvsroot   = ":ext:ffxbld\@cvs.mozilla.org:/cvsroot";
 
 #- Set these proper values for your tinderbox server
@@ -131,7 +132,7 @@ $moz_cvsroot   = ":ext:ffxbld\@cvs.mozilla.org:/cvsroot";
 #$ObjDir = '';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'Tb-Release';
+$BuildNameExtra = 'Tb-L10n-Nightly';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -143,9 +144,11 @@ $ConfigureOnly = 1;
 $LocalizationVersionFile = 'mail/config/version.txt';
 %WGetFiles = (
 	     "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly/latest-mozilla1.8/thunderbird-%version%.en-US.mac.dmg" =>
+# CONFIG:            "%l10n_buildDir%/%l10n_buildPlatform%/thunderbird.dmg"
 	     "/builds/tinderbox/Tb-Mozilla1.8-l10n/Darwin_8.7.0_Depend/thunderbird.dmg"
 	     );
 
+# CONFIG: $BuildLocalesArgs = "ZIP_IN=%l10n_buildDir%/%l10n_buildPlatform%/thunderbird.dmg";
 $BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Tb-Mozilla1.8-l10n/Darwin_8.7.0_Depend/thunderbird.dmg";
 
 
@@ -195,8 +198,11 @@ $build_hour    = "9";
 $package_creation_path = "/mail/installer";
 # needs setting for mac + talkback: $mac_bundle_path = "/browser/app";
 $mac_bundle_path = "/mail/app";
+# CONFIG: $ssh_user      = "%sshUser%";
 $ssh_user      = "tbirdbld";
+# CONFIG: $ssh_key       = "'$ENV{HOME}/.ssh/%sshUser%_dsa'";
 $ssh_key       = "'$ENV{HOME}/.ssh/tbirdbld_dsa'";
+# CONFIG: $ssh_server    = "%sshServer%";
 $ssh_server    = "stage-old.mozilla.org";
 $ftp_path      = "/home/ftp/pub/thunderbird/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly";
