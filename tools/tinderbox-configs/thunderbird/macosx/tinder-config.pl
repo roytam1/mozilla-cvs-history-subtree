@@ -120,7 +120,7 @@ $VendorName               = 'Mozilla';
 # :pserver:$ENV{USER}%netscape.com@cvs.mozilla.org:/cvsroot
 
 # CONFIG: $moz_cvsroot   = '%mozillaCvsroot%';
-$moz_cvsroot   = ":ext:ffxbld\@cvs.mozilla.org:/cvsroot";
+$moz_cvsroot   = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 
 #- Set these proper values for your tinderbox server
 #$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
@@ -145,11 +145,11 @@ $LocalizationVersionFile = 'mail/config/version.txt';
 %WGetFiles = (
 	     "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly/latest-mozilla1.8/thunderbird-%version%.en-US.mac.dmg" =>
 # CONFIG:            "%l10n_buildDir%/%l10n_buildPlatform%/thunderbird.dmg"
-	     "/builds/tinderbox/Tb-Mozilla1.8-l10n/Darwin_8.7.0_Depend/thunderbird.dmg"
+"/builds/tinderbox/Tb-Mozilla1.8-l10n-Nightly/Darwin_8.7.0_Depend/thunderbird.dmg"
 	     );
 
 # CONFIG: $BuildLocalesArgs = "ZIP_IN=%l10n_buildDir%/%l10n_buildPlatform%/thunderbird.dmg";
-$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Tb-Mozilla1.8-l10n/Darwin_8.7.0_Depend/thunderbird.dmg";
+$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Tb-Mozilla1.8-l10n-Nightly/Darwin_8.7.0_Depend/thunderbird.dmg";
 
 
 #-
