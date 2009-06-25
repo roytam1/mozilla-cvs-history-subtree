@@ -120,7 +120,7 @@ $ProductName              = "Thunderbird";
 # :pserver:$ENV{USER}%netscape.com@cvs.mozilla.org:/cvsroot
 
 # CONFIG: $moz_cvsroot = '%mozillaCvsroot%';
-$moz_cvsroot   = ":ext:ffxbld\@cvs.mozilla.org:/cvsroot";                       
+$moz_cvsroot = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 
 #- Set these proper values for your tinderbox server
 #$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
@@ -145,11 +145,11 @@ $LocalizationVersionFile = 'mail/config/version.txt';
 %WGetFiles = (
 	      "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly/latest-mozilla1.8/thunderbird-%version%.en-US.linux-i686.tar.gz" =>
 # CONFIG:            "%l10n_buildDir%/%l10n_buildPlatform%/thunderbird.tar.gz"
-	      "/builds/tinderbox/Tb-Mozilla1.8-l10n/Linux_2.4.20-28.8_Clobber/thunderbird.tar.gz"
+"/builds/tinderbox/Tb-Mozilla1.8-l10n-Nightly/Linux_2.4.18-14_Depend/thunderbird.tar.gz"
 	      );
 
 # CONFIG: $BuildLocalesArgs = "ZIP_IN=%l10n_buildDir%/%l10n_buildPlatform%/thunderbird.tar.gz";
-$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Tb-Mozilla1.8-l10n/Linux_2.4.20-28.8_Clobber/thunderbird.tar.gz";
+$BuildLocalesArgs = "ZIP_IN=/builds/tinderbox/Tb-Mozilla1.8-l10n-Nightly/Linux_2.4.18-14_Depend/thunderbird.tar.gz";
 
 #-
 #- The rest should not need to be changed
