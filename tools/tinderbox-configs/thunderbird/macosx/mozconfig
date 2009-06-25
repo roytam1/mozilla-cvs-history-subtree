@@ -1,10 +1,11 @@
 #
-## hostname: bm-xserve02
-## uname: Darwin bm-xserve02.mozilla.org 8.7.0 Darwin Kernel Version 8.7.0: Fri May 26 15:20:53 PDT 2006; root:xnu-792.6.76.obj~1/RELEASE_PPC Power Macintosh powerpc
+## hostname: bm-xserve05.build.mozilla.org
+## uname: Darwin bm-xserve05 8.7.0 Darwin Kernel Version 8.7.0: Fri May 26 15:20:53 PDT 2006; root:xnu-792.6.76.obj~1/RELEASE_PPC Power Macintosh powerpc
 #
 
 mk_add_options MOZ_CO_PROJECT=mail
 mk_add_options MOZ_CO_LOCALES=all
+# CONFIG: mk_add_options LOCALES_CVSROOT=%l10nCvsroot%
 mk_add_options LOCALES_CVSROOT=:ext:ffxbld@cvs.mozilla.org:/l10n
 # mk_add_options LOCALES_CO_TAG=AVIARY_1_0_20040515_BRANCH
 mk_add_options MOZ_CO_MODULE="mozilla/tools/update-packaging"
