@@ -147,6 +147,7 @@ $LocalizationVersionFile = 'mail/config/version.txt';
 	      "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly/latest-mozilla1.8/thunderbird-%version%.en-US.win32.zip" =>
 # CONFIG:            "%l10n_buildDir%/%l10n_buildPlatform%/thunderbird.zip"
 "/cygdrive/e/builds/tinderbox/Tb-Mozilla1.8-l10n-Nightly/WINNT_5.0_Depend/thunderbird.zip"
+             );
 
 # CONFIG: $BuildLocalesArgs = "ZIP_IN=%l10n_buildDir%/%l10n_buildPlatform%/thunderbird.zip WIN32_INSTALLER_IN=%l10n_buildDir%/%l10n_buildPlatform%/thunderbird-installer.exe";
 $BuildLocalesArgs = "ZIP_IN=/cygdrive/e/builds/tinderbox/Tb-Mozilla1.8-l10n-Nightly/WINNT_5.0_Depend/thunderbird.zip WIN32_INSTALLER_IN=/cygdrive/e/builds/tinderbox/Tb-Mozilla1.8-l10n-Nightly/WINNT_5.0_Depend/thunderbird-installer.exe";
