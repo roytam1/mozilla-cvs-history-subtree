@@ -118,7 +118,7 @@ $use_blat       = 1;
 # :pserver:$ENV{USER}%netscape.com@cvs.mozilla.org:/cvsroot
 
 # CONFIG: $moz_cvsroot   = '%mozillaCvsroot%';
-$moz_cvsroot   = ":ext:ffxbld\@cvs.mozilla.org:/cvsroot";
+$moz_cvsroot   = ':ext:cltbld@cvs.mozilla.org:/cvsroot';
 
 #- Set these proper values for your tinderbox server
 #$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
@@ -143,13 +143,13 @@ $ConfigureOnly = 1;
 $LocalizationVersionFile = 'mail/config/version.txt';
 %WGetFiles = ("http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly/latest-mozilla1.8/thunderbird-%version%.en-US.win32.installer.exe" =>
 # CONFIG:            "%l10n_buildDir%/%l10n_buildPlatform%/thunderbird-installer.exe",
-	      "/cygdrive/c/builds/tinderbox/Tb-Mozilla1.8-l10n/WINNT_5.2_Clobber/thunderbird-installer.exe",
+"/cygdrive/e/builds/tinderbox/Tb-Mozilla1.8-l10n-Nightly/WINNT_5.0_Depend/thunderbird-installer.exe",
 	      "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly/latest-mozilla1.8/thunderbird-%version%.en-US.win32.zip" =>
 # CONFIG:            "%l10n_buildDir%/%l10n_buildPlatform%/thunderbird.zip"
-	      "/cygdrive/c/builds/tinderbox/Tb-Mozilla1.8-l10n/WINNT_5.2_Clobber/thunderbird.zip");
+"/cygdrive/e/builds/tinderbox/Tb-Mozilla1.8-l10n-Nightly/WINNT_5.0_Depend/thunderbird.zip"
 
 # CONFIG: $BuildLocalesArgs = "ZIP_IN=%l10n_buildDir%/%l10n_buildPlatform%/thunderbird.zip WIN32_INSTALLER_IN=%l10n_buildDir%/%l10n_buildPlatform%/thunderbird-installer.exe";
-$BuildLocalesArgs = "ZIP_IN=/cygdrive/c/builds/tinderbox/Tb-Mozilla1.8-l10n/WINNT_5.2_Clobber/thunderbird.zip WIN32_INSTALLER_IN=/cygdrive/c/builds/tinderbox/Tb-Mozilla1.8-l10n/WINNT_5.2_Clobber/thunderbird-installer.exe";
+$BuildLocalesArgs = "ZIP_IN=/cygdrive/e/builds/tinderbox/Tb-Mozilla1.8-l10n-Nightly/WINNT_5.0_Depend/thunderbird.zip WIN32_INSTALLER_IN=/cygdrive/e/builds/tinderbox/Tb-Mozilla1.8-l10n-Nightly/WINNT_5.0_Depend/thunderbird-installer.exe";
 
 #-
 #- The rest should not need to be changed
@@ -200,7 +200,7 @@ $ssh_version   = "2";
 # CONFIG: $ssh_user      = "%sshUser%";
 $ssh_user      = "tbirdbld";
 # CONFIG: $ssh_key       = "$ENV{HOME}/.ssh/%sshUser%_dsa";
-$ssh_key       = "'$ENV{HOME}/.ssh/tbirdbld_dsa'";
+$ssh_key       = "$ENV{HOME}/.ssh/tbirdbld_dsa";
 # CONFIG: $ssh_server    = "%sshServer%";
 $ssh_server    = "stage-old.mozilla.org";
 $ftp_path      = "/home/ftp/pub/thunderbird/nightly";
