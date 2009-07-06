@@ -409,9 +409,8 @@ PK11_CreateNewObject(PK11SlotInfo *slot, CK_SESSION_HANDLE session,
 	    PORT_SetError(SEC_ERROR_BAD_DATA);
 	    return SECFailure;
 	}
-	crv = PK11_GETTAB(slot)->C_CreateObject(rwsession, 
-	      /* cast away const :-( */         (CK_ATTRIBUTE_PTR)theTemplate,
-						count, objectID);
+	crv = PK11_GETTAB(slot)->C_CreateObject(rwsession, theTemplate,
+							count,objectID);
 	if(crv != CKR_OK) {
 	    PORT_SetError( PK11_MapError(crv) );
 	    rv = SECFailure;
@@ -981,7 +980,7 @@ PK11_UnwrapPrivKey(PK11SlotInfo *slot, PK11SymKey *wrappingKey,
     }
 
     if (wrappingKey->slot != slot) {
-	newKey = pk11_CopyToSlot(slot,wrapType,CKA_UNWRAP,wrappingKey);
+	newKey = pk11_CopyToSlot(slot,wrapType,CKA_WRAP,wrappingKey);
     } else {
 	newKey = PK11_ReferenceSymKey(wrappingKey);
     }

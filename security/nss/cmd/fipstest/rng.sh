@@ -8,12 +8,22 @@
 # directory where the REQUEST (.req) files reside.  The script generates the
 # RESPONSE (.rsp) files in the same directory.
 
-drbg_requests="
-SHA256_DRBG.req
+vst_requests="
+FIPS186_VST.req
+FIPS186_VSTGEN.req
+"
+mct_requests="
+FIPS186_MCT.req
+FIPS186_MCTGEN.req
 "
 
-for request in $drbg_requests; do
+for request in $vst_requests; do
     response=`echo $request | sed -e "s/req/rsp/"`
     echo $request $response
-    fipstest drbg $request > $response
+    fipstest rng vst $request > $response
+done
+for request in $mct_requests; do
+    response=`echo $request | sed -e "s/req/rsp/"`
+    echo $request $response
+    fipstest rng mct $request > $response
 done

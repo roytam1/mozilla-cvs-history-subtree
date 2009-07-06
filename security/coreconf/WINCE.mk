@@ -81,9 +81,6 @@ GARBAGE     += $(OBJDIR)/vc20.pdb $(OBJDIR)/vc40.pdb
 XP_DEFINE   += -DXP_PC
 LIB_SUFFIX   = lib
 DLL_SUFFIX   = dll
-OS_DLLFLAGS  += -DLL
-
-EXTRA_EXE_LD_FLAGS += -ENTRY:mainWCRTStartup
 
 ifdef BUILD_OPT
 #   OS_CFLAGS  += -MD
@@ -208,7 +205,7 @@ endif
 
 
 #
-# Always set CPU_TAG on Linux, WINCE.
+# Always set CPU_TAG on Linux, OpenVMS, WINCE.
 #
 CPU_TAG = _$(CPU_ARCH)
 

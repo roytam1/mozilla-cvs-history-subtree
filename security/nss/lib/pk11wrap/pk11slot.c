@@ -70,7 +70,6 @@ PK11DefaultArrayEntry PK11_DefaultArray[] = {
 	{ "DES", SECMOD_DES_FLAG, CKM_DES_CBC },
 	{ "AES", SECMOD_AES_FLAG, CKM_AES_CBC },
 	{ "Camellia", SECMOD_CAMELLIA_FLAG, CKM_CAMELLIA_CBC },
-	{ "SEED", SECMOD_SEED_FLAG, CKM_SEED_CBC },
 	{ "RC5", SECMOD_RC5_FLAG, CKM_RC5_CBC },
 	{ "SHA-1", SECMOD_SHA1_FLAG, CKM_SHA_1 },
 	{ "SHA256", SECMOD_SHA256_FLAG, CKM_SHA256 },
@@ -100,9 +99,7 @@ PK11_GetDefaultArray(int *size)
  * These  slotlists are lists of modules which provide default support for
  *  a given algorithm or mechanism.
  */
-static PK11SlotList 
-    pk11_seedSlotList,
-    pk11_camelliaSlotList,
+static PK11SlotList pk11_camelliaSlotList,
     pk11_aesSlotList,
     pk11_desSlotList,
     pk11_rc4SlotList,
@@ -482,19 +479,13 @@ PRBool
 SECMOD_HasRootCerts(void)
 {
    SECMODModuleList *mlp;
-   SECMODModuleList *modules;
+   SECMODModuleList *modules = SECMOD_GetDefaultModuleList();
    SECMODListLock *moduleLock = SECMOD_GetDefaultModuleListLock();
    int i;
    PRBool found = PR_FALSE;
 
-    if (!moduleLock) {
-    	PORT_SetError(SEC_ERROR_NOT_INITIALIZED);
-	return found;
-    }
-
    /* work through all the slots */
    SECMOD_GetReadLock(moduleLock);
-   modules = SECMOD_GetDefaultModuleList();
    for(mlp = modules; mlp != NULL; mlp = mlp->next) {
 	for (i=0; i < mlp->module->slotCount; i++) {
 	    PK11SlotInfo *tmpSlot = mlp->module->slots[i];
@@ -520,22 +511,17 @@ PK11_FindSlotsByNames(const char *dllName, const char* slotName,
                         const char* tokenName, PRBool presentOnly)
 {
     SECMODModuleList *mlp;
-    SECMODModuleList *modules;
+    SECMODModuleList *modules = SECMOD_GetDefaultModuleList();
     SECMODListLock *moduleLock = SECMOD_GetDefaultModuleListLock();
     int i;
     PK11SlotList* slotList = NULL;
     PRUint32 slotcount = 0;
     SECStatus rv = SECSuccess;
 
-    if (!moduleLock) {
-    	PORT_SetError(SEC_ERROR_NOT_INITIALIZED);
-	return slotList;
-    }
-
     slotList = PK11_NewSlotList();
     if (!slotList) {
         PORT_SetError(SEC_ERROR_NO_MEMORY);
-        return slotList;
+        return NULL;
     }
 
     if ( ((NULL == dllName) || (0 == *dllName)) &&
@@ -548,7 +534,6 @@ PK11_FindSlotsByNames(const char *dllName, const char* slotName,
 
     /* work through all the slots */
     SECMOD_GetReadLock(moduleLock);
-    modules = SECMOD_GetDefaultModuleList();
     for (mlp = modules; mlp != NULL; mlp = mlp->next) {
         PORT_Assert(mlp->module);
         if (!mlp->module) {
@@ -596,22 +581,17 @@ PK11SlotInfo *
 PK11_FindSlotByName(const char *name)
 {
    SECMODModuleList *mlp;
-   SECMODModuleList *modules;
+   SECMODModuleList *modules = SECMOD_GetDefaultModuleList();
    SECMODListLock *moduleLock = SECMOD_GetDefaultModuleListLock();
    int i;
    PK11SlotInfo *slot = NULL;
 
-    if (!moduleLock) {
-    	PORT_SetError(SEC_ERROR_NOT_INITIALIZED);
-	return slot;
-    }
    if ((name == NULL) || (*name == 0)) {
 	return PK11_GetInternalKeySlot();
    }
 
    /* work through all the slots */
    SECMOD_GetReadLock(moduleLock);
-   modules = SECMOD_GetDefaultModuleList();
    for(mlp = modules; mlp != NULL; mlp = mlp->next) {
 	for (i=0; i < mlp->module->slotCount; i++) {
 	    PK11SlotInfo *tmpSlot = mlp->module->slots[i];
@@ -638,18 +618,13 @@ PK11SlotInfo *
 PK11_FindSlotBySerial(char *serial)
 {
    SECMODModuleList *mlp;
-   SECMODModuleList *modules;
+   SECMODModuleList *modules = SECMOD_GetDefaultModuleList();
    SECMODListLock *moduleLock = SECMOD_GetDefaultModuleListLock();
    int i;
    PK11SlotInfo *slot = NULL;
 
-    if (!moduleLock) {
-    	PORT_SetError(SEC_ERROR_NOT_INITIALIZED);
-	return slot;
-    }
    /* work through all the slots */
    SECMOD_GetReadLock(moduleLock);
-   modules = SECMOD_GetDefaultModuleList();
    for(mlp = modules; mlp != NULL; mlp = mlp->next) {
 	for (i=0; i < mlp->module->slotCount; i++) {
 	    PK11SlotInfo *tmpSlot = mlp->module->slots[i];
@@ -778,7 +753,6 @@ pk11_InitSlotListStatic(PK11SlotList *list)
 SECStatus
 PK11_InitSlotLists(void)
 {
-    pk11_InitSlotListStatic(&pk11_seedSlotList);
     pk11_InitSlotListStatic(&pk11_camelliaSlotList);
     pk11_InitSlotListStatic(&pk11_aesSlotList);
     pk11_InitSlotListStatic(&pk11_desSlotList);
@@ -804,7 +778,6 @@ PK11_InitSlotLists(void)
 void
 PK11_DestroySlotLists(void)
 {
-    pk11_FreeSlotListStatic(&pk11_seedSlotList);
     pk11_FreeSlotListStatic(&pk11_camelliaSlotList);
     pk11_FreeSlotListStatic(&pk11_aesSlotList);
     pk11_FreeSlotListStatic(&pk11_desSlotList);
@@ -837,9 +810,6 @@ PK11_GetSlotList(CK_MECHANISM_TYPE type)
         return NULL;
 #endif
     switch (type) {
-    case CKM_SEED_CBC:
-    case CKM_SEED_ECB:
-	return &pk11_seedSlotList;
     case CKM_CAMELLIA_CBC:
     case CKM_CAMELLIA_ECB:
 	return &pk11_camelliaSlotList;
@@ -1744,16 +1714,12 @@ PRBool
 PK11_TokenExists(CK_MECHANISM_TYPE type)
 {
     SECMODModuleList *mlp;
-    SECMODModuleList *modules;
+    SECMODModuleList *modules = SECMOD_GetDefaultModuleList();
     SECMODListLock *moduleLock = SECMOD_GetDefaultModuleListLock();
     PK11SlotInfo *slot;
     PRBool found = PR_FALSE;
     int i;
 
-    if (!moduleLock) {
-    	PORT_SetError(SEC_ERROR_NOT_INITIALIZED);
-	return found;
-    }
     /* we only need to know if there is a token that does this mechanism.
      * check the internal module first because it's fast, and supports 
      * almost everything. */
@@ -1765,7 +1731,6 @@ PK11_TokenExists(CK_MECHANISM_TYPE type)
     if (found) return PR_TRUE; /* bypass getting module locks */
 
     SECMOD_GetReadLock(moduleLock);
-    modules = SECMOD_GetDefaultModuleList();
     for(mlp = modules; mlp != NULL && (!found); mlp = mlp->next) {
 	for (i=0; i < mlp->module->slotCount; i++) {
 	    slot = mlp->module->slots[i];
@@ -1791,27 +1756,18 @@ PK11SlotList *
 PK11_GetAllTokens(CK_MECHANISM_TYPE type, PRBool needRW, PRBool loadCerts, 
                   void *wincx)
 {
-    PK11SlotList *     list;
-    PK11SlotList *     loginList;
-    PK11SlotList *     friendlyList;
+    PK11SlotList *     list         = PK11_NewSlotList();
+    PK11SlotList *     loginList    = PK11_NewSlotList();
+    PK11SlotList *     friendlyList = PK11_NewSlotList();
     SECMODModuleList * mlp;
-    SECMODModuleList * modules;
-    SECMODListLock *   moduleLock;
+    SECMODModuleList * modules      = SECMOD_GetDefaultModuleList();
+    SECMODListLock *   moduleLock   = SECMOD_GetDefaultModuleListLock();
     int                i;
 #if defined( XP_WIN32 ) 
     int                j            = 0;
     PRInt32            waste[16];
 #endif
 
-    moduleLock   = SECMOD_GetDefaultModuleListLock();
-    if (!moduleLock) {
-    	PORT_SetError(SEC_ERROR_NOT_INITIALIZED);
-	return NULL;
-    }
-
-    list         = PK11_NewSlotList();
-    loginList    = PK11_NewSlotList();
-    friendlyList = PK11_NewSlotList();
     if ((list == NULL)  || (loginList == NULL) || (friendlyList == NULL)) {
 	if (list) PK11_FreeSlotList(list);
 	if (loginList) PK11_FreeSlotList(loginList);
@@ -1820,8 +1776,6 @@ PK11_GetAllTokens(CK_MECHANISM_TYPE type, PRBool needRW, PRBool loadCerts,
     }
 
     SECMOD_GetReadLock(moduleLock);
-
-    modules      = SECMOD_GetDefaultModuleList();
     for(mlp = modules; mlp != NULL; mlp = mlp->next) {
 
 #if defined( XP_WIN32 ) 

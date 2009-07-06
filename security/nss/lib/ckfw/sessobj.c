@@ -271,14 +271,14 @@ nssCKMDSessionObject_Create
   *pError = CKR_OK;
 
   mdso = nss_ZNEW(arena, nssCKMDSessionObject);
-  if (!mdso) {
+  if( (nssCKMDSessionObject *)NULL == mdso ) {
     goto loser;
   }
 
   mdso->arena = arena;
   mdso->n = ulCount;
   mdso->attributes = nss_ZNEWARRAY(arena, NSSItem, ulCount);
-  if (!mdso->attributes) {
+  if( (NSSItem *)NULL == mdso->attributes ) {
     goto loser;
   }
 
@@ -290,7 +290,7 @@ nssCKMDSessionObject_Create
     mdso->types[i] = attributes[i].type;
     mdso->attributes[i].size = attributes[i].ulValueLen;
     mdso->attributes[i].data = nss_ZAlloc(arena, attributes[i].ulValueLen);
-    if (!mdso->attributes[i].data) {
+    if( (void *)NULL == mdso->attributes[i].data ) {
       goto loser;
     }
     (void)nsslibc_memcpy(mdso->attributes[i].data, attributes[i].pValue,
@@ -298,7 +298,7 @@ nssCKMDSessionObject_Create
   }
 
   mdObject = nss_ZNEW(arena, NSSCKMDObject);
-  if (!mdObject) {
+  if( (NSSCKMDObject *)NULL == mdObject ) {
     goto loser;
   }
 
@@ -314,7 +314,7 @@ nssCKMDSessionObject_Create
   mdObject->GetObjectSize = nss_ckmdSessionObject_GetObjectSize;
 
   hash = nssCKFWToken_GetSessionObjectHash(fwToken);
-  if (!hash) {
+  if( (nssCKFWHash *)NULL == hash ) {
     *pError = CKR_GENERAL_ERROR;
     goto loser;
   }
@@ -335,8 +335,8 @@ nssCKMDSessionObject_Create
   return mdObject;
 
  loser:
-  if (mdso) {
-    if (mdso->attributes) {
+  if( (nssCKMDSessionObject *)NULL != mdso ) {
+    if( (NSSItem *)NULL != mdso->attributes ) {
       for( i = 0; i < ulCount; i++ ) {
         nss_ZFreeIf(mdso->attributes[i].data);
       }
@@ -475,7 +475,7 @@ nss_ckmdSessionObject_GetAttributeCount
   nssCKMDSessionObject *obj;
 
 #ifdef NSSDEBUG
-  if (!pError) {
+  if( (CK_RV *)NULL == pError ) {
     return 0;
   }
 
@@ -560,7 +560,7 @@ nss_ckmdSessionObject_GetAttributeSize
   CK_ULONG i;
 
 #ifdef NSSDEBUG
-  if (!pError) {
+  if( (CK_RV *)NULL == pError ) {
     return 0;
   }
 
@@ -610,7 +610,7 @@ nss_ckmdSessionObject_GetAttribute
   item.needsFreeing = PR_FALSE;
   item.item = NULL;
 #ifdef NSSDEBUG
-  if (!pError) {
+  if( (CK_RV *)NULL == pError ) {
     return item;
   }
 
@@ -684,7 +684,7 @@ nss_ckmdSessionObject_SetAttribute
 
   n.size = value->size;
   n.data = nss_ZAlloc(obj->arena, n.size);
-  if (!n.data) {
+  if( (void *)NULL == n.data ) {
     return CKR_HOST_MEMORY;
   }
   (void)nsslibc_memcpy(n.data, value->data, n.size);
@@ -702,19 +702,22 @@ nss_ckmdSessionObject_SetAttribute
    */
 
   ra = (NSSItem *)nss_ZRealloc(obj->attributes, sizeof(NSSItem) * (obj->n + 1));
-  if (!ra) {
+  if( (NSSItem *)NULL == ra ) {
     nss_ZFreeIf(n.data);
     return CKR_HOST_MEMORY;
   }
+
+  rt = (CK_ATTRIBUTE_TYPE_PTR)nss_ZRealloc(obj->types, (obj->n + 1));
+  if( (CK_ATTRIBUTE_TYPE_PTR)NULL == rt ) {
+    nss_ZFreeIf(n.data);
+    obj->attributes = (NSSItem *)nss_ZRealloc(ra, sizeof(NSSItem) * obj->n);
+    if( (NSSItem *)NULL == obj->attributes ) {
+      return CKR_GENERAL_ERROR;
+    }
+    return CKR_HOST_MEMORY;
+  }
+
   obj->attributes = ra;
-
-  rt = (CK_ATTRIBUTE_TYPE_PTR)nss_ZRealloc(obj->types, 
-                                      sizeof(CK_ATTRIBUTE_TYPE) * (obj->n + 1));
-  if (!rt) {
-    nss_ZFreeIf(n.data);
-    return CKR_HOST_MEMORY;
-  }
-
   obj->types = rt;
   obj->attributes[obj->n] = n;
   obj->types[obj->n] = attribute;
@@ -746,7 +749,7 @@ nss_ckmdSessionObject_GetObjectSize
   CK_ULONG rv = (CK_ULONG)0;
 
 #ifdef NSSDEBUG
-  if (!pError) {
+  if( (CK_RV *)NULL == pError ) {
     return 0;
   }
 
@@ -964,7 +967,7 @@ nssCKMDFindSessionObjects_Create
   NSSCKMDFindObjects *rv;
 
 #ifdef NSSDEBUG
-  if (!pError) {
+  if( (CK_RV *)NULL == pError ) {
     return (NSSCKMDFindObjects *)NULL;
   }
 
@@ -982,19 +985,19 @@ nssCKMDFindSessionObjects_Create
   *pError = CKR_OK;
 
   hash = nssCKFWToken_GetSessionObjectHash(fwToken);
-  if (!hash) {
+  if( (nssCKFWHash *)NULL == hash ) {
     *pError= CKR_GENERAL_ERROR;
     return (NSSCKMDFindObjects *)NULL;
   }
 
   arena = NSSArena_Create();
-  if (!arena) {
+  if( (NSSArena *)NULL == arena ) {
     *pError = CKR_HOST_MEMORY;
     return (NSSCKMDFindObjects *)NULL;
   }
 
   mdfso = nss_ZNEW(arena, nssCKMDFindSessionObjects);
-  if (!mdfso) {
+  if( (nssCKMDFindSessionObjects *)NULL == mdfso ) {
     goto loser;
   }
 
@@ -1094,7 +1097,7 @@ nss_ckmdFindSessionObjects_Next
 
   mdfso = (nssCKMDFindSessionObjects *)mdFindObjects->etc;
 
-  while (!rv) {
+  while( (NSSCKMDObject *)NULL == rv ) {
     if( (struct nodeStr *)NULL == mdfso->list ) {
       *pError = CKR_OK;
       return (NSSCKMDObject *)NULL;

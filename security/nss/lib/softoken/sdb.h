@@ -94,7 +94,6 @@ struct SDBStr {
     CK_RV (*sdb_Abort)(SDB *sdb);
     CK_RV (*sdb_Reset)(SDB *sdb);
     CK_RV (*sdb_Close)(SDB *sdb);
-    void (*sdb_SetForkState)(PRBool forked);
 };
 
 CK_RV s_open(const char *directory, const char *certPrefix, 

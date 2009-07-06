@@ -101,7 +101,6 @@ static cipherPolicy ssl_ciphers[] = {	   /*   Export           France   */
  {  TLS_DHE_DSS_WITH_CAMELLIA_256_CBC_SHA,  SSL_NOT_ALLOWED, SSL_NOT_ALLOWED },
  {  TLS_DHE_RSA_WITH_CAMELLIA_256_CBC_SHA,  SSL_NOT_ALLOWED, SSL_NOT_ALLOWED },
  {  TLS_RSA_WITH_CAMELLIA_256_CBC_SHA, 	    SSL_NOT_ALLOWED, SSL_NOT_ALLOWED },
- {  TLS_RSA_WITH_SEED_CBC_SHA,		    SSL_NOT_ALLOWED, SSL_NOT_ALLOWED },
  {  TLS_RSA_EXPORT1024_WITH_DES_CBC_SHA,    SSL_ALLOWED,     SSL_NOT_ALLOWED },
  {  TLS_RSA_EXPORT1024_WITH_RC4_56_SHA,     SSL_ALLOWED,     SSL_NOT_ALLOWED },
 #ifdef NSS_ENABLE_ECC
@@ -1558,13 +1557,8 @@ SSL_SetSockPeerID(PRFileDesc *fd, char *peerID)
 	return SECFailure;
     }
 
-    if (ss->peerID) {
-    	PORT_Free(ss->peerID);
-	ss->peerID = NULL;
-    }
-    if (peerID)
-	ss->peerID = PORT_Strdup(peerID);
-    return (ss->peerID || !peerID) ? SECSuccess : SECFailure;
+    ss->peerID = PORT_Strdup(peerID);
+    return SECSuccess;
 }
 
 #define PR_POLL_RW (PR_POLL_WRITE | PR_POLL_READ)

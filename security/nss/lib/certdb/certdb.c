@@ -20,7 +20,6 @@
  *
  * Contributor(s):
  *    Aaron Spangler <aaron@spangler.ods.org>
- *    Kaspar Brand <mozbugzilla@velox.ch>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -53,6 +52,7 @@
 #include "genname.h"
 #include "keyhi.h"
 #include "secitem.h"
+#include "mcom_db.h"
 #include "certdb.h"
 #include "prprf.h"
 #include "sechash.h"
@@ -939,14 +939,14 @@ CERT_DecodeDERCertificate(SECItem *derSignedCert, PRBool copyDER,
 	goto loser;
     }
 
-    /* determine if this is a root cert */
-    cert->isRoot = cert_IsRootCert(cert);
-
     /* initialize the certType */
     rv = cert_GetCertType(cert);
     if ( rv != SECSuccess ) {
 	goto loser;
     }
+
+    /* determine if this is a root cert */
+    cert->isRoot = cert_IsRootCert(cert);
 
     tmpname = CERT_NameToAscii(&cert->subject);
     if ( tmpname != NULL ) {
@@ -1447,61 +1447,32 @@ CERT_AddOKDomainName(CERTCertificate *cert, const char *hn)
 ** returns SECFailure with SSL_ERROR_BAD_CERT_DOMAIN if no match,
 ** returns SECFailure with some other error code if another error occurs.
 **
-** This function may modify string cn, so caller must pass a modifiable copy.
+** may modify cn, so caller must pass a modifiable copy.
 */
 static SECStatus
 cert_TestHostName(char * cn, const char * hn)
 {
-    static int useShellExp = -1;
+    int regvalid = PORT_RegExpValid(cn);
+    if (regvalid != NON_SXP) {
+	SECStatus rv;
+	/* cn is a regular expression, try to match the shexp */
+	int match = PORT_RegExpCaseSearch(hn, cn);
 
-    if (useShellExp < 0) {
-        useShellExp = (NULL != PR_GetEnv("NSS_USE_SHEXP_IN_CERT_NAME"));
-    }
-    if (useShellExp) {
-    	/* Backward compatible code, uses Shell Expressions (SHEXP). */
-	int regvalid = PORT_RegExpValid(cn);
-	if (regvalid != NON_SXP) {
-	    SECStatus rv;
-	    /* cn is a regular expression, try to match the shexp */
-	    int match = PORT_RegExpCaseSearch(hn, cn);
-
-	    if ( match == 0 ) {
-		rv = SECSuccess;
-	    } else {
-		PORT_SetError(SSL_ERROR_BAD_CERT_DOMAIN);
-		rv = SECFailure;
-	    }
-	    return rv;
+	if ( match == 0 ) {
+	    rv = SECSuccess;
+	} else {
+	    PORT_SetError(SSL_ERROR_BAD_CERT_DOMAIN);
+	    rv = SECFailure;
 	}
-    } else {
-	/* New approach conforms to RFC 2818. */
-	char *wildcard    = PORT_Strchr(cn, '*');
-	char *firstcndot  = PORT_Strchr(cn, '.');
-	char *secondcndot = firstcndot ? PORT_Strchr(firstcndot+1, '.') : NULL;
-	char *firsthndot  = PORT_Strchr(hn, '.');
+	return rv;
+    } 
+    /* cn is not a regular expression */
 
-	/* For a cn pattern to be considered valid, the wildcard character...
-	 * - may occur only in a DNS name with at least 3 components, and
-	 * - may occur only as last character in the first component, and
-	 * - may be preceded by additional characters
-	 */
-	if (wildcard && secondcndot && secondcndot[1] && firsthndot 
-	    && firstcndot  - wildcard  == 1
-	    && secondcndot - firstcndot > 1
-	    && PORT_Strrchr(cn, '*') == wildcard
-	    && !PORT_Strncasecmp(cn, hn, wildcard - cn)
-	    && !PORT_Strcasecmp(firstcndot, firsthndot)) {
-	    /* valid wildcard pattern match */
-	    return SECSuccess;
-	}
-    }
-    /* String cn has no wildcard or shell expression.  
-     * Compare entire string hn with cert name. 
-     */
+    /* compare entire hn with cert name */
     if (PORT_Strcasecmp(hn, cn) == 0) {
 	return SECSuccess;
     }
-
+	    
     PORT_SetError(SSL_ERROR_BAD_CERT_DOMAIN);
     return SECFailure;
 }
@@ -1552,18 +1523,15 @@ cert_VerifySubjectAltName(CERTCertificate *cert, const char *hn)
 		** so must copy it.  
 		*/
 		int cnLen = current->name.other.len;
-		rv = CERT_RFC1485_EscapeAndQuote(cn, cnBufLen, 
-					    current->name.other.data, cnLen);
-		if (rv != SECSuccess && PORT_GetError() == SEC_ERROR_OUTPUT_LEN) {
-		    cnBufLen = cnLen * 3 + 3; /* big enough for worst case */
+		if (cnLen + 1 > cnBufLen) {
+		    cnBufLen = cnLen + 1;
 		    cn = (char *)PORT_ArenaAlloc(arena, cnBufLen);
 		    if (!cn)
 			goto fail;
-		    rv = CERT_RFC1485_EscapeAndQuote(cn, cnBufLen, 
-					    current->name.other.data, cnLen);
 		}
-		if (rv == SECSuccess)
-		    rv = cert_TestHostName(cn ,hn);
+		PORT_Memcpy(cn, current->name.other.data, cnLen);
+		cn[cnLen] = 0;
+		rv = cert_TestHostName(cn ,hn);
 		if (rv == SECSuccess)
 		    goto finish;
 	    }
@@ -1739,7 +1707,7 @@ cert_GetDNSPatternsFromGeneralNames(CERTGeneralName *firstName,
               return SECFailure;
             PORT_Memcpy(cn, currentInput->name.other.data, 
                             currentInput->name.other.len);
-            cn[currentInput->name.other.len] = 0;
+            cn[currentInput->name.other.len + 1] = 0;
             break;
         case certIPAddress:
             if (currentInput->name.other.len == 4) {
@@ -1751,7 +1719,7 @@ cert_GetDNSPatternsFromGeneralNames(CERTGeneralName *firstName,
               memcpy(&addr.ipv6.ip, currentInput->name.other.data, 
                                     currentInput->name.other.len);
             }
-            if (PR_NetAddrToString(&addr, ipbuf, sizeof(ipbuf)) == PR_FAILURE)
+            if (PR_NetAddrToString(&addr, ipbuf, sizeof(ipbuf) == PR_FAILURE))
               return SECFailure;
             cn = PORT_ArenaStrdup(nickNames->arena, ipbuf);
             if (!cn)
@@ -2139,56 +2107,7 @@ CERT_DestroyCrl (CERTSignedCrl *crl)
     SEC_DestroyCrl (crl);
 }
 
-static int
-cert_Version(CERTCertificate *cert)
-{
-    int version = 0;
-    if (cert && cert->version.data && cert->version.len) {
-	version = DER_GetInteger(&cert->version);
-	if (version < 0)
-	    version = 0;
-    }
-    return version;
-}
 
-static unsigned int
-cert_ComputeTrustOverrides(CERTCertificate *cert, unsigned int cType)
-{
-    CERTCertTrust *trust = cert->trust;
-
-    if (trust && (trust->sslFlags |
-		  trust->emailFlags |
-		  trust->objectSigningFlags)) {
-
-	if (trust->sslFlags & (CERTDB_VALID_PEER|CERTDB_TRUSTED)) 
-	    cType |= NS_CERT_TYPE_SSL_SERVER|NS_CERT_TYPE_SSL_CLIENT;
-	if (trust->sslFlags & (CERTDB_VALID_CA|CERTDB_TRUSTED_CA)) 
-	    cType |= NS_CERT_TYPE_SSL_CA;
-#if defined(CERTDB_NOT_TRUSTED)
-	if (trust->sslFlags & CERTDB_NOT_TRUSTED) 
-	    cType &= ~(NS_CERT_TYPE_SSL_SERVER|NS_CERT_TYPE_SSL_CLIENT|
-	               NS_CERT_TYPE_SSL_CA);
-#endif
-	if (trust->emailFlags & (CERTDB_VALID_PEER|CERTDB_TRUSTED)) 
-	    cType |= NS_CERT_TYPE_EMAIL;
-	if (trust->emailFlags & (CERTDB_VALID_CA|CERTDB_TRUSTED_CA)) 
-	    cType |= NS_CERT_TYPE_EMAIL_CA;
-#if defined(CERTDB_NOT_TRUSTED)
-	if (trust->emailFlags & CERTDB_NOT_TRUSTED) 
-	    cType &= ~(NS_CERT_TYPE_EMAIL|NS_CERT_TYPE_EMAIL_CA);
-#endif
-	if (trust->objectSigningFlags & (CERTDB_VALID_PEER|CERTDB_TRUSTED)) 
-	    cType |= NS_CERT_TYPE_OBJECT_SIGNING;
-	if (trust->objectSigningFlags & (CERTDB_VALID_CA|CERTDB_TRUSTED_CA)) 
-	    cType |= NS_CERT_TYPE_OBJECT_SIGNING_CA;
-#if defined(CERTDB_NOT_TRUSTED)
-	if (trust->objectSigningFlags & CERTDB_NOT_TRUSTED) 
-	    cType &= ~(NS_CERT_TYPE_OBJECT_SIGNING|
-	               NS_CERT_TYPE_OBJECT_SIGNING_CA);
-#endif
-    }
-    return cType;
-}
 
 /*
  * Does a cert belong to a CA?  We decide based on perm database trust
@@ -2197,39 +2116,74 @@ cert_ComputeTrustOverrides(CERTCertificate *cert, unsigned int cType)
 PRBool
 CERT_IsCACert(CERTCertificate *cert, unsigned int *rettype)
 {
-    unsigned int cType = cert->nsCertType;
-    PRBool ret = PR_FALSE;
+    CERTCertTrust *trust;
+    SECStatus rv;
+    unsigned int type;
+    PRBool ret;
 
-    if (cType & (NS_CERT_TYPE_SSL_CA | NS_CERT_TYPE_EMAIL_CA | 
-                NS_CERT_TYPE_OBJECT_SIGNING_CA)) {
-        ret = PR_TRUE;
-    } else {
-	SECStatus rv;
-	CERTBasicConstraints constraints;
+    ret = PR_FALSE;
+    type = 0;
 
-	rv = CERT_FindBasicConstraintExten(cert, &constraints);
-	if (rv == SECSuccess && constraints.isCA) {
+    if ( cert->trust && (cert->trust->sslFlags|cert->trust->emailFlags|
+				cert->trust->objectSigningFlags)) {
+	trust = cert->trust;
+	if ( ( ( trust->sslFlags & CERTDB_VALID_CA ) == CERTDB_VALID_CA ) ||
+	   ( ( trust->sslFlags & CERTDB_TRUSTED_CA ) == CERTDB_TRUSTED_CA ) ) {
 	    ret = PR_TRUE;
-	    cType |= (NS_CERT_TYPE_SSL_CA | NS_CERT_TYPE_EMAIL_CA);
+	    type |= NS_CERT_TYPE_SSL_CA;
+	}
+	
+	if ( ( ( trust->emailFlags & CERTDB_VALID_CA ) == CERTDB_VALID_CA ) ||
+	  ( ( trust->emailFlags & CERTDB_TRUSTED_CA ) == CERTDB_TRUSTED_CA ) ) {
+	    ret = PR_TRUE;
+	    type |= NS_CERT_TYPE_EMAIL_CA;
+	}
+	
+	if ( ( ( trust->objectSigningFlags & CERTDB_VALID_CA ) 
+						== CERTDB_VALID_CA ) ||
+          ( ( trust->objectSigningFlags & CERTDB_TRUSTED_CA ) 
+						== CERTDB_TRUSTED_CA ) ) {
+	    ret = PR_TRUE;
+	    type |= NS_CERT_TYPE_OBJECT_SIGNING_CA;
+	}
+    } else {
+	if ( cert->nsCertType &
+	    ( NS_CERT_TYPE_SSL_CA | NS_CERT_TYPE_EMAIL_CA |
+	     NS_CERT_TYPE_OBJECT_SIGNING_CA ) ) {
+	    ret = PR_TRUE;
+	    type = (cert->nsCertType & NS_CERT_TYPE_CA);
+	} else {
+	    CERTBasicConstraints constraints;
+	    rv = CERT_FindBasicConstraintExten(cert, &constraints);
+	    if ( rv == SECSuccess ) {
+		if ( constraints.isCA ) {
+		    ret = PR_TRUE;
+		    type = (NS_CERT_TYPE_SSL_CA | NS_CERT_TYPE_EMAIL_CA);
+		}
+	    } 
 	} 
+
+	/* finally check if it's a FORTEZZA V1 CA */
+	if (ret == PR_FALSE) {
+	    if (fortezzaIsCA(cert)) {
+		ret = PR_TRUE;
+		type = (NS_CERT_TYPE_SSL_CA | NS_CERT_TYPE_EMAIL_CA);
+	    }
+	}
     }
 
-    /* finally check if it's an X.509 v1 root or FORTEZZA V1 CA */
-    if (!ret && 
-        ((cert->isRoot && cert_Version(cert) < SEC_CERTIFICATE_VERSION_3) ||
-    	 fortezzaIsCA(cert) )) {
+    /* the isRoot flag trumps all */
+    if (cert->isRoot) {
 	ret = PR_TRUE;
-	cType |= (NS_CERT_TYPE_SSL_CA | NS_CERT_TYPE_EMAIL_CA);
+	/* set only these by default, same as above */
+	type = (NS_CERT_TYPE_SSL_CA | NS_CERT_TYPE_EMAIL_CA);
     }
-    /* Now apply trust overrides, if any */
-    cType = cert_ComputeTrustOverrides(cert, cType);
-    ret = (cType & (NS_CERT_TYPE_SSL_CA | NS_CERT_TYPE_EMAIL_CA |
-                    NS_CERT_TYPE_OBJECT_SIGNING_CA)) ? PR_TRUE : PR_FALSE;
 
-    if (rettype != NULL) {
-	*rettype = cType;
+    if ( rettype != NULL ) {
+	*rettype = type;
     }
-    return ret;
+    
+    return(ret);
 }
 
 PRBool
@@ -2406,7 +2360,7 @@ CERT_FixupEmailAddr(const char *emailAddr)
  * NOTE - don't allow encode of govt-approved or invisible bits
  */
 SECStatus
-CERT_DecodeTrustString(CERTCertTrust *trust, const char *trusts)
+CERT_DecodeTrustString(CERTCertTrust *trust, char *trusts)
 {
     unsigned int i;
     unsigned int *pflags;

@@ -72,6 +72,11 @@
 #include <direct.h>
 #endif
 
+#ifdef XP_MAC
+#include "prlog.h"
+#define printf PR_LogPrint
+#endif
+
 
 #define BASE_PORT 9867
 
@@ -120,9 +125,7 @@ static PRStatus MakeReceiver(Shared *shared)
     {
         char *argv[3];
         char path[1024 + sizeof("/tmoacc")];
-
-        getcwd(path, sizeof(path));
-
+        (void)getcwd(path, sizeof(path));
         (void)strcat(path, "/tmoacc");
 #ifdef XP_PC
         (void)strcat(path, ".exe");

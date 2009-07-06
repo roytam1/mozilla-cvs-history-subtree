@@ -60,8 +60,12 @@ endif
 # To create a loadable module on Darwin, we must use -bundle.
 #
 ifeq ($(OS_TARGET),Darwin)
-ifndef USE_64
 DSO_LDOPTS = -bundle
 endif
+
+ifeq ($(OS_TARGET),SunOS)
+# The -R '$ORIGIN' linker option instructs this library to search for its
+# dependencies in the same directory where it resides.
+MKSHLIB += -R '$$ORIGIN'
 endif
 

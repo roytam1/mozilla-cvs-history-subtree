@@ -165,6 +165,11 @@ ifeq ($(OS_ARCH),OS_2)
     OS_RELEASE := $(shell uname -v)
 endif
 
+ifneq (,$(findstring OpenVMS,$(OS_ARCH)))
+    OS_ARCH = OpenVMS
+    OS_RELEASE := $(shell uname -v)
+endif
+
 #######################################################################
 # Master "Core Components" macros for getting the OS target           #
 #######################################################################
@@ -177,6 +182,9 @@ endif
 # in Windows 95. The Win95 target will run on Windows NT, but (supposedly)
 # at lesser performance (the Win95 target uses threads; the WinNT target
 # uses fibers).
+#
+# When OS_TARGET=WIN16 is specified, then a Windows 3.11 (16bit) target
+# is built. See: win16_3.11.mk for lots more about the Win16 target.
 #
 # If OS_TARGET is not specified, it defaults to $(OS_ARCH), i.e., no
 # cross-compilation.
@@ -290,6 +298,11 @@ ifeq ($(OS_TARGET), WIN95)
     OS_RELEASE = 4.0
 endif
 
+ifeq ($(OS_TARGET), WIN16)
+    OS_RELEASE =
+#   OS_RELEASE = _3.11
+endif
+
 ifdef OS_TARGET_RELEASE
     OS_RELEASE = $(OS_TARGET_RELEASE)
 endif
@@ -306,12 +319,24 @@ OS_CONFIG = $(OS_TARGET)$(OS_RELEASE)
 #
 
 ifdef BUILD_OPT
-    OBJDIR_TAG = $(64BIT_TAG)_OPT
+    ifeq ($(OS_TARGET),WIN16)
+	OBJDIR_TAG = _O
+    else
+	OBJDIR_TAG = $(64BIT_TAG)_OPT
+    endif
 else
     ifdef BUILD_IDG
-	OBJDIR_TAG = $(64BIT_TAG)_IDG
+	ifeq ($(OS_TARGET),WIN16)
+	    OBJDIR_TAG = _I
+	else
+	    OBJDIR_TAG = $(64BIT_TAG)_IDG
+	endif
     else
-	OBJDIR_TAG = $(64BIT_TAG)_DBG
+	ifeq ($(OS_TARGET),WIN16)
+	    OBJDIR_TAG = _D
+	else
+	    OBJDIR_TAG = $(64BIT_TAG)_DBG
+	endif
     endif
 endif
 
@@ -326,7 +351,7 @@ endif
 
 OBJDIR_NAME = $(OS_TARGET)$(OS_RELEASE)$(CPU_TAG)$(COMPILER_TAG)$(LIBC_TAG)$(IMPL_STRATEGY)$(OBJDIR_TAG).OBJ
 
-ifeq (,$(filter-out WIN%,$(OS_TARGET)))
+ifeq (,$(filter-out WINNT WIN95 WINCE,$(OS_TARGET))) # list omits WIN16
 ifndef BUILD_OPT
 #
 # Define USE_DEBUG_RTL if you want to use the debug runtime library

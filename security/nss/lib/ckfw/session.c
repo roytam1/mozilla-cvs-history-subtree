@@ -179,7 +179,7 @@ nssCKFWSession_Create
   NSSCKFWSlot *fwSlot;
 
 #ifdef NSSDEBUG
-  if (!pError) {
+  if( (CK_RV *)NULL == pError ) {
     return (NSSCKFWSession *)NULL;
   }
 
@@ -190,13 +190,13 @@ nssCKFWSession_Create
 #endif /* NSSDEBUG */
 
   arena = NSSArena_Create();
-  if (!arena) {
+  if( (NSSArena *)NULL == arena ) {
     *pError = CKR_HOST_MEMORY;
     return (NSSCKFWSession *)NULL;
   }
 
   fwSession = nss_ZNEW(arena, NSSCKFWSession);
-  if (!fwSession) {
+  if( (NSSCKFWSession *)NULL == fwSession ) {
     *pError = CKR_HOST_MEMORY;
     goto loser;
   }
@@ -217,7 +217,7 @@ nssCKFWSession_Create
   fwSession->fwFindObjects = (NSSCKFWFindObjects *)NULL;
 
   fwSession->sessionObjectHash = nssCKFWHash_Create(fwSession->fwInstance, arena, pError);
-  if (!fwSession->sessionObjectHash) {
+  if( (nssCKFWHash *)NULL == fwSession->sessionObjectHash ) {
     if( CKR_OK == *pError ) {
       *pError = CKR_GENERAL_ERROR;
     }
@@ -234,8 +234,8 @@ nssCKFWSession_Create
   return fwSession;
 
  loser:
-  if (arena) {
-    if (fwSession &&   fwSession->sessionObjectHash) {
+  if( (NSSArena *)NULL != arena ) {
+    if( fwSession && (nssCKFWHash *)NULL != fwSession->sessionObjectHash ) {
       (void)nssCKFWHash_Destroy(fwSession->sessionObjectHash);
     }
     NSSArena_Destroy(arena);
@@ -294,7 +294,7 @@ nssCKFWSession_Destroy
                       (void *)NULL);
 
   for (i=0; i < NSSCKFWCryptoOperationState_Max; i++) {
-    if (fwSession->fwOperationArray[i]) {
+    if ((NSSCKFWCryptoOperation *)NULL != fwSession->fwOperationArray[i]) {
       nssCKFWCryptoOperation_Destroy(fwSession->fwOperationArray[i]);
     }
   }
@@ -339,7 +339,7 @@ nssCKFWSession_GetArena
 )
 {
 #ifdef NSSDEBUG
-  if (!pError) {
+  if( (CK_RV *)NULL == pError ) {
     return (NSSArena *)NULL;
   }
 
@@ -500,8 +500,8 @@ nssCKFWSession_SetFWFindObjects
   /* fwFindObjects may be null */
 #endif /* NSSDEBUG */
 
-  if ((fwSession->fwFindObjects) &&
-      (fwFindObjects)) {
+  if( ((NSSCKFWFindObjects *)NULL != fwSession->fwFindObjects) &&
+      ((NSSCKFWFindObjects *)NULL != fwFindObjects) ) {
     return CKR_OPERATION_ACTIVE;
   }
 
@@ -522,7 +522,7 @@ nssCKFWSession_GetFWFindObjects
 )
 {
 #ifdef NSSDEBUG
-  if (!pError) {
+  if( (CK_RV *)NULL == pError ) {
     return (NSSCKFWFindObjects *)NULL;
   }
 
@@ -532,7 +532,7 @@ nssCKFWSession_GetFWFindObjects
   }
 #endif /* NSSDEBUG */
 
-  if (!fwSession->fwFindObjects) {
+  if( (NSSCKFWFindObjects *)NULL == fwSession->fwFindObjects ) {
     *pError = CKR_OPERATION_NOT_INITIALIZED;
     return (NSSCKFWFindObjects *)NULL;
   }
@@ -561,12 +561,12 @@ nssCKFWSession_SetMDSession
     return error;
   }
 
-  if (!mdSession) {
+  if( (NSSCKMDSession *)NULL == mdSession ) {
     return CKR_ARGUMENTS_BAD;
   }
 #endif /* NSSDEBUG */
 
-  if (fwSession->mdSession) {
+  if( (NSSCKMDSession *)NULL != fwSession->mdSession ) {
     return CKR_GENERAL_ERROR;
   }
 
@@ -644,7 +644,7 @@ nssCKFWSession_RegisterSessionObject
   }
 #endif /* NSSDEBUG */
 
-  if (fwSession->sessionObjectHash) {
+  if( (nssCKFWHash *)NULL != fwSession->sessionObjectHash ) {
     rv = nssCKFWHash_Add(fwSession->sessionObjectHash, fwObject, fwObject);
   }
 
@@ -668,7 +668,7 @@ nssCKFWSession_DeregisterSessionObject
   }
 #endif /* NSSDEBUG */
 
-  if (fwSession->sessionObjectHash) {
+  if( (nssCKFWHash *)NULL != fwSession->sessionObjectHash ) {
     nssCKFWHash_Remove(fwSession->sessionObjectHash, fwObject);
   }
 
@@ -690,12 +690,12 @@ nssCKFWSession_GetDeviceError
     return (CK_ULONG)0;
   }
 
-  if (!fwSession->mdSession) {
+  if( (NSSCKMDSession *)NULL == fwSession->mdSession ) {
     return (CK_ULONG)0;
   }
 #endif /* NSSDEBUG */
 
-  if (!fwSession->mdSession->GetDeviceError) {
+  if( (void *)NULL == (void *)fwSession->mdSession->GetDeviceError ) {
     return (CK_ULONG)0;
   }
 
@@ -734,13 +734,13 @@ nssCKFWSession_Login
     return CKR_USER_TYPE_INVALID;
   }
 
-  if (!pin) {
+  if( (NSSItem *)NULL == pin ) {
     if( CK_TRUE != nssCKFWToken_GetHasProtectedAuthenticationPath(fwSession->fwToken) ) {
       return CKR_ARGUMENTS_BAD;
     }
   }
 
-  if (!fwSession->mdSession) {
+  if( (NSSCKMDSession *)NULL == fwSession->mdSession ) {
     return CKR_GENERAL_ERROR;
   }
 #endif /* NSSDEBUG */
@@ -802,7 +802,7 @@ nssCKFWSession_Login
    * Old == CKS_RO_PUBLIC_SESSION, New == CKS_RO_USER_FUNCTIONS;
    */
 
-  if (!fwSession->mdSession->Login) {
+  if( (void *)NULL == (void *)fwSession->mdSession->Login ) {
     /*
      * The Module doesn't want to be informed (or check the pin)
      * it'll just rely on the Framework as needed.
@@ -841,7 +841,7 @@ nssCKFWSession_Logout
     return error;
   }
 
-  if (!fwSession->mdSession) {
+  if( (NSSCKMDSession *)NULL == fwSession->mdSession ) {
     return CKR_GENERAL_ERROR;
   }
 #endif /* NSSDEBUG */
@@ -874,7 +874,7 @@ nssCKFWSession_Logout
    * Old == CKS_RO_USER_FUNCTIONS, New == CKS_RO_PUBLIC_SESSION;
    */
 
-  if (!fwSession->mdSession->Logout) {
+  if( (void *)NULL == (void *)fwSession->mdSession->Logout ) {
     /*
      * The Module doesn't want to be informed.  Okay.
      */
@@ -916,7 +916,7 @@ nssCKFWSession_InitPIN
     return error;
   }
 
-  if (!fwSession->mdSession) {
+  if( (NSSCKMDSession *)NULL == fwSession->mdSession ) {
     return CKR_GENERAL_ERROR;
   }
 #endif /* NSSDEBUG */
@@ -926,14 +926,14 @@ nssCKFWSession_InitPIN
     return CKR_USER_NOT_LOGGED_IN;
   }
 
-  if (!pin) {
+  if( (NSSItem *)NULL == pin ) {
     CK_BBOOL has = nssCKFWToken_GetHasProtectedAuthenticationPath(fwSession->fwToken);
     if( CK_TRUE != has ) {
       return CKR_ARGUMENTS_BAD;
     }
   }
 
-  if (!fwSession->mdSession->InitPIN) {
+  if( (void *)NULL == (void *)fwSession->mdSession->InitPIN ) {
     return CKR_TOKEN_WRITE_PROTECTED;
   }
 
@@ -964,26 +964,26 @@ nssCKFWSession_SetPIN
     return error;
   }
 
-  if (!fwSession->mdSession) {
+  if( (NSSCKMDSession *)NULL == fwSession->mdSession ) {
     return CKR_GENERAL_ERROR;
   }
 #endif /* NSSDEBUG */
 
-  if (!newPin) {
+  if( (NSSItem *)NULL == newPin ) {
     CK_BBOOL has = nssCKFWToken_GetHasProtectedAuthenticationPath(fwSession->fwToken);
     if( CK_TRUE != has ) {
       return CKR_ARGUMENTS_BAD;
     }
   }
 
-  if (!oldPin) {
+  if( (NSSItem *)NULL == oldPin ) {
     CK_BBOOL has = nssCKFWToken_GetHasProtectedAuthenticationPath(fwSession->fwToken);
     if( CK_TRUE != has ) {
       return CKR_ARGUMENTS_BAD;
     }
   }
 
-  if (!fwSession->mdSession->SetPIN) {
+  if( (void *)NULL == (void *)fwSession->mdSession->SetPIN ) {
     return CKR_TOKEN_WRITE_PROTECTED;
   }
 
@@ -1009,7 +1009,7 @@ nssCKFWSession_GetOperationStateLen
   CK_ULONG fwAmt;
 
 #ifdef NSSDEBUG
-  if (!pError) {
+  if( (CK_RV *)NULL == pError ) {
     return (CK_ULONG)0;
   }
 
@@ -1018,13 +1018,13 @@ nssCKFWSession_GetOperationStateLen
     return (CK_ULONG)0;
   }
 
-  if (!fwSession->mdSession) {
+  if( (NSSCKMDSession *)NULL == fwSession->mdSession ) {
     *pError = CKR_GENERAL_ERROR;
     return (CK_ULONG)0;
   }
 #endif /* NSSDEBUG */
 
-  if (!fwSession->mdSession->GetOperationStateLen) {
+  if( (void *)NULL == (void *)fwSession->mdSession->GetOperationStateLen ) {
     *pError = CKR_STATE_UNSAVEABLE;
     return (CK_ULONG)0;
   }
@@ -1072,20 +1072,20 @@ nssCKFWSession_GetOperationState
     return error;
   }
 
-  if (!buffer) {
+  if( (NSSItem *)NULL == buffer ) {
     return CKR_ARGUMENTS_BAD;
   }
 
-  if (!buffer->data) {
+  if( (void *)NULL == buffer->data ) {
     return CKR_ARGUMENTS_BAD;
   }
 
-  if (!fwSession->mdSession) {
+  if( (NSSCKMDSession *)NULL == fwSession->mdSession ) {
     return CKR_GENERAL_ERROR;
   }
 #endif /* NSSDEBUG */
 
-  if (!fwSession->mdSession->GetOperationState) {
+  if( (void *)NULL == (void *)fwSession->mdSession->GetOperationState ) {
     return CKR_STATE_UNSAVEABLE;
   }
 
@@ -1159,29 +1159,29 @@ nssCKFWSession_SetOperationState
     return error;
   }
 
-  if (!state) {
+  if( (NSSItem *)NULL == state ) {
     return CKR_ARGUMENTS_BAD;
   }
 
-  if (!state->data) {
+  if( (void *)NULL == state->data ) {
     return CKR_ARGUMENTS_BAD;
   }
 
-  if (encryptionKey) {
+  if( (NSSCKFWObject *)NULL != encryptionKey ) {
     error = nssCKFWObject_verifyPointer(encryptionKey);
     if( CKR_OK != error ) {
       return error;
     }
   }
 
-  if (authenticationKey) {
+  if( (NSSCKFWObject *)NULL != authenticationKey ) {
     error = nssCKFWObject_verifyPointer(authenticationKey);
     if( CKR_OK != error ) {
       return error;
     }
   }
 
-  if (!fwSession->mdSession) {
+  if( (NSSCKMDSession *)NULL == fwSession->mdSession ) {
     return CKR_GENERAL_ERROR;
   }
 #endif /* NSSDEBUG */
@@ -1200,20 +1200,20 @@ nssCKFWSession_SetOperationState
     return CKR_SAVED_STATE_INVALID;
   }
 
-  if (!fwSession->mdSession->SetOperationState) {
+  if( (void *)NULL == (void *)fwSession->mdSession->SetOperationState ) {
     return CKR_GENERAL_ERROR;
   }
 
   s.size = state->size - 2*sizeof(CK_ULONG);
   s.data = (void *)&ulBuffer[2];
 
-  if (encryptionKey) {
+  if( (NSSCKFWObject *)NULL != encryptionKey ) {
     mdek = nssCKFWObject_GetMDObject(encryptionKey);
   } else {
     mdek = (NSSCKMDObject *)NULL;
   }
 
-  if (authenticationKey) {
+  if( (NSSCKFWObject *)NULL != authenticationKey ) {
     mdak = nssCKFWObject_GetMDObject(authenticationKey);
   } else {
     mdak = (NSSCKMDObject *)NULL;
@@ -1278,7 +1278,7 @@ nssCKFWSession_CreateObject
   CK_BBOOL isTokenObject;
 
 #ifdef NSSDEBUG
-  if (!pError) {
+  if( (CK_RV *)NULL == pError ) {
     return (NSSCKFWObject *)NULL;
   }
 
@@ -1292,7 +1292,7 @@ nssCKFWSession_CreateObject
     return (NSSCKFWObject *)NULL;
   }
 
-  if (!fwSession->mdSession) {
+  if( (NSSCKMDSession *)NULL == fwSession->mdSession ) {
     *pError = CKR_GENERAL_ERROR;
     return (NSSCKFWObject *)NULL;
   }
@@ -1306,13 +1306,13 @@ nssCKFWSession_CreateObject
   if( CK_TRUE == isTokenObject ) {
     /* === TOKEN OBJECT === */
 
-    if (!fwSession->mdSession->CreateObject) {
+    if( (void *)NULL == (void *)fwSession->mdSession->CreateObject ) {
       *pError = CKR_TOKEN_WRITE_PROTECTED;
       return (NSSCKFWObject *)NULL;
     }
 
     arena = nssCKFWToken_GetArena(fwSession->fwToken, pError);
-    if (!arena) {
+    if( (NSSArena *)NULL == arena ) {
       if( CKR_OK == *pError ) {
         *pError = CKR_GENERAL_ERROR;
       }
@@ -1324,7 +1324,7 @@ nssCKFWSession_CreateObject
     /* === SESSION OBJECT === */
 
     arena = nssCKFWSession_GetArena(fwSession, pError);
-    if (!arena) {
+    if( (NSSArena *)NULL == arena ) {
       if( CKR_OK == *pError ) {
         *pError = CKR_GENERAL_ERROR;
       }
@@ -1335,7 +1335,7 @@ nssCKFWSession_CreateObject
                      fwSession->fwInstance) ) {
       /* --- module handles the session object -- */
 
-      if (!fwSession->mdSession->CreateObject) {
+      if( (void *)NULL == (void *)fwSession->mdSession->CreateObject ) {
         *pError = CKR_GENERAL_ERROR;
         return (NSSCKFWObject *)NULL;
       }
@@ -1356,7 +1356,7 @@ nssCKFWSession_CreateObject
     ulAttributeCount, pError);
 
  gotmdobject:
-  if (!mdObject) {
+  if( (NSSCKMDObject *)NULL == mdObject ) {
     if( CKR_OK == *pError ) {
       *pError = CKR_GENERAL_ERROR;
     }
@@ -1366,12 +1366,12 @@ nssCKFWSession_CreateObject
   fwObject = nssCKFWObject_Create(arena, mdObject, 
     isTokenObject ? NULL : fwSession, 
     fwSession->fwToken, fwSession->fwInstance, pError);
-  if (!fwObject) {
+  if( (NSSCKFWObject *)NULL == fwObject ) {
     if( CKR_OK == *pError ) {
       *pError = CKR_GENERAL_ERROR;
     }
     
-    if (mdObject->Destroy) {
+    if( (void *)NULL != (void *)mdObject->Destroy ) {
       (void)mdObject->Destroy(mdObject, (NSSCKFWObject *)NULL,
         fwSession->mdSession, fwSession, fwSession->mdToken,
         fwSession->fwToken, fwSession->mdInstance, fwSession->fwInstance);
@@ -1413,7 +1413,7 @@ nssCKFWSession_CopyObject
   NSSCKFWObject *rv;
 
 #ifdef NSSDEBUG
-  if (!pError) {
+  if( (CK_RV *)NULL == pError ) {
     return (NSSCKFWObject *)NULL;
   }
 
@@ -1427,7 +1427,7 @@ nssCKFWSession_CopyObject
     return (NSSCKFWObject *)NULL;
   }
 
-  if (!fwSession->mdSession) {
+  if( (NSSCKMDSession *)NULL == fwSession->mdSession ) {
     *pError = CKR_GENERAL_ERROR;
     return (NSSCKFWObject *)NULL;
   }
@@ -1437,7 +1437,7 @@ nssCKFWSession_CopyObject
    * Sanity-check object
    */
 
-  if (!fwObject) {
+  if( (NSSCKFWObject *)NULL == fwObject ) {
     *pError = CKR_ARGUMENTS_BAD;
     return (NSSCKFWObject *)NULL;
   }
@@ -1458,7 +1458,7 @@ nssCKFWSession_CopyObject
    * and old object are token objects, use CopyObject if it exists.
    */
 
-  if ((fwSession->mdSession->CopyObject) &&
+  if( ((void *)NULL != (void *)fwSession->mdSession->CopyObject) &&
       (((CK_TRUE == oldIsToken) && (CK_TRUE == newIsToken)) ||
        (CK_TRUE == nssCKFWInstance_GetModuleHandlesSessionObjects(
                      fwSession->fwInstance))) ) {
@@ -1474,7 +1474,7 @@ nssCKFWSession_CopyObject
     } else {
       arena = nssCKFWSession_GetArena(fwSession, pError);
     }
-    if (!arena) {
+    if( (NSSArena *)NULL == arena ) {
       if( CKR_OK == *pError ) {
         *pError = CKR_GENERAL_ERROR;
       }
@@ -1485,7 +1485,7 @@ nssCKFWSession_CopyObject
       fwSession, fwSession->mdToken, fwSession->fwToken,
       fwSession->mdInstance, fwSession->fwInstance, mdOldObject,
       fwObject, arena, pTemplate, ulAttributeCount, pError);
-    if (!mdObject) {
+    if( (NSSCKMDObject *)NULL == mdObject ) {
       if( CKR_OK == *pError ) {
         *pError = CKR_GENERAL_ERROR;
       }
@@ -1516,7 +1516,7 @@ nssCKFWSession_CopyObject
     NSSCKFWObject *rv;
     
     tmpArena = NSSArena_Create();
-    if (!tmpArena) {
+    if( (NSSArena *)NULL == tmpArena ) {
       *pError = CKR_HOST_MEMORY;
       return (NSSCKFWObject *)NULL;
     }
@@ -1587,7 +1587,7 @@ nssCKFWSession_CopyObject
         item.data = (void *)NULL;
         it = nssCKFWObject_GetAttribute(fwObject, oldTypes[j],
           &item, tmpArena, pError);
-        if (!it) {
+        if( (NSSItem *)NULL == it ) {
           if( CKR_OK == *pError ) {
             *pError = CKR_GENERAL_ERROR;
           }
@@ -1603,7 +1603,7 @@ nssCKFWSession_CopyObject
     /* assert that k == newLength */
 
     rv = nssCKFWSession_CreateObject(fwSession, newTemplate, newLength, pError);
-    if (!rv) {
+    if( (NSSCKFWObject *)NULL == rv ) {
       if( CKR_OK == *pError ) {
         *pError = CKR_GENERAL_ERROR;
       }
@@ -1633,7 +1633,7 @@ nssCKFWSession_FindObjectsInit
   NSSCKMDFindObjects *mdfo2 = (NSSCKMDFindObjects *)NULL;
 
 #ifdef NSSDEBUG
-  if (!pError) {
+  if( (CK_RV *)NULL == pError ) {
     return (NSSCKFWFindObjects *)NULL;
   }
 
@@ -1647,7 +1647,7 @@ nssCKFWSession_FindObjectsInit
     return (NSSCKFWFindObjects *)NULL;
   }
 
-  if (!fwSession->mdSession) {
+  if( (NSSCKMDSession *)NULL == fwSession->mdSession ) {
     *pError = CKR_GENERAL_ERROR;
     return (NSSCKFWFindObjects *)NULL;
   }
@@ -1674,7 +1674,7 @@ nssCKFWSession_FindObjectsInit
 
         if( CK_TRUE == isToken ) {
           /* Pass it on to the module's search routine */
-          if (!fwSession->mdSession->FindObjectsInit) {
+          if( (void *)NULL == (void *)fwSession->mdSession->FindObjectsInit ) {
             goto wrap;
           }
 
@@ -1688,7 +1688,7 @@ nssCKFWSession_FindObjectsInit
                     pTemplate, ulAttributeCount, pError);
         }
 
-        if (!mdfo1) {
+        if( (NSSCKMDFindObjects *)NULL == mdfo1 ) {
           if( CKR_OK == *pError ) {
             *pError = CKR_GENERAL_ERROR;
           }
@@ -1706,7 +1706,7 @@ nssCKFWSession_FindObjectsInit
                 fwSession->mdInstance, fwSession->fwInstance, 
                 pTemplate, ulAttributeCount, pError);
 
-      if (!mdfo1) {
+      if( (NSSCKMDFindObjects *)NULL == mdfo1 ) {
         if( CKR_OK == *pError ) {
           *pError = CKR_GENERAL_ERROR;
         }
@@ -1715,11 +1715,11 @@ nssCKFWSession_FindObjectsInit
 
       mdfo2 = nssCKMDFindSessionObjects_Create(fwSession->fwToken,
                 pTemplate, ulAttributeCount, pError);
-      if (!mdfo2) {
+      if( (NSSCKMDFindObjects *)NULL == mdfo2 ) {
         if( CKR_OK == *pError ) {
           *pError = CKR_GENERAL_ERROR;
         }
-        if (mdfo1->Final) {
+        if( (void *)NULL != (void *)mdfo1->Final ) {
           mdfo1->Final(mdfo1, (NSSCKFWFindObjects *)NULL, fwSession->mdSession,
             fwSession, fwSession->mdToken, fwSession->fwToken, 
             fwSession->mdInstance, fwSession->fwInstance);
@@ -1737,7 +1737,7 @@ nssCKFWSession_FindObjectsInit
               fwSession->mdInstance, fwSession->fwInstance, 
               pTemplate, ulAttributeCount, pError);
 
-    if (!mdfo1) {
+    if( (NSSCKMDFindObjects *)NULL == mdfo1 ) {
       if( CKR_OK == *pError ) {
         *pError = CKR_GENERAL_ERROR;
       }
@@ -1771,11 +1771,11 @@ nssCKFWSession_SeedRandom
     return error;
   }
 
-  if (!seed) {
+  if( (NSSItem *)NULL == seed ) {
     return CKR_ARGUMENTS_BAD;
   }
 
-  if (!seed->data) {
+  if( (void *)NULL == seed->data ) {
     return CKR_ARGUMENTS_BAD;
   }
 
@@ -1783,12 +1783,12 @@ nssCKFWSession_SeedRandom
     return CKR_ARGUMENTS_BAD;
   }
 
-  if (!fwSession->mdSession) {
+  if( (NSSCKMDSession *)NULL == fwSession->mdSession ) {
     return CKR_GENERAL_ERROR;
   }
 #endif /* NSSDEBUG */
 
-  if (!fwSession->mdSession->SeedRandom) {
+  if( (void *)NULL == (void *)fwSession->mdSession->SeedRandom ) {
     return CKR_RANDOM_SEED_NOT_SUPPORTED;
   }
 
@@ -1818,20 +1818,20 @@ nssCKFWSession_GetRandom
     return error;
   }
 
-  if (!buffer) {
+  if( (NSSItem *)NULL == buffer ) {
     return CKR_ARGUMENTS_BAD;
   }
 
-  if (!buffer->data) {
+  if( (void *)NULL == buffer->data ) {
     return CKR_ARGUMENTS_BAD;
   }
 
-  if (!fwSession->mdSession) {
+  if( (NSSCKMDSession *)NULL == fwSession->mdSession ) {
     return CKR_GENERAL_ERROR;
   }
 #endif /* NSSDEBUG */
 
-  if (!fwSession->mdSession->GetRandom) {
+  if( (void *)NULL == (void *)fwSession->mdSession->GetRandom ) {
     if( CK_TRUE == nssCKFWToken_GetHasRNG(fwSession->fwToken) ) {
       return CKR_GENERAL_ERROR;
     } else {
@@ -1873,7 +1873,7 @@ nssCKFWSession_SetCurrentCryptoOperation
     return;
   }
 
-  if (!fwSession->mdSession) {
+  if( (NSSCKMDSession *)NULL == fwSession->mdSession ) {
     return;
   }
 #endif /* NSSDEBUG */
@@ -1902,7 +1902,7 @@ nssCKFWSession_GetCurrentCryptoOperation
     return (NSSCKFWCryptoOperation *)NULL;
   }
 
-  if (!fwSession->mdSession) {
+  if( (NSSCKMDSession *)NULL == fwSession->mdSession ) {
     return (NSSCKFWCryptoOperation *)NULL;
   }
 #endif /* NSSDEBUG */
@@ -1932,14 +1932,14 @@ nssCKFWSession_Final
     return error;
   }
 
-  if (!fwSession->mdSession) {
+  if( (NSSCKMDSession *)NULL == fwSession->mdSession ) {
     return CKR_GENERAL_ERROR;
   }
 #endif /* NSSDEBUG */
 
   /* make sure we have a valid operation initialized */
   fwOperation = nssCKFWSession_GetCurrentCryptoOperation(fwSession, state);
-  if (!fwOperation) {
+  if ((NSSCKFWCryptoOperation *)NULL == fwOperation) {
     return CKR_OPERATION_NOT_INITIALIZED;
   }
 
@@ -2012,14 +2012,14 @@ nssCKFWSession_Update
     return error;
   }
 
-  if (!fwSession->mdSession) {
+  if( (NSSCKMDSession *)NULL == fwSession->mdSession ) {
     return CKR_GENERAL_ERROR;
   }
 #endif /* NSSDEBUG */
 
   /* make sure we have a valid operation initialized */
   fwOperation = nssCKFWSession_GetCurrentCryptoOperation(fwSession, state);
-  if (!fwOperation) {
+  if ((NSSCKFWCryptoOperation *)NULL == fwOperation) {
     return CKR_OPERATION_NOT_INITIALIZED;
   }
 
@@ -2077,14 +2077,14 @@ nssCKFWSession_DigestUpdate
     return error;
   }
 
-  if (!fwSession->mdSession) {
+  if( (NSSCKMDSession *)NULL == fwSession->mdSession ) {
     return CKR_GENERAL_ERROR;
   }
 #endif /* NSSDEBUG */
 
   /* make sure we have a valid operation initialized */
   fwOperation = nssCKFWSession_GetCurrentCryptoOperation(fwSession, state);
-  if (!fwOperation) {
+  if ((NSSCKFWCryptoOperation *)NULL == fwOperation) {
     return CKR_OPERATION_NOT_INITIALIZED;
   }
 
@@ -2121,7 +2121,7 @@ nssCKFWSession_DigestKey
     return error;
   }
 
-  if (!fwSession->mdSession) {
+  if( (NSSCKMDSession *)NULL == fwSession->mdSession ) {
     return CKR_GENERAL_ERROR;
   }
 #endif /* NSSDEBUG */
@@ -2129,7 +2129,7 @@ nssCKFWSession_DigestKey
   /* make sure we have a valid operation initialized */
   fwOperation = nssCKFWSession_GetCurrentCryptoOperation(fwSession, 
                                  NSSCKFWCryptoOperationState_Digest);
-  if (!fwOperation) {
+  if ((NSSCKFWCryptoOperation *)NULL == fwOperation) {
     return CKR_OPERATION_NOT_INITIALIZED;
   }
 
@@ -2146,7 +2146,7 @@ nssCKFWSession_DigestKey
 
   /* no machine depended way for this to happen, do it by hand */
   inputBuffer=nssCKFWObject_GetAttribute(fwKey, CKA_VALUE, NULL, NULL, &error);
-  if (!inputBuffer) {
+  if ((NSSItem *)NULL == inputBuffer) {
     /* couldn't get the value, just fail then */
     return error;
   }
@@ -2182,14 +2182,14 @@ nssCKFWSession_UpdateFinal
     return error;
   }
 
-  if (!fwSession->mdSession) {
+  if( (NSSCKMDSession *)NULL == fwSession->mdSession ) {
     return CKR_GENERAL_ERROR;
   }
 #endif /* NSSDEBUG */
 
   /* make sure we have a valid operation initialized */
   fwOperation = nssCKFWSession_GetCurrentCryptoOperation(fwSession, state);
-  if (!fwOperation) {
+  if ((NSSCKFWCryptoOperation *)NULL == fwOperation) {
     return CKR_OPERATION_NOT_INITIALIZED;
   }
 
@@ -2289,7 +2289,7 @@ nssCKFWSession_UpdateCombo
     return error;
   }
 
-  if (!fwSession->mdSession) {
+  if( (NSSCKMDSession *)NULL == fwSession->mdSession ) {
     return CKR_GENERAL_ERROR;
   }
 #endif /* NSSDEBUG */
@@ -2297,7 +2297,7 @@ nssCKFWSession_UpdateCombo
   /* make sure we have a valid operation initialized */
   fwOperation = nssCKFWSession_GetCurrentCryptoOperation(fwSession, 
                 NSSCKFWCryptoOperationState_EncryptDecrypt);
-  if (!fwOperation) {
+  if ((NSSCKFWCryptoOperation *)NULL == fwOperation) {
     return CKR_OPERATION_NOT_INITIALIZED;
   }
 
@@ -2308,7 +2308,7 @@ nssCKFWSession_UpdateCombo
   /* make sure we have a valid operation initialized */
   fwPeerOperation = nssCKFWSession_GetCurrentCryptoOperation(fwSession, 
                   digestState);
-  if (!fwPeerOperation) {
+  if ((NSSCKFWCryptoOperation *)NULL == fwPeerOperation) {
     return CKR_OPERATION_NOT_INITIALIZED;
   }
 
@@ -2397,7 +2397,7 @@ NSSCKFWSession_GetArena
 )
 {
 #ifdef DEBUG
-  if (!pError) {
+  if( (CK_RV *)NULL == pError ) {
     return (NSSArena *)NULL;
   }
 

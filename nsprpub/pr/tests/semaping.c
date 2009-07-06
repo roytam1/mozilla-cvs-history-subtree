@@ -40,17 +40,9 @@
 
 #include <stdio.h>
 
-#ifdef SYMBIAN
-#define SHM_NAME "c:\\data\\counter"
-#define SEM_NAME1 "c:\\data\\foo.sem"
-#define SEM_NAME2 "c:\\data\\bar.sem"
-#define EXE_NAME "nspr_tests_semapong.exe"
-#else
 #define SHM_NAME "/tmp/counter"
 #define SEM_NAME1 "/tmp/foo.sem"
 #define SEM_NAME2 "/tmp/bar.sem"
-#define EXE_NAME "semapong"
-#endif
 #define SEM_MODE  0666
 #define SHM_MODE  0666
 #define ITERATIONS 1000
@@ -136,7 +128,7 @@ int main(int argc, char **argv)
     }
 
     child_arg = &child_argv[0];
-    *child_arg++ = EXE_NAME;
+    *child_arg++ = "semapong";
     if (debug_mode != PR_FALSE) {
         *child_arg++ = "-d";
     }

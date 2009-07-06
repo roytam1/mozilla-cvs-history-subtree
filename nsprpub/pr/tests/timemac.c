@@ -43,6 +43,12 @@
 #include "prinit.h"
 #include "prtime.h"
 
+#ifdef XP_MAC
+#include "prlog.h"
+#define printf PR_LogPrint
+extern void SetupMacPrintfLog(char *logFile);
+#endif
+
 
 static char *dayOfWeek[] =
 	{ "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "???" };
@@ -85,6 +91,10 @@ int main(int argc, char** argv)
     PR_Init(PR_USER_THREAD, PR_PRIORITY_NORMAL, 0);
 
  
+#ifdef XP_MAC
+	SetupMacPrintfLog("timemac.log");
+#endif
+
    /*
      *************************************************************
      **

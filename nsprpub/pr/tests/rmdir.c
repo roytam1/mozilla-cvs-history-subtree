@@ -69,7 +69,7 @@ static void Help( void )  {
                     );
 } /* --- end Help() */
 
-int main(int argc, char **argv)
+PRIntn main(PRIntn argc, char *argv[])
 {
     PLOptStatus os;
     PLOptState *opt = PL_CreateOptState(argc, argv, "dh");

@@ -45,7 +45,7 @@ COMPVERSIONDIR = $(DEPTH)/directory/c-sdk
 endif
 
 DEFAULT_VENDOR_NAME=mozilla.org
-DEFAULT_VENDOR_VERSION=606
+DEFAULT_VENDOR_VERSION=604
 
 ifndef VENDOR_NAME
 VENDOR_NAME	= $(DEFAULT_VENDOR_NAME)
@@ -241,7 +241,6 @@ ifdef NS_USE_GCC
 OFFLAG=-o #
 else
 OFFLAG=/Fo
-MT = mt.exe
 endif
 else
 OFFLAG=-o
@@ -444,18 +443,23 @@ LINK_EXE	= $(CC_FOR_LINK) -o $@ $(LDFLAGS) $(LCFLAGS) $(DEPLIBS) \
 LINK_LIB	= $(AR) cr $@ $(OBJS)
 LINK_DLL	= $(CC_FOR_LINK) -shared -Wl,--export-all-symbols -Wl,--out-implib -Wl,$(@:.$(DLL_SUFFIX)=.$(LIB_SUFFIX)) $(LLFLAGS) $(DLL_LDFLAGS) -o $@ $(OBJS) $(EXTRA_LIBS) $(EXTRA_DLL_LIBS)
 else
-SUBSYSTEM=CONSOLE
+DEBUG_LINK_OPT=-DEBUG
+ifeq ($(BUILD_OPT), 1)
+  ifndef MOZ_DEBUG_SYMBOLS
+    DEBUG_LINK_OPT=
+  endif
+  DEBUG_LINK_OPT += -OPT:REF
+endif
 
-LINK_EXE        = $(CYGWIN_WRAPPER) link $(DLLFLAGS) -OUT:"$@" -MAP $(ALDFLAGS) $(LDFLAGS) $(ML_DEBUG) \
+SUBSYSTEM=CONSOLE
+ifndef MOZ_DEBUG_SYMBOLS
+DEBUG_FLAGS=-PDB:NONE
+endif
+
+LINK_EXE        = $(CYGWIN_WRAPPER) link $(DEBUG_LINK_OPT) -OUT:"$@" -MAP $(ALDFLAGS) $(LDFLAGS) $(ML_DEBUG) \
     $(LCFLAGS) -NOLOGO $(DEBUG_FLAGS) -INCREMENTAL:NO \
     -NODEFAULTLIB:MSVCRTD -SUBSYSTEM:$(SUBSYSTEM) $(DEPLIBS) \
-    $(filter %.$(OBJ_SUFFIX),$^) $(OBJS) $(EXTRA_LIBS) $(PLATFORMLIBS) msvcrt.lib
-
-ifdef MT
-LINK_EXE += ; if test -f $@.manifest ; then \
-$(MT) -NOLOGO -MANIFEST $@.manifest -OUTPUTRESOURCE:$@\;1; \
-rm -f $@.manifest ; fi
-endif # MSVC with manifest tool - from NSS rules.mk
+    $(filter %.$(OBJ_SUFFIX),$^) $(OBJS) $(EXTRA_LIBS) $(PLATFORMLIBS)
 
 # AR is set when doing an autoconf build
 ifdef AR
@@ -468,7 +472,7 @@ ifndef LD
 LD=link
 endif
 
-LINK_DLL        = $(CYGWIN_WRAPPER) $(LD) $(DLLFLAGS) -MAP $(OS_DLLFLAGS) \
+LINK_DLL        = $(CYGWIN_WRAPPER) $(LD) $(DEBUG_LINK_OPT) -nologo -MAP -DLL $(DEBUG_FLAGS) \
         $(ML_DEBUG) -SUBSYSTEM:$(SUBSYSTEM) $(LLFLAGS) $(DLL_LDFLAGS) \
         $(EXTRA_LIBS) -out:"$@" $(OBJS)
 endif # NS_USE_GCC
@@ -479,8 +483,12 @@ else # WINNT
 ifeq ($(OS_ARCH),OS2)
 LINK_LIB        = -$(RM) $@ && $(AR) $(AR_FLAGS) $(OBJS) && $(RANLIB) $@
 LINK_LIB2       = -$(RM) $@ && $(AR) $@ $(OBJS2) && $(RANLIB) $@
+ifeq ($(MOZ_OS2_TOOLS),VACPP)
+LINK_DLL        = $(LD) $(OS_DLLFLAGS) $(DLLFLAGS) $(OBJS)
+else
 LINK_DLL        = $(LD) $(DSO_LDOPTS) $(ALDFLAGS) $(DLL_LDFLAGS) $(DLL_EXPORT_FLAGS) \
                         -o $@ $(OBJS)
+endif
 
 else
 

@@ -317,9 +317,6 @@ nssCertificate_GetDecoding (
 )
 {
     nssDecodedCert* deco = NULL;
-    if (c->type == NSSCertificateType_PKIX) {
-        (void)STAN_GetCERTCertificate(c);
-    }
     nssPKIObject_Lock(&c->object);
     if (!c->decoding) {
 	deco = nssDecodedCert_Create(NULL, &c->encoding, c->type);
