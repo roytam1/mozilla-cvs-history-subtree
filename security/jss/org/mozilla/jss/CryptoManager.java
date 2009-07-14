@@ -895,9 +895,9 @@ public final class CryptoManager implements TokenSupplier
      *
      * @param values The options with which to initialize CryptoManager.
      * @exception org.mozilla.jss.util.KeyDatabaseException Unable to open
-     *  the key database, or it was currupted.
+     *  the key database, or it was corrupted.
      * @exception org.mozilla.jss.util.CertDatabaseException Unable
-     *  to open the certificate database, or it was currupted.
+     *  to open the certificate database, or it was corrupted.
      **/
     public static synchronized void initialize( InitializationValues values )
         throws

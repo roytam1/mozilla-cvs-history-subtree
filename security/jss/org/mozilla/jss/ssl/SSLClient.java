@@ -213,7 +213,7 @@ public class SSLClient
 	//s.setClientCertNickname("JavaSSLTestClientCert");
 	
 	
-        // Setup a hanshake callback. This listener will get invoked
+        // Setup a handshake callback. This listener will get invoked
         // When the SSL handshake is completed on this socket.
 	
 	listener = new ClientHandshakeCB(this);

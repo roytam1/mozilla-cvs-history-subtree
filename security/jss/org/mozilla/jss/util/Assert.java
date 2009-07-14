@@ -94,7 +94,7 @@ public class Assert {
     }
 
     /**
-     * Throw an AssertionException because functionlity is not yet implemented.
+     * Throw an AssertionException because functionality is not yet implemented.
      *
      * @param msg A message describing what is not implemented.
      */

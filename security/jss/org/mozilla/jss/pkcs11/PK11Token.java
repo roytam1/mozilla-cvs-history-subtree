@@ -581,7 +581,7 @@ public final class PK11Token implements CryptoToken {
 }
 
 /**
- * This class just hardwires the type to be TOKEN so we don't have to mess
+ * This class just hard-wires the type to be TOKEN so we don't have to mess
  * with Java constants in native code.
  */
 class TokenCallbackInfo extends PasswordCallbackInfo {
