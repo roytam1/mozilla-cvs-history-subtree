@@ -178,7 +178,7 @@ $BuildSleep = 5;
 $BuildTree  = 'Camino';
 
 #$BuildName = '';
-#$BuildTag = '';
+$BuildTag = 'CAMINO_2_0_BRANCH';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 

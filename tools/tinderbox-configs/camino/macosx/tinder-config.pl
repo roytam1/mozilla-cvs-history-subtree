@@ -94,7 +94,7 @@ $StartupPerformanceTest   = 1;  # Ts
                                 # aviary directory structure?
 
 $TestsPhoneHome           = 1;  # Should test report back to server?
-#$GraphNameOverride        = ''; # Override name built from ::hostname() and $BuildTag
+#$GraphNameOverride        = 'cb-xserve01.mozilla.com_CAMINO_2_0_BRANCH'; # Override name built from ::hostname() and $BuildTag
 
 # $results_server
 #----------------------------------------------------------------------------
@@ -201,7 +201,7 @@ $BuildSleep = 5;
 $BuildTree  = 'Camino';
 
 #$BuildName = '';
-#$BuildTag = '';
+$BuildTag = 'CAMINO_2_0_BRANCH';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
