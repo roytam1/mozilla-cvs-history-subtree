@@ -37,6 +37,10 @@
 
 !macro PostUpdate
   SetShellVarContext all
+  ; Upgrade the copies of the MAPI DLLs, this needs to happen before calling
+  ; SetClientsMail as SetClientsMail tries to get the path to mozMapi32_InUse.dll
+  ${UpgradeMapiDLLs}
+
   ${SetClientsMail}
 
   ; Remove registry entries for non-existent apps and for apps that point to our
@@ -48,9 +52,6 @@
 
   ; Remove uninstall entries that point to our install location
   ${RegCleanUninstall}
-
-  ; Upgrade the copies of the MAPI DLLs
-  ${UpgradeMapiDLLs}
 
   ; Add Software\Mozilla\ registry entries
   ${SetAppKeys}
