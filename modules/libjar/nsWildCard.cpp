@@ -211,7 +211,7 @@ _handle_union(const char *str, const char *expr, PRBool case_insensitive,
     e2 = (char *) PR_Malloc(1 + strlen(expr));
     if (!e2)
         return ABORTED;
-    for (sx = 1; ret == NOMATCH && expr[sx] && expr[sx] != ')'; ++sx) {
+    for (sx = 1; ; ++sx) {
         /* Here, expr[sx] is one character past the preceeding '(' or '|'. */
         /* Copy everything up to the next delimiter to e2 */
         count = _scan_and_copy(expr + sx, ')', '|', e2);
@@ -223,6 +223,8 @@ _handle_union(const char *str, const char *expr, PRBool case_insensitive,
         /* Append everything after closing parenthesis to e2. This is safe. */
         strcpy(e2+count, expr+cp);
         ret = _shexp_match(str, e2, case_insensitive, level + 1);
+        if (ret != NOMATCH || !expr[sx] || expr[sx] == ')')
+            break;
     }
     PR_Free(e2);
     if (sx < 2)
