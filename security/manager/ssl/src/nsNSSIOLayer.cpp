@@ -1805,7 +1805,7 @@ SECStatus nsConvertCANamesToStrings(PRArenaPool* arena, char** caNameStrings,
     SECItem* dername;
     SECStatus rv;
     int headerlen;
-    PRUint32 contentlen;
+    uint32 contentlen;
     SECItem newitem;
     int n;
     char* namestring;
