@@ -265,6 +265,9 @@ components\pipnss.xpt
 components\pippki.dll
 components\pippki.xpt
 nss3.dll
+nssutil3.dll
+nssdbm3.dll
+sqlite3.dll
 smime3.dll
 softokn3.chk
 softokn3.dll
