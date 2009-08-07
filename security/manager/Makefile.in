@@ -50,10 +50,12 @@ PACKAGE_FILE = psm.pkg
 ifndef MOZ_NATIVE_NSS
 PACKAGE_VARS += \
 	NSS3_LIB \
+	NSSUTIL3_LIB \
 	SMIME3_LIB \
 	SSL3_LIB \
 	SOFTOKEN3_LIB \
 	SOFTOKEN3_CHK \
+	NSSDBM3_LIB \
 	LOADABLE_ROOT_MODULE \
 	HAVE_FREEBL_LIBS \
 	HAVE_FREEBL_LIBS_32 \
@@ -65,10 +67,12 @@ LOADABLE_ROOT_MODULE = $(DLL_PREFIX)nssckbi$(DLL_SUFFIX)
 endif
 
 NSS3_LIB = $(DLL_PREFIX)nss3$(DLL_SUFFIX)
+NSSUTIL3_LIB = $(DLL_PREFIX)nssutil3$(DLL_SUFFIX)
 SMIME3_LIB = $(DLL_PREFIX)smime3$(DLL_SUFFIX)
 SSL3_LIB =  $(DLL_PREFIX)ssl3$(DLL_SUFFIX)
 SOFTOKEN3_LIB = $(DLL_PREFIX)softokn3$(DLL_SUFFIX)
 SOFTOKEN3_CHK = $(DLL_PREFIX)softokn3.chk
+NSSDBM3_LIB = $(DLL_PREFIX)nssdbm3$(DLL_SUFFIX)
 
 # Default
 HAVE_FREEBL_LIBS = 1
@@ -249,15 +253,7 @@ else
 	cd $(DIST)/lib; cp -f $(LIB_PREFIX)mozdbm_s.$(LIB_SUFFIX) $(LIB_PREFIX)dbm.$(LIB_SUFFIX); $(RANLIB) $(LIB_PREFIX)dbm.$(LIB_SUFFIX)
 endif
 ifndef MOZ_NATIVE_NSS
-	$(MAKE) -C $(topsrcdir)/security/nss/lib/util $(DEFAULT_GMAKE_FLAGS) clean
-	$(MAKE) -C $(topsrcdir)/security/nss-fips/lib $(DEFAULT_GMAKE_FLAGS) export
-	$(MAKE) -C $(topsrcdir)/security/nss-fips/lib/util $(DEFAULT_GMAKE_FLAGS) libs
-	$(MAKE) -C $(topsrcdir)/security/nss-fips/lib/freebl $(DEFAULT_GMAKE_FLAGS) libs
-	$(MAKE) -C $(topsrcdir)/security/nss-fips/lib/softoken $(DEFAULT_GMAKE_FLAGS) libs
-	$(MAKE) -C $(topsrcdir)/security/nss-fips/lib/util $(DEFAULT_GMAKE_FLAGS) clean
-	# In NSS 3.11.8-3.11.9, lib/ssl/derive.c includes cmd/lib/secutil.h.
-	$(MAKE) -C $(topsrcdir)/security/nss/cmd/lib $(DEFAULT_GMAKE_FLAGS) export
-	$(MAKE) -C $(topsrcdir)/security/nss/lib $(DEFAULT_GMAKE_FLAGS) DIRS="util base dev pki pki1 certdb certhigh pk11wrap cryptohi nss ssl pkcs12 pkcs7 smime crmf jar ckfw ckfw/builtins"
+	$(MAKE) -C $(topsrcdir)/security/nss/lib $(DEFAULT_GMAKE_FLAGS)
 ifndef SKIP_CHK
 	$(MAKE) -C $(topsrcdir)/security/nss/cmd/lib $(DEFAULT_GMAKE_FLAGS)
 	$(MAKE) -C $(topsrcdir)/security/nss/cmd/shlibsign $(DEFAULT_GMAKE_FLAGS)
@@ -268,6 +264,8 @@ ifndef SKIP_CHK
 endif
 	$(INSTALL) -m 755 $(DIST)/lib/$(SOFTOKEN3_LIB) $(DIST)/bin
 	$(INSTALL) -m 755 $(DIST)/lib/$(NSS3_LIB) $(DIST)/bin
+	$(INSTALL) -m 755 $(DIST)/lib/$(NSSUTIL3_LIB) $(DIST)/bin
+	$(INSTALL) -m 755 $(DIST)/lib/$(NSSDBM3_LIB) $(DIST)/bin
 	$(INSTALL) -m 755 $(DIST)/lib/$(SSL3_LIB) $(DIST)/bin
 	$(INSTALL) -m 755 $(DIST)/lib/$(SMIME3_LIB) $(DIST)/bin
 ifdef HAVE_FREEBL_LIBS
@@ -314,6 +312,8 @@ ifndef SKIP_CHK
 endif
 	$(SYSINSTALL) -m 755 $(DIST)/lib/$(SOFTOKEN3_LIB) $(DESTDIR)$(mozappdir)
 	$(SYSINSTALL) -m 755 $(DIST)/lib/$(NSS3_LIB) $(DESTDIR)$(mozappdir)
+	$(SYSINSTALL) -m 755 $(DIST)/lib/$(NSSUTIL3_LIB) $(DESTDIR)$(mozappdir)
+	$(SYSINSTALL) -m 755 $(DIST)/lib/$(NSSDBM3_LIB) $(DESTDIR)$(mozappdir)
 	$(SYSINSTALL) -m 755 $(DIST)/lib/$(SSL3_LIB) $(DESTDIR)$(mozappdir)
 	$(SYSINSTALL) -m 755 $(DIST)/lib/$(SMIME3_LIB) $(DESTDIR)$(mozappdir)
 ifdef HAVE_FREEBL_LIBS

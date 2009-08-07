@@ -258,13 +258,10 @@ MODULES_all :=                                  \
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
 MOZ_CO_TAG           = MOZILLA_1_8_BRANCH
-NSPR_CO_TAG          = NSPR_4_6_8_RTM
-NSS_CO_TAG           = NSS_3_11_10_WITH_CKBI_1_67_RTM
+NSPR_CO_TAG          = NSPR_4_7_5_RTM
+NSS_CO_TAG           = NSS_3_12_3_1_RTM
 LDAPCSDK_CO_TAG      = MOZILLA_1_8_BRANCH
 LOCALES_CO_TAG       = MOZILLA_1_8_BRANCH
-
-NSS_FIPS_CO_TAG      = NSS_3_11_4_RTM
-NSS_FIPS_CO_DIR      = nss-fips
 
 BUILD_MODULES = all
 
@@ -430,18 +427,11 @@ NSS_CO_MODULE =               \
 		mozilla/security/coreconf \
 		$(NULL)
 
-NSS_FIPS_CO_MODULE =               \
-		mozilla/security/nss      \
-		$(NULL)
-
 NSS_CO_FLAGS := -P
-NSS_FIPS_CO_FLAGS := -P
 ifdef MOZ_CO_FLAGS
   NSS_CO_FLAGS := $(MOZ_CO_FLAGS)
-  NSS_FIPS_CO_FLAGS := $(MOZ_CO_FLAGS)
 endif
 NSS_CO_FLAGS := $(NSS_CO_FLAGS) $(if $(NSS_CO_TAG),-r $(NSS_CO_TAG),-A)
-NSS_FIPS_CO_FLAGS := $(NSS_FIPS_CO_FLAGS) -r $(NSS_FIPS_CO_TAG)
 
 # Can only pull the tip or branch tags by date
 ifeq (,$(filter-out HEAD %BRANCH,$(NSS_CO_TAG)))
@@ -449,7 +439,6 @@ CVSCO_NSS = $(CVS) $(CVS_FLAGS) co $(NSS_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(NSS_CO
 else
 CVSCO_NSS = $(CVS) $(CVS_FLAGS) co $(NSS_CO_FLAGS) $(NSS_CO_MODULE)
 endif
-CVSCO_NSS_FIPS = $(CVS) $(CVS_FLAGS) co -d $(NSS_FIPS_CO_DIR) $(NSS_FIPS_CO_FLAGS) $(NSS_FIPS_CO_MODULE)
 
 ####################################
 # CVS defines for NSPR
@@ -498,7 +487,6 @@ ifeq (,$(filter $(NSPRPUB_DIR), $(BUILD_MODULE_CVS))$(MOZ_CO_PROJECT))
 endif
 ifeq (,$(filter security security/manager, $(BUILD_MODULE_CVS))$(MOZ_CO_PROJECT))
   CVSCO_NSS :=
-  CVSCO_NSS_FIPS :=
 endif
 ifeq (,$(filter directory/c-sdk, $(BUILD_MODULE_CVS))$(MOZ_CO_PROJECT))
   CVSCO_LDAPCSDK :=
@@ -649,9 +637,6 @@ real_checkout:
 	  "$$@" 2>&1 | tee -a $(CVSCO_LOGFILE); }; \
 	cvs_co $(CVSCO_NSPR); \
 	cvs_co $(CVSCO_NSS); \
-	cd mozilla/security; \
-	cvs_co $(CVSCO_NSS_FIPS); \
-	cd ../..; \
 	cvs_co $(CVSCO_LDAPCSDK); \
 	$(CHECKOUT_MODULES) \
 	$(CHECKOUT_MODULES_NS); \
@@ -705,9 +690,6 @@ real_fast-update:
 	fast_update $(CVSCO_NSPR); \
 	cd $(ROOTDIR); \
 	cvs_co $(CVSCO_NSS); \
-	cd mozilla/security; \
-	cvs_co $(CVSCO_NSS_FIPS); \
-	cd ../..; \
 	cd mozilla; \
 	fast_update $(CVSCO_LDAPCSDK); \
 	$(FASTUPDATE_MODULES); \
