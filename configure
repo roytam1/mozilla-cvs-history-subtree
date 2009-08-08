@@ -11864,7 +11864,7 @@ else
         $(DIST)/lib/$(LIB_PREFIX)nssutil'$NSS_VERSION'.$(IMPORT_LIB_SUFFIX) \\\
         $(DIST)/lib/$(LIB_PREFIX)softokn'$NSS_VERSION'.$(IMPORT_LIB_SUFFIX)'
    else
-       NSS_LIBS='-L$(LIBS_DIR)'" -lcrmf -lsmime$NSS_VERSION -lssl$NSS_VERSION -lnss$NSS_VERSION -lnssutil$NSS_VERSION -lsqlite3 -lsoftokn$NSS_VERSION"
+       NSS_LIBS='-L$(LIBS_DIR)'" -lcrmf -lsmime$NSS_VERSION -lssl$NSS_VERSION -lnss$NSS_VERSION -lnssutil$NSS_VERSION -lsoftokn$NSS_VERSION"
    fi
 fi
 
@@ -15544,6 +15544,12 @@ if test -n "$MOZ_STORAGE"; then
 #define MOZ_STORAGE 1
 EOF
 
+fi
+
+if test -z "$GNU_CC" && test "$OS_ARCH" = "WINNT" -o "$OS_ARCH" = "WINCE" -o "$OS_ARCH" = "OS2"; then
+    SQLITE_LIBS='$(DIST)/lib/$(LIB_PREFIX)sqlite3.$(IMPORT_LIB_SUFFIX)'
+else
+    SQLITE_LIBS='-L$(LIBS_DIR)'" -lsqlite3"
 fi
 
 # Check whether --enable-safe-browsing or --disable-safe-browsing was given.
@@ -20675,6 +20681,7 @@ s%@LDAP_LIBS@%$LDAP_LIBS%g
 s%@LIBICONV@%$LIBICONV%g
 s%@MOZ_PLACES@%$MOZ_PLACES%g
 s%@MOZ_STORAGE@%$MOZ_STORAGE%g
+s%@SQLITE_LIBS@%$SQLITE_LIBS%g
 s%@MOZ_FEEDS@%$MOZ_FEEDS%g
 s%@NS_PRINTING@%$NS_PRINTING%g
 s%@MOZ_JAVAXPCOM@%$MOZ_JAVAXPCOM%g

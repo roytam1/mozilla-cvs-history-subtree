@@ -3768,7 +3768,7 @@ else
         $(DIST)/lib/$(LIB_PREFIX)nssutil'$NSS_VERSION'.$(IMPORT_LIB_SUFFIX) \\\
         $(DIST)/lib/$(LIB_PREFIX)softokn'$NSS_VERSION'.$(IMPORT_LIB_SUFFIX)'
    else
-       NSS_LIBS='-L$(LIBS_DIR)'" -lcrmf -lsmime$NSS_VERSION -lssl$NSS_VERSION -lnss$NSS_VERSION -lnssutil$NSS_VERSION -lsqlite3 -lsoftokn$NSS_VERSION"
+       NSS_LIBS='-L$(LIBS_DIR)'" -lcrmf -lsmime$NSS_VERSION -lssl$NSS_VERSION -lnss$NSS_VERSION -lnssutil$NSS_VERSION -lsoftokn$NSS_VERSION"
    fi
 fi
 
@@ -5581,6 +5581,12 @@ MOZ_ARG_ENABLE_BOOL(storage,
     MOZ_STORAGE= )
 if test -n "$MOZ_STORAGE"; then
     AC_DEFINE(MOZ_STORAGE)
+fi
+
+if test -z "$GNU_CC" && test "$OS_ARCH" = "WINNT" -o "$OS_ARCH" = "WINCE" -o "$OS_ARCH" = "OS2"; then
+    SQLITE_LIBS='$(DIST)/lib/$(LIB_PREFIX)sqlite3.$(IMPORT_LIB_SUFFIX)'
+else
+    SQLITE_LIBS='-L$(LIBS_DIR)'" -lsqlite3"
 fi
 
 dnl ========================================================
