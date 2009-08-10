@@ -1023,6 +1023,16 @@
 		DE148A490BF543F300F414D9 /* tab_scroll_button_left.tiff in Resources */ = {isa = PBXBuildFile; fileRef = DE148A430BF543F300F414D9 /* tab_scroll_button_left.tiff */; };
 		DE148A4A0BF543F300F414D9 /* tab_menu_button.tiff in Resources */ = {isa = PBXBuildFile; fileRef = DE148A440BF543F300F414D9 /* tab_menu_button.tiff */; };
 		DE148A4B0BF543F300F414D9 /* tab_scroll_button_right.tiff in Resources */ = {isa = PBXBuildFile; fileRef = DE148A450BF543F300F414D9 /* tab_scroll_button_right.tiff */; };
+		DE22B336102F735A00AC7553 /* libnssutil3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = DE22B334102F735A00AC7553 /* libnssutil3.dylib */; };
+		DE22B338102F735A00AC7553 /* libnssutil3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = DE22B334102F735A00AC7553 /* libnssutil3.dylib */; };
+		DE22B33B102F738900AC7553 /* libsqlite3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = DE22B33A102F738900AC7553 /* libsqlite3.dylib */; };
+		DE22B33C102F738900AC7553 /* libsqlite3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = DE22B33A102F738900AC7553 /* libsqlite3.dylib */; };
+		DE22B33F102F742B00AC7553 /* libnssutil3.dylib in Copy Security Libraries */ = {isa = PBXBuildFile; fileRef = DE22B334102F735A00AC7553 /* libnssutil3.dylib */; };
+		DE22B340102F742B00AC7553 /* libnssdbm3.dylib in Copy Security Libraries */ = {isa = PBXBuildFile; fileRef = DE22B335102F735A00AC7553 /* libnssdbm3.dylib */; };
+		DE22B341102F745600AC7553 /* libsqlite3.dylib in Copy Libraries */ = {isa = PBXBuildFile; fileRef = DE22B33A102F738900AC7553 /* libsqlite3.dylib */; };
+		DE22B344102F76B400AC7553 /* libsqlite3.dylib in Copy Libraries */ = {isa = PBXBuildFile; fileRef = DE22B33A102F738900AC7553 /* libsqlite3.dylib */; };
+		DE22B345102F76E200AC7553 /* libnssutil3.dylib in Copy Security Libraries */ = {isa = PBXBuildFile; fileRef = DE22B334102F735A00AC7553 /* libnssutil3.dylib */; };
+		DE22B346102F76E200AC7553 /* libnssdbm3.dylib in Copy Security Libraries */ = {isa = PBXBuildFile; fileRef = DE22B335102F735A00AC7553 /* libnssdbm3.dylib */; };
 		DE56E9230B73E71500D27D57 /* libauth.dylib in Copy Gecko Components */ = {isa = PBXBuildFile; fileRef = DE56E9220B73E71500D27D57 /* libauth.dylib */; };
 		DE56E9250B73E7EE00D27D57 /* libauth.a in Frameworks */ = {isa = PBXBuildFile; fileRef = DE56E9240B73E7EE00D27D57 /* libauth.a */; };
 		DE6D273A0C19FE6F00292043 /* CHPermissionManager.mm in Sources */ = {isa = PBXBuildFile; fileRef = DE6D27390C19FE6F00292043 /* CHPermissionManager.mm */; };
@@ -1632,6 +1642,8 @@
 				3F44AD5E05BDFB9F00CB4B08 /* libsoftokn3.dylib in Copy Security Libraries */,
 				0FF2885A0961EE00007527B4 /* libfreebl3.dylib in Copy Security Libraries */,
 				3F44AD5F05BDFB9F00CB4B08 /* libssl3.dylib in Copy Security Libraries */,
+				DE22B33F102F742B00AC7553 /* libnssutil3.dylib in Copy Security Libraries */,
+				DE22B340102F742B00AC7553 /* libnssdbm3.dylib in Copy Security Libraries */,
 			);
 			name = "Copy Security Libraries";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1652,6 +1664,7 @@
 				3F44AD6705BDFB9F00CB4B08 /* libgkgfx.dylib in Copy Libraries */,
 				3F44AD6805BDFB9F00CB4B08 /* libwidget.rsrc in Copy Libraries */,
 				3F44AD6905BDFB9F00CB4B08 /* libjsj.dylib in Copy Libraries */,
+				DE22B341102F745600AC7553 /* libsqlite3.dylib in Copy Libraries */,
 			);
 			name = "Copy Libraries";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1927,6 +1940,8 @@
 				3F44AF7905BDFBA000CB4B08 /* libsoftokn3.dylib in Copy Security Libraries */,
 				0FF2885D0961EE2A007527B4 /* libfreebl3.dylib in Copy Security Libraries */,
 				3F44AF7A05BDFBA000CB4B08 /* libssl3.dylib in Copy Security Libraries */,
+				DE22B345102F76E200AC7553 /* libnssutil3.dylib in Copy Security Libraries */,
+				DE22B346102F76E200AC7553 /* libnssdbm3.dylib in Copy Security Libraries */,
 			);
 			name = "Copy Security Libraries";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1966,6 +1981,7 @@
 				3F44AF8A05BDFBA000CB4B08 /* libnspr4.dylib in Copy Libraries */,
 				3F44AF8B05BDFBA000CB4B08 /* libplc4.dylib in Copy Libraries */,
 				3F44AF8C05BDFBA000CB4B08 /* libplds4.dylib in Copy Libraries */,
+				DE22B344102F76B400AC7553 /* libsqlite3.dylib in Copy Libraries */,
 				3F44AF8D05BDFBA000CB4B08 /* libwidget.rsrc in Copy Libraries */,
 			);
 			name = "Copy Libraries";
@@ -2427,6 +2443,9 @@
 		DE148A430BF543F300F414D9 /* tab_scroll_button_left.tiff */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; name = tab_scroll_button_left.tiff; path = resources/images/chrome/tab_scroll_button_left.tiff; sourceTree = SOURCE_ROOT; };
 		DE148A440BF543F300F414D9 /* tab_menu_button.tiff */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; name = tab_menu_button.tiff; path = resources/images/chrome/tab_menu_button.tiff; sourceTree = SOURCE_ROOT; };
 		DE148A450BF543F300F414D9 /* tab_scroll_button_right.tiff */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; name = tab_scroll_button_right.tiff; path = resources/images/chrome/tab_scroll_button_right.tiff; sourceTree = SOURCE_ROOT; };
+		DE22B334102F735A00AC7553 /* libnssutil3.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libnssutil3.dylib; path = ../dist/bin/libnssutil3.dylib; sourceTree = SOURCE_ROOT; };
+		DE22B335102F735A00AC7553 /* libnssdbm3.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libnssdbm3.dylib; path = ../dist/bin/libnssdbm3.dylib; sourceTree = SOURCE_ROOT; };
+		DE22B33A102F738900AC7553 /* libsqlite3.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libsqlite3.dylib; path = ../dist/bin/libsqlite3.dylib; sourceTree = SOURCE_ROOT; };
 		DE56E9220B73E71500D27D57 /* libauth.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.bundle"; name = libauth.dylib; path = ../dist/bin/components/libauth.dylib; sourceTree = SOURCE_ROOT; };
 		DE56E9240B73E7EE00D27D57 /* libauth.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libauth.a; path = ../dist/lib/components/libauth.a; sourceTree = SOURCE_ROOT; };
 		DE6D27360C19FE5500292043 /* CHPermissionManager.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = CHPermissionManager.h; path = src/embedding/CHPermissionManager.h; sourceTree = "<group>"; };
@@ -2883,6 +2902,8 @@
 				0FF288560961EDDD007527B4 /* libfreebl3.dylib in Frameworks */,
 				008116E60B272204001CB3F0 /* Security.framework in Frameworks */,
 				7B64B7E10CCFDA640098406C /* Sparkle.framework in Frameworks */,
+				DE22B336102F735A00AC7553 /* libnssutil3.dylib in Frameworks */,
+				DE22B33B102F738900AC7553 /* libsqlite3.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -3004,6 +3025,8 @@
 				DE56E9250B73E7EE00D27D57 /* libauth.a in Frameworks */,
 				7B64B7E30CCFDA860098406C /* Sparkle.framework in Frameworks */,
 				DEFD23F70D022572006899B9 /* libstoragecomps.a in Frameworks */,
+				DE22B338102F735A00AC7553 /* libnssutil3.dylib in Frameworks */,
+				DE22B33C102F738900AC7553 /* libsqlite3.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -4007,6 +4030,8 @@
 				F5247C360228B91F013DD99A /* libssl3.dylib */,
 				F5247C350228B91F013DD99A /* libsoftokn3.dylib */,
 				0FF288540961EDDD007527B4 /* libfreebl3.dylib */,
+				DE22B334102F735A00AC7553 /* libnssutil3.dylib */,
+				DE22B335102F735A00AC7553 /* libnssdbm3.dylib */,
 			);
 			name = "Executable Level";
 			sourceTree = "<group>";
@@ -4401,6 +4426,7 @@
 				F6BD638001B30EA301A962F7 /* libnspr4.dylib */,
 				F6BD638101B30EA301A962F7 /* libplc4.dylib */,
 				F6BD638201B30EA301A962F7 /* libplds4.dylib */,
+				DE22B33A102F738900AC7553 /* libsqlite3.dylib */,
 				F50DCB4302C2856001A967F3 /* libjsj.dylib */,
 				F6BD638701B30F5301A962F7 /* libgkgfx.dylib */,
 				0E6A9882097DFF9A007962C1 /* libucvmath.dylib */,
