@@ -61,7 +61,7 @@ extern void SECKEY_DestroySubjectPublicKeyInfo(CERTSubjectPublicKeyInfo *spki);
 ** Copy subject-public-key-info "src" to "dst". "dst" is filled in
 ** appropriately (memory is allocated for each of the sub objects).
 */
-extern SECStatus SECKEY_CopySubjectPublicKeyInfo(PRArenaPool *arena,
+extern SECStatus SECKEY_CopySubjectPublicKeyInfo(PLArenaPool *arena,
 					     CERTSubjectPublicKeyInfo *dst,
 					     CERTSubjectPublicKeyInfo *src);
 
@@ -82,12 +82,12 @@ SECKEY_KEAParamCompare(CERTCertificate *cert1,CERTCertificate *cert2);
 /*
 ** Return the strength of the public key in bytes
 */
-extern unsigned SECKEY_PublicKeyStrength(SECKEYPublicKey *pubk);
+extern unsigned SECKEY_PublicKeyStrength(const SECKEYPublicKey *pubk);
 
 /*
 ** Return the strength of the public key in bits
 */
-extern unsigned SECKEY_PublicKeyStrengthInBits(SECKEYPublicKey *pubk);
+extern unsigned SECKEY_PublicKeyStrengthInBits(const SECKEYPublicKey *pubk);
 
 /*
 ** Return the length of the signature in bytes
@@ -97,12 +97,12 @@ extern unsigned SECKEY_SignatureLen(const SECKEYPublicKey *pubk);
 /*
 ** Make a copy of the private key "privKey"
 */
-extern SECKEYPrivateKey *SECKEY_CopyPrivateKey(SECKEYPrivateKey *privKey);
+extern SECKEYPrivateKey *SECKEY_CopyPrivateKey(const SECKEYPrivateKey *privKey);
 
 /*
 ** Make a copy of the public key "pubKey"
 */
-extern SECKEYPublicKey *SECKEY_CopyPublicKey(SECKEYPublicKey *pubKey);
+extern SECKEYPublicKey *SECKEY_CopyPublicKey(const SECKEYPublicKey *pubKey);
 
 /*
 ** Convert a private key "privateKey" into a public key
@@ -222,7 +222,7 @@ SECKEY_DestroyEncryptedPrivateKeyInfo(SECKEYEncryptedPrivateKeyInfo *epki,
  * returned.  otherwise, SECSuccess is returned.
  */
 extern SECStatus
-SECKEY_CopyPrivateKeyInfo(PRArenaPool *poolp,
+SECKEY_CopyPrivateKeyInfo(PLArenaPool *poolp,
 			  SECKEYPrivateKeyInfo *to,
 			  SECKEYPrivateKeyInfo *from);
 
@@ -238,7 +238,7 @@ SECKEY_CacheStaticFlags(SECKEYPrivateKey* key);
  * returned.  otherwise, SECSuccess is returned.
  */
 extern SECStatus
-SECKEY_CopyEncryptedPrivateKeyInfo(PRArenaPool *poolp,
+SECKEY_CopyEncryptedPrivateKeyInfo(PLArenaPool *poolp,
 				   SECKEYEncryptedPrivateKeyInfo *to,
 				   SECKEYEncryptedPrivateKeyInfo *from);
 /*

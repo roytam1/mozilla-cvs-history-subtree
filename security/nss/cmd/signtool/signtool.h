@@ -52,7 +52,6 @@
 #include "secpkcs7.h"
 #include "pk11func.h"
 #include "secmod.h"
-#include "secmodi.h"
 #include "plhash.h"
 #include "nss.h"
 
@@ -112,7 +111,8 @@ void print_error (int i);
 void give_help (int status);
 const char* secErrorString(long code);
 void displayVerifyLog(CERTVerifyLog *log);
-void usage (void);
+void Usage (void);
+void LongUsage (void);
 char* chop(char*);
 void out_of_memory(void);
 void FatalError(char *msg);
@@ -141,5 +141,6 @@ extern PRFileDesc *outputFD, *errorFD;
 extern int verbosity;
 extern int errorCount;
 extern int warningCount;
+extern secuPWData pwdata;
 
 #endif /* SIGNTOOL_H */

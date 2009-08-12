@@ -39,8 +39,13 @@
  * ***** END LICENSE BLOCK ***** */
 /* $Id$ */
 
+#ifdef FREEBL_NO_DEPEND
+extern int FREEBL_InitStubs(void);
+#endif
+
 #include "loader.h"
 #include "alghmac.h"
+
 
 static const struct FREEBLVectorStr vector = 
 {
@@ -227,6 +232,38 @@ static const struct FREEBLVectorStr vector =
     FIPS186Change_ReduceModQForDSA,
 
     /* End of Version 3.009. */
+    Camellia_InitContext,
+    Camellia_AllocateContext,
+    Camellia_CreateContext,
+    Camellia_DestroyContext,
+    Camellia_Encrypt,
+    Camellia_Decrypt,
+
+    PQG_DestroyParams,
+    PQG_DestroyVerify,
+
+    /* End of Version 3.010. */
+
+    SEED_InitContext,
+    SEED_AllocateContext,
+    SEED_CreateContext,
+    SEED_DestroyContext,
+    SEED_Encrypt,
+    SEED_Decrypt,
+
+    /* End of Version 3.011. */
+
+    BL_Init,
+    BL_SetForkState,
+
+    /* End of Version 3.012. */
+
+    PRNGTEST_Instantiate,
+    PRNGTEST_Reseed,
+    PRNGTEST_Generate,
+    PRNGTEST_Uninstantiate
+
+    /* End of Version 3.013. */
 };
 
 const FREEBLVector * 
@@ -236,8 +273,12 @@ FREEBL_GetVector(void)
     extern const char __nss_freebl_sccsid[];
 
     /* force a reference that won't get optimized away */
-    volatile char c = __nss_freebl_rcsid[0] + __nss_freebl_sccsid[0]; 
+    volatile char c;
 
+    c = __nss_freebl_rcsid[0] + __nss_freebl_sccsid[0]; 
+#ifdef FREEBL_NO_DEPEND
+    FREEBL_InitStubs();
+#endif
     return &vector;
 }
 

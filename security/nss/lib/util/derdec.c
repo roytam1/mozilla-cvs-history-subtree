@@ -37,10 +37,10 @@
 #include "secder.h"
 #include "secerr.h"
 
-static uint32
+static PRUint32
 der_indefinite_length(unsigned char *buf, unsigned char *end)
 {
-    uint32 len, ret, dataLen;
+    PRUint32 len, ret, dataLen;
     unsigned char tag, lenCode;
     int dataLenLen;
 
@@ -105,11 +105,11 @@ der_indefinite_length(unsigned char *buf, unsigned char *end)
 */
 static SECStatus
 der_capture(unsigned char *buf, unsigned char *end,
-	    int *header_len_p, uint32 *contents_len_p)
+	    int *header_len_p, PRUint32 *contents_len_p)
 {
     unsigned char *bp;
     unsigned char whole_tag;
-    uint32 contents_len;
+    PRUint32 contents_len;
     int tag_number;
 
     if ((buf + 2) > end) {
@@ -214,7 +214,7 @@ der_capture(unsigned char *buf, unsigned char *end,
 }
 
 SECStatus
-DER_Lengths(SECItem *item, int *header_len_p, uint32 *contents_len_p)
+DER_Lengths(SECItem *item, int *header_len_p, PRUint32 *contents_len_p)
 {
     return(der_capture(item->data, &item->data[item->len], header_len_p,
 		       contents_len_p));

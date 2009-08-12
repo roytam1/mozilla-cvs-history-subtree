@@ -36,6 +36,9 @@
 
 #ifndef _SECITEM_H_
 #define _SECITEM_H_
+
+#include "utilrename.h"
+
 /*
  * secitem.h - public data structures and prototypes for handling
  *	       SECItems
@@ -52,16 +55,18 @@ SEC_BEGIN_PROTOS
 /*
 ** Allocate an item.  If "arena" is not NULL, then allocate from there,
 ** otherwise allocate from the heap.  If "item" is not NULL, allocate
-** only the data for the item, not the item itself.  The item structure
-** is allocated zero-filled; the data buffer is not zeroed.  The caller
-** is responsible for initializing the type field of the item.
+** only the data buffer for the item, not the item itself.  If "len" is
+** 0, do not allocate the data buffer for the item; simply set the data
+** field to NULL and the len field to 0.  The item structure is allocated
+** zero-filled; the data buffer is not zeroed.  The caller is responsible
+** for initializing the type field of the item.
 **
 ** The resulting item is returned; NULL if any error occurs.
 **
 ** XXX This probably should take a SECItemType, but since that is mostly
 ** unused and our improved APIs (aka Stan) are looming, I left it out.
 */
-extern SECItem *SECITEM_AllocItem(PRArenaPool *arena, SECItem *item,
+extern SECItem *SECITEM_AllocItem(PLArenaPool *arena, SECItem *item,
 				  unsigned int len);
 
 /*
@@ -72,7 +77,7 @@ extern SECItem *SECITEM_AllocItem(PRArenaPool *arena, SECItem *item,
 ** SECFailure is returned if it is not.  If the allocation succeeds,
 ** SECSuccess is returned.
 */
-extern SECStatus SECITEM_ReallocItem(PRArenaPool *arena, SECItem *item,
+extern SECStatus SECITEM_ReallocItem(PLArenaPool *arena, SECItem *item,
 				     unsigned int oldlen, unsigned int newlen);
 
 /*
@@ -88,7 +93,7 @@ extern PRBool SECITEM_ItemsAreEqual(const SECItem *a, const SECItem *b);
 /*
 ** Copy "from" to "to"
 */
-extern SECStatus SECITEM_CopyItem(PRArenaPool *arena, SECItem *to, 
+extern SECStatus SECITEM_CopyItem(PLArenaPool *arena, SECItem *to, 
                                   const SECItem *from);
 
 /*
@@ -101,7 +106,7 @@ extern SECItem *SECITEM_DupItem(const SECItem *from);
 ** data it points to are both allocated from the arena.  If arena is
 ** NULL, this function is equivalent to SECITEM_DupItem.
 */
-extern SECItem *SECITEM_ArenaDupItem(PRArenaPool *arena, const SECItem *from);
+extern SECItem *SECITEM_ArenaDupItem(PLArenaPool *arena, const SECItem *from);
 
 /*
 ** Free "zap". If freeit is PR_TRUE then "zap" itself is freed.

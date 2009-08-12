@@ -65,16 +65,17 @@ SECStatus PK11_DeleteSlotFromList(PK11SlotList *list,PK11SlotListElement *le);
 PK11SlotListElement *PK11_FindSlotElement(PK11SlotList *list,
 							PK11SlotInfo *slot);
 PK11SlotInfo *PK11_FindSlotBySerial(char *serial);
+int PK11_GetMaxKeyLength(CK_MECHANISM_TYPE type);
 
 /************************************************************
  * Generic Slot Management
  ************************************************************/
 CK_OBJECT_HANDLE PK11_CopyKey(PK11SlotInfo *slot, CK_OBJECT_HANDLE srcObject);
 SECStatus PK11_ReadAttribute(PK11SlotInfo *slot, CK_OBJECT_HANDLE id,
-         CK_ATTRIBUTE_TYPE type, PRArenaPool *arena, SECItem *result);
+         CK_ATTRIBUTE_TYPE type, PLArenaPool *arena, SECItem *result);
 CK_ULONG PK11_ReadULongAttribute(PK11SlotInfo *slot, CK_OBJECT_HANDLE id,
          CK_ATTRIBUTE_TYPE type);
-char * PK11_MakeString(PRArenaPool *arena,char *space,char *staticSring,
+char * PK11_MakeString(PLArenaPool *arena,char *space,char *staticSring,
 								int stringLen);
 int PK11_MapError(CK_RV error);
 CK_SESSION_HANDLE PK11_GetRWSession(PK11SlotInfo *slot);
@@ -118,7 +119,8 @@ SECStatus PK11_ReadSlotCerts(PK11SlotInfo *slot);
  *       Mechanism Mapping functions
  *********************************************************************/
 void PK11_AddMechanismEntry(CK_MECHANISM_TYPE type, CK_KEY_TYPE key,
-		 	CK_MECHANISM_TYPE keygen, int ivLen, int blocksize);
+	 	CK_MECHANISM_TYPE keygen, CK_MECHANISM_TYPE pad, 
+		int ivLen, int blocksize);
 CK_MECHANISM_TYPE PK11_GetKeyMechanism(CK_KEY_TYPE type);
 CK_MECHANISM_TYPE PK11_GetKeyGenWithSize(CK_MECHANISM_TYPE type, int size);
 
@@ -148,17 +150,11 @@ CK_OBJECT_HANDLE PK11_MatchItem(PK11SlotInfo *slot,CK_OBJECT_HANDLE peer,
 CK_BBOOL PK11_HasAttributeSet( PK11SlotInfo *slot,
 			       CK_OBJECT_HANDLE id,
 			       CK_ATTRIBUTE_TYPE type );
-CK_RV PK11_GetAttributes(PRArenaPool *arena,PK11SlotInfo *slot,
+CK_RV PK11_GetAttributes(PLArenaPool *arena,PK11SlotInfo *slot,
 			 CK_OBJECT_HANDLE obj,CK_ATTRIBUTE *attr, int count);
 int PK11_NumberCertsForCertSubject(CERTCertificate *cert);
 SECStatus PK11_TraverseCertsForSubject(CERTCertificate *cert, 
 	SECStatus(*callback)(CERTCertificate *, void *), void *arg);
-CERTCertificate *PK11_FindCertFromDERCertItem(PK11SlotInfo *slot, 
-					  SECItem *derCert, void *wincx);
-CERTCertificate *PK11_FindCertFromDERSubjectAndNickname(
-					PK11SlotInfo *slot, 
-					CERTCertificate *cert, char *nickname,
-					void *wincx);
 SECStatus PK11_GetKEAMatchedCerts(PK11SlotInfo *slot1,
    PK11SlotInfo *slot2, CERTCertificate **cert1, CERTCertificate **cert2);
 SECStatus PK11_TraverseCertsInSlot(PK11SlotInfo *slot,
@@ -176,7 +172,7 @@ PRBool PK11_HashOK(SECOidTag hashAlg);
 
 
 /**********************************************************************
- * Functions which are  depricated....
+ * Functions which are  deprecated....
  **********************************************************************/
 
 SECItem *

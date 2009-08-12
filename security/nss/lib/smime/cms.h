@@ -68,7 +68,7 @@ SEC_BEGIN_PROTOS
  * "decrypt_key_cb", "decrypt_key_cb_arg" - callback function for getting bulk key for encryptedData
  */
 extern NSSCMSDecoderContext *
-NSS_CMSDecoder_Start(PRArenaPool *poolp,
+NSS_CMSDecoder_Start(PLArenaPool *poolp,
 		      NSSCMSContentCallback cb, void *cb_arg,
 		      PK11PasswordFunc pwfn, void *pwfn_arg,
 		      NSSCMSGetDecryptKeyCallback decrypt_key_cb, void *decrypt_key_cb_arg);
@@ -410,13 +410,6 @@ NSS_CMSAlgArray_GetIndexByAlgTag(SECAlgorithmID **algorithmArray, SECOidTag algt
 extern const SECHashObject *
 NSS_CMSUtil_GetHashObjByAlgID(SECAlgorithmID *algid);
 
-/*
- * XXX I would *really* like to not have to do this, but the current
- * signing interface gives me little choice.
- */
-extern SECOidTag
-NSS_CMSUtil_MakeSignatureAlgorithm(SECOidTag hashalg, SECOidTag encalg);
-
 extern const SEC_ASN1Template *
 NSS_CMSUtil_GetTemplateByTypeTag(SECOidTag type);
 
@@ -577,7 +570,7 @@ NSS_CMSSignedData_SetDigestValue(NSSCMSSignedData *sigd,
 				SECItem *digestdata);
 
 extern SECStatus
-NSS_CMSSignedData_AddDigest(PRArenaPool *poolp,
+NSS_CMSSignedData_AddDigest(PLArenaPool *poolp,
 				NSSCMSSignedData *sigd,
 				SECOidTag digestalgtag,
 				SECItem *digest);
@@ -906,7 +899,7 @@ NSS_CMSRecipientInfo_GetEncryptedKey(NSSCMSRecipientInfo *ri, int subIndex);
 /*
  * NSS_CMSRecipientInfo_Encode - encode an NSS_CMSRecipientInfo as ASN.1
  */
-SECStatus NSS_CMSRecipientInfo_Encode(PRArenaPool* poolp,
+SECStatus NSS_CMSRecipientInfo_Encode(PLArenaPool* poolp,
                                       const NSSCMSRecipientInfo *src,
                                       SECItem* returned);
 

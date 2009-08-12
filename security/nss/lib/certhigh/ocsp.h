@@ -57,7 +57,7 @@ SEC_BEGIN_PROTOS
 
 /*
  * This function registers the HttpClient with whose functions the
- * HttpClientFcn structure have been populated as the default Http
+ * HttpClientFcn structure has been populated as the default Http
  * client.
  *
  * The function table must be a global object.
@@ -66,6 +66,13 @@ SEC_BEGIN_PROTOS
  */
 extern SECStatus
 SEC_RegisterDefaultHttpClient(const SEC_HttpClientFcn *fcnTable);
+
+/*
+ * This function obtains the HttpClient which has been registered
+ * by an earlier call to SEC_RegisterDefaultHttpClient.
+ */
+extern const SEC_HttpClientFcn *
+SEC_GetRegisteredHttpClient(void);
 
 /*
  * Sets parameters that control NSS' internal OCSP cache.
@@ -91,6 +98,12 @@ CERT_OCSPCacheSettings(PRInt32 maxCacheEntries,
  */
 extern SECStatus
 CERT_SetOCSPFailureMode(SEC_OcspFailureMode ocspFailureMode);
+
+/*
+ * Configure the maximum time NSS will wait for an OCSP response.
+ */
+extern SECStatus
+CERT_SetOCSPTimeout(PRUint32 seconds);
 
 /*
  * Removes all items currently stored in the OCSP cache.
@@ -214,7 +227,7 @@ CERT_DisableOCSPDefaultResponder(CERTCertDBHandle *handle);
  *     must be handled by the caller (and thus by having multiple calls
  *     to this routine), who knows about where the request(s) are being
  *     sent and whether there are any trusted responders in place.
- *   int64 time
+ *   PRTime time
  *     Indicates the time for which the certificate status is to be 
  *     determined -- this may be used in the search for the cert's issuer
  *     but has no effect on the request itself.
@@ -233,7 +246,7 @@ CERT_DisableOCSPDefaultResponder(CERTCertDBHandle *handle);
  *   Other errors are low-level problems (no memory, bad database, etc.).
  */
 extern CERTOCSPRequest *
-CERT_CreateOCSPRequest(CERTCertList *certList, int64 time, 
+CERT_CreateOCSPRequest(CERTCertList *certList, PRTime time, 
 		       PRBool addServiceLocator,
 		       CERTCertificate *signerCert);
 
@@ -262,7 +275,7 @@ CERT_AddOCSPAcceptableResponses(CERTOCSPRequest *request,
  *   DER encodes an OCSP Request, possibly adding a signature as well.
  *   XXX Signing is not yet supported, however; see comments in code.
  * INPUTS: 
- *   PRArenaPool *arena
+ *   PLArenaPool *arena
  *     The return value is allocated from here.
  *     If a NULL is passed in, allocation is done from the heap instead.
  *   CERTOCSPRequest *request
@@ -276,7 +289,7 @@ CERT_AddOCSPAcceptableResponses(CERTOCSPRequest *request,
  *   (e.g. no memory).
  */
 extern SECItem *
-CERT_EncodeOCSPRequest(PRArenaPool *arena, CERTOCSPRequest *request, 
+CERT_EncodeOCSPRequest(PLArenaPool *arena, CERTOCSPRequest *request, 
 		       void *pwArg);
 
 /*
@@ -338,7 +351,7 @@ CERT_DestroyOCSPResponse(CERTOCSPResponse *response);
  *   Creates and sends a request to an OCSP responder, then reads and
  *   returns the (encoded) response.
  * INPUTS:
- *   PRArenaPool *arena
+ *   PLArenaPool *arena
  *     Pointer to arena from which return value will be allocated.
  *     If NULL, result will be allocated from the heap (and thus should
  *     be freed via SECITEM_FreeItem).
@@ -352,7 +365,7 @@ CERT_DestroyOCSPResponse(CERTOCSPResponse *response);
  *     sent and whether there are any trusted responders in place.
  *   char *location
  *     The location of the OCSP responder (a URL).
- *   int64 time
+ *   PRTime time
  *     Indicates the time for which the certificate status is to be 
  *     determined -- this may be used in the search for the cert's issuer
  *     but has no other bearing on the operation.
@@ -380,8 +393,8 @@ CERT_DestroyOCSPResponse(CERTOCSPResponse *response);
  *   Other errors are low-level problems (no memory, bad database, etc.).
  */
 extern SECItem *
-CERT_GetEncodedOCSPResponse(PRArenaPool *arena, CERTCertList *certList,
-			    char *location, int64 time,
+CERT_GetEncodedOCSPResponse(PLArenaPool *arena, CERTCertList *certList,
+			    char *location, PRTime time,
 			    PRBool addServiceLocator,
 			    CERTCertificate *signerCert, void *pwArg,
 			    CERTOCSPRequest **pRequest);
@@ -444,6 +457,47 @@ extern char *
 CERT_GetOCSPAuthorityInfoAccessLocation(CERTCertificate *cert);
 
 /*
+ * FUNCTION: CERT_RegisterAlternateOCSPAIAInfoCallBack
+ *   This function serves two purposes.  
+ *   1) It registers the address of a callback function that will be 
+ *   called for certs that have no OCSP AIA extension, to see if the 
+ *   callback wishes to supply an alternative URL for such an OCSP inquiry.
+ *   2) It outputs the previously registered function's address to the 
+ *   address supplied by the caller, unless that is NULL.
+ *   The registered callback function returns NULL, or an allocated string 
+ *   that may be subsequently freed by calling PORT_Free().
+ * RETURN:
+ *   SECSuccess or SECFailure (if the library is not yet intialized)
+ */
+extern SECStatus
+CERT_RegisterAlternateOCSPAIAInfoCallBack(
+			CERT_StringFromCertFcn   newCallback,
+			CERT_StringFromCertFcn * oldCallback);
+
+/*
+ * FUNCTION: CERT_ParseURL
+ *   Parse the URI of a OCSP responder into hostname, port, and path.
+ * INPUTS:
+ *   const char *location
+ *     The URI to be parsed
+ * OUTPUTS:
+ *   char *pHostname
+ *     Pointer to store the hostname obtained from the URI.
+ *     This result should be freed (via PORT_Free) when no longer in use.
+ *   PRUint16 *pPort
+ *     Pointer to store the port number obtained from the URI.
+ *   char *pPath
+ *     Pointer to store the path obtained from the URI.
+ *     This result should be freed (via PORT_Free) when no longer in use.
+ * RETURN:
+ *   Returns SECSuccess when parsing was successful. Anything else means
+ *   problems were encountered.
+ *     
+ */
+extern SECStatus
+CERT_ParseURL(const char *url, char **pHostname, PRUint16 *pPort, char **pPath);
+
+/*
  * FUNCTION: CERT_CheckOCSPStatus
  *   Checks the status of a certificate via OCSP.  Will only check status for
  *   a certificate that has an AIA (Authority Information Access) extension
@@ -458,7 +512,7 @@ CERT_GetOCSPAuthorityInfoAccessLocation(CERTCertificate *cert);
  *   XXX in the long term also need a boolean parameter that specifies
  *	whether to check the cert chain, as well; for now we check only
  *	the leaf (the specified certificate)
- *   int64 time
+ *   PRTime time
  *     time for which status is to be determined
  *   void *pwArg
  *     argument for password prompting, if needed
@@ -495,7 +549,7 @@ CERT_GetOCSPAuthorityInfoAccessLocation(CERTCertificate *cert);
  */    
 extern SECStatus 
 CERT_CheckOCSPStatus(CERTCertDBHandle *handle, CERTCertificate *cert,
-		     int64 time, void *pwArg);
+		     PRTime time, void *pwArg);
 /*
  * FUNCTION: CERT_GetOCSPStatusForCertID
  *  Returns the OCSP status contained in the passed in paramter response
@@ -510,7 +564,7 @@ CERT_CheckOCSPStatus(CERTCertDBHandle *handle, CERTCertificate *cert,
  *  CERTCertificate *signerCert
  *    the certificate that was used to sign the OCSP response.
  *    must be obtained via a call to CERT_VerifyOCSPResponseSignature.
- *  int64 time
+ *  PRTime time
  *    The time at which we're checking the status for.
  *  RETURN:
  *    Return values are the same as those for CERT_CheckOCSPStatus
@@ -520,7 +574,7 @@ CERT_GetOCSPStatusForCertID(CERTCertDBHandle *handle,
 			    CERTOCSPResponse *response,
 			    CERTOCSPCertID   *certID,
 			    CERTCertificate  *signerCert,
-                            int64             time);
+                            PRTime            time);
 
 /*
  * FUNCTION CERT_GetOCSPResponseStatus
@@ -548,7 +602,7 @@ CERT_GetOCSPResponseStatus(CERTOCSPResponse *response);
  * INPUTS:
  *  CERTCertificate *cert
  *    The certificate for which to create the certID for.
- *  int64 time
+ *  PRTime time
  *    The time at which the id is requested for.  This is used
  *    to determine the appropriate issuer for the cert since
  *    the issuing CA may be an older expired certificate.
@@ -558,7 +612,7 @@ CERT_GetOCSPResponseStatus(CERTOCSPResponse *response);
  *    certID is no longer necessary.
  */
 extern CERTOCSPCertID*
-CERT_CreateOCSPCertID(CERTCertificate *cert, int64 time);
+CERT_CreateOCSPCertID(CERTCertificate *cert, PRTime time);
 
 /*
  * FUNCTION: CERT_DestroyOCSPCertID

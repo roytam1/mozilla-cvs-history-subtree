@@ -36,7 +36,7 @@
 
 /*
 **
-** Sample client side test program that uses SSL and libsec
+** Sample client side test program that uses SSL and NSS
 **
 */
 
@@ -156,6 +156,8 @@ int main(int argc, char **argv)
 	    break;
 	}
     } while (cont);
+
+    PK11_FreeSlot(slot);
 
     if (NSS_Shutdown() != SECSuccess) {
         exit(1);

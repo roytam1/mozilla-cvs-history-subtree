@@ -313,6 +313,9 @@ components/pipnss.xpt
 components/libpippki.so
 components/pippki.xpt
 libnss3.so
+libnssutil3.so
+libnssdbm3.so
+libsqlite3.so
 libsmime3.so
 libsoftokn3.chk
 libsoftokn3.so

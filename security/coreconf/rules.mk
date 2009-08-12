@@ -60,10 +60,6 @@ ifeq (,$(filter-out _WIN%,$(NS_USE_GCC)_$(OS_TARGET)))
 USE_NT_C_SYNTAX=1
 endif
 
-ifdef XP_OS2_VACPP
-USE_NT_C_SYNTAX=1
-endif
-
 #
 # IMPORTS will always be associated with a component.  Therefore,
 # the "import" rule will always change directory to the top-level
@@ -274,13 +270,6 @@ alltags:
 	find . -name dist -prune -o \( -name '*.[hc]' -o -name '*.cp' -o -name '*.cpp' \) -print | xargs etags -a
 	find . -name dist -prune -o \( -name '*.[hc]' -o -name '*.cp' -o -name '*.cpp' \) -print | xargs ctags -a
 
-ifdef XP_OS2_VACPP
-# list of libs (such as -lnspr4) do not work for our compiler
-# change it to be $(DIST)/lib/nspr4.lib
-EXTRA_SHARED_LIBS := $(filter-out -L%,$(EXTRA_SHARED_LIBS))
-EXTRA_SHARED_LIBS := $(patsubst -l%,$(DIST)/lib/%.$(LIB_SUFFIX),$(EXTRA_SHARED_LIBS))
-endif
-
 $(PROGRAM): $(OBJS) $(EXTRA_LIBS)
 	@$(MAKE_OBJDIR)
 ifeq (,$(filter-out _WIN%,$(NS_USE_GCC)_$(OS_TARGET)))
@@ -292,11 +281,7 @@ ifdef MT
 	fi
 endif	# MSVC with manifest tool
 else
-ifdef XP_OS2_VACPP
-	$(MKPROG) -Fe$@ $(CFLAGS) $(OBJS) $(EXTRA_LIBS) $(EXTRA_SHARED_LIBS) $(OS_LIBS)
-else
 	$(MKPROG) -o $@ $(CFLAGS) $(OBJS) $(LDFLAGS) $(EXTRA_LIBS) $(EXTRA_SHARED_LIBS) $(OS_LIBS)
-endif
 endif
 
 get_objs:
@@ -353,8 +338,8 @@ ifdef MT
 endif	# MSVC with manifest tool
 endif
 else
-ifdef XP_OS2_VACPP
-	$(MKSHLIB) $(DLLFLAGS) $(LDFLAGS) $(OBJS) $(SUB_SHLOBJS) $(LD_LIBS) $(EXTRA_LIBS) $(EXTRA_SHARED_LIBS) $(OS_LIBS)
+ifeq ($(OS_TARGET),RISCOS)
+	$(MKSHLIB) $@ $(OBJS) $(SUB_SHLOBJS)
 else
 	$(MKSHLIB) -o $@ $(OBJS) $(SUB_SHLOBJS) $(LD_LIBS) $(EXTRA_LIBS) $(EXTRA_SHARED_LIBS) $(OS_LIBS)
 endif
@@ -454,21 +439,15 @@ else
 endif
 endif
 
-ifndef XP_OS2_VACPP
 ifneq (,$(filter-out _WIN%,$(NS_USE_GCC)_$(OS_TARGET)))
 $(OBJDIR)/$(PROG_PREFIX)%$(OBJ_SUFFIX): %.s
 	@$(MAKE_OBJDIR)
 	$(AS) -o $@ $(ASFLAGS) -c $<
 endif
-endif
 
 $(OBJDIR)/$(PROG_PREFIX)%$(OBJ_SUFFIX): %.asm
 	@$(MAKE_OBJDIR)
-ifdef XP_OS2_VACPP
-	$(AS) -Fdo:$(OBJDIR) $(ASFLAGS) $(subst /,\\,$<)
-else
 	$(AS) -Fo$@ $(ASFLAGS) -c $<
-endif
 
 $(OBJDIR)/$(PROG_PREFIX)%$(OBJ_SUFFIX): %.S
 	@$(MAKE_OBJDIR)
@@ -971,6 +950,29 @@ else
 depend::
 endif
 
+#
+# HACK ALERT
+#
+# The only purpose of this rule is to pass Mozilla's Tinderbox depend
+# builds (http://tinderbox.mozilla.org/showbuilds.cgi).  Mozilla's
+# Tinderbox builds NSS continuously as part of the Mozilla client.
+# Because NSS's make depend is not implemented, whenever we change
+# an NSS header file, the depend build does not recompile the NSS
+# files that depend on the header.
+#
+# This rule makes all the objects depend on a dummy header file.
+# Check in a change to this dummy header file to force the depend
+# build to recompile everything.
+#
+# This rule should be removed when make depend is implemented.
+#
+
+DUMMY_DEPEND = $(CORE_DEPTH)/coreconf/coreconf.dep
+
+$(filter $(OBJDIR)/%$(OBJ_SUFFIX),$(OBJS)): $(OBJDIR)/%$(OBJ_SUFFIX): $(DUMMY_DEPEND)
+
+# END OF HACK
+
 ################################################################################
 # Special gmake rules.
 ################################################################################
@@ -980,7 +982,7 @@ endif
 # hundreds of built-in suffix rules for stuff we don't need.
 #
 .SUFFIXES:
-.SUFFIXES: .out .a .ln .o .obj .c .cc .C .cpp .y .l .s .S .h .sh .i .pl .class .java .html .asm
+.SUFFIXES: .out .a .ln .o .obj .c .cc .C .cpp .y .l .s .S .h .sh .i .pl .class .java .html .asm .dep
 
 #
 # Don't delete these files if we get killed.

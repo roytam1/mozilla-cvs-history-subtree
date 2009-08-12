@@ -371,9 +371,14 @@ CreateCertRequest(TESTKeyPair *pair, long inRequestID)
     SECStatus                 rv;
     CRMFValidityCreationInfo  validity;
     unsigned char             UIDbuf[UID_BITS / BPB];
-    SECItem                   issuerUID  = { siBuffer, UIDbuf, UID_BITS };
-    SECItem                   subjectUID = { siBuffer, UIDbuf, UID_BITS };
-                                                               /* len in bits */
+    SECItem                   issuerUID  = { siBuffer, NULL, 0 };
+    SECItem                   subjectUID = { siBuffer, NULL, 0 };
+
+    /* len in bits */
+    issuerUID.data = UIDbuf;
+    issuerUID.len = UID_BITS;
+    subjectUID.data = UIDbuf;
+    subjectUID.len = UID_BITS;
 
     pair->certReq = NULL;
     certReq = CRMF_CreateCertRequest(inRequestID);
@@ -1328,7 +1333,7 @@ DoChallengeResponse(SECKEYPrivateKey *privKey,
 	    return 912;
 	}
 	if (retrieved != randomNums[i]) {
-	    printf ("Retrieved the number (%d), expected (%d)\n", retrieved,
+	    printf ("Retrieved the number (%ld), expected (%ld)\n", retrieved,
 		    randomNums[i]);
 	    return 913;
 	}
@@ -1434,7 +1439,6 @@ DestroyPairReqAndMsg(TESTKeyPair *pair)
 int
 DestroyPair(TESTKeyPair *pair)
 {
-    SECStatus rv  = SECSuccess;
     int       irv = 0;
 
     if (pair->pubKey) {
@@ -1493,6 +1497,7 @@ Usage (void)
 	    "\tcrmftest -d [Database Directory] -p [Personal Cert]\n"
 	    "\t         -e [Encrypter] -s [CA Certificate] [-P password]\n\n"
 	    "\t         [crmf] [dsa] [decode] [cmmf] [recover] [challenge]\n"
+	    "\t         [-f password_file]\n"
 	    "Database Directory\n"
 	    "\tThis is the directory where the key3.db, cert7.db, and\n"
 	    "\tsecmod.db files are located.  This is also the directory\n"
@@ -1554,6 +1559,7 @@ main(int argc, char **argv)
     PLOptState       *optstate;
     PLOptStatus       status;
     char             *password = NULL;
+    char             *pwfile = NULL;
     int               irv     = 0;
     PRUint32          flags   = 0;
     SECStatus         rv;
@@ -1566,7 +1572,7 @@ main(int argc, char **argv)
     memset( &signPair,  0, sizeof signPair);
     memset( &cryptPair, 0, sizeof cryptPair);
     printf ("\ncrmftest v1.0\n");
-    optstate = PL_CreateOptState(argc, argv, "d:p:e:s:P:");
+    optstate = PL_CreateOptState(argc, argv, "d:p:e:s:P:f:");
     while ((status = PL_GetNextOpt(optstate)) == PL_OPT_OK) {
 	switch (optstate->option) {
 	case 'd':
@@ -1608,8 +1614,19 @@ main(int argc, char **argv)
 	        printf ("-P  failed\n");
 	        return 606;
 	    }
+            pwdata.source = PW_PLAINTEXT;
+            pwdata.data = password;
 	    PArg = PR_TRUE;
 	    break;
+        case 'f':
+	    pwfile = PORT_Strdup(optstate->value);
+	    if (pwfile == NULL) {
+	        printf ("-f  failed\n");
+	        return 607;
+	    }
+            pwdata.source = PW_FROMFILE;
+            pwdata.data = pwfile;
+            break;
 	case 0:  /* positional parameter */
 	    rv = parsePositionalParam(optstate->value, &flags);
 	    if (rv) {
@@ -1631,10 +1648,6 @@ main(int argc, char **argv)
     	flags = ~ TEST_USE_DSA;
     db = CERT_GetDefaultCertDB();
     InitPKCS11();
-    if (password) {
-	pwdata.source = PW_PLAINTEXT;
-	pwdata.data = password;
-    }
 
     if (flags & TEST_MAKE_CRMF_REQ) {
 	printf("Generating CRMF request\n");

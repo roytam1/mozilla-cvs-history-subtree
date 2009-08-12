@@ -124,6 +124,8 @@ endif
 else
 include $(topsrcdir)/config/static-config.mk
 
+EXTRA_DSO_LIBS += sqlite3
+
 EXTRA_DEPS	+= \
 	$(STATIC_EXTRA_DEPS) \
 	$(NULL)

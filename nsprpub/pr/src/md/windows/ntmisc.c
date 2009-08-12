@@ -112,7 +112,7 @@ static int assembleCmdLine(char *const *argv, char **cmdLine)
 {
     char *const *arg;
     char *p, *q;
-    int cmdLineSize;
+    size_t cmdLineSize;
     int numBackslashes;
     int i;
     int argNeedQuotes;
@@ -133,7 +133,7 @@ static int assembleCmdLine(char *const *argv, char **cmdLine)
                 + 2                      /* we quote every argument */
                 + 1;                     /* space in between, or final null */
     }
-    p = *cmdLine = PR_MALLOC(cmdLineSize);
+    p = *cmdLine = PR_MALLOC((PRUint32) cmdLineSize);
     if (p == NULL) {
         return -1;
     }
@@ -147,8 +147,11 @@ static int assembleCmdLine(char *const *argv, char **cmdLine)
         numBackslashes = 0;
         argNeedQuotes = 0;
 
-        /* If the argument contains white space, it needs to be quoted. */
-        if (strpbrk(*arg, " \f\n\r\t\v")) {
+        /*
+         * If the argument is empty or contains white space, it needs to
+         * be quoted.
+         */
+        if (**arg == '\0' || strpbrk(*arg, " \f\n\r\t\v")) {
             argNeedQuotes = 1;
         }
 
@@ -226,7 +229,7 @@ static int assembleEnvBlock(char **envp, char **envBlock)
     char **env;
     char *curEnv;
     char *cwdStart, *cwdEnd;
-    int envBlockSize;
+    size_t envBlockSize;
 
     if (envp == NULL) {
         *envBlock = NULL;
@@ -261,7 +264,7 @@ static int assembleEnvBlock(char **envp, char **envBlock)
     }
     envBlockSize++;
 
-    p = *envBlock = PR_MALLOC(envBlockSize);
+    p = *envBlock = PR_MALLOC((PRUint32) envBlockSize);
     if (p == NULL) {
         FreeEnvironmentStrings(curEnv);
         return -1;
@@ -307,6 +310,7 @@ PRProcess * _PR_CreateWindowsProcess(
     char **newEnvp = NULL;
     const char *cwd = NULL; /* current working directory */
     PRProcess *proc = NULL;
+    PRBool hasFdInheritBuffer;
 
     proc = PR_NEW(PRProcess);
     if (!proc) {
@@ -323,33 +327,34 @@ PRProcess * _PR_CreateWindowsProcess(
      * If attr->fdInheritBuffer is not NULL, we need to insert
      * it into the envp array, so envp cannot be NULL.
      */
-    if ((envp == NULL) && attr && attr->fdInheritBuffer) {
+    hasFdInheritBuffer = (attr && attr->fdInheritBuffer);
+    if ((envp == NULL) && hasFdInheritBuffer) {
         envp = environ;
     }
 
     if (envp != NULL) {
         int idx;
         int numEnv;
-        int newEnvpSize;
+        PRBool found = PR_FALSE;
 
         numEnv = 0;
         while (envp[numEnv]) {
             numEnv++;
         }
-        newEnvpSize = numEnv + 1;  /* terminating null pointer */
-        if (attr && attr->fdInheritBuffer) {
-            newEnvpSize++;
-        }
-        newEnvp = (char **) PR_MALLOC(newEnvpSize * sizeof(char *));
+        newEnvp = (char **) PR_MALLOC((numEnv + 2) * sizeof(char *));
         for (idx = 0; idx < numEnv; idx++) {
             newEnvp[idx] = envp[idx];
+            if (hasFdInheritBuffer && !found
+                    && !strncmp(newEnvp[idx], "NSPR_INHERIT_FDS=", 17)) {
+                newEnvp[idx] = attr->fdInheritBuffer;
+                found = PR_TRUE;
+            }
         }
-        if (attr && attr->fdInheritBuffer) {
+        if (hasFdInheritBuffer && !found) {
             newEnvp[idx++] = attr->fdInheritBuffer;
         }
         newEnvp[idx] = NULL;
-        qsort((void *) newEnvp, (size_t) (newEnvpSize - 1),
-                sizeof(char *), compare);
+        qsort((void *) newEnvp, (size_t) idx, sizeof(char *), compare);
     }
     if (assembleEnvBlock(newEnvp, &envBlock) == -1) {
         PR_SetError(PR_OUT_OF_MEMORY_ERROR, 0);
@@ -583,7 +588,7 @@ PRStatus _MD_CreateFileMap(PRFileMap *fmap, PRInt64 size)
 {
     DWORD dwHi, dwLo;
     DWORD flProtect;
-    PRUint32    osfd;
+    PROsfd osfd;
 
     osfd = ( fmap->fd == (PRFileDesc*)-1 )?  -1 : fmap->fd->secret->md.osfd;
 
@@ -774,7 +779,7 @@ PR_StackPush(PRStack *stack, PRStackElem *stack_elem)
   if (*tos == (void *) -1)
     goto retry;
   
-  __asm__("lock xchg %0,%1"
+  __asm__("xchg %0,%1"
           : "=r" (tmp), "=m"(*tos)
           : "0" (-1), "m"(*tos));
   
@@ -815,7 +820,7 @@ PR_StackPop(PRStack *stack)
   if (*tos == (void *) -1)
     goto retry;
   
-  __asm__("lock xchg %0,%1"
+  __asm__("xchg %0,%1"
           : "=r" (tmp), "=m"(*tos)
           : "0" (-1), "m"(*tos));
 

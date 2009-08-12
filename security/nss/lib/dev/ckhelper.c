@@ -133,8 +133,8 @@ nssCKObject_GetAttributes (
 	/* Allocate memory for each attribute. */
 	for (i=0; i<count; i++) {
 	    CK_ULONG ulValueLen = obj_template[i].ulValueLen;
-	    if (ulValueLen == 0) continue;
-	    if (ulValueLen == (CK_ULONG) -1) {
+	    if (ulValueLen == 0 || ulValueLen == (CK_ULONG) -1) {
+		obj_template[i].pValue = NULL;
 		obj_template[i].ulValueLen = 0;
 		continue;
 	    }
@@ -568,7 +568,7 @@ NSS_IMPLEMENT PRStatus
 nssCryptokiPrivateKey_SetCertificate (
   nssCryptokiObject *keyObject,
   nssSession *sessionOpt,
-  NSSUTF8 *nickname,
+  const NSSUTF8 *nickname,
   NSSItem *id,
   NSSDER *subject
 )
@@ -592,18 +592,18 @@ nssCryptokiPrivateKey_SetCertificate (
     if (sessionOpt) {
 	if (!nssSession_IsReadWrite(sessionOpt)) {
 	    return PR_FAILURE;
-	}
+	} 
 	session = sessionOpt;
     } else if (defaultSession && nssSession_IsReadWrite(defaultSession)) {
 	session = defaultSession;
     } else {
 	NSSSlot *slot = nssToken_GetSlot(token);
 	session = nssSlot_CreateSession(token->slot, NULL, PR_TRUE);
+	nssSlot_Destroy(slot);
 	if (!session) {
 	    return PR_FAILURE;
 	}
 	createdSession = PR_TRUE;
-	nssSlot_Destroy(slot);
     }
 
     ckrv = CKAPI(epv)->C_SetAttributeValue(session->handle,

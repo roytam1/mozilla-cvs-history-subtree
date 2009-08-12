@@ -163,10 +163,6 @@ static void _pr_SetNativeThreadsOnlyMode(void)
 }
 #endif
 
-#if !defined(_PR_INET6) || defined(_PR_INET6_PROBE)
-extern PRStatus _pr_init_ipv6(void);
-#endif
-
 static void _PR_InitStuff(void)
 {
 
@@ -247,10 +243,6 @@ static void _PR_InitStuff(void)
 
     nspr_InitializePRErrorTable();
 
-#if !defined(_PR_INET6) || defined(_PR_INET6_PROBE)
-	_pr_init_ipv6();
-#endif
-	
     _PR_MD_FINAL_INIT();
 }
 
@@ -425,6 +417,8 @@ PR_IMPLEMENT(PRStatus) PR_Cleanup()
         _PR_CleanupDtoa();
         _PR_CleanupCallOnce();
 		_PR_ShutdownLinker();
+        _PR_CleanupNet();
+        _PR_CleanupIO();
         /* Release the primordial thread's private data, etc. */
         _PR_CleanupThread(me);
 
@@ -454,12 +448,11 @@ PR_IMPLEMENT(PRStatus) PR_Cleanup()
          * Ideally, for each _PR_InitXXX(), there should be a corresponding
          * _PR_XXXCleanup() that we can call here.
          */
-        _PR_CleanupNet();
-        _PR_CleanupIO();
 #ifdef WINNT
         _PR_CleanupCPUs();
 #endif
         _PR_CleanupThreads();
+        _PR_CleanupCMon();
         PR_DestroyLock(_pr_sleeplock);
         _pr_sleeplock = NULL;
         _PR_CleanupLayerCache();
@@ -589,8 +582,12 @@ PR_ProcessAttrSetInheritableFD(
 #define FD_INHERIT_BUFFER_INCR 128
     /* The length of "NSPR_INHERIT_FDS=" */
 #define NSPR_INHERIT_FDS_STRLEN 17
-    /* The length of osfd (PRInt32) printed in hexadecimal with 0x prefix */
+    /* The length of osfd (PROsfd) printed in hexadecimal with 0x prefix */
+#ifdef _WIN64
+#define OSFD_STRLEN 18
+#else
 #define OSFD_STRLEN 10
+#endif
     /* The length of fd type (PRDescType) printed in decimal */
 #define FD_TYPE_STRLEN 1
     PRSize newSize;
@@ -647,10 +644,10 @@ PR_ProcessAttrSetInheritableFD(
     freeSize = attr->fdInheritBufferSize - attr->fdInheritBufferUsed;
     if (0 == attr->fdInheritBufferUsed) {
         nwritten = PR_snprintf(cur, freeSize,
-                "NSPR_INHERIT_FDS=%s:%d:0x%lx",
+                "NSPR_INHERIT_FDS=%s:%d:0x%" PR_PRIxOSFD,
                 name, (PRIntn)fd->methods->file_type, fd->secret->md.osfd);
     } else {
-        nwritten = PR_snprintf(cur, freeSize, ":%s:%d:0x%lx",
+        nwritten = PR_snprintf(cur, freeSize, ":%s:%d:0x%" PR_PRIxOSFD,
                 name, (PRIntn)fd->methods->file_type, fd->secret->md.osfd);
     }
     attr->fdInheritBufferUsed += nwritten; 
@@ -664,7 +661,7 @@ PR_IMPLEMENT(PRFileDesc *) PR_GetInheritedFD(
     const char *envVar;
     const char *ptr;
     int len = strlen(name);
-    PRInt32 osfd;
+    PROsfd osfd;
     int nColons;
     PRIntn fileType;
 
@@ -678,7 +675,7 @@ PR_IMPLEMENT(PRFileDesc *) PR_GetInheritedFD(
     while (1) {
         if ((ptr[len] == ':') && (strncmp(ptr, name, len) == 0)) {
             ptr += len + 1;
-            PR_sscanf(ptr, "%d:0x%lx", &fileType, &osfd);
+            PR_sscanf(ptr, "%d:0x%" PR_SCNxOSFD, &fileType, &osfd);
             switch ((PRDescType)fileType) {
                 case PR_DESC_FILE:
                     fd = PR_ImportFile(osfd);
@@ -820,6 +817,10 @@ PR_IMPLEMENT(PRStatus) PR_CallOnce(
             }
 	    PR_Unlock(mod_init.ml);
 	}
+    } else {
+        if (PR_SUCCESS != once->status) {
+            PR_SetError(PR_CALL_ONCE_ERROR, 0);
+        }
     }
     return once->status;
 }
@@ -845,6 +846,10 @@ PR_IMPLEMENT(PRStatus) PR_CallOnceWithArg(
             }
 	    PR_Unlock(mod_init.ml);
 	}
+    } else {
+        if (PR_SUCCESS != once->status) {
+            PR_SetError(PR_CALL_ONCE_ERROR, 0);
+        }
     }
     return once->status;
 }

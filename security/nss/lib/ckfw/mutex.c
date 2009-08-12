@@ -111,15 +111,6 @@ nssCKFWMutex_verifyPointer
 
 #endif /* DEBUG */
 
-static CK_RV
-mutex_noop
-(
-  CK_VOID_PTR pMutex
-)
-{
-  return CKR_OK;
-}
-
 /*
  * nssCKFWMutex_Create
  *
@@ -136,7 +127,7 @@ nssCKFWMutex_Create
   NSSCKFWMutex *mutex;
   
   mutex = nss_ZNEW(arena, NSSCKFWMutex);
-  if( (NSSCKFWMutex *)NULL == mutex ) {
+  if (!mutex) {
     *pError = CKR_HOST_MEMORY;
     return (NSSCKFWMutex *)NULL;
   }

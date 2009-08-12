@@ -79,7 +79,7 @@ cert_init()
        . ../iopr/cert_iopr.sh
   fi
   SCRIPTNAME="cert.sh"
-  CRL_GRP_DATE=`date "+%Y%m%d%H%M%SZ"`
+  CRL_GRP_DATE=`date -u "+%Y%m%d%H%M%SZ"`
   if [ -n "$NSS_ENABLE_ECC" ] ; then
       html_head "Certutil and Crlutil Tests with ECC"
   else
@@ -90,46 +90,22 @@ cert_init()
 
   ROOTCERTSFILE=`ls -1 ${LIBDIR}/*nssckbi* | head -1`
   if [ ! "${ROOTCERTSFILE}" ] ; then
-      html_failed "<TR><TD>Looking for root certs module." 
+      html_failed "Looking for root certs module." 
       cert_log "ERROR: Root certs module not found."
       Exit 5 "Fatal - Root certs module not found."
   else
-      html_passed "<TR><TD>Looking for root certs module."
+      html_passed "Looking for root certs module."
   fi
 
   if [ "${OS_ARCH}" = "WINNT" -a "$OS_NAME" = "CYGWIN_NT" ]; then
 	ROOTCERTSFILE=`cygpath -m ${ROOTCERTSFILE}`
   fi
-
-
-  ################## Generate noise for our CA cert. ######################
-  # NOTE: these keys are only suitable for testing, as this whole thing 
-  # bypasses the entropy gathering. Don't use this method to generate 
-  # keys and certs for product use or deployment.
-  #
-  ps -efl > ${NOISE_FILE} 2>&1
-  ps aux >> ${NOISE_FILE} 2>&1
-  noise
-
 }
 
 cert_log() ######################    write the cert_status file
 {
     echo "$SCRIPTNAME $*"
     echo $* >>${CERT_LOG_FILE}
-}
-
-################################ noise ##################################
-# Generate noise for our certs
-#
-# NOTE: these keys are only suitable for testing, as this whole thing bypasses
-# the entropy gathering. Don't use this method to generate keys and certs for
-# product use or deployment.
-#########################################################################
-noise()
-{
-    #netstat >> ${NOISE_FILE} 2>&1
-    date >> ${NOISE_FILE} 2>&1
 }
 
 ################################ certu #################################
@@ -144,20 +120,20 @@ certu()
         #the subject of the cert contains blanks, and the shell 
         #will strip the quotes off the string, if called otherwise...
         echo "certutil -s \"${CU_SUBJECT}\" $*"
-        certutil -s "${CU_SUBJECT}" $*
+        ${PROFTOOL} ${BINDIR}/certutil -s "${CU_SUBJECT}" $*
         RET=$?
         CU_SUBJECT=""
     else
         echo "certutil $*"
-        certutil $*
+        ${PROFTOOL} ${BINDIR}/certutil $*
         RET=$?
     fi
     if [ "$RET" -ne 0 ]; then
         CERTFAILED=$RET
-        html_failed "<TR><TD>${CU_ACTION} ($RET) " 
+        html_failed "${CU_ACTION} ($RET) " 
         cert_log "ERROR: ${CU_ACTION} failed $RET"
     else
-        html_passed "<TR><TD>${CU_ACTION}"
+        html_passed "${CU_ACTION}"
     fi
 
     return $RET
@@ -173,14 +149,14 @@ crlu()
     
     CRLUTIL="crlutil -q"
     echo "$CRLUTIL $*"
-    $CRLUTIL $*
+    ${PROFTOOL} ${BINDIR}/$CRLUTIL $*
     RET=$?
     if [ "$RET" -ne 0 ]; then
         CRLFAILED=$RET
-        html_failed "<TR><TD>${CU_ACTION} ($RET) " 
+        html_failed "${CU_ACTION} ($RET) " 
         cert_log "ERROR: ${CU_ACTION} failed $RET"
     else
-        html_passed "<TR><TD>${CU_ACTION}"
+        html_passed "${CU_ACTION}"
     fi
 
     return $RET
@@ -193,14 +169,14 @@ modu()
     MODUTIL="modutil"
     echo "$MODUTIL $*"
     # echo is used to press Enter expected by modutil
-    echo | $MODUTIL $*
+    echo | ${BINDIR}/$MODUTIL $*
     RET=$?
     if [ "$RET" -ne 0 ]; then
         MODFAILED=$RET
-        html_failed "<TR><TD>${CU_ACTION} ($RET) " 
+        html_failed "${CU_ACTION} ($RET) " 
         cert_log "ERROR: ${CU_ACTION} failed $RET"
     else
-        html_passed "<TR><TD>${CU_ACTION}"
+        html_passed "${CU_ACTION}"
     fi
 
     return $RET
@@ -249,7 +225,7 @@ hw_acc()
 
         echo "modutil -add rainbow -libfile /usr/lib/libcryptoki22.so "
         echo "         -dbdir ${PROFILEDIR} 2>&1 "
-        echo | modutil -add rainbow -libfile /usr/lib/libcryptoki22.so \
+        echo | ${BINDIR}/modutil -add rainbow -libfile /usr/lib/libcryptoki22.so \
             -dbdir ${PROFILEDIR} 2>&1 
         if [ "$?" -ne 0 ]; then
             echo "modutil -add rainbow failed in `pwd`"
@@ -260,7 +236,7 @@ hw_acc()
         echo "modutil -add ncipher "
         echo "         -libfile /opt/nfast/toolkits/pkcs11/libcknfast.so "
         echo "         -dbdir ${PROFILEDIR} 2>&1 "
-        echo | modutil -add ncipher \
+        echo | ${BINDIR}/modutil -add ncipher \
             -libfile /opt/nfast/toolkits/pkcs11/libcknfast.so \
             -dbdir ${PROFILEDIR} 2>&1 
         if [ "$?" -ne 0 ]; then
@@ -269,9 +245,9 @@ hw_acc()
             HW_ACC_ERR="$HW_ACC_ERR,modutil -add ncipher"
         fi
         if [ "$HW_ACC_RET" -ne 0 ]; then
-            html_failed "<TR><TD>Adding HW accelerators to certDB for ${CERTNAME} ($HW_ACC_RET) " 
+            html_failed "Adding HW accelerators to certDB for ${CERTNAME} ($HW_ACC_RET) " 
         else
-            html_passed "<TR><TD>Adding HW accelerators to certDB for ${CERTNAME}"
+            html_passed "Adding HW accelerators to certDB for ${CERTNAME}"
         fi
 
     fi
@@ -931,10 +907,10 @@ cert_ssl()
   echo "             ${HOSTADDR} ------------------------------------"
   cert_create_cert ${SERVERDIR} "${HOSTADDR}" 100 ${D_SERVER}
   CU_ACTION="Modify trust attributes of Root CA -t TC,TC,TC"
-  certu -M -n "TestCA" -t "TC,TC,TC" -d ${PROFILEDIR}
+  certu -M -n "TestCA" -t "TC,TC,TC" -d ${PROFILEDIR} -f "${R_PWFILE}"
   if [ -n "$NSS_ENABLE_ECC" ] ; then
       CU_ACTION="Modify trust attributes of EC Root CA -t TC,TC,TC"
-      certu -M -n "TestCA-ec" -t "TC,TC,TC" -d ${PROFILEDIR}
+      certu -M -n "TestCA-ec" -t "TC,TC,TC" -d ${PROFILEDIR} -f "${R_PWFILE}"
   fi
 #  cert_init_cert ${SERVERDIR} "${HOSTADDR}" 1 ${D_SERVER}
 #  echo "************* Copying CA files to ${SERVERDIR}"
@@ -1008,15 +984,15 @@ cert_fips()
   echo "$SCRIPTNAME: Enable FIPS mode on database -----------------------"
   CU_ACTION="Enable FIPS mode on database for ${CERTNAME}"
   echo "modutil -dbdir ${PROFILEDIR} -fips true "
-  modutil -dbdir ${PROFILEDIR} -fips true 2>&1 <<MODSCRIPT
+  ${BINDIR}/modutil -dbdir ${PROFILEDIR} -fips true 2>&1 <<MODSCRIPT
 y
 MODSCRIPT
   RET=$?
   if [ "$RET" -ne 0 ]; then
-    html_failed "<TR><TD>${CU_ACTION} ($RET) " 
+    html_failed "${CU_ACTION} ($RET) " 
     cert_log "ERROR: ${CU_ACTION} failed $RET"
   else
-    html_passed "<TR><TD>${CU_ACTION}"
+    html_passed "${CU_ACTION}"
   fi
 
   CU_ACTION="Generate Certificate for ${CERTNAME}"
@@ -1096,79 +1072,91 @@ cert_eccurves()
 
   fi # if NSS_ENABLE_ECC=1
 }
-############################## cert_extensions ###############################
-# local shell function to test cert extensions generation.
+
+########################### cert_extensions_test #############################
+# local shell function to test cert extensions generation
 ##############################################################################
-
-checkRes()
+cert_extensions_test()
 {
-    res=$1
-    filterList=$2
-    
-    [ $res -ne 0 ] && return 1
+    COUNT=`expr ${COUNT} + 1`
+    CERTNAME=TestExt${COUNT}
+    CU_SUBJECT="CN=${CERTNAME}, E=${CERTNAME}@bogus.com, O=BOGUS NSS, L=Mountain View, ST=California, C=US"
 
-    for fl in `echo $filterList | tr \| ' '`; do
-        fl="`echo $fl | tr _ ' '`"
-        expStat=0
-        if [ X`echo "$fl" | cut -c 1` = 'X!' ]; then
-            expStat=1
-            fl=`echo $fl | tr -d '!'`
+    echo
+    echo certutil -d ${CERT_EXTENSIONS_DIR} -S -n ${CERTNAME} \
+        -t "u,u,u" -o /tmp/cert -s "${CU_SUBJECT}" -x -f ${R_PWFILE} \
+        -z "${R_NOISE_FILE}" -${OPT} \< ${TARG_FILE}
+    echo "certutil options:"
+    cat ${TARG_FILE}
+    ${BINDIR}/certutil -d ${CERT_EXTENSIONS_DIR} -S -n ${CERTNAME} \
+        -t "u,u,u" -o /tmp/cert -s "${CU_SUBJECT}" -x -f ${R_PWFILE} \
+        -z "${R_NOISE_FILE}" -${OPT} < ${TARG_FILE}
+    RET=$?
+    if [ "${RET}" -ne 0 ]; then
+        CERTFAILED=1
+        html_failed "${TESTNAME} (${COUNT}) - Create and Add Certificate" 
+        cert_log "ERROR: ${TESTNAME} - Create and Add Certificate failed" 
+        return 1
+    fi
+
+    echo certutil -d ${CERT_EXTENSIONS_DIR} -L -n ${CERTNAME} 
+    EXTLIST=`${BINDIR}/certutil -d ${CERT_EXTENSIONS_DIR} -L -n ${CERTNAME}`
+    RET=$?
+    echo "${EXTLIST}"
+    if [ "${RET}" -ne 0 ]; then
+        CERTFAILED=1
+        html_failed "${TESTNAME} (${COUNT}) - List Certificate" 
+        cert_log "ERROR: ${TESTNAME} - List Certificate failed" 
+        return 1
+    fi
+
+    for FL in `echo ${FILTERLIST} | tr \| ' '`; do
+        FL="`echo ${FL} | tr _ ' '`"
+        EXPSTAT=0
+        if [ X`echo "${FL}" | cut -c 1` = 'X!' ]; then
+            EXPSTAT=1
+            FL=`echo ${FL} | tr -d '!'`
         fi
-        certutil -d ${CERT_EXTENSIONS_DIR} -L -n $CERTNAME | grep "$fl" >/dev/null 2>&1
-        [ $? -ne $expStat ] && return 1
+        echo "${EXTLIST}" | grep "${FL}" >/dev/null 2>&1
+        RET=$?
+        if [ "${RET}" -ne "${EXPSTAT}" ]; then
+            CERTFAILED=1
+            html_failed "${TESTNAME} (${COUNT}) - Looking for ${FL}" "returned ${RET}, expected is ${EXPSTAT}" 
+            cert_log "ERROR: ${TESTNAME} - Looking for ${FL} failed"
+            return 1
+        fi
     done
+
+    html_passed "${TESTNAME} (${COUNT})"
     return 0
 }
 
-
+############################## cert_extensions ###############################
+# local shell function to run cert extensions tests
+##############################################################################
 cert_extensions()
 {
-
     CERTNAME=TestExt
-    cert_create_cert ${CERT_EXTENSIONS_DIR} $CERTNAME 90 ${D_CERT_EXTENSTIONS}
+    cert_create_cert ${CERT_EXTENSIONS_DIR} ${CERTNAME} 90 ${D_CERT_EXTENSTIONS}
     TARG_FILE=${CERT_EXTENSIONS_DIR}/test.args
 
-    CU_SUBJECT="CN=$CERTNAME, E=${CERTNAME}@bogus.com, O=BOGUS NSS, L=Mountain View, ST=California, C=US"
-
-    count=0
-    while read arg opt filterList; do
-        if [ X"`echo $arg | cut -c 1`" = "X#" ]; then
+    COUNT=0
+    while read ARG OPT FILTERLIST; do
+        if [ X"`echo ${ARG} | cut -c 1`" = "X#" ]; then
             continue
         fi
-        if [ X"`echo $arg | cut -c 1`" = "X!" ]; then
-            testName="$filterList"
+        if [ X"`echo ${ARG} | cut -c 1`" = "X!" ]; then
+            TESTNAME="${FILTERLIST}"
             continue
         fi
-        if [ X"$arg" = "X=" ]; then
-            count=`expr $count + 1`
-            echo "#################################################"
-            CU_ACTION="Testing $testName"
-            certutil -d ${CERT_EXTENSIONS_DIR} -D -n $CERTNAME
-            echo certutil -d ${CERT_EXTENSIONS_DIR} -S -n $CERTNAME \
-	        -t "u,u,u" -o /tmp/cert -s "${CU_SUBJECT}" -x -f ${R_PWFILE} \
-		-z "${R_NOISE_FILE}" -$opt < $TARG_FILE
-            certutil -d ${CERT_EXTENSIONS_DIR} -S -n $CERTNAME -t "u,u,u" \
-	        -o /tmp/cert -s "${CU_SUBJECT}" -x -f ${R_PWFILE} \
-		-z "${R_NOISE_FILE}" -$opt < $TARG_FILE
-            ret=$?  
-            echo "certutil options:"
-            cat $TARG_FILE
-            checkRes $ret "$filterList"
-            RET=$?
-            if [ "$RET" -ne 0 ]; then
-                CERTFAILED=$RET
-                html_failed "<TR><TD>${CU_ACTION} ($RET) " 
-                cert_log "ERROR: ${CU_ACTION} failed $RET"
-            else
-                html_passed "<TR><TD>${CU_ACTION}"
-            fi
-            rm -f $TARG_FILE
+        if [ X"${ARG}" = "X=" ]; then
+            cert_extensions_test
+            rm -f ${TARG_FILE}
         else
-            echo $arg >> $TARG_FILE
+            echo ${ARG} >> ${TARG_FILE}
         fi
     done < ${QADIR}/cert/certext.txt
 }
-
 
 ############################## cert_crl_ssl ############################
 # local shell function to generate certs and crls for SSL tests
@@ -1206,7 +1194,7 @@ cert_crl_ssl()
   CRL_FILE_GRP_1=${R_SERVERDIR}/root.crl_${CRL_GRP_1_BEGIN}-${CRL_GRP_END}
   CRL_FILE=${CRL_FILE_GRP_1}
   
-  CRLUPDATE=`date +%Y%m%d%H%M%SZ`
+  CRLUPDATE=`date -u "+%Y%m%d%H%M%SZ"`
   CU_ACTION="Generating CRL for range ${CRL_GRP_1_BEGIN}-${CRL_GRP_END} TestCA authority"
   CRL_GRP_END_=`expr ${CRL_GRP_END} - 1`
   crlu -d $CADIR -G -n "TestCA" -f ${R_PWFILE} \
@@ -1243,8 +1231,8 @@ EOF_CRLINI
 
   echo "$SCRIPTNAME: Modifying CA CRL by adding one more cert ============"
   sleep 2
-  CRLUPDATE=`date "+%Y%m%d%H%M%SZ"`
-  CRL_GRP_DATE=`date "+%Y%m%d%H%M%SZ"`
+  CRLUPDATE=`date -u "+%Y%m%d%H%M%SZ"`
+  CRL_GRP_DATE=`date -u "+%Y%m%d%H%M%SZ"`
   CU_ACTION="Modify CRL by adding one more cert"
   crlu -d $CADIR -M -n "TestCA" -f ${R_PWFILE} -o ${CRL_FILE_GRP_1}_or1 \
       -i ${CRL_FILE_GRP_1}_or <<EOF_CRLINI
@@ -1270,7 +1258,7 @@ EOF_CRLINI
   echo "$SCRIPTNAME: Modifying CA CRL by removing one cert ==============="
   CU_ACTION="Modify CRL by removing one cert"
   sleep 2
-  CRLUPDATE=`date "+%Y%m%d%H%M%SZ"`
+  CRLUPDATE=`date -u "+%Y%m%d%H%M%SZ"`
   crlu -d $CADIR -M -n "TestCA" -f ${R_PWFILE} -o ${CRL_FILE_GRP_1} \
       -i ${CRL_FILE_GRP_1}_or1 <<EOF_CRLINI
 update=$CRLUPDATE
@@ -1295,8 +1283,8 @@ EOF_CRLINI
 
   echo "$SCRIPTNAME: Creating CA CRL for groups 1 and 2  ==============="
   sleep 2
-  CRLUPDATE=`date "+%Y%m%d%H%M%SZ"`
-  CRL_GRP_DATE=`date "+%Y%m%d%H%M%SZ"`
+  CRLUPDATE=`date -u "+%Y%m%d%H%M%SZ"`
+  CRL_GRP_DATE=`date -u "+%Y%m%d%H%M%SZ"`
   CU_ACTION="Creating CRL for groups 1 and 2"
   crlu -d $CADIR -M -n "TestCA" -f ${R_PWFILE} -o ${CRL_FILE_GRP_2} \
           -i ${CRL_FILE_GRP_1} <<EOF_CRLINI
@@ -1324,10 +1312,12 @@ EOF_CRLINI
   CRL_GRP_END=`expr ${CRL_GRP_3_BEGIN} + ${CRL_GRP_3_RANGE} - 1`
   CRL_FILE_GRP_3=${R_SERVERDIR}/root.crl_${CRL_GRP_3_BEGIN}-${CRL_GRP_END}
 
+
+
   echo "$SCRIPTNAME: Creating CA CRL for groups 1, 2 and 3  ==============="
   sleep 2
-  CRLUPDATE=`date "+%Y%m%d%H%M%SZ"`
-  CRL_GRP_DATE=`date "+%Y%m%d%H%M%SZ"`
+  CRLUPDATE=`date -u "+%Y%m%d%H%M%SZ"`
+  CRL_GRP_DATE=`date -u "+%Y%m%d%H%M%SZ"`
   CU_ACTION="Creating CRL for groups 1, 2 and 3"
   crlu -d $CADIR -M -n "TestCA" -f ${R_PWFILE} -o ${CRL_FILE_GRP_3} \
             -i ${CRL_FILE_GRP_2} <<EOF_CRLINI
@@ -1373,6 +1363,34 @@ EOF_CRLINI
   fi
 }
 
+#################
+# Verify the we can successfully change the password on the database
+#
+cert_test_password()
+{
+  CERTFAILED=0
+  echo "$SCRIPTNAME: Create A Password Test Cert  =============="
+  cert_init_cert "${DBPASSDIR}" "Password Test Cert" 1000 "${D_DBPASSDIR}"
+
+  echo "$SCRIPTNAME: Create A Password Test Ca  --------"
+  ALL_CU_SUBJECT="CN=NSS Password Test CA, O=BOGUS NSS, L=Mountain View, ST=California, C=US"
+  cert_CA ${DBPASSDIR} PasswordCA -x "CTu,CTu,CTu" ${D_DBPASS} "1"
+
+  # now change the password
+  CU_ACTION="Changing password on ${CERTNAME}'s Cert DB"
+  certu -W -d "${PROFILEDIR}" -f "${R_PWFILE}" -@ "${R_FIPSPWFILE}" 2>&1
+
+  # finally make sure we can use the old key with the new password
+  CU_ACTION="Generate Certificate for ${CERTNAME} with new password"
+  CU_SUBJECT="CN=${CERTNAME}, E=password@bogus.com, O=BOGUS NSS, L=Mountain View, ST=California, C=US"
+  certu -S -n PasswordCert -c PasswordCA -t "u,u,u" -d "${PROFILEDIR}" -f "${R_FIPSPWFILE}" -z "${R_NOISE_FILE}" 2>&1
+  if [ "$RET" -eq 0 ]; then
+    cert_log "SUCCESS: PASSWORD passed"
+  fi
+  CU_ACTION="Verify Certificate for ${CERTNAME} with new password"
+  certu -V -n PasswordCert -u S -d "${PROFILEDIR}" -f "${R_FIPSPWFILE}" 2>&1
+}
+
 ############################## cert_cleanup ############################
 # local shell function to finish this script (no exit since it might be
 # sourced)
@@ -1395,6 +1413,7 @@ cert_smime_client
 cert_fips
 cert_eccurves
 cert_extensions
+cert_test_password
 
 if [ -z "$NSS_TEST_DISABLE_CRL" ] ; then
     cert_crl_ssl

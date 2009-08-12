@@ -329,10 +329,14 @@ mp_err  mpp_pprime(mp_int *a, int nt)
   /* Do the test nt times... */
   for(iter = 0; iter < nt; iter++) {
 
-    /* Choose a random value for x < a          */
+    /* Choose a random value for 1 < x < a      */
     s_mp_pad(&x, USED(a));
     mpp_random(&x);
     MP_CHECKOK( mp_mod(&x, a, &x) );
+    if(mp_cmp_d(&x, 1) <= 0) {
+      iter--;    /* don't count this iteration */
+      continue;  /* choose a new x */
+    }
 
     /* Compute z = (x ** m) mod a               */
     MP_CHECKOK( mp_exptmod(&x, &m, a, &z) );
@@ -429,11 +433,11 @@ mp_err mpp_make_prime(mp_int *start, mp_size nBits, mp_size strong,
   mp_size       num_tests;
   unsigned char *sieve;
   
-  sieve = malloc(SIEVE_SIZE);
-  ARGCHK(sieve != NULL, MP_MEM);
-
   ARGCHK(start != 0, MP_BADARG);
   ARGCHK(nBits > 16, MP_RANGE);
+
+  sieve = malloc(SIEVE_SIZE);
+  ARGCHK(sieve != NULL, MP_MEM);
 
   MP_DIGITS(&trial) = 0;
   MP_DIGITS(&q) = 0;

@@ -101,7 +101,7 @@ static void     nssRWLock_ReleaseLockStack(void *lock_stack);
  *
  */
 
-PR_IMPLEMENT(NSSRWLock *)
+NSSRWLock *
 NSSRWLock_New(PRUint32 lock_rank, const char *lock_name)
 {
     NSSRWLock *rwlock;
@@ -147,7 +147,7 @@ loser:
 /*
 ** Destroy the given RWLock "lock".
 */
-PR_IMPLEMENT(void)
+void
 NSSRWLock_Destroy(NSSRWLock *rwlock)
 {
     PR_ASSERT(rwlock != NULL);
@@ -166,45 +166,10 @@ NSSRWLock_Destroy(NSSRWLock *rwlock)
     PR_DELETE(rwlock);
 }
 
-/***********************************************************************
-**  Given the address of a NULL pointer to a NSSRWLock, 
-**  atomically initializes that pointer to a newly created NSSRWLock.
-**  Returns the value placed into that pointer, or NULL.
-**   If the lock cannot be created because of resource constraints, 
-**   the pointer will be left NULL.
-**  
-***********************************************************************/
-PR_IMPLEMENT(NSSRWLock *)
-nssRWLock_AtomicCreate( NSSRWLock  ** prwlock, 
-			PRUint32      lock_rank, 
-			const char *  lock_name)
-{
-    NSSRWLock  *    rwlock;
-    static PRInt32  initializers;
-
-    PR_ASSERT(prwlock != NULL);
-
-    /* atomically initialize the lock */
-    while (NULL == (rwlock = *prwlock)) {
-        PRInt32 myAttempt = PR_AtomicIncrement(&initializers);
-        if (myAttempt == 1) {
-            if (NULL == (rwlock = *prwlock)) {
-                *prwlock = rwlock = NSSRWLock_New(lock_rank, lock_name);
-            }
-            (void) PR_AtomicDecrement(&initializers);
-            break;
-        }
-        PR_Sleep(PR_INTERVAL_NO_WAIT);          /* PR_Yield() */
-        (void) PR_AtomicDecrement(&initializers);
-    }
-
-    return rwlock;
-}
-
 /*
 ** Read-lock the RWLock.
 */
-PR_IMPLEMENT(void)
+void
 NSSRWLock_LockRead(NSSRWLock *rwlock)
 {
     PRThread *me = PR_GetCurrentThread();
@@ -242,7 +207,7 @@ NSSRWLock_LockRead(NSSRWLock *rwlock)
 
 /* Unlock a Read lock held on this RW lock.
 */
-PR_IMPLEMENT(void)
+void
 NSSRWLock_UnlockRead(NSSRWLock *rwlock)
 {
     PZ_Lock(rwlock->rw_lock);
@@ -271,7 +236,7 @@ NSSRWLock_UnlockRead(NSSRWLock *rwlock)
 /*
 ** Write-lock the RWLock.
 */
-PR_IMPLEMENT(void)
+void
 NSSRWLock_LockWrite(NSSRWLock *rwlock)
 {
     PRThread *me = PR_GetCurrentThread();
@@ -321,7 +286,7 @@ NSSRWLock_LockWrite(NSSRWLock *rwlock)
 
 /* Unlock a Read lock held on this RW lock.
 */
-PR_IMPLEMENT(void)
+void
 NSSRWLock_UnlockWrite(NSSRWLock *rwlock)
 {
     PRThread *me = PR_GetCurrentThread();
@@ -356,7 +321,7 @@ NSSRWLock_UnlockWrite(NSSRWLock *rwlock)
 }
 
 /* This is primarily for debugging, i.e. for inclusion in ASSERT calls. */
-PR_IMPLEMENT(PRBool)
+PRBool
 NSSRWLock_HaveWriteLock(NSSRWLock *rwlock) {
     PRBool ownWriteLock;
     PRThread *me = PR_GetCurrentThread();

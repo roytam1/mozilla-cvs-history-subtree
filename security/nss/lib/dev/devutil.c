@@ -148,9 +148,7 @@ nssSlotArray_Clone (
     if (count > 0) {
 	rvSlots = nss_ZNEWARRAY(NULL, NSSSlot *, count + 1);
 	if (rvSlots) {
-	    sp = slots;
-	    count = 0;
-	    for (sp = slots; *sp; sp++) {
+	    for (sp = slots, count = 0; *sp; sp++) {
 		rvSlots[count++] = nssSlot_AddRef(*sp);
 	    }
 	}
@@ -376,7 +374,7 @@ create_object (
 )
 {
     PRUint32 j;
-    NSSArena *arena;
+    NSSArena *arena = NULL;
     NSSSlot *slot = NULL;
     nssSession *session = NULL;
     nssCryptokiObjectAndAttributes *rvCachedObject = NULL;
@@ -423,9 +421,8 @@ create_object (
     }
     rvCachedObject->numAttributes = numTypes;
     *status = PR_SUCCESS;
-    if (slot) {
-	nssSlot_Destroy(slot);
-    }
+    nssSlot_Destroy(slot);
+
     return rvCachedObject;
 loser:
     *status = PR_FAILURE;
@@ -634,6 +631,8 @@ get_token_objects_for_cache (
 	    nssToken_AddRef(cache->objects[objectType][j]->object->token);
 	    nssArena_Destroy(cache->objects[objectType][j]->arena);
 	}
+	nss_ZFreeIf(cache->objects[objectType]);
+	cache->objects[objectType] = NULL;
 	nssCryptokiObjectArray_Destroy(objects);
     }
     cache->searchedObjectType[objectType] = PR_TRUE;

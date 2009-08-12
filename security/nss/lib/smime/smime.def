@@ -263,6 +263,13 @@ SEC_PKCS7EncodeItem;
 ;+    global:
 SEC_PKCS12DecoderIterateInit;
 SEC_PKCS12DecoderIterateNext;
+SEC_PKCS12DecryptionAllowed;
+;+    local:
+;+       *;
+;+};
+;+NSS_3.12.2 {   # NSS 3.12.2 release
+;+    global:
+SEC_PKCS12AddCertOrChainAndKey;
 ;+    local:
 ;+       *;
 ;+};

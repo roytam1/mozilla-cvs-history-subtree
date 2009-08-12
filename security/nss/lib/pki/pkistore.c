@@ -60,6 +60,8 @@ static const char CVS_ID[] = "@(#) $RCSfile$ $Revision$ $Date$";
 
 #include "cert.h"
 
+#include "prbit.h"
+
 /* 
  * Certificate Store
  *
@@ -352,7 +354,7 @@ nssCertificateStore_Lock (
 
 NSS_IMPLEMENT void
 nssCertificateStore_Unlock (
-  nssCertificateStore *store, nssCertificateStoreTrace* in,
+  nssCertificateStore *store, const nssCertificateStoreTrace* in,
   nssCertificateStoreTrace* out
 )
 {
@@ -361,11 +363,13 @@ nssCertificateStore_Unlock (
     PORT_Assert(out);
     out->store = store;
     out->lock = store->lock;
+    PORT_Assert(!out->locked);
     out->unlocked = PR_TRUE;
 
     PORT_Assert(in->store == out->store);
     PORT_Assert(in->lock == out->lock);
     PORT_Assert(in->locked);
+    PORT_Assert(!in->unlocked);
 
     PZ_Unlock(out->lock);
 #else
@@ -462,7 +466,7 @@ static void match_nickname(const void *k, void *v, void *a)
 NSS_IMPLEMENT NSSCertificate **
 nssCertificateStore_FindCertificatesByNickname (
   nssCertificateStore *store,
-  NSSUTF8 *nickname,
+  const NSSUTF8 *nickname,
   NSSCertificate *rvOpt[],
   PRUint32 maximumOpt,
   NSSArena *arenaOpt
@@ -470,7 +474,7 @@ nssCertificateStore_FindCertificatesByNickname (
 {
     NSSCertificate **rvArray = NULL;
     struct nickname_template_str nt;
-    nt.nickname = nickname;
+    nt.nickname = (char*) nickname;
     nt.subjectList = NULL;
     PZ_Lock(store->lock);
     nssHash_Iterate(store->subject, match_nickname, &nt);
@@ -719,9 +723,9 @@ nss_certificate_hash (
     NSSCertificate *c = (NSSCertificate *)key;
     h = 0;
     for (i=0; i<c->issuer.size; i++)
-	h = (h >> 28) ^ (h << 4) ^ ((unsigned char *)c->issuer.data)[i];
+	h = PR_ROTATE_LEFT32(h, 4) ^ ((unsigned char *)c->issuer.data)[i];
     for (i=0; i<c->serial.size; i++)
-	h = (h >> 28) ^ (h << 4) ^ ((unsigned char *)c->serial.data)[i];
+	h = PR_ROTATE_LEFT32(h, 4) ^ ((unsigned char *)c->serial.data)[i];
     return h;
 }
 

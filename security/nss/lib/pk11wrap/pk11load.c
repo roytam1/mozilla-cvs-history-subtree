@@ -37,6 +37,7 @@
  * The following handles the loading, unloading and management of
  * various PCKS #11 modules
  */
+#define FORCE_PR_LOG 1
 #include "seccomon.h"
 #include "pkcs11.h"
 #include "secmod.h"
@@ -48,13 +49,7 @@
 #include "secerr.h"
 #include "prenv.h"
 
-extern void FC_GetFunctionList(void);
-extern void NSC_GetFunctionList(void);
-extern void NSC_ModuleDBFunc(void);
-
-#ifdef DEBUG
 #define DEBUG_MODULE 1
-#endif
 
 #ifdef DEBUG_MODULE
 static char *modToDBG = NULL;
@@ -222,6 +217,43 @@ SECMOD_SetRootCerts(PK11SlotInfo *slot, SECMODModule *mod) {
     }
 }
 
+static const char* NameOfThisSharedLib =
+    SHLIB_PREFIX"nss"SHLIB_VERSION"."SHLIB_SUFFIX;
+static const char* softoken_default_name =
+    SHLIB_PREFIX"softokn"SOFTOKEN_SHLIB_VERSION"."SHLIB_SUFFIX;
+static const PRCallOnceType pristineCallOnce;
+static PRCallOnceType loadSoftokenOnce;
+static PRLibrary* softokenLib;
+static PRInt32 softokenLoadCount;
+
+#include "prio.h"
+#include "prprf.h"
+#include <stdio.h>
+#include "prsystem.h"
+
+#include "../freebl/genload.c"
+
+/* This function must be run only once. */
+/*  determine if hybrid platform, then actually load the DSO. */
+static PRStatus
+softoken_LoadDSO( void ) 
+{
+  PRLibrary *  handle;
+  const char * name = softoken_default_name;
+
+  if (!name) {
+    PR_SetError(PR_LOAD_LIBRARY_ERROR, 0);
+    return PR_FAILURE;
+  }
+
+  handle = loader_LoadLibrary(name);
+  if (handle) {
+    softokenLib = handle;
+    return PR_SUCCESS;
+  }
+  return PR_FAILURE;
+}
+
 /*
  * load a new module into our address space and initialize it.
  */
@@ -240,19 +272,36 @@ SECMOD_LoadPKCS11Module(SECMODModule *mod) {
 
     /* intenal modules get loaded from their internal list */
     if (mod->internal) {
-	/* internal, statically get the C_GetFunctionList function */
-	if (mod->isFIPS) {
-	    entry = (CK_C_GetFunctionList) FC_GetFunctionList;
-	} else {
-	    entry = (CK_C_GetFunctionList) NSC_GetFunctionList;
-	}
-	if (mod->isModuleDB) {
-	    mod->moduleDBFunc = (void *) NSC_ModuleDBFunc;
-	}
-	if (mod->moduleDBOnly) {
-	    mod->loaded = PR_TRUE;
-	    return SECSuccess;
-	}
+    /*
+     * Loads softoken as a dynamic library,
+     * even though the rest of NSS assumes this as the "internal" module.
+     */
+    if (!softokenLib && 
+        PR_SUCCESS != PR_CallOnce(&loadSoftokenOnce, &softoken_LoadDSO))
+        return SECFailure;
+
+    PR_AtomicIncrement(&softokenLoadCount);
+
+    if (mod->isFIPS) {
+        entry = (CK_C_GetFunctionList) 
+                    PR_FindSymbol(softokenLib, "FC_GetFunctionList");
+    } else {
+        entry = (CK_C_GetFunctionList) 
+                    PR_FindSymbol(softokenLib, "NSC_GetFunctionList");
+    }
+
+    if (!entry)
+        return SECFailure;
+
+    if (mod->isModuleDB) {
+        mod->moduleDBFunc = (CK_C_GetFunctionList) 
+                    PR_FindSymbol(softokenLib, "NSC_ModuleDBFunc");
+    }
+
+    if (mod->moduleDBOnly) {
+        mod->loaded = PR_TRUE;
+        return SECSuccess;
+    }
     } else {
 	/* Not internal, load the DLL and look up C_GetFunctionList */
 	if (mod->dllName == NULL) {
@@ -274,7 +323,12 @@ SECMOD_LoadPKCS11Module(SECMODModule *mod) {
 	 */
 	library = PR_LoadLibrary(full_name);
 	mod->library = (void *)library;
+#ifdef notdef
+	PR_FreeLibraryName(full_name);
+#else
 	PORT_Free(full_name);
+#endif
+
 	if (library == NULL) {
 	    return SECFailure;
 	}
@@ -415,6 +469,17 @@ SECMOD_UnloadModule(SECMODModule *mod) {
      * if not, we should change this to SECFailure and move it above the
      * mod->loaded = PR_FALSE; */
     if (mod->internal) {
+        if (0 == PR_AtomicDecrement(&softokenLoadCount)) {
+          if (softokenLib) {
+              disableUnload = PR_GetEnv("NSS_DISABLE_UNLOAD");
+              if (!disableUnload) {
+                  PRStatus status = PR_UnloadLibrary(softokenLib);
+                  PORT_Assert(PR_SUCCESS == status);
+              }
+              softokenLib = NULL;
+          }
+          loadSoftokenOnce = pristineCallOnce;
+        }
 	return SECSuccess;
     }
 

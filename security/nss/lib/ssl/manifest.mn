@@ -38,11 +38,6 @@ CORE_DEPTH = ../../..
 
 # DEFINES = -DTRACE
 
-PRIVATE_EXPORTS = \
-	ssl3prot.h \
-	sslimpl.h \
-	$(NULL)
-
 EXPORTS = \
 	ssl.h \
 	sslt.h \
@@ -64,6 +59,7 @@ CSRCS = \
 	ssldef.c \
 	sslenum.c \
 	sslerr.c \
+	ssl3ext.c \
 	sslgathr.c \
 	sslmutex.c \
 	sslnonce.c \
@@ -80,10 +76,8 @@ CSRCS = \
 	ssl3ecc.c \
 	$(NULL)
 
-ifdef NSS_ENABLE_ECC
-DEFINES += -DNSS_ENABLE_ECC
-endif
-
 LIBRARY_NAME = ssl
 LIBRARY_VERSION = 3
 
+# This part of the code, including all sub-dirs, can be optimized for size
+export ALLOW_OPT_CODE_SIZE = 1

@@ -268,25 +268,29 @@ nssCKMDSessionObject_Create
   CK_ULONG i;
   nssCKFWHash *hash;
 
+  *pError = CKR_OK;
+
   mdso = nss_ZNEW(arena, nssCKMDSessionObject);
-  if( (nssCKMDSessionObject *)NULL == mdso ) {
+  if (!mdso) {
     goto loser;
   }
 
   mdso->arena = arena;
   mdso->n = ulCount;
   mdso->attributes = nss_ZNEWARRAY(arena, NSSItem, ulCount);
-  if( (NSSItem *)NULL == mdso->attributes ) {
+  if (!mdso->attributes) {
     goto loser;
   }
 
   mdso->types = nss_ZNEWARRAY(arena, CK_ATTRIBUTE_TYPE, ulCount);
-
+  if (!mdso->types) {
+    goto loser;
+  }
   for( i = 0; i < ulCount; i++ ) {
     mdso->types[i] = attributes[i].type;
     mdso->attributes[i].size = attributes[i].ulValueLen;
     mdso->attributes[i].data = nss_ZAlloc(arena, attributes[i].ulValueLen);
-    if( (void *)NULL == mdso->attributes[i].data ) {
+    if (!mdso->attributes[i].data) {
       goto loser;
     }
     (void)nsslibc_memcpy(mdso->attributes[i].data, attributes[i].pValue,
@@ -294,7 +298,7 @@ nssCKMDSessionObject_Create
   }
 
   mdObject = nss_ZNEW(arena, NSSCKMDObject);
-  if( (NSSCKMDObject *)NULL == mdObject ) {
+  if (!mdObject) {
     goto loser;
   }
 
@@ -310,7 +314,7 @@ nssCKMDSessionObject_Create
   mdObject->GetObjectSize = nss_ckmdSessionObject_GetObjectSize;
 
   hash = nssCKFWToken_GetSessionObjectHash(fwToken);
-  if( (nssCKFWHash *)NULL == hash ) {
+  if (!hash) {
     *pError = CKR_GENERAL_ERROR;
     goto loser;
   }
@@ -323,30 +327,29 @@ nssCKMDSessionObject_Create
   }
 
 #ifdef DEBUG
-  if( CKR_OK != nss_ckmdSessionObject_add_pointer(mdObject) ) {
+  if(( *pError = nss_ckmdSessionObject_add_pointer(mdObject)) != CKR_OK ) {
     goto loser;
   }
 #endif /* DEBUG */
 
-  *pError = CKR_OK;
   return mdObject;
 
  loser:
-  if( (nssCKMDSessionObject *)NULL != mdso ) {
-    if( (NSSItem *)NULL != mdso->attributes ) {
+  if (mdso) {
+    if (mdso->attributes) {
       for( i = 0; i < ulCount; i++ ) {
         nss_ZFreeIf(mdso->attributes[i].data);
       }
-
       nss_ZFreeIf(mdso->attributes);
     }
-
     nss_ZFreeIf(mdso->types);
     nss_ZFreeIf(mdso);
   }
 
   nss_ZFreeIf(mdObject);
-  *pError = CKR_HOST_MEMORY;
+  if (*pError == CKR_OK) {
+      *pError = CKR_HOST_MEMORY;
+  }
   return (NSSCKMDObject *)NULL;
 }
 
@@ -472,7 +475,7 @@ nss_ckmdSessionObject_GetAttributeCount
   nssCKMDSessionObject *obj;
 
 #ifdef NSSDEBUG
-  if( (CK_RV *)NULL == pError ) {
+  if (!pError) {
     return 0;
   }
 
@@ -557,7 +560,7 @@ nss_ckmdSessionObject_GetAttributeSize
   CK_ULONG i;
 
 #ifdef NSSDEBUG
-  if( (CK_RV *)NULL == pError ) {
+  if (!pError) {
     return 0;
   }
 
@@ -607,7 +610,7 @@ nss_ckmdSessionObject_GetAttribute
   item.needsFreeing = PR_FALSE;
   item.item = NULL;
 #ifdef NSSDEBUG
-  if( (CK_RV *)NULL == pError ) {
+  if (!pError) {
     return item;
   }
 
@@ -681,7 +684,7 @@ nss_ckmdSessionObject_SetAttribute
 
   n.size = value->size;
   n.data = nss_ZAlloc(obj->arena, n.size);
-  if( (void *)NULL == n.data ) {
+  if (!n.data) {
     return CKR_HOST_MEMORY;
   }
   (void)nsslibc_memcpy(n.data, value->data, n.size);
@@ -699,7 +702,7 @@ nss_ckmdSessionObject_SetAttribute
    */
 
   ra = (NSSItem *)nss_ZRealloc(obj->attributes, sizeof(NSSItem) * (obj->n + 1));
-  if( (NSSItem *)NULL == ra ) {
+  if (!ra) {
     nss_ZFreeIf(n.data);
     return CKR_HOST_MEMORY;
   }
@@ -708,7 +711,7 @@ nss_ckmdSessionObject_SetAttribute
   if( (CK_ATTRIBUTE_TYPE_PTR)NULL == rt ) {
     nss_ZFreeIf(n.data);
     obj->attributes = (NSSItem *)nss_ZRealloc(ra, sizeof(NSSItem) * obj->n);
-    if( (NSSItem *)NULL == obj->attributes ) {
+    if (!obj->attributes) {
       return CKR_GENERAL_ERROR;
     }
     return CKR_HOST_MEMORY;
@@ -746,7 +749,7 @@ nss_ckmdSessionObject_GetObjectSize
   CK_ULONG rv = (CK_ULONG)0;
 
 #ifdef NSSDEBUG
-  if( (CK_RV *)NULL == pError ) {
+  if (!pError) {
     return 0;
   }
 
@@ -964,7 +967,7 @@ nssCKMDFindSessionObjects_Create
   NSSCKMDFindObjects *rv;
 
 #ifdef NSSDEBUG
-  if( (CK_RV *)NULL == pError ) {
+  if (!pError) {
     return (NSSCKMDFindObjects *)NULL;
   }
 
@@ -979,26 +982,29 @@ nssCKMDFindSessionObjects_Create
   }
 #endif /* NSSDEBUG */
 
+  *pError = CKR_OK;
+
   hash = nssCKFWToken_GetSessionObjectHash(fwToken);
-  if( (nssCKFWHash *)NULL == hash ) {
+  if (!hash) {
     *pError= CKR_GENERAL_ERROR;
     return (NSSCKMDFindObjects *)NULL;
   }
 
   arena = NSSArena_Create();
-  if( (NSSArena *)NULL == arena ) {
+  if (!arena) {
     *pError = CKR_HOST_MEMORY;
     return (NSSCKMDFindObjects *)NULL;
   }
 
   mdfso = nss_ZNEW(arena, nssCKMDFindSessionObjects);
-  if( (nssCKMDFindSessionObjects *)NULL == mdfso ) {
-    NSSArena_Destroy(arena);
-    *pError = CKR_HOST_MEMORY;
-    return (NSSCKMDFindObjects *)NULL;
+  if (!mdfso) {
+    goto loser;
   }
 
   rv = nss_ZNEW(arena, NSSCKMDFindObjects);
+  if(rv == NULL) {
+    goto loser;
+  }
 
   mdfso->error = CKR_OK;
   mdfso->pTemplate = pTemplate;
@@ -1008,9 +1014,7 @@ nssCKMDFindSessionObjects_Create
   nssCKFWHash_Iterate(hash, findfcn, mdfso);
 
   if( CKR_OK != mdfso->error ) {
-    NSSArena_Destroy(arena);
-    *pError = CKR_HOST_MEMORY;
-    return (NSSCKMDFindObjects *)NULL;
+    goto loser;
   }
 
   rv->etc = (void *)mdfso;
@@ -1019,13 +1023,21 @@ nssCKMDFindSessionObjects_Create
 
 #ifdef DEBUG
   if( (*pError = nss_ckmdFindSessionObjects_add_pointer(rv)) != CKR_OK ) {
-    NSSArena_Destroy(arena);
-    return (NSSCKMDFindObjects *)NULL;
+    goto loser;
   }
 #endif /* DEBUG */    
   mdfso->arena = arena;
 
   return rv;
+
+loser:
+  if (arena) {
+    NSSArena_Destroy(arena);
+  }
+  if (*pError == CKR_OK) {
+      *pError = CKR_HOST_MEMORY;
+  }
+  return NULL;
 }
 
 static void
@@ -1085,7 +1097,7 @@ nss_ckmdFindSessionObjects_Next
 
   mdfso = (nssCKMDFindSessionObjects *)mdFindObjects->etc;
 
-  while( (NSSCKMDObject *)NULL == rv ) {
+  while (!rv) {
     if( (struct nodeStr *)NULL == mdfso->list ) {
       *pError = CKR_OK;
       return (NSSCKMDObject *)NULL;

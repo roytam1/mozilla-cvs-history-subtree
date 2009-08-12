@@ -121,7 +121,9 @@ struct CachedCrlStr {
     PreAllocator* prebuffer; /* big pre-allocated buffer mentioned above */
     PRBool sigChecked; /* this CRL signature has already been checked */
     PRBool sigValid; /* signature verification status .
-                     Only meaningful if checked is PR_TRUE . */
+                        Only meaningful if checked is PR_TRUE . */
+    PRBool unbuildable; /* Avoid using assosiated CRL is it fails
+                         * a decoding step */
 };
 
 /*  CRL distribution point cache object
@@ -243,9 +245,75 @@ cert_FindDERCertBySubjectKeyID(SECItem *subjKeyID);
 /* return maximum length of AVA value based on its type OID tag. */
 extern int cert_AVAOidTagToMaxLen(SECOidTag tag);
 
+/* Make an AVA, allocated from pool, from OID and DER encoded value */
+extern CERTAVA * CERT_CreateAVAFromRaw(PRArenaPool *pool, 
+                               const SECItem * OID, const SECItem * value);
+
+/* Make an AVA from binary input specified by SECItem */
+extern CERTAVA * CERT_CreateAVAFromSECItem(PRArenaPool *arena, SECOidTag kind, 
+                                           int valueType, SECItem *value);
+
+/*
+ * get a DPCache object for the given issuer subject and dp
+ * Automatically creates the cache object if it doesn't exist yet.
+ */
+SECStatus AcquireDPCache(CERTCertificate* issuer, SECItem* subject,
+                         SECItem* dp, int64 t, void* wincx,
+                         CRLDPCache** dpcache, PRBool* writeLocked);
+
+/* check if a particular SN is in the CRL cache and return its entry */
+SECStatus DPCache_Lookup(CRLDPCache* cache, SECItem* sn,
+                         CERTCrlEntry** returned);
+
+/* release a DPCache object that was previously acquired */
+void ReleaseDPCache(CRLDPCache* dpcache, PRBool writeLocked);
+
+/* this function assumes the caller holds a lock on the DPCache */
+SECStatus DPCache_GetAllCRLs(CRLDPCache* dpc, PRArenaPool* arena,
+                             CERTSignedCrl*** crls, PRUint16* status);
+
+/* this function assumes the caller holds a lock on the DPCache */
+SECStatus DPCache_GetCRLEntry(CRLDPCache* cache, PRBool readlocked,
+                              CERTSignedCrl* crl, SECItem* sn,
+                              CERTCrlEntry** returned);
+
+/*
+ * map Stan errors into NSS errors
+ * This function examines the stan error stack and automatically sets
+ * PORT_SetError(); to the appropriate SEC_ERROR value.
+ */
+void CERT_MapStanError();
+
+/* Interface function for libpkix cert validation engine:
+ * cert_verify wrapper. */
+SECStatus
+cert_VerifyCertChainPkix(CERTCertificate *cert,
+                         PRBool checkSig,
+                         SECCertUsage     requiredUsage,
+                         PRTime           time,
+                         void            *wincx,
+                         CERTVerifyLog   *log,
+                         PRBool          *sigError,
+                         PRBool          *revoked);
+
 SECStatus cert_InitLocks(void);
 
 SECStatus cert_DestroyLocks(void);
+
+/*
+ * fill in nsCertType field of the cert based on the cert extension
+ */
+extern SECStatus cert_GetCertType(CERTCertificate *cert);
+
+/*
+ * compute and return the value of nsCertType for cert, but do not 
+ * update the CERTCertificate.
+ */
+extern PRUint32 cert_ComputeCertType(CERTCertificate *cert);
+
+void cert_AddToVerifyLog(CERTVerifyLog *log,CERTCertificate *cert,
+                         unsigned long errorCode, unsigned int depth,
+                         void *arg);
 
 #endif /* _CERTI_H_ */
 

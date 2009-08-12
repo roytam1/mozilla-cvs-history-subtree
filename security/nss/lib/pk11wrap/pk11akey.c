@@ -59,8 +59,40 @@
 #include "secpkcs5.h"  
 #include "ec.h"
 
+static SECItem *
+pk11_MakeIDFromPublicKey(SECKEYPublicKey *pubKey)
+{
+    /* set the ID to the public key so we can find it again */
+    SECItem *pubKeyIndex =  NULL;
+    switch (pubKey->keyType) {
+    case rsaKey:
+      pubKeyIndex = &pubKey->u.rsa.modulus;
+      break;
+    case dsaKey:
+      pubKeyIndex = &pubKey->u.dsa.publicValue;
+      break;
+    case dhKey:
+      pubKeyIndex = &pubKey->u.dh.publicValue;
+      break;      
+    case ecKey:
+      pubKeyIndex = &pubKey->u.ec.publicValue;
+      break;      
+    default:
+      return NULL;
+    }
+    PORT_Assert(pubKeyIndex != NULL);
+
+    return PK11_MakeIDFromPubKey(pubKeyIndex);
+} 
+
 /*
  * import a public key into the desired slot
+ *
+ * This function takes a public key structure and creates a public key in a 
+ * given slot. If isToken is set, then a persistant public key is created.
+ *
+ * Note: it is possible for this function to return a handle for a key which
+ * is persistant, even if isToken is not set.
  */
 CK_OBJECT_HANDLE
 PK11_ImportPublicKey(PK11SlotInfo *slot, SECKEYPublicKey *pubKey, 
@@ -71,9 +103,11 @@ PK11_ImportPublicKey(PK11SlotInfo *slot, SECKEYPublicKey *pubKey,
     CK_OBJECT_CLASS keyClass = CKO_PUBLIC_KEY;
     CK_KEY_TYPE keyType = CKK_GENERIC_SECRET;
     CK_OBJECT_HANDLE objectID;
-    CK_ATTRIBUTE theTemplate[10];
+    CK_ATTRIBUTE theTemplate[11];
     CK_ATTRIBUTE *signedattr = NULL;
     CK_ATTRIBUTE *attrs = theTemplate;
+    SECItem *ckaId = NULL;
+    SECItem *pubValue = NULL;
     int signedcount = 0;
     int templateCount = 0;
     SECStatus rv;
@@ -86,10 +120,12 @@ PK11_ImportPublicKey(PK11SlotInfo *slot, SECKEYPublicKey *pubKey,
     /* free the existing key */
     if (pubKey->pkcs11Slot != NULL) {
 	PK11SlotInfo *oSlot = pubKey->pkcs11Slot;
-	PK11_EnterSlotMonitor(oSlot);
-	(void) PK11_GETTAB(oSlot)->C_DestroyObject(oSlot->session,
+	if (!PK11_IsPermObject(pubKey->pkcs11Slot,pubKey->pkcs11ID)) {
+	    PK11_EnterSlotMonitor(oSlot);
+	    (void) PK11_GETTAB(oSlot)->C_DestroyObject(oSlot->session,
 							pubKey->pkcs11ID);
-	PK11_ExitSlotMonitor(oSlot);
+	    PK11_ExitSlotMonitor(oSlot);
+	}
 	PK11_FreeSlot(oSlot);
 	pubKey->pkcs11Slot = NULL;
     }
@@ -97,6 +133,14 @@ PK11_ImportPublicKey(PK11SlotInfo *slot, SECKEYPublicKey *pubKey,
     PK11_SETATTRS(attrs, CKA_KEY_TYPE, &keyType, sizeof(keyType) ); attrs++;
     PK11_SETATTRS(attrs, CKA_TOKEN, isToken ? &cktrue : &ckfalse,
 						 sizeof(CK_BBOOL) ); attrs++;
+    if (isToken) {
+	ckaId = pk11_MakeIDFromPublicKey(pubKey);
+	if (ckaId == NULL) {
+	    PORT_SetError( SEC_ERROR_BAD_KEY );
+	    return CK_INVALID_HANDLE;
+	}
+	PK11_SETATTRS(attrs, CKA_ID, ckaId->data, ckaId->len); attrs++;
+    }
 
     /* now import the key */
     {
@@ -160,8 +204,23 @@ PK11_ImportPublicKey(PK11SlotInfo *slot, SECKEYPublicKey *pubKey,
 	    PK11_SETATTRS(attrs, CKA_EC_PARAMS, 
 		          pubKey->u.ec.DEREncodedParams.data,
 		          pubKey->u.ec.DEREncodedParams.len); attrs++;
-	    PK11_SETATTRS(attrs, CKA_EC_POINT, pubKey->u.ec.publicValue.data,
+	    if (PR_GetEnv("NSS_USE_DECODED_CKA_EC_POINT")) {
+	    	PK11_SETATTRS(attrs, CKA_EC_POINT, 
+			  pubKey->u.ec.publicValue.data,
 			  pubKey->u.ec.publicValue.len); attrs++;
+	    } else {
+		pubValue = SEC_ASN1EncodeItem(NULL, NULL,
+			&pubKey->u.ec.publicValue,
+			SEC_ASN1_GET(SEC_OctetStringTemplate));
+		if (pubValue == NULL) {
+		    if (ckaId) {
+			SECITEM_FreeItem(ckaId,PR_TRUE);
+		    }
+		    return CK_INVALID_HANDLE;
+		}
+	    	PK11_SETATTRS(attrs, CKA_EC_POINT, 
+			  pubValue->data, pubValue->len); attrs++;
+	    }
 	    break;
 	default:
 	    PORT_SetError( SEC_ERROR_BAD_KEY );
@@ -176,6 +235,12 @@ PK11_ImportPublicKey(PK11SlotInfo *slot, SECKEYPublicKey *pubKey,
 	} 
         rv = PK11_CreateNewObject(slot, CK_INVALID_SESSION, theTemplate,
 				 	templateCount, isToken, &objectID);
+	if (ckaId) {
+	    SECITEM_FreeItem(ckaId,PR_TRUE);
+	}
+	if (pubValue) {
+	    SECITEM_FreeItem(pubValue,PR_TRUE);
+	}
 	if ( rv != SECSuccess) {
 	    return CK_INVALID_HANDLE;
 	}
@@ -191,7 +256,7 @@ PK11_ImportPublicKey(PK11SlotInfo *slot, SECKEYPublicKey *pubKey,
  * take an attribute and copy it into a secitem
  */
 static CK_RV
-pk11_Attr2SecItem(PRArenaPool *arena, CK_ATTRIBUTE *attr, SECItem *item) 
+pk11_Attr2SecItem(PRArenaPool *arena, const CK_ATTRIBUTE *attr, SECItem *item) 
 {
     item->data = NULL;
 
@@ -201,6 +266,309 @@ pk11_Attr2SecItem(PRArenaPool *arena, CK_ATTRIBUTE *attr, SECItem *item)
     } 
     PORT_Memcpy(item->data, attr->pValue, item->len);
     return CKR_OK;
+}
+
+
+/*
+ * get a curve length from a set of ecParams.
+ * 
+ * We need this so we can reliably determine if a the ecPoint passed to us
+ * was encoded or not. With out this, for many curves, we would incorrectly
+ * identify an unencoded curve as an encoded curve 1 in 65536 times, and for
+ * a few we would make that same mistake 1 in 32768 times. These are bad 
+ * numbers since they are rare enough to pass tests, but common enough to
+ * be tripped over in the field. 
+ *
+ * This function will only work for curves we recognized as of March 2009.
+ * The assumption is curves in use after March of 2009 would be supplied by
+ * PKCS #11 modules that already pass the correct encoding to us.
+ *
+ * Point length = (Roundup(curveLenInBits/8)*2+1)
+ */
+static int
+pk11_get_EC_PointLenInBytes(PRArenaPool *arena, const SECItem *ecParams)
+{
+   SECItem oid;
+   SECOidTag tag;
+   SECStatus rv;
+
+   /* decode the OID tag */
+   rv = SEC_QuickDERDecodeItem(arena, &oid,
+		SEC_ASN1_GET(SEC_ObjectIDTemplate), ecParams);
+   if (rv != SECSuccess) {
+	/* could be explict curves, allow them to work if the 
+	 * PKCS #11 module support them. If we try to parse the
+	 * explicit curve value in the future, we may return -1 here
+	 * to indicate an invalid parameter if the explicit curve
+	 * decode fails. */
+	return 0;
+   }
+
+   tag = SECOID_FindOIDTag(&oid);
+   switch (tag) {
+    case SEC_OID_SECG_EC_SECP112R1:
+    case SEC_OID_SECG_EC_SECP112R2:
+	return 29; /* curve len in bytes = 14 bytes */
+    case SEC_OID_SECG_EC_SECT113R1:
+    case SEC_OID_SECG_EC_SECT113R2:
+	return 31; /* curve len in bytes = 15 bytes */
+    case SEC_OID_SECG_EC_SECP128R1:
+    case SEC_OID_SECG_EC_SECP128R2:
+	return 33; /* curve len in bytes = 16 bytes */
+    case SEC_OID_SECG_EC_SECT131R1:
+    case SEC_OID_SECG_EC_SECT131R2:
+	return 35; /* curve len in bytes = 17 bytes */
+    case SEC_OID_SECG_EC_SECP160K1:
+    case SEC_OID_SECG_EC_SECP160R1:
+    case SEC_OID_SECG_EC_SECP160R2:
+	return 41; /* curve len in bytes = 20 bytes */
+    case SEC_OID_SECG_EC_SECT163K1:
+    case SEC_OID_SECG_EC_SECT163R1:
+    case SEC_OID_SECG_EC_SECT163R2:
+    case SEC_OID_ANSIX962_EC_C2PNB163V1:
+    case SEC_OID_ANSIX962_EC_C2PNB163V2:
+    case SEC_OID_ANSIX962_EC_C2PNB163V3:
+	return 43; /* curve len in bytes = 21 bytes */
+    case SEC_OID_ANSIX962_EC_C2PNB176V1:
+	return 45; /* curve len in bytes = 22 bytes */
+    case SEC_OID_ANSIX962_EC_C2TNB191V1:
+    case SEC_OID_ANSIX962_EC_C2TNB191V2:
+    case SEC_OID_ANSIX962_EC_C2TNB191V3:
+    case SEC_OID_SECG_EC_SECP192K1:
+    case SEC_OID_ANSIX962_EC_PRIME192V1:
+    case SEC_OID_ANSIX962_EC_PRIME192V2:
+    case SEC_OID_ANSIX962_EC_PRIME192V3:
+	return 49; /*curve len in bytes = 24 bytes */
+    case SEC_OID_SECG_EC_SECT193R1:
+    case SEC_OID_SECG_EC_SECT193R2:
+	return 51; /*curve len in bytes = 25 bytes */
+    case SEC_OID_ANSIX962_EC_C2PNB208W1:
+	return 53; /*curve len in bytes = 26 bytes */
+    case SEC_OID_SECG_EC_SECP224K1:
+    case SEC_OID_SECG_EC_SECP224R1:
+	return 57; /*curve len in bytes = 28 bytes */
+    case SEC_OID_SECG_EC_SECT233K1:
+    case SEC_OID_SECG_EC_SECT233R1:
+    case SEC_OID_SECG_EC_SECT239K1:
+    case SEC_OID_ANSIX962_EC_PRIME239V1:
+    case SEC_OID_ANSIX962_EC_PRIME239V2:
+    case SEC_OID_ANSIX962_EC_PRIME239V3:
+    case SEC_OID_ANSIX962_EC_C2TNB239V1:
+    case SEC_OID_ANSIX962_EC_C2TNB239V2:
+    case SEC_OID_ANSIX962_EC_C2TNB239V3:
+	return 61; /*curve len in bytes = 30 bytes */
+    case SEC_OID_ANSIX962_EC_PRIME256V1:
+    case SEC_OID_SECG_EC_SECP256K1:
+	return 65; /*curve len in bytes = 32 bytes */
+    case SEC_OID_ANSIX962_EC_C2PNB272W1:
+	return 69; /*curve len in bytes = 34 bytes */
+    case SEC_OID_SECG_EC_SECT283K1:
+    case SEC_OID_SECG_EC_SECT283R1:
+	return 73; /*curve len in bytes = 36 bytes */
+    case SEC_OID_ANSIX962_EC_C2PNB304W1:
+	return 77; /*curve len in bytes = 38 bytes */
+    case SEC_OID_ANSIX962_EC_C2TNB359V1:
+	return 91; /*curve len in bytes = 45 bytes */
+    case SEC_OID_ANSIX962_EC_C2PNB368W1:
+	return 93; /*curve len in bytes = 46 bytes */
+    case SEC_OID_SECG_EC_SECP384R1:
+	return 97; /*curve len in bytes = 48 bytes */
+    case SEC_OID_SECG_EC_SECT409K1:
+    case SEC_OID_SECG_EC_SECT409R1:
+	return 105; /*curve len in bytes = 52 bytes */
+    case SEC_OID_ANSIX962_EC_C2TNB431R1:
+	return 109; /*curve len in bytes = 54 bytes */
+    case SEC_OID_SECG_EC_SECP521R1:
+	return 133; /*curve len in bytes = 66 bytes */
+    case SEC_OID_SECG_EC_SECT571K1:
+    case SEC_OID_SECG_EC_SECT571R1:
+	return 145; /*curve len in bytes = 72 bytes */
+    /* unknown or unrecognized OIDs. return unknown length */
+    default:
+	break;
+   }
+   return 0;
+}
+
+/*
+ * returns the decoded point. In some cases the point may already be decoded.
+ * this function tries to detect those cases and return the point in 
+ * publicKeyValue. In other cases it's DER encoded. In those cases the point
+ * is first decoded and returned. Space for the point is allocated out of 
+ * the passed in arena.
+ */
+static CK_RV
+pk11_get_Decoded_ECPoint(PRArenaPool *arena, const SECItem *ecParams, 
+	const CK_ATTRIBUTE *ecPoint, SECItem *publicKeyValue)
+{
+    SECItem encodedPublicValue;
+    SECStatus rv;
+    int keyLen;
+
+    if (ecPoint->ulValueLen == 0) {
+	return CKR_ATTRIBUTE_VALUE_INVALID;
+    }
+
+    /*
+     * The PKCS #11 spec requires ecPoints to be encoded as a DER OCTET String.
+     * NSS has mistakenly passed unencoded values, and some PKCS #11 vendors
+     * followed that mistake. Now we need to detect which encoding we were
+     * passed in. The task is made more complicated by the fact the the
+     * DER encoding byte (SEC_ASN_OCTET_STRING) is the same as the 
+     * EC_POINT_FORM_UNCOMPRESSED byte (0x04), so we can't use that to
+     * determine which curve we are using.
+     */
+
+    /* get the expected key length for the passed in curve.
+     * pk11_get_EC_PointLenInBytes only returns valid values for curves
+     * NSS has traditionally recognized. If the curve is not recognized,
+     * it will return '0', and we have to figure out if the key was
+     * encoded or not heuristically. If the ecParams are invalid, it
+     * will return -1 for the keyLen.
+     */
+    keyLen = pk11_get_EC_PointLenInBytes(arena, ecParams);
+    if (keyLen < 0) {
+	return CKR_ATTRIBUTE_VALUE_INVALID;
+    }
+
+
+    /* If the point is uncompressed and the lengths match, it
+     * must be an unencoded point */
+    if ((*((char *)ecPoint->pValue) == EC_POINT_FORM_UNCOMPRESSED) 
+	&& (ecPoint->ulValueLen == keyLen)) {
+	    return pk11_Attr2SecItem(arena, ecPoint, publicKeyValue);
+    }
+
+    /* now assume the key passed to us was encoded and decode it */
+    if (*((char *)ecPoint->pValue) == SEC_ASN1_OCTET_STRING) {
+	/* OK, now let's try to decode it and see if it's valid */
+	encodedPublicValue.data = ecPoint->pValue;
+	encodedPublicValue.len = ecPoint->ulValueLen;
+	rv = SEC_QuickDERDecodeItem(arena, publicKeyValue,
+		SEC_ASN1_GET(SEC_OctetStringTemplate), &encodedPublicValue);
+
+	/* it coded correctly & we know the key length (and they match)
+	 * then we are done, return the results. */
+        if (keyLen && rv == SECSuccess && publicKeyValue->len == keyLen) {
+	    return CKR_OK;
+	}
+
+	/* if we know the key length, one of the above tests should have
+	 * succeded. If it doesn't the module gave us bad data */
+	if (keyLen) {
+	    return CKR_ATTRIBUTE_VALUE_INVALID;
+	}
+		
+
+	/* We don't know the key length, so we don't know deterministically
+	 * which encoding was used. We now will try to pick the most likely 
+	 * form that's correct, with a preference for the encoded form if we
+	 * can't determine for sure. We do this by checking the key we got
+	 * back from SEC_QuickDERDecodeItem for defects. If no defects are
+	 * found, we assume the encoded paramter was was passed to us.
+	 * our defect tests include:
+	 *   1) it didn't decode.
+	 *   2) The decode key had an invalid length (must be odd).
+	 *   3) The decoded key wasn't an UNCOMPRESSED key.
+	 *   4) The decoded key didn't include the entire encoded block
+	 *   except the DER encoding values. (fixing DER length to one
+	 *   particular value).
+	 */
+	if ((rv != SECSuccess)
+	    || ((publicKeyValue->len & 1) != 1)
+	    || (publicKeyValue->data[0] != EC_POINT_FORM_UNCOMPRESSED)
+	    || (PORT_Memcmp(&encodedPublicValue.data[encodedPublicValue.len -
+		 	    publicKeyValue->len], publicKeyValue->data, 
+			    publicKeyValue->len) != 0)) {
+	    /* The decoded public key was flawed, the original key must have
+	     * already been in decoded form. Do a quick sanity check then 
+	     * return the original key value.
+	     */
+	    if ((encodedPublicValue.len & 1) == 0) {
+		return CKR_ATTRIBUTE_VALUE_INVALID;
+	    }
+	    return pk11_Attr2SecItem(arena, ecPoint, publicKeyValue);
+	}
+
+	/* as best we can figure, the passed in key was encoded, and we've
+	 * now decoded it. Note: there is a chance this could be wrong if the 
+	 * following conditions hold:
+	 *  1) The first byte or bytes of the X point looks like a valid length
+	 * of precisely the right size (2*curveSize -1). this means for curves
+	 * less than 512 bits (64 bytes), this will happen 1 in 256 times*.
+	 * for curves between 512 and 1024, this will happen 1 in 65,536 times*
+	 * for curves between 1024 and 256K this will happen 1 in 16 million*
+	 *  2) The length of the 'DER length field' is odd 
+	 * (making both the encoded and decode
+	 * values an odd length. this is true of all curves less than 512,
+	 * as well as curves between 1024 and 256K).
+	 *  3) The X[length of the 'DER length field'] == 0x04, 1 in 256.
+	 *
+	 *  (* assuming all values are equally likely in the first byte, 
+	 * This isn't true if the curve length is not a multiple of 8. In these
+	 * cases, if the DER length is possible, it's more likely, 
+	 * if it's not possible, then we have no false decodes).
+	 * 
+	 * For reference here are the odds for the various curves we currently
+	 * have support for (and the only curves SSL will negotiate at this
+	 * time). NOTE: None of the supported curves will show up here 
+	 * because we return a valid length for all of these curves. 
+	 * The only way to get here is to have some application (not SSL) 
+	 * which supports some unknown curve and have some vendor supplied 
+	 * PKCS #11 module support that curve. NOTE: in this case, one 
+	 * presumes that that pkcs #11 module is likely to be using the 
+	 * correct encodings.
+	 *
+	 * Prime Curves (GFp):
+	 *   Bit	False	    Odds of 
+	 *  Size	DER Len	 False Decode Positive
+	 *  112 	27	   1 in 65536 
+	 *  128 	31	   1 in 65536 
+	 *  160 	39	   1 in 65536 
+	 *  192 	47	   1 in 65536 
+	 *  224 	55	   1 in 65536 
+	 *  239 	59	   1 in 32768 (top byte can only be 0-127)
+	 *  256 	63	   1 in 65536 
+	 *  521 	129,131	     0        (decoded value would be even)
+	 *
+	 * Binary curves (GF2m).
+	 *   Bit	False	    Odds of 
+	 *  Size	DER Len	 False Decode Positive
+	 *  131 	33	     0        (top byte can only be 0-7)
+	 *  163 	41	     0        (top byte can only be 0-7)
+	 *  176 	43	   1 in 65536 
+	 *  191 	47	   1 in 32768 (top byte can only be 0-127)
+	 *  193 	49	     0        (top byte can only be 0-1)
+	 *  208 	51	   1 in 65536 
+	 *  233 	59	     0        (top byte can only be 0-1)
+	 *  239 	59	   1 in 32768 (top byte can only be 0-127)
+	 *  272 	67	   1 in 65536 
+	 *  283 	71	     0        (top byte can only be 0-7)
+	 *  304 	75	   1 in 65536 
+	 *  359 	89	   1 in 32768 (top byte can only be 0-127)
+	 *  368 	91	   1 in 65536 
+	 *  409 	103	     0        (top byte can only be 0-1)
+	 *  431 	107	   1 in 32768 (top byte can only be 0-127)
+	 *  571 	129,143	     0        (decoded value would be even)
+	 *
+	 */
+
+	return CKR_OK;
+    }
+
+    /* In theory, we should handle the case where the curve == 0 and
+     * the first byte is EC_POINT_FORM_UNCOMPRESSED, (which would be
+     * handled by doing a santity check on the key length and returning
+     * pk11_Attr2SecItem() to copy the ecPoint to the publicKeyValue).
+     *
+     * This test is unnecessary, however, due to the fact that 
+     * EC_POINT_FORM_UNCOMPRESSED == SEC_ASIN1_OCTET_STRING, that case is
+     * handled in the above if. That means if we get here, the initial
+     * byte of our ecPoint value was invalid, so we can safely return.
+     * invalid attribute.
+     */
+	
+    return CKR_ATTRIBUTE_VALUE_INVALID;
 }
 
 /*
@@ -353,7 +721,7 @@ PK11_ExtractPublicKey(PK11SlotInfo *slot,KeyType keyType,CK_OBJECT_HANDLE id)
 	PK11_SETATTRS(attrs, CKA_EC_POINT, NULL, 0); attrs++; 
 	templateCount = attrs - template;
 	PR_ASSERT(templateCount <= sizeof(template)/sizeof(CK_ATTRIBUTE));
-	crv = PK11_GetAttributes(tmp_arena,slot,id,template,templateCount);
+	crv = PK11_GetAttributes(arena,slot,id,template,templateCount);
 	if (crv != CKR_OK) break;
 
 	if ((keyClass != CKO_PUBLIC_KEY) || (pk11KeyType != CKK_EC)) {
@@ -364,8 +732,9 @@ PK11_ExtractPublicKey(PK11SlotInfo *slot,KeyType keyType,CK_OBJECT_HANDLE id)
 	crv = pk11_Attr2SecItem(arena,ecparams,
 	                        &pubKey->u.ec.DEREncodedParams);
 	if (crv != CKR_OK) break;
-	crv = pk11_Attr2SecItem(arena,value,&pubKey->u.ec.publicValue);
-	if (crv != CKR_OK) break;
+	crv = pk11_get_Decoded_ECPoint(arena,
+		 &pubKey->u.ec.DEREncodedParams, value, 
+		 &pubKey->u.ec.publicValue);
 	break;
     case fortezzaKey:
     case nullKey:
@@ -510,11 +879,9 @@ pk11_loadPrivKeyWithFlags(PK11SlotInfo *slot,SECKEYPrivateKey *privKey,
 	{ CKA_CLASS, NULL, 0 },
 	{ CKA_KEY_TYPE, NULL, 0 },
 	{ CKA_ID, NULL, 0 },
-#ifdef notdef
-	{ CKA_LABEL, NULL, 0 },
-	{ CKA_SUBJECT, NULL, 0 },
-#endif
-	/* RSA */
+	/* RSA - the attributes below will be replaced for other 
+	 *       key types.
+	 */
 	{ CKA_MODULUS, NULL, 0 },
 	{ CKA_PRIVATE_EXPONENT, NULL, 0 },
 	{ CKA_PUBLIC_EXPONENT, NULL, 0 },
@@ -523,6 +890,11 @@ pk11_loadPrivKeyWithFlags(PK11SlotInfo *slot,SECKEYPrivateKey *privKey,
 	{ CKA_EXPONENT_1, NULL, 0 },
 	{ CKA_EXPONENT_2, NULL, 0 },
 	{ CKA_COEFFICIENT, NULL, 0 },
+	{ CKA_DECRYPT, NULL, 0 },
+	{ CKA_DERIVE, NULL, 0 },
+	{ CKA_SIGN, NULL, 0 },
+	{ CKA_SIGN_RECOVER, NULL, 0 },
+	{ CKA_UNWRAP, NULL, 0 },
 	/* reserve space for the attributes that may be
 	 * specified in attrFlags */
 	{ CKA_TOKEN, NULL, 0 },
@@ -574,15 +946,19 @@ pk11_loadPrivKeyWithFlags(PK11SlotInfo *slot,SECKEYPrivateKey *privKey,
 	ap->type = CKA_SUBPRIME; ap++; count++; extra_count++;
 	ap->type = CKA_BASE; ap++; count++; extra_count++;
 	ap->type = CKA_VALUE; ap++; count++; extra_count++;
+	ap->type = CKA_SIGN; ap++; count++; extra_count++;
 	break;
     case dhKey:
 	ap->type = CKA_PRIME; ap++; count++; extra_count++;
 	ap->type = CKA_BASE; ap++; count++; extra_count++;
 	ap->type = CKA_VALUE; ap++; count++; extra_count++;
+	ap->type = CKA_DERIVE; ap++; count++; extra_count++;
 	break;
     case ecKey:
 	ap->type = CKA_EC_PARAMS; ap++; count++; extra_count++;
 	ap->type = CKA_VALUE; ap++; count++; extra_count++;
+	ap->type = CKA_DERIVE; ap++; count++; extra_count++;
+	ap->type = CKA_SIGN; ap++; count++; extra_count++;
 	break;
      default:
 	count = 0;
@@ -674,8 +1050,9 @@ PK11_LoadPrivKey(PK11SlotInfo *slot,SECKEYPrivateKey *privKey,
  * Use the token to generate a key pair.
  */
 SECKEYPrivateKey *
-PK11_GenerateKeyPairWithFlags(PK11SlotInfo *slot,CK_MECHANISM_TYPE type, 
-   void *param, SECKEYPublicKey **pubKey, PK11AttrFlags attrFlags, void *wincx)
+PK11_GenerateKeyPairWithOpFlags(PK11SlotInfo *slot,CK_MECHANISM_TYPE type, 
+   void *param, SECKEYPublicKey **pubKey, PK11AttrFlags attrFlags, 
+   CK_FLAGS opFlags, CK_FLAGS opFlagsMask, void *wincx)
 {
     /* we have to use these native types because when we call PKCS 11 modules
      * we have to make sure that we are using the correct sizes for all the
@@ -749,7 +1126,8 @@ PK11_GenerateKeyPairWithFlags(PK11SlotInfo *slot,CK_MECHANISM_TYPE type,
     SECKEYPQGParams *dsaParams;
     SECKEYDHParams * dhParams;
     CK_MECHANISM mechanism;
-    CK_MECHANISM test_mech, test_mech2;
+    CK_MECHANISM test_mech;
+    CK_MECHANISM test_mech2;
     CK_SESSION_HANDLE session_handle;
     CK_RV crv;
     CK_OBJECT_HANDLE privID,pubID;
@@ -759,7 +1137,6 @@ PK11_GenerateKeyPairWithFlags(PK11SlotInfo *slot,CK_MECHANISM_TYPE type,
     int peCount,i;
     CK_ATTRIBUTE *attrs;
     CK_ATTRIBUTE *privattrs;
-    SECItem *pubKeyIndex;
     CK_ATTRIBUTE setTemplate;
     CK_MECHANISM_INFO mechanism_info;
     CK_OBJECT_CLASS keyClass;
@@ -776,6 +1153,20 @@ PK11_GenerateKeyPairWithFlags(PK11SlotInfo *slot,CK_MECHANISM_TYPE type,
 	PORT_SetError( SEC_ERROR_INVALID_ARGS );
 	return NULL;
     }
+
+    /*
+     * The opFlags and opFlagMask parameters allow us to control the
+     * settings of the key usage attributes (CKA_ENCRYPT and friends).
+     * opFlagMask is set to one if the flag is specified in opFlags and 
+     *  zero if it is to take on a default value calculated by 
+     *  PK11_GenerateKeyPairWithOpFlags.
+     * opFlags specifies the actual value of the flag 1 or 0. 
+     *   Bits not corresponding to one bits in opFlagMask should be zero.
+     */
+
+    /* if we are trying to turn on a flag, it better be in the mask */
+    PORT_Assert ((opFlags & ~opFlagsMask) == 0);
+    opFlags &= opFlagsMask;
 
     PORT_Assert(slot != NULL);
     if (slot == NULL) {
@@ -824,10 +1215,8 @@ PK11_GenerateKeyPairWithFlags(PK11SlotInfo *slot,CK_MECHANISM_TYPE type,
     mechanism.mechanism = type;
     mechanism.pParameter = NULL;
     mechanism.ulParameterLen = 0;
-
     test_mech.pParameter = NULL;
     test_mech.ulParameterLen = 0;
-
     test_mech2.mechanism = CKM_INVALID_MECHANISM;
     test_mech2.pParameter = NULL;
     test_mech2.ulParameterLen = 0;
@@ -905,10 +1294,22 @@ PK11_GenerateKeyPairWithFlags(PK11SlotInfo *slot,CK_MECHANISM_TYPE type,
 	 * We may need to query both mechanism types and or the results
 	 * together -- but we only do that if either the user has
 	 * requested both usages, or not specified any usages.
- 	 */
-	/* neither was specified default to both */
-	test_mech.mechanism = CKM_ECDH1_DERIVE;
-	test_mech2.mechanism = CKM_ECDSA;
+	 */
+	if ((opFlags & (CKF_SIGN|CKF_DERIVE)) == (CKF_SIGN|CKF_DERIVE)) {
+	    /* We've explicitly turned on both flags, use both mechanism */
+	    test_mech.mechanism = CKM_ECDH1_DERIVE;
+	    test_mech2.mechanism = CKM_ECDSA;
+	} else if (opFlags & CKF_SIGN) {
+	    /* just do signing */
+	    test_mech.mechanism = CKM_ECDSA;
+	} else if (opFlags & CKF_DERIVE) {
+	    /* just do ECDH */
+	    test_mech.mechanism = CKM_ECDH1_DERIVE;
+	} else {
+	    /* neither was specified default to both */
+	    test_mech.mechanism = CKM_ECDH1_DERIVE;
+	    test_mech2.mechanism = CKM_ECDSA;
+	}
         break;
     default:
 	PORT_SetError( SEC_ERROR_BAD_KEY );
@@ -921,7 +1322,7 @@ PK11_GenerateKeyPairWithFlags(PK11SlotInfo *slot,CK_MECHANISM_TYPE type,
 				test_mech.mechanism,&mechanism_info);
     /*
      * EC keys are used in multiple different types of mechanism, if we
-     * are using dual use keys, we need to query the the second mechanism
+     * are using dual use keys, we need to query the second mechanism
      * as well.
      */
     if (test_mech2.mechanism != CKM_INVALID_MECHANISM) {
@@ -945,30 +1346,31 @@ PK11_GenerateKeyPairWithFlags(PK11SlotInfo *slot,CK_MECHANISM_TYPE type,
     if ((crv != CKR_OK) || (mechanism_info.flags == 0)) {
 	/* must be old module... guess what it should be... */
 	switch (test_mech.mechanism) {
- 	case CKM_RSA_PKCS:
+	case CKM_RSA_PKCS:
 	    mechanism_info.flags = (CKF_SIGN | CKF_DECRYPT | 
 		CKF_WRAP | CKF_VERIFY_RECOVER | CKF_ENCRYPT | CKF_WRAP);
 	    break;
- 	case CKM_DSA:
+	case CKM_DSA:
 	    mechanism_info.flags = CKF_SIGN | CKF_VERIFY;
 	    break;
- 	case CKM_DH_PKCS_DERIVE:
+	case CKM_DH_PKCS_DERIVE:
 	    mechanism_info.flags = CKF_DERIVE;
 	    break;
- 	case CKM_ECDH1_DERIVE:
+	case CKM_ECDH1_DERIVE:
 	    mechanism_info.flags = CKF_DERIVE;
 	    if (test_mech2.mechanism == CKM_ECDSA) {
 		mechanism_info.flags |= CKF_SIGN | CKF_VERIFY;
 	    }
 	    break;
- 	case CKM_ECDSA:
-	case CKM_ECDSA_SHA1:
+	case CKM_ECDSA:
 	    mechanism_info.flags =  CKF_SIGN | CKF_VERIFY;
 	    break;
- 	default:
+	default:
 	    break;
 	}
     }
+    /* now adjust our flags according to the user's key usage passed to us */
+    mechanism_info.flags = (mechanism_info.flags & (~opFlagsMask)) | opFlags;
     /* set the public key attributes */
     attrs += pk11_AttrFlagsToAttributes(pubKeyAttrFlags, attrs,
 						&cktrue, &ckfalse);
@@ -1056,25 +1458,7 @@ PK11_GenerateKeyPairWithFlags(PK11SlotInfo *slot,CK_MECHANISM_TYPE type,
     }
 
     /* set the ID to the public key so we can find it again */
-    pubKeyIndex =  NULL;
-    switch (type) {
-    case CKM_RSA_PKCS_KEY_PAIR_GEN:
-    case CKM_RSA_X9_31_KEY_PAIR_GEN:
-      pubKeyIndex = &(*pubKey)->u.rsa.modulus;
-      break;
-    case CKM_DSA_KEY_PAIR_GEN:
-      pubKeyIndex = &(*pubKey)->u.dsa.publicValue;
-      break;
-    case CKM_DH_PKCS_KEY_PAIR_GEN:
-      pubKeyIndex = &(*pubKey)->u.dh.publicValue;
-      break;      
-    case CKM_EC_KEY_PAIR_GEN:
-      pubKeyIndex = &(*pubKey)->u.ec.publicValue;
-      break;      
-    }
-    PORT_Assert(pubKeyIndex != NULL);
-
-    cka_id = PK11_MakeIDFromPubKey(pubKeyIndex);
+    cka_id = pk11_MakeIDFromPublicKey(*pubKey);
     pubIsToken = (PRBool)PK11_HasAttributeSet(slot,pubID, CKA_TOKEN);
 
     PK11_SETATTRS(&setTemplate, CKA_ID, cka_id->data, cka_id->len);
@@ -1114,6 +1498,14 @@ PK11_GenerateKeyPairWithFlags(PK11SlotInfo *slot,CK_MECHANISM_TYPE type,
     }
 
     return privKey;
+}
+
+SECKEYPrivateKey *
+PK11_GenerateKeyPairWithFlags(PK11SlotInfo *slot,CK_MECHANISM_TYPE type, 
+   void *param, SECKEYPublicKey **pubKey, PK11AttrFlags attrFlags, void *wincx)
+{
+    return PK11_GenerateKeyPairWithOpFlags(slot,type,param,pubKey,attrFlags,
+					   0, 0, wincx);
 }
 
 /*
@@ -1181,12 +1573,11 @@ PK11_ImportEncryptedPrivateKeyInfo(PK11SlotInfo *slot,
 			PRBool isPrivate, KeyType keyType, 
 			unsigned int keyUsage, void *wincx)
 {
-    CK_MECHANISM_TYPE mechanism;
-    SECItem *pbe_param, crypto_param;
+    CK_MECHANISM_TYPE pbeMechType;
+    SECItem *crypto_param = NULL;
     PK11SymKey *key = NULL;
     SECStatus rv = SECSuccess;
-    CK_MECHANISM cryptoMech, pbeMech;
-    CK_RV crv;
+    CK_MECHANISM_TYPE cryptoMechType;
     SECKEYPrivateKey *privKey = NULL;
     PRBool faulty3DES = PR_FALSE;
     int usageCount = 0;
@@ -1200,9 +1591,7 @@ PK11_ImportEncryptedPrivateKeyInfo(PK11SlotInfo *slot,
     if((epki == NULL) || (pwitem == NULL))
 	return SECFailure;
 
-    crypto_param.data = NULL;
-
-    mechanism = PK11_AlgtagToMechanism(SECOID_FindOIDTag(
+    pbeMechType = PK11_AlgtagToMechanism(SECOID_FindOIDTag(
 					&epki->algorithm.algorithm));
 
     switch (keyType) {
@@ -1256,34 +1645,26 @@ PK11_ImportEncryptedPrivateKeyInfo(PK11SlotInfo *slot,
     }
 
 try_faulty_3des:
-    pbe_param = PK11_ParamFromAlgid(&epki->algorithm);
 
-    key = PK11_RawPBEKeyGen(slot, mechanism, pbe_param, pwitem, 
-							faulty3DES, wincx);
-    if((key == NULL) || (pbe_param == NULL)) {
+    key = PK11_PBEKeyGen(slot, &epki->algorithm, pwitem, faulty3DES, wincx);
+    if (key == NULL) {
+	rv = SECFailure;
+	goto done;
+    }
+    cryptoMechType = pk11_GetPBECryptoMechanism(&epki->algorithm,
+					 &crypto_param, pwitem, faulty3DES);
+    if (cryptoMechType == CKM_INVALID_MECHANISM) {
 	rv = SECFailure;
 	goto done;
     }
 
-    pbeMech.mechanism = mechanism;
-    pbeMech.pParameter = pbe_param->data;
-    pbeMech.ulParameterLen = pbe_param->len;
 
-    crv = PK11_MapPBEMechanismToCryptoMechanism(&pbeMech, &cryptoMech, 
-					        pwitem, faulty3DES);
-    if(crv != CKR_OK) {
-	rv = SECFailure;
-	goto done;
-    }
-
-    cryptoMech.mechanism = PK11_GetPadMechanism(cryptoMech.mechanism);
-    crypto_param.data = (unsigned char*)cryptoMech.pParameter;
-    crypto_param.len = cryptoMech.ulParameterLen;
+    cryptoMechType = PK11_GetPadMechanism(cryptoMechType);
 
     PORT_Assert(usage != NULL);
     PORT_Assert(usageCount != 0);
-    privKey = PK11_UnwrapPrivKey(slot, key, cryptoMech.mechanism, 
-				 &crypto_param, &epki->encryptedData, 
+    privKey = PK11_UnwrapPrivKey(slot, key, cryptoMechType, 
+				 crypto_param, &epki->encryptedData, 
 				 nickname, publicValue, isPerm, isPrivate,
 				 key_type, usage, usageCount, wincx);
     if(privKey) {
@@ -1293,28 +1674,21 @@ try_faulty_3des:
 	goto done;
     }
 
-    /* if we are unable to import the key and the mechanism is 
+    /* if we are unable to import the key and the pbeMechType is 
      * CKM_NETSCAPE_PBE_SHA1_TRIPLE_DES_CBC, then it is possible that
      * the encrypted blob was created with a buggy key generation method
      * which is described in the PKCS 12 implementation notes.  So we
      * need to try importing via that method.
      */ 
-    if((mechanism == CKM_NETSCAPE_PBE_SHA1_TRIPLE_DES_CBC) && (!faulty3DES)) {
+    if((pbeMechType == CKM_NETSCAPE_PBE_SHA1_TRIPLE_DES_CBC) && (!faulty3DES)) {
 	/* clean up after ourselves before redoing the key generation. */
 
 	PK11_FreeSymKey(key);
 	key = NULL;
 
-	if(pbe_param) {
-	    SECITEM_ZfreeItem(pbe_param, PR_TRUE);
-	    pbe_param = NULL;
-	}
-
-	if(crypto_param.data) {
-	    SECITEM_ZfreeItem(&crypto_param, PR_FALSE);
-	    crypto_param.data = NULL;
-	    cryptoMech.pParameter = NULL;
-	    crypto_param.len = cryptoMech.ulParameterLen = 0;
+	if(crypto_param) {
+	    SECITEM_ZfreeItem(crypto_param, PR_TRUE);
+	    crypto_param = NULL;
 	}
 
 	faulty3DES = PR_TRUE;
@@ -1325,13 +1699,8 @@ try_faulty_3des:
     rv = SECFailure;
 
 done:
-    if(pbe_param != NULL) {
-	SECITEM_ZfreeItem(pbe_param, PR_TRUE);
-	pbe_param = NULL;
-    }
-
-    if(crypto_param.data != NULL) {
-	SECITEM_ZfreeItem(&crypto_param, PR_FALSE);
+    if(crypto_param != NULL) {
+	SECITEM_ZfreeItem(crypto_param, PR_TRUE);
     }
 
     if(key != NULL) {
@@ -1359,28 +1728,27 @@ PK11_ExportEncryptedPrivKeyInfo(
     SECKEYEncryptedPrivateKeyInfo *epki      = NULL;
     PRArenaPool                   *arena     = NULL;
     SECAlgorithmID                *algid;
-    SECItem                       *pbe_param = NULL;
+    SECOidTag			  pbeAlgTag = SEC_OID_UNKNOWN;
+    SECItem                       *crypto_param = NULL;
     PK11SymKey                    *key       = NULL;
     SECKEYPrivateKey		  *tmpPK = NULL;
     SECStatus                      rv        = SECSuccess;
     CK_RV                          crv;
     CK_ULONG                       encBufLen;
-    CK_MECHANISM_TYPE              mechanism;
-    CK_MECHANISM                   pbeMech;
+    CK_MECHANISM_TYPE              pbeMechType;
+    CK_MECHANISM_TYPE              cryptoMechType;
     CK_MECHANISM                   cryptoMech;
-    SECItem                        crypto_param;
 
     if (!pwitem || !pk) {
 	PORT_SetError(SEC_ERROR_INVALID_ARGS);
 	return NULL;
     }
 
-    algid = SEC_PKCS5CreateAlgorithmID(algTag, NULL, iteration);
+    algid = sec_pkcs5CreateAlgorithmID(algTag, SEC_OID_UNKNOWN, SEC_OID_UNKNOWN,
+				&pbeAlgTag, 0, NULL, iteration);
     if (algid == NULL) {
 	return NULL;
     }
-
-    crypto_param.data = NULL;
 
     arena = PORT_NewArena(2048);
     if (arena)
@@ -1391,15 +1759,6 @@ PK11_ExportEncryptedPrivKeyInfo(
     }
     epki->arena = arena;
 
-    mechanism = PK11_AlgtagToMechanism(algTag);
-    pbe_param = PK11_ParamFromAlgid(algid);
-    if (!pbe_param || mechanism == CKM_INVALID_MECHANISM) {
-	rv = SECFailure;
-	goto loser;
-    }
-    pbeMech.mechanism = mechanism;
-    pbeMech.pParameter = pbe_param->data;
-    pbeMech.ulParameterLen = pbe_param->len;
 
     /* if we didn't specify a slot, use the slot the private key was in */
     if (!slot) {
@@ -1409,38 +1768,37 @@ PK11_ExportEncryptedPrivKeyInfo(
     /* if we specified a different slot, and the private key slot can do the
      * pbe key gen, generate the key in the private key slot so we don't have 
      * to move it later */
+    pbeMechType = PK11_AlgtagToMechanism(pbeAlgTag);
     if (slot != pk->pkcs11Slot) {
-	if (PK11_DoesMechanism(pk->pkcs11Slot,mechanism)) {
+	if (PK11_DoesMechanism(pk->pkcs11Slot,pbeMechType)) {
 	    slot = pk->pkcs11Slot;
 	}
     }
-    key = PK11_RawPBEKeyGen(slot, mechanism, pbe_param, pwitem, 
-							PR_FALSE, wincx);
-
-    if((key == NULL) || (pbe_param == NULL)) {
+    key = PK11_PBEKeyGen(slot, algid, pwitem, PR_FALSE, wincx);
+    if (key == NULL) {
 	rv = SECFailure;
 	goto loser;
     }
 
-    crv = PK11_MapPBEMechanismToCryptoMechanism(&pbeMech, &cryptoMech, 
-						pwitem, PR_FALSE);
-    if(crv != CKR_OK) {
+    cryptoMechType = PK11_GetPBECryptoMechanism(algid, &crypto_param, pwitem);
+    if (cryptoMechType == CKM_INVALID_MECHANISM) {
 	rv = SECFailure;
 	goto loser;
     }
-    cryptoMech.mechanism = PK11_GetPadMechanism(cryptoMech.mechanism);
-    crypto_param.data = (unsigned char *)cryptoMech.pParameter;
-    crypto_param.len = cryptoMech.ulParameterLen;
+
+    cryptoMech.mechanism = PK11_GetPadMechanism(cryptoMechType);
+    cryptoMech.pParameter = crypto_param ? crypto_param->data : NULL;
+    cryptoMech.ulParameterLen = crypto_param ? crypto_param->len : 0;
 
     /* If the key isn't in the private key slot, move it */
     if (key->slot != pk->pkcs11Slot) {
 	PK11SymKey *newkey = pk11_CopyToSlot(pk->pkcs11Slot,
 						key->type, CKA_WRAP, key);
 	if (newkey == NULL) {
+            /* couldn't import the wrapping key, try exporting the
+             * private key */
 	    tmpPK = pk11_loadPrivKey(key->slot, pk, NULL, PR_FALSE, PR_TRUE);
 	    if (tmpPK == NULL) {
-		/* couldn't import the wrapping key, couldn't export the
-		 * private key, we are done */
 		rv = SECFailure;
 		goto loser;
 	    }
@@ -1491,14 +1849,9 @@ PK11_ExportEncryptedPrivKeyInfo(
     rv = SECOID_CopyAlgorithmID(arena, &epki->algorithm, algid);
 
 loser:
-    if(pbe_param != NULL) {
-	SECITEM_ZfreeItem(pbe_param, PR_TRUE);
-	pbe_param = NULL;
-    }
-
-    if(crypto_param.data != NULL) {
-	SECITEM_ZfreeItem(&crypto_param, PR_FALSE);
-	crypto_param.data = NULL;
+    if(crypto_param != NULL) {
+	SECITEM_ZfreeItem(crypto_param, PR_TRUE);
+	crypto_param = NULL;
     }
 
     if(key != NULL) {
@@ -1873,6 +2226,15 @@ PK11_MakeIDFromPubKey(SECItem *pubKeyData)
     PK11Context *context;
     SECItem *certCKA_ID;
     SECStatus rv;
+
+    if (pubKeyData->len <= SHA1_LENGTH) {
+	/* probably an already hashed value. The strongest known public
+	 * key values <= 160 bits would be less than 40 bit symetric in
+	 * strength. Don't hash them, just return the value. There are
+	 * none at the time of this writing supported by previous versions
+	 * of NSS, so change is binary compatible safe */
+	return SECITEM_DupItem(pubKeyData);
+    }
 
     context = PK11_CreateDigestContext(SEC_OID_SHA1);
     if (context == NULL) {

@@ -102,7 +102,7 @@ token_destructor(void *t)
 {
     NSSToken *tok = (NSSToken *)t;
     /* The token holds the first/last reference to the slot.
-     * When the token is actually destroyed (ref count == 0),
+     * When the token is actually destroyed (ref count == 0), 
      * the slot will also be destroyed.
      */
     nssToken_Destroy(tok);
@@ -441,7 +441,7 @@ get_certs_from_list(nssList *list)
 NSS_IMPLEMENT NSSCertificate **
 nssTrustDomain_FindCertificatesByNickname (
   NSSTrustDomain *td,
-  NSSUTF8 *name,
+  const NSSUTF8 *name,
   NSSCertificate *rvOpt[],
   PRUint32 maximumOpt, /* 0 for no max */
   NSSArena *arenaOpt
@@ -558,7 +558,7 @@ NSSTrustDomain_FindCertificatesByNickname (
 NSS_IMPLEMENT NSSCertificate *
 nssTrustDomain_FindBestCertificateByNickname (
   NSSTrustDomain *td,
-  NSSUTF8 *name,
+  const NSSUTF8 *name,
   NSSTime *timeOpt,
   NSSUsage *usage,
   NSSPolicies *policiesOpt
@@ -583,7 +583,7 @@ nssTrustDomain_FindBestCertificateByNickname (
 NSS_IMPLEMENT NSSCertificate *
 NSSTrustDomain_FindBestCertificateByNickname (
   NSSTrustDomain *td,
-  NSSUTF8 *name,
+  const NSSUTF8 *name,
   NSSTime *timeOpt,
   NSSUsage *usage,
   NSSPolicies *policiesOpt

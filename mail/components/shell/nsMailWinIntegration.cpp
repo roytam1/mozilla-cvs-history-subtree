@@ -294,7 +294,7 @@ nsresult nsWindowsShellService::Init()
   rv = NS_NewNativeLocalFile(mAppLongPath, PR_TRUE, getter_AddRefs(lf));
   NS_ENSURE_SUCCESS(rv, rv);
 
-  rv = lf->SetNativeLeafName(nsDependentCString("mozMapi32.dll"));
+  rv = lf->SetNativeLeafName(nsDependentCString("mozMapi32_InUse.dll"));
   NS_ENSURE_SUCCESS(rv, rv);
 
   return lf->GetNativePath(mMapiDLLPath);

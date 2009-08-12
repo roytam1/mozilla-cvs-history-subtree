@@ -44,7 +44,7 @@
 
 #include "blapi.h"
 
-#define FREEBL_VERSION 0x0309
+#define FREEBL_VERSION 0x030B
 
 struct FREEBLVectorStr {
 
@@ -458,6 +458,88 @@ struct FREEBLVectorStr {
                                                 unsigned char *xj);
 
   /* Version 3.009 came to here */
+
+ SECStatus (* p_Camellia_InitContext)(CamelliaContext *cx,
+				 const unsigned char *key, 
+				 unsigned int keylen, 
+				 const unsigned char *iv, 
+				 int mode, 
+				 unsigned int encrypt,
+				 unsigned int unused);
+
+ CamelliaContext *(*p_Camellia_AllocateContext)(void);
+ CamelliaContext * (* p_Camellia_CreateContext)(const unsigned char *key, 
+						const unsigned char *iv, 
+						int mode, int encrypt,
+						unsigned int keylen);
+ void (* p_Camellia_DestroyContext)(CamelliaContext *cx, PRBool freeit);
+
+ SECStatus (* p_Camellia_Encrypt)(CamelliaContext *cx, unsigned char *output,
+				  unsigned int *outputLen,
+				  unsigned int maxOutputLen,
+				  const unsigned char *input,
+				  unsigned int inputLen);
+
+ SECStatus (* p_Camellia_Decrypt)(CamelliaContext *cx, unsigned char *output,
+				  unsigned int *outputLen,
+				  unsigned int maxOutputLen,
+				  const unsigned char *input,
+				  unsigned int inputLen);
+
+ void (* p_PQG_DestroyParams)(PQGParams *params);
+
+ void (* p_PQG_DestroyVerify)(PQGVerify *vfy);
+
+  /* Version 3.010 came to here */
+
+ SECStatus (* p_SEED_InitContext)(SEEDContext *cx,
+                                 const unsigned char *key,
+                                 unsigned int keylen,
+                                 const unsigned char *iv,
+                                 int mode,
+                                 unsigned int encrypt,
+                                 unsigned int );
+
+ SEEDContext *(*p_SEED_AllocateContext)(void);
+
+ SEEDContext *(* p_SEED_CreateContext)(const unsigned char *key,
+                                     const unsigned char *iv,
+                                     int mode, PRBool encrypt);
+
+ void (* p_SEED_DestroyContext)(SEEDContext *cx, PRBool freeit);
+
+ SECStatus (* p_SEED_Encrypt)(SEEDContext *cx, unsigned char *output,
+                            unsigned int *outputLen, unsigned int maxOutputLen,
+                            const unsigned char *input, unsigned int inputLen);
+
+ SECStatus (* p_SEED_Decrypt)(SEEDContext *cx, unsigned char *output,
+                            unsigned int *outputLen, unsigned int maxOutputLen,
+                            const unsigned char *input, unsigned int inputLen);
+
+
+
+ SECStatus (* p_BL_Init)(void);
+ void ( * p_BL_SetForkState)(PRBool);
+
+ SECStatus (* p_PRNGTEST_Instantiate)(const PRUint8 *entropy, 
+				      unsigned int entropy_len, 
+				      const PRUint8 *nonce, 
+				      unsigned int nonce_len,
+				      const PRUint8 *personal_string, 
+				      unsigned int ps_len);
+
+ SECStatus (* p_PRNGTEST_Reseed)(const PRUint8 *entropy, 
+				 unsigned int entropy_len, 
+				 const PRUint8 *additional, 
+				 unsigned int additional_len);
+
+ SECStatus (* p_PRNGTEST_Generate)(PRUint8 *bytes, 
+				   unsigned int bytes_len, 
+				   const PRUint8 *additional, 
+				   unsigned int additional_len);
+
+ SECStatus (* p_PRNGTEST_Uninstantiate)(void);
+   /* Version 3.011 came to here */
 };
 
 typedef struct FREEBLVectorStr FREEBLVector;

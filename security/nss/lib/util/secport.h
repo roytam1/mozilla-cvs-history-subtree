@@ -43,16 +43,12 @@
 #ifndef _SECPORT_H_
 #define _SECPORT_H_
 
+#include "utilrename.h"
+
 /*
- * define XP_MAC, XP_WIN, XP_BEOS, or XP_UNIX, in case they are not defined
+ * define XP_WIN, XP_BEOS, or XP_UNIX, in case they are not defined
  * by anyone else
  */
-#ifdef macintosh
-# ifndef XP_MAC
-# define XP_MAC 1
-# endif
-#endif
-
 #ifdef _WINDOWS
 # ifndef XP_WIN
 # define XP_WIN
@@ -80,16 +76,9 @@
 # endif
 #endif
 
-#if defined(__WATCOMC__) || defined(__WATCOM_CPLUSPLUS__)
-#include "watcomfx.h"
-#endif
-
 #if defined(_WIN32_WCE)
 #include <windef.h>
 #include <types.h>
-#elif defined( XP_MAC ) 
-#include <types.h>
-#include <time.h> /* for time_t below */
 #else
 #include <sys/types.h>
 #endif
@@ -141,9 +130,7 @@ extern void PORT_ArenaZRelease(PLArenaPool *arena, void *mark);
 extern void PORT_ArenaUnmark(PLArenaPool *arena, void *mark);
 extern char *PORT_ArenaStrdup(PLArenaPool *arena, const char *str);
 
-#ifdef __cplusplus
-}
-#endif
+SEC_END_PROTOS
 
 #define PORT_Assert PR_ASSERT
 #define PORT_ZNew(type) (type*)PORT_ZAlloc(sizeof(type))
@@ -163,7 +150,7 @@ extern char *PORT_ArenaStrdup(PLArenaPool *arena, const char *str);
 
 /* Please, keep these defines sorted alphabetically.  Thanks! */
 
-#define PORT_Atoi 	atoi
+#define PORT_Atoi(buff)	(int)strtol(buff, NULL, 10)
 
 #define PORT_Memcmp 	memcmp
 #define PORT_Memcpy 	memcpy
@@ -201,9 +188,7 @@ typedef PRBool (PR_CALLBACK * PORTCharConversionFunc) (PRBool toUnicode,
 			unsigned char *outBuf, unsigned int maxOutBufLen,
 			unsigned int *outBufLen);
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+SEC_BEGIN_PROTOS
 
 void PORT_SetUCS4_UTF8ConversionFunction(PORTCharConversionFunc convFunc);
 void PORT_SetUCS2_ASCIIConversionFunction(PORTCharConversionWSwapFunc convFunc);
@@ -224,7 +209,7 @@ PRBool PORT_ISO88591_UTF8Conversion(const unsigned char *inBuf,
 			unsigned int inBufLen, unsigned char *outBuf,
 			unsigned int maxOutBufLen, unsigned int *outBufLen);
 
-PR_EXTERN(PRBool)
+extern PRBool
 sec_port_ucs4_utf8_conversion_function
 (
   PRBool toUnicode,
@@ -235,7 +220,7 @@ sec_port_ucs4_utf8_conversion_function
   unsigned int *outBufLen
 );
 
-PR_EXTERN(PRBool)
+extern PRBool
 sec_port_ucs2_utf8_conversion_function
 (
   PRBool toUnicode,

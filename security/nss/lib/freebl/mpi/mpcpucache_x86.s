@@ -1,37 +1,39 @@
-//* ***** BEGIN LICENSE BLOCK *****
-/ * Version: MPL 1.1/GPL 2.0/LGPL 2.1
-/ *
-/ * The contents of this file are subject to the Mozilla Public License Version
-/ * 1.1 (the "License"); you may not use this file except in compliance with
-/ * the License. You may obtain a copy of the License at
-/ * http://www.mozilla.org/MPL/
-/ *
-/ * Software distributed under the License is distributed on an "AS IS" basis,
-/ * WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
-/ * for the specific language governing rights and limitations under the
-/ * License.
-/ *
-/ * The Initial Developer of the Original Code is
-/ * Red Hat, Inc.
-/ * Portions created by the Initial Developer are Copyright (C) 2005
-/ * the Initial Developer. All Rights Reserved.
-/ *
-/ * Contributor(s):
-/ *	Robert Relyea <rrelyea@redhat.com>
-/ *
-/ * Alternatively, the contents of this file may be used under the terms of
-/ * either the GNU General Public License Version 2 or later (the "GPL"), or
-/ * the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
-/ * in which case the provisions of the GPL or the LGPL are applicable instead
-/ * of those above. If you wish to allow use of your version of this file only
-/ * under the terms of either the GPL or the LGPL, and not to allow others to
-/ * use your version of this file under the terms of the MPL, indicate your
-/ * decision by deleting the provisions above and replace them with the notice
-/ * and other provisions required by the GPL or the LGPL. If you do not delete
-/ * the provisions above, a recipient may use your version of this file under
-/ * the terms of any one of the MPL, the GPL or the LGPL.
-/ *
-/ * ***** END LICENSE BLOCK ***** */
+/ ***** BEGIN LICENSE BLOCK *****
+/ Version: MPL 1.1/GPL 2.0/LGPL 2.1
+/
+/ The contents of this file are subject to the Mozilla Public License Version
+/ 1.1 (the "License"); you may not use this file except in compliance with
+/ the License. You may obtain a copy of the License at
+/ http://www.mozilla.org/MPL/
+/
+/ Software distributed under the License is distributed on an "AS IS" basis,
+/ WITHOUT WARRANTY OF ANY KIND, either express or implied. See the License
+/ for the specific language governing rights and limitations under the
+/ License.
+/
+/ The Original Code is Red Hat code.
+/
+/ The Initial Developer of the Original Code is
+/ Red Hat, Inc.
+/ Portions created by the Initial Developer are Copyright (C) 2005
+/ the Initial Developer. All Rights Reserved.
+/
+/ Contributor(s):
+/	Robert Relyea <rrelyea@redhat.com>
+/
+/ Alternatively, the contents of this file may be used under the terms of
+/ either the GNU General Public License Version 2 or later (the "GPL"), or
+/ the GNU Lesser General Public License Version 2.1 or later (the "LGPL"),
+/ in which case the provisions of the GPL or the LGPL are applicable instead
+/ of those above. If you wish to allow use of your version of this file only
+/ under the terms of either the GPL or the LGPL, and not to allow others to
+/ use your version of this file under the terms of the MPL, indicate your
+/ decision by deleting the provisions above and replace them with the notice
+/ and other provisions required by the GPL or the LGPL. If you do not delete
+/ the provisions above, a recipient may use your version of this file under
+/ the terms of any one of the MPL, the GPL or the LGPL.
+/
+/ ***** END LICENSE BLOCK *****
 
 	.file	"mpcpucache.c"
 /	.section	.rodata.str1.1,"aMS",@progbits,1
@@ -590,8 +592,9 @@ CacheMap:
 	.byte	0
 	.text
 	.align	4
-	.type	cpuid, @function
-cpuid:
+.globl freebl_cpuid
+	.type	freebl_cpuid, @function
+freebl_cpuid:
 	pushl	%ebp
 	pushl	%edi
 	pushl	%esi
@@ -616,7 +619,7 @@ cpuid:
 	popl	%edi
 	popl	%ebp
 	ret
-	.size	cpuid, .-cpuid
+	.size	freebl_cpuid, .-freebl_cpuid
 	.align	4
 	.type	changeFlag, @function
 changeFlag:
@@ -778,7 +781,7 @@ s_mpi_getProcessorLineSize:
 	pushl	%eax
 	leal	-120(%ebp), %edx
 	xorl	%eax, %eax
-	call	cpuid
+	call	freebl_cpuid
 	movl	-120(%ebp), %eax
 	movl	%eax, -164(%ebp)
 	movl	-116(%ebp), %eax
@@ -824,7 +827,7 @@ s_mpi_getProcessorLineSize:
 	movl	$2, %eax
 	pushl	%edx
 	leal	-136(%ebp), %edx
-	call	cpuid
+	call	freebl_cpuid
 	movl	-136(%ebp), %eax
 	movl	%eax, %edi
 	andl	$15, %edi
@@ -879,7 +882,7 @@ s_mpi_getProcessorLineSize:
 	pushl	-180(%ebp)
 	leal	-136(%ebp), %edx
 	movl	$2, %eax
-	call	cpuid
+	call	freebl_cpuid
 	addl	$12, %esp
 .L34:
 	cmpl	%edi, %esi
@@ -910,7 +913,7 @@ s_mpi_getProcessorLineSize:
 	pushl	%esi
 	leal	-160(%ebp), %edx
 	movl	$-2147483648, %eax
-	call	cpuid
+	call	freebl_cpuid
 	addl	$12, %esp
 	cmpl	$-2147483644, -160(%ebp)
 	ja	.L51
@@ -923,7 +926,7 @@ s_mpi_getProcessorLineSize:
 	pushl	%esi
 	leal	-160(%ebp), %edx
 	movl	$-2147483643, %eax
-	call	cpuid
+	call	freebl_cpuid
 	movzbl	-152(%ebp), %edx
 	addl	$12, %esp
 	movl	%edx, -172(%ebp)

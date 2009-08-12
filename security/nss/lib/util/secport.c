@@ -50,7 +50,7 @@
 #include "plarena.h"
 #include "secerr.h"
 #include "prmon.h"
-#include "nsslocks.h"
+#include "nssilock.h"
 #include "secport.h"
 #include "prvrsion.h"
 #include "prenv.h"
@@ -63,7 +63,7 @@
 #include "prthread.h"
 #endif /* THREADMARK */
 
-#if defined(XP_UNIX) || defined(XP_MAC) || defined(XP_OS2) || defined(XP_BEOS)
+#if defined(XP_UNIX) || defined(XP_OS2) || defined(XP_BEOS)
 #include <stdlib.h>
 #else
 #include "wtypes.h"
@@ -178,6 +178,9 @@ PORT_Strdup(const char *str)
 void
 PORT_SetError(int value)
 {	
+#ifdef DEBUG_jp96085
+    PORT_Assert(value != SEC_ERROR_REUSED_ISSUER_AND_SERIAL);
+#endif
     PR_SetError(value, 0);
     return;
 }
@@ -631,7 +634,7 @@ PORT_UCS2_ASCIIConversion(PRBool toUnicode, unsigned char *inBuf,
 int
 NSS_PutEnv(const char * envVarName, const char * envValue)
 {
-#if  defined(XP_MAC) || defined(_WIN32_WCE)
+#ifdef _WIN32_WCE
     return SECFailure;
 #else
     SECStatus result = SECSuccess;

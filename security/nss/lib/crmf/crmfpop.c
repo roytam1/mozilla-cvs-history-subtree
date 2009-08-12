@@ -93,7 +93,7 @@ CRMF_CertReqMsgSetRAVerifiedPOP(CRMFCertReqMsg *inCertReqMsg)
     return SECFailure;
 }
 
-SECOidTag
+static SECOidTag
 crmf_get_key_sign_tag(SECKEYPublicKey *inPubKey)
 {
     /* maintain backward compatibility with older
@@ -104,7 +104,7 @@ crmf_get_key_sign_tag(SECKEYPublicKey *inPubKey)
     return SEC_GetSignatureAlgorithmOidTag(inPubKey->keyType, SEC_OID_UNKNOWN);
 }
 
-SECAlgorithmID*
+static SECAlgorithmID*
 crmf_create_poposignkey_algid(PRArenaPool      *poolp,
 			      SECKEYPublicKey  *inPubKey)
 {
@@ -358,7 +358,7 @@ crmf_encode_popoprivkey(PRArenaPool            *poolp,
 			const SEC_ASN1Template *privKeyTemplate)
 {
     struct crmfEncoderArg   encoderArg;
-    SECItem                 derTemp; 
+    SECItem                 derTemp = { siBuffer, NULL, 0 };
     SECStatus               rv;
     void                   *mark;
     const SEC_ASN1Template *subDerTemplate;

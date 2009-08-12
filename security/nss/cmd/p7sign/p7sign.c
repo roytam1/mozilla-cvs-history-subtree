@@ -64,19 +64,7 @@ extern int fwrite(char *, size_t, size_t, FILE*);
 extern int fprintf(FILE *, char *, ...);
 #endif
 
-char* KeyDbPassword = 0;
-
-
-char* MyPK11PasswordFunc (PK11SlotInfo *slot, PRBool retry, void* arg)
-{
-    char *ret=0;
-
-    if (retry == PR_TRUE)
-        return NULL;
-    ret = PL_strdup (KeyDbPassword);
-    return ret;
-}
-
+static secuPWData  pwdata          = { PW_NONE, 0 };
 
 static void
 Usage(char *progName)
@@ -95,6 +83,7 @@ Usage(char *progName)
     fprintf(stderr, "%-20s Encapsulate content in signature message\n",
 	    "-e");
     fprintf(stderr, "%-20s Password to the key databse\n", "-p");
+    fprintf(stderr, "%-20s password file\n", "-f");
     exit(-1);
 }
 
@@ -174,7 +163,7 @@ SignFile(FILE *outFile, PRFileDesc *inFile, CERTCertificate *cert,
     }
 
     rv = SEC_PKCS7Encode (cinfo, SignOut, outFile, NULL,
-			  NULL, NULL);
+			  NULL, &pwdata);
 
     SEC_PKCS7DestroyContentInfo (cinfo);
 
@@ -190,7 +179,7 @@ main(int argc, char **argv)
     char *progName;
     FILE *outFile;
     PRFileDesc *inFile;
-    char *keyName;
+    char *keyName = NULL;
     CERTCertDBHandle *certHandle;
     CERTCertificate *cert;
     PRBool encapsulated = PR_FALSE;
@@ -208,7 +197,7 @@ main(int argc, char **argv)
     /*
      * Parse command line arguments
      */
-    optstate = PL_CreateOptState(argc, argv, "ed:k:i:o:p:");
+    optstate = PL_CreateOptState(argc, argv, "ed:k:i:o:p:f:");
     while ((status = PL_GetNextOpt(optstate)) == PL_OPT_OK) {
 	switch (optstate->option) {
 	  case '?':
@@ -238,7 +227,7 @@ main(int argc, char **argv)
 	    break;
 
 	  case 'o':
-	    outFile = fopen(optstate->value, "w");
+	    outFile = fopen(optstate->value, "wb");
 	    if (!outFile) {
 		fprintf(stderr, "%s: unable to open \"%s\" for writing\n",
 			progName, optstate->value);
@@ -246,8 +235,14 @@ main(int argc, char **argv)
 	    }
 	    break;
 	  case 'p':
-            KeyDbPassword = strdup (optstate->value);
+            pwdata.source = PW_PLAINTEXT;
+            pwdata.data = strdup (optstate->value);
             break;
+
+	  case 'f':
+              pwdata.source = PW_FROMFILE;
+              pwdata.data = PORT_Strdup (optstate->value);
+              break;
 	}
     }
 
@@ -261,15 +256,16 @@ main(int argc, char **argv)
     rv = NSS_Init(SECU_ConfigDirectory(NULL));
     if (rv != SECSuccess) {
 	SECU_PrintPRandOSError(progName);
-	return -1;
+	goto loser;
     }
 
-    PK11_SetPasswordFunc (MyPK11PasswordFunc);
+    PK11_SetPasswordFunc(SECU_GetModulePassword);
 
     /* open cert database */
     certHandle = CERT_GetDefaultCertDB();
     if (certHandle == NULL) {
-	return -1;
+	rv = SECFailure;
+	goto loser;
     }
 
     /* find cert */
@@ -278,17 +274,36 @@ main(int argc, char **argv)
 	SECU_PrintError(progName,
 		        "the corresponding cert for key \"%s\" does not exist",
 			keyName);
-	return -1;
+	rv = SECFailure;
+	goto loser;
     }
 
     if (SignFile(outFile, inFile, cert, encapsulated)) {
 	SECU_PrintError(progName, "problem signing data");
-	return -1;
+	rv = SECFailure;
+	goto loser;
     }
 
+loser:
+    if (pwdata.data) {
+        PORT_Free(pwdata.data);
+    }
+    if (keyName) {
+        PORT_Free(keyName);
+    }
+    if (cert) {
+        CERT_DestroyCertificate(cert);
+    }
+    if (inFile && inFile != PR_STDIN) {
+        PR_Close(inFile);
+    }
+    if (outFile && outFile != stdout) {
+        fclose(outFile);
+    }
     if (NSS_Shutdown() != SECSuccess) {
+        SECU_PrintError(progName, "NSS shutdown:");
         exit(1);
     }
 
-    return 0;
+    return (rv != SECSuccess);
 }

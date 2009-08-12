@@ -360,7 +360,8 @@ static int jar_physical_inflate
 
   unsigned long prev_total, ochunk, tin;
 
-  if ((inbuf = (char *) PORT_ZAlloc (ICHUNK)) == NULL)
+  /* Raw inflate in zlib 1.1.4 needs an extra dummy byte at the end */
+  if ((inbuf = (char *) PORT_ZAlloc (ICHUNK + 1)) == NULL)
     return JAR_ERR_MEMORY;
 
   if ((outbuf = (char *) PORT_ZAlloc (OCHUNK)) == NULL)
@@ -373,7 +374,11 @@ static int jar_physical_inflate
   status = inflateInit2 (&zs, -MAX_WBITS);
 
   if (status != Z_OK)
+    {
+    PORT_Free (inbuf);
+    PORT_Free (outbuf);
     return JAR_ERR_GENERAL;
+    }
 
   if ((out = JAR_FOPEN (outpath, "wb")) != NULL)
     {
@@ -388,10 +393,19 @@ static int jar_physical_inflate
       if (JAR_FREAD (fp, inbuf, chunk) != chunk)
         {
         /* incomplete read */
+        JAR_FCLOSE (out);
+        PORT_Free (inbuf);
+        PORT_Free (outbuf);
         return JAR_ERR_CORRUPT;
         }
 
       at += chunk;
+
+      if (at == length)
+        {
+        /* add an extra dummy byte at the end */
+        inbuf[chunk++] = 0xDD;
+        }
 
       zs.next_in = (Bytef *) inbuf;
       zs.avail_in = chunk;
@@ -411,6 +425,9 @@ static int jar_physical_inflate
         if (status != Z_OK && status != Z_STREAM_END)
           {
           /* error during decompression */
+          JAR_FCLOSE (out);
+          PORT_Free (inbuf);
+          PORT_Free (outbuf);
           return JAR_ERR_CORRUPT;
           }
 
@@ -477,6 +494,7 @@ static int jar_inflate_memory
   if (status < 0)
     {
     /* error initializing zlib stream */
+    PORT_Free (outbuf);
     return JAR_ERR_GENERAL;
     }
 
@@ -491,6 +509,7 @@ static int jar_inflate_memory
   if (status != Z_OK && status != Z_STREAM_END)
     {
     /* error during deflation */
+    PORT_Free (outbuf);
     return JAR_ERR_GENERAL; 
     }
 
@@ -499,6 +518,7 @@ static int jar_inflate_memory
   if (status != Z_OK)
     {
     /* error during deflation */
+    PORT_Free (outbuf);
     return JAR_ERR_GENERAL;
     }
 
@@ -579,23 +599,26 @@ static JAR_Physical *jar_get_physical (JAR *jar, char *pathname)
 
 static int jar_extract_manifests (JAR *jar, jarArch format, JAR_FILE fp)
   {
-  int status;
+  int status, signatures;
 
   if (format != jarArchZip && format != jarArchTar)
     return JAR_ERR_CORRUPT;
 
   if ((status = jar_extract_mf (jar, format, fp, "mf")) < 0)
     return status;
-
+  if (!status) 
+    return JAR_ERR_ORDER;
   if ((status = jar_extract_mf (jar, format, fp, "sf")) < 0)
     return status;
-
+  if (!status) 
+    return JAR_ERR_ORDER;
   if ((status = jar_extract_mf (jar, format, fp, "rsa")) < 0)
     return status;
-
+  signatures = status;
   if ((status = jar_extract_mf (jar, format, fp, "dsa")) < 0)
     return status;
-
+  if (!(signatures += status)) 
+    return JAR_ERR_SIG;
   return 0;
   }
 
@@ -629,7 +652,7 @@ static int jar_extract_mf (JAR *jar, jarArch format, JAR_FILE fp, char *ext)
     return JAR_ERR_PNF;
 
   for (link = ZZ_ListHead (list);
-       !ZZ_ListIterDone (list, link);
+       ret >= 0 && !ZZ_ListIterDone (list, link);
        link = link->next)
     {
     it = link->thing;
@@ -663,19 +686,15 @@ static int jar_extract_mf (JAR *jar, jarArch format, JAR_FILE fp, char *ext)
         continue;
         }
 
-      if (phy->length == 0)
+      if (phy->length == 0 || phy->length > 0xFFFF)
         {
-        /* manifest files cannot be zero length! */
+        /* manifest files cannot be zero length or too big! */
+        /* the 0xFFFF limit is per J2SE SDK */
         return JAR_ERR_CORRUPT;
         }
 
       /* Read in the manifest and parse it */
-      /* FIX? Does this break on win16 for very very large manifest files? */
-
-#ifdef XP_WIN16
-      PORT_Assert( phy->length+1 < 0xFFFF );
-#endif
-
+      /* Raw inflate in zlib 1.1.4 needs an extra dummy byte at the end */
       manifest = (char ZHUGEP *) PORT_ZAlloc (phy->length + 1);
       if (manifest)
         {
@@ -685,21 +704,28 @@ static int jar_extract_mf (JAR *jar, jarArch format, JAR_FILE fp, char *ext)
         if (num != phy->length)
           {
           /* corrupt archive file */
+          PORT_Free (manifest);
           return JAR_ERR_CORRUPT;
           }
 
         if (phy->compression == 8)
           {
           length = phy->length;
+          /* add an extra dummy byte at the end */
+          manifest[length++] = 0xDD;
 
           status = jar_inflate_memory ((unsigned int) phy->compression, &length,  phy->uncompressed_length, &manifest);
 
           if (status < 0)
+            {
+            PORT_Free (manifest);
             return status;
+            }
           }
         else if (phy->compression)
           {
           /* unsupported compression method */
+          PORT_Free (manifest);
           return JAR_ERR_CORRUPT;
           }
         else
@@ -710,7 +736,10 @@ static int jar_extract_mf (JAR *jar, jarArch format, JAR_FILE fp, char *ext)
 
         PORT_Free (manifest);
 
-        if (status < 0 && ret == 0) ret = status;
+        if (status < 0) 
+	  ret = status;
+	else
+	  ++ret;
         }
       else
         return JAR_ERR_MEMORY;

@@ -73,9 +73,13 @@ nss_cmsrecipientinfo_usessubjectkeyid(NSSCMSRecipientInfo *ri)
  * CMSMessage for that matter */
 static const SECOidData fakeContent;
 NSSCMSRecipientInfo *
-nss_cmsrecipientinfo_create(NSSCMSMessage *cmsg, NSSCMSRecipientIDSelector type,
-                            CERTCertificate *cert, SECKEYPublicKey *pubKey, 
-                            SECItem *subjKeyID, void* pwfn_arg, SECItem* DERinput)
+nss_cmsrecipientinfo_create(NSSCMSMessage *cmsg, 
+			    NSSCMSRecipientIDSelector type,
+                            CERTCertificate *cert, 
+			    SECKEYPublicKey *pubKey, 
+                            SECItem *subjKeyID, 
+			    void* pwfn_arg, 
+			    SECItem* DERinput)
 {
     NSSCMSRecipientInfo *ri;
     void *mark;
@@ -96,7 +100,7 @@ nss_cmsrecipientinfo_create(NSSCMSMessage *cmsg, NSSCMSRecipientIDSelector type,
 	cmsg = NSS_CMSMessage_Create(NULL);
         cmsg->pwfn_arg = pwfn_arg;
 	/* mark it as a special cms message */
-	cmsg->contentInfo.contentTypeTag = &fakeContent;
+	cmsg->contentInfo.contentTypeTag = (SECOidData *)&fakeContent;
     }
 
     poolp = cmsg->poolp;
@@ -461,7 +465,6 @@ NSS_CMSRecipientInfo_WrapBulkKey(NSSCMSRecipientInfo *ri, PK11SymKey *bulkkey,
     CERTCertificate *cert;
     SECOidTag certalgtag;
     SECStatus rv = SECSuccess;
-    SECItem *params = NULL;
     NSSCMSRecipientEncryptedKey *rek;
     NSSCMSOriginatorIdentifierOrKey *oiok;
     CERTSubjectPublicKeyInfo *spki, *freeSpki = NULL;

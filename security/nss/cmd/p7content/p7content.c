@@ -47,6 +47,7 @@
 #include "cert.h"
 #include "certdb.h"
 #include "nss.h"
+#include "pk11pub.h"
 
 #if defined(XP_UNIX)
 #include <unistd.h>
@@ -79,6 +80,7 @@ Usage(char *progName)
 }
 
 static PRBool saw_content;
+static secuPWData  pwdata          = { PW_NONE, 0 };
 
 static void
 PrintBytes(void *arg, const char *buf, unsigned long len)
@@ -120,7 +122,7 @@ DecodeAndPrintFile(FILE *out, PRFileDesc *in, char *progName)
     fprintf(out, "\n---------------------------------------------\n");
 
     saw_content = PR_FALSE;
-    dcx = SEC_PKCS7DecoderStart(PrintBytes, out, NULL, NULL,
+    dcx = SEC_PKCS7DecoderStart(PrintBytes, out, NULL, &pwdata,
 				NULL, NULL, decryption_allowed);
     if (dcx != NULL) {
 #if 0	/* Test that decoder works when data is really streaming in. */
@@ -193,7 +195,6 @@ DecodeAndPrintFile(FILE *out, PRFileDesc *in, char *progName)
     return 0;
 }
 
-
 /*
  * Print the contents of a PKCS7 message, indicating signatures, etc.
  */
@@ -217,7 +218,7 @@ main(int argc, char **argv)
     /*
      * Parse command line arguments
      */
-    optstate = PL_CreateOptState(argc, argv, "d:i:o:");
+    optstate = PL_CreateOptState(argc, argv, "d:i:o:p:f:");
     while ((status = PL_GetNextOpt(optstate)) == PL_OPT_OK) {
 	switch (optstate->option) {
 	  case 'd':
@@ -242,6 +243,16 @@ main(int argc, char **argv)
 	    }
 	    break;
 
+	  case 'p':
+            pwdata.source = PW_PLAINTEXT;
+            pwdata.data = PORT_Strdup (optstate->value);
+            break;
+
+          case 'f':
+            pwdata.source = PW_FROMFILE;
+            pwdata.data = PORT_Strdup (optstate->value);
+            break;
+
 	  default:
 	    Usage(progName);
 	    break;
@@ -260,6 +271,8 @@ main(int argc, char **argv)
 	SECU_PrintPRandOSError(progName);
 	return -1;
     }
+
+    PK11_SetPasswordFunc(SECU_GetModulePassword);
 
     if (DecodeAndPrintFile(outFile, inFile, progName)) {
 	SECU_PrintError(progName, "problem decoding data");

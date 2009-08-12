@@ -160,21 +160,11 @@ static PRBool disableTLS      = PR_FALSE;
 static PRBool bypassPKCS11    = PR_FALSE;
 static PRBool disableLocking  = PR_FALSE;
 static PRBool ignoreErrors    = PR_FALSE;
+static PRBool enableSessionTickets = PR_FALSE;
 
 PRIntervalTime maxInterval    = PR_INTERVAL_NO_TIMEOUT;
 
 char * progName;
-
-char * ownPasswd( PK11SlotInfo *slot, PRBool retry, void *arg)
-{
-        char *passwd = NULL;
-
-        if ( (!retry) && arg ) {
-                passwd = PL_strdup((char *)arg);
-        }
-
-        return passwd;
-}
 
 int	stopping;
 int	verbose;
@@ -190,6 +180,7 @@ Usage(const char *progName)
     	"Usage: %s [-n nickname] [-p port] [-d dbdir] [-c connections]\n"
  	"          [-23BDNTovqs] [-f filename] [-N | -P percentage]\n"
 	"          [-w dbpasswd] [-C cipher(s)] [-t threads] hostname\n"
+        "          [-W pwfile]\n"
 	" where -v means verbose\n"
         "       -o flag is interpreted as follows:\n"
         "          1 -o   means override the result of server certificate validation.\n"
@@ -203,7 +194,8 @@ Usage(const char *progName)
         "       -3 means disable SSL3\n"
         "       -T means disable TLS\n"
         "       -U means enable throttling up threads\n"
-	"       -B bypasses the PKCS11 layer for SSL encryption and MACing\n",
+	"       -B bypasses the PKCS11 layer for SSL encryption and MACing\n"
+	"       -u enable TLS Session Ticket extension\n",
 	progName);
     exit(1);
 }
@@ -250,13 +242,6 @@ disableAllSSLCiphers(void)
 	    exit(2);
 	}
     }
-}
-
-static SECStatus
-myGoodSSLAuthCertificate(void *arg, PRFileDesc *fd, PRBool checkSig,
-		     PRBool isServer)
-{
-    return SECSuccess;
 }
 
 /* This invokes the "default" AuthCert handler in libssl.
@@ -354,10 +339,12 @@ printSecurityInfo(PRFileDesc *fd)
 	cert = NULL;
     }
     fprintf(stderr,
-    	"strsclnt: %ld cache hits; %ld cache misses, %ld cache not reusable\n",
+    	"strsclnt: %ld cache hits; %ld cache misses, %ld cache not reusable\n"
+	"          %ld stateless resumes\n",
     	ssl3stats->hsh_sid_cache_hits, 
 	ssl3stats->hsh_sid_cache_misses,
-	ssl3stats->hsh_sid_cache_not_ok);
+	ssl3stats->hsh_sid_cache_not_ok,
+	ssl3stats->hsh_sid_stateless_resumes);
 
 }
 
@@ -738,11 +725,10 @@ handle_connection( PRFileDesc *ssl_sock, int tid)
 
 PRInt32 lastFullHandshakePeerID;
 
-SECStatus 
+void
 myHandshakeCallback(PRFileDesc *socket, void *arg) 
 {
     PR_AtomicSet(&lastFullHandshakePeerID, (PRInt32) arg);
-    return SECSuccess;
 }
 
 #endif
@@ -855,8 +841,9 @@ retry:
         if ( (savid != 1) &&
             ( ( (savid <= total_connections_rounded_down_to_hundreds) &&
                 (conid <= fullhs) ) ||
-              (conid*100 <= total_connections_modulo_100*fullhs ) ) ) {
+              (conid*100 <= total_connections_modulo_100*fullhs ) ) ) 
 #ifdef USE_SOCK_PEER_ID
+        {
             /* force a full handshake by changing the socket peer ID */
             thisPeerID = PR_AtomicIncrement(&sockPeerID);
         } else {
@@ -870,7 +857,6 @@ retry:
 #else
             /* force a full handshake by setting the no cache option */
             SSL_OptionSet(ssl_sock, SSL_NO_CACHE, 1);
-        }
 #endif
     }
     rv = SSL_ResetHandshake(ssl_sock, /* asServer */ 0);
@@ -904,7 +890,7 @@ typedef struct {
     char* nickname;
     CERTCertificate* cert;
     SECKEYPrivateKey* key;
-    char* password;
+    void* wincx;
 } cert_and_key;
 
 PRBool FindCertAndKey(cert_and_key* Cert_And_Key)
@@ -914,9 +900,9 @@ PRBool FindCertAndKey(cert_and_key* Cert_And_Key)
     }
     Cert_And_Key->cert = CERT_FindUserCertByUsage(CERT_GetDefaultCertDB(),
                             Cert_And_Key->nickname, certUsageSSLClient,
-                            PR_FALSE, Cert_And_Key->password);
+                            PR_FALSE, Cert_And_Key->wincx);
     if (Cert_And_Key->cert) {
-        Cert_And_Key->key = PK11_FindKeyByAnyCert(Cert_And_Key->cert, Cert_And_Key->password);
+        Cert_And_Key->key = PK11_FindKeyByAnyCert(Cert_And_Key->cert, Cert_And_Key->wincx);
     }
     if (Cert_And_Key->cert && Cert_And_Key->key) {
         return PR_TRUE;
@@ -1033,7 +1019,7 @@ StressClient_GetClientAuthData(void * arg,
         SECStatus          rv         = SECFailure;
 
         if (Cert_And_Key) {
-            proto_win = Cert_And_Key->password;
+            proto_win = Cert_And_Key->wincx;
         }
 
         names = CERT_GetCertNicknames(CERT_GetDefaultCertDB(),
@@ -1191,7 +1177,8 @@ client_main(
 
     /* do SSL configuration. */
 
-    rv = SSL_OptionSet(model_sock, SSL_SECURITY, 1);
+    rv = SSL_OptionSet(model_sock, SSL_SECURITY,
+        !(disableSSL2 && disableSSL3 && disableTLS));
     if (rv < 0) {
 	errExit("SSL_OptionSet SSL_SECURITY");
     }
@@ -1238,6 +1225,12 @@ client_main(
 	if (rv < 0) {
 	    errExit("SSL_OptionSet SSL_NO_LOCKS");
 	}
+    }
+
+    if (enableSessionTickets) {
+	rv = SSL_OptionSet(model_sock, SSL_ENABLE_SESSION_TICKETS, PR_TRUE);
+	if (rv != SECSuccess)
+	    errExit("SSL_OptionSet SSL_ENABLE_SESSION_TICKETS");
     }
 
     SSL_SetURL(model_sock, hostName);
@@ -1326,7 +1319,6 @@ main(int argc, char **argv)
     char *               hostName    = NULL;
     char *               nickName    = NULL;
     char *               tmp         = NULL;
-    char *		 passwd      = NULL;
     int                  connections = 1;
     int                  exitVal;
     int                  tmpInt;
@@ -1335,6 +1327,7 @@ main(int argc, char **argv)
     PLOptState *         optstate;
     PLOptStatus          status;
     cert_and_key Cert_And_Key;
+    secuPWData  pwdata          = { PW_NONE, 0 };
 
     /* Call the NSPR initialization routines */
     PR_Init( PR_SYSTEM_THREAD, PR_PRIORITY_NORMAL, 1);
@@ -1345,7 +1338,7 @@ main(int argc, char **argv)
     progName = progName ? progName + 1 : tmp;
  
 
-    optstate = PL_CreateOptState(argc, argv, "23BC:DNP:TUc:d:f:in:op:qst:vw:");
+    optstate = PL_CreateOptState(argc, argv, "23BC:DNP:TUW:c:d:f:in:op:qst:uvw:");
     while ((status = PL_GetNextOpt(optstate)) == PL_OPT_OK) {
 	switch(optstate->option) {
 
@@ -1391,9 +1384,19 @@ main(int argc, char **argv)
 	        max_threads = active_threads = tmpInt;
 	    break;
 
-        case 'v': verbose++; break;
+	case 'u': enableSessionTickets = PR_TRUE; break;
 
-	case 'w': passwd = PL_strdup(optstate->value); break;
+	case 'v': verbose++; break;
+
+        case 'w':
+            pwdata.source = PW_PLAINTEXT;
+            pwdata.data = PL_strdup(optstate->value);
+            break;
+
+        case 'W':
+            pwdata.source = PW_FROMFILE;
+            pwdata.data = PL_strdup(optstate->value);
+            break;
 
 	case 0:   /* positional parameter */
 	    if (hostName) {
@@ -1423,12 +1426,7 @@ main(int argc, char **argv)
     if (fileName)
     	readBigFile(fileName);
 
-    /* set our password function */
-    if ( passwd ) {
-	PK11_SetPasswordFunc(ownPasswd);
-    } else {
-	PK11_SetPasswordFunc(SECU_GetModulePassword);
-    }
+    PK11_SetPasswordFunc(SECU_GetModulePassword);
 
     tmp = PR_GetEnv("NSS_DEBUG_TIMEOUT");
     if (tmp && tmp[0]) {
@@ -1438,7 +1436,7 @@ main(int argc, char **argv)
     	}
     }
 
-    /* Call the libsec initialization routines */
+    /* Call the NSS initialization routines */
     rv = NSS_Initialize(dir, "", "", SECMOD_DB, NSS_INIT_READONLY);
     if (rv != SECSuccess) {
     	fputs("NSS_Init failed.\n", stderr);
@@ -1447,7 +1445,7 @@ main(int argc, char **argv)
     ssl3stats = SSL_GetStatistics();
     Cert_And_Key.lock = PR_NewLock();
     Cert_And_Key.nickname = nickName;
-    Cert_And_Key.password = passwd;
+    Cert_And_Key.wincx = &pwdata;
     Cert_And_Key.cert = NULL;
     Cert_And_Key.key = NULL;
 
@@ -1478,8 +1476,8 @@ main(int argc, char **argv)
 
     PR_DestroyLock(Cert_And_Key.lock);
 
-    if (Cert_And_Key.password) {
-        PL_strfree(Cert_And_Key.password);
+    if (pwdata.data) {
+        PL_strfree(pwdata.data);
     }
     if (Cert_And_Key.nickname) {
         PL_strfree(Cert_And_Key.nickname);
@@ -1488,29 +1486,41 @@ main(int argc, char **argv)
     PL_strfree(hostName);
 
     /* some final stats. */
-    if (ssl3stats->hsh_sid_cache_hits + ssl3stats->hsh_sid_cache_misses +
-        ssl3stats->hsh_sid_cache_not_ok == 0) {
+    if (ssl3stats->hsh_sid_cache_hits +
+	ssl3stats->hsh_sid_cache_misses +
+	ssl3stats->hsh_sid_cache_not_ok +
+	ssl3stats->hsh_sid_stateless_resumes == 0) {
 	/* presumably we were testing SSL2. */
 	printf("strsclnt: SSL2 - %d server certificates tested.\n",
                certsTested);
     } else {
 	printf(
-	"strsclnt: %ld cache hits; %ld cache misses, %ld cache not reusable\n",
+	"strsclnt: %ld cache hits; %ld cache misses, %ld cache not reusable\n"
+	"          %ld stateless resumes\n",
 	    ssl3stats->hsh_sid_cache_hits, 
 	    ssl3stats->hsh_sid_cache_misses,
-	    ssl3stats->hsh_sid_cache_not_ok);
+	    ssl3stats->hsh_sid_cache_not_ok,
+	    ssl3stats->hsh_sid_stateless_resumes);
     }
 
-    if (!NoReuse)
-	exitVal = (ssl3stats->hsh_sid_cache_misses > 1) ||
-                (ssl3stats->hsh_sid_cache_not_ok != 0) ||
-                (certsTested > 1);
-    else {
+    if (!NoReuse) {
+	if (enableSessionTickets)
+	    exitVal = (ssl3stats->hsh_sid_stateless_resumes == 0);
+	else
+	    exitVal = (ssl3stats->hsh_sid_cache_misses > 1) ||
+		      (ssl3stats->hsh_sid_stateless_resumes != 0);
+	if (!exitVal)
+	    exitVal = (ssl3stats->hsh_sid_cache_not_ok != 0) ||
+		      (certsTested > 1);
+    } else {
 	printf("strsclnt: NoReuse - %d server certificates tested.\n",
                certsTested);
-        if (ssl3stats->hsh_sid_cache_hits + ssl3stats->hsh_sid_cache_misses +
-            ssl3stats->hsh_sid_cache_not_ok > 0) {
+        if (ssl3stats->hsh_sid_cache_hits +
+            ssl3stats->hsh_sid_cache_misses +
+            ssl3stats->hsh_sid_cache_not_ok +
+            ssl3stats->hsh_sid_stateless_resumes > 0) {
             exitVal = (ssl3stats->hsh_sid_cache_misses != connections) ||
+                (ssl3stats->hsh_sid_stateless_resumes != 0) ||
                 (certsTested != connections);
         } else {                /* ssl2 connections */
             exitVal = (certsTested != connections);

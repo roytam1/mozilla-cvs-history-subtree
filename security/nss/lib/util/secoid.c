@@ -37,9 +37,9 @@
 
 #include "secoid.h"
 #include "pkcs11t.h"
-#include "secmodt.h"
 #include "secitem.h"
 #include "secerr.h"
+#include "prenv.h"
 #include "plhash.h"
 #include "nssrwlk.h"
 
@@ -169,11 +169,28 @@
 #define ANSI_X962_SIGNATURE_OID ANSI_X962_OID, 0x04
 #define ANSI_X962_SPECIFY_OID   ANSI_X962_SIGNATURE_OID, 0x03
 
+/* for Camellia: iso(1) member-body(2) jisc(392)
+ *    mitsubishi(200011) isl(61) security(1) algorithm(1)
+ */
+#define MITSUBISHI_ALG 0x2a,0x83,0x08,0x8c,0x9a,0x4b,0x3d,0x01,0x01
+#define CAMELLIA_ENCRYPT_OID MITSUBISHI_ALG,1
+#define CAMELLIA_WRAP_OID    MITSUBISHI_ALG,3
+
+/* for SEED : iso(1) member-body(2) korea(410)
+ *    kisa(200004) algorithm(1)
+ */
+#define SEED_OID		 0x2a,0x83,0x1a,0x8c,0x9a,0x44,0x01
+
 #define CONST_OID static const unsigned char
 
 CONST_OID md2[]        				= { DIGEST, 0x02 };
 CONST_OID md4[]        				= { DIGEST, 0x04 };
 CONST_OID md5[]        				= { DIGEST, 0x05 };
+CONST_OID hmac_sha1[]   			= { DIGEST, 7 };
+CONST_OID hmac_sha224[]				= { DIGEST, 8 };
+CONST_OID hmac_sha256[]				= { DIGEST, 9 };
+CONST_OID hmac_sha384[]				= { DIGEST, 10 };
+CONST_OID hmac_sha512[]				= { DIGEST, 11 };
 
 CONST_OID rc2cbc[]     				= { CIPHER, 0x02 };
 CONST_OID rc4[]        				= { CIPHER, 0x04 };
@@ -190,6 +207,7 @@ CONST_OID isoSHAWithRSASignature[]           = { ALGORITHM, 0x0f };
 CONST_OID desede[]                           = { ALGORITHM, 0x11 };
 CONST_OID sha1[]                             = { ALGORITHM, 0x1a };
 CONST_OID bogusDSASignaturewithSHA1Digest[]  = { ALGORITHM, 0x1b };
+CONST_OID isoSHA1WithRSASignature[]          = { ALGORITHM, 0x1d };
 
 CONST_OID pkcs1RSAEncryption[]         		= { PKCS1, 0x01 };
 CONST_OID pkcs1MD2WithRSAEncryption[]  		= { PKCS1, 0x02 };
@@ -203,6 +221,9 @@ CONST_OID pkcs1SHA512WithRSAEncryption[] 	= { PKCS1, 13 };
 CONST_OID pkcs5PbeWithMD2AndDEScbc[]  		= { PKCS5, 0x01 };
 CONST_OID pkcs5PbeWithMD5AndDEScbc[]  		= { PKCS5, 0x03 };
 CONST_OID pkcs5PbeWithSha1AndDEScbc[] 		= { PKCS5, 0x0a };
+CONST_OID pkcs5Pbkdf2[]  			= { PKCS5, 12 };
+CONST_OID pkcs5Pbes2[]  			= { PKCS5, 13 };
+CONST_OID pkcs5Pbmac1[]				= { PKCS5, 14 };
 
 CONST_OID pkcs7[]                     		= { PKCS7 };
 CONST_OID pkcs7Data[]                 		= { PKCS7, 0x01 };
@@ -343,6 +364,9 @@ CONST_OID x509InhibitAnyPolicy[]           	= { ID_CE_OID, 54 };
 CONST_OID x509AuthInfoAccess[]        		= { PKIX_CERT_EXTENSIONS,  1 };
 CONST_OID x509SubjectInfoAccess[]               = { PKIX_CERT_EXTENSIONS, 11 };
 
+CONST_OID x509SIATimeStamping[]                 = {PKIX_ACCESS_DESCRIPTION, 0x03};
+CONST_OID x509SIACaRepository[]                 = {PKIX_ACCESS_DESCRIPTION, 0x05};
+
 /* pkcs 12 additions */
 CONST_OID pkcs12[]                           = { PKCS12 };
 CONST_OID pkcs12ModeIDs[]                    = { PKCS12_MODE_IDS };
@@ -460,6 +484,13 @@ CONST_OID aes256_CFB[] 				= { AES, 44 };
 #endif
 CONST_OID aes256_KEY_WRAP[]			= { AES, 45 };
 
+CONST_OID camellia128_CBC[]			= { CAMELLIA_ENCRYPT_OID, 2};
+CONST_OID camellia192_CBC[]			= { CAMELLIA_ENCRYPT_OID, 3};
+CONST_OID camellia256_CBC[]			= { CAMELLIA_ENCRYPT_OID, 4};
+CONST_OID camellia128_KEY_WRAP[]		= { CAMELLIA_WRAP_OID, 2};
+CONST_OID camellia192_KEY_WRAP[]		= { CAMELLIA_WRAP_OID, 3};
+CONST_OID camellia256_KEY_WRAP[]		= { CAMELLIA_WRAP_OID, 4};
+
 CONST_OID sha256[]                              = { SHAXXX, 1 };
 CONST_OID sha384[]                              = { SHAXXX, 2 };
 CONST_OID sha512[]                              = { SHAXXX, 3 };
@@ -542,6 +573,8 @@ CONST_OID secgECsect409r1[] = {SECG_OID, 0x25 };
 CONST_OID secgECsect571k1[] = {SECG_OID, 0x26 };
 CONST_OID secgECsect571r1[] = {SECG_OID, 0x27 };
 
+CONST_OID seed_CBC[]				= { SEED_OID, 4 };
+
 #define OI(x) { siDEROID, (unsigned char *)x, sizeof x }
 #ifndef SECOID_NO_STRINGS
 #define OD(oid,tag,desc,mech,ext) { OI(oid), tag, desc, mech, ext }
@@ -558,7 +591,7 @@ CONST_OID secgECsect571r1[] = {SECG_OID, 0x27 };
 /*
  * NOTE: the order of these entries must mach the SECOidTag enum in secoidt.h!
  */
-const static SECOidData oids[] = {
+const static SECOidData oids[SEC_OID_TOTAL] = {
     { { siDEROID, NULL, 0 }, SEC_OID_UNKNOWN,
 	"Unknown OID", CKM_INVALID_MECHANISM, INVALID_CERT_EXTENSION },
     OD( md2, SEC_OID_MD2, "MD2", CKM_MD2, INVALID_CERT_EXTENSION ),
@@ -609,13 +642,13 @@ const static SECOidData oids[] = {
 	INVALID_CERT_EXTENSION ),
 
     OD( pkcs5PbeWithMD2AndDEScbc, SEC_OID_PKCS5_PBE_WITH_MD2_AND_DES_CBC,
-	"PKCS #5 Password Based Encryption with MD2 and DES CBC",
+	"PKCS #5 Password Based Encryption with MD2 and DES-CBC",
 	CKM_PBE_MD2_DES_CBC, INVALID_CERT_EXTENSION ),
     OD( pkcs5PbeWithMD5AndDEScbc, SEC_OID_PKCS5_PBE_WITH_MD5_AND_DES_CBC,
-	"PKCS #5 Password Based Encryption with MD5 and DES CBC",
+	"PKCS #5 Password Based Encryption with MD5 and DES-CBC",
 	CKM_PBE_MD5_DES_CBC, INVALID_CERT_EXTENSION ),
     OD( pkcs5PbeWithSha1AndDEScbc, SEC_OID_PKCS5_PBE_WITH_SHA1_AND_DES_CBC,
-	"PKCS #5 Password Based Encryption with SHA1 and DES CBC", 
+	"PKCS #5 Password Based Encryption with SHA-1 and DES-CBC", 
 	CKM_NETSCAPE_PBE_SHA1_DES_CBC, INVALID_CERT_EXTENSION ),
     OD( pkcs7, SEC_OID_PKCS7,
 	"PKCS #7", CKM_INVALID_MECHANISM, INVALID_CERT_EXTENSION ),
@@ -806,13 +839,13 @@ const static SECOidData oids[] = {
 	"CRL Distribution Points",
 	CKM_INVALID_MECHANISM, FAKE_SUPPORTED_CERT_EXTENSION ),
     OD( x509CertificatePolicies, SEC_OID_X509_CERTIFICATE_POLICIES,
-	"Certificate Policies",
+ 	"Certificate Policies",
         CKM_INVALID_MECHANISM, FAKE_SUPPORTED_CERT_EXTENSION ),
     OD( x509PolicyMappings, SEC_OID_X509_POLICY_MAPPINGS, 
-	"Certificate Policy Mappings",
+ 	"Certificate Policy Mappings",
         CKM_INVALID_MECHANISM, UNSUPPORTED_CERT_EXTENSION ),
     OD( x509PolicyConstraints, SEC_OID_X509_POLICY_CONSTRAINTS, 
-	"Certificate Policy Constraints",
+ 	"Certificate Policy Constraints",
         CKM_INVALID_MECHANISM, FAKE_SUPPORTED_CERT_EXTENSION ),
     OD( x509AuthKeyID, SEC_OID_X509_AUTH_KEY_ID, 
 	"Certificate Authority Key Identifier",
@@ -884,23 +917,23 @@ const static SECOidData oids[] = {
 	CKM_INVALID_MECHANISM, INVALID_CERT_EXTENSION ),
     OD( pkcs12PBEWithSha1And128BitRC4,
 	SEC_OID_PKCS12_PBE_WITH_SHA1_AND_128_BIT_RC4,
-	"PKCS #12 PBE With Sha1 and 128 Bit RC4", 
+	"PKCS #12 PBE With SHA-1 and 128 Bit RC4", 
 	CKM_NETSCAPE_PBE_SHA1_128_BIT_RC4, INVALID_CERT_EXTENSION ),
     OD( pkcs12PBEWithSha1And40BitRC4,
 	SEC_OID_PKCS12_PBE_WITH_SHA1_AND_40_BIT_RC4,
-	"PKCS #12 PBE With Sha1 and 40 Bit RC4", 
+	"PKCS #12 PBE With SHA-1 and 40 Bit RC4", 
 	CKM_NETSCAPE_PBE_SHA1_40_BIT_RC4, INVALID_CERT_EXTENSION ),
     OD( pkcs12PBEWithSha1AndTripleDESCBC,
 	SEC_OID_PKCS12_PBE_WITH_SHA1_AND_TRIPLE_DES_CBC,
-	"PKCS #12 PBE With Sha1 and Triple DES CBC", 
+	"PKCS #12 PBE With SHA-1 and Triple DES-CBC", 
 	CKM_NETSCAPE_PBE_SHA1_TRIPLE_DES_CBC, INVALID_CERT_EXTENSION ),
     OD( pkcs12PBEWithSha1And128BitRC2CBC,
 	SEC_OID_PKCS12_PBE_WITH_SHA1_AND_128_BIT_RC2_CBC,
-	"PKCS #12 PBE With Sha1 and 128 Bit RC2 CBC", 
+	"PKCS #12 PBE With SHA-1 and 128 Bit RC2 CBC", 
 	CKM_NETSCAPE_PBE_SHA1_128_BIT_RC2_CBC, INVALID_CERT_EXTENSION ),
     OD( pkcs12PBEWithSha1And40BitRC2CBC,
 	SEC_OID_PKCS12_PBE_WITH_SHA1_AND_40_BIT_RC2_CBC,
-	"PKCS #12 PBE With Sha1 and 40 Bit RC2 CBC", 
+	"PKCS #12 PBE With SHA-1 and 40 Bit RC2 CBC", 
 	CKM_NETSCAPE_PBE_SHA1_40_BIT_RC2_CBC, INVALID_CERT_EXTENSION ),
     OD( pkcs12RSAEncryptionWith128BitRC4,
 	SEC_OID_PKCS12_RSA_ENCRYPTION_WITH_128_BIT_RC4,
@@ -924,11 +957,11 @@ const static SECOidData oids[] = {
 	"ANSI X9.57 DSA Signature", CKM_DSA, INVALID_CERT_EXTENSION ),
     OD( ansix9DSASignaturewithSHA1Digest,
         SEC_OID_ANSIX9_DSA_SIGNATURE_WITH_SHA1_DIGEST,
-	"ANSI X9.57 DSA Signature with SHA1 Digest", 
+	"ANSI X9.57 DSA Signature with SHA-1 Digest", 
 	CKM_DSA_SHA1, INVALID_CERT_EXTENSION ),
     OD( bogusDSASignaturewithSHA1Digest,
         SEC_OID_BOGUS_DSA_SIGNATURE_WITH_SHA1_DIGEST,
-	"FORTEZZA DSA Signature with SHA1 Digest", 
+	"FORTEZZA DSA Signature with SHA-1 Digest", 
 	CKM_DSA_SHA1, INVALID_CERT_EXTENSION ),
 
     /* verisign oids */
@@ -1027,27 +1060,27 @@ const static SECOidData oids[] = {
     /* pkcs12 v2 oids */
     OD( pkcs12V2PBEWithSha1And128BitRC4,
         SEC_OID_PKCS12_V2_PBE_WITH_SHA1_AND_128_BIT_RC4,
-	"PKCS12 V2 PBE With SHA1 And 128 Bit RC4", 
+	"PKCS #12 V2 PBE With SHA-1 And 128 Bit RC4", 
 	CKM_PBE_SHA1_RC4_128, INVALID_CERT_EXTENSION ),
     OD( pkcs12V2PBEWithSha1And40BitRC4,
         SEC_OID_PKCS12_V2_PBE_WITH_SHA1_AND_40_BIT_RC4,
-	"PKCS12 V2 PBE With SHA1 And 40 Bit RC4", 
+	"PKCS #12 V2 PBE With SHA-1 And 40 Bit RC4", 
 	CKM_PBE_SHA1_RC4_40, INVALID_CERT_EXTENSION ),
     OD( pkcs12V2PBEWithSha1And3KeyTripleDEScbc,
         SEC_OID_PKCS12_V2_PBE_WITH_SHA1_AND_3KEY_TRIPLE_DES_CBC,
-	"PKCS12 V2 PBE With SHA1 And 3KEY Triple DES-cbc", 
+	"PKCS #12 V2 PBE With SHA-1 And 3KEY Triple DES-CBC", 
 	CKM_PBE_SHA1_DES3_EDE_CBC, INVALID_CERT_EXTENSION ),
     OD( pkcs12V2PBEWithSha1And2KeyTripleDEScbc,
         SEC_OID_PKCS12_V2_PBE_WITH_SHA1_AND_2KEY_TRIPLE_DES_CBC,
-	"PKCS12 V2 PBE With SHA1 And 2KEY Triple DES-cbc", 
+	"PKCS #12 V2 PBE With SHA-1 And 2KEY Triple DES-CBC", 
 	CKM_PBE_SHA1_DES2_EDE_CBC, INVALID_CERT_EXTENSION ),
     OD( pkcs12V2PBEWithSha1And128BitRC2cbc,
         SEC_OID_PKCS12_V2_PBE_WITH_SHA1_AND_128_BIT_RC2_CBC,
-	"PKCS12 V2 PBE With SHA1 And 128 Bit RC2 CBC", 
+	"PKCS #12 V2 PBE With SHA-1 And 128 Bit RC2 CBC", 
 	CKM_PBE_SHA1_RC2_128_CBC, INVALID_CERT_EXTENSION ),
     OD( pkcs12V2PBEWithSha1And40BitRC2cbc,
         SEC_OID_PKCS12_V2_PBE_WITH_SHA1_AND_40_BIT_RC2_CBC,
-	"PKCS12 V2 PBE With SHA1 And 40 Bit RC2 CBC", 
+	"PKCS #12 V2 PBE With SHA-1 And 40 Bit RC2 CBC", 
 	CKM_PBE_SHA1_RC2_40_CBC, INVALID_CERT_EXTENSION ),
     OD( pkcs12SafeContentsID, SEC_OID_PKCS12_SAFE_CONTENTS_ID,
 	"PKCS #12 Safe Contents ID", 
@@ -1116,7 +1149,7 @@ const static SECOidData oids[] = {
         "Ephemeral-Static Diffie-Hellman", CKM_INVALID_MECHANISM /* XXX */,
         INVALID_CERT_EXTENSION ),
     OD( cms3DESwrap, SEC_OID_CMS_3DES_KEY_WRAP,
-        "CMS 3DES Key Wrap", CKM_INVALID_MECHANISM /* XXX */,
+        "CMS Triple DES Key Wrap", CKM_INVALID_MECHANISM /* XXX */,
         INVALID_CERT_EXTENSION ),
     OD( cmsRC2wrap, SEC_OID_CMS_RC2_KEY_WRAP,
         "CMS RC2 Key Wrap", CKM_INVALID_MECHANISM /* XXX */,
@@ -1163,11 +1196,11 @@ const static SECOidData oids[] = {
 	INVALID_CERT_EXTENSION ),
 
     OD( aes128_KEY_WRAP, SEC_OID_AES_128_KEY_WRAP,
-	"AES-128 Key Wrap", CKM_NETSCAPE_AES_KEY_WRAP, INVALID_CERT_EXTENSION),
+	"AES-128 Key Wrap", CKM_NSS_AES_KEY_WRAP, INVALID_CERT_EXTENSION),
     OD( aes192_KEY_WRAP, SEC_OID_AES_192_KEY_WRAP,
-	"AES-192 Key Wrap", CKM_NETSCAPE_AES_KEY_WRAP, INVALID_CERT_EXTENSION),
+	"AES-192 Key Wrap", CKM_NSS_AES_KEY_WRAP, INVALID_CERT_EXTENSION),
     OD( aes256_KEY_WRAP, SEC_OID_AES_256_KEY_WRAP,
-	"AES-256 Key Wrap", CKM_NETSCAPE_AES_KEY_WRAP, INVALID_CERT_EXTENSION),
+	"AES-256 Key Wrap", CKM_NSS_AES_KEY_WRAP, INVALID_CERT_EXTENSION),
 
     /* Elliptic Curve Cryptography (ECC) OIDs */
     OD( ansix962ECPublicKey, SEC_OID_ANSIX962_EC_PUBLIC_KEY,
@@ -1175,7 +1208,7 @@ const static SECOidData oids[] = {
 	INVALID_CERT_EXTENSION ),
     OD( ansix962SignaturewithSHA1Digest, 
 	SEC_OID_ANSIX962_ECDSA_SHA1_SIGNATURE,
-	"X9.62 ECDSA signature with SHA1", CKM_ECDSA_SHA1,
+	"X9.62 ECDSA signature with SHA-1", CKM_ECDSA_SHA1,
 	INVALID_CERT_EXTENSION ),
 
     /* Named curves */
@@ -1508,7 +1541,66 @@ const static SECOidData oids[] = {
         "Subject Info Access",        CKM_INVALID_MECHANISM,
 	UNSUPPORTED_CERT_EXTENSION ),
 
+    /* Camellia algorithm OIDs */
+    OD( camellia128_CBC, SEC_OID_CAMELLIA_128_CBC,
+	"CAMELLIA-128-CBC", CKM_CAMELLIA_CBC, INVALID_CERT_EXTENSION ),
+    OD( camellia192_CBC, SEC_OID_CAMELLIA_192_CBC,
+	"CAMELLIA-192-CBC", CKM_CAMELLIA_CBC, INVALID_CERT_EXTENSION ),
+    OD( camellia256_CBC, SEC_OID_CAMELLIA_256_CBC,
+	"CAMELLIA-256-CBC", CKM_CAMELLIA_CBC, INVALID_CERT_EXTENSION ),
+
+    /* PKCS 5 v2 OIDS */
+    OD( pkcs5Pbkdf2, SEC_OID_PKCS5_PBKDF2,
+	"PKCS #5 Password Based Key Dervive Function v2 ", 
+	CKM_PKCS5_PBKD2, INVALID_CERT_EXTENSION ),
+    OD( pkcs5Pbes2, SEC_OID_PKCS5_PBES2,
+	"PKCS #5 Password Based Encryption v2 ", 
+	CKM_INVALID_MECHANISM, INVALID_CERT_EXTENSION ),
+    OD( pkcs5Pbmac1, SEC_OID_PKCS5_PBMAC1,
+	"PKCS #5 Password Based Authentication v1 ", 
+	CKM_INVALID_MECHANISM, INVALID_CERT_EXTENSION ),
+    OD( hmac_sha1, SEC_OID_HMAC_SHA1, "HMAC SHA-1", 
+	CKM_SHA_1_HMAC, INVALID_CERT_EXTENSION ),
+    OD( hmac_sha224, SEC_OID_HMAC_SHA224, "HMAC SHA-224", 
+	CKM_SHA224_HMAC, INVALID_CERT_EXTENSION ),
+    OD( hmac_sha256, SEC_OID_HMAC_SHA256, "HMAC SHA-256", 
+	CKM_SHA256_HMAC, INVALID_CERT_EXTENSION ),
+    OD( hmac_sha384, SEC_OID_HMAC_SHA384, "HMAC SHA-384", 
+	CKM_SHA384_HMAC, INVALID_CERT_EXTENSION ),
+    OD( hmac_sha512, SEC_OID_HMAC_SHA512, "HMAC SHA-512", 
+	CKM_SHA512_HMAC, INVALID_CERT_EXTENSION ),
+
+    /* SIA extension OIDs */
+    OD( x509SIATimeStamping,          SEC_OID_PKIX_TIMESTAMPING,
+        "SIA Time Stamping",          CKM_INVALID_MECHANISM,
+	INVALID_CERT_EXTENSION ),
+    OD( x509SIACaRepository,          SEC_OID_PKIX_CA_REPOSITORY,
+        "SIA CA Repository",          CKM_INVALID_MECHANISM,
+	INVALID_CERT_EXTENSION ),
+
+    OD( isoSHA1WithRSASignature, SEC_OID_ISO_SHA1_WITH_RSA_SIGNATURE,
+	"ISO SHA-1 with RSA Signature", 
+	CKM_INVALID_MECHANISM, INVALID_CERT_EXTENSION ),
+
+    /* SEED algorithm OIDs */
+    OD( seed_CBC, SEC_OID_SEED_CBC,
+	"SEED-CBC", CKM_SEED_CBC, INVALID_CERT_EXTENSION),
+
 };
+
+/* PRIVATE EXTENDED SECOID Table
+ * This table is private. Its structure is opaque to the outside.
+ * It is indexed by the same SECOidTag as the oids table above.
+ * Every member of this struct must have accessor functions (set, get)
+ * and those functions must operate by value, not by reference.
+ * The addresses of the contents of this table must not be exposed 
+ * by the accessor functions.
+ */
+typedef struct privXOidStr {
+    PRUint32	notPolicyFlags; /* ones complement of policy flags */
+} privXOid;
+
+static privXOid xOids[SEC_OID_TOTAL];
 
 /*
  * now the dynamic table. The dynamic table gets build at init time.
@@ -1522,41 +1614,34 @@ const static SECOidData oids[] = {
  * uninitialized, it is allocated in BSS, and does NOT increase the 
  * library size. 
  */
+
+typedef struct dynXOidStr {
+    SECOidData  data;
+    privXOid    priv;
+} dynXOid;
+
 static NSSRWLock   * dynOidLock;
 static PLArenaPool * dynOidPool;
 static PLHashTable * dynOidHash;
-static SECOidData ** dynOidTable;	/* not in the pool */
+static dynXOid    ** dynOidTable;	/* not in the pool */
 static int           dynOidEntriesAllocated;
 static int           dynOidEntriesUsed;
 
-/* Creates NSSRWLock and dynOidPool, if they don't exist.
-** This function MIGHT create the lock, but not the pool, so
-** code should test for dynOidPool, not dynOidLock, when deciding
-** whether or not to call this function.
+/* Creates NSSRWLock and dynOidPool at initialization time.
 */
 static SECStatus
 secoid_InitDynOidData(void)
 {
     SECStatus   rv = SECSuccess;
-    NSSRWLock * lock;
 
-    /* This function will create the lock if it doesn't exist,
-    ** and will return the address of the lock, whether it was 
-    ** previously created, or was created by the function.
-    */
-    lock = nssRWLock_AtomicCreate(&dynOidLock, 1, "dynamic OID data");
-    if (!lock) {
+    dynOidLock = NSSRWLock_New(1, "dynamic OID data");
+    if (!dynOidLock) {
     	return SECFailure; /* Error code should already be set. */
     }
-    PORT_Assert(lock == dynOidLock);
-    NSSRWLock_LockWrite(lock);
+    dynOidPool = PORT_NewArena(2048);
     if (!dynOidPool) {
-    	dynOidPool = PORT_NewArena(2048);
-	if (!dynOidPool) {
-	    rv = SECFailure /* Error code should already be set. */;
-	}
+        rv = SECFailure /* Error code should already be set. */;
     }
-    NSSRWLock_UnlockWrite(lock);
     return rv;
 }
 
@@ -1602,10 +1687,10 @@ secoid_FindDynamic(const SECItem *key)
     return ret;
 }
 
-static SECOidData *
+static dynXOid *
 secoid_FindDynamicByTag(SECOidTag tagnum)
 {
-    SECOidData *data = NULL;
+    dynXOid *dxo = NULL;
     int tagNumDiff;
 
     if (tagnum < SEC_OID_TOTAL) {
@@ -1618,14 +1703,14 @@ secoid_FindDynamicByTag(SECOidTag tagnum)
 	NSSRWLock_LockRead(dynOidLock);
 	if (dynOidTable != NULL && /* must check it again with lock held. */
 	    tagNumDiff < dynOidEntriesUsed) {
-	    data = dynOidTable[tagNumDiff];
+	    dxo = dynOidTable[tagNumDiff];
 	}
 	NSSRWLock_UnlockRead(dynOidLock);
     }
-    if (data == NULL) {
+    if (dxo == NULL) {
 	PORT_SetError(SEC_ERROR_UNRECOGNIZED_OID);
     }
-    return data;
+    return dxo;
 }
 
 /*
@@ -1635,7 +1720,7 @@ SECOidTag
 SECOID_AddEntry(const SECOidData * src)
 {
     SECOidData * dst;
-    SECOidData **table;
+    dynXOid    **table;
     SECOidTag    ret         = SEC_OID_UNKNOWN;
     SECStatus    rv;
     int          tableEntries;
@@ -1653,8 +1738,8 @@ SECOID_AddEntry(const SECOidData * src)
 	return ret;
     }
 
-    if (!dynOidPool && secoid_InitDynOidData() != SECSuccess) {
-	/* Caller has set error code. */
+    if (!dynOidPool || !dynOidLock) {
+	PORT_SetError(SEC_ERROR_NOT_INITIALIZED);
     	return ret;
     }
 
@@ -1682,11 +1767,11 @@ SECOID_AddEntry(const SECOidData * src)
     used         = dynOidEntriesUsed;
 
     if (used + 1 > tableEntries) {
-	SECOidData **newTable;
+	dynXOid   ** newTable;
 	int          newTableEntries = tableEntries + 16;
 
-	newTable = (SECOidData **)PORT_Realloc(table, 
-				       newTableEntries * sizeof(SECOidData *));
+	newTable = (dynXOid **)PORT_Realloc(table, 
+				       newTableEntries * sizeof(dynXOid *));
 	if (newTable == NULL) {
 	    goto done;
 	}
@@ -1695,7 +1780,7 @@ SECOID_AddEntry(const SECOidData * src)
     }
 
     /* copy oid structure */
-    dst = PORT_ArenaNew(dynOidPool, SECOidData);
+    dst = (SECOidData *)PORT_ArenaZNew(dynOidPool, dynXOid);
     if (!dst) {
     	goto done;
     }
@@ -1712,8 +1797,8 @@ SECOID_AddEntry(const SECOidData * src)
     dst->supportedExtension = src->supportedExtension;
 
     rv = secoid_HashDynamicOiddata(dst);
-    if ( rv == SECSuccess ) {
-	table[used++] = dst;
+    if (rv == SECSuccess) {
+	table[used++] = (dynXOid *)dst;
 	dynOidEntriesUsed = used;
 	ret = dst->offset;
     }
@@ -1733,20 +1818,66 @@ secoid_HashNumber(const void *key)
     return (PLHashNumber) key;
 }
 
+static void
+handleHashAlgSupport(char * envVal)
+{
+    char * myVal = PORT_Strdup(envVal);  /* Get a copy we can alter */
+    char * arg   = myVal;
+
+    while (arg && *arg) {
+	char *   nextArg = PL_strpbrk(arg, ";");
+	PRUint32 notEnable;
+
+	if (nextArg) {
+	    while (*nextArg == ';') {
+		*nextArg++ = '\0';
+	    }
+	}
+	notEnable = (*arg == '-') ? NSS_USE_ALG_IN_CERT_SIGNATURE : 0;
+	if ((*arg == '+' || *arg == '-') && *++arg) { 
+	    int i;
+
+	    for (i = 1; i < SEC_OID_TOTAL; i++) {
+	        if (oids[i].desc && strstr(arg, oids[i].desc)) {
+		     xOids[i].notPolicyFlags = notEnable |
+		    (xOids[i].notPolicyFlags & ~NSS_USE_ALG_IN_CERT_SIGNATURE);
+		}
+	    }
+	}
+	arg = nextArg;
+    }
+    PORT_Free(myVal);  /* can handle NULL argument OK */
+}
 
 SECStatus
-secoid_Init(void)
+SECOID_Init(void)
 {
     PLHashEntry *entry;
     const SECOidData *oid;
     int i;
-
-    if (!dynOidPool && secoid_InitDynOidData() != SECSuccess) {
-    	return SECFailure;
-    }
+    char * envVal;
 
     if (oidhash) {
-	return SECSuccess;
+	return SECSuccess; /* already initialized */
+    }
+
+    if (!PR_GetEnv("NSS_ALLOW_WEAK_SIGNATURE_ALG")) {
+	/* initialize any policy flags that are disabled by default */
+	xOids[SEC_OID_MD2                           ].notPolicyFlags = ~0;
+	xOids[SEC_OID_MD4                           ].notPolicyFlags = ~0;
+	xOids[SEC_OID_PKCS1_MD2_WITH_RSA_ENCRYPTION ].notPolicyFlags = ~0;
+	xOids[SEC_OID_PKCS1_MD4_WITH_RSA_ENCRYPTION ].notPolicyFlags = ~0;
+	xOids[SEC_OID_PKCS5_PBE_WITH_MD2_AND_DES_CBC].notPolicyFlags = ~0;
+    }
+
+    envVal = PR_GetEnv("NSS_HASH_ALG_SUPPORT");
+    if (envVal)
+    	handleHashAlgSupport(envVal);
+
+    if (secoid_InitDynOidData() != SECSuccess) {
+        PORT_SetError(SEC_ERROR_LIBRARY_FAILURE);
+        PORT_Assert(0); /* this function should never fail */
+    	return SECFailure;
     }
     
     oidhash = PL_NewHashTable(0, SECITEM_Hash, SECITEM_HashCompare,
@@ -1760,7 +1891,7 @@ secoid_Init(void)
 	return(SECFailure);
     }
 
-    for ( i = 0; i < ( sizeof(oids) / sizeof(SECOidData) ); i++ ) {
+    for ( i = 0; i < SEC_OID_TOTAL; i++ ) {
 	oid = &oids[i];
 
 	PORT_Assert ( oid->offset == i );
@@ -1837,12 +1968,11 @@ SECOID_FindOIDTag(const SECItem *oid)
 SECOidData *
 SECOID_FindOIDByTag(SECOidTag tagnum)
 {
-
     if (tagnum >= SEC_OID_TOTAL) {
-	return secoid_FindDynamicByTag(tagnum);
+	return (SECOidData *)secoid_FindDynamicByTag(tagnum);
     }
 
-    PORT_Assert((unsigned int)tagnum < (sizeof(oids) / sizeof(SECOidData)));
+    PORT_Assert((unsigned int)tagnum < SEC_OID_TOTAL);
     return (SECOidData *)(&oids[tagnum]);
 }
 
@@ -1865,6 +1995,71 @@ SECOID_FindOIDTagDescription(SECOidTag tagnum)
   return oidData ? oidData->desc : 0;
 }
 
+/* --------- opaque extended OID table accessor functions ---------------*/
+/*
+ * Any of these functions may return SECSuccess or SECFailure with the error 
+ * code set to SEC_ERROR_UNKNOWN_OBJECT_TYPE if the SECOidTag is out of range.
+ */
+
+static privXOid *
+secoid_FindXOidByTag(SECOidTag tagnum)
+{
+    if (tagnum >= SEC_OID_TOTAL) {
+	dynXOid *dxo = secoid_FindDynamicByTag(tagnum);
+	return (dxo ? &dxo->priv : NULL);
+    }
+
+    PORT_Assert((unsigned int)tagnum < SEC_OID_TOTAL);
+    return &xOids[tagnum];
+}
+
+/* The Get function outputs the 32-bit value associated with the SECOidTag.
+ * Flags bits are the NSS_USE_ALG_ #defines in "secoidt.h".
+ * Default value for any algorithm is 0xffffffff (enabled for all purposes).
+ * No value is output if function returns SECFailure.
+ */
+SECStatus 
+NSS_GetAlgorithmPolicy(SECOidTag tag, PRUint32 *pValue)
+{
+    privXOid * pxo = secoid_FindXOidByTag(tag);
+    if (!pxo)
+    	return SECFailure;
+    if (!pValue) {
+        PORT_SetError(SEC_ERROR_INVALID_ARGS);
+	return SECFailure;
+    }
+    *pValue = ~(pxo->notPolicyFlags);
+    return SECSuccess;
+}
+
+/* The Set function modifies the stored value according to the following
+ * algorithm:
+ *   policy[tag] = (policy[tag] & ~clearBits) | setBits;
+ */
+SECStatus
+NSS_SetAlgorithmPolicy(SECOidTag tag, PRUint32 setBits, PRUint32 clearBits)
+{
+    privXOid * pxo = secoid_FindXOidByTag(tag);
+    PRUint32   policyFlags;
+    if (!pxo)
+    	return SECFailure;
+    /* The stored policy flags are the ones complement of the flags as 
+     * seen by the user.  This is not atomic, but these changes should 
+     * be done rarely, e.g. at initialization time. 
+     */
+    policyFlags = ~(pxo->notPolicyFlags);
+    policyFlags = (policyFlags & ~clearBits) | setBits;
+    pxo->notPolicyFlags = ~policyFlags;
+    return SECSuccess;
+}
+
+/* --------- END OF opaque extended OID table accessor functions ---------*/
+
+/* for now, this is only used in a single place, so it can remain static */
+static PRBool parentForkedAfterC_Initialize;
+
+#define SKIP_AFTER_FORK(x) if (!parentForkedAfterC_Initialize) x
+
 /*
  * free up the oid tables.
  */
@@ -1885,7 +2080,7 @@ SECOID_Shutdown(void)
     ** the destruction of data that probably isn't initialized anyway.
     */
     if (dynOidLock) {
-	NSSRWLock_LockWrite(dynOidLock);
+	SKIP_AFTER_FORK(NSSRWLock_LockWrite(dynOidLock));
 	if (dynOidHash) {
 	    PL_HashTableDestroy(dynOidHash);
 	    dynOidHash = NULL;
@@ -1901,8 +2096,8 @@ SECOID_Shutdown(void)
 	dynOidEntriesAllocated = 0;
 	dynOidEntriesUsed = 0;
 
-	NSSRWLock_UnlockWrite(dynOidLock);
-	NSSRWLock_Destroy(dynOidLock);
+	SKIP_AFTER_FORK(NSSRWLock_UnlockWrite(dynOidLock));
+	SKIP_AFTER_FORK(NSSRWLock_Destroy(dynOidLock));
 	dynOidLock = NULL;
     } else {
     	/* Since dynOidLock doesn't exist, then all the data it protects
@@ -1917,5 +2112,13 @@ SECOID_Shutdown(void)
 	dynOidEntriesAllocated = 0;
 	dynOidEntriesUsed = 0;
     }
+    memset(xOids, 0, sizeof xOids);
     return SECSuccess;
 }
+
+void UTIL_SetForkState(PRBool forked)
+{
+    parentForkedAfterC_Initialize = forked;
+}
+
+

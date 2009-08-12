@@ -45,6 +45,7 @@
 #ifndef _SECASN1_H_
 #define _SECASN1_H_
 
+#include "utilrename.h"
 #include "plarena.h"
 
 #include "seccomon.h"
@@ -62,7 +63,7 @@ SEC_BEGIN_PROTOS
 ** Decoding.
 */
 
-extern SEC_ASN1DecoderContext *SEC_ASN1DecoderStart(PRArenaPool *pool,
+extern SEC_ASN1DecoderContext *SEC_ASN1DecoderStart(PLArenaPool *pool,
 						    void *dest,
 						    const SEC_ASN1Template *t);
 
@@ -88,7 +89,7 @@ extern void SEC_ASN1DecoderSetNotifyProc(SEC_ASN1DecoderContext *cx,
 
 extern void SEC_ASN1DecoderClearNotifyProc(SEC_ASN1DecoderContext *cx);
 
-extern SECStatus SEC_ASN1Decode(PRArenaPool *pool, void *dest,
+extern SECStatus SEC_ASN1Decode(PLArenaPool *pool, void *dest,
 				const SEC_ASN1Template *t,
 				const char *buf, long len);
 
@@ -99,11 +100,11 @@ extern SECStatus SEC_ASN1Decode(PRArenaPool *pool, void *dest,
    allocated (from POINTER, SET OF, SEQUENCE OF) the decoder sets the type
    field to siBuffer. */
 
-extern SECStatus SEC_ASN1DecodeItem(PRArenaPool *pool, void *dest,
+extern SECStatus SEC_ASN1DecodeItem(PLArenaPool *pool, void *dest,
 				    const SEC_ASN1Template *t,
 				    const SECItem *src);
 
-extern SECStatus SEC_QuickDERDecodeItem(PRArenaPool* arena, void* dest,
+extern SECStatus SEC_QuickDERDecodeItem(PLArenaPool* arena, void* dest,
                      const SEC_ASN1Template* templateEntry,
                      const SECItem* src);
 
@@ -148,13 +149,13 @@ extern SECStatus SEC_ASN1Encode(const void *src, const SEC_ASN1Template *t,
 				SEC_ASN1WriteProc output_proc,
 				void *output_arg);
 
-extern SECItem * SEC_ASN1EncodeItem(PRArenaPool *pool, SECItem *dest,
+extern SECItem * SEC_ASN1EncodeItem(PLArenaPool *pool, SECItem *dest,
 				    const void *src, const SEC_ASN1Template *t);
 
-extern SECItem * SEC_ASN1EncodeInteger(PRArenaPool *pool,
+extern SECItem * SEC_ASN1EncodeInteger(PLArenaPool *pool,
 				       SECItem *dest, long value);
 
-extern SECItem * SEC_ASN1EncodeUnsignedInteger(PRArenaPool *pool,
+extern SECItem * SEC_ASN1EncodeUnsignedInteger(PLArenaPool *pool,
 					       SECItem *dest,
 					       unsigned long value);
 
@@ -306,5 +307,14 @@ SEC_ASN1_CHOOSER_DECLARE(SEC_PointerToOctetStringTemplate)
 
 SEC_ASN1_CHOOSER_DECLARE(SEC_SetOfAnyTemplate)
 
+SEC_ASN1_CHOOSER_DECLARE(SEC_EnumeratedTemplate)
+SEC_ASN1_CHOOSER_DECLARE(SEC_PointerToEnumeratedTemplate)
+SEC_ASN1_CHOOSER_DECLARE(SEC_SequenceOfAnyTemplate)
+SEC_ASN1_CHOOSER_DECLARE(SEC_SequenceOfObjectIDTemplate)
+SEC_ASN1_CHOOSER_DECLARE(SEC_SkipTemplate)
+SEC_ASN1_CHOOSER_DECLARE(SEC_UniversalStringTemplate)
+SEC_ASN1_CHOOSER_DECLARE(SEC_PrintableStringTemplate)
+SEC_ASN1_CHOOSER_DECLARE(SEC_T61StringTemplate)
+SEC_ASN1_CHOOSER_DECLARE(SEC_PointerToGeneralizedTimeTemplate)
 SEC_END_PROTOS
 #endif /* _SECASN1_H_ */

@@ -57,7 +57,6 @@ static const char BASE_CVS_ID[] = "@(#) $RCSfile$ $Revision$ $Date$";
 #endif /* NSSBASE_H */
 
 #include "plhash.h"
-#include "prthread.h"
 
 PR_BEGIN_EXTERN_C
 
@@ -521,6 +520,13 @@ extern const NSSError NSS_ERROR_INVALID_ARENA;
 #endif /* DEBUG */
 
 /*
+ * Private function to be called by NSS_Shutdown to cleanup nssArena 
+ * bookkeeping.
+ */
+extern PRStatus
+nssArena_Shutdown(void);
+
+/*
  * nssArenaHashAllocOps
  *
  * This constant structure contains allocation callbacks designed for
@@ -564,6 +570,18 @@ nss_SetError
 
 NSS_EXTERN void
 nss_ClearErrorStack
+(
+  void
+);
+
+/*
+ * nss_DestroyErrorStack
+ *
+ * This routine frees the calling thread's error stack.
+ */
+
+NSS_EXTERN void
+nss_DestroyErrorStack
 (
   void
 );
@@ -1406,42 +1424,6 @@ nsslibc_memequal
 extern const NSSError NSS_ERROR_INVALID_POINTER;
 
 #define nsslibc_offsetof(str, memb) ((PRPtrdiff)(&(((str *)0)->memb)))
-
-/*
- * nss_NewThreadPrivateIndex
- * 
- */
-
-NSS_EXTERN PRStatus
-nss_NewThreadPrivateIndex
-(
-  PRUintn *ip,
-  PRThreadPrivateDTOR dtor
-);
-
-/*
- * nss_GetThreadPrivate
- *
- */
-
-NSS_EXTERN void *
-nss_GetThreadPrivate
-(
-  PRUintn i
-);
-
-/*
- * nss_SetThreadPrivate
- *
- */
-
-NSS_EXTERN void
-nss_SetThreadPrivate
-(
-  PRUintn i,
-  void *v
-);
-
 
 PR_END_EXTERN_C
 

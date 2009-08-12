@@ -49,8 +49,7 @@ RPM_RELEASE = 1
 endif
 VERSION     = `grep NSS_VERSION $(CORE_DEPTH)/../dist/public/nss/nss.h \
 		| head -1 \
-		| sed -e 's/[^"]*"//' -e 's/".*//' -e 's/ .*//' \
-		| cut -d. -f 1-3`
+		| sed -e 's/[^"]*"//' -e 's/".*//' -e 's/ .*//'`
 PWD         = `pwd`
 BUILDROOT   = $(PWD)\/$(NAME)-root
 

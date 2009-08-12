@@ -56,6 +56,7 @@ static const char CVS_ID[] = "@(#) $RCSfile$ $Revision$ $Date$";
 
 extern const NSSError NSS_ERROR_NOT_FOUND;
 extern const NSSError NSS_ERROR_INVALID_ARGUMENT;
+extern const NSSError NSS_ERROR_PKCS11;
 
 /* The number of object handles to grab during each call to C_FindObjects */
 #define OBJECT_STACK_SIZE 16
@@ -198,7 +199,13 @@ nssToken_DeleteStoredObject (
     if (createdSession) {
 	nssSession_Destroy(session);
     }
-    status = (ckrv == CKR_OK) ? PR_SUCCESS : PR_FAILURE;
+    status = PR_SUCCESS;
+    if (ckrv != CKR_OK) {
+	status = PR_FAILURE;
+	/* use the error stack to pass the PKCS #11 error out  */
+	nss_SetError(ckrv);
+	nss_SetError(NSS_ERROR_PKCS11);
+    }
     return status;
 }
 
@@ -234,8 +241,8 @@ import_object (
 	session = (sessionOpt) ? sessionOpt : tok->defaultSession;
     }
     if (session == NULL) {
-       nss_SetError(NSS_ERROR_INVALID_ARGUMENT);
-       return NULL;
+	nss_SetError(NSS_ERROR_INVALID_ARGUMENT);
+	return NULL;
     }
     nssSession_EnterMonitor(session);
     ckrv = CKAPI(epv)->C_CreateObject(session->handle, 
@@ -244,6 +251,9 @@ import_object (
     nssSession_ExitMonitor(session);
     if (ckrv == CKR_OK) {
 	object = nssCryptokiObject_Create(tok, session, handle);
+    } else {
+	nss_SetError(ckrv);
+	nss_SetError(NSS_ERROR_PKCS11);
     }
     if (createdSession) {
 	nssSession_Destroy(session);
@@ -269,9 +279,9 @@ create_objects_from_handles (
 		for (--i; i>0; --i) {
 		    nssCryptokiObject_Destroy(objects[i]);
 		}
-                nss_ZFreeIf(objects);
-                objects = NULL;
-                break;
+		nss_ZFreeIf(objects);
+		objects = NULL;
+		break;
 	    }
 	}
     }
@@ -401,6 +411,8 @@ loser:
 	nss_SetError(NSS_ERROR_NOT_FOUND);
 	if (statusOpt) *statusOpt = PR_SUCCESS;
     } else {
+	nss_SetError(ckrv);
+	nss_SetError(NSS_ERROR_PKCS11);
 	if (statusOpt) *statusOpt = PR_FAILURE;
     }
     return (nssCryptokiObject **)NULL;
@@ -462,7 +474,7 @@ nssToken_ImportCertificate (
   nssSession *sessionOpt,
   NSSCertificateType certType,
   NSSItem *id,
-  NSSUTF8 *nickname,
+  const NSSUTF8 *nickname,
   NSSDER *encoding,
   NSSDER *issuer,
   NSSDER *subject,
@@ -652,7 +664,7 @@ NSS_IMPLEMENT nssCryptokiObject **
 nssToken_FindCertificatesByNickname (
   NSSToken *token,
   nssSession *sessionOpt,
-  NSSUTF8 *name,
+  const NSSUTF8 *name,
   nssTokenSearchType searchType,
   PRUint32 maximumOpt,
   PRStatus *statusOpt

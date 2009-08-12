@@ -44,19 +44,32 @@
 #include "ssl.h"
 #include "sslproto.h"
 
+/*
+ * The ciphers are listed in the following order:
+ * - stronger ciphers before weaker ciphers
+ * - national ciphers before international ciphers
+ * - faster ciphers before slower ciphers
+ *
+ * National ciphers such as Camellia are listed before international ciphers
+ * such as AES and RC4 to allow servers that prefer Camellia to negotiate
+ * Camellia without having to disable AES and RC4, which are needed for
+ * interoperability with clients that don't yet implement Camellia.
+ */
 const PRUint16 SSL_ImplementedCiphers[] = {
-
     /* 256-bit */
 #ifdef NSS_ENABLE_ECC
     TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
     TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
 #endif /* NSS_ENABLE_ECC */
+    TLS_DHE_RSA_WITH_CAMELLIA_256_CBC_SHA,
+    TLS_DHE_DSS_WITH_CAMELLIA_256_CBC_SHA,
     TLS_DHE_RSA_WITH_AES_256_CBC_SHA,
     TLS_DHE_DSS_WITH_AES_256_CBC_SHA,
 #ifdef NSS_ENABLE_ECC
     TLS_ECDH_RSA_WITH_AES_256_CBC_SHA,
     TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA,
 #endif /* NSS_ENABLE_ECC */
+    TLS_RSA_WITH_CAMELLIA_256_CBC_SHA,
     TLS_RSA_WITH_AES_256_CBC_SHA,
 
     /* 128-bit */
@@ -66,6 +79,8 @@ const PRUint16 SSL_ImplementedCiphers[] = {
     TLS_ECDHE_RSA_WITH_RC4_128_SHA,
     TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
 #endif /* NSS_ENABLE_ECC */
+    TLS_DHE_RSA_WITH_CAMELLIA_128_CBC_SHA,
+    TLS_DHE_DSS_WITH_CAMELLIA_128_CBC_SHA,
     TLS_DHE_DSS_WITH_RC4_128_SHA,
     TLS_DHE_RSA_WITH_AES_128_CBC_SHA,
     TLS_DHE_DSS_WITH_AES_128_CBC_SHA,
@@ -75,6 +90,8 @@ const PRUint16 SSL_ImplementedCiphers[] = {
     TLS_ECDH_ECDSA_WITH_RC4_128_SHA,
     TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA,
 #endif /* NSS_ENABLE_ECC */
+    TLS_RSA_WITH_SEED_CBC_SHA,
+    TLS_RSA_WITH_CAMELLIA_128_CBC_SHA,
     SSL_RSA_WITH_RC4_128_MD5,
     SSL_RSA_WITH_RC4_128_SHA,
     TLS_RSA_WITH_AES_128_CBC_SHA,

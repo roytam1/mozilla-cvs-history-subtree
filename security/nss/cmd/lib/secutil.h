@@ -62,11 +62,6 @@
 #define NS_CRL_HEADER  "-----BEGIN CRL-----"
 #define NS_CRL_TRAILER "-----END CRL-----"
 
-/* From libsec/pcertdb.c --- it's not declared in sec.h */
-extern SECStatus SEC_AddPermCertificate(CERTCertDBHandle *handle,
-		SECItem *derCert, char *nickname, CERTCertTrust *trust);
-
-
 #ifdef SECUTIL_NEW
 typedef int (*SECU_PPFunc)(PRFileDesc *out, SECItem *item, 
                            char *msg, int level);
@@ -91,6 +86,16 @@ typedef struct {
 ** file containing the password, or NULL for both to prompt the user.
 */
 SECStatus SECU_ChangePW(PK11SlotInfo *slot, char *passwd, char *pwFile);
+
+/*
+** Change a password on a token, or initialize a token with a password
+** if it does not already have one.
+** In this function, you can specify both the old and new passwords
+** as either a string or file. NOTE: any you don't specify will
+** be prompted for
+*/
+SECStatus SECU_ChangePW2(PK11SlotInfo *slot, char *oldPass, char *newPass,
+                        char *oldPwFile, char *newPwFile);
 
 /*  These were stolen from the old sec.h... */
 /*
@@ -168,11 +173,24 @@ extern void SECU_PrintSystemError(char *progName, char *msg, ...);
 /* Return informative error string */
 extern const char * SECU_Strerror(PRErrorCode errNum);
 
-/* print information about cert verification failure */
+/* revalidate the cert and print information about cert verification
+ * failure at time == now */
 extern void
 SECU_printCertProblems(FILE *outfile, CERTCertDBHandle *handle, 
 	CERTCertificate *cert, PRBool checksig, 
 	SECCertificateUsage certUsage, void *pinArg, PRBool verbose);
+
+/* revalidate the cert and print information about cert verification
+ * failure at specified time */
+extern void
+SECU_printCertProblemsOnDate(FILE *outfile, CERTCertDBHandle *handle, 
+	CERTCertificate *cert, PRBool checksig, SECCertificateUsage certUsage, 
+	void *pinArg, PRBool verbose, PRTime datetime);
+
+/* print out CERTVerifyLog info. */
+extern void
+SECU_displayVerifyLog(FILE *outfile, CERTVerifyLog *log,
+                      PRBool verbose);
 
 /* Read the contents of a file into a SECItem */
 extern SECStatus SECU_FileToItem(SECItem *dst, PRFileDesc *src);
@@ -242,10 +260,14 @@ extern int SECU_PrintCertificateRequest(FILE *out, SECItem *der, char *m,
 extern int SECU_PrintCertificate(FILE *out, SECItem *der, char *m, int level);
 
 /* print trust flags on a cert */
-extern void SECU_PrintTrustFlags(FILE *out, CERTCertTrust *trust, char *m, int level);
+extern void SECU_PrintTrustFlags(FILE *out, CERTCertTrust *trust, char *m, 
+                                 int level);
 
-/* Dump contents of public key */
-extern int SECU_PrintPublicKey(FILE *out, SECItem *der, char *m, int level);
+/* Dump contents of an RSA public key */
+extern int SECU_PrintRSAPublicKey(FILE *out, SECItem *der, char *m, int level);
+
+extern int SECU_PrintSubjectPublicKeyInfo(FILE *out, SECItem *der, char *m, 
+                                          int level);
 
 #ifdef HAVE_EPV_TEMPLATE
 /* Dump contents of private key */
@@ -264,8 +286,13 @@ extern int SECU_PrintPKCS7ContentInfo(FILE *out, SECItem *der, char *m,
 extern SECStatus SECU_PKCS11Init(PRBool readOnly);
 
 /* Dump contents of signed data */
-extern int SECU_PrintSignedData(FILE *out, SECItem *der, char *m, int level,
-				SECU_PPFunc inner);
+extern int SECU_PrintSignedData(FILE *out, SECItem *der, const char *m, 
+                                int level, SECU_PPFunc inner);
+
+/* Print cert data and its trust flags */
+extern SECStatus SEC_PrintCertificateAndTrust(CERTCertificate *cert,
+                                              const char *label,
+                                              CERTCertTrust *trust);
 
 extern int SECU_PrintCrl(FILE *out, SECItem *der, char *m, int level);
 
@@ -283,6 +310,7 @@ extern void SECU_PrintExtensions(FILE *out, CERTCertExtension **extensions,
 				 char *msg, int level);
 
 extern void SECU_PrintName(FILE *out, CERTName *name, char *msg, int level);
+extern void SECU_PrintRDN(FILE *out, CERTRDN *rdn, char *msg, int level);
 
 #ifdef SECU_GetPassword
 /* Convert a High public Key to a Low public Key */
@@ -307,7 +335,7 @@ extern SECOidTag SECU_StringToSignatureAlgTag(const char *alg);
  * encodes with base64 and exports to file if ascii flag is set
  * and file is not NULL. */
 extern SECStatus SECU_StoreCRL(PK11SlotInfo *slot, SECItem *derCrl,
-                               PRFileDesc *outFile, int ascii, char *url);
+                               PRFileDesc *outFile, PRBool ascii, char *url);
 
 
 /*
@@ -367,6 +395,14 @@ SECU_EncodeAndAddExtensionValue(PRArenaPool *arena, void *extHandle,
                                 void *value, PRBool criticality, int extenType, 
                                 EXTEN_EXT_VALUE_ENCODER EncodeValueFn);
 
+/* Caller ensures that dst is at least item->len*2+1 bytes long */
+void
+SECU_SECItemToHex(const SECItem * item, char * dst);
+
+/* Requires 0x prefix. Case-insensitive. Will do in-place replacement if
+ * successful */
+SECStatus
+SECU_SECItemHexStringToBinary(SECItem* srcdest);
 
 /*
  *
@@ -380,6 +416,7 @@ typedef struct {
     PRBool needsArg;
     char *arg;
     PRBool activated;
+    char *longform;
 } secuCommandFlag;
 
 /*  A full array of command/option flags  */
@@ -394,9 +431,10 @@ typedef struct
 
 /*  fill the "arg" and "activated" fields for each flag  */
 SECStatus 
-SECU_ParseCommandLine(int argc, char **argv, char *progName, secuCommand *cmd);
+SECU_ParseCommandLine(int argc, char **argv, char *progName,
+		      const secuCommand *cmd);
 char *
-SECU_GetOptionArg(secuCommand *cmd, int optionNum);
+SECU_GetOptionArg(const secuCommand *cmd, int optionNum);
 
 /*
  *
@@ -412,7 +450,7 @@ char *SECU_ErrorStringRaw(int16 err);
 
 void printflags(char *trusts, unsigned int flags);
 
-#ifndef XP_UNIX
+#if !defined(XP_UNIX) && !defined(XP_OS2)
 extern int ffs(unsigned int i);
 #endif
 

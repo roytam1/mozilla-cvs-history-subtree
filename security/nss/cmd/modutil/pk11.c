@@ -160,6 +160,7 @@ static const MaskString mechanismStrings[] = {
     {"SSL", PUBLIC_MECH_SSL_FLAG},
     {"TLS", PUBLIC_MECH_TLS_FLAG},
     {"AES", PUBLIC_MECH_AES_FLAG},
+    {"CAMELLIA", PUBLIC_MECH_CAMELLIA_FLAG},
     {"SHA256", PUBLIC_MECH_SHA256_FLAG},
     {"SHA512", PUBLIC_MECH_SHA512_FLAG},
     {"RANDOM", PUBLIC_MECH_RANDOM_FLAG},
@@ -296,12 +297,12 @@ AddModule(char *moduleName, char *libFile, char *cipherString,
 	    copied = PR_GetErrorText(errtxt);
 	}
 	if (copied && errtxt) {
-	    PR_fprintf(PR_STDERR, errStrings[ADD_MODULE_FAILED_STATUS_ERR], 
+	    PR_fprintf(PR_STDERR, errStrings[ADD_MODULE_FAILED_ERR], 
 		       moduleName, errtxt);
 	    PR_Free(errtxt);
 	} else {
 	    PR_fprintf(PR_STDERR, errStrings[ADD_MODULE_FAILED_ERR], 
-		       moduleName);
+		       moduleName, SECU_Strerror(PORT_GetError()));
 	}
 	return ADD_MODULE_FAILED_ERR;
     } else {
@@ -510,7 +511,7 @@ static int numDisableReasonStr =
 Error
 ListModule(char *moduleName)
 {
-    SECMODModule *module;
+    SECMODModule *module = NULL;
     PK11SlotInfo *slot;
     int slotnum;
     CK_INFO modinfo;
@@ -527,13 +528,15 @@ ListModule(char *moduleName)
     module = SECMOD_FindModule(moduleName);
     if(!module) {
 	PR_fprintf(PR_STDERR, errStrings[NO_SUCH_MODULE_ERR], moduleName);
-	return NO_SUCH_MODULE_ERR;
+	rv = NO_SUCH_MODULE_ERR;
+        goto loser;
     }
 
     if ((module->loaded) && 
 			(PK11_GetModInfo(module, &modinfo) != SECSuccess)) {
 	PR_fprintf(PR_STDERR, errStrings[MOD_INFO_ERR], moduleName);
-	return MOD_INFO_ERR;
+	rv = MOD_INFO_ERR;
+        goto loser;
     }
 
     /* Module info */
@@ -655,6 +658,10 @@ ListModule(char *moduleName)
     }
     PR_fprintf(PR_STDOUT, 
 	"\n-----------------------------------------------------------\n");
+loser:
+    if (module) {
+        SECMOD_DestroyModule(module);
+    }
     return rv;
 }
 
@@ -675,8 +682,6 @@ ChangePW(char *tokenName, char *pwFile, char *newpwFile)
 	PR_fprintf(PR_STDERR, errStrings[NO_SUCH_TOKEN_ERR], tokenName);
 	return NO_SUCH_TOKEN_ERR;
     }
-
-    PK11_SetPasswordFunc(SECU_GetModulePassword);
 
     /* Get old password */
     if(! PK11_NeedUserInit(slot)) {
@@ -745,6 +750,8 @@ loser:
 	memset(newpw2, 0, strlen(newpw2));
 	PORT_Free(newpw2);
     }
+    PK11_FreeSlot(slot);
+
     return ret;
 }
 
@@ -761,14 +768,16 @@ Error
 EnableModule(char *moduleName, char *slotName, PRBool enable)
 {
     int i;
-    SECMODModule *module;
+    SECMODModule *module = NULL;
     PK11SlotInfo *slot = NULL;
     PRBool found = PR_FALSE;
+    Error rv;
 
     module = SECMOD_FindModule(moduleName);
     if(!module) {
 	PR_fprintf(PR_STDERR, errStrings[NO_SUCH_MODULE_ERR], moduleName);
-	return NO_SUCH_MODULE_ERR;
+	rv = NO_SUCH_MODULE_ERR;
+        goto loser;
     }
 
     for(i=0; i < module->slotCount; i++) {
@@ -781,7 +790,8 @@ EnableModule(char *moduleName, char *slotName, PRBool enable)
 	    if(! PK11_UserEnableSlot(slot)) {
 		PR_fprintf(PR_STDERR, errStrings[ENABLE_FAILED_ERR],
 		    "enable", PK11_GetSlotName(slot));
-		return ENABLE_FAILED_ERR;
+		rv = ENABLE_FAILED_ERR;
+                goto loser;
 	    } else {
 		found = PR_TRUE;
 		PR_fprintf(PR_STDOUT, msgStrings[ENABLE_SUCCESS_MSG],
@@ -791,7 +801,8 @@ EnableModule(char *moduleName, char *slotName, PRBool enable)
 	    if(! PK11_UserDisableSlot(slot)) {
 		PR_fprintf(PR_STDERR, errStrings[ENABLE_FAILED_ERR],
 		    "disable", PK11_GetSlotName(slot));
-		return ENABLE_FAILED_ERR;
+		rv = ENABLE_FAILED_ERR;
+                goto loser;
 	    } else {
 		found = PR_TRUE;
 		PR_fprintf(PR_STDOUT, msgStrings[ENABLE_SUCCESS_MSG],
@@ -802,16 +813,23 @@ EnableModule(char *moduleName, char *slotName, PRBool enable)
 
     if(slotName && !found) {
 	PR_fprintf(PR_STDERR, errStrings[NO_SUCH_SLOT_ERR], slotName);
-	return NO_SUCH_SLOT_ERR;
+	rv = NO_SUCH_SLOT_ERR;
+        goto loser;
     }
 
     /* Delete and re-add module to save changes */
     if( SECMOD_UpdateModule(module) != SECSuccess ) {
 	PR_fprintf(PR_STDERR, errStrings[UPDATE_MOD_FAILED_ERR], moduleName);
-	return UPDATE_MOD_FAILED_ERR;
+	rv = UPDATE_MOD_FAILED_ERR;
+        goto loser;
     }
 
-    return SUCCESS;
+    rv = SUCCESS;
+loser:
+    if (module) {
+        SECMOD_DestroyModule(module);
+    }
+    return rv;
 }
 
 /*************************************************************************
@@ -822,7 +840,7 @@ EnableModule(char *moduleName, char *slotName, PRBool enable)
 Error
 SetDefaultModule(char *moduleName, char *slotName, char *mechanisms)
 {
-    SECMODModule *module;
+    SECMODModule *module = NULL;
     PK11SlotInfo *slot;
     int s, i;
     unsigned long mechFlags = getFlagsFromString(mechanisms, mechanismStrings,
@@ -887,6 +905,9 @@ SetDefaultModule(char *moduleName, char *slotName, char *mechanisms)
 
     errcode = SUCCESS;
 loser:
+    if (module) {
+        SECMOD_DestroyModule(module);
+    }
     return errcode;
 }
 
@@ -897,18 +918,20 @@ loser:
 Error
 UnsetDefaultModule(char *moduleName, char *slotName, char *mechanisms)
 {
-    SECMODModule * module;
+    SECMODModule * module = NULL;
     PK11SlotInfo *slot;
     int s, i;
     unsigned long mechFlags = getFlagsFromString(mechanisms,
 	mechanismStrings, numMechanismStrings);
     PRBool found = PR_FALSE;
+    Error rv;
 
     if (pk11_DefaultArray == NULL) {
 	pk11_DefaultArray = PK11_GetDefaultArray(&pk11_DefaultArraySize);
 	if (pk11_DefaultArray == NULL) {
 	    /* should assert. This shouldn't happen */
-	    return UNSPECIFIED_ERR;
+	    rv = UNSPECIFIED_ERR;
+            goto loser;
 	}
     }
 
@@ -917,7 +940,8 @@ UnsetDefaultModule(char *moduleName, char *slotName, char *mechanisms)
     module = SECMOD_FindModule(moduleName);
     if(!module) {
 	PR_fprintf(PR_STDERR, errStrings[NO_SUCH_MODULE_ERR], moduleName);
-	return NO_SUCH_MODULE_ERR;
+	rv = NO_SUCH_MODULE_ERR;
+        goto loser;
     }
 
     for(s=0; s < module->slotCount; s++) {
@@ -937,16 +961,23 @@ UnsetDefaultModule(char *moduleName, char *slotName, char *mechanisms)
     }
     if (slotName && !found) {
 	PR_fprintf(PR_STDERR, errStrings[NO_SUCH_SLOT_ERR], slotName);
-	return NO_SUCH_SLOT_ERR;
+	rv = NO_SUCH_SLOT_ERR;
+        goto loser;
     }
 
     /* Delete and re-add module to save changes */
     if( SECMOD_UpdateModule(module) != SECSuccess ) {
 	PR_fprintf(PR_STDERR, errStrings[UNDEFAULT_FAILED_ERR],
 	  moduleName);
-	return UNDEFAULT_FAILED_ERR;
+	rv = UNDEFAULT_FAILED_ERR;
+        goto loser;
     }
 
     PR_fprintf(PR_STDOUT, msgStrings[UNDEFAULT_SUCCESS_MSG]);
-    return SUCCESS;
+    rv = SUCCESS;
+loser:
+    if (module) {
+        SECMOD_DestroyModule(module);
+    }
+    return rv;
 }

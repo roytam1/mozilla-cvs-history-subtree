@@ -37,6 +37,9 @@
 
 #ifndef _SECOIDT_H_
 #define _SECOIDT_H_
+
+#include "utilrename.h"
+
 /*
  * secoidt.h - public data structures for ASN.1 OID functions
  *
@@ -423,6 +426,28 @@ typedef enum {
     SEC_OID_X509_INHIBIT_ANY_POLICY         = 286,
     SEC_OID_X509_SUBJECT_INFO_ACCESS        = 287,
 
+    /* Camellia OIDs (RFC3657)*/
+    SEC_OID_CAMELLIA_128_CBC                = 288,
+    SEC_OID_CAMELLIA_192_CBC                = 289,
+    SEC_OID_CAMELLIA_256_CBC                = 290,
+
+    /* PKCS 5 V2 OIDS */
+    SEC_OID_PKCS5_PBKDF2                    = 291,
+    SEC_OID_PKCS5_PBES2                     = 292,
+    SEC_OID_PKCS5_PBMAC1                    = 293,
+    SEC_OID_HMAC_SHA1                       = 294,
+    SEC_OID_HMAC_SHA224                     = 295,
+    SEC_OID_HMAC_SHA256                     = 296,
+    SEC_OID_HMAC_SHA384                     = 297,
+    SEC_OID_HMAC_SHA512                     = 298,
+
+    SEC_OID_PKIX_TIMESTAMPING               = 299,
+    SEC_OID_PKIX_CA_REPOSITORY              = 300,
+
+    SEC_OID_ISO_SHA1_WITH_RSA_SIGNATURE     = 301,
+
+    SEC_OID_SEED_CBC			    = 302,
+
     SEC_OID_TOTAL
 } SECOidTag;
 
@@ -449,5 +474,19 @@ struct SECOidDataStr {
 				   that we can print the names of those
 				   extensions that we don't even support */
 };
+
+/* New Opaque extended OID table API.  
+ * These are algorithm policy Flags, used with functions
+ * NSS_SetAlgorithmPolicy & NSS_GetAlgorithmPolicy.
+ */
+#define NSS_USE_ALG_IN_CERT_SIGNATURE  0x00000001  /* CRLs and OCSP, too */
+#define NSS_USE_ALG_IN_CMS_SIGNATURE   0x00000002  /* used in S/MIME */
+#define NSS_USE_ALG_RESERVED           0xfffffffc  /* may be used in future */
+
+/* Code MUST NOT SET or CLEAR reserved bits, and must NOT depend on them
+ * being all zeros or having any other known value.  The reserved bits
+ * must be ignored.
+ */
+
 
 #endif /* _SECOIDT_H_ */

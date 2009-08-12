@@ -55,8 +55,8 @@
  */
 char	*progName; /* argv[0] */
 
-/* password on command line. Use for build testing only */
-char	*password = NULL;
+/* password data */
+secuPWData  pwdata = { PW_NONE, 0 };
 
 /* directories or files to exclude in descent */
 PLHashTable *excludeDirs = NULL;
@@ -109,7 +109,8 @@ static char	*token = NULL;
 
 typedef enum {
     UNKNOWN_OPT,
-    QUESTION_OPT,
+    HELP_OPT,
+    LONG_HELP_OPT,
     BASE_OPT,
     COMPRESSION_OPT,
     CERT_DIR_OPT,
@@ -184,7 +185,7 @@ ProcessCommandFile()
 	return - 1;
     }
 
-    while (pr_fgets(buf, CMD_FILE_BUFSIZE, fd), buf && *buf != '\0') {
+    while (pr_fgets(buf, CMD_FILE_BUFSIZE, fd)) {
 	char	*eol;
 	linenum++;
 
@@ -355,9 +356,6 @@ parse_args(int argc, char *argv[])
 		}
 
 		switch (opt[1]) {
-		case '?':
-		    type = QUESTION_OPT;
-		    break;
 		case 'b':
 		    type = BASE_OPT;
 		    break;
@@ -372,6 +370,12 @@ parse_args(int argc, char *argv[])
 		    break;
 		case 'f':
 		    type = COMMAND_FILE_OPT;
+		    break;
+		case 'h':
+		    type = HELP_OPT;
+		    break;
+		case 'H':
+		    type = LONG_HELP_OPT;
 		    break;
 		case 'i':
 		    type = INSTALL_SCRIPT_OPT;
@@ -494,8 +498,11 @@ ProcessOneOpt(OPT_TYPE type, char *arg)
     int	ate = 0;
 
     switch (type) {
-    case QUESTION_OPT:
-	usage();
+    case HELP_OPT:
+	Usage();
+	break;
+    case LONG_HELP_OPT:
+	LongUsage();
 	break;
     case BASE_OPT:
 	if (base) {
@@ -636,12 +643,12 @@ ProcessOneOpt(OPT_TYPE type, char *arg)
 	enableOCSP = 1;
 	break;
     case PASSWORD_OPT:
-	if (password) {
+	if (pwdata.data) {
 	    PR_fprintf(errorFD, errStrings[DUPLICATE_OPTION_ERR],
 	         				"password (-p)");
 	    warningCount++;
-	    PR_Free(password); 
-	    password = NULL;
+	    PR_Free(pwdata.data); 
+	    pwdata.data = NULL;
 	}
 	if (!arg) {
 	    PR_fprintf(errorFD, errStrings[OPTION_NEEDS_ARG_ERR],
@@ -649,7 +656,8 @@ ProcessOneOpt(OPT_TYPE type, char *arg)
 	    errorCount++;
 	    goto loser;
 	}
-	password = PL_strdup(arg);
+        pwdata.source = PW_PLAINTEXT;
+	pwdata.data = PL_strdup(arg);
 	ate = 1;
 	break;
     case VERIFY_OPT:
@@ -865,7 +873,7 @@ main(int argc, char *argv[])
     progName = argv[0];
 
     if (argc < 2) {
-	usage();
+	Usage();
     }
 
     excludeDirs = PL_NewHashTable(10, PL_HashString, PL_CompareStrings,
@@ -1074,7 +1082,7 @@ main(int argc, char *argv[])
 	SignArchive(jartree, keyName, zipfile, javascript, metafile,
 	     		install_script, optimize, !noRecurse);
     } else
-	usage();
+	Usage();
 
 cleanup:
     if (extensions) {

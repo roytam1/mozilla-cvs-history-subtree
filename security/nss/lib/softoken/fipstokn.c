@@ -52,7 +52,6 @@
 #include "seccomon.h"
 #include "softoken.h"
 #include "lowkeyi.h"
-#include "pcert.h"
 #include "pkcs11.h"
 #include "pkcs11i.h"
 #include "prenv.h"
@@ -75,8 +74,13 @@
 #include <pthread.h>
 #include <dlfcn.h>
 #define LIBAUDIT_NAME "libaudit.so.0"
-#ifndef AUDIT_USER
-#define AUDIT_USER 1005  /* message type: message from userspace */
+#ifndef AUDIT_CRYPTO_TEST_USER
+#define AUDIT_CRYPTO_TEST_USER          2400 /* Crypto test results */
+#define AUDIT_CRYPTO_PARAM_CHANGE_USER  2401 /* Crypto attribute change */
+#define AUDIT_CRYPTO_LOGIN              2402 /* Logged in as crypto officer */
+#define AUDIT_CRYPTO_LOGOUT             2403 /* Logged out from crypto */
+#define AUDIT_CRYPTO_KEY_USER           2404 /* Create,delete,negotiate */
+#define AUDIT_CRYPTO_FAILURE_USER       2405 /* Fail decrypt,encrypt,randomize */
 #endif
 static void *libaudit_handle;
 static int (*audit_open_func)(void);
@@ -322,6 +326,47 @@ sftk_get_object_class_and_fipsCheck(CK_SESSION_HANDLE hSession,
     return rv;
 }
 
+#ifdef LINUX
+
+int
+sftk_mapLinuxAuditType(NSSAuditSeverity severity, NSSAuditType auditType)
+{
+    switch (auditType) {
+    case NSS_AUDIT_ACCESS_KEY:
+    case NSS_AUDIT_CHANGE_KEY: 
+    case NSS_AUDIT_COPY_KEY:
+    case NSS_AUDIT_DERIVE_KEY:
+    case NSS_AUDIT_DESTROY_KEY:
+    case NSS_AUDIT_DIGEST_KEY:
+    case NSS_AUDIT_GENERATE_KEY: 
+    case NSS_AUDIT_LOAD_KEY:
+    case NSS_AUDIT_UNWRAP_KEY:
+    case NSS_AUDIT_WRAP_KEY:
+	return AUDIT_CRYPTO_KEY_USER;
+    case NSS_AUDIT_CRYPT:
+	return (severity == NSS_AUDIT_ERROR) ? AUDIT_CRYPTO_FAILURE_USER : 
+					 AUDIT_CRYPTO_KEY_USER;
+    case NSS_AUDIT_FIPS_STATE:
+    case NSS_AUDIT_INIT_PIN:
+    case NSS_AUDIT_INIT_TOKEN:
+    case NSS_AUDIT_SET_PIN:
+	return AUDIT_CRYPTO_PARAM_CHANGE_USER;
+    case NSS_AUDIT_SELF_TEST: 
+	return AUDIT_CRYPTO_TEST_USER;
+    case NSS_AUDIT_LOGIN:
+	return AUDIT_CRYPTO_LOGIN;
+    case NSS_AUDIT_LOGOUT:
+	return AUDIT_CRYPTO_LOGOUT;
+    /* we skip the fault case here so we can get compiler 
+     * warnings if new 'NSSAuditType's are added without
+     * added them to this list, defaults fall through */
+    }
+    /* default */
+    return AUDIT_CRYPTO_PARAM_CHANGE_USER;
+} 
+#endif
+
+
 /**********************************************************************
  *
  *     FIPS 140 auditable event logging
@@ -345,7 +390,8 @@ PRBool sftk_audit_enabled = PR_FALSE;
  * - for assuming a role, the type of role, and the location of the request
  */
 void
-sftk_LogAuditMessage(NSSAuditSeverity severity, const char *msg)
+sftk_LogAuditMessage(NSSAuditSeverity severity, NSSAuditType auditType,
+		     const char *msg)
 {
 #ifdef NSS_AUDIT_WITH_SYSLOG
     int level;
@@ -371,6 +417,7 @@ sftk_LogAuditMessage(NSSAuditSeverity severity, const char *msg)
     }
     if (libaudit_handle) {
 	int audit_fd;
+	int linuxAuditType;
 	int result = (severity != NSS_AUDIT_ERROR); /* 1=success; 0=failed */
 	char *message = PR_smprintf("NSS " SOFTOKEN_LIB_NAME ": %s", msg);
 	if (!message) {
@@ -381,11 +428,12 @@ sftk_LogAuditMessage(NSSAuditSeverity severity, const char *msg)
 	    PR_smprintf_free(message);
 	    return;
 	}
+	linuxAuditType = sftk_mapLinuxAuditType(severity, auditType);
 	if (audit_log_user_message_func) {
-	    audit_log_user_message_func(audit_fd, AUDIT_USER, message,
+	    audit_log_user_message_func(audit_fd, linuxAuditType, message,
 					NULL, NULL, NULL, result);
 	} else {
-	    audit_send_user_message_func(audit_fd, AUDIT_USER, message);
+	    audit_send_user_message_func(audit_fd, linuxAuditType, message);
 	}
 	audit_close_func(audit_fd);
 	PR_smprintf_free(message);
@@ -432,6 +480,9 @@ sftk_LogAuditMessage(NSSAuditSeverity severity, const char *msg)
  **********************************************************************/
 /* return the function list */
 CK_RV FC_GetFunctionList(CK_FUNCTION_LIST_PTR *pFunctionList) {
+
+    CHECK_FORK();
+
     *pFunctionList = &sftk_fipsTable;
     return CKR_OK;
 }
@@ -443,6 +494,8 @@ PRBool nsf_init = PR_FALSE;
 CK_RV FC_Initialize(CK_VOID_PTR pReserved) {
     const char *envp;
     CK_RV crv;
+
+    sftk_ForkReset(pReserved, &crv);
 
     if (nsf_init) {
 	return CKR_CRYPTOKI_ALREADY_INITIALIZED;
@@ -472,7 +525,7 @@ CK_RV FC_Initialize(CK_VOID_PTR pReserved) {
 			"C_Initialize()=0x%08lX "
 			"power-up self-tests failed",
 			(PRUint32)crv);
-	    sftk_LogAuditMessage(NSS_AUDIT_ERROR, msg);
+	    sftk_LogAuditMessage(NSS_AUDIT_ERROR, NSS_AUDIT_SELF_TEST, msg);
 	}
 	return crv;
     }
@@ -484,10 +537,17 @@ CK_RV FC_Initialize(CK_VOID_PTR pReserved) {
 /*FC_Finalize indicates that an application is done with the PKCS #11 library.*/
 CK_RV FC_Finalize (CK_VOID_PTR pReserved) {
    CK_RV crv;
+
+   if (sftk_ForkReset(pReserved, &crv)) {
+       return crv;
+   }
+
    if (!nsf_init) {
       return CKR_OK;
    }
+
    crv = nsc_CommonFinalize (pReserved, PR_TRUE);
+
    nsf_init = (PRBool) !(crv == CKR_OK);
    return crv;
 }
@@ -495,18 +555,24 @@ CK_RV FC_Finalize (CK_VOID_PTR pReserved) {
 
 /* FC_GetInfo returns general information about PKCS #11. */
 CK_RV  FC_GetInfo(CK_INFO_PTR pInfo) {
+    CHECK_FORK();
+
     return NSC_GetInfo(pInfo);
 }
 
 /* FC_GetSlotList obtains a list of slots in the system. */
 CK_RV FC_GetSlotList(CK_BBOOL tokenPresent,
 	 		CK_SLOT_ID_PTR pSlotList, CK_ULONG_PTR pulCount) {
+    CHECK_FORK();
+
     return nsc_CommonGetSlotList(tokenPresent,pSlotList,pulCount,
 							 NSC_FIPS_MODULE);
 }
 	
 /* FC_GetSlotInfo obtains information about a particular slot in the system. */
 CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
+    CHECK_FORK();
+
     return NSC_GetSlotInfo(slotID,pInfo);
 }
 
@@ -514,6 +580,8 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
 /*FC_GetTokenInfo obtains information about a particular token in the system.*/
  CK_RV FC_GetTokenInfo(CK_SLOT_ID slotID,CK_TOKEN_INFO_PTR pInfo) {
     CK_RV crv;
+
+    CHECK_FORK();
 
     crv = NSC_GetTokenInfo(slotID,pInfo);
     if (crv == CKR_OK) 
@@ -527,6 +595,8 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
 /*FC_GetMechanismList obtains a list of mechanism types supported by a token.*/
  CK_RV FC_GetMechanismList(CK_SLOT_ID slotID,
 	CK_MECHANISM_TYPE_PTR pMechanismList, CK_ULONG_PTR pusCount) {
+     CHECK_FORK();
+
     SFTK_FIPSFATALCHECK();
     if (slotID == FIPS_SLOT_ID) slotID = NETSCAPE_SLOT_ID;
     /* FIPS Slot supports all functions */
@@ -538,6 +608,8 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
  * possibly supported by a token. */
  CK_RV FC_GetMechanismInfo(CK_SLOT_ID slotID, CK_MECHANISM_TYPE type,
     					CK_MECHANISM_INFO_PTR pInfo) {
+    CHECK_FORK();
+
     SFTK_FIPSFATALCHECK();
     if (slotID == FIPS_SLOT_ID) slotID = NETSCAPE_SLOT_ID;
     /* FIPS Slot supports all functions */
@@ -550,6 +622,8 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
  				CK_ULONG usPinLen,CK_CHAR_PTR pLabel) {
     CK_RV crv;
 
+    CHECK_FORK();
+
     crv = NSC_InitToken(slotID,pPin,usPinLen,pLabel);
     if (sftk_audit_enabled) {
 	char msg[128];
@@ -559,7 +633,7 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
 	PR_snprintf(msg,sizeof msg,
 		"C_InitToken(slotID=%lu, pLabel=\"%.32s\")=0x%08lX",
 		(PRUint32)slotID,pLabel,(PRUint32)crv);
-	sftk_LogAuditMessage(severity, msg);
+	sftk_LogAuditMessage(severity, NSS_AUDIT_INIT_TOKEN, msg);
     }
     return crv;
 }
@@ -569,6 +643,9 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
  CK_RV FC_InitPIN(CK_SESSION_HANDLE hSession,
     					CK_CHAR_PTR pPin, CK_ULONG ulPinLen) {
     CK_RV rv;
+
+    CHECK_FORK();
+
     if (sftk_fatalError) return CKR_DEVICE_ERROR;
     if ((rv = sftk_newPinCheck(pPin,ulPinLen)) == CKR_OK) {
 	rv = NSC_InitPIN(hSession,pPin,ulPinLen);
@@ -580,7 +657,7 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
 	PR_snprintf(msg,sizeof msg,
 		"C_InitPIN(hSession=0x%08lX)=0x%08lX",
 		(PRUint32)hSession,(PRUint32)rv);
-	sftk_LogAuditMessage(severity, msg);
+	sftk_LogAuditMessage(severity, NSS_AUDIT_INIT_PIN, msg);
     }
     return rv;
 }
@@ -591,6 +668,9 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
  CK_RV FC_SetPIN(CK_SESSION_HANDLE hSession, CK_CHAR_PTR pOldPin,
     CK_ULONG usOldLen, CK_CHAR_PTR pNewPin, CK_ULONG usNewLen) {
     CK_RV rv;
+
+    CHECK_FORK();
+
     if ((rv = sftk_fipsCheck()) == CKR_OK &&
 	(rv = sftk_newPinCheck(pNewPin,usNewLen)) == CKR_OK) {
 	rv = NSC_SetPIN(hSession,pOldPin,usOldLen,pNewPin,usNewLen);
@@ -602,7 +682,7 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
 	PR_snprintf(msg,sizeof msg,
 		"C_SetPIN(hSession=0x%08lX)=0x%08lX",
 		(PRUint32)hSession,(PRUint32)rv);
-	sftk_LogAuditMessage(severity, msg);
+	sftk_LogAuditMessage(severity, NSS_AUDIT_SET_PIN, msg);
     }
     return rv;
 }
@@ -611,18 +691,26 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
  CK_RV FC_OpenSession(CK_SLOT_ID slotID, CK_FLAGS flags,
    CK_VOID_PTR pApplication,CK_NOTIFY Notify,CK_SESSION_HANDLE_PTR phSession) {
     SFTK_FIPSFATALCHECK();
+
+    CHECK_FORK();
+
     return NSC_OpenSession(slotID,flags,pApplication,Notify,phSession);
 }
 
 
 /* FC_CloseSession closes a session between an application and a token. */
  CK_RV FC_CloseSession(CK_SESSION_HANDLE hSession) {
+    CHECK_FORK();
+
     return NSC_CloseSession(hSession);
 }
 
 
 /* FC_CloseAllSessions closes all sessions with a token. */
  CK_RV FC_CloseAllSessions (CK_SLOT_ID slotID) {
+
+    CHECK_FORK();
+
     return NSC_CloseAllSessions (slotID);
 }
 
@@ -632,6 +720,8 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
 						CK_SESSION_INFO_PTR pInfo) {
     CK_RV rv;
     SFTK_FIPSFATALCHECK();
+
+    CHECK_FORK();
 
     rv = NSC_GetSessionInfo(hSession,pInfo);
     if (rv == CKR_OK) {
@@ -662,7 +752,7 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
 	PR_snprintf(msg,sizeof msg,
 		    "C_Login(hSession=0x%08lX, userType=%lu)=0x%08lX",
 		    (PRUint32)hSession,(PRUint32)userType,(PRUint32)rv);
-	sftk_LogAuditMessage(severity, msg);
+	sftk_LogAuditMessage(severity, NSS_AUDIT_LOGIN, msg);
     }
     return rv;
 }
@@ -670,6 +760,9 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
 /* FC_Logout logs a user out from a token. */
  CK_RV FC_Logout(CK_SESSION_HANDLE hSession) {
     CK_RV rv;
+
+    CHECK_FORK();
+
     if ((rv = sftk_fipsCheck()) == CKR_OK) {
 	rv = NSC_Logout(hSession);
 	isLoggedIn = PR_FALSE;
@@ -681,7 +774,7 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
 	PR_snprintf(msg,sizeof msg,
 		    "C_Logout(hSession=0x%08lX)=0x%08lX",
 		    (PRUint32)hSession,(PRUint32)rv);
-	sftk_LogAuditMessage(severity, msg);
+	sftk_LogAuditMessage(severity, NSS_AUDIT_LOGOUT, msg);
     }
     return rv;
 }
@@ -692,7 +785,10 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
 		CK_ATTRIBUTE_PTR pTemplate, CK_ULONG ulCount, 
 					CK_OBJECT_HANDLE_PTR phObject) {
     CK_OBJECT_CLASS * classptr;
+
     SFTK_FIPSCHECK();
+    CHECK_FORK();
+
     classptr = (CK_OBJECT_CLASS *)fc_getAttribute(pTemplate,ulCount,CKA_CLASS);
     if (classptr == NULL) return CKR_TEMPLATE_INCOMPLETE;
 
@@ -718,6 +814,9 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
 					CK_OBJECT_HANDLE_PTR phNewObject) {
     CK_RV rv;
     CK_OBJECT_CLASS objClass = CKO_NOT_A_KEY;
+
+    CHECK_FORK();
+
     SFTK_FIPSFATALCHECK();
     rv = sftk_get_object_class_and_fipsCheck(hSession, hObject, &objClass);
     if (rv == CKR_OK) {
@@ -736,6 +835,9 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
 		 				CK_OBJECT_HANDLE hObject) {
     CK_RV rv;
     CK_OBJECT_CLASS objClass = CKO_NOT_A_KEY;
+
+    CHECK_FORK();
+
     SFTK_FIPSFATALCHECK();
     rv = sftk_get_object_class_and_fipsCheck(hSession, hObject, &objClass);
     if (rv == CKR_OK) {
@@ -753,6 +855,9 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
     			CK_OBJECT_HANDLE hObject, CK_ULONG_PTR pulSize) {
     CK_RV rv;
     CK_OBJECT_CLASS objClass = CKO_NOT_A_KEY;
+
+    CHECK_FORK();
+
     SFTK_FIPSFATALCHECK();
     rv = sftk_get_object_class_and_fipsCheck(hSession, hObject, &objClass);
     if (rv == CKR_OK) {
@@ -770,6 +875,9 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
  CK_OBJECT_HANDLE hObject,CK_ATTRIBUTE_PTR pTemplate,CK_ULONG ulCount) {
     CK_RV rv;
     CK_OBJECT_CLASS objClass = CKO_NOT_A_KEY;
+
+    CHECK_FORK();
+
     SFTK_FIPSFATALCHECK();
     rv = sftk_get_object_class_and_fipsCheck(hSession, hObject, &objClass);
     if (rv == CKR_OK) {
@@ -787,6 +895,9 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
  CK_OBJECT_HANDLE hObject,CK_ATTRIBUTE_PTR pTemplate,CK_ULONG ulCount) {
     CK_RV rv;
     CK_OBJECT_CLASS objClass = CKO_NOT_A_KEY;
+
+    CHECK_FORK();
+
     SFTK_FIPSFATALCHECK();
     rv = sftk_get_object_class_and_fipsCheck(hSession, hObject, &objClass);
     if (rv == CKR_OK) {
@@ -808,6 +919,9 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
     unsigned int i;
     CK_RV rv;
     PRBool needLogin = PR_FALSE;
+
+
+    CHECK_FORK();
 
     SFTK_FIPSFATALCHECK();
 
@@ -840,6 +954,8 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
  CK_RV FC_FindObjects(CK_SESSION_HANDLE hSession,
     CK_OBJECT_HANDLE_PTR phObject,CK_ULONG usMaxObjectCount,
     					CK_ULONG_PTR pusObjectCount) {
+    CHECK_FORK();
+
     /* let publically readable object be found */
     SFTK_FIPSFATALCHECK();
     return NSC_FindObjects(hSession,phObject,usMaxObjectCount,
@@ -855,6 +971,8 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
  CK_RV FC_EncryptInit(CK_SESSION_HANDLE hSession,
 		 CK_MECHANISM_PTR pMechanism, CK_OBJECT_HANDLE hKey) {
     SFTK_FIPSCHECK();
+    CHECK_FORK();
+
     rv = NSC_EncryptInit(hSession,pMechanism,hKey);
     if (sftk_audit_enabled) {
 	sftk_AuditCryptInit("Encrypt",hSession,pMechanism,hKey,rv);
@@ -867,6 +985,8 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
     		CK_ULONG usDataLen, CK_BYTE_PTR pEncryptedData,
 					 CK_ULONG_PTR pusEncryptedDataLen) {
     SFTK_FIPSCHECK();
+    CHECK_FORK();
+
     return NSC_Encrypt(hSession,pData,usDataLen,pEncryptedData,
 							pusEncryptedDataLen);
 }
@@ -877,6 +997,8 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
     CK_BYTE_PTR pPart, CK_ULONG usPartLen, CK_BYTE_PTR pEncryptedPart,	
 					CK_ULONG_PTR pusEncryptedPartLen) {
     SFTK_FIPSCHECK();
+    CHECK_FORK();
+
     return NSC_EncryptUpdate(hSession,pPart,usPartLen,pEncryptedPart,
 						pusEncryptedPartLen);
 }
@@ -885,8 +1007,9 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
 /* FC_EncryptFinal finishes a multiple-part encryption operation. */
  CK_RV FC_EncryptFinal(CK_SESSION_HANDLE hSession,
     CK_BYTE_PTR pLastEncryptedPart, CK_ULONG_PTR pusLastEncryptedPartLen) {
-
     SFTK_FIPSCHECK();
+    CHECK_FORK();
+
     return NSC_EncryptFinal(hSession,pLastEncryptedPart,
 						pusLastEncryptedPartLen);
 }
@@ -900,6 +1023,8 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
  CK_RV FC_DecryptInit( CK_SESSION_HANDLE hSession,
 			 CK_MECHANISM_PTR pMechanism, CK_OBJECT_HANDLE hKey) {
     SFTK_FIPSCHECK();
+    CHECK_FORK();
+
     rv = NSC_DecryptInit(hSession,pMechanism,hKey);
     if (sftk_audit_enabled) {
 	sftk_AuditCryptInit("Decrypt",hSession,pMechanism,hKey,rv);
@@ -912,6 +1037,8 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
     CK_BYTE_PTR pEncryptedData,CK_ULONG usEncryptedDataLen,CK_BYTE_PTR pData,
     						CK_ULONG_PTR pusDataLen) {
     SFTK_FIPSCHECK();
+    CHECK_FORK();
+
     return NSC_Decrypt(hSession,pEncryptedData,usEncryptedDataLen,pData,
     								pusDataLen);
 }
@@ -922,6 +1049,8 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
     CK_BYTE_PTR pEncryptedPart, CK_ULONG usEncryptedPartLen,
     				CK_BYTE_PTR pPart, CK_ULONG_PTR pusPartLen) {
     SFTK_FIPSCHECK();
+    CHECK_FORK();
+
     return NSC_DecryptUpdate(hSession,pEncryptedPart,usEncryptedPartLen,
     							pPart,pusPartLen);
 }
@@ -931,6 +1060,8 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
  CK_RV FC_DecryptFinal(CK_SESSION_HANDLE hSession,
     CK_BYTE_PTR pLastPart, CK_ULONG_PTR pusLastPartLen) {
     SFTK_FIPSCHECK();
+    CHECK_FORK();
+
     return NSC_DecryptFinal(hSession,pLastPart,pusLastPartLen);
 }
 
@@ -943,6 +1074,8 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
  CK_RV FC_DigestInit(CK_SESSION_HANDLE hSession,
     					CK_MECHANISM_PTR pMechanism) {
     SFTK_FIPSFATALCHECK();
+    CHECK_FORK();
+
     return NSC_DigestInit(hSession, pMechanism);
 }
 
@@ -952,6 +1085,8 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
     CK_BYTE_PTR pData, CK_ULONG usDataLen, CK_BYTE_PTR pDigest,
     						CK_ULONG_PTR pusDigestLen) {
     SFTK_FIPSFATALCHECK();
+    CHECK_FORK();
+
     return NSC_Digest(hSession,pData,usDataLen,pDigest,pusDigestLen);
 }
 
@@ -960,6 +1095,8 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
  CK_RV FC_DigestUpdate(CK_SESSION_HANDLE hSession,CK_BYTE_PTR pPart,
 					    CK_ULONG usPartLen) {
     SFTK_FIPSFATALCHECK();
+    CHECK_FORK();
+
     return NSC_DigestUpdate(hSession,pPart,usPartLen);
 }
 
@@ -968,6 +1105,8 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
  CK_RV FC_DigestFinal(CK_SESSION_HANDLE hSession,CK_BYTE_PTR pDigest,
     						CK_ULONG_PTR pusDigestLen) {
     SFTK_FIPSFATALCHECK();
+    CHECK_FORK();
+
     return NSC_DigestFinal(hSession,pDigest,pusDigestLen);
 }
 
@@ -982,6 +1121,8 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
  CK_RV FC_SignInit(CK_SESSION_HANDLE hSession,
 		 CK_MECHANISM_PTR pMechanism, CK_OBJECT_HANDLE hKey) {
     SFTK_FIPSCHECK();
+    CHECK_FORK();
+
     rv = NSC_SignInit(hSession,pMechanism,hKey);
     if (sftk_audit_enabled) {
 	sftk_AuditCryptInit("Sign",hSession,pMechanism,hKey,rv);
@@ -997,6 +1138,8 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
     CK_BYTE_PTR pData,CK_ULONG usDataLen,CK_BYTE_PTR pSignature,
     					CK_ULONG_PTR pusSignatureLen) {
     SFTK_FIPSCHECK();
+    CHECK_FORK();
+
     return NSC_Sign(hSession,pData,usDataLen,pSignature,pusSignatureLen);
 }
 
@@ -1007,6 +1150,8 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
  CK_RV FC_SignUpdate(CK_SESSION_HANDLE hSession,CK_BYTE_PTR pPart,
     							CK_ULONG usPartLen) {
     SFTK_FIPSCHECK();
+    CHECK_FORK();
+
     return NSC_SignUpdate(hSession,pPart,usPartLen);
 }
 
@@ -1016,6 +1161,8 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
  CK_RV FC_SignFinal(CK_SESSION_HANDLE hSession,CK_BYTE_PTR pSignature,
 					    CK_ULONG_PTR pusSignatureLen) {
     SFTK_FIPSCHECK();
+    CHECK_FORK();
+
     return NSC_SignFinal(hSession,pSignature,pusSignatureLen);
 }
 
@@ -1028,6 +1175,8 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
  CK_RV FC_SignRecoverInit(CK_SESSION_HANDLE hSession,
 			 CK_MECHANISM_PTR pMechanism,CK_OBJECT_HANDLE hKey) {
     SFTK_FIPSCHECK();
+    CHECK_FORK();
+
     rv = NSC_SignRecoverInit(hSession,pMechanism,hKey);
     if (sftk_audit_enabled) {
 	sftk_AuditCryptInit("SignRecover",hSession,pMechanism,hKey,rv);
@@ -1042,6 +1191,8 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
  CK_RV FC_SignRecover(CK_SESSION_HANDLE hSession, CK_BYTE_PTR pData,
   CK_ULONG usDataLen, CK_BYTE_PTR pSignature, CK_ULONG_PTR pusSignatureLen) {
     SFTK_FIPSCHECK();
+    CHECK_FORK();
+
     return NSC_SignRecover(hSession,pData,usDataLen,pSignature,pusSignatureLen);
 }
 
@@ -1055,6 +1206,8 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
  CK_RV FC_VerifyInit(CK_SESSION_HANDLE hSession,
 			   CK_MECHANISM_PTR pMechanism,CK_OBJECT_HANDLE hKey) {
     SFTK_FIPSCHECK();
+    CHECK_FORK();
+
     rv = NSC_VerifyInit(hSession,pMechanism,hKey);
     if (sftk_audit_enabled) {
 	sftk_AuditCryptInit("Verify",hSession,pMechanism,hKey,rv);
@@ -1070,6 +1223,8 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
     CK_ULONG usDataLen, CK_BYTE_PTR pSignature, CK_ULONG usSignatureLen) {
     /* make sure we're legal */
     SFTK_FIPSCHECK();
+    CHECK_FORK();
+
     return NSC_Verify(hSession,pData,usDataLen,pSignature,usSignatureLen);
 }
 
@@ -1080,6 +1235,8 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
  CK_RV FC_VerifyUpdate( CK_SESSION_HANDLE hSession, CK_BYTE_PTR pPart,
 						CK_ULONG usPartLen) {
     SFTK_FIPSCHECK();
+    CHECK_FORK();
+
     return NSC_VerifyUpdate(hSession,pPart,usPartLen);
 }
 
@@ -1089,6 +1246,8 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
  CK_RV FC_VerifyFinal(CK_SESSION_HANDLE hSession,
 			CK_BYTE_PTR pSignature,CK_ULONG usSignatureLen) {
     SFTK_FIPSCHECK();
+    CHECK_FORK();
+
     return NSC_VerifyFinal(hSession,pSignature,usSignatureLen);
 }
 
@@ -1102,6 +1261,8 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
  CK_RV FC_VerifyRecoverInit(CK_SESSION_HANDLE hSession,
 			CK_MECHANISM_PTR pMechanism,CK_OBJECT_HANDLE hKey) {
     SFTK_FIPSCHECK();
+    CHECK_FORK();
+
     rv = NSC_VerifyRecoverInit(hSession,pMechanism,hKey);
     if (sftk_audit_enabled) {
 	sftk_AuditCryptInit("VerifyRecover",hSession,pMechanism,hKey,rv);
@@ -1117,6 +1278,8 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
 		 CK_BYTE_PTR pSignature,CK_ULONG usSignatureLen,
     				CK_BYTE_PTR pData,CK_ULONG_PTR pusDataLen) {
     SFTK_FIPSCHECK();
+    CHECK_FORK();
+
     return NSC_VerifyRecover(hSession,pSignature,usSignatureLen,pData,
 								pusDataLen);
 }
@@ -1132,6 +1295,7 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
     CK_BBOOL *boolptr;
 
     SFTK_FIPSCHECK();
+    CHECK_FORK();
 
     /* all secret keys must be sensitive, if the upper level code tries to say
      * otherwise, reject it. */
@@ -1161,6 +1325,8 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
     CK_RV crv;
 
     SFTK_FIPSCHECK();
+    CHECK_FORK();
+
 
     /* all private keys must be sensitive, if the upper level code tries to say
      * otherwise, reject it. */
@@ -1193,6 +1359,8 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
     CK_OBJECT_HANDLE hKey, CK_BYTE_PTR pWrappedKey,
 					 CK_ULONG_PTR pulWrappedKeyLen) {
     SFTK_FIPSCHECK();
+    CHECK_FORK();
+
     rv = NSC_WrapKey(hSession,pMechanism,hWrappingKey,hKey,pWrappedKey,
 							pulWrappedKeyLen);
     if (sftk_audit_enabled) {
@@ -1212,6 +1380,7 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
     CK_BBOOL *boolptr;
 
     SFTK_FIPSCHECK();
+    CHECK_FORK();
 
     /* all secret keys must be sensitive, if the upper level code tries to say
      * otherwise, reject it. */
@@ -1240,6 +1409,7 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
     CK_BBOOL *boolptr;
 
     SFTK_FIPSCHECK();
+    CHECK_FORK();
 
     /* all secret keys must be sensitive, if the upper level code tries to say
      * otherwise, reject it. */
@@ -1270,6 +1440,8 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
     CK_RV crv;
 
     SFTK_FIPSFATALCHECK();
+    CHECK_FORK();
+
     crv = NSC_SeedRandom(hSession,pSeed,usSeedLen);
     if (crv != CKR_OK) {
 	sftk_fatalError = PR_TRUE;
@@ -1283,6 +1455,8 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
     CK_BYTE_PTR	pRandomData, CK_ULONG ulRandomLen) {
     CK_RV crv;
 
+    CHECK_FORK();
+
     SFTK_FIPSFATALCHECK();
     crv = NSC_GenerateRandom(hSession,pRandomData,ulRandomLen);
     if (crv != CKR_OK) {
@@ -1295,7 +1469,7 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
 			"self-test: continuous RNG test failed",
 			(PRUint32)hSession,pRandomData,
 			(PRUint32)ulRandomLen,(PRUint32)crv);
-	    sftk_LogAuditMessage(NSS_AUDIT_ERROR, msg);
+	    sftk_LogAuditMessage(NSS_AUDIT_ERROR, NSS_AUDIT_SELF_TEST, msg);
 	}
     }
     return crv;
@@ -1306,6 +1480,8 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
  * in parallel with an application. */
  CK_RV FC_GetFunctionStatus(CK_SESSION_HANDLE hSession) {
     SFTK_FIPSCHECK();
+    CHECK_FORK();
+
     return NSC_GetFunctionStatus(hSession);
 }
 
@@ -1313,6 +1489,8 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
 /* FC_CancelFunction cancels a function running in parallel */
  CK_RV FC_CancelFunction(CK_SESSION_HANDLE hSession) {
     SFTK_FIPSCHECK();
+    CHECK_FORK();
+
     return NSC_CancelFunction(hSession);
 }
 
@@ -1325,6 +1503,8 @@ CK_RV FC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo) {
 CK_RV FC_GetOperationState(CK_SESSION_HANDLE hSession, 
 	CK_BYTE_PTR  pOperationState, CK_ULONG_PTR pulOperationStateLen) {
     SFTK_FIPSFATALCHECK();
+    CHECK_FORK();
+
     return NSC_GetOperationState(hSession,pOperationState,pulOperationStateLen);
 }
 
@@ -1335,6 +1515,8 @@ CK_RV FC_SetOperationState(CK_SESSION_HANDLE hSession,
 	CK_BYTE_PTR  pOperationState, CK_ULONG  ulOperationStateLen,
         CK_OBJECT_HANDLE hEncryptionKey, CK_OBJECT_HANDLE hAuthenticationKey) {
     SFTK_FIPSFATALCHECK();
+    CHECK_FORK();
+
     return NSC_SetOperationState(hSession,pOperationState,ulOperationStateLen,
         				hEncryptionKey,hAuthenticationKey);
 }
@@ -1343,6 +1525,8 @@ CK_RV FC_SetOperationState(CK_SESSION_HANDLE hSession,
 CK_RV FC_FindObjectsFinal(CK_SESSION_HANDLE hSession) {
     /* let publically readable object be found */
     SFTK_FIPSFATALCHECK();
+    CHECK_FORK();
+
     return NSC_FindObjectsFinal(hSession);
 }
 
@@ -1355,6 +1539,8 @@ CK_RV FC_DigestEncryptUpdate(CK_SESSION_HANDLE hSession, CK_BYTE_PTR  pPart,
     CK_ULONG  ulPartLen, CK_BYTE_PTR  pEncryptedPart,
 					 CK_ULONG_PTR pulEncryptedPartLen) {
     SFTK_FIPSCHECK();
+    CHECK_FORK();
+
     return NSC_DigestEncryptUpdate(hSession,pPart,ulPartLen,pEncryptedPart,
 					 pulEncryptedPartLen);
 }
@@ -1365,8 +1551,9 @@ CK_RV FC_DigestEncryptUpdate(CK_SESSION_HANDLE hSession, CK_BYTE_PTR  pPart,
 CK_RV FC_DecryptDigestUpdate(CK_SESSION_HANDLE hSession,
      CK_BYTE_PTR  pEncryptedPart, CK_ULONG  ulEncryptedPartLen,
     				CK_BYTE_PTR  pPart, CK_ULONG_PTR pulPartLen) {
-
     SFTK_FIPSCHECK();
+    CHECK_FORK();
+
     return NSC_DecryptDigestUpdate(hSession, pEncryptedPart,ulEncryptedPartLen,
     				pPart,pulPartLen);
 }
@@ -1376,8 +1563,9 @@ CK_RV FC_DecryptDigestUpdate(CK_SESSION_HANDLE hSession,
 CK_RV FC_SignEncryptUpdate(CK_SESSION_HANDLE hSession, CK_BYTE_PTR  pPart,
 	 CK_ULONG  ulPartLen, CK_BYTE_PTR  pEncryptedPart,
 					 CK_ULONG_PTR pulEncryptedPartLen) {
-
     SFTK_FIPSCHECK();
+    CHECK_FORK();
+
     return NSC_SignEncryptUpdate(hSession,pPart,ulPartLen,pEncryptedPart,
 					 pulEncryptedPartLen);
 }
@@ -1387,8 +1575,9 @@ CK_RV FC_SignEncryptUpdate(CK_SESSION_HANDLE hSession, CK_BYTE_PTR  pPart,
 CK_RV FC_DecryptVerifyUpdate(CK_SESSION_HANDLE hSession, 
 	CK_BYTE_PTR  pEncryptedData, CK_ULONG  ulEncryptedDataLen, 
 				CK_BYTE_PTR  pData, CK_ULONG_PTR pulDataLen) {
-
     SFTK_FIPSCHECK();
+    CHECK_FORK();
+
     return NSC_DecryptVerifyUpdate(hSession,pEncryptedData,ulEncryptedDataLen, 
 				pData,pulDataLen);
 }
@@ -1399,6 +1588,8 @@ CK_RV FC_DecryptVerifyUpdate(CK_SESSION_HANDLE hSession,
  */
 CK_RV FC_DigestKey(CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hKey) {
     SFTK_FIPSCHECK();
+    CHECK_FORK();
+
     rv = NSC_DigestKey(hSession,hKey);
     if (sftk_audit_enabled) {
 	sftk_AuditDigestKey(hSession,hKey,rv);
@@ -1410,5 +1601,7 @@ CK_RV FC_DigestKey(CK_SESSION_HANDLE hSession, CK_OBJECT_HANDLE hKey) {
 CK_RV FC_WaitForSlotEvent(CK_FLAGS flags, CK_SLOT_ID_PTR pSlot,
 							 CK_VOID_PTR pReserved)
 {
+    CHECK_FORK();
+
     return NSC_WaitForSlotEvent(flags, pSlot, pReserved);
 }

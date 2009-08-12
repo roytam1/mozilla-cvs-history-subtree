@@ -103,6 +103,7 @@ static KeyTypes keyArray[] = {
     { CKK_JUNIPER, CKM_JUNIPER_CBC128, CKM_JUNIPER_WRAP, "juniper" },
     { CKK_CDMF, CKM_CDMF_CBC, CKM_CDMF_ECB, "cdmf" },
     { CKK_AES, CKM_AES_CBC, CKM_AES_ECB, "aes" },
+    { CKK_CAMELLIA, CKM_CAMELLIA_CBC, CKM_CAMELLIA_ECB, "camellia" },
 };
 
 static int keyArraySize = sizeof(keyArray)/sizeof(keyArray[0]);
@@ -1034,18 +1035,23 @@ main(int argc, char **argv)
 	    /* loop over all the slots */
 	    PK11SlotList *slotList = PK11_GetAllTokens(CKM_INVALID_MECHANISM,
 					PR_FALSE, PR_FALSE, &pwdata);
-	    PK11SlotListElement *se;
-
 	    if (slotList == NULL) {
 	        PR_fprintf(PR_STDERR, "%s: No tokens found\n",progName);
-	    }
-	    for (se = PK11_GetFirstSafe(slotList); se; 
-				se=PK11_GetNextSafe(slotList,se, PR_FALSE)) {
-	        rv = ListKeys(se->slot,&printLabel,&pwdata);
-	        if (rv !=SECSuccess) {
-		    break;
-		}
-	    }
+	    } else {
+                PK11SlotListElement *se;
+                for (se = PK11_GetFirstSafe(slotList); se; 
+                                    se=PK11_GetNextSafe(slotList,se, PR_FALSE)) {
+                    rv = ListKeys(se->slot,&printLabel,&pwdata);
+                    if (rv !=SECSuccess) {
+                        break;
+                    }
+                }
+                if (se) {
+                    SECStatus rv2 = PK11_FreeSlotListElement(slotList, se);
+                    PORT_Assert(SECSuccess == rv2);
+                }
+                PK11_FreeSlotList(slotList);
+            }
 	}
     }
 

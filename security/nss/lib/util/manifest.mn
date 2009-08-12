@@ -46,6 +46,13 @@ EXPORTS = \
 	nssilckt.h \
 	nssrwlk.h \
 	nssrwlkt.h \
+	nssutil.h \
+	pkcs11.h \
+	pkcs11f.h \
+	pkcs11p.h \
+	pkcs11t.h \
+	pkcs11n.h \
+	pkcs11u.h \
 	portreg.h \
 	secasn1.h \
 	secasn1t.h \
@@ -59,11 +66,11 @@ EXPORTS = \
 	secoidt.h \
 	secport.h \
 	secerr.h \
-	watcomfx.h \
+	utilrename.h \
 	$(NULL)
 
 PRIVATE_EXPORTS = \
-	pqgutil.h \
+	templates.c \
 	$(NULL)
 
 CSRCS = \
@@ -77,9 +84,8 @@ CSRCS = \
 	nssb64e.c \
 	nssrwlk.c \
 	nssilock.c \
-	nsslocks.c \
+	oidstring.c \
 	portreg.c \
-	pqgutil.c \
 	secalgid.c \
 	secasn1d.c \
 	secasn1e.c \
@@ -89,12 +95,17 @@ CSRCS = \
 	sectime.c \
 	secport.c \
 	secinit.c \
+	templates.c \
 	utf8.c \
 	$(NULL)
 
 MODULE = nss
 
 # don't duplicate module name in REQUIRES
-REQUIRES = dbm
+MAPFILE = $(OBJDIR)/nssutil.def
 
-LIBRARY_NAME = secutil
+LIBRARY_NAME = nssutil
+LIBRARY_VERSION = 3
+
+# This part of the code, including all sub-dirs, can be optimized for size
+export ALLOW_OPT_CODE_SIZE = 1

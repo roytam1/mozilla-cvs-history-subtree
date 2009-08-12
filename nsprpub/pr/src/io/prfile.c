@@ -358,7 +358,7 @@ PR_IMPLEMENT(const PRIOMethods*) PR_GetPipeMethods(void)
 
 PR_IMPLEMENT(PRFileDesc*) PR_Open(const char *name, PRIntn flags, PRIntn mode)
 {
-    PRInt32 osfd;
+    PROsfd osfd;
     PRFileDesc *fd = 0;
 #if !defined(_PR_HAVE_O_APPEND)
     PRBool  appendMode = ( PR_APPEND & flags )? PR_TRUE : PR_FALSE;
@@ -386,7 +386,7 @@ PR_IMPLEMENT(PRFileDesc*) PR_Open(const char *name, PRIntn flags, PRIntn mode)
 PR_IMPLEMENT(PRFileDesc*) PR_OpenFile(
     const char *name, PRIntn flags, PRIntn mode)
 {
-    PRInt32 osfd;
+    PROsfd osfd;
     PRFileDesc *fd = 0;
 #if !defined(_PR_HAVE_O_APPEND)
     PRBool  appendMode = ( PR_APPEND & flags )? PR_TRUE : PR_FALSE;
@@ -557,7 +557,7 @@ PRInt32 rv;
 /*
 ** Import an existing OS file to NSPR 
 */
-PR_IMPLEMENT(PRFileDesc*) PR_ImportFile(PRInt32 osfd)
+PR_IMPLEMENT(PRFileDesc*) PR_ImportFile(PROsfd osfd)
 {
     PRFileDesc *fd = NULL;
 
@@ -576,7 +576,7 @@ PR_IMPLEMENT(PRFileDesc*) PR_ImportFile(PRInt32 osfd)
 /*
 ** Import an existing OS pipe to NSPR 
 */
-PR_IMPLEMENT(PRFileDesc*) PR_ImportPipe(PRInt32 osfd)
+PR_IMPLEMENT(PRFileDesc*) PR_ImportPipe(PROsfd osfd)
 {
     PRFileDesc *fd = NULL;
 
@@ -732,13 +732,13 @@ PR_IMPLEMENT(PRStatus) PR_CreatePipe(
         PR_SetError(PR_UNKNOWN_ERROR, GetLastError());
         return PR_FAILURE;
     }
-    *readPipe = PR_AllocFileDesc((PRInt32)readEnd, &_pr_pipeMethods);
+    *readPipe = PR_AllocFileDesc((PROsfd)readEnd, &_pr_pipeMethods);
     if (NULL == *readPipe) {
         CloseHandle(readEnd);
         CloseHandle(writeEnd);
         return PR_FAILURE;
     }
-    *writePipe = PR_AllocFileDesc((PRInt32)writeEnd, &_pr_pipeMethods);
+    *writePipe = PR_AllocFileDesc((PROsfd)writeEnd, &_pr_pipeMethods);
     if (NULL == *writePipe) {
         PR_Close(*readPipe);
         CloseHandle(writeEnd);
@@ -801,7 +801,7 @@ PR_IMPLEMENT(PRStatus) PR_CreatePipe(
 PR_IMPLEMENT(PRFileDesc*) PR_OpenFileUTF16(
     const PRUnichar *name, PRIntn flags, PRIntn mode)
 { 
-    PRInt32 osfd;
+    PROsfd osfd;
     PRFileDesc *fd = 0;
 #if !defined(_PR_HAVE_O_APPEND)
     PRBool  appendMode = ( PR_APPEND & flags )? PR_TRUE : PR_FALSE;

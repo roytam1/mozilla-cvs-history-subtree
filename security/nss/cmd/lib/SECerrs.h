@@ -519,3 +519,39 @@ ER3(SEC_ERROR_OCSP_RESPONDER_CERT_INVALID,  	(SEC_ERROR_BASE + 156),
 
 ER3(SEC_ERROR_OCSP_BAD_SIGNATURE,      		(SEC_ERROR_BASE + 157),
 "OCSP response has an invalid signature.")
+
+ER3(SEC_ERROR_OUT_OF_SEARCH_LIMITS,      		(SEC_ERROR_BASE + 158),
+"Cert validation search is out of search limits")
+
+ER3(SEC_ERROR_INVALID_POLICY_MAPPING,      		(SEC_ERROR_BASE + 159),
+"Policy mapping contains anypolicy")
+
+ER3(SEC_ERROR_POLICY_VALIDATION_FAILED,    		(SEC_ERROR_BASE + 160),
+"Cert chain fails policy validation")
+
+ER3(SEC_ERROR_UNKNOWN_AIA_LOCATION_TYPE,    		(SEC_ERROR_BASE + 161),
+"Unknown location type in cert AIA extension")
+
+ER3(SEC_ERROR_BAD_HTTP_RESPONSE,    		(SEC_ERROR_BASE + 162),
+"Server returned bad HTTP response")
+
+ER3(SEC_ERROR_BAD_LDAP_RESPONSE,    		(SEC_ERROR_BASE + 163),
+"Server returned bad LDAP response")
+
+ER3(SEC_ERROR_FAILED_TO_ENCODE_DATA,    		(SEC_ERROR_BASE + 164),
+"Failed to encode data with ASN1 encoder")
+
+ER3(SEC_ERROR_BAD_INFO_ACCESS_LOCATION,    		(SEC_ERROR_BASE + 165),
+"Bad information access location in cert extension")
+
+ER3(SEC_ERROR_LIBPKIX_INTERNAL,      		(SEC_ERROR_BASE + 166),
+"Libpkix internal error occured during cert validation.")
+
+ER3(SEC_ERROR_PKCS11_GENERAL_ERROR,      		(SEC_ERROR_BASE + 167),
+"A PKCS #11 module returned CKR_GENERAL_ERROR, indicating that an unrecoverable error has occurred.")
+
+ER3(SEC_ERROR_PKCS11_FUNCTION_FAILED,      		(SEC_ERROR_BASE + 168),
+"A PKCS #11 module returned CKR_FUNCTION_FAILED, indicating that the requested function could not be performed.  Trying the same operation again might succeed.")
+
+ER3(SEC_ERROR_PKCS11_DEVICE_ERROR,      		(SEC_ERROR_BASE + 169),
+"A PKCS #11 module returned CKR_DEVICE_ERROR, indicating that a problem has occurred with the token or slot.")

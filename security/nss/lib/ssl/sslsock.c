@@ -95,6 +95,13 @@ static cipherPolicy ssl_ciphers[] = {	   /*   Export           France   */
  {  TLS_DHE_DSS_WITH_AES_256_CBC_SHA, 	    SSL_NOT_ALLOWED, SSL_NOT_ALLOWED },
  {  TLS_DHE_RSA_WITH_AES_256_CBC_SHA,       SSL_NOT_ALLOWED, SSL_NOT_ALLOWED },
  {  TLS_RSA_WITH_AES_256_CBC_SHA,     	    SSL_NOT_ALLOWED, SSL_NOT_ALLOWED },
+ {  TLS_DHE_DSS_WITH_CAMELLIA_128_CBC_SHA,  SSL_NOT_ALLOWED, SSL_NOT_ALLOWED },
+ {  TLS_DHE_RSA_WITH_CAMELLIA_128_CBC_SHA,  SSL_NOT_ALLOWED, SSL_NOT_ALLOWED },
+ {  TLS_RSA_WITH_CAMELLIA_128_CBC_SHA, 	    SSL_NOT_ALLOWED, SSL_NOT_ALLOWED },
+ {  TLS_DHE_DSS_WITH_CAMELLIA_256_CBC_SHA,  SSL_NOT_ALLOWED, SSL_NOT_ALLOWED },
+ {  TLS_DHE_RSA_WITH_CAMELLIA_256_CBC_SHA,  SSL_NOT_ALLOWED, SSL_NOT_ALLOWED },
+ {  TLS_RSA_WITH_CAMELLIA_256_CBC_SHA, 	    SSL_NOT_ALLOWED, SSL_NOT_ALLOWED },
+ {  TLS_RSA_WITH_SEED_CBC_SHA,		    SSL_NOT_ALLOWED, SSL_NOT_ALLOWED },
  {  TLS_RSA_EXPORT1024_WITH_DES_CBC_SHA,    SSL_ALLOWED,     SSL_NOT_ALLOWED },
  {  TLS_RSA_EXPORT1024_WITH_RC4_56_SHA,     SSL_ALLOWED,     SSL_NOT_ALLOWED },
 #ifdef NSS_ENABLE_ECC
@@ -172,6 +179,7 @@ static sslOptions ssl_defaults = {
     PR_FALSE,   /* noStepDown         */
     PR_FALSE,   /* bypassPKCS11       */
     PR_FALSE,   /* noLocks            */
+    PR_FALSE,   /* enableSessionTickets */
 };
 
 sslSessionIDLookupFunc  ssl_sid_lookup;
@@ -693,6 +701,10 @@ SSL_OptionSet(PRFileDesc *fd, PRInt32 which, PRBool on)
 	}
 	break;
 
+      case SSL_ENABLE_SESSION_TICKETS:
+	ss->opt.enableSessionTickets = on;
+	break;
+
       default:
 	PORT_SetError(SEC_ERROR_INVALID_ARGS);
 	rv = SECFailure;
@@ -748,6 +760,9 @@ SSL_OptionGet(PRFileDesc *fd, PRInt32 which, PRBool *pOn)
     case SSL_NO_STEP_DOWN:        on = ss->opt.noStepDown;         break;
     case SSL_BYPASS_PKCS11:       on = ss->opt.bypassPKCS11;       break;
     case SSL_NO_LOCKS:            on = ss->opt.noLocks;            break;
+    case SSL_ENABLE_SESSION_TICKETS:
+	on = ss->opt.enableSessionTickets;
+	break;
 
     default:
 	PORT_SetError(SEC_ERROR_INVALID_ARGS);
@@ -789,6 +804,9 @@ SSL_OptionGetDefault(PRInt32 which, PRBool *pOn)
     case SSL_NO_STEP_DOWN:        on = ssl_defaults.noStepDown;         break;
     case SSL_BYPASS_PKCS11:       on = ssl_defaults.bypassPKCS11;       break;
     case SSL_NO_LOCKS:            on = ssl_defaults.noLocks;            break;
+    case SSL_ENABLE_SESSION_TICKETS:
+	on = ssl_defaults.enableSessionTickets;
+	break;
 
     default:
 	PORT_SetError(SEC_ERROR_INVALID_ARGS);
@@ -914,6 +932,10 @@ SSL_OptionSetDefault(PRInt32 which, PRBool on)
 	    locksEverDisabled = PR_TRUE;
 	    strcpy(lockStatus + LOCKSTATUS_OFFSET, "DISABLED.");
 	}
+	break;
+
+      case SSL_ENABLE_SESSION_TICKETS:
+	ssl_defaults.enableSessionTickets = on;
 	break;
 
       default:

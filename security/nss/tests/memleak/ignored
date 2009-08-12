@@ -1,9 +1,3 @@
-#169313
-**/SECMOD_LoadModule/SECMOD_LoadPKCS11Module/secmod_ModuleInit/builtinsC_Initialize/NSSCKFWC_Initialize/nssCKFWInstance_Create/NSSArena_Create/nssArena_Create/arena_add_pointer/nssPointerTracker_initialize/call_once/**
-
-#308275
-**/NSSCKFWC_FindObjects/nssCKFWFindObjects_Next/nssCKFWObject_Create/nssCKFWInstance_CreateMutex/nssCKFWMutex_Create/PR_NewLock/**
-
 #367374
 **/PR_ErrorInstallTable**
 **/_PR_ImplicitInitialization/**
@@ -16,24 +10,37 @@
 **/_PR_UnixInit/PR_NewMonitor/**
 
 #367376
-**/_PR_CreateThread/**
+**/_PR_CreateThread/pthread_create@@GLIBC_2.1/**
 
 #367384
+**/PR_LoadLibraryWithFlags/**
 **/pr_LoadLibraryByPathname/**
-
-#370536
-**/nssArena_Destroy/arena_remove_pointer/nssPointerTracker_remove/PL_HashTableRemove/PL_HashTableRawRemove/DefaultAllocTable/**
-**/NSSArena_Create/nssArena_Create/arena_add_pointer/nssPointerTracker_initialize/call_once/**
-
-#391770
-*/main/**/OCSP_InitGlobal/PR_NewMonitor/**
-
-#393181
-ocspclnt/main/CERT_SetOCSPDefaultResponder/**
-
-#397483
-**/PR_CallOnce/InitializeArenas/PR_NewLock/**
+**/PR_LoadLibrary/**
 
 #397487
 **/__rpc_getconfip/setnetconfig/**
+
+#401100
+**/testThreadLockingBehavior/pthread_create@@GLIBC_2.1/**
+**/findLockInfo/pthread_create@@GLIBC_2.1/**
+
+#430544
+**/PR_CallOnce/InitializeArenas/PR_NewLock/**
+
+#458905
+**/cert_createObject/nssTrustDomain_AddCertsToCache/add_cert_to_cache/**
+**/cert_createObject/nssTrustDomain_AddCertsToCache/nssArena_Create/**
+
+#459237
+**/PR_FormatTime/strftime/**
+**/PR_FormatTime/__strftime_std/**
+
+#463208
+**/sqlite3UnixFullPathname/_getcwd/**
+
+#463631
+vfychain/main/PL_CreateOptState/**
+
+#486928
+selfserv/main/PORT_Strdup_Util/PORT_Alloc_Util/**
 

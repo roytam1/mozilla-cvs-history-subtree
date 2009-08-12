@@ -53,6 +53,8 @@ SEC_BEGIN_PROTOS
 ** buffer must be at least the size of the public key modulus.
 */
 
+extern SECStatus BL_Init(void);
+
 /*
 ** Generate and return a new RSA public and private key.
 **	Both keys are encoded in a single RSAPrivateKey structure.
@@ -517,6 +519,30 @@ extern SECStatus DES_Decrypt(DESContext *cx, unsigned char *output,
 			    const unsigned char *input, unsigned int inputLen);
 
 /******************************************/
+/* 
+** SEED symmetric block cypher		  
+*/
+extern SEEDContext *
+SEED_CreateContext(const unsigned char *key, const unsigned char *iv, 
+		   int mode, PRBool encrypt);
+extern SEEDContext *SEED_AllocateContext(void);
+extern SECStatus   SEED_InitContext(SEEDContext *cx, 
+				    const unsigned char *key, 
+				    unsigned int keylen, 
+				    const unsigned char *iv, 
+				    int mode, unsigned int encrypt, 
+				    unsigned int );
+extern void SEED_DestroyContext(SEEDContext *cx, PRBool freeit);
+extern SECStatus 
+SEED_Encrypt(SEEDContext *cx, unsigned char *output, 
+	     unsigned int *outputLen, unsigned int maxOutputLen, 
+	     const unsigned char *input, unsigned int inputLen);
+extern SECStatus 
+SEED_Decrypt(SEEDContext *cx, unsigned char *output, 
+	     unsigned int *outputLen, unsigned int maxOutputLen, 
+             const unsigned char *input, unsigned int inputLen);
+
+/******************************************/
 /*
 ** AES symmetric block cypher (Rijndael)
 */
@@ -645,6 +671,68 @@ extern SECStatus
 AESKeyWrap_Decrypt(AESKeyWrapContext *cx, unsigned char *output,
             unsigned int *outputLen, unsigned int maxOutputLen,
             const unsigned char *input, unsigned int inputLen);
+
+ /******************************************/
+/*
+** Camellia symmetric block cypher
+*/
+
+/*
+** Create a new Camellia context suitable for Camellia encryption/decryption.
+** 	"key" raw key data
+** 	"keylen" the number of bytes of key data (16, 24, or 32)
+*/
+extern CamelliaContext *
+Camellia_CreateContext(const unsigned char *key, const unsigned char *iv, 
+		       int mode, int encrypt, unsigned int keylen);
+
+extern CamelliaContext *Camellia_AllocateContext(void);
+extern SECStatus   Camellia_InitContext(CamelliaContext *cx,
+					const unsigned char *key, 
+					unsigned int keylen, 
+					const unsigned char *iv, 
+					int mode, 
+					unsigned int encrypt,
+					unsigned int unused);
+/*
+** Destroy a Camellia encryption/decryption context.
+**	"cx" the context
+**	"freeit" if PR_TRUE then free the object as well as its sub-objects
+*/
+extern void 
+Camellia_DestroyContext(CamelliaContext *cx, PRBool freeit);
+
+/*
+** Perform Camellia encryption.
+**	"cx" the context
+**	"output" the output buffer to store the encrypted data.
+**	"outputLen" how much data is stored in "output". Set by the routine
+**	   after some data is stored in output.
+**	"maxOutputLen" the maximum amount of data that can ever be
+**	   stored in "output"
+**	"input" the input data
+**	"inputLen" the amount of input data
+*/
+extern SECStatus 
+Camellia_Encrypt(CamelliaContext *cx, unsigned char *output,
+		 unsigned int *outputLen, unsigned int maxOutputLen,
+		 const unsigned char *input, unsigned int inputLen);
+
+/*
+** Perform Camellia decryption.
+**	"cx" the context
+**	"output" the output buffer to store the decrypted data.
+**	"outputLen" how much data is stored in "output". Set by the routine
+**	   after some data is stored in output.
+**	"maxOutputLen" the maximum amount of data that can ever be
+**	   stored in "output"
+**	"input" the input data
+**	"inputLen" the amount of input data
+*/
+extern SECStatus 
+Camellia_Decrypt(CamelliaContext *cx, unsigned char *output,
+		 unsigned int *outputLen, unsigned int maxOutputLen,
+		 const unsigned char *input, unsigned int inputLen);
 
 
 /******************************************/
@@ -993,22 +1081,8 @@ extern void RNG_SystemInfoForRNG(void);
  */
 
 /*
- * Given the seed-key and the seed, generate the random output.
- *
- * Parameters:
- *   XKEY [input/output]: the state of the RNG (seed-key)
- *   XSEEDj [input]: optional user input (seed)
- *   x_j [output]: output of the RNG
- *
- * Return value:
- * This function usually returns SECSuccess.  The only reason
- * this function returns SECFailure is that XSEEDj equals
- * XKEY, including the intermediate XKEY value between the two
- * iterations.  (This test is actually a FIPS 140-2 requirement
- * and not required for FIPS algorithm testing, but it is too
- * hard to separate from this function.)  If this function fails,
- * XKEY is not updated, but some data may have been written to
- * x_j, which should be ignored.
+ * FIPS186Change_GenerateX is now deprecated. It will return SECFailure with
+ * the error set to PR_NOT_IMPLEMENTED_ERROR.
  */
 extern SECStatus
 FIPS186Change_GenerateX(unsigned char *XKEY,
@@ -1027,6 +1101,27 @@ extern SECStatus
 FIPS186Change_ReduceModQForDSA(const unsigned char *w,
                                const unsigned char *q,
                                unsigned char *xj);
+
+/*
+ * The following functions are for FIPS poweron self test and FIPS algorithm
+ * testing.
+ */
+extern SECStatus
+PRNGTEST_Instantiate(const PRUint8 *entropy, unsigned int entropy_len, 
+		const PRUint8 *nonce, unsigned int nonce_len,
+		const PRUint8 *personal_string, unsigned int ps_len);
+
+extern SECStatus
+PRNGTEST_Reseed(const PRUint8 *entropy, unsigned int entropy_len, 
+		  const PRUint8 *additional, unsigned int additional_len);
+
+extern SECStatus
+PRNGTEST_Generate(PRUint8 *bytes, unsigned int bytes_len, 
+		  const PRUint8 *additional, unsigned int additional_len);
+
+extern SECStatus
+PRNGTEST_Uninstantiate(void);
+
 
 /* Generate PQGParams and PQGVerify structs.
  * Length of seed and length of h both equal length of P. 
@@ -1054,7 +1149,7 @@ PQG_ParamGenSeedLen(
  *  If vfy is non-NULL, test PQGParams to make sure they were generated
  *       using the specified seed, counter, and h values.
  *
- *  Return value indicates whether Verification operation ran succesfully
+ *  Return value indicates whether Verification operation ran successfully
  *  to completion, but does not indicate if PQGParams are valid or not.
  *  If return value is SECSuccess, then *pResult has these meanings:
  *       SECSuccess: PQGParams are valid.
@@ -1079,6 +1174,10 @@ PQG_ParamGenSeedLen(
 extern SECStatus   PQG_VerifyParams(const PQGParams *params, 
                                     const PQGVerify *vfy, SECStatus *result);
 
+extern void PQG_DestroyParams(PQGParams *params);
+
+extern void PQG_DestroyVerify(PQGVerify *vfy);
+
 
 /*
  * clean-up any global tables freebl may have allocated after it starts up.
@@ -1102,6 +1201,8 @@ PRBool BLAPI_VerifySelf(const char *name);
 
 /*********************************************************************/
 extern const SECHashObject * HASH_GetRawHashObject(HASH_HashType hashType);
+
+extern void BL_SetForkState(PRBool forked);
 
 SEC_END_PROTOS
 

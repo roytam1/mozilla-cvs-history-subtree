@@ -90,7 +90,7 @@ ocsp_get_cert_status() {
     
     if [ -n "$respUrl" -o -n "$defRespCert" ]; then
         if [ -z "$respUrl" -o -z "$defRespCert" ]; then
-            html_failed "<TR><TD>Incorrect test params" 
+            html_failed "Incorrect test params" 
             return 1
         fi
         clntParam="-l $respUrl -t $defRespCert"
@@ -99,7 +99,7 @@ ocsp_get_cert_status() {
     if [ -z "${MEMLEAK_DBG}" ]; then
         outFile=$dbDir/ocsptest.out.$$
         echo "ocspclnt -d $dbDir -S $cert $clntParam"
-        ocspclnt -d $dbDir -S $cert $clntParam >$outFile 2>&1
+        ${BINDIR}/ocspclnt -d $dbDir -S $cert $clntParam >$outFile 2>&1
         ret=$?
         echo "ocspclnt output:"
         cat $outFile
@@ -110,7 +110,7 @@ ocsp_get_cert_status() {
     fi
 
     OCSP_ATTR="-d $dbDir -S $cert $clntParam"
-    ${RUN_COMMAND_DBG} ocspclnt ${OCSP_ATTR}
+    ${RUN_COMMAND_DBG} ${BINDIR}/ocspclnt ${OCSP_ATTR}
 }
 
 ########################################################################

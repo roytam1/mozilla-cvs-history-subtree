@@ -69,6 +69,8 @@ PK11DefaultArrayEntry PK11_DefaultArray[] = {
 	{ "RC4", SECMOD_RC4_FLAG, CKM_RC4 },
 	{ "DES", SECMOD_DES_FLAG, CKM_DES_CBC },
 	{ "AES", SECMOD_AES_FLAG, CKM_AES_CBC },
+	{ "Camellia", SECMOD_CAMELLIA_FLAG, CKM_CAMELLIA_CBC },
+	{ "SEED", SECMOD_SEED_FLAG, CKM_SEED_CBC },
 	{ "RC5", SECMOD_RC5_FLAG, CKM_RC5_CBC },
 	{ "SHA-1", SECMOD_SHA1_FLAG, CKM_SHA_1 },
 	{ "SHA256", SECMOD_SHA256_FLAG, CKM_SHA256 },
@@ -98,7 +100,10 @@ PK11_GetDefaultArray(int *size)
  * These  slotlists are lists of modules which provide default support for
  *  a given algorithm or mechanism.
  */
-static PK11SlotList pk11_aesSlotList,
+static PK11SlotList 
+    pk11_seedSlotList,
+    pk11_camelliaSlotList,
+    pk11_aesSlotList,
     pk11_desSlotList,
     pk11_rc4SlotList,
     pk11_rc2SlotList,
@@ -552,9 +557,8 @@ PK11_FindSlotsByNames(const char *dllName, const char* slotName,
                     (0==PORT_Strcmp(tmpSlot->token_name, tokenName)))) &&
                     ( (!slotName) || (tmpSlot->slot_name &&
                     (0==PORT_Strcmp(tmpSlot->slot_name, slotName)))) ) {
-                    PK11SlotInfo* slot = PK11_ReferenceSlot(tmpSlot);
-                    if (slot) {
-                        PK11_AddSlotToList(slotList, slot);
+                    if (tmpSlot) {
+                        PK11_AddSlotToList(slotList, tmpSlot);
                         slotcount++;
                     }
                 }
@@ -752,6 +756,8 @@ pk11_InitSlotListStatic(PK11SlotList *list)
 SECStatus
 PK11_InitSlotLists(void)
 {
+    pk11_InitSlotListStatic(&pk11_seedSlotList);
+    pk11_InitSlotListStatic(&pk11_camelliaSlotList);
     pk11_InitSlotListStatic(&pk11_aesSlotList);
     pk11_InitSlotListStatic(&pk11_desSlotList);
     pk11_InitSlotListStatic(&pk11_rc4SlotList);
@@ -776,6 +782,8 @@ PK11_InitSlotLists(void)
 void
 PK11_DestroySlotLists(void)
 {
+    pk11_FreeSlotListStatic(&pk11_seedSlotList);
+    pk11_FreeSlotListStatic(&pk11_camelliaSlotList);
     pk11_FreeSlotListStatic(&pk11_aesSlotList);
     pk11_FreeSlotListStatic(&pk11_desSlotList);
     pk11_FreeSlotListStatic(&pk11_rc4SlotList);
@@ -807,6 +815,12 @@ PK11_GetSlotList(CK_MECHANISM_TYPE type)
         return NULL;
 #endif
     switch (type) {
+    case CKM_SEED_CBC:
+    case CKM_SEED_ECB:
+	return &pk11_seedSlotList;
+    case CKM_CAMELLIA_CBC:
+    case CKM_CAMELLIA_ECB:
+	return &pk11_camelliaSlotList;
     case CKM_AES_CBC:
     case CKM_AES_ECB:
 	return &pk11_aesSlotList;
@@ -1335,12 +1349,12 @@ PK11_InitSlot(SECMODModule *mod,CK_SLOT_ID slotID,PK11SlotInfo *slot)
 	    slot->disabled = PR_TRUE;
 	    slot->reason = PK11_DIS_COULD_NOT_INIT_TOKEN;
 	}
-    }
-    if (pk11_isRootSlot(slot)) {
-	if (!slot->hasRootCerts) {
-	    slot->module->trustOrder = 100;
+	if (rv == SECSuccess && pk11_isRootSlot(slot)) {
+	    if (!slot->hasRootCerts) {
+		slot->module->trustOrder = 100;
+	    }
+	    slot->hasRootCerts= PR_TRUE;
 	}
-	slot->hasRootCerts= PR_TRUE;
     }
 }
 
@@ -1488,6 +1502,12 @@ PRBool
 PK11_IsHW(PK11SlotInfo *slot)
 {
     return slot->isHW;
+}
+
+PRBool
+PK11_IsRemovable(PK11SlotInfo *slot)
+{
+    return !slot->isPerm;
 }
 
 PRBool
@@ -1932,6 +1952,64 @@ PK11_GetBestKeyLength(PK11SlotInfo *slot,CK_MECHANISM_TYPE mechanism)
     if (mechanism_info.ulMinKeySize == mechanism_info.ulMaxKeySize) 
 		return 0;
     return mechanism_info.ulMaxKeySize;
+}
+
+
+/*
+ * This function uses the existing PKCS #11 module to find the
+ * longest supported key length in the preferred token for a mechanism.
+ * This varies from the above function in that 1) it returns the key length
+ * even for fixed key algorithms, and 2) it looks through the tokens
+ * generally rather than for a specific token. This is used in liu of
+ * a PK11_GetKeyLength function in pk11mech.c since we can actually read
+ * supported key lengths from PKCS #11.
+ *
+ * For symmetric key operations the length is returned in bytes.
+ */
+int
+PK11_GetMaxKeyLength(CK_MECHANISM_TYPE mechanism)
+{
+    CK_MECHANISM_INFO mechanism_info;
+    PK11SlotList *list = NULL;
+    PK11SlotListElement *le ;
+    PRBool freeit = PR_FALSE;
+    int keyLength = 0;
+
+    list = PK11_GetSlotList(mechanism);
+
+    if ((list == NULL) || (list->head == NULL)) {
+	/* We need to look up all the tokens for the mechanism */
+	list = PK11_GetAllTokens(mechanism,PR_FALSE,PR_FALSE,NULL);
+	freeit = PR_TRUE;
+    }
+
+    /* no tokens recognize this mechanism */
+    if (list == NULL) {
+	PORT_SetError(SEC_ERROR_INVALID_ALGORITHM);
+	return 0;
+    }
+
+    for (le = PK11_GetFirstSafe(list); le;
+			 	le = PK11_GetNextSafe(list,le,PR_TRUE)) {
+	PK11SlotInfo *slot = le->slot;
+	CK_RV crv;
+	if (PK11_IsPresent(slot)) {
+	    if (!slot->isThreadSafe) PK11_EnterSlotMonitor(slot);
+	    crv = PK11_GETTAB(slot)->C_GetMechanismInfo(slot->slotID,
+                               mechanism,&mechanism_info);
+ 	    if (!slot->isThreadSafe) PK11_ExitSlotMonitor(slot);
+	    if ((crv == CKR_OK)  && (mechanism_info.ulMaxKeySize != 0)
+		&& (mechanism_info.ulMaxKeySize != 0xffffffff)) {
+		keyLength = mechanism_info.ulMaxKeySize;
+		break;
+	    }
+	}
+    }
+    if (le) 
+	PK11_FreeSlotListElement(list, le);
+    if (freeit) 
+	PK11_FreeSlotList(list);
+    return keyLength;
 }
 
 SECStatus

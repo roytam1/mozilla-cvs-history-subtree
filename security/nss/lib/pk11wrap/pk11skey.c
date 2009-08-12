@@ -666,15 +666,16 @@ PK11_DeleteTokenSymKey(PK11SymKey *symKey)
 }
 
 SECItem *
-__PK11_GetKeyData(PK11SymKey *symKey)
+PK11_GetKeyData(PK11SymKey *symKey)
 {
     return &symKey->data;
 }
 
+/* This symbol is exported for backward compatibility. */
 SECItem *
-PK11_GetKeyData(PK11SymKey *symKey)
+__PK11_GetKeyData(PK11SymKey *symKey)
 {
-    return __PK11_GetKeyData(symKey);
+    return PK11_GetKeyData(symKey);
 }
 
 /* return the keylength if possible.  '0' if not */
@@ -876,23 +877,31 @@ PK11_MoveSymKey(PK11SlotInfo *slot, CK_ATTRIBUTE_TYPE operation,
 					operation, flags, perm, symKey);
 }
 
-
 /*
- * Use the token to generate a key. keySize must be 'zero' for fixed key
- * length algorithms. A nonzero keySize causes the CKA_VALUE_LEN attribute
- * to be added to the template for the key. PKCS #11 modules fail if you
- * specify the CKA_VALUE_LEN attribute for keys with fixed length.
- * NOTE: this means to generate a DES2 key from this interface you must
- * specify CKM_DES2_KEY_GEN as the mechanism directly; specifying
- * CKM_DES3_CBC as the mechanism and 16 as keySize currently doesn't work.
+ * Use the token to generate a key. 
+ * 
+ * keySize must be 'zero' for fixed key length algorithms. A nonzero 
+ *  keySize causes the CKA_VALUE_LEN attribute to be added to the template 
+ *  for the key. Most PKCS #11 modules fail if you specify the CKA_VALUE_LEN 
+ *  attribute for keys with fixed length. The exception is DES2. If you
+ *  select a CKM_DES3_CBC mechanism, this code will not add the CKA_VALUE_LEN
+ *  paramter and use the key size to determine which underlying DES keygen
+ *  function to use (CKM_DES2_KEY_GEN or CKM_DES3_KEY_GEN).
+ *
+ * keyType must be -1 for most algorithms. Some PBE algorthims cannot 
+ *  determine the correct key type from the mechanism or the paramters,
+ *  so key type must be specified. Other PKCS #11 mechanisms may do so in
+ *  the future. Currently there is no need to export this publically.
+ *  Keep it private until there is a need in case we need to expand the
+ *  keygen parameters again...
  *
  * CK_FLAGS flags: key operation flags
  * PK11AttrFlags attrFlags: PK11_ATTR_XXX key attribute flags
  */
 PK11SymKey *
-PK11_TokenKeyGenWithFlags(PK11SlotInfo *slot, CK_MECHANISM_TYPE type,
-    SECItem *param, int keySize, SECItem *keyid, CK_FLAGS opFlags,
-    PK11AttrFlags attrFlags, void *wincx)
+pk11_TokenKeyGenWithFlagsAndKeyType(PK11SlotInfo *slot, CK_MECHANISM_TYPE type,
+    SECItem *param, CK_KEY_TYPE keyType, int keySize, SECItem *keyid, 
+    CK_FLAGS opFlags, PK11AttrFlags attrFlags, void *wincx)
 {
     PK11SymKey *symKey;
     CK_ATTRIBUTE genTemplate[MAX_TEMPL_ATTRS];
@@ -911,10 +920,16 @@ PK11_TokenKeyGenWithFlags(PK11SlotInfo *slot, CK_MECHANISM_TYPE type,
 	return NULL;
     }
 
-    if (keySize != 0) {
+    if ((keySize != 0) && (type != CKM_DES3_CBC) && 
+		(type !=CKM_DES3_CBC_PAD) && (type != CKM_DES3_ECB)) {
         ck_key_size = keySize; /* Convert to PK11 type */
 
         PK11_SETATTRS(attrs, CKA_VALUE_LEN, &ck_key_size, sizeof(ck_key_size)); 
+							attrs++;
+    }
+
+    if (keyType != -1) {
+        PK11_SETATTRS(attrs, CKA_KEY_TYPE, &keyType, sizeof(CK_KEY_TYPE)); 
 							attrs++;
     }
 
@@ -1003,6 +1018,29 @@ PK11_TokenKeyGenWithFlags(PK11SlotInfo *slot, CK_MECHANISM_TYPE type,
 }
 
 /*
+ * Use the token to generate a key.  - Public
+ * 
+ * keySize must be 'zero' for fixed key length algorithms. A nonzero 
+ *  keySize causes the CKA_VALUE_LEN attribute to be added to the template 
+ *  for the key. Most PKCS #11 modules fail if you specify the CKA_VALUE_LEN 
+ *  attribute for keys with fixed length. The exception is DES2. If you
+ *  select a CKM_DES3_CBC mechanism, this code will not add the CKA_VALUE_LEN
+ *  paramter and use the key size to determine which underlying DES keygen
+ *  function to use (CKM_DES2_KEY_GEN or CKM_DES3_KEY_GEN).
+ *
+ * CK_FLAGS flags: key operation flags
+ * PK11AttrFlags attrFlags: PK11_ATTR_XXX key attribute flags
+ */
+PK11SymKey *
+PK11_TokenKeyGenWithFlags(PK11SlotInfo *slot, CK_MECHANISM_TYPE type,
+    SECItem *param, int keySize, SECItem *keyid, CK_FLAGS opFlags,
+    PK11AttrFlags attrFlags, void *wincx)
+{
+    return pk11_TokenKeyGenWithFlagsAndKeyType(slot, type, param, -1, keySize, 
+	keyid, opFlags, attrFlags, wincx);
+}
+
+/*
  * Use the token to generate a key. keySize must be 'zero' for fixed key
  * length algorithms. A nonzero keySize causes the CKA_VALUE_LEN attribute
  * to be added to the template for the key. PKCS #11 modules fail if you
@@ -1031,8 +1069,8 @@ PK11_TokenKeyGen(PK11SlotInfo *slot, CK_MECHANISM_TYPE type, SECItem *param,
 	attrFlags |= (PK11_ATTR_TOKEN | PK11_ATTR_PRIVATE);
     }
 
-    symKey = PK11_TokenKeyGenWithFlags(slot, type, param, keySize, keyid,
-						opFlags, attrFlags, wincx);
+    symKey = pk11_TokenKeyGenWithFlagsAndKeyType(slot, type, param, 
+			-1, keySize, keyid, opFlags, attrFlags, wincx);
     if (symKey && weird) {
 	PK11_SetFortezzaHack(symKey);
     }
@@ -1576,6 +1614,7 @@ PK11_PubDerive(SECKEYPrivateKey *privKey, SECKEYPublicKey *pubKey,
 	    mechanism.mechanism = derive;
 
 	    /* we can undefine these when we define diffie-helman keys */
+
 	    mechanism.pParameter = pubKey->u.dh.publicValue.data; 
 	    mechanism.ulParameterLen = pubKey->u.dh.publicValue.len;
 		
@@ -1597,6 +1636,7 @@ PK11_PubDerive(SECKEYPrivateKey *privKey, SECKEYPublicKey *pubKey,
 	    int templateCount;
 	    CK_ATTRIBUTE *attrs = keyTemplate;
 	    CK_ECDH1_DERIVE_PARAMS *mechParams = NULL;
+	    SECItem *pubValue = NULL;
 
 	    if (pubKey->keyType != ecKey) {
 		PORT_SetError(SEC_ERROR_BAD_KEY);
@@ -1622,8 +1662,21 @@ PK11_PubDerive(SECKEYPrivateKey *privKey, SECKEYPublicKey *pubKey,
 	    mechParams->kdf = CKD_SHA1_KDF;
 	    mechParams->ulSharedDataLen = 0;
 	    mechParams->pSharedData = NULL;
-	    mechParams->ulPublicDataLen =  pubKey->u.ec.publicValue.len;
-	    mechParams->pPublicData =  pubKey->u.ec.publicValue.data;
+
+	    if (PR_GetEnv("NSS_USE_DECODED_CKA_EC_POINT")) {
+		mechParams->ulPublicDataLen =  pubKey->u.ec.publicValue.len;
+		mechParams->pPublicData =  pubKey->u.ec.publicValue.data;
+	    } else {
+		pubValue = SEC_ASN1EncodeItem(NULL, NULL,
+			&pubKey->u.ec.publicValue,
+			SEC_ASN1_GET(SEC_OctetStringTemplate));
+		if (pubValue == NULL) {
+	    	    PORT_ZFree(mechParams, sizeof(CK_ECDH1_DERIVE_PARAMS));
+		    break;
+		}
+		mechParams->ulPublicDataLen =  pubValue->len;
+		mechParams->pPublicData =  pubValue->data;
+	    }
 
 	    mechanism.mechanism = derive;
 	    mechanism.pParameter = mechParams;
@@ -1635,6 +1688,9 @@ PK11_PubDerive(SECKEYPrivateKey *privKey, SECKEYPublicKey *pubKey,
 		templateCount, &symKey->objectID);
 	    pk11_ExitKeyMonitor(symKey);
 
+	    if (pubValue) {
+		SECITEM_FreeItem(pubValue,PR_TRUE);
+	    }
 	    PORT_ZFree(mechParams, sizeof(CK_ECDH1_DERIVE_PARAMS));
 
 	    if (crv == CKR_OK) return symKey;
@@ -1666,6 +1722,7 @@ pk11_PubDeriveECKeyWithKDF(
     int                     templateCount;
     CK_ATTRIBUTE           *attrs           = keyTemplate;
     CK_ECDH1_DERIVE_PARAMS *mechParams      = NULL;
+    SECItem *pubValue = NULL;
 
     if (pubKey->keyType != ecKey) {
 	PORT_SetError(SEC_ERROR_BAD_KEY);
@@ -1710,8 +1767,21 @@ pk11_PubDeriveECKeyWithKDF(
 	mechParams->ulSharedDataLen = sharedData->len;
 	mechParams->pSharedData     = sharedData->data;
     }
-    mechParams->ulPublicDataLen = pubKey->u.ec.publicValue.len;
-    mechParams->pPublicData     = pubKey->u.ec.publicValue.data;
+    if (PR_GetEnv("NSS_USE_DECODED_CKA_EC_POINT")) {
+	mechParams->ulPublicDataLen =  pubKey->u.ec.publicValue.len;
+	mechParams->pPublicData =  pubKey->u.ec.publicValue.data;
+    } else {
+	pubValue = SEC_ASN1EncodeItem(NULL, NULL,
+		&pubKey->u.ec.publicValue,
+		SEC_ASN1_GET(SEC_OctetStringTemplate));
+	if (pubValue == NULL) {
+    	    PORT_ZFree(mechParams, sizeof(CK_ECDH1_DERIVE_PARAMS));
+	    PK11_FreeSymKey(symKey);
+	    return NULL;
+	}
+	mechParams->ulPublicDataLen =  pubValue->len;
+	mechParams->pPublicData =  pubValue->data;
+    }
 
     mechanism.mechanism      = derive;
     mechanism.pParameter     = mechParams;
@@ -1723,6 +1793,9 @@ pk11_PubDeriveECKeyWithKDF(
     pk11_ExitKeyMonitor(symKey);
 
     PORT_ZFree(mechParams, sizeof(CK_ECDH1_DERIVE_PARAMS));
+    if (pubValue) {
+	SECITEM_FreeItem(pubValue,PR_TRUE);
+    }
 
     if (crv != CKR_OK) {
 	PK11_FreeSymKey(symKey);
@@ -2180,3 +2253,10 @@ PK11_GenerateFortezzaIV(PK11SymKey *symKey,unsigned char *iv,int len)
     PK11_ExitSlotMonitor(symKey->slot);
     return rv;
 }
+
+CK_OBJECT_HANDLE
+PK11_GetSymKeyHandle(PK11SymKey *symKey)
+{
+    return symKey->objectID;
+}
+

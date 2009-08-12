@@ -45,12 +45,10 @@ LIBRARY_NAME = cryptohi
 EXPORTS = \
 	cryptohi.h \
 	cryptoht.h \
-	hasht.h   \
 	key.h     \
 	keyhi.h   \
 	keyt.h    \
 	keythi.h  \
-	sechash.h \
 	$(NULL)
 
 PRIVATE_EXPORTS = \
@@ -65,3 +63,6 @@ LIBSRCS = \
 	$(NULL)
 
 CSRCS = $(LIBSRCS)
+
+# This part of the code, including all sub-dirs, can be optimized for size
+export ALLOW_OPT_CODE_SIZE = 1

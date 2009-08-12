@@ -58,7 +58,7 @@ typedef unsigned int mode_t;
 
 #define HAVE_LCHOWN
 
-#if defined(AIX) || defined(BSDI) || defined(HPUX) || defined(LINUX) || defined(SUNOS4) || defined(SCO) || defined(UNIXWARE) || defined(VMS) || defined(NTO) || defined(DARWIN) || defined(BEOS)
+#if defined(AIX) || defined(BSDI) || defined(HPUX) || defined(LINUX) || defined(SUNOS4) || defined(SCO) || defined(UNIXWARE) || defined(VMS) || defined(NTO) || defined(DARWIN) || defined(BEOS) || defined(__riscos__)
 #undef HAVE_LCHOWN
 #endif
 
@@ -125,8 +125,7 @@ mkdirs(char *path, mode_t mode)
 	fail("Null pointer or empty string passed to mkdirs()");
     while (*path == '/' && path[1] == '/')
 	path++;
-    while ((cp = strrchr(path, '/')) && cp[1] == '\0')
-	*cp = '\0';
+    for (cp = strrchr(path, '/'); cp && cp != path && *(cp - 1) == '/'; cp--);
     if (cp && cp != path) {
 	*cp = '\0';
 	if ((stat(path, &sb) < 0 || !S_ISDIR(sb.st_mode)) &&
@@ -360,6 +359,8 @@ retry:
 	    if (!exists && symlink(name, toname) < 0) {
 		if (errno == EEXIST) {
 		    fprintf(stderr, "symlink creation race: %s\n", toname);
+                    fail("symlink was attempted in working directory %s "
+                         "from %s to %s.\n", cwd, name, toname);
 		    goto retry;
 		}
 		diagnosePath(toname);

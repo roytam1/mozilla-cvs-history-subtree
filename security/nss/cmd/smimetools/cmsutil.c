@@ -133,6 +133,7 @@ Usage(char *progName)
 " -i infile     use infile as source of data (default: stdin)\n"
 " -o outfile    use outfile as destination of data (default: stdout)\n"
 " -p password   use password as key db password (default: prompt)\n"
+" -f pwfile     use password file to set password on all PKCS#11 tokens)\n"
 " -u certusage  set type of certificate usage (default: certUsageEmailSigner)\n"
 " -v            print debugging information\n"
 "\n"
@@ -155,6 +156,7 @@ Usage(char *progName)
 }
 
 struct optionsStr {
+    char *pwfile;
     char *password;
     SECCertUsage certUsage;
     CERTCertDBHandle *certHandle;
@@ -206,6 +208,7 @@ static NSSCMSMessage *
 decode(FILE *out, SECItem *input, const struct decodeOptionsStr *decodeOptions)
 {
     NSSCMSDecoderContext *dcx;
+    SECStatus rv;
     NSSCMSMessage *cmsg;
     int nlevels, i;
     SECItem sitem = { 0, 0, 0 };
@@ -216,7 +219,16 @@ decode(FILE *out, SECItem *input, const struct decodeOptionsStr *decodeOptions)
                                pwcb, pwcb_arg,     /* password callback    */
 			       decodeOptions->dkcb, /* decrypt key callback */
                                decodeOptions->bulkkey);
-    (void)NSS_CMSDecoder_Update(dcx, (char *)input->data, input->len);
+    if (dcx == NULL) {
+	fprintf(stderr, "%s: failed to set up message decoder.\n", progName);
+	return NULL;
+    }
+    rv = NSS_CMSDecoder_Update(dcx, (char *)input->data, input->len);
+    if (rv != SECSuccess) {
+	fprintf(stderr, "%s: failed to decode message.\n", progName);
+	NSS_CMSDecoder_Cancel(dcx);
+	return NULL;
+    }
     cmsg = NSS_CMSDecoder_Finish(dcx);
     if (cmsg == NULL) {
 	fprintf(stderr, "%s: failed to decode message.\n", progName);
@@ -430,6 +442,8 @@ signed_data(struct signOptionsStr *signOptions)
 	fprintf(stderr, "Input to signed_data:\n");
 	if (signOptions->options->password)
 	    fprintf(stderr, "password [%s]\n", signOptions->options->password);
+        else if (signOptions->options->pwfile)
+	    fprintf(stderr, "password file [%s]\n", signOptions->options->pwfile);
 	else
 	    fprintf(stderr, "password [NULL]\n");
 	fprintf(stderr, "certUsage [%d]\n", signOptions->options->certUsage);
@@ -1111,6 +1125,7 @@ main(int argc, char **argv)
     decodeOptions.keepCerts = PR_FALSE;
     options.certUsage = certUsageEmailSigner;
     options.password = NULL;
+    options.pwfile = NULL;
     signOptions.nickname = NULL;
     signOptions.detached = PR_FALSE;
     signOptions.signingTime = PR_FALSE;
@@ -1129,7 +1144,7 @@ main(int argc, char **argv)
      * Parse command line arguments
      */
     optstate = PL_CreateOptState(argc, argv, 
-				 "CDEGH:N:OPSTY:bc:d:e:h:i:kno:p:r:s:u:v");
+				 "CDEGH:N:OPSTY:bc:d:e:f:h:i:kno:p:r:s:u:v");
     while ((status = PL_GetNextOpt(optstate)) == PL_OPT_OK) {
 	switch (optstate->option) {
 	case 'C':
@@ -1341,6 +1356,16 @@ main(int argc, char **argv)
 	    options.password = strdup(optstate->value);
 	    break;
 
+        case 'f':
+            if (!optstate->value) {
+                fprintf(stderr, "%s: option -f must have a value.\n", progName);
+                Usage(progName);
+                exit(1);
+            }
+
+            options.pwfile = strdup(optstate->value);
+            break;
+
 	case 'r':
 	    if (!optstate->value) {
 		fprintf(stderr, "%s: option -r must have a value.\n", progName);
@@ -1396,7 +1421,7 @@ main(int argc, char **argv)
 	fprintf(stderr, "received commands\n");
     }
 
-    /* Call the libsec initialization routines */
+    /* Call the NSS initialization routines */
     PR_Init(PR_SYSTEM_THREAD, PR_PRIORITY_NORMAL, 1);
     rv = NSS_InitReadWrite(SECU_ConfigDirectory(NULL));
     if (SECSuccess != rv) {
@@ -1418,6 +1443,11 @@ main(int argc, char **argv)
     {
     	pwdata.source = PW_PLAINTEXT;
     	pwdata.data = options.password;
+    }
+    if (options.pwfile)
+    {
+    	pwdata.source = PW_FROMFILE;
+    	pwdata.data = options.pwfile;
     }
     pwcb = SECU_GetModulePassword;
     pwcb_arg = (void *)&pwdata;
@@ -1558,8 +1588,9 @@ main(int argc, char **argv)
 	if (cms_verbose) {
 	    fprintf(stderr, "cmsg [%p]\n", cmsg);
 	    fprintf(stderr, "arena [%p]\n", arena);
-	    if (pwcb_arg)
-		fprintf(stderr, "password [%s]\n", (char *)pwcb_arg);
+	    if (pwcb_arg && (PW_PLAINTEXT == ((secuPWData*)pwcb_arg)->source))
+		fprintf(stderr, "password [%s]\n",
+                        ((secuPWData*)pwcb_arg)->data);
 	    else
 		fprintf(stderr, "password [NULL]\n");
 	}

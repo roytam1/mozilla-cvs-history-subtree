@@ -133,6 +133,7 @@
 #ifndef _NSSILCKT_H_
 #define _NSSILCKT_H_
 
+#include "utilrename.h"
 #include "prtypes.h"
 #include "prmon.h"
 #include "prlock.h"
@@ -160,6 +161,11 @@ typedef enum {
     nssILockKeyDB = 18,
     nssILockLast  /* don't use this one! */
 } nssILockType;
+
+/*
+** conditionally compile in nssilock features
+*/
+#if defined(NEED_NSS_ILOCK)
 
 /*
 ** Declare operation type enumerator
@@ -199,12 +205,6 @@ struct pzTrace_s {
     char            file[24]; /* filename */
 };
 
-PR_BEGIN_EXTERN_C
-/*
-** conditionally compile in nssilock features
-*/
-#if defined(NEED_NSS_ILOCK)
-
 /*
 ** declare opaque types. See: nssilock.c
 */
@@ -220,5 +220,4 @@ typedef struct pzmonitor_s PZMonitor;
     
 #endif /* NEED_NSS_ILOCK */
 
-PR_END_EXTERN_C
 #endif /* _NSSILCKT_H_ */

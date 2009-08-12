@@ -41,10 +41,6 @@
 #ifndef __nss_h_
 #define __nss_h_
 
-#include "seccomon.h"
-
-SEC_BEGIN_PROTOS
-
 /* The private macro _NSS_ECC_STRING is for NSS internal use only. */
 #ifdef NSS_ENABLE_ECC
 #ifdef NSS_ECC_MORE_THAN_SUITE_B
@@ -70,11 +66,17 @@ SEC_BEGIN_PROTOS
  * The format of the version string should be
  *     "<major version>.<minor version>[.<patch level>][ <ECC>][ <Beta>]"
  */
-#define NSS_VERSION  "3.11.10.1" _NSS_ECC_STRING  _NSS_CUSTOMIZED
+#define NSS_VERSION  "3.12.3.1" _NSS_ECC_STRING _NSS_CUSTOMIZED
 #define NSS_VMAJOR   3
-#define NSS_VMINOR   11
-#define NSS_VPATCH  10 
+#define NSS_VMINOR   12
+#define NSS_VPATCH   3
 #define NSS_BETA     PR_FALSE
+
+#ifndef RC_INVOKED
+
+#include "seccomon.h"
+
+SEC_BEGIN_PROTOS
 
 /*
  * Return a boolean that indicates whether the underlying library
@@ -197,6 +199,21 @@ extern SECStatus NSS_Initialize(const char *configdir,
 	const char *secmodName, PRUint32 flags);
 
 /*
+ * same as NSS_Init, but checks to see if we need to merge an
+ * old database in.
+ *   updatedir is the directory where the old database lives.
+ *   updCertPrefix is the certPrefix for the old database.
+ *   updKeyPrefix is the keyPrefix for the old database.
+ *   updateID is a unique identifier chosen by the application for
+ *      the specific database.
+ *   updatName is the name the user will be prompted for when
+ *      asking to authenticate to the old database  */
+extern SECStatus NSS_InitWithMerge(const char *configdir, 
+	const char *certPrefix, const char *keyPrefix, const char *secmodName,
+	const char *updatedir,  const char *updCertPrefix, 
+	const char *updKeyPrefix, const char *updateID, 
+	const char *updateName, PRUint32 flags);
+/*
  * initialize NSS without a creating cert db's, key db's, or secmod db's.
  */
 SECStatus NSS_NoDB_Init(const char *configdir);
@@ -247,4 +264,5 @@ void nss_DumpCertificateCacheInfo(void);
 
 SEC_END_PROTOS
 
+#endif /* RC_INVOKED */
 #endif /* __nss_h_ */
