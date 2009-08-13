@@ -54,7 +54,9 @@
 #include "prnetdb.h"
 #include "prprf.h"
 #include "prthread.h"
+
 #include "pprio.h"
+
 #include "plerror.h"
 #include "plgetopt.h"
 
@@ -318,7 +320,7 @@ static void Help(void)
     PR_fprintf(err, "\t\tthe server and not act as a client.\n");
 }  /* Help */
 
-int main(int argc, char **argv)
+PRIntn main(PRIntn argc, char **argv)
 {
     PLOptStatus os;
     const char *server_name = NULL;

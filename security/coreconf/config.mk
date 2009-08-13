@@ -63,7 +63,7 @@ endif
 #######################################################################
 
 TARGET_OSES = FreeBSD BSD_OS NetBSD OpenUNIX OS2 QNX Darwin BeOS OpenBSD \
-              AIX RISCOS WINNT WIN95 WINCE
+              OpenVMS AIX RISCOS WINNT WIN95 WINCE
 
 ifeq (,$(filter-out $(TARGET_OSES),$(OS_TARGET)))
 include $(CORE_DEPTH)/coreconf/$(OS_TARGET).mk
@@ -192,11 +192,6 @@ endif
 
 ifdef NSS_DISABLE_DBM
 DEFINES += -DNSS_DISABLE_DBM
-endif
-
-ifdef NSS_NO_FORK_CHECK
-DEFINES += -DNO_FORK_CHECK
-DEFINES += -DNO_CHECK_FORK
 endif
 
 # Avoid building object leak test code for optimized library

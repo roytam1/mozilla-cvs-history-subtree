@@ -78,6 +78,13 @@ DEFINES = -UDEBUG -U_DEBUG -DNDEBUG
 DLLFLAGS = -OUT:"$@"
 OBJDIR_TAG = _OPT
 
+# Add symbolic information for use by a profiler
+ifdef MOZ_PROFILE
+OPTIMIZER += -Zi
+DLLFLAGS += -DEBUG
+LDFLAGS += -DEBUG
+endif
+
 else
 #
 # Define USE_DEBUG_RTL if you want to use the debug runtime library
@@ -148,11 +155,7 @@ else
 ifeq ($(CPU_ARCH),ALPHA)
 DEFINES += -D_ALPHA_=1
 else
-ifeq ($(CPU_ARCH),x86_64)
-DEFINES += -D_AMD64_ -D_M_AMD64
-else
 CPU_ARCH = processor_is_undefined
-endif
 endif
 endif
 endif

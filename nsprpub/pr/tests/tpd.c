@@ -47,7 +47,11 @@
 #include "prthread.h"
 #include "prtypes.h"
 
+#if defined(XP_MAC)
+#include "pprio.h"
+#else
 #include "private/pprio.h"
+#endif
 
 #include "plgetopt.h"
 
@@ -306,7 +310,7 @@ static PRIntn PR_CALLBACK Tpd(PRIntn argc, char **argv)
 
 }  /* Tpd */
 
-int main(int argc, char **argv)
+PRIntn main(PRIntn argc, char *argv[])
 {
 	PLOptStatus os;
 	PLOptState *opt = PL_CreateOptState(argc, argv, "dl:r:");

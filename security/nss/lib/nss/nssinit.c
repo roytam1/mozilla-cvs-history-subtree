@@ -39,7 +39,6 @@
 /* $Id$ */
 
 #include <ctype.h>
-#include <string.h>
 #include "seccomon.h"
 #include "prinit.h"
 #include "prprf.h"
@@ -556,11 +555,7 @@ loser:
 				STAN_GetDefaultTrustDomain());
 	if ((!noModDB) && (!noCertDB) && (!noRootInit)) {
 	    if (!SECMOD_HasRootCerts()) {
-		const char *dbpath = configdir;
-		if (strncmp(dbpath, "sql:", 4) == 0) {
-		    dbpath += 4;
-		}
-		nss_FindExternalRoot(dbpath, secmodName);
+		nss_FindExternalRoot(configdir, secmodName);
 	    }
 	}
 	pk11sdr_Init();
@@ -774,7 +769,6 @@ NSS_RegisterShutdown(NSS_ShutdownFunc sFunc, void *appData)
 		(nssShutdownList.allocatedFuncs + NSS_SHUTDOWN_STEP) 
 		*sizeof(struct NSSShutdownFuncPair));
 	if (!funcs) {
-	    PZ_Unlock(nssShutdownList.lock);
 	    return SECFailure;
 	}
 	nssShutdownList.funcs = funcs;

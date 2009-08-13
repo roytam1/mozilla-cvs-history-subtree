@@ -41,7 +41,7 @@
 
 #include <stdio.h>
 
-int main(int argc, char **argv)
+int main()
 {
     char buffer[256];
     char small_buffer[8];

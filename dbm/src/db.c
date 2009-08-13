@@ -64,7 +64,11 @@ dbSetOrClearDBLock(DBLockFlagEnum type)
 		all_databases_locked_closed = 0;
 }
 
+#if defined(__WATCOMC__) || defined(__WATCOM_CPLUSPLUS__)
 DB *
+#else
+PR_IMPLEMENT(DB *)
+#endif
 dbopen(const char *fname, int flags,int mode, DBTYPE type, const void *openinfo)
 {
 

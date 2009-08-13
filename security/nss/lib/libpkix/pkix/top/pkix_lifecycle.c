@@ -145,11 +145,10 @@ PKIX_Initialize(
                    (5, 5, &aiaConnectionCache, plContext),
                    PKIX_HASHTABLECREATEFAILED);
         
-#ifdef PKIX_SOCKETCACHE
         PKIX_CHECK(PKIX_PL_HashTable_Create
                    (5, 5, &httpSocketCache, plContext),
                    PKIX_HASHTABLECREATEFAILED);
-#endif
+        
         if (pkixLoggerLock == NULL) {
             PKIX_CHECK(PKIX_PL_MonitorLock_Create
                        (&pkixLoggerLock, plContext),

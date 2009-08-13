@@ -76,7 +76,7 @@ endif
 
 LDFLAGS			= -z -Wl,+s
 
-MKSHLIB			= $(LD) $(DSO_LDOPTS) $(RPATH)
+MKSHLIB			= $(LD) $(DSO_LDOPTS)
 ifdef MAPFILE
 MKSHLIB += -c $(MAPFILE)
 endif
@@ -84,12 +84,8 @@ PROCESS_MAP_FILE = grep -v ';+' $< | grep -v ';-' | \
          sed -e 's; DATA ;;' -e 's,;;,,' -e 's,;.*,,' -e 's,^,+e ,' > $@
 
 DSO_LDOPTS		= -b +h $(notdir $@)
-RPATH			= +b '$$ORIGIN'
-ifneq ($(OS_TEST),ia64)
-# pa-risc
-ifndef USE_64
-RPATH   =
-endif
+ifeq ($(OS_TEST),ia64)
+	DSO_LDOPTS	+= +b '$$ORIGIN'
 endif
 DSO_LDFLAGS		=
 

@@ -61,7 +61,7 @@
 
 static char *child_argv[] = { "sockpong", NULL };
 
-int main(int argc, char **argv)
+int main()
 {
     PRFileDesc *sock[2];
     PRStatus status;
