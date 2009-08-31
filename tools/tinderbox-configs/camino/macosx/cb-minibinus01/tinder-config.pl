@@ -240,6 +240,14 @@ $archive       = 1;
 #$update_extv = "1.0+";
 #$update_pushinfo = 1;
 
+$crashreporter_buildsymbols = 1;
+$crashreporter_pushsymbols = 1;
+$ENV{SYMBOL_SERVER_HOST} = 'dm-symbolpush01.mozilla.org';
+$ENV{SYMBOL_SERVER_USER}   = 'caminobld';
+$ENV{SYMBOL_SERVER_PATH}   = '/mnt/netapp/breakpad/symbols_camino/';
+# this is optional, it's a full path to a ssh private key
+$ENV{SYMBOL_SERVER_SSH_KEY}   = "$ENV{HOME}/.ssh/id_dsa";
+
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
 # locking up (and testing would be suspect even after a couple of cycles).
