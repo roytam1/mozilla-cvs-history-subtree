@@ -90,6 +90,8 @@
 		00BBBF1F0D6A149900C2D916 /* FindBarTextured.nib in Resources */ = {isa = PBXBuildFile; fileRef = 00BBBF1C0D6A149800C2D916 /* FindBarTextured.nib */; };
 		00BBBFE70D70A6E400C2D916 /* tab_loading.tiff in Resources */ = {isa = PBXBuildFile; fileRef = 00BBBFE60D70A6E400C2D916 /* tab_loading.tiff */; };
 		00BBBFE80D70A6E400C2D916 /* tab_loading.tiff in Resources */ = {isa = PBXBuildFile; fileRef = 00BBBFE60D70A6E400C2D916 /* tab_loading.tiff */; };
+		00C6890710560B110082D80F /* BreakpadWrapper.m in Sources */ = {isa = PBXBuildFile; fileRef = 00C6890610560B110082D80F /* BreakpadWrapper.m */; };
+		00C6890810560B110082D80F /* BreakpadWrapper.m in Sources */ = {isa = PBXBuildFile; fileRef = 00C6890610560B110082D80F /* BreakpadWrapper.m */; };
 		032FFDD5077351DA00440548 /* Downloads.mm in Sources */ = {isa = PBXBuildFile; fileRef = 032FFDCE077351A800440548 /* Downloads.mm */; };
 		032FFDD6077351EA00440548 /* Downloads.tiff in Resources */ = {isa = PBXBuildFile; fileRef = 032FFDCF077351A800440548 /* Downloads.tiff */; };
 		032FFDD7077351EA00440548 /* Downloads.nib in Resources */ = {isa = PBXBuildFile; fileRef = 032FFDD0077351A800440548 /* Downloads.nib */; };
@@ -2535,6 +2537,8 @@
 		00BBBC840D66C13400C2D916 /* CHGradient.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = CHGradient.m; path = src/extensions/CHGradient.m; sourceTree = "<group>"; };
 		00BBBF1D0D6A149800C2D916 /* English */ = {isa = PBXFileReference; lastKnownFileType = wrapper.nib; name = English; path = resources/localized/English.lproj/FindBarTextured.nib; sourceTree = "<group>"; };
 		00BBBFE60D70A6E400C2D916 /* tab_loading.tiff */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; name = tab_loading.tiff; path = chrome/tab_loading.tiff; sourceTree = "<group>"; };
+		00C6890510560B110082D80F /* BreakpadWrapper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BreakpadWrapper.h; path = src/application/BreakpadWrapper.h; sourceTree = SOURCE_ROOT; };
+		00C6890610560B110082D80F /* BreakpadWrapper.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = BreakpadWrapper.m; path = src/application/BreakpadWrapper.m; sourceTree = SOURCE_ROOT; };
 		032FFDCD077351A800440548 /* Downloads.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = Downloads.h; sourceTree = "<group>"; };
 		032FFDCE077351A800440548 /* Downloads.mm */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.objcpp; path = Downloads.mm; sourceTree = "<group>"; };
 		032FFDCF077351A800440548 /* Downloads.tiff */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; path = Downloads.tiff; sourceTree = "<group>"; };
@@ -4580,6 +4584,8 @@
 			children = (
 				F5AE04B60206A37C01A967DF /* MainController.h */,
 				F5AE04BA0206A4FE01A967DF /* MainController.mm */,
+				00C6890510560B110082D80F /* BreakpadWrapper.h */,
+				00C6890610560B110082D80F /* BreakpadWrapper.m */,
 				F58DB2D20381FD3301A9666E /* JSConsole.h */,
 				F58DB2D30381FD3301A9666E /* JSConsole.mm */,
 				F52D5CD7027D3D5001A80166 /* PreferenceManager.h */,
@@ -6439,6 +6445,7 @@
 				B3886D880F79D53700D8E015 /* FlashblockWhitelistManager.mm in Sources */,
 				3DACDAAA0FBF1D1600709AC3 /* SafeBrowsingTestDataUpdater.mm in Sources */,
 				3D9A2AE310019F6E00CC9154 /* SafeBrowsingBar.mm in Sources */,
+ 				00C6890710560B110082D80F /* BreakpadWrapper.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -6631,6 +6638,7 @@
 				B3886D890F79D53700D8E015 /* FlashblockWhitelistManager.mm in Sources */,
 				3DACDAAB0FBF1D1600709AC3 /* SafeBrowsingTestDataUpdater.mm in Sources */,
 				3D9A2AE410019F6E00CC9154 /* SafeBrowsingBar.mm in Sources */,
+ 				00C6890810560B110082D80F /* BreakpadWrapper.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
