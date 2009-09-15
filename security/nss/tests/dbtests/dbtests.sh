@@ -80,6 +80,8 @@ dbtest_init()
   fi
 
   SCRIPTNAME="dbtests.sh"
+  DBTEST_LOG=${HOSTDIR}/dbtest.log    #we don't want all the errormessages 
+         # in the output.log, otherwise we can't tell what's a real error
   RONLY_DIR=${HOSTDIR}/ronlydir
   EMPTY_DIR=${HOSTDIR}/emptydir
   CONFLICT_DIR=${HOSTDIR}/conflictdir
@@ -281,5 +283,5 @@ dbtest_main()
 ################## main #################################################
 
 dbtest_init 
-dbtest_main 2>&1
+dbtest_main >$DBTEST_LOG 2>&1
 dbtest_cleanup

@@ -74,6 +74,12 @@ extern "C" {
  *
  * #pragma pack(pop, cryptoki)
  *
+ * In a Win16 environment, this might be done by using the
+ * following preprocessor directive before including pkcs11.h
+ * or pkcs11t.h:
+ *
+ * #pragma pack(1)
+ *
  * In a UNIX environment, you're on your own here.  You might
  * not need to do anything.
  *
@@ -89,6 +95,10 @@ extern "C" {
  * In a Win32 environment, it might be defined by
  *
  * #define CK_PTR *
+ *
+ * In a Win16 environment, it might be defined by
+ *
+ * #define CK_PTR far *
  *
  * In a UNIX environment, it might be defined by
  *
@@ -114,6 +124,12 @@ extern "C" {
  * #define CK_DEFINE_FUNCTION(returnType, name) \
  *   returnType __declspec(dllexport) name
  *
+ * For defining a function in a Win16 PKCS #11 .dll, it might be
+ * defined by
+ *
+ * #define CK_DEFINE_FUNCTION(returnType, name) \
+ *   returnType __export _far _pascal name
+ *
  * In a UNIX environment, it might be defined by
  *
  * #define CK_DEFINE_FUNCTION(returnType, name) \
@@ -134,6 +150,12 @@ extern "C" {
  *
  * #define CK_DECLARE_FUNCTION(returnType, name) \
  *   returnType __declspec(dllimport) name
+ *
+ * For declaring a function in a Win16 PKCS #11 .dll, it might
+ * be defined by
+ *
+ * #define CK_DECLARE_FUNCTION(returnType, name) \
+ *   returnType __export _far _pascal name
  *
  * In a UNIX environment, it might be defined by
  *
@@ -165,6 +187,12 @@ extern "C" {
  * #define CK_DECLARE_FUNCTION_POINTER(returnType, name) \
  *   returnType __declspec(dllimport) (* name)
  *
+ * For accessing functions in a Win16 PKCS #11 .dll, it might be
+ * defined by
+ *
+ * #define CK_DECLARE_FUNCTION_POINTER(returnType, name) \
+ *   returnType __export _far _pascal (* name)
+ *
  * In a UNIX environment, it might be defined by
  *
  * #define CK_DECLARE_FUNCTION_POINTER(returnType, name) \
@@ -189,6 +217,11 @@ extern "C" {
  *
  * #define CK_CALLBACK_FUNCTION(returnType, name) \
  *   returnType (* name)
+ *
+ * In a Win16 environment, it might be defined by
+ *
+ * #define CK_CALLBACK_FUNCTION(returnType, name) \
+ *   returnType _far _pascal (* name)
  *
  * In a UNIX environment, it might be defined by
  *

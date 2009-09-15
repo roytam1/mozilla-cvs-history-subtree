@@ -58,7 +58,11 @@
 
 #include "prlog.h"
 #include "prinit.h"
+#ifdef XP_MAC
+#include "pralarm.h"
+#else
 #include "obsolete/pralarm.h"
+#endif
 #include "prlock.h"
 #include "prlong.h"
 #include "prcvar.h"
@@ -72,6 +76,12 @@
 
 #if defined(XP_UNIX)
 #include <sys/time.h>
+#endif
+
+#ifdef XP_MAC
+#include "prlog.h"
+#define printf PR_LogPrint
+extern void SetupMacPrintfLog(char *logFile);
 #endif
 
 static PRIntn debug_mode;
@@ -286,6 +296,10 @@ static PRIntervalTime Alarms1(PRUint32 loops)
 
 static PRBool AlarmFn2(PRAlarmID *id, void *clientData, PRUint32 late)
 {
+#if defined(XP_MAC)
+#pragma unused (id)
+#endif
+
     PRBool keepGoing;
     PRStatus rv = PR_SUCCESS;
     AlarmData *ad = (AlarmData*)clientData;
@@ -520,6 +534,10 @@ int prmain(int argc, char** argv)
 
 	if (debug_mode)		
         printf("Alarm: Using %d cpu(s)\n", cpus);
+#ifdef XP_MAC
+	SetupMacPrintfLog("alarm.log");
+	debug_mode = 1;
+#endif
 
     for (cpu = 1; cpu <= cpus; ++cpu)
     {

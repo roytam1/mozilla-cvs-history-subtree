@@ -235,7 +235,12 @@ test
     return;
 }
 
-int main(int argc, char **argv)
+int
+main
+(
+    int     argc,
+    char   *argv[]
+)
 {
     int okay = 0;
     int multithread = 0;

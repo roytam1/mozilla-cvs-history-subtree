@@ -74,7 +74,7 @@ static PRBool sftk_argGetPair(char c) {
 }
 
 static PRBool sftk_argIsBlank(char c) {
-   return isspace((unsigned char )c);
+   return isspace(c);
 }
 
 static PRBool sftk_argIsEscape(char c) {

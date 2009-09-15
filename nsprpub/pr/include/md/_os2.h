@@ -450,12 +450,10 @@ extern struct PRThread * _MD_CURRENT_THREAD(void);
 #define _MD_INIT_STACK(stack, redzone)
 #define _MD_CLEAR_STACK(stack)
 
-/* --- Memory-mapped files stuff --- */
-/* ReadOnly and WriteCopy modes are simulated on OS/2;
- * ReadWrite mode is not supported.
- */
+/* --- Memory-mapped files stuff --- not implemented on OS/2 */
+
 struct _MDFileMap {
-    PROffset64  maxExtent;
+    PRInt8 unused;
 };
 
 extern PRStatus _MD_CreateFileMap(struct PRFileMap *fmap, PRInt64 size);
@@ -528,7 +526,7 @@ extern APIRET (* APIENTRY QueryThreadContext)(TID, ULONG, PCONTEXTRECORD);
  * not emulating anything.  Just mapping.
  */
 #define FreeLibrary(x) DosFreeModule((HMODULE)x)
-#define OutputDebugStringA(x)
+#define OutputDebugString(x)
                                
 extern int _MD_os2_get_nonblocking_connect_error(int osfd);
 

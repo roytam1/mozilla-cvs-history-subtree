@@ -42,63 +42,20 @@
 
 #import <AppKit/AppKit.h>
 #import "AutoCompleteDataSource.h"
-#import "AutoCompleteTextField.h"
-#import "AutoCompleteResult.h"
-#import "CHBrowserService.h"
 #import "SiteIconProvider.h"
 
-#import "Bookmark.h"
-#import "BookmarkFolder.h"
-#import "BookmarkManager.h"
+#include "nsString.h"
+#include "nsCRT.h"
+#include "nsIAutoCompleteResults.h"
+#include "nsIHistoryItems.h"
 
-#import "HistoryItem.h"
-#import "HistoryDataSource.h"
-
-
-const unsigned int kMaxResultsPerHeading = 5;
-const unsigned int kNumberOfItemsPerChunk = 100;
-
-@interface AutoCompleteDataSource (Private)
-// Clears data previously loaded into mBookmarkData and mHistoryData.
-// Also resets the chunk for a new search.
-- (void)resetSearch;
-
-// Checks if a given item (bookmark or history) matches the search string.
-- (BOOL)searchStringMatchesItem:(id)item;
-
-// Creates and returns an AutoCompleteResult object for the given item.
-// The AutoCompleteResult class is used by the AutoCompleteCell to store
-// all of the data relevant to drawing a cell.
-- (AutoCompleteResult *)autoCompleteResultForItem:(id)item;
-
-// Processes one chunk of the bookmark/history data (as specified by
-// kNumberOfItemsPerChunk), then checks if we are done (i.e. when we
-// have finished looking at all bookmark/history data or when we have
-// enough results to satisfy kMaxResultsPerHeading).
-- (void)processNextSearchChunk;
-
-// Iterates though a chunk of the data array and looks for matches to the
-// search string. When a match is found, it is added to the results array.
-- (void)processChunkOfData:(NSArray *)dataArray forResults:(NSMutableArray *)resultsArray;
-
-// Adds headers to results arrays and consolidates into mResults array,
-// then calls searchResultsAvailable on the delegate.
-- (void)reportResults;
-
-// Adds the header to the specified results array.
-- (void)addHeader:(NSString *)header toResults:(NSMutableArray *)results;
-@end
 
 @implementation AutoCompleteDataSource
 
 -(id)init
 {
   if ((self = [super init])) {
-    mBookmarkData = [[NSMutableArray alloc] init];
-    mHistoryData = [[NSMutableArray alloc] init];
-    mBookmarkResultsInProgress = [[NSMutableArray alloc] init];
-    mHistoryResultsInProgress = [[NSMutableArray alloc] init];
-    mResults = [[NSMutableArray alloc] init];
+    mResults = nil;
     mGenericSiteIcon = [[NSImage imageNamed:@"globe_ico"] retain];
     mGenericFileIcon = [[NSImage imageNamed:@"smallDocument"] retain];
   }
@@ -107,177 +64,98 @@ const unsigned int kNumberOfItemsPerChunk = 100;
 
 -(void)dealloc
 {
-  [mBookmarkData release];
-  [mHistoryData release];
-  [mBookmarkResultsInProgress release];
-  [mHistoryResultsInProgress release];
-  [mResults release];
-  [mURLRegexTest release];
-  [mTitleRegexTest release];
+  NS_IF_RELEASE(mResults);
   [mGenericSiteIcon release];
   [mGenericFileIcon release];
+  [mErrorMessage release];
   [super dealloc];
 }
 
-- (void)resetSearch
+- (void) setErrorMessage: (NSString*) error
 {
-  [mBookmarkResultsInProgress removeAllObjects];
-  [mHistoryResultsInProgress removeAllObjects];
-  [mURLRegexTest release];
-  mURLRegexTest = nil;
-  [mTitleRegexTest release];
-  mTitleRegexTest = nil;
-  mChunkRange = NSMakeRange(0, kNumberOfItemsPerChunk);
+  [self setResults:nsnull]; // releases mErrorMessage
+
+  mErrorMessage = [error retain];
 }
 
-- (void)loadSearchableData
+- (NSString*) errorMessage
 {
-  [mBookmarkData removeAllObjects];
-  [mHistoryData removeAllObjects];
-
-  BookmarkFolder *bookmarkRoot = [[BookmarkManager sharedBookmarkManager] bookmarkRoot];
-  [mBookmarkData addObjectsFromArray:[bookmarkRoot allChildBookmarks]];
-  NSSortDescriptor *visitCountDescriptor = [[[NSSortDescriptor alloc] initWithKey:@"numberOfVisits"
-                                                                        ascending:NO] autorelease];
-  [mBookmarkData sortUsingDescriptors:[NSArray arrayWithObject:visitCountDescriptor]];
-
-  HistoryDataSource *historyDataSource = [[[HistoryDataSource alloc] init] autorelease];
-  [historyDataSource setHistoryView:kHistoryViewFlat];
-  [historyDataSource setSortColumnIdentifier:@"visit_count"];
-  [historyDataSource setSortDescending:YES];
-  [historyDataSource loadLazily];
-  HistoryItem *rootHistoryItem = [historyDataSource rootItem];
-  NSEnumerator *historyEnum = [[rootHistoryItem children] objectEnumerator];
-  HistoryItem *curChild;
-  while ((curChild = [historyEnum nextObject])) {
-    if ([curChild isKindOfClass:[HistorySiteItem class]])
-      [mHistoryData addObject:curChild];
-  }
+  return mErrorMessage;
 }
 
-- (void)performSearchWithString:(NSString *)searchString delegate:(id)delegate
+- (void) setResults:(nsIAutoCompleteResults*)aResults
 {
-  mDelegate = delegate;
-  [self resetSearch];
-  [NSObject cancelPreviousPerformRequestsWithTarget:self];
-
-  // Construct the regular expression for url matching. NSPredicate will
-  // only evaluate to true if the entire string matches--thus the leading
-  // and trails stars. Matching works as follows:
-  // 1. If the user has not typed '://', match any protocol followed by
-  //    '://' followed by an optional 'www.' followed by the search string.
-  // 2. If the user has typed '://', then match the entire search string.
-  NSString *regex;
-  if ([searchString rangeOfString:@"://"].location == NSNotFound)
-    regex = [NSString stringWithFormat:@".*://(www\\.)?%@.*", searchString];
-  else
-    regex = [NSString stringWithFormat:@".*%@.*", searchString];
-  mURLRegexTest = [[NSPredicate predicateWithFormat:@"SELF MATCHES[cd] %@", regex] retain];
-
-  // Construct the regular expression for title matching. The title will
-  // only match if the search string appears at the beginning of a word.
-  regex = [NSString stringWithFormat:@".*\\b%@.*", searchString];
-  mTitleRegexTest = [[NSPredicate predicateWithFormat:@"SELF MATCHES[cd] %@", regex] retain];
-
-  [self performSelector:@selector(processNextSearchChunk) withObject:nil afterDelay:0.0];
+  NS_IF_RELEASE(mResults);
+  
+  [mErrorMessage release];
+  mErrorMessage = nil;
+  
+  mResults = aResults;
+  NS_IF_ADDREF(mResults);
 }
 
-- (void)processNextSearchChunk
+- (nsIAutoCompleteResults *) results
 {
-  [self processChunkOfData:mBookmarkData forResults:mBookmarkResultsInProgress];
-  [self processChunkOfData:mHistoryData forResults:mHistoryResultsInProgress];
-
-  // Check if finished.
-  BOOL bookmarksDone = [mBookmarkResultsInProgress count] == kMaxResultsPerHeading ||
-                       NSMaxRange(mChunkRange) >= [mBookmarkData count];
-  BOOL historyDone = [mHistoryResultsInProgress count] == kMaxResultsPerHeading ||
-                     NSMaxRange(mChunkRange) >= [mHistoryData count];
-  if (bookmarksDone && historyDone) {
-    [self reportResults];
-  } else {
-    // Set new range and process the next chunk.
-    mChunkRange = NSMakeRange(NSMaxRange(mChunkRange), kNumberOfItemsPerChunk);
-    [self performSelector:@selector(processNextSearchChunk) withObject:nil afterDelay:0.0];
-  }
+  return mResults;
 }
 
-- (void)processChunkOfData:(NSArray *)dataArray forResults:(NSMutableArray *)resultsArray
+- (int) rowCount
 {
-  for (unsigned int i = mChunkRange.location; i < [dataArray count] && i < NSMaxRange(mChunkRange)
-       && [resultsArray count] < kMaxResultsPerHeading; i++) {
-    id dataItem = [dataArray objectAtIndex:i];
-    if ([self searchStringMatchesItem:dataItem]) {
-      AutoCompleteResult *info = [self autoCompleteResultForItem:dataItem];
-      if (![mBookmarkResultsInProgress containsObject:info] && ![mHistoryResultsInProgress containsObject:info])
-        [resultsArray addObject:info];
+  if (!mResults)
+    return 0;
+    
+  nsCOMPtr<nsISupportsArray> items;
+  mResults->GetItems(getter_AddRefs(items));
+  PRUint32 count;
+  items->Count(&count);
+
+  return count;
+}
+
+- (id) resultForRow:(int)aRow columnIdentifier:(NSString *)aColumnIdentifier
+{
+  id result = [aColumnIdentifier isEqualToString:@"icon"] ? (id)mGenericSiteIcon : (id)@"";
+  
+  if (!mResults)
+    return result;
+
+  nsCOMPtr<nsISupportsArray> items;
+  mResults->GetItems(getter_AddRefs(items));
+  
+  nsCOMPtr<nsISupports> itemSupports = dont_AddRef(items->ElementAt(aRow));
+  nsCOMPtr<nsIHistoryItem> item = do_QueryInterface(itemSupports);
+  if (!item)
+    return result;
+
+  else if ([aColumnIdentifier isEqualToString:@"col1"]) {
+    nsCAutoString value;
+    item->GetURL(value);
+    result = [[NSString stringWith_nsACString:value] unescapedURI];
+  } else if ([aColumnIdentifier isEqualToString:@"col2"]) {
+    nsAutoString titleStr;
+    item->GetTitle(titleStr);
+    result = [NSString stringWith_nsAString:titleStr];
+  } else if ([aColumnIdentifier isEqualToString:@"icon"]) {
+    nsCAutoString url;
+    item->GetURL(url);
+    NSString* urlString = [NSString stringWith_nsACString:url];
+    NSImage* cachedFavicon = [[SiteIconProvider sharedFavoriteIconProvider] favoriteIconForPage:urlString];
+    if (cachedFavicon) {
+      result = cachedFavicon;
+    } else if ([urlString hasPrefix:@"file://"]) {
+      result = mGenericFileIcon;
     }
   }
+
+  return result;
 }
 
-- (BOOL)searchStringMatchesItem:(id)item
-{
-  return [mURLRegexTest evaluateWithObject:[item url]] || [mTitleRegexTest evaluateWithObject:[item title]];
-}
-
-- (AutoCompleteResult *)autoCompleteResultForItem:(id)item
-{
-  AutoCompleteResult *info = [[[AutoCompleteResult alloc] init] autorelease];
-  [info setTitle:[item title]];
-  [info setUrl:[item url]];
-  if ([[info title] isEqualToString:@""]) {
-    NSString *host = [[NSURL URLWithString:[info url]] host];
-    [info setTitle:(host ? host : [info url])];
-  }
-  NSImage* cachedFavicon = [[SiteIconProvider sharedFavoriteIconProvider] favoriteIconForPage:[info url]];
-  if (cachedFavicon)
-    [info setIcon:cachedFavicon];
-  else if ([[info url] hasPrefix:@"file://"])
-    [info setIcon:mGenericFileIcon];
-  else
-    [info setIcon:mGenericSiteIcon];
-  return info;
-}
-
-- (void)reportResults
-{
-  [self addHeader:@"Bookmarks" toResults:mBookmarkResultsInProgress];
-  [self addHeader:@"History" toResults:mHistoryResultsInProgress];
-  [mResults removeAllObjects];
-  [mResults addObjectsFromArray:mBookmarkResultsInProgress];
-  [mResults addObjectsFromArray:mHistoryResultsInProgress];
-  [self resetSearch];
-  [mDelegate searchResultsAvailable];
-}
-
-- (void)addHeader:(NSString *)header toResults:(NSMutableArray *)results
-{
-  if ([results count] == 0) {
-    // Don't add a header to empty results.
-    return;
-  }
-  AutoCompleteResult *info = [[[AutoCompleteResult alloc] init] autorelease];
-  [info setIsHeader:YES];
-  [info setTitle:header];
-  [results insertObject:info atIndex:0];
-}
-
-- (int)rowCount {
-  return [mResults count];
-}
-
-- (id)resultForRow:(int)aRow columnIdentifier:(NSString *)aColumnIdentifier
-{
-  if (aRow >= 0 && aRow < [self rowCount])
-    return [mResults objectAtIndex:aRow];
-  return nil;
-}
-
-- (int)numberOfRowsInTableView:(NSTableView*)aTableView
+-(int) numberOfRowsInTableView:(NSTableView*)aTableView
 {
   return [self rowCount];
 }
 
-- (id)tableView:(NSTableView*)aTableView objectValueForTableColumn:(NSTableColumn*)aTableColumn row:(int)aRowIndex
+-(id)tableView:(NSTableView*)aTableView objectValueForTableColumn:(NSTableColumn*)aTableColumn row:(int)aRowIndex
 {
   return [self resultForRow:aRowIndex columnIdentifier:[aTableColumn identifier]];
 }

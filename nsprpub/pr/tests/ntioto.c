@@ -204,7 +204,7 @@ static void ConnectThread( void *arg )
 } /* end ConnectThread() */
 
 
-int main(int argc, char **argv)
+PRIntn main(PRIntn argc, char *argv[])
 {
     PRThread *tJitter;
     PRThread *tAccept;

@@ -66,6 +66,7 @@ ARCH			= openbsd
 
 DSO_CFLAGS		= -fPIC -DPIC
 DSO_LDOPTS		= -shared -fPIC -Wl,-soname,lib$(LIBRARY_NAME)$(LIBRARY_VERSION).$(DLL_SUFFIX)
+DSO_LDFLAGS		=
 
 MKSHLIB			= $(CC) $(DSO_LDOPTS)
 

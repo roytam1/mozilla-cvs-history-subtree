@@ -56,6 +56,12 @@
 #include <stdio.h>
 #include "plgetopt.h"
 
+#ifdef XP_MAC
+#include "prlog.h"
+#define printf PR_LogPrint
+#else
+#endif
+
 /*
  * A file name that cannot exist
  */
@@ -65,6 +71,11 @@ static PRFileDesc *t1;
 
 int main(int argc, char **argv)
 {
+
+#ifdef XP_MAC
+	SetupMacPrintfLog("pr_open_re.log");
+#endif
+	
     PR_STDIO_INIT();
 	t1 = PR_Open(NO_SUCH_FILE,  PR_RDONLY, 0666);
 	if (t1 == NULL) {

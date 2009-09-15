@@ -179,10 +179,7 @@ SECMOD_AddModuleToList(SECMODModule *newModule)
 SECStatus
 SECMOD_AddModuleToDBOnlyList(SECMODModule *newModule)
 {
-    if (defaultDBModule && SECMOD_GetDefaultModDBFlag(newModule)) {
-	SECMOD_DestroyModule(defaultDBModule);
-	defaultDBModule = SECMOD_ReferenceModule(newModule);
-    } else if (defaultDBModule == NULL) {
+    if (defaultDBModule == NULL) {
 	defaultDBModule = SECMOD_ReferenceModule(newModule);
     }
     return secmod_AddModuleToList(&modulesDB,newModule);
@@ -226,10 +223,6 @@ SECMOD_FindModule(const char *name)
     SECMODModuleList *mlp;
     SECMODModule *module = NULL;
 
-    if (!moduleLock) {
-    	PORT_SetError(SEC_ERROR_NOT_INITIALIZED);
-	return module;
-    }
     SECMOD_GetReadLock(moduleLock);
     for(mlp = modules; mlp != NULL; mlp = mlp->next) {
 	if (PORT_Strcmp(name,mlp->module->commonName) == 0) {
@@ -265,10 +258,6 @@ SECMOD_FindModuleByID(SECMODModuleID id)
     SECMODModuleList *mlp;
     SECMODModule *module = NULL;
 
-    if (!moduleLock) {
-    	PORT_SetError(SEC_ERROR_NOT_INITIALIZED);
-	return module;
-    }
     SECMOD_GetReadLock(moduleLock);
     for(mlp = modules; mlp != NULL; mlp = mlp->next) {
 	if (id == mlp->module->moduleID) {
@@ -293,10 +282,6 @@ SECMOD_FindSlotByID(SECMODModule *module, CK_SLOT_ID slotID)
     int i;
     PK11SlotInfo *slot = NULL;
 
-    if (!moduleLock) {
-    	PORT_SetError(SEC_ERROR_NOT_INITIALIZED);
-	return slot;
-    }
     SECMOD_GetReadLock(moduleLock);
     for (i=0; i < module->slotCount; i++) {
 	PK11SlotInfo *cSlot = module->slots[i];
@@ -343,11 +328,6 @@ SECMOD_DeleteModuleEx(const char *name, SECMODModule *mod,
     SECMODModuleList *mlp;
     SECMODModuleList **mlpp;
     SECStatus rv = SECFailure;
-
-    if (!moduleLock) {
-    	PORT_SetError(SEC_ERROR_NOT_INITIALIZED);
-	return rv;
-    }
 
     *type = SECMOD_EXTERNAL;
 
@@ -423,10 +403,6 @@ SECMOD_DeleteInternalModule(const char *name)
 
     if (pendingModule) {
 	PORT_SetError(SEC_ERROR_MODULE_STUCK);
-	return rv;
-    }
-    if (!moduleLock) {
-    	PORT_SetError(SEC_ERROR_NOT_INITIALIZED);
 	return rv;
     }
 
@@ -532,10 +508,6 @@ SECMOD_FindSlot(SECMODModule *module,const char *name)
     char *string;
     PK11SlotInfo *retSlot = NULL;
 
-    if (!moduleLock) {
-    	PORT_SetError(SEC_ERROR_NOT_INITIALIZED);
-	return retSlot;
-    }
     SECMOD_GetReadLock(moduleLock);
     for (i=0; i < module->slotCount; i++) {
 	PK11SlotInfo *slot = module->slots[i];
@@ -602,10 +574,6 @@ SECMOD_AddNewModuleEx(const char* moduleName, const char* dllPath,
     PK11SlotInfo* slot;
 
     PR_SetErrorText(0, NULL);
-    if (!moduleLock) {
-    	PORT_SetError(SEC_ERROR_NOT_INITIALIZED);
-	return result;
-    }
 
     module = SECMOD_CreateModule(dllPath, moduleName, modparms, nssparms);
 
@@ -725,14 +693,10 @@ PRBool
 SECMOD_IsModulePresent( unsigned long int pubCipherEnableFlags )
 {
     PRBool result = PR_FALSE;
-    SECMODModuleList *mods;
-
-    if (!moduleLock) {
-    	PORT_SetError(SEC_ERROR_NOT_INITIALIZED);
-	return result;
-    }
+    SECMODModuleList *mods = SECMOD_GetDefaultModuleList();
     SECMOD_GetReadLock(moduleLock);
-    mods = SECMOD_GetDefaultModuleList();
+
+
     for ( ; mods != NULL; mods = mods->next) {
         if (mods->module->ssl[0] & 
 		SECMOD_PubCipherFlagstoInternal(pubCipherEnableFlags)) {
@@ -903,11 +867,6 @@ SECMOD_UpdateSlotList(SECMODModule *mod)
     PK11SlotInfo **newSlots = NULL;
     PK11SlotInfo **oldSlots = NULL;
 
-    if (!moduleLock) {
-    	PORT_SetError(SEC_ERROR_NOT_INITIALIZED);
-	return SECFailure;
-    }
-
     /* C_GetSlotList is not a session function, make sure 
      * calls are serialized */
     PZ_Lock(mod->refLock);
@@ -1029,10 +988,6 @@ secmod_HandleWaitForSlotEvent(SECMODModule *mod,  unsigned long flags,
     int i;
     int error = SEC_ERROR_NO_EVENT;
 
-    if (!moduleLock) {
-    	PORT_SetError(SEC_ERROR_NOT_INITIALIZED);
-	return NULL;
-    }
     PZ_Lock(mod->refLock);
     if (mod->evControlMask & SECMOD_END_WAIT) {
 	mod->evControlMask &= ~SECMOD_END_WAIT;
@@ -1229,10 +1184,6 @@ SECMOD_HasRemovableSlots(SECMODModule *mod)
     int i;
     PRBool ret = PR_FALSE;
 
-    if (!moduleLock) {
-    	PORT_SetError(SEC_ERROR_NOT_INITIALIZED);
-	return ret;
-    }
     SECMOD_GetReadLock(moduleLock);
     for (i=0; i < mod->slotCount; i++) {
 	PK11SlotInfo *slot = mod->slots[i];
@@ -1251,12 +1202,13 @@ SECMOD_HasRemovableSlots(SECMODModule *mod)
  * helper function to actually create and destroy user defined slots
  */
 static SECStatus
-secmod_UserDBOp(PK11SlotInfo *slot, CK_OBJECT_CLASS objClass, 
-		const char *sendSpec)
+secmod_UserDBOp(CK_OBJECT_CLASS objClass, const char *sendSpec)
 {
+    PK11SlotInfo *slot = PK11_GetInternalSlot();
     CK_OBJECT_HANDLE dummy;
     CK_ATTRIBUTE template[2] ;
     CK_ATTRIBUTE *attrs = template;
+    SECStatus rv;
     CK_RV crv;
 
     PK11_SETATTRS(attrs, CKA_CLASS, &objClass, sizeof(objClass)); attrs++;
@@ -1272,10 +1224,13 @@ secmod_UserDBOp(PK11SlotInfo *slot, CK_OBJECT_CLASS objClass,
     PK11_ExitSlotMonitor(slot);
 
     if (crv != CKR_OK) {
+	PK11_FreeSlot(slot);
 	PORT_SetError(PK11_MapError(crv));
 	return SECFailure;
     }
-    return SECMOD_UpdateSlotList(slot->module);
+    rv = SECMOD_UpdateSlotList(slot->module);
+    PK11_FreeSlot(slot);
+    return rv;
 }
 
 /*
@@ -1331,112 +1286,6 @@ done:
 }
 
 /*
- * return true if the selected slot ID is not present or doesn't exist
- */
-static PRBool
-secmod_SlotIsEmpty(SECMODModule *mod,  CK_SLOT_ID slotID)
-{
-    PK11SlotInfo *slot = SECMOD_LookupSlot(mod->moduleID, slotID);
-    if (slot) {
-	PRBool present = PK11_IsPresent(slot);
-	PK11_FreeSlot(slot);
-	if (present) {
-	    return PR_FALSE;
-	}
-    }
-    /* it doesn't exist or isn't present, it's available */
-    return PR_TRUE;
-}
-
-/*
- * Find an unused slot id in module.
- */
-static CK_SLOT_ID
-secmod_FindFreeSlot(SECMODModule *mod)
-{
-    CK_SLOT_ID i, minSlotID, maxSlotID;
-
-    /* look for a free slot id on the internal module */
-    if (mod->internal && mod->isFIPS) {
-	minSlotID = SFTK_MIN_FIPS_USER_SLOT_ID;
-	maxSlotID = SFTK_MAX_FIPS_USER_SLOT_ID;
-    } else {
-	minSlotID = SFTK_MIN_USER_SLOT_ID;
-	maxSlotID = SFTK_MAX_USER_SLOT_ID;
-    }
-    for (i=minSlotID; i < maxSlotID; i++) {
-	if (secmod_SlotIsEmpty(mod,i)) {
-	    return i;
-	}
-    }
-    PORT_SetError(SEC_ERROR_NO_SLOT_SELECTED);
-    return (CK_SLOT_ID) -1;
-}
-
-/*
- * Attempt to open a new slot.
- *
- * This works the same os OpenUserDB except it can be called against
- * any module that understands the softoken protocol for opening new
- * slots, not just the softoken itself. If the selected module does not
- * understand the protocol, C_CreateObject will fail with 
- * CKR_INVALID_ATTRIBUTE, and SECMOD_OpenNewSlot will return NULL and set
- * SEC_ERROR_BAD_DATA.
- * 
- * NewSlots can be closed with SECMOD_CloseUserDB();
- *
- * Modulespec is module dependent.
- */
-PK11SlotInfo *
-SECMOD_OpenNewSlot(SECMODModule *mod, const char *moduleSpec)
-{
-    CK_SLOT_ID slotID = 0;
-    PK11SlotInfo *slot;
-    char *escSpec;
-    char *sendSpec;
-    SECStatus rv;
-
-    slotID = secmod_FindFreeSlot(mod);
-    if (slotID == (CK_SLOT_ID) -1) {
-	return NULL;
-    }
-
-    if (mod->slotCount == 0) {
-	return NULL;
-    }
-
-    /* just grab the first slot in the module, any present slot should work */
-    slot = PK11_ReferenceSlot(mod->slots[0]);
-    if (slot == NULL) {
-	return NULL;
-    }
-
-    /* we've found the slot, now build the moduleSpec */
-    escSpec = nss_doubleEscape(moduleSpec);
-    if (escSpec == NULL) {
-	PK11_FreeSlot(slot);
-	return NULL;
-    }
-    sendSpec = PR_smprintf("tokens=[0x%x=<%s>]", slotID, escSpec);
-    PORT_Free(escSpec);
-
-    if (sendSpec == NULL) {
-	/* PR_smprintf does not set SEC_ERROR_NO_MEMORY on failure. */
-	PK11_FreeSlot(slot);
-	PORT_SetError(SEC_ERROR_NO_MEMORY);
-	return NULL;
-    }
-    rv = secmod_UserDBOp(slot, CKO_NETSCAPE_NEWSLOT, sendSpec);
-    PR_smprintf_free(sendSpec);
-    PK11_FreeSlot(slot);
-    if (rv != SECSuccess) {
-	return NULL;
-    }
-
-    return SECMOD_FindSlotByID(mod, slotID);
-}
-
-/*
  * Open a new database using the softoken. The caller is responsible for making
  * sure the module spec is correct and usable. The caller should ask for one
  * new database per call if the caller wants to get meaningful information 
@@ -1488,7 +1337,13 @@ SECMOD_OpenNewSlot(SECMODModule *mod, const char *moduleSpec)
 PK11SlotInfo *
 SECMOD_OpenUserDB(const char *moduleSpec)
 {
+    CK_SLOT_ID slotID = 0;
+    char *escSpec;
+    char *sendSpec;
+    SECStatus rv;
     SECMODModule *mod;
+    CK_SLOT_ID i, minSlotID, maxSlotID;
+    PRBool found = PR_FALSE;
 
     if (moduleSpec == NULL) {
 	return NULL;
@@ -1502,21 +1357,76 @@ SECMOD_OpenUserDB(const char *moduleSpec)
 	PORT_SetError(SEC_ERROR_LIBRARY_FAILURE);
 	return NULL;
     }
-    return SECMOD_OpenNewSlot(mod, moduleSpec);
-}
 
+    /* look for a free slot id on the internal module */
+    if (mod->isFIPS) {
+	minSlotID = SFTK_MIN_FIPS_USER_SLOT_ID;
+	maxSlotID = SFTK_MAX_FIPS_USER_SLOT_ID;
+    } else {
+	minSlotID = SFTK_MIN_USER_SLOT_ID;
+	maxSlotID = SFTK_MAX_USER_SLOT_ID;
+    }
+    for (i=minSlotID; i < maxSlotID; i++) {
+	PK11SlotInfo *slot = SECMOD_LookupSlot(mod->moduleID, i);
+	if (slot) {
+	    PRBool present = PK11_IsPresent(slot);
+	    PK11_FreeSlot(slot);
+	    if (present) {
+		continue;
+	    }
+	    /* not present means it's available */
+	}
+	/* it doesn't exist or isn't present, it's available */
+	slotID = i;
+	found = PR_TRUE;
+	break;
+    }
+
+    if (!found) {
+	/* this could happen if we try to open too many slots */
+	PORT_SetError(SEC_ERROR_NO_SLOT_SELECTED);
+	return NULL;
+    }
+
+    /* we've found the slot, now build the moduleSpec */
+
+    escSpec = nss_doubleEscape(moduleSpec);
+    if (escSpec == NULL) {
+	return NULL;
+    }
+    sendSpec = PR_smprintf("tokens=[0x%x=<%s>]", slotID, escSpec);
+    PORT_Free(escSpec);
+
+    if (sendSpec == NULL) {
+	/* PR_smprintf does not set no memory error */
+	PORT_SetError(SEC_ERROR_NO_MEMORY);
+	return NULL;
+    }
+    rv = secmod_UserDBOp(CKO_NETSCAPE_NEWSLOT, sendSpec);
+    PR_smprintf_free(sendSpec);
+    if (rv != SECSuccess) {
+	return NULL;
+    }
+
+    return SECMOD_FindSlotByID(mod, slotID);
+}
 
 /*
  * close an already opened user database. NOTE: the database must be
  * in the internal token, and must be one created with SECMOD_OpenUserDB().
  * Once the database is closed, the slot will remain as an empty slot
- * until it's used again with SECMOD_OpenUserDB() or SECMOD_OpenNewSlot().
+ * until it's used again with SECMOD_OpenUserDB().
  */
 SECStatus
 SECMOD_CloseUserDB(PK11SlotInfo *slot)
 {
     SECStatus rv;
     char *sendSpec;
+
+    if (!slot->isInternal) {
+	PORT_SetError(SEC_ERROR_INVALID_ARGS);
+	return SECFailure;
+    }
     
     sendSpec = PR_smprintf("tokens=[0x%x=<>]", slot->slotID);
     if (sendSpec == NULL) {
@@ -1524,7 +1434,7 @@ SECMOD_CloseUserDB(PK11SlotInfo *slot)
 	PORT_SetError(SEC_ERROR_NO_MEMORY);
 	return SECFailure;
     }
-    rv = secmod_UserDBOp(slot, CKO_NETSCAPE_DELSLOT, sendSpec);
+    rv = secmod_UserDBOp(CKO_NETSCAPE_DELSLOT, sendSpec);
     PR_smprintf_free(sendSpec);
     return rv;
 }

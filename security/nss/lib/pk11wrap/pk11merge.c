@@ -681,6 +681,7 @@ pk11_IncrementNickname(char *nickname)
 {
     char *newNickname = NULL;
     int end;
+    PRBool needCarry;
     int digit;
     int len = strlen(nickname);
 

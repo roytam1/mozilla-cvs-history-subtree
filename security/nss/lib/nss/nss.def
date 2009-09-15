@@ -972,17 +972,3 @@ PK11_GetSymKeyHandle;
 ;+    local:
 ;+       *;
 ;+};
-;+NSS_3.12.4 { 	# NSS 3.12.4 release
-;+    global:
-PK11_IsInternalKeySlot;
-SECMOD_OpenNewSlot;
-;+    local:
-;+       *;
-;+};
-;+NSS_3.12.5 { 	# NSS 3.12.5 release
-;+    global:
-SECMOD_GetDefaultModDBFlag;
-SECMOD_GetSkipFirstFlag;
-;+    local:
-;+       *;
-;+};
