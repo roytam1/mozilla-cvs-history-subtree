@@ -92,7 +92,10 @@ const int kAnnoyancePrefSome = 3;
 
   // Set initial value on Java checkbox, and disable it if plugins are off
   BOOL pluginsEnabled = [self getBooleanPref:"camino.enable_plugins" withSuccess:&gotPref] || !gotPref;
-  [mEnableJava setEnabled:pluginsEnabled];
+  BOOL javaSuppressed = [self getBooleanPref:"camino.java_suppressed"
+                                 withSuccess:NULL];
+  [mEnableJava setEnabled:(pluginsEnabled && !javaSuppressed)];
+  [mEnableJava setToolTip:[self localizedStringForKey:@"JavaSuppressionExplanation"]];
   BOOL javaEnabled = pluginsEnabled && [self getBooleanPref:"security.enable_java" withSuccess:NULL];
   [mEnableJava setState:javaEnabled];
 

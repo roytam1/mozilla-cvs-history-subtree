@@ -218,6 +218,16 @@ OSStatus _LSSaveAndRefresh();
 }
 
 //
+// +isSnowLeopardOrHigher
+//
+// returns YES if we're on 10.6 or better
+//
++ (BOOL)isSnowLeopardOrHigher
+{
+  return [self systemVersion] >= 0x1060;
+}
+
+//
 // +isLeopardOrHigher
 //
 // returns YES if we're on 10.5 or better
