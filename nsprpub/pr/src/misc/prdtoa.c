@@ -1759,8 +1759,6 @@ PR_strtod
 		else
 			s = s00;
 		}
-	if (nd > 64 * 1024)
-		goto ret0;
 	if (!nd) {
 		if (!nz && !nz0) {
 #ifdef INFNAN_CHECK
@@ -1791,7 +1789,6 @@ PR_strtod
 			  }
 #endif /* INFNAN_CHECK */
  ret0:
-			PR_SetError(PR_INVALID_ARGUMENT_ERROR, 0);
 			s = s00;
 			sign = 0;
 			}
