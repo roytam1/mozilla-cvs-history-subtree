@@ -1,1 +1,0 @@
-This module is mostly migrated to http://hg.mozilla.org/build/buildbot. This module is being kept for historical reasons, and so that we have access to the BUILBOT_*_BRANCH branches if we need them. Please do not do any new development against it; the Mercurial repository is the correct place for that.
