@@ -37,32 +37,37 @@
 #include "jar.h"
 
 /* These are old DS_* routines renamed to ZZ_* */
-ZZList *
-ZZ_NewList(void)
-{
-    ZZList *list = (ZZList *) PORT_ZAlloc (sizeof (ZZList));
-    if (list)
-	ZZ_InitList (list);
-    return list;
-}
 
-ZZLink *
-ZZ_NewLink(JAR_Item *thing)
-{
-    ZZLink *link = (ZZLink *) PORT_ZAlloc (sizeof (ZZLink));
-    if (link)
-	link->thing = thing;
-    return link;
-}
+ZZList *ZZ_NewList()
+  {
+  ZZList *list;
 
-void 
-ZZ_DestroyLink(ZZLink *link)
-{
-    PORT_Free(link);
-}
+  list = (ZZList *) PORT_ZAlloc (sizeof (ZZList));
 
-void 
-ZZ_DestroyList (ZZList *list)
-{
-    PORT_Free(list);
-}
+  if (list)
+    ZZ_InitList (list);
+
+  return list;
+  }
+
+ZZLink *ZZ_NewLink (JAR_Item *thing)
+  {
+  ZZLink *link;
+
+  link = (ZZLink *) PORT_ZAlloc (sizeof (ZZLink));
+
+  if (link)
+    link->thing = thing;
+ 
+  return link;
+  }
+
+void ZZ_DestroyLink (ZZLink *link)
+  {
+  PORT_Free (link);
+  }
+
+void ZZ_DestroyList (ZZList *list)
+  {
+  PORT_Free (list);
+  }

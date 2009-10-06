@@ -267,29 +267,7 @@ struct NSSLOWHASHContextStr {
    
 };
 
-static int nsslow_GetFIPSEnabled(void) {
-#ifdef LINUX
-    FILE *f;
-    char d;
-    size_t size;
-
-    f = fopen("/proc/sys/crypto/fips_enabled", "r");
-    if (!f)
-        return 1;
-
-    size = fread(&d, 1, 1, f);
-    fclose(f);
-    if (size != 1)
-        return 0;
-    if (d != '1')
-        return 0;
-#endif
-    return 1;
-}
-
-
 static int post = 0;
-static int post_failed = 0;
 
 static NSSLOWInitContext dummyContext = { 0 };
 
@@ -303,16 +281,11 @@ NSSLOW_Init(void)
 
     rv = FREEBL_InitStubs();
     nsprAvailable = (rv ==  SECSuccess ) ? PR_TRUE : PR_FALSE;
-
-    if (post_failed) {
-	return NULL;
-    }
 	
 
-    if (!post && nsslow_GetFIPSEnabled()) {
+    if (!post) {
 	crv = freebl_fipsPowerUpSelfTest();
 	if (crv != CKR_OK) {
-	    post_failed = 1;
 	    return NULL;
 	}
     }
@@ -329,25 +302,11 @@ NSSLOW_Shutdown(NSSLOWInitContext *context)
    return;
 }
 
-void
-NSSLOW_Reset(NSSLOWInitContext *context)
-{
-   PORT_Assert(context == &dummyContext);
-   post_failed = 0;
-   post = 0;
-   return;
-}
-
 NSSLOWHASHContext *
 NSSLOWHASH_NewContext(NSSLOWInitContext *initContext, 
 			HASH_HashType hashType)
 {
    NSSLOWHASHContext *context;
-
-   if (post_failed) {
-	PORT_SetError(SEC_ERROR_PKCS11_DEVICE_ERROR);
-	return NULL;
-   }
 
    if (initContext != &dummyContext) {
 	PORT_SetError(SEC_ERROR_INVALID_ARGS);

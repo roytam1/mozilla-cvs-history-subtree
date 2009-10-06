@@ -57,6 +57,10 @@
 # ifndef XP_WIN32
 # define XP_WIN32
 # endif
+#else
+# ifndef XP_WIN16
+# define XP_WIN16
+# endif
 #endif
 #endif
 

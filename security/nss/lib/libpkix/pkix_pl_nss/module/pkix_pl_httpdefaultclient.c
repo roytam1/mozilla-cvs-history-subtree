@@ -1423,15 +1423,15 @@ pkix_pl_HttpDefaultClient_TrySendAndReceive(
 
                         /* PR_smprintf_free original header buffer */
                         PR_smprintf_free(sendbuf);
-                        sendbuf = NULL;
                         
                 } else if (client->send_http_method == HTTP_GET_METHOD) {
-                        client->GETBuf = PR_smprintf
+                        sendbuf = PR_smprintf
                             ("GET %s HTTP/1.1\r\nHost: %s:%d\r\n\r\n",
                             client->path,
                             client->host,
                             client->portnum);
-                        client->GETLen = PORT_Strlen(client->GETBuf);
+                        client->GETBuf = sendbuf;
+                        client->GETLen = PORT_Strlen(sendbuf);
                 }
 
         }
@@ -1497,9 +1497,6 @@ pkix_pl_HttpDefaultClient_TrySendAndReceive(
         }
 
 cleanup:
-        if (sendbuf) {
-            PR_smprintf_free(sendbuf);
-        }
 
         PKIX_RETURN(HTTPDEFAULTCLIENT);
 

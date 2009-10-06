@@ -45,7 +45,14 @@
 int _debug_on = 0;
 #define DPRINTF(arg) if (_debug_on) printf arg
 
+#ifdef XP_MAC
+#include "prlog.h"
+#include "prsem.h"
+#define printf PR_LogPrint
+extern void SetupMacPrintfLog(char *logFile);
+#else
 #include "obsolete/prsem.h"
+#endif
 
 PRLock *lock;
 PRMonitor *mon;
@@ -420,6 +427,10 @@ int main(int argc, char **argv)
 	PR_BlockClockInterrupts();
 	PR_UnblockClockInterrupts();
     PR_STDIO_INIT();
+
+#ifdef XP_MAC
+    SetupMacPrintfLog("perf.log");
+#endif
 
     lock = PR_NewLock();
     mon = PR_NewMonitor();

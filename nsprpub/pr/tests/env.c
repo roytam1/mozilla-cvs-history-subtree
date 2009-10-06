@@ -67,7 +67,7 @@ static char * NewBuffer( size_t size )
     return(buf);
 } /* end NewBuffer() */
 
-int main(int argc, char **argv)
+PRIntn main(PRIntn argc, char *argv[])
 {
     char    *value;
     PRStatus    rc;

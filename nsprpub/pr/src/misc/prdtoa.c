@@ -35,16 +35,6 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-/*
- * This file is based on the third-party code dtoa.c.  We minimize our
- * modifications to third-party code to make it easy to merge new versions.
- * The author of dtoa.c was not willing to add the parentheses suggested by
- * GCC, so we suppress these warnings.
- */
-#if (__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ >= 2)
-#pragma GCC diagnostic ignored "-Wparentheses"
-#endif
-
 #include "primpl.h"
 
 #define MULTIPLE_THREADS
@@ -1362,6 +1352,10 @@ d2b
 		    b->wds = (x[1] = z) ? 2 : 1;
 		}
 	else {
+#ifdef DEBUG
+		if (!z)
+			Bug("Zero passed to d2b");
+#endif
 		k = lo0bits(&z);
 		x[0] = z;
 #ifndef Sudden_Underflow
@@ -1765,8 +1759,6 @@ PR_strtod
 		else
 			s = s00;
 		}
-	if (nd > 64 * 1024)
-		goto ret0;
 	if (!nd) {
 		if (!nz && !nz0) {
 #ifdef INFNAN_CHECK
@@ -1797,7 +1789,6 @@ PR_strtod
 			  }
 #endif /* INFNAN_CHECK */
  ret0:
-			PR_SetError(PR_INVALID_ARGUMENT_ERROR, 0);
 			s = s00;
 			sign = 0;
 			}
@@ -3374,9 +3365,7 @@ dtoa
 		++*s++;
 		}
 	else {
-#ifdef Honor_FLT_ROUNDS
  trimzeros:
-#endif
 		while(*--s == '0');
 		s++;
 		}
