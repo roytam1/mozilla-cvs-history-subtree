@@ -409,7 +409,7 @@ MODULES_all :=                                  \
 # and commit this file on that tag.
 CAMINO_CO_TAG        = CAMINO_2_0_BRANCH
 #MOZ_CO_TAG          = 
-NSPR_CO_TAG          = NSPR_4_7_6_BETA2
+NSPR_CO_TAG          = NSPR_4_7_6_RTM
 NSS_CO_TAG           = NSS_3_12_3_1_RTM
 LDAPCSDK_CO_TAG      = LDAPCSDK_6_0_3_CLIENT_BRANCH
 LOCALES_CO_TAG       =
