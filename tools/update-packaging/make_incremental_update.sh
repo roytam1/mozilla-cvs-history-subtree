@@ -24,19 +24,23 @@ check_for_forced_update() {
   force_list="$1"
   forced_file_chk="$2"
 
-  ## 'false'... because this is bash. Oh yay!  
-  local do_force=1
   local f
+
+  if [ "${forced_file_chk##*.}" = "chk" ]
+  then
+    ## "true" *giggle*
+    return 0;
+  fi
 
   for f in $force_list; do
     #echo comparing $forced_file_chk to $f
     if [ "$forced_file_chk" = "$f" ]; then
       ## "true" *giggle*
-      do_force=0
-      break
+      return 0;
     fi
   done
-  return $do_force;
+  ## 'false'... because this is bash. Oh yay!
+  return 1;
 }
 
 if [ $# = 0 ]; then
@@ -70,14 +74,15 @@ workdir="$newdir.work"
 manifest="$workdir/update.manifest"
 archivefiles="update.manifest"
 
+mkdir -p "$workdir"
+
 # Generate a list of all files in the target directory.
 pushd "$olddir"
 if test $? -ne 0 ; then
   exit 1
 fi
 
-list=$(list_files)
-eval "oldfiles=($list)"
+list_files oldfiles
 
 popd
 
@@ -86,18 +91,16 @@ if test $? -ne 0 ; then
   exit 1
 fi
 
-list=$(list_files)
-eval "newfiles=($list)"
+list_files newfiles
 
 popd
 
-mkdir -p "$workdir"
 > $manifest
 
 num_oldfiles=${#oldfiles[*]}
 
 for ((i=0; $i<$num_oldfiles; i=$i+1)); do
-  f=${oldfiles[$i]}
+  f="${oldfiles[$i]}"
 
   # This file is created by Talkback, so we can ignore it
   if [ "$f" = "readme.txt" ]; then

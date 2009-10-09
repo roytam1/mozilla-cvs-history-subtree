@@ -85,10 +85,6 @@ main( int argc, char **argv )
 #endif
 
     optind = ldaptool_process_args( argc, argv, "cq", 0, options_callback );
-    
-    if ( optind == -1 ) {
-        usage ( LDAP_PARAM_ERROR );
-    }
 
     if ( ldaptool_fp == NULL && optind >= argc ) {
 	ldaptool_fp = stdin;
@@ -180,10 +176,10 @@ docompare( LDAP *ld, const char *dn, const char *attrtype,
 		valuestr = bvalue->bv_val;
 	} else {
 #ifdef HAVE_SNPRINTF
-	    snprintf( tmpbuf, sizeof(tmpbuf), "NOT ASCII (%d bytes)",
+	    snprintf( tmpbuf, sizeof(tmpbuf), "NOT ASCII (%ld bytes)",
 			bvalue->bv_len );
 #else
-	    sprintf( tmpbuf, "NOT ASCII (%d bytes)",
+	    sprintf( tmpbuf, "NOT ASCII (%ld bytes)",
 			bvalue->bv_len );
 #endif
 	    valuestr = tmpbuf;

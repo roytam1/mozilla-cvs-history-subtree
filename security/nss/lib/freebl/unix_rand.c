@@ -46,7 +46,6 @@
 #include "secrng.h"
 #include "secerr.h"
 #include "prerror.h"
-#include "prthread.h"
 
 size_t RNG_FileUpdate(const char *fileName, size_t limit);
 
@@ -776,13 +775,6 @@ safe_popen(char *cmd)
     if (pipe(p) < 0)
 	return 0;
 
-    fp = fdopen(p[0], "r");
-    if (fp == 0) {
-	close(p[0]);
-	close(p[1]);
-	return 0;
-    }
-
     /* Setup signals so that SIGCHLD is ignored as we want to do waitpid */
     newact.sa_handler = SIG_DFL;
     newact.sa_flags = 0;
@@ -792,7 +784,7 @@ safe_popen(char *cmd)
     pid = fork();
     switch (pid) {
       case -1:
-	fclose(fp); /* this closes p[0], the fd associated with fp */
+	close(p[0]);
 	close(p[1]);
 	sigaction (SIGCHLD, &oldact, NULL);
 	return 0;
@@ -834,6 +826,12 @@ safe_popen(char *cmd)
 
       default:
 	close(p[1]);
+	fp = fdopen(p[0], "r");
+	if (fp == 0) {
+	    close(p[0]);
+	    sigaction (SIGCHLD, &oldact, NULL);
+	    return 0;
+	}
 	break;
     }
 
@@ -846,28 +844,25 @@ static int
 safe_pclose(FILE *fp)
 {
     pid_t pid;
-    int status = -1, rv;
+    int count, status;
 
     if ((pid = safe_popen_pid) == 0)
 	return -1;
     safe_popen_pid = 0;
 
-    fclose(fp);
-
-    /* yield the processor so the child gets some time to exit normally */
-    PR_Sleep(PR_INTERVAL_NO_WAIT);
-
     /* if the child hasn't exited, kill it -- we're done with its output */
-    while ((rv = waitpid(pid, &status, WNOHANG)) == -1 && errno == EINTR)
-	;
-    if (rv == 0 && kill(pid, SIGKILL) == 0) {
-	while ((rv = waitpid(pid, &status, 0)) == -1 && errno == EINTR)
-	    ;
+    count = 0;
+    while (waitpid(pid, &status, WNOHANG) == 0) {
+    	if (kill(pid, SIGKILL) < 0 && errno == ESRCH)
+	    break;
+	if (++count == 1000)
+	    break;
     }
 
     /* Reset SIGCHLD signal hander before returning */
     sigaction(SIGCHLD, &oldact, NULL);
 
+    fclose(fp);
     return status;
 }
 

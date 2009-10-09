@@ -887,18 +887,3 @@ SECKEY_SignatureLen;
 ;+    local:
 ;+       *;
 ;+};
-;+NSS_3.12 { 	# NSS 3.12 release
-;+    global:
-PK11_GetAllSlotsForCert;
-SECKEY_ECParamsToKeySize;
-SECKEY_ECParamsToBasePointOrderLen;
-SECMOD_DeleteModuleEx;
-VFY_CreateContextDirect;
-VFY_CreateContextWithAlgorithmID;
-VFY_VerifyDataDirect;
-VFY_VerifyDataWithAlgorithmID;
-VFY_VerifyDigestDirect;
-VFY_VerifyDigestWithAlgorithmID;
-;+    local:
-;+       *;
-;+};
