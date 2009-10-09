@@ -403,9 +403,9 @@ MODULES_all :=                                  \
 #
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
-MOZ_CO_TAG           = UPDATE_PACKAGING_R9
-NSPR_CO_TAG          = UPDATE_PACKAGING_R9
-NSS_CO_TAG           = UPDATE_PACKAGING_R9
+MOZ_CO_TAG           = UPDATE_PACKAGING_R10
+NSPR_CO_TAG          = UPDATE_PACKAGING_R10
+NSS_CO_TAG           = UPDATE_PACKAGING_R10
 LDAPCSDK_CO_TAG      = ldapcsdk_5_17_client_branch
 LOCALES_CO_TAG       =
 
