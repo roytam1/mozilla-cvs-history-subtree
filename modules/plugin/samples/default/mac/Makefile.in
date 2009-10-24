@@ -96,7 +96,7 @@ install-plugin: build-plugin
 
 build-plugin:
 	$(PBBUILD) $(PROJECT_ARG) -target $(TARGET) -buildstyle $(BUILDSTYLE) $(PBBUILD_ARG)
-	echo -n NSPLMOSS > "$(XCODE_PRODUCT_DIR)/Default Plugin.plugin/Contents/PkgInfo"
+	printf NSPLMOSS > "$(XCODE_PRODUCT_DIR)/Default Plugin.plugin/Contents/PkgInfo"
 
 clean clobber distclean::
 	rm -rf build
