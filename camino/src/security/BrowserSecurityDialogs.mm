@@ -271,6 +271,12 @@ static int kInvalidCertCancelOverride = 0;
       if (cert) {
         CertificateItem* certItem = [CertificateItem certificateItemWithCert:cert];
         [certItem setDomainIsMismatched:isDomainMismatch];
+        // Partially work around bug 453075, so the certificate failure message
+        // matches what we are telling the user in the dialog text.
+        if (isUntrusted)
+          [certItem setFallbackProblemMessageKey:@"InvalidStateCertNotTrusted"];
+        else if (isInvalidTime)
+          [certItem setFallbackProblemMessageKey:@"InvalidStateExpired"];
         [self setCertificateItem:certItem];
         return certItem;
       }
@@ -324,6 +330,10 @@ static int kInvalidCertCancelOverride = 0;
   else if (mCertFailureFlags & CHCertificateOverrideFlagDomainMismatch) {
     NSString* messageFormat = NSLocalizedStringFromTable(@"MismatchedCertMessageFormat", @"CertificateDialogs", nil);
     problemDescription = [NSString stringWithFormat:messageFormat, [certItem commonName], mSourceHost];
+  }
+  else if (mCertFailureFlags & CHCertificateOverrideFlagInvalidTime) {
+    NSString* messageFormat = NSLocalizedStringFromTable(@"ExpiredCertMessageFormat", @"CertificateDialogs", nil);
+    problemDescription = [NSString stringWithFormat:messageFormat, mSourceHost];
   } else {
     NSString* messageFormat = NSLocalizedStringFromTable(@"InvalidCertMessageFormat", @"CertificateDialogs", nil);
     problemDescription = [NSString stringWithFormat:messageFormat, mSourceHost];

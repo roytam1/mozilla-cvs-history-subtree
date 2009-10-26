@@ -47,7 +47,6 @@
 #import "BrowserWindowController.h"
 #import "BrowserTabViewItem.h"
 #import "NSString+Utils.h"
-#import "MAAttachedWindow.h"
 
 
 // This file adds scripting support to various classes.
@@ -77,6 +76,7 @@
 - (NSScriptObjectSpecifier *)objectSpecifier;
 - (NSArray *)tabs;
 - (BrowserWrapper *)currentTab;
+- (void)setCurrentTab:(BrowserWrapper *)newTabItemView;
 @end
 
 @interface BrowserWrapper (ScriptingSupport)
@@ -167,7 +167,7 @@
     // the second set of windows is, but they certainly shouldn't be included.
     // Note: there is no -[NSWindow uniqueID] method; the uniqueID key is only
     // availible via KVC.
-    if (![curWindow isKindOfClass:[MAAttachedWindow class]] &&
+    if (![curWindow isKindOfClass:[AutoCompleteWindow class]] &&
         [[curWindow valueForKey:@"uniqueID"] intValue] != -1) {
           [windowArray addObject:curWindow];
     }
@@ -276,6 +276,22 @@
 - (BrowserWrapper *)currentTab
 {
   return [self valueForKeyPath:@"windowController.tabBrowser.selectedTabViewItem.view"];
+}
+
+// Changes the current tab in a given browser window to a tab (BrowserWrapper)
+// specified by the user. Make sure that the BrowserWrapper we are given is
+// actually in the same browser window and warn the user if it is not.
+- (void)setCurrentTab:(BrowserWrapper *)newTabItemView;
+{
+  NSTabViewItem *newTabItem = [newTabItemView tab];
+  BrowserTabView *tabView = [[self windowController] tabBrowser];
+  if ([tabView indexOfTabViewItem:newTabItem] != NSNotFound) {
+    [tabView selectTabViewItem:newTabItem];
+  }
+  else {
+    [[NSScriptCommand currentCommand] setScriptErrorNumber:NSArgumentsWrongScriptError];
+    [[NSScriptCommand currentCommand] setScriptErrorString:@"The tab to select must be in the same window."];
+  }
 }
 
 @end

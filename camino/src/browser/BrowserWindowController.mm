@@ -104,9 +104,7 @@
 #include "nsIHistoryEntry.h"
 #include "nsIHistoryItems.h"
 #include "nsIDOMDocument.h"
-#include "nsIDOMNSDocument.h"
 #include "nsIDOMNSHTMLDocument.h"
-#include "nsIDOMLocation.h"
 #include "nsIDOMElement.h"
 #include "nsIDOMEvent.h"
 #include "nsIContextMenuListener.h"
@@ -3430,16 +3428,9 @@ public:
 
   nsCOMPtr<nsIDOMDocument> ownerDoc;
   mDataOwner->mContextMenuNode->GetOwnerDocument(getter_AddRefs(ownerDoc));
-
-  nsCOMPtr<nsIDOMNSDocument> nsDoc = do_QueryInterface(ownerDoc);
-  if (!nsDoc) return @"";
-
-  nsCOMPtr<nsIDOMLocation> location;
-  nsDoc->GetLocation(getter_AddRefs(location));
-  if (!location) return @"";
-
   nsAutoString urlStr;
-  location->GetHref(urlStr);
+  if (!GeckoUtils::GetURIForDocument(ownerDoc, urlStr))
+    return @"";
   return [NSString stringWith_nsAString:urlStr];
 }
 
@@ -5054,6 +5045,13 @@ public:
 
   if (oldResponderIsGecko != newResponderIsGecko && [[self window] isKeyWindow])
     [mBrowserView setBrowserActive:newResponderIsGecko];
+
+  // When the blocked page overlay shows up, Gecko causes us to lose content
+  // focus; manually restore it if that happens.
+  if (newResponder == [self window] && oldResponderIsGecko &&
+      [mBrowserView isBlockedErrorOverlayShowing]) {
+    [[self window] makeFirstResponder:[mBrowserView browserView]];
+  }
 }
 
 //
@@ -5262,22 +5260,20 @@ public:
 {
   [mContentView toggleTabThumbnailGridView];
   if ([mContentView tabThumbnailGridViewIsVisible]) {
-    // If either of the toolbar fields is in the middle of an edit, end the edit
-    // by focusing the window.
-    NSText* locationFieldEditor = [mURLBar fieldEditor];
-    NSText* searchFieldEditor = [[self window] fieldEditor:NO forObject:mSearchBar];
-    NSResponder* currentFirstResponder = [[self window] firstResponder];
-    if ((locationFieldEditor && currentFirstResponder == locationFieldEditor) ||
-        (searchFieldEditor && currentFirstResponder == searchFieldEditor))
-    {
-      [[self window] makeFirstResponder:[self window]];
-    }
     [mURLBar setEditable:NO];
     [mSearchBar setEditable:NO];
   }
   else {
     [mURLBar setEditable:YES];
     [mSearchBar setEditable:YES];
+    // If we don't have focus anywhere useful when coming out of tab overview
+    // mode (due to the view shuffling) set it on the content area.
+    if ([[[self window] firstResponder] isEqual:[self window]]) {
+      if ([self bookmarkManagerIsVisible])
+        [[self bookmarkViewControllerForCurrentTab] focusSearchField];
+      else
+        [[self window] makeFirstResponder:[mBrowserView browserView]];
+    }
   }
 }
 

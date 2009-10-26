@@ -620,7 +620,7 @@ const int kZoomActionsTag = 108;
         if (NSClassFromString(className))
           [addOnsPresent addObject:[problemAddOns objectForKey:className]];
       }
-      // Check for CamiTools by path, since it's a preference pane rather than an InputManager.
+      // Check for CamiTools and ExtraFonts by path, since they're preference panes rather than InputManagers.
       NSString* userPreferencePanesPath = [[prefManager profilePath] stringByAppendingPathComponent:@"PreferencePanes"];
       NSString* globalPreferencePanesPath = @"/Library/Application Support/Camino/PreferencePanes";
       NSFileManager* fileManager = [NSFileManager defaultManager];
@@ -634,6 +634,8 @@ const int kZoomActionsTag = 108;
       while ((paneName = [prefPaneEnumerator nextObject])) {
         if ([paneName rangeOfString:@"CamiTools" options:NSCaseInsensitiveSearch].location != NSNotFound)
           [addOnsPresent addObject:@"CamiTools"];
+        if ([paneName rangeOfString:@"ExtraFonts" options:NSCaseInsensitiveSearch].location != NSNotFound)
+          [addOnsPresent addObject:@"ExtraFonts"];
       }
 
       if ([addOnsPresent count] > 0) {
@@ -1455,15 +1457,14 @@ const int kZoomActionsTag = 108;
   [savePanel setAccessoryView:mExportPanelView];
 
   // Set the initial extension based on the remembered value for the output type.
-  int selectedButton = [button indexOfSelectedItem];
-  [self setFileExtension:[button itemAtIndex:selectedButton]];
+  [self setFileExtension:[button itemAtIndex:[button indexOfSelectedItem]]];
 
   // start the save panel
   [NSMenu cancelAllTracking];
   int saveResult = [savePanel runModalForDirectory:nil file:NSLocalizedString(@"ExportedBookmarkFile", @"Exported Bookmarks")];
   if (saveResult != NSFileHandlingPanelOKButton)
     return;
-  if (0 == selectedButton)
+  if ([button indexOfSelectedItem] == 0)
     [[BookmarkManager sharedBookmarkManager] writeHTMLFile:[savePanel filename]];
   else
     [[BookmarkManager sharedBookmarkManager] writeSafariFile:[savePanel filename]];

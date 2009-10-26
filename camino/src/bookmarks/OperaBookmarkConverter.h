@@ -1,6 +1,5 @@
-/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*-
- *
- * ***** BEGIN LICENSE BLOCK *****
+/* -*- Mode: C++; tab-width: 2; indent-tabs-mode: nil; c-basic-offset: 2 -*- */
+/* ***** BEGIN LICENSE BLOCK *****
  * Version: MPL 1.1/GPL 2.0/LGPL 2.1
  *
  * The contents of this file are subject to the Mozilla Public License Version
@@ -15,13 +14,13 @@
  *
  * The Original Code is Camino code.
  *
- * The Initial Developer of the Original Code is Ian Leue.
- * Portions created by the Initial Developer are Copyright (C) 2006
+ * The Initial Developer of the Original Code is
+ * Stuart Morgan
+ * Portions created by the Initial Developer are Copyright (C) 2009
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Ian Leue <froodian@gmail.com>  (Original Author)
- *   Christopher Henderson <trendyhendy2000@gmail.com>
+ *   Stuart Morgan <stuart.morgan@alumni.case.edu>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -37,16 +36,19 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#import "NSTextView+Utils.h"
+#import <Foundation/Foundation.h>
 
+@class BookmarkItem;
+@class BookmarkFolder;
 
-@implementation NSTextView(CaminoExtensions)
-
-- (BOOL)caretIsAtEndOfLine
-{
-  NSRange selectedLocation = [self selectedRange];
-  return ((selectedLocation.length == 0) &&
-          (selectedLocation.location == [[self string] length]));
+// Reads Opera bookmark files, converting them to Camino bookmark structures.
+@interface OperaBookmarkConverter : NSObject {
 }
+
++ (id)operaBookmarkConverter;
+
+// Reads the bookmarks from |filePath| and returns the root bookmark folder
+// from the import (or nil if importing fails).
+- (BookmarkFolder*)bookmarksFromFile:(NSString*)filePath;
 
 @end

@@ -43,9 +43,6 @@
 #import "NSString+Gecko.h"
 #import "NSTextView+Utils.h"
 
-#import "MAAttachedWindow.h"
-#import "AutoCompleteCell.h"
-#import "AutoCompleteResult.h"
 #import "AutoCompleteTextField.h"
 #import "AutoCompleteDataSource.h"
 #import "BrowserWindowController.h"
@@ -53,11 +50,17 @@
 #import "PreferenceManager.h"
 #import "CHBrowserService.h"
 
-#include "BookmarkManager.h"
-#include "Bookmark.h"
+#include "nsIAutoCompleteSession.h"
+#include "nsIAutoCompleteResults.h"
+#include "nsIAutoCompleteListener.h"
+#include "nsIBrowserHistory.h"
 
+#include "nsIServiceManager.h"
 #include "nsIWebProgressListener.h"
+#include "nsMemory.h"
+#include "nsString.h"
 
+static const int kMaxRows = 6;
 static const int kFrameMargin = 1;
 
 const float kSecureIconRightOffset = 19.0;    // offset from right size of url bar
@@ -77,9 +80,11 @@ NSString* const kWillShowFeedMenu = @"WillShowFeedMenu";
 @interface AutoCompleteTextField(Private)
 
 - (NSTableView *) tableView;
+- (int) visibleRows;
 
 - (void) startSearch:(NSString*)aString complete:(BOOL)aComplete;
 - (void) performSearch;
+- (void) dataReady:(nsIAutoCompleteResults*)aResults status:(AutoCompleteStatus)aStatus;
 - (void) searchTimer:(NSTimer *)aTimer;
 
 - (void) completeDefaultResult;
@@ -170,7 +175,7 @@ NSString* const kWillShowFeedMenu = @"WillShowFeedMenu";
     theRect.size.width -= kSecureIconRightOffset;
   if ([self isFeedIconDisplayed])
     theRect.size.width -= kFeedIconRightOffest;
-
+    
   return [super drawingRectForBounds:theRect];
 }
 
@@ -286,6 +291,34 @@ NSString* const kWillShowFeedMenu = @"WillShowFeedMenu";
 
 #pragma mark -
 
+class AutoCompleteListener : public nsIAutoCompleteListener
+{  
+public:
+  AutoCompleteListener(AutoCompleteTextField* aTextField)
+  {
+    mTextField = aTextField;
+  }
+  
+  NS_DECL_ISUPPORTS
+
+  NS_IMETHODIMP OnStatus(const PRUnichar* aText) { return NS_OK; }
+  NS_IMETHODIMP SetParam(nsISupports *aParam) { return NS_OK; }
+  NS_IMETHODIMP GetParam(nsISupports **aParam) { return NS_OK; }
+
+  NS_IMETHODIMP OnAutoComplete(nsIAutoCompleteResults *aResults, AutoCompleteStatus aStatus)
+  {
+    [mTextField dataReady:aResults status:aStatus];
+    return NS_OK;
+  }
+
+private:
+  AutoCompleteTextField *mTextField;
+};
+
+NS_IMPL_ISUPPORTS1(AutoCompleteListener, nsIAutoCompleteListener)
+
+#pragma mark -
+
 @implementation AutoCompleteTextField
 
 + (Class) cellClass
@@ -311,13 +344,29 @@ NSString* const kWillShowFeedMenu = @"WillShowFeedMenu";
 
 - (void) awakeFromNib
 {
+  NSTableColumn *column;
+  NSScrollView *scrollView;
+  NSCell *dataCell;
+  
+  mListener = (nsIAutoCompleteListener *)new AutoCompleteListener(self);
+  NS_IF_ADDREF(mListener);
+
   [self setFont:[NSFont controlContentFontOfSize:0]];
   [self setDelegate: self];
 
+  // XXX the owner of the textfield should set this
+  [self setSession:@"history"];
+  
+  // construct and configure the popup window
+  mPopupWin = [[AutoCompleteWindow alloc] initWithContentRect:NSMakeRect(0,0,0,0)
+                      styleMask:NSBorderlessWindowMask backing:NSBackingStoreBuffered defer:NO];
+  [mPopupWin setReleasedWhenClosed:NO];
+  [mPopupWin setHasShadow:YES];
+  [mPopupWin setAlphaValue:0.9];
+
   // construct and configure the view
-  mTableView = [[[NSTableView alloc] initWithFrame:NSZeroRect] autorelease];
-  [mTableView setIntercellSpacing:NSMakeSize(0, 2)];
-  [mTableView setDelegate:self];
+  mTableView = [[[NSTableView alloc] initWithFrame:NSMakeRect(0,0,0,0)] autorelease];
+  [mTableView setIntercellSpacing:NSMakeSize(1, 2)];
   [mTableView setTarget:self];
   [mTableView setAction:@selector(onRowClicked:)];
   
@@ -329,6 +378,13 @@ NSString* const kWillShowFeedMenu = @"WillShowFeedMenu";
     [self addSubview:mProxyIcon];
     [mProxyIcon release];
     [mProxyIcon setFrameOrigin: NSMakePoint(3, 3)];
+    // Create the icon column
+    column = [[[NSTableColumn alloc] initWithIdentifier:@"icon"] autorelease];
+    [column setWidth:[mProxyIcon frame].origin.x + [mProxyIcon frame].size.width];
+    dataCell = [[[NSImageCell alloc] initImageCell:nil] autorelease];
+    [column setDataCell:dataCell];
+    [column setEditable:NO];
+    [mTableView addTableColumn: column];
   }
   
   // cache the bg color for secure pages. create a secure icon view which we'll display at the far right
@@ -351,36 +407,29 @@ NSString* const kWillShowFeedMenu = @"WillShowFeedMenu";
   
   [self setAutoresizesSubviews:YES];
 
-  // create the main column
-  NSTableColumn *column = [[[NSTableColumn alloc] initWithIdentifier:@"main"] autorelease];
+  // create the text columns
+  column = [[[NSTableColumn alloc] initWithIdentifier:@"col1"] autorelease];
   [column setEditable:NO];
-  [column setDataCell:[[[AutoCompleteCell alloc] init] autorelease]];
-  [mTableView addTableColumn:column];
+  [mTableView addTableColumn: column];
+  column = [[[NSTableColumn alloc] initWithIdentifier:@"col2"] autorelease];
+  [[column dataCell] setTextColor:[NSColor darkGrayColor]];
+  [column setEditable:NO];
+  [mTableView addTableColumn: column];
 
   // hide the table header
   [mTableView setHeaderView:nil];
-
-  // Construct and configure the popup window. It is necessary to give the view some
-  // initial dimension because of the way that MAAttachedWindow constructs itself.
-  NSView* tableViewContainerView = [[[NSView alloc] initWithFrame:NSMakeRect(0, 0, 100, 100)] autorelease];
-  [tableViewContainerView addSubview:mTableView];
-  const float kPopupWindowOffsetFromLocationField = 8.0;
-  mPopupWin = [[MAAttachedWindow alloc] initWithView:tableViewContainerView
-                                     attachedToPoint:NSZeroPoint
-                                            inWindow:[self window]
-                                              onSide:MAPositionBottom
-                                          atDistance:kPopupWindowOffsetFromLocationField];
-  [mPopupWin setReleasedWhenClosed:NO];
-  [mPopupWin setBorderColor:[NSColor darkGrayColor]];
-  [mPopupWin setBackgroundColor:[NSColor whiteColor]];
-  [mPopupWin setViewMargin:1.0];
-  [mPopupWin setBorderWidth:0.0];
-  [mPopupWin setCornerRadius:5.0];
-  [mPopupWin setHasArrow:NO];
+  
+  // construct the scroll view that contains the table view
+  scrollView = [[[NSScrollView alloc] initWithFrame:NSMakeRect(0,0,0,0)] autorelease];
+  [scrollView setHasVerticalScroller:YES];
+  [[scrollView verticalScroller] setControlSize:NSSmallControlSize];
+  [scrollView setDocumentView: mTableView];
 
   // construct the datasource
   mDataSource = [[AutoCompleteDataSource alloc] init];
   [mTableView setDataSource: mDataSource];
+
+  [mPopupWin setContentView:scrollView];
 
   [[NSNotificationCenter defaultCenter] addObserver:self
                                            selector:@selector(onResize:)
@@ -446,6 +495,10 @@ NSString* const kWillShowFeedMenu = @"WillShowFeedMenu";
   mLock = nil;
   [mFeedIcon release];
   mFeedIcon = nil;
+
+  NS_IF_RELEASE(mSession);
+  NS_IF_RELEASE(mResults);
+  NS_IF_RELEASE(mListener);
 }
 
 - (void)shutdown: (NSNotification*)aNotification
@@ -453,9 +506,32 @@ NSString* const kWillShowFeedMenu = @"WillShowFeedMenu";
   [self cleanup];
 }
 
+- (void) setSession:(NSString *)aSession
+{
+  NS_IF_RELEASE(mSession);
+
+  // XXX add aSession to contract id
+  nsCOMPtr<nsIAutoCompleteSession> session =
+    do_GetService(NS_GLOBALHISTORY_AUTOCOMPLETE_CONTRACTID);
+  mSession = session;
+  NS_IF_ADDREF(mSession);
+}
+
+- (NSString *) session
+{
+  // XXX return session name
+  return @"";
+}
+
 - (NSTableView *) tableView
 {
   return mTableView;
+}
+
+- (int) visibleRows
+{
+  int minRows = [mDataSource rowCount];
+  return minRows < kMaxRows ? minRows : kMaxRows;
 }
 
 - (PageProxyIcon*) pageProxyIcon
@@ -494,7 +570,7 @@ NSString* const kWillShowFeedMenu = @"WillShowFeedMenu";
 
 // searching ////////////////////////////
 
-- (void)startSearch:(NSString*)aString complete:(BOOL)aComplete
+- (void) startSearch:(NSString*)aString complete:(BOOL)aComplete
 {
   if (mSearchString)
     [mSearchString release];
@@ -505,9 +581,6 @@ NSString* const kWillShowFeedMenu = @"WillShowFeedMenu";
   if ([self isOpen]) {
     [self performSearch];
   } else {
-    // Reload search data.
-    [mDataSource loadSearchableData];
-
     // delay the search when the popup is not yet opened so that users 
     // don't see a jerky flashing popup when they start typing for the first time
     if (mOpenTimer) {
@@ -523,17 +596,37 @@ NSString* const kWillShowFeedMenu = @"WillShowFeedMenu";
 
 - (void) performSearch
 {
-  [mDataSource performSearchWithString:mSearchString delegate:self];
+  // sometimes we get a null mSession, and if we don't check for that we crash
+  if (mSession) {
+    nsAutoString searchString;
+    [mSearchString assignTo_nsAString:searchString];
+    nsresult rv = mSession->OnStartLookup(searchString.get(), mResults, mListener);
+    if (NS_FAILED(rv))
+      NSLog(@"Unable to perform autocomplete lookup");
+  }
 }
 
-- (void)searchResultsAvailable {
+- (void) dataReady:(nsIAutoCompleteResults*)aResults status:(AutoCompleteStatus)aStatus
+{
+  NS_IF_RELEASE(mResults);
+  mResults = nsnull;
+  
+  if (aStatus == nsIAutoCompleteStatus::failed) {
+    [mDataSource setErrorMessage:@""];
+  } else if (aStatus == nsIAutoCompleteStatus::ignored) {
+    [mDataSource setErrorMessage:@""];
+  } else if (aStatus == nsIAutoCompleteStatus::noMatch) {
+    [mDataSource setErrorMessage:@""];
+  } else if (aStatus == nsIAutoCompleteStatus::matchFound) {
+    mResults = aResults;
+    NS_IF_ADDREF(mResults);
+    [mDataSource setResults:aResults];
+    [self completeDefaultResult];
+  }
+
   if ([mDataSource rowCount] > 0) {
-    // Make sure a header row doesn't get selected.
-    if ([[mDataSource resultForRow:[mTableView selectedRow] columnIdentifier:@"main"] isHeader])
-      [self selectRowBy:-1];
     [mTableView noteNumberOfRowsChanged];
     [self openPopup];
-    [self completeDefaultResult];
   } else {
     [self closePopup];
   }
@@ -553,6 +646,11 @@ NSString* const kWillShowFeedMenu = @"WillShowFeedMenu";
   if (mSearchString)
     [mSearchString release];
   mSearchString = nil;
+  NS_IF_RELEASE(mResults);
+  mResults = nsnull;
+
+  [mDataSource setResults:nil];
+
   [self closePopup];
 }
 
@@ -574,7 +672,7 @@ NSString* const kWillShowFeedMenu = @"WillShowFeedMenu";
 
 - (void) resizePopup:(BOOL)forceResize
 {
-  if ([mDataSource rowCount] == 0) {
+  if ([self visibleRows] == 0) {
     [self closePopup];
     return;
   }
@@ -583,25 +681,26 @@ NSString* const kWillShowFeedMenu = @"WillShowFeedMenu";
   // to show the popup)
   if (![self isOpen] && !forceResize)
     return;
-  
-  // Convert coordinates.
+
+  // get the origin of the location bar in coordinates of the root view
   NSRect locationFrame = [self bounds];
-  locationFrame.origin = [self convertPoint:locationFrame.origin toView:nil];
-  locationFrame.origin = [[self window] convertBaseToScreen:locationFrame.origin];
+  NSPoint locationOrigin = locationFrame.origin;
+  locationOrigin.y += NSHeight(locationFrame);    // we want bottom left
+  locationOrigin = [self convertPoint:locationOrigin toView:nil];
+
+  // get the height of the table view
+  NSRect winFrame = [[self window] frame];
+  int tableHeight = (int)([mTableView rowHeight] + [mTableView intercellSpacing].height) * [self visibleRows];
+
+  // make the columns split the width of the popup
+  [[mTableView tableColumnWithIdentifier:@"col1"] setWidth:(locationFrame.size.width / 2.0f)];
   
-  // Resize views.
-  const float kHorizontalPadding = 5.0;
-  int tableHeight = (int)([mTableView rowHeight] + [mTableView intercellSpacing].height) * [mDataSource rowCount];
-  NSRect tableViewFrame = NSZeroRect;
-  tableViewFrame.size.height = tableHeight;
-  tableViewFrame.size.width = locationFrame.size.width - (2 * kFrameMargin);
-  tableViewFrame.origin.y = kHorizontalPadding;
-  NSRect containerViewFrame = tableViewFrame;
-  containerViewFrame.size.height += kHorizontalPadding * 2.0;
-  [[mTableView superview] setFrame:containerViewFrame];
-  [mTableView setFrame:tableViewFrame];
-  [mPopupWin setPoint:NSMakePoint(NSMidX(locationFrame), locationFrame.origin.y) side:MAPositionBottom];
-  
+  // position the popup anchored to bottom/left of location bar
+  NSRect popupFrame = NSMakeRect(winFrame.origin.x + locationOrigin.x + kFrameMargin,
+                                 ((winFrame.origin.y + locationOrigin.y) - tableHeight) - kFrameMargin,
+                                 locationFrame.size.width - (2 * kFrameMargin),
+                                 tableHeight);
+  [mPopupWin setFrame:popupFrame display:NO];
 }
 
 - (void) closePopup
@@ -689,8 +788,10 @@ NSString* const kWillShowFeedMenu = @"WillShowFeedMenu";
 
 - (void) completeDefaultResult
 {
+  PRInt32 defaultRow;
+  mResults->GetDefaultItemIndex(&defaultRow);
+  
   if (mCompleteResult && mCompleteWhileTyping) {
-    PRInt32 defaultRow = 1;
     [self selectRowAt:defaultRow];
     [self completeResult:defaultRow];
   } else {
@@ -714,7 +815,7 @@ NSString* const kWillShowFeedMenu = @"WillShowFeedMenu";
     [[self fieldEditor] setSelectedRange:selectAtEnd];
   }
   else {
-    if ([mDataSource rowCount] == 0)
+    if ([mDataSource rowCount] <= 0)
       return;
 
     // Fill in the suggestion from the list, but change only the text 
@@ -722,7 +823,7 @@ NSString* const kWillShowFeedMenu = @"WillShowFeedMenu";
     // user to see what they have typed and what change the autocomplete
     // makes while allowing them to continue typing w/out having to
     // reset the insertion point. 
-    NSString *result = [(AutoCompleteResult *)[mDataSource resultForRow:aRow columnIdentifier:@"main"] url];
+    NSString *result = [mDataSource resultForRow:aRow columnIdentifier:@"col1"];
     
     // figure out where to start the match, depending on whether the user typed the protocol part
     int protocolLength = 0;
@@ -733,7 +834,7 @@ NSString* const kWillShowFeedMenu = @"WillShowFeedMenu";
       if (([[searchURL scheme] length] == 0) || ![[searchURL scheme] isEqualToString:[resultURL scheme]])
         protocolLength = [[resultURL scheme] length];
     }
-
+        
     NSRange matchRange = [result rangeOfString:mSearchString options:NSCaseInsensitiveSearch range:NSMakeRange(protocolLength, [result length] - protocolLength)];
     if (matchRange.length > 0 && matchRange.location != NSNotFound) {
       unsigned int location = matchRange.location + matchRange.length;
@@ -746,8 +847,7 @@ NSString* const kWillShowFeedMenu = @"WillShowFeedMenu";
 - (void) enterResult:(int)aRow
 {
   if (aRow >= 0 && [mDataSource rowCount] > 0) {
-    [self setStringUndoably:[(AutoCompleteResult *)[mDataSource resultForRow:[mTableView selectedRow] columnIdentifier:@"main"] url]
-               fromLocation:0];
+    [self setStringUndoably:[mDataSource resultForRow:[mTableView selectedRow] columnIdentifier:@"col1"] fromLocation:0];
     [self closePopup];
   } else if (mOpenTimer) {
     // if there was a search timer going when we hit enter, cancel it
@@ -909,10 +1009,6 @@ NSString* const kWillShowFeedMenu = @"WillShowFeedMenu";
 
 // selecting rows /////////////////////////////////////////
 
-- (BOOL)tableView:(NSTableView *)tableView shouldSelectRow:(int)rowIndex {
-  return (![[mDataSource resultForRow:rowIndex columnIdentifier:@"main"] isHeader]);
-}
-
 - (void) selectRowAt:(int)aRow
 {
   if (aRow >= -1 && [mDataSource rowCount] > 0) {
@@ -953,11 +1049,8 @@ NSString* const kWillShowFeedMenu = @"WillShowFeedMenu";
   } else {
     // no special case, just increment current row
     row += aRows;
-    // make sure we didn't just select a header
-    if ([[mDataSource resultForRow:row columnIdentifier:@"main"] isHeader])
-      row += aRows / abs(aRows);
   }
-
+    
   [self selectRowAt:row];
 }
 
@@ -1069,7 +1162,7 @@ NSString* const kWillShowFeedMenu = @"WillShowFeedMenu";
   NSTextView* fieldEditor = [[aNote userInfo] objectForKey:@"NSFieldEditor"];
   [[fieldEditor undoManager] removeAllActionsWithTarget:fieldEditor];
 }
-
+  
 - (BOOL)control:(NSControl *)control textView:(NSTextView *)textView doCommandBySelector:(SEL)command
 {
   if (command == @selector(insertNewline:)) {
@@ -1091,16 +1184,22 @@ NSString* const kWillShowFeedMenu = @"WillShowFeedMenu";
       [self startSearch:[self stringValue] complete:YES];
       return YES;
     }
+  } else if (command == @selector(scrollPageUp:)) {
+    [self selectRowBy:-kMaxRows];
+    [self completeSelectedResult];
+  } else if (command == @selector(scrollPageDown:)) {
+    [self selectRowBy:kMaxRows];
+    [self completeSelectedResult];
   } else if (command == @selector(moveToBeginningOfDocument:)) {
-    [self selectRowAt:1];
+    [self selectRowAt:0];
     [self completeSelectedResult];
   } else if (command == @selector(moveToEndOfDocument:)) {
     [self selectRowAt:[mTableView numberOfRows]-1];
     [self completeSelectedResult];
   } else if (command == @selector(complete:)) {
-    [self selectRowBy:1];
-    [self completeSelectedResult];
-    return YES;
+      [self selectRowBy:1];
+      [self completeSelectedResult];
+      return YES;
   } else if (command == @selector(insertTab:)) {
     if ([mPopupWin isVisible]) {
       [self selectRowBy:1];
