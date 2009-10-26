@@ -92,6 +92,10 @@
 		00BBBFE80D70A6E400C2D916 /* tab_loading.tiff in Resources */ = {isa = PBXBuildFile; fileRef = 00BBBFE60D70A6E400C2D916 /* tab_loading.tiff */; };
 		00C6890710560B110082D80F /* BreakpadWrapper.m in Sources */ = {isa = PBXBuildFile; fileRef = 00C6890610560B110082D80F /* BreakpadWrapper.m */; };
 		00C6890810560B110082D80F /* BreakpadWrapper.m in Sources */ = {isa = PBXBuildFile; fileRef = 00C6890610560B110082D80F /* BreakpadWrapper.m */; };
+		00F79F591075B622006688AC /* OperaBookmarkConverter.m in Sources */ = {isa = PBXBuildFile; fileRef = 00F79F581075B622006688AC /* OperaBookmarkConverter.m */; };
+		00F79F5A1075B622006688AC /* OperaBookmarkConverter.m in Sources */ = {isa = PBXBuildFile; fileRef = 00F79F581075B622006688AC /* OperaBookmarkConverter.m */; };
+		00F7A08C1077F255006688AC /* SafariBookmarkConverter.m in Sources */ = {isa = PBXBuildFile; fileRef = 00F7A08B1077F255006688AC /* SafariBookmarkConverter.m */; };
+		00F7A08D1077F255006688AC /* SafariBookmarkConverter.m in Sources */ = {isa = PBXBuildFile; fileRef = 00F7A08B1077F255006688AC /* SafariBookmarkConverter.m */; };
 		032FFDD5077351DA00440548 /* Downloads.mm in Sources */ = {isa = PBXBuildFile; fileRef = 032FFDCE077351A800440548 /* Downloads.mm */; };
 		032FFDD6077351EA00440548 /* Downloads.tiff in Resources */ = {isa = PBXBuildFile; fileRef = 032FFDCF077351A800440548 /* Downloads.tiff */; };
 		032FFDD7077351EA00440548 /* Downloads.nib in Resources */ = {isa = PBXBuildFile; fileRef = 032FFDD0077351A800440548 /* Downloads.nib */; };
@@ -2503,6 +2507,10 @@
 		00BBBFE60D70A6E400C2D916 /* tab_loading.tiff */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; name = tab_loading.tiff; path = chrome/tab_loading.tiff; sourceTree = "<group>"; };
 		00C6890510560B110082D80F /* BreakpadWrapper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BreakpadWrapper.h; path = src/application/BreakpadWrapper.h; sourceTree = SOURCE_ROOT; };
 		00C6890610560B110082D80F /* BreakpadWrapper.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = BreakpadWrapper.m; path = src/application/BreakpadWrapper.m; sourceTree = SOURCE_ROOT; };
+		00F79F571075B622006688AC /* OperaBookmarkConverter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = OperaBookmarkConverter.h; path = src/bookmarks/OperaBookmarkConverter.h; sourceTree = "<group>"; };
+		00F79F581075B622006688AC /* OperaBookmarkConverter.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = OperaBookmarkConverter.m; path = src/bookmarks/OperaBookmarkConverter.m; sourceTree = "<group>"; };
+		00F7A08A1077F255006688AC /* SafariBookmarkConverter.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SafariBookmarkConverter.h; path = src/bookmarks/SafariBookmarkConverter.h; sourceTree = "<group>"; };
+		00F7A08B1077F255006688AC /* SafariBookmarkConverter.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = SafariBookmarkConverter.m; path = src/bookmarks/SafariBookmarkConverter.m; sourceTree = "<group>"; };
 		032FFDCD077351A800440548 /* Downloads.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = Downloads.h; sourceTree = "<group>"; };
 		032FFDCE077351A800440548 /* Downloads.mm */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.objcpp; path = Downloads.mm; sourceTree = "<group>"; };
 		032FFDCF077351A800440548 /* Downloads.tiff */ = {isa = PBXFileReference; lastKnownFileType = image.tiff; path = Downloads.tiff; sourceTree = "<group>"; };
@@ -4102,6 +4110,10 @@
 			children = (
 				336234460E6BC2FB00DD5373 /* HTMLBookmarkConverter.h */,
 				336234470E6BC2FB00DD5373 /* HTMLBookmarkConverter.m */,
+				00F79F571075B622006688AC /* OperaBookmarkConverter.h */,
+				00F79F581075B622006688AC /* OperaBookmarkConverter.m */,
+				00F7A08A1077F255006688AC /* SafariBookmarkConverter.h */,
+				00F7A08B1077F255006688AC /* SafariBookmarkConverter.m */,
 			);
 			name = "Import and Export";
 			sourceTree = "<group>";
@@ -6338,6 +6350,8 @@
 				3DACDAAA0FBF1D1600709AC3 /* SafeBrowsingTestDataUpdater.mm in Sources */,
 				3D9A2AE310019F6E00CC9154 /* SafeBrowsingBar.mm in Sources */,
  				00C6890710560B110082D80F /* BreakpadWrapper.m in Sources */,
+ 				00F79F591075B622006688AC /* OperaBookmarkConverter.m in Sources */,
+ 				00F7A08C1077F255006688AC /* SafariBookmarkConverter.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -6531,6 +6545,8 @@
 				3DACDAAB0FBF1D1600709AC3 /* SafeBrowsingTestDataUpdater.mm in Sources */,
 				3D9A2AE410019F6E00CC9154 /* SafeBrowsingBar.mm in Sources */,
  				00C6890810560B110082D80F /* BreakpadWrapper.m in Sources */,
+ 				00F79F5A1075B622006688AC /* OperaBookmarkConverter.m in Sources */,
+ 				00F7A08D1077F255006688AC /* SafariBookmarkConverter.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
