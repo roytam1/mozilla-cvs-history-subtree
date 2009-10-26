@@ -1,0 +1,14 @@
+#
+## hostname: cb-xserve04.mozilla.com
+## uname: Darwin cb-xserve04.mozilla.com 9.8.0 Darwin Kernel Version 9.8.0: Wed Jul 15 16:55:01 PDT 2009; root:xnu-1228.15.4~1/RELEASE_I386 i386
+#
+
+. $topsrcdir/build/macosx/universal/mozconfig
+. $topsrcdir/camino/config/mozconfig
+ac_add_app_options ppc --with-macos-sdk=/Developer/SDKs/MacOSX10.3.9.sdk
+ac_add_app_options ppc --enable-macos-target=10.3
+ac_add_options --enable-optimize="-g -O2"
+ac_add_options --disable-shared
+ac_add_options --enable-static
+mk_add_options MOZ_MAKE_FLAGS=-j8
+mk_add_options MOZ_OBJDIR=@TOPSRCDIR@/../build
