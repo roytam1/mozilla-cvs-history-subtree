@@ -186,6 +186,9 @@ public:
 protected:
   nsCOMPtr<nsIInterfaceRequestor> mCallbacks;
   PRFileDesc* mFd;
+  enum { 
+    blocking_state_unknown, is_nonblocking_socket, is_blocking_socket 
+  } mBlockingState;
   PRUint32 mSecurityState;
   nsString mShortDesc;
   PRPackedBool mForSTARTTLS;
