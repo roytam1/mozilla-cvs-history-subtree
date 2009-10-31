@@ -1,6 +1,16 @@
 #! /bin/bash
 
 #### LOCAL MACHINE SETTINGS ####
+PORT_64_DBG=8543
+PORT_64_OPT=8544
+PORT_32_DBG=8545
+PORT_32_OPT=8546
+if [ "${NSS_TESTS}" = "memtest" ]; then
+    PORT_64_DBG=8547
+    PORT_64_OPT=8548
+    PORT_32_DBG=8549
+    PORT_32_OPT=8550
+fi
 JAVA_HOME_64=/usr/lib/jvm/java-1.6.0-openjdk.x86_64
 JAVA_HOME_32=/usr/lib/jvm/java-1.6.0-openjdk
 
