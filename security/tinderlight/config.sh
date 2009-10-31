@@ -1,6 +1,8 @@
 #! /bin/bash
 
 #### LOCAL MACHINE SETTINGS ####
+JAVA_HOME_64=/usr/lib/jvm/java-1.6.0-openjdk.x86_64
+JAVA_HOME_32=/usr/lib/jvm/java-1.6.0-openjdk
 
 # example configuration
 case ${HOST} in

@@ -37,18 +37,26 @@ proc_args()
             "--nojss")
                 NO_JSS=1
                 ;;
+            "--memtest")
+                NSS_TESTS="memtest"
+                ;;
+            "--nojsssign")
+                NO_JSS_SIGN=1
+                ;;
             *)
                 echo "Usage: $0 [--bits=BITS] [--opt=OPT] [--once] ..."
                 echo "    --bits      - bits mode (32 or 64)"
                 echo "    --opt       - debug/opt mode (DBG or OPT)"
                 echo "    --once      - run only once"
                 echo "    --cycles    - run cycles (pkix, shared db,..) in separate runs"
+                echo "    --memtest   - run the memory leak tests"
                 echo "    --nomail    - don't send e-mail"
                 echo "    --nocvs     - skip CVS checkout (work with old data)"
                 echo "    --nobuild   - skip build"
                 echo "    --notest    - skip testing"
                 echo "    --nomove    - don't move old data directory after testing"
                 echo "    --nojss     - don't build/test JSS (NSS only)"
+                echo "    --nojsssign - try to sign jss"
                 exit 0
                 ;;
         esac 
@@ -291,12 +299,13 @@ build_jss()
     print_log "$ cd ${DATADIR}/mozilla/dist"
     cd ${DATADIR}/mozilla/dist
 
-    print_log "cat ${TESTDIR}/keystore.pw | ${JAVA_HOME}/bin/jarsigner -keystore ${TESTDIR}/keystore -internalsf ${XPCLASS} jssdsa"
-    cat ${TESTDIR}/keystore.pw | ${JAVA_HOME}/bin/jarsigner -keystore ${TESTDIR}/keystore -internalsf ${XPCLASS} jssdsa >> ${LOG_ALL} 2>&1
-    RET=$?
-    print_result "JSS - sign JAR files - ${BITS} bits - ${OPT}" ${RET} 0
-    [ ${RET} -eq 0 ] || return ${RET}
-
+    if [ -z "${NO_JSS_SIGN}" ]; then
+	print_log "cat ${TESTDIR}/keystore.pw | ${JAVA_HOME}/bin/jarsigner -keystore ${TESTDIR}/keystore -internalsf ${XPCLASS} jssdsa"
+	cat ${TESTDIR}/keystore.pw | ${JAVA_HOME}/bin/jarsigner -keystore ${TESTDIR}/keystore -internalsf ${XPCLASS} jssdsa >> ${LOG_ALL} 2>&1
+	RET=$?
+	print_result "JSS - sign JAR files - ${BITS} bits - ${OPT}" ${RET} 0
+	[ ${RET} -eq 0 ] || return ${RET}
+    fi
     print_log "${JAVA_HOME}/bin/jarsigner -verify -certs ${XPCLASS}"
     ${JAVA_HOME}/bin/jarsigner -verify -certs ${XPCLASS} >> ${LOG_ALL} 2>&1
     RET=$?
