@@ -41,6 +41,12 @@ if [ "${ARCH}" = "SunOS" ]; then
     ARCH=SunOS/$(uname -p)
 fi
 
+if [ "${ARCH}" = "Linux" -a -f /etc/system-release ]; then
+   VERSION=`sed -e 's; release ;;' -e 's; (.*)$;;' -e 's;Red Hat Enterprise Linux Server;RHEL;' /etc/system-release`
+   ARCH=Linux/${VERSION}
+   echo ${ARCH}
+fi
+
 MAIL=mail
 TB_SERVER=tinderbox-daemon@tinderbox.mozilla.org
 
