@@ -37,6 +37,9 @@ proc_args()
             "--nojss")
                 NO_JSS=1
                 ;;
+	    "--pidfile")
+		echo " $$" >>  ${VAL}
+		;;
             "--memtest")
                 NSS_TESTS="memtest"
                 ;;
@@ -68,7 +71,13 @@ proc_args()
 set_env()
 {
     TESTDIR=$(pwd)
-    DATADIR=$(pwd)$(echo "/data/${HOST}_${RUN_BITS}_${RUN_OPT}" | sed "s/ /_/g")
+    TESTSET=standard
+    MEM_LEAK=
+    if [ "${NSS_TESTS}" = "memleak" ]; then
+	TESTSET=memleak
+	MEM_LEAK="_MEMLEAK"
+    fi
+    DATADIR=$(pwd)$(echo "/data/${HOST}_${RUN_BITS}_${RUN_OPT}${MEM_LEAK}" | sed "s/ /_/g")
     LOG_ALL="${DATADIR}/all.log"
     LOG_TMP="${DATADIR}/tmp.log"
 
@@ -79,9 +88,6 @@ set_env()
         CVS_LIST="${CVS_TRUNK}"
         TB_TREE="NSS"
     fi
-
-    TESTSET=standard
-    [ "${NSS_TESTS}" = "memleak" ] && TESTSET=memleak
 }
 
 print_log()
@@ -500,6 +506,7 @@ main()
     return 0
 }
 
+echo "tinderbox args: $0 $@"
 . env.sh
 proc_args "$@"
 set_env
