@@ -460,14 +460,13 @@ pkix_pl_HttpCertStore_ProcessCrlResponse(
         PKIX_List **pCrlList,
         void *plContext)
 {
-        SECItem encodedResponse;
+        PRArenaPool *arena = NULL;
+        SECItem *encodedResponse = NULL;
         PRInt16 compareVal = 0;
         PKIX_List *crls = NULL;
-        SECItem *derCrlCopy = NULL;
-        CERTSignedCrl *nssCrl = NULL;
-        PKIX_PL_CRL *crl = NULL;
 
-        PKIX_ENTER(HTTPCERTSTORECONTEXT,
+        PKIX_ENTER
+                (HTTPCERTSTORECONTEXT,
                 "pkix_pl_HttpCertStore_ProcessCrlResponse");
         PKIX_NULLCHECK_ONE(pCrlList);
 
@@ -485,47 +484,42 @@ pkix_pl_HttpCertStore_ProcessCrlResponse(
         if (compareVal != 0) {
                 PKIX_ERROR(PKIX_CONTENTTYPENOTPKIXCRL);
         }
-        encodedResponse.type = siBuffer;
-        encodedResponse.data = (void*)responseData;
-        encodedResponse.len = responseDataLen;
 
-        derCrlCopy = SECITEM_DupItem(&encodedResponse);
-        if (!derCrlCopy) {
-            PKIX_ERROR(PKIX_ALLOCERROR);
+        /* Make a SECItem of the response data */
+        arena = PORT_NewArena(DER_DEFAULT_CHUNKSIZE);
+        if (arena == NULL) {
+                PKIX_ERROR(PKIX_OUTOFMEMORY);
         }
-        /* crl will be based on derCrlCopy, but will not own the der. */
-        nssCrl =
-            CERT_DecodeDERCrlWithFlags(NULL, derCrlCopy, SEC_CRL_TYPE,
-                                       CRL_DECODE_DONT_COPY_DER |
-                                       CRL_DECODE_SKIP_ENTRIES);
-        if (!nssCrl) {
-            PKIX_ERROR(PKIX_FAILEDTODECODECRL);
+
+        if (responseData == NULL) {
+                PKIX_ERROR(PKIX_NORESPONSEDATAINHTTPRESPONSE);
         }
-        /* pkix crls own the der. */
-        PKIX_CHECK(
-            pkix_pl_CRL_CreateWithSignedCRL(nssCrl, derCrlCopy, NULL,
-                                            &crl, plContext),
-            PKIX_CRLCREATEWITHSIGNEDCRLFAILED);
-        /* Left control over memory pointed by derCrlCopy and
-         * nssCrl to pkix crl. */
-        derCrlCopy = NULL;
-        nssCrl = NULL;
+
+        encodedResponse = SECITEM_AllocItem(arena, NULL, responseDataLen);
+        if (encodedResponse == NULL) {
+                PKIX_ERROR(PKIX_OUTOFMEMORY);
+        }
+
+        PORT_Memcpy(encodedResponse->data, responseData, responseDataLen);
+
         PKIX_CHECK(PKIX_List_Create(&crls, plContext),
-                   PKIX_LISTCREATEFAILED);
-        PKIX_CHECK(PKIX_List_AppendItem
-                   (crls, (PKIX_PL_Object *) crl, plContext),
-                   PKIX_LISTAPPENDITEMFAILED);
+                PKIX_LISTCREATEFAILED);
+
+        PKIX_CHECK(pkix_pl_CRL_CreateToList
+                (encodedResponse, crls, plContext),
+                PKIX_CRLCREATETOLISTFAILED);
+
         *pCrlList = crls;
-        crls = NULL;
+
 cleanup:
-        if (derCrlCopy) {
-            SECITEM_FreeItem(derCrlCopy, PR_TRUE);
+        if (PKIX_ERROR_RECEIVED) {
+                PKIX_DECREF(crls);
         }
-        if (nssCrl) {
-            SEC_DestroyCrl(nssCrl);
+
+        if (arena != NULL) {
+                PKIX_PL_NSSCALL(CERTSTORE, PORT_FreeArena, (arena, PR_FALSE));
         }
-        PKIX_DECREF(crl);
-        PKIX_DECREF(crls);
+
 
         PKIX_RETURN(HTTPCERTSTORECONTEXT);
 }
@@ -596,7 +590,6 @@ PKIX_Error *
 pkix_pl_HttpCertStore_GetCert(
         PKIX_CertStore *store,
         PKIX_CertSelector *selector,
-        PKIX_VerifyNode *verifyNode,
         void **pNBIOContext,
         PKIX_List **pCertList,
         void *plContext)
@@ -675,7 +668,6 @@ PKIX_Error *
 pkix_pl_HttpCertStore_GetCertContinue(
         PKIX_CertStore *store,
         PKIX_CertSelector *selector,
-        PKIX_VerifyNode *verifyNode,
         void **pNBIOContext,
         PKIX_List **pCertList,
         void *plContext)
@@ -1133,7 +1125,6 @@ portnum = 2001;
                 (&domainString, plContext, formatString, hostString, portnum),
                 PKIX_STRINGCREATEFAILED);
 
-#ifdef PKIX_SOCKETCACHE
         /* Is this domainName already in cache? */
         PKIX_CHECK(PKIX_PL_HashTable_Lookup
                 (httpSocketCache,
@@ -1141,7 +1132,7 @@ portnum = 2001;
                 (PKIX_PL_Object **)&socket,
                 plContext),
                 PKIX_HASHTABLELOOKUPFAILED);
-#endif
+
         if (socket == NULL) {
 
                 /* No, create a connection (and cache it) */
@@ -1155,14 +1146,13 @@ portnum = 2001;
                         plContext),
                         PKIX_SOCKETCREATEBYHOSTANDPORTFAILED);
 
-#ifdef PKIX_SOCKETCACHE
                 PKIX_CHECK(PKIX_PL_HashTable_Add
                         (httpSocketCache,
                         (PKIX_PL_Object *)domainString,
                         (PKIX_PL_Object *)socket,
                         plContext),
                         PKIX_HASHTABLEADDFAILED);
-#endif 
+
         }
 
         *pSocket = socket;

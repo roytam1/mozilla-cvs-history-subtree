@@ -956,7 +956,7 @@ nssCKFWMechanism_GenerateKeyPair
   NSSArena       *arena;
   CK_RV         error = CKR_OK;
 
-  if (!fwMechanism->mdMechanism->GenerateKeyPair) {
+  if (!fwMechanism->mdMechanism->GenerateKey) {
     return CKR_FUNCTION_FAILED;
   }
 

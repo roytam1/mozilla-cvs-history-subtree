@@ -45,7 +45,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int main(int argc, char **argv)
+int main()
 {
     if (PR_MakeDir("tdir0400", 0400) == PR_FAILURE) {
         fprintf(stderr, "PR_MakeDir failed\n");

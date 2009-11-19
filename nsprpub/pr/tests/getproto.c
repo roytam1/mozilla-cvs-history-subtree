@@ -52,7 +52,7 @@
 #include "prnetdb.h"
 #include "prerror.h"
 
-int main(int argc, char **argv)
+int main()
 {
     PRFileDesc *prstderr = PR_GetSpecialFD(PR_StandardError);
     PRBool failed = PR_FALSE;

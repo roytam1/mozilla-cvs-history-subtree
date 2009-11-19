@@ -56,7 +56,6 @@ DIRS = lib  \
  digest  \
  fipstest  \
  makepqg  \
- multinit \
  ocspclnt  \
  oidcalc  \
  p7content  \

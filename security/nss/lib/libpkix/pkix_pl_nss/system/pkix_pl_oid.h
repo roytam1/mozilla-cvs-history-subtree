@@ -51,7 +51,8 @@ extern "C" {
 #endif
 
 struct PKIX_PL_OIDStruct {
-    SECItem derOid;
+        PKIX_UInt32 *components;
+        PKIX_UInt32 length;
 };
 
 /* see source file for function documentation */

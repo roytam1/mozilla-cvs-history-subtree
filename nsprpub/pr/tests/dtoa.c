@@ -55,7 +55,7 @@
 
 static int failed_already = 0;
 
-int main(int argc, char **argv)
+int main( int argc, char* argv[] )
 {
     double num;
     double num1;
@@ -208,13 +208,6 @@ int main(int argc, char **argv)
 	fprintf(stderr,"Failed to convert numeric value %lf %s\n",num,cnvt);
         failed_already = 1;
     }
-
-    /*
-     * Bug 414772: should not exit with "Zero passed to d2b" in debug
-     * build.
-     */
-    num1 = PR_strtod("4e-356",NULL);
-
     if (failed_already) {
         printf("FAILED\n");
     } else {

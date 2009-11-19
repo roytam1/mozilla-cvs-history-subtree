@@ -129,7 +129,7 @@ static void PrintInfo(PRFileInfo64 *info, const char *filename)
         output, "    creation: %s,\n    modify: %s\n", ctime, mtime);
 }  /* PrintInfo */
 
-int main(int argc, char **argv)
+PRIntn main(PRIntn argc, char **argv)
 {
     PRStatus rv;
     char *buffer;
@@ -183,13 +183,8 @@ int main(int argc, char **argv)
     if (0 == filesize) filesize = DEFAULT_FILESIZE;
     if (NULL == filename)
     {
-#ifdef SYMBIAN
-#define FILE_NAME "c:\\data\\bigfile.dat"
-#else
-#define FILE_NAME "bigfile.dat"
-#endif
         if (DEFAULT_FILESIZE != filesize) return Usage();
-        else filename = FILE_NAME;
+        else filename = "bigfile.dat";
     }
 
     if (PR_FAILURE == DeleteIfFound(filename)) return 1;

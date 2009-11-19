@@ -189,7 +189,11 @@ NSPR_API(void) PR_LogPrint(const char *fmt, ...);
 */
 NSPR_API(void) PR_LogFlush(void);
 
-#if defined(DEBUG) || defined(FORCE_PR_LOG)
+/*
+** Windoze 16 can't support a large static string space for all of the
+** various debugging strings so logging is not enabled for it.
+*/
+#if (defined(DEBUG) || defined(FORCE_PR_LOG)) && !defined(WIN16)
 #define PR_LOGGING 1
 
 #define PR_LOG_TEST(_module,_level) \
@@ -209,13 +213,13 @@ NSPR_API(void) PR_LogFlush(void);
       }                     \
     PR_END_MACRO
 
-#else /* defined(DEBUG) || defined(FORCE_PR_LOG) */
+#else /* (defined(DEBUG) || defined(FORCE_PR_LOG)) && !defined(WIN16) */
 
 #undef PR_LOGGING
 #define PR_LOG_TEST(module,level) 0
 #define PR_LOG(module,level,args)
 
-#endif /* defined(DEBUG) || defined(FORCE_PR_LOG) */
+#endif /* (defined(DEBUG) || defined(FORCE_PR_LOG)) && !defined(WIN16) */
 
 #ifndef NO_NSPR_10_SUPPORT
 

@@ -54,7 +54,11 @@
 #include "plgetopt.h"
 
 #include "prinit.h"
+#ifdef XP_MAC
+#include "pralarm.h"
+#else
 #include "obsolete/pralarm.h"
+#endif
 
 #include "prio.h"
 #include "prprf.h"
@@ -227,7 +231,7 @@ static PRIntn PR_CALLBACK RealMain(int argc, char** argv)
 }
 
 
-int main(int argc, char **argv)
+PRIntn main(PRIntn argc, char *argv[])
 {
     PRIntn rv;
     
