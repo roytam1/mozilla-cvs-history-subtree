@@ -1237,12 +1237,6 @@
 		E4C7D98C0A32108500B455AD /* libspellchecker.dylib in Copy Component Libraries */ = {isa = PBXBuildFile; fileRef = E4C7D98B0A32108500B455AD /* libspellchecker.dylib */; };
 		E4C7D99F0A32109D00B455AD /* spellchecker.xpt in Copy Component XPTs */ = {isa = PBXBuildFile; fileRef = E4C7D99E0A32109D00B455AD /* spellchecker.xpt */; };
 		E4C7D9A00A32109D00B455AD /* spellchecker.xpt in Copy Component XPTs */ = {isa = PBXBuildFile; fileRef = E4C7D99E0A32109D00B455AD /* spellchecker.xpt */; };
-		F724342B0FE6DB08008B783E /* AutoCompleteCell.m in Sources */ = {isa = PBXBuildFile; fileRef = F72434200FE6DA90008B783E /* AutoCompleteCell.m */; };
-		F724342C0FE6DB09008B783E /* AutoCompleteCell.m in Sources */ = {isa = PBXBuildFile; fileRef = F72434200FE6DA90008B783E /* AutoCompleteCell.m */; };
-		F724342D0FE6DB12008B783E /* AutoCompleteResult.m in Sources */ = {isa = PBXBuildFile; fileRef = F72434220FE6DA90008B783E /* AutoCompleteResult.m */; };
-		F724342E0FE6DB12008B783E /* AutoCompleteResult.m in Sources */ = {isa = PBXBuildFile; fileRef = F72434220FE6DA90008B783E /* AutoCompleteResult.m */; };
-		F724342F0FE6DB19008B783E /* MAAttachedWindow.m in Sources */ = {isa = PBXBuildFile; fileRef = F72434290FE6DAAA008B783E /* MAAttachedWindow.m */; };
-		F72434300FE6DB19008B783E /* MAAttachedWindow.m in Sources */ = {isa = PBXBuildFile; fileRef = F72434290FE6DAAA008B783E /* MAAttachedWindow.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -2959,7 +2953,7 @@
 		DEE9EBA30AF5C379002BC511 /* SessionManager.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = SessionManager.h; path = src/application/SessionManager.h; sourceTree = "<group>"; };
 		DEE9EBA60AF5C390002BC511 /* SessionManager.mm */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.objcpp; name = SessionManager.mm; path = src/application/SessionManager.mm; sourceTree = SOURCE_ROOT; };
 		DEFAA2850F24192200BD51C1 /* Growl.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = Growl.xcodeproj; path = growl/Growl.xcodeproj; sourceTree = SOURCE_ROOT; };
-		DEFAA3430F241C1600BD51C1 /* Growl.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; name = Growl.framework; path = growl/build/Release/Growl.framework; sourceTree = "<group>"; };
+		DEFAA3430F241C1600BD51C1 /* Growl.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; name = Growl.framework; path = "growl/build/Release/Growl.framework"; sourceTree = "<group>"; };
 		DEFD234F0D021C3A006899B9 /* dom_loadsave.xpt */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = file; name = dom_loadsave.xpt; path = ../dist/bin/components/dom_loadsave.xpt; sourceTree = SOURCE_ROOT; };
 		DEFD23520D021C48006899B9 /* dom_storage.xpt */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = file; name = dom_storage.xpt; path = ../dist/bin/components/dom_storage.xpt; sourceTree = SOURCE_ROOT; };
 		DEFD23550D021C63006899B9 /* content_xmldoc.xpt */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = file; name = content_xmldoc.xpt; path = ../dist/bin/components/content_xmldoc.xpt; sourceTree = SOURCE_ROOT; };
@@ -3310,12 +3304,6 @@
 		F6BD64FC01B3184301A962F7 /* all.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; name = all.js; path = ../dist/Embed/greprefs/all.js; sourceTree = SOURCE_ROOT; };
 		F6BD650001B3184301A962F7 /* embed.jar */ = {isa = PBXFileReference; lastKnownFileType = archive.jar; name = embed.jar; path = ../dist/Embed/chrome/embed.jar; sourceTree = SOURCE_ROOT; };
 		F6BD650001B3184301A96307 /* flashblock.jar */ = {isa = PBXFileReference; lastKnownFileType = archive.jar; name = flashblock.jar; path = ../dist/Embed/chrome/flashblock.jar; sourceTree = SOURCE_ROOT; };
-		F72434200FE6DA90008B783E /* AutoCompleteCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = AutoCompleteCell.m; path = src/extensions/AutoCompleteCell.m; sourceTree = SOURCE_ROOT; };
-		F72434210FE6DA90008B783E /* AutoCompleteResult.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AutoCompleteResult.h; path = src/extensions/AutoCompleteResult.h; sourceTree = SOURCE_ROOT; };
-		F72434220FE6DA90008B783E /* AutoCompleteResult.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = AutoCompleteResult.m; path = src/extensions/AutoCompleteResult.m; sourceTree = SOURCE_ROOT; };
-		F72434230FE6DA90008B783E /* AutoCompleteCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AutoCompleteCell.h; path = src/extensions/AutoCompleteCell.h; sourceTree = SOURCE_ROOT; };
-		F72434280FE6DAAA008B783E /* MAAttachedWindow.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MAAttachedWindow.h; path = src/extensions/MAAttachedWindow.h; sourceTree = SOURCE_ROOT; };
-		F72434290FE6DAAA008B783E /* MAAttachedWindow.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MAAttachedWindow.m; path = src/extensions/MAAttachedWindow.m; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -3872,10 +3860,6 @@
 			children = (
 				DE74F74A0AB25E9900FD1D5B /* AppListMenuFactory.h */,
 				DE74F7470AB25E7D00FD1D5B /* AppListMenuFactory.mm */,
-				F72434230FE6DA90008B783E /* AutoCompleteCell.h */,
-				F72434200FE6DA90008B783E /* AutoCompleteCell.m */,
-				F72434210FE6DA90008B783E /* AutoCompleteResult.h */,
-				F72434220FE6DA90008B783E /* AutoCompleteResult.m */,
 				0F7EAA9909326B860082C3EA /* AutoSizingTextField.h */,
 				0F7EAA9609326B770082C3EA /* AutoSizingTextField.m */,
 				00BBBC830D66C13400C2D916 /* CHGradient.h */,
@@ -3896,8 +3880,6 @@
 				3F2CF8CC042A88B7005FD42F /* ImageAndTextCell.m */,
 				7B5072FC0D11E83B00458384 /* KeyEquivView.h */,
 				7B5072FD0D11E83B00458384 /* KeyEquivView.mm */,
-				F72434280FE6DAAA008B783E /* MAAttachedWindow.h */,
-				F72434290FE6DAAA008B783E /* MAAttachedWindow.m */,
 				0FBC0EE20798FA2700E8E0E2 /* PopupMenuButton.h */,
 				0FBC0EDF0798FA1900E8E0E2 /* PopupMenuButton.m */,
 				DEBC80140A14E547006AECD3 /* RolloverImageButton.h */,
@@ -6367,12 +6349,9 @@
 				B3886D880F79D53700D8E015 /* FlashblockWhitelistManager.mm in Sources */,
 				3DACDAAA0FBF1D1600709AC3 /* SafeBrowsingTestDataUpdater.mm in Sources */,
 				3D9A2AE310019F6E00CC9154 /* SafeBrowsingBar.mm in Sources */,
-				F724342B0FE6DB08008B783E /* AutoCompleteCell.m in Sources */,
-				F724342E0FE6DB12008B783E /* AutoCompleteResult.m in Sources */,
-				F72434300FE6DB19008B783E /* MAAttachedWindow.m in Sources */,
-				00C6890710560B110082D80F /* BreakpadWrapper.m in Sources */,
-				00F79F591075B622006688AC /* OperaBookmarkConverter.m in Sources */,
-				00F7A08C1077F255006688AC /* SafariBookmarkConverter.m in Sources */,
+ 				00C6890710560B110082D80F /* BreakpadWrapper.m in Sources */,
+ 				00F79F591075B622006688AC /* OperaBookmarkConverter.m in Sources */,
+ 				00F7A08C1077F255006688AC /* SafariBookmarkConverter.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -6565,12 +6544,9 @@
 				B3886D890F79D53700D8E015 /* FlashblockWhitelistManager.mm in Sources */,
 				3DACDAAB0FBF1D1600709AC3 /* SafeBrowsingTestDataUpdater.mm in Sources */,
 				3D9A2AE410019F6E00CC9154 /* SafeBrowsingBar.mm in Sources */,
-				F724342C0FE6DB09008B783E /* AutoCompleteCell.m in Sources */,
-				F724342D0FE6DB12008B783E /* AutoCompleteResult.m in Sources */,
-				F724342F0FE6DB19008B783E /* MAAttachedWindow.m in Sources */,
-				00C6890810560B110082D80F /* BreakpadWrapper.m in Sources */,
-				00F79F5A1075B622006688AC /* OperaBookmarkConverter.m in Sources */,
-				00F7A08D1077F255006688AC /* SafariBookmarkConverter.m in Sources */,
+ 				00C6890810560B110082D80F /* BreakpadWrapper.m in Sources */,
+ 				00F79F5A1075B622006688AC /* OperaBookmarkConverter.m in Sources */,
+ 				00F7A08D1077F255006688AC /* SafariBookmarkConverter.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
