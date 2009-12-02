@@ -163,11 +163,11 @@ $LocaleProduct = "browser";
 $LocalizationVersionFile = 'browser/config/version.txt';
 %WGetFiles = (
 # CONFIG:             'http://%stagingServer%/pub/mozilla.org/firefox/nightly/%version%-candidates/build%build%/unsigned/firefox-%appVersion%.en-US.win32.installer.exe' =>
-'http://stage-old.mozilla.org/pub/mozilla.org/firefox/nightly/3.0.16-candidates/build2/unsigned/firefox-3.0.16.en-US.win32.installer.exe' =>
+'http://stage-old.mozilla.org/pub/mozilla.org/firefox/nightly/3.0.16-candidates/build3/unsigned/firefox-3.0.16.en-US.win32.installer.exe' =>
 # CONFIG:             "%l10n_buildDir%/%l10n_buildPlatform%/firefox-installer.exe",
 "/e/fx19l10nrel/WINNT_5.2_Depend/firefox-installer.exe",
 # CONFIG:             'http://%stagingServer%/pub/mozilla.org/firefox/nightly/%version%-candidates/build%build%/unsigned/firefox-%appVersion%.en-US.win32.zip' =>
-'http://stage-old.mozilla.org/pub/mozilla.org/firefox/nightly/3.0.16-candidates/build2/unsigned/firefox-3.0.16.en-US.win32.zip' =>
+'http://stage-old.mozilla.org/pub/mozilla.org/firefox/nightly/3.0.16-candidates/build3/unsigned/firefox-3.0.16.en-US.win32.zip' =>
 # CONFIG:             "%l10n_buildDir%/%l10n_buildPlatform%/firefox.zip"
 "/e/fx19l10nrel/WINNT_5.2_Depend/firefox.zip"
 	      );

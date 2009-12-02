@@ -169,7 +169,7 @@ $LocaleProduct = "browser";
 $LocalizationVersionFile = 'browser/config/version.txt';
 %WGetFiles = (
 # CONFIG:             "http://%stagingServer%/pub/mozilla.org/firefox/nightly/%version%-candidates/build%build%/firefox-%appVersion%.en-US.linux-i686.tar.bz2" => 
-"http://stage-old.mozilla.org/pub/mozilla.org/firefox/nightly/3.0.16-candidates/build2/firefox-3.0.16.en-US.linux-i686.tar.bz2" => 
+"http://stage-old.mozilla.org/pub/mozilla.org/firefox/nightly/3.0.16-candidates/build3/firefox-3.0.16.en-US.linux-i686.tar.bz2" => 
 # CONFIG:             "/%l10n_buildDir%/%l10n_buildPlatform%/firefox.tar.bz2"
 "//builds/tinderbox/Fx-Mozilla1.9-l10n-Release/Linux_2.6.18-53.1.13.el5_Depend/firefox.tar.bz2"
 	      );
