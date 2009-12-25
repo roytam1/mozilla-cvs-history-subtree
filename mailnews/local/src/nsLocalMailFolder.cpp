@@ -2567,7 +2567,7 @@ NS_IMETHODIMP nsMsgLocalMailFolder::EndCopy(PRBool copySucceeded)
     nsCOMPtr <nsIFileSpec> pathSpec;
     rv = GetPath(getter_AddRefs(pathSpec));
     
-    if (NS_SUCCEEDED(rv) && pathSpec)
+    if (NS_SUCCEEDED(rv) && pathSpec && mCopyState->m_curDstKey != 0xffffffff)
       pathSpec->Truncate(mCopyState->m_curDstKey);
     
     if (!mCopyState->m_isMove)
