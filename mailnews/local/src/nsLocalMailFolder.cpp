@@ -1712,6 +1712,11 @@ nsMsgLocalMailFolder::CopyMessages(nsIMsgFolder* srcFolder, nsISupportsArray*
     return OnCopyCompleted(srcSupport, PR_FALSE);
   }
   
+  // This early checking is kept here because 
+  // we may already have too large file (>4GB)
+  // due to the previous lack of proper checking before, and we want to
+  // detect this early. The size checking is done again later.
+
   PRBool mailboxTooLarge;
 
   (void) WarnIfLocalFileTooBig(msgWindow, &mailboxTooLarge);
@@ -1729,16 +1734,29 @@ nsMsgLocalMailFolder::CopyMessages(nsIMsgFolder* srcFolder, nsISupportsArray*
   rv = srcFolder->GetURI(getter_Copies(uri));
   nsCAutoString protocolType(uri);
   protocolType.SetLength(protocolType.FindChar(':'));
-  
-  if (WeAreOffline() && (protocolType.LowerCaseEqualsLiteral("imap") || protocolType.LowerCaseEqualsLiteral("news")))
+
+  PRBool needOfflineBody = (WeAreOffline() &&
+    (protocolType.LowerCaseEqualsLiteral("imap") ||
+     protocolType.LowerCaseEqualsLiteral("news")));
+
+  PRInt64 totalMsgSize = 0;
+  PRUint32 numMessages = 0;
+  messages->Count(&numMessages);
+  for (PRUint32 i = 0; i < numMessages; i++)
   {
-    PRUint32 numMessages = 0;
-    messages->Count(&numMessages);
-    for (PRUint32 i = 0; i < numMessages; i++)
+    nsCOMPtr<nsIMsgDBHdr> message;
+    messages->QueryElementAt(i, NS_GET_IID(nsIMsgDBHdr),(void **)getter_AddRefs(message));
+    if(NS_SUCCEEDED(rv) && message)
     {
-      nsCOMPtr<nsIMsgDBHdr> message;
-      messages->QueryElementAt(i, NS_GET_IID(nsIMsgDBHdr),(void **)getter_AddRefs(message));
-      if(NS_SUCCEEDED(rv) && message)
+      PRUint32 msgSize;
+      message->GetMessageSize(&msgSize);
+
+      /* 200 is a per-message overhead to account for any extra data added
+         to the message.
+      */
+      totalMsgSize += msgSize + 200;
+
+      if(needOfflineBody)	
       {
         nsMsgKey key;
         PRBool hasMsgOffline = PR_FALSE;
@@ -1754,7 +1772,25 @@ nsMsgLocalMailFolder::CopyMessages(nsIMsgFolder* srcFolder, nsISupportsArray*
       }
     }
   }
-  
+
+  // Proper checking using the estimated size.
+  PRInt64 sizeOnDisk;
+
+  nsCOMPtr <nsILocalFile> filePath;
+  rv = GetFilePath(getter_AddRefs(filePath));
+  if (NS_SUCCEEDED(rv))
+    rv = filePath->GetFileSize(&sizeOnDisk);
+
+  // check if the folder size + the size of the messages will be > 4GB or so.
+  // If so, warn, and return an error.
+  if (NS_FAILED(rv) || sizeOnDisk + totalMsgSize > 0xFFC00000)
+  {
+    ThrowAlertMsg("mailboxTooLarge", msgWindow);
+    if (isMove)
+      srcFolder->NotifyFolderEvent(mDeleteOrMoveMsgFailedAtom);
+    return OnCopyCompleted(srcSupport, PR_FALSE);
+  }
+
   // don't update the counts in the dest folder until it is all over
   EnableNotifications(allMessageCountNotifications, PR_FALSE, PR_FALSE /*dbBatching*/);  //dest folder doesn't need db batching
   
