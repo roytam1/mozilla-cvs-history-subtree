@@ -118,5 +118,4 @@ f none usr/include/mps/plbase64.h 0644 root bin
 f none usr/include/mps/plerror.h 0644 root bin
 f none usr/include/mps/plgetopt.h 0644 root bin
 f none usr/include/mps/plhash.h 0644 root bin
-f none usr/include/mps/plresolv.h 0644 root bin
 f none usr/include/mps/plstr.h 0644 root bin
