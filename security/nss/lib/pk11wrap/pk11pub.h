@@ -109,7 +109,6 @@ PK11SlotList *PK11_FindSlotsByNames(const char *dllName,
         const char* slotName, const char* tokenName, PRBool presentOnly);
 PRBool PK11_IsReadOnly(PK11SlotInfo *slot);
 PRBool PK11_IsInternal(PK11SlotInfo *slot);
-PRBool PK11_IsInternalKeySlot(PK11SlotInfo *slot);
 char * PK11_GetTokenName(PK11SlotInfo *slot);
 char * PK11_GetSlotName(PK11SlotInfo *slot);
 PRBool PK11_NeedLogin(PK11SlotInfo *slot);
@@ -237,15 +236,6 @@ int PK11_GetBestKeyLength(PK11SlotInfo *slot, CK_MECHANISM_TYPE type);
  */
 PK11SlotInfo *SECMOD_OpenUserDB(const char *moduleSpec);
 SECStatus SECMOD_CloseUserDB(PK11SlotInfo *slot);
-
-/*
- * This is exactly the same as OpenUserDB except it can be called on any
- * module that understands softoken style new slot entries. The resulting
- * slot can be closed using SECMOD_CloseUserDB above. Value of moduleSpec
- * is token specific.
- */
-PK11SlotInfo *SECMOD_OpenNewSlot(SECMODModule *mod, const char *moduleSpec);
-
 
 /*
  * merge the permanent objects from on token to another 
@@ -574,10 +564,6 @@ SECKEYPrivateKey *PK11_UnwrapPrivKey(PK11SlotInfo *slot,
 SECStatus PK11_WrapPrivKey(PK11SlotInfo *slot, PK11SymKey *wrappingKey,
 			   SECKEYPrivateKey *privKey, CK_MECHANISM_TYPE wrapType,
 			   SECItem *param, SECItem *wrappedKey, void *wincx);
-/*
- * The caller of PK11_DEREncodePublicKey should free the returned SECItem with
- * a SECITEM_FreeItem(..., PR_TRUE) call.
- */
 SECItem* PK11_DEREncodePublicKey(SECKEYPublicKey *pubk);
 PK11SymKey* PK11_CopySymKeyForSigning(PK11SymKey *originalKey,
 	CK_MECHANISM_TYPE mech);
@@ -795,11 +781,6 @@ PK11GenericObject *PK11_CreateGenericObject(PK11SlotInfo *slot,
  *
  *  All other types are considered invalid. If type does not match the object
  *  passed, unpredictable results will occur.
- *
- * PK11_ReadRawAttribute allocates the buffer for returning the attribute
- * value.  The caller of PK11_ReadRawAttribute should free the data buffer
- * pointed to by item using a SECITEM_FreeItem(item, PR_FALSE) or
- * PORT_Free(item->data) call.
  */
 SECStatus PK11_ReadRawAttribute(PK11ObjectType type, void *object, 
 				CK_ATTRIBUTE_TYPE attr, SECItem *item);

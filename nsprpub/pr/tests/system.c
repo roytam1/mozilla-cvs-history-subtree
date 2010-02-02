@@ -57,7 +57,7 @@ static PRSysInfo Incr(PRSysInfo *cmd)
     return (PRSysInfo)tmp;
 }  /* Incr */
 
-int main(int argc, char **argv)
+PRIntn main(PRIntn argc, char **argv)
 {
     PRStatus rv;
     PRSysInfo cmd;

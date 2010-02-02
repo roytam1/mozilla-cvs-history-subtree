@@ -77,15 +77,11 @@ endif
 ifdef FREEBL_NO_DEPEND
 	DEFINES += -DFREEBL_NO_DEPEND
 endif
-# NSS_X86 means the target is a 32-bits x86 CPU architecture
-# NSS_X64 means the target is a 64-bits x64 CPU architecture
-# NSS_X86_OR_X64 means the target is either x86 or x64
-ifeq (,$(filter-out x386 x86 x86_64,$(CPU_ARCH)))
-        DEFINES += -DNSS_X86_OR_X64
-ifdef USE_64
-        DEFINES += -DNSS_X64
-else
-        DEFINES += -DNSS_X86
+# some code wants _X86_ defined for intel CPUs.
+# coreconf does this for windows, but not for Linux, FreeBSD, etc.
+ifeq (,$(filter-out x86 x86_64,$(CPU_ARCH)))
+ifneq (,$(filter-out WIN%,$(OS_TARGET)))
+	DEFINES += -D_X86_
 endif
 endif
 
@@ -94,15 +90,7 @@ ifeq ($(OS_TARGET),OSF1)
     MPI_SRCS += mpvalpha.c
 endif
 
-ifeq (OS2,$(OS_TARGET))
-    ASFILES  = mpi_x86_os2.s
-    DEFINES += -DMP_ASSEMBLY_MULTIPLY -DMP_ASSEMBLY_SQUARE 
-    DEFINES += -DMP_ASSEMBLY_DIV_2DX1D
-    DEFINES += -DMP_USE_UINT_DIGIT -DMP_NO_MP_WORD
-    DEFINES += -DMP_CHAR_STORE_SLOW -DMP_IS_LITTLE_ENDIAN
-endif
-
-ifeq (,$(filter-out WINNT WIN95,$(OS_TARGET)))  #omits WINCE
+ifeq (,$(filter-out WINNT WIN95,$(OS_TARGET)))  #omits WIN16 and WINCE
 ifndef USE_64
 # 32-bit Windows
 ifdef NS_USE_GCC
@@ -157,14 +145,14 @@ endif
 ifeq ($(OS_TARGET),Linux)
 ifeq ($(CPU_ARCH),x86_64)
     ASFILES  = arcfour-amd64-gas.s mpi_amd64_gas.s
-    ASFLAGS += -march=opteron -m64 -fPIC -Wa,--noexecstack
+    ASFLAGS += -march=opteron -m64 -fPIC
     DEFINES += -DNSS_BEVAND_ARCFOUR -DMPI_AMD64 -DMP_ASSEMBLY_MULTIPLY
     DEFINES += -DNSS_USE_COMBA
     DEFINES += -DMP_CHAR_STORE_SLOW -DMP_IS_LITTLE_ENDIAN
 #   DEFINES += -DMPI_AMD64_ADD
     # comment the next two lines to turn off intel HW accelleration
-#    DEFINES += -DUSE_HW_AES
-#    ASFILES += intel-aes.s
+    DEFINES += -DUSE_HW_AES
+    ASFILES += intel-aes.s
     MPI_SRCS += mpi_amd64.c mp_comba.c
 endif
 ifeq ($(CPU_ARCH),x86)
@@ -230,6 +218,9 @@ endif
 
 ifeq ($(OS_TARGET),SunOS)
 
+# The -R '$ORIGIN' linker option instructs this library to search for its
+# dependencies in the same directory where it resides.
+MKSHLIB += -R '$$ORIGIN'
 ifdef NS_USE_GCC
     ifdef GCC_USE_GNU_LD
 	MKSHLIB += -Wl,-Bsymbolic,-z,now,-z,text
@@ -410,11 +401,12 @@ else
 	DEFINES += -DNSS_BEVAND_ARCFOUR -DMPI_AMD64 -DMP_ASSEMBLY_MULTIPLY
 	DEFINES += -DNSS_USE_COMBA -DMP_CHAR_STORE_SLOW -DMP_IS_LITTLE_ENDIAN
 	# comment the next two lines to turn off intel HW accelleration
-#	DEFINES += -DUSE_HW_AES
-#	ASFILES += intel-aes.s
+	DEFINES += -DUSE_HW_AES
+	ASFILES += intel-aes.s
 	MPI_SRCS += mpi_amd64.c
     else
 	# Solaris x86
+	DEFINES += -D_X86_
 	DEFINES += -DMP_USE_UINT_DIGIT
 	DEFINES += -DMP_ASSEMBLY_MULTIPLY -DMP_ASSEMBLY_SQUARE 
 	DEFINES += -DMP_ASSEMBLY_DIV_2DX1D

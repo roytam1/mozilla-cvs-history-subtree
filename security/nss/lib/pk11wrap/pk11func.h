@@ -37,9 +37,8 @@
 #define _PK11FUNC_H_
 
 /*
- * The original pk11func.h had a mix of public and private functions.
- * Continue to provide those for backward compatibility.  New code should
- * include pk11pub.h instead of pk11func.h.
+ * the original pk11func.h had a mix of public and private functions.
+ * continue to provide those for backward compatibility.
  */
 #include "pk11pub.h"
 #include "pk11priv.h"

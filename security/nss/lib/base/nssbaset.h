@@ -56,7 +56,8 @@ static const char NSSBASET_CVS_ID[] = "@(#) $RCSfile$ $Revision$ $Date$";
  * NSS has its own versions of these NSPR macros, in a form which
  * does not confuse ctags and other related utilities.  NSPR 
  * defines these macros to take the type as an argument, because
- * of certain OS requirements on platforms not supported by NSS.
+ * of a requirement to support win16 dlls.  We do not have that
+ * requirement, so we can drop that restriction.
  */
 
 #define DUMMY	/* dummy */

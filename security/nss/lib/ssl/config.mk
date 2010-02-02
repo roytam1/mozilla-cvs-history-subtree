@@ -43,13 +43,6 @@ ifdef NSS_SURVIVE_DOUBLE_BYPASS_FAILURE
 DEFINES += -DNSS_SURVIVE_DOUBLE_BYPASS_FAILURE
 endif
 
-# $(PROGRAM) has explicit dependencies on $(EXTRA_LIBS)
-CRYPTOLIB=$(SOFTOKEN_LIB_DIR)/$(LIB_PREFIX)freebl.$(LIB_SUFFIX)
-
-EXTRA_LIBS += \
-	$(CRYPTOLIB) \
-	$(NULL)
-
 ifeq (,$(filter-out WIN%,$(OS_TARGET)))
 
 # don't want the 32 in the shared library name
@@ -63,7 +56,6 @@ ifdef NS_USE_GCC
 EXTRA_SHARED_LIBS += \
 	-L$(DIST)/lib \
 	-lnss3 \
-	-L$(NSSUTIL_LIB_DIR) \
 	-lnssutil3 \
 	-L$(NSPR_LIB_DIR) \
 	-lplc4 \
@@ -80,14 +72,38 @@ EXTRA_SHARED_LIBS += \
 	$(NULL)
 endif # NS_USE_GCC
 
+# $(PROGRAM) has explicit dependencies on $(EXTRA_LIBS)
+CRYPTOLIB=$(DIST)/lib/$(LIB_PREFIX)freebl.$(LIB_SUFFIX)
+CRYPTODIR=../freebl
+ifdef MOZILLA_SECURITY_BUILD
+	CRYPTOLIB=$(DIST)/lib/$(LIB_PREFIX)crypto.$(LIB_SUFFIX)
+	CRYPTODIR=../crypto
+endif
+
+EXTRA_LIBS += \
+	$(CRYPTOLIB) \
+	$(NULL)
+
 else
+
+# $(PROGRAM) has explicit dependencies on $(EXTRA_LIBS)
+CRYPTOLIB=$(DIST)/lib/$(LIB_PREFIX)freebl.$(LIB_SUFFIX)
+CRYPTODIR=../freebl
+ifdef MOZILLA_SECURITY_BUILD
+	CRYPTOLIB=$(DIST)/lib/$(LIB_PREFIX)crypto.$(LIB_SUFFIX)
+	CRYPTODIR=../crypto
+endif
+
+EXTRA_LIBS += \
+	$(CRYPTOLIB) \
+	$(NULL)
+
 
 # $(PROGRAM) has NO explicit dependencies on $(EXTRA_SHARED_LIBS)
 # $(EXTRA_SHARED_LIBS) come before $(OS_LIBS), except on AIX.
 EXTRA_SHARED_LIBS += \
 	-L$(DIST)/lib \
 	-lnss3 \
-	-L$(NSSUTIL_LIB_DIR) \
 	-lnssutil3 \
 	-L$(NSPR_LIB_DIR) \
 	-lplc4 \
@@ -97,6 +113,21 @@ EXTRA_SHARED_LIBS += \
 
 ifeq ($(OS_ARCH), BeOS)
 EXTRA_SHARED_LIBS += -lbe
+endif
+
+ifeq ($(OS_TARGET),SunOS)
+# The -R '$ORIGIN' linker option instructs this library to search for its
+# dependencies in the same directory where it resides.
+MKSHLIB += -R '$$ORIGIN'
+endif
+
+ifeq ($(OS_ARCH), HP-UX) 
+ifneq ($(OS_TEST), ia64)
+# pa-risc
+ifeq ($(USE_64), 1)
+MKSHLIB += +b '$$ORIGIN'
+endif
+endif
 endif
 
 endif

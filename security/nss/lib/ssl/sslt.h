@@ -125,11 +125,6 @@ typedef enum {
     ssl_hmac_sha      = 4 	/* TLS HMAC version of mac_sha */
 } SSLMACAlgorithm;
 
-typedef enum {
-    ssl_compression_null = 0,
-    ssl_compression_deflate = 1  /* RFC 3749 */
-} SSLCompressionMethod;
-
 typedef struct SSLChannelInfoStr {
     PRUint32             length;
     PRUint16             protocolVersion;
@@ -147,12 +142,6 @@ typedef struct SSLChannelInfoStr {
     PRUint32             expirationTime;	/* seconds since Jan 1, 1970 */
     PRUint32             sessionIDLength;	/* up to 32 */
     PRUint8              sessionID    [32];
-
-    /* The following fields are added in NSS 3.12.5. */
-
-    /* compression method info */
-    const char *         compressionMethodName;
-    SSLCompressionMethod compressionMethod;
 } SSLChannelInfo;
 
 typedef struct SSLCipherSuiteInfoStr {
@@ -188,24 +177,5 @@ typedef struct SSLCipherSuiteInfoStr {
     PRUintn              reservedBits :29;
 
 } SSLCipherSuiteInfo;
-
-typedef enum {
-    SSL_sni_host_name                    = 0,
-    SSL_sni_type_total
-} SSLSniNameType;
-
-/* Supported extensions. */
-/* Update SSL_MAX_EXTENSIONS whenever a new extension type is added. */
-typedef enum {
-    ssl_server_name_xtn              = 0,
-#ifdef NSS_ENABLE_ECC
-    ssl_elliptic_curves_xtn          = 10,
-    ssl_ec_point_formats_xtn         = 11,
-#endif
-    ssl_session_ticket_xtn           = 35,
-    ssl_renegotiation_info_xtn       = 0xff01	/* experimental number */
-} ExtensionType;
-
-#define SSL_MAX_EXTENSIONS             5
 
 #endif /* __sslt_h_ */

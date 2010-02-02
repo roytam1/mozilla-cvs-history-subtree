@@ -44,7 +44,7 @@
 #define PR_LINKER_ARCH		"riscos"
 #define _PR_SI_SYSNAME		"RISCOS"
 #define _PR_SI_ARCHITECTURE	"arm"
-#define PR_DLL_SUFFIX		".so"
+#define PR_DLL_SUFFIX		".a"
 
 #define _PR_POLL_AVAILABLE
 #define _PR_USE_POLL
@@ -60,8 +60,8 @@
 
 
 #undef  HAVE_STACK_GROWING_UP
-#define HAVE_DLL
-#define USE_DLFCN
+#undef  HAVE_DLL
+#undef  USE_DLFCN
 #define NEED_STRFTIME_LOCK
 #define NEED_TIME_R
 #define PT_NO_SIGTIMEDWAIT

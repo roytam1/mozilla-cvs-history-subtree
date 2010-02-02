@@ -98,8 +98,7 @@ int main(int argc, char** argv)
     PR_FreeLibraryName(libName);
     if (lib == NULL) {
         PRInt32 textLength = PR_GetErrorTextLength();
-        char *text = (char*)PR_MALLOC(textLength + 1);
-        text[0] = '\0';
+        char *text = (char*)PR_MALLOC(textLength);
         (void)PR_GetErrorText(text);
         fprintf(
             stderr, "PR_LoadLibrary failed (%d, %d, %s)\n",

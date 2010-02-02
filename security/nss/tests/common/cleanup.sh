@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 #
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
@@ -17,11 +17,10 @@
 #
 # The Initial Developer of the Original Code is
 # Netscape Communications Corporation.
-# Portions created by the Initial Developer are Copyright (C) 1994-2009
+# Portions created by the Initial Developer are Copyright (C) 1994-2000
 # the Initial Developer. All Rights Reserved.
 #
 # Contributor(s):
-#   Slavomir Katuscak <slavomir.katuscak@sun.com>, Sun Microsystems
 #
 # Alternatively, the contents of this file may be used under the terms of
 # either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -55,8 +54,6 @@ if [ -z "${CLEANUP}" -o "${CLEANUP}" = "${SCRIPTNAME}" ]; then
     echo "NSS_AIA_PATH=${NSS_AIA_PATH}"
     echo "NSS_AIA_HTTP=${NSS_AIA_HTTP}"
     echo "NSS_AIA_OCSP=${NSS_AIA_OCSP}"
-    echo "IOPR_HOSTADDR_LIST=${IOPR_HOSTADDR_LIST}"
-    echo "PKITS_DATA=${PKITS_DATA}"
     echo
     echo "Tests summary:"
     echo "--------------"

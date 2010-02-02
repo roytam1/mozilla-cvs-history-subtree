@@ -72,6 +72,9 @@
 #define COUNT_DAYS(Y)  ( ((Y)-1)*365 + COUNT_LEAPS(Y) )
 #define DAYS_BETWEEN_YEARS(A, B)  (COUNT_DAYS(B) - COUNT_DAYS(A))
 
+
+
+
 /*
  * Static variables used by functions in this file
  */
@@ -100,7 +103,7 @@ static const PRInt8 nDays[2][12] = {
  */
 
 static void        ComputeGMT(PRTime time, PRExplodedTime *gmt);
-static int         IsLeapYear(PRInt16 year);
+static int        IsLeapYear(PRInt16 year);
 static void        ApplySecOffset(PRExplodedTime *time, PRInt32 secOffset);
 
 /*
@@ -110,6 +113,7 @@ static void        ApplySecOffset(PRExplodedTime *time, PRInt32 secOffset);
  *
  *     Caveats:
  *     - we ignore leap seconds
+ *     - our leap-year calculation is only correct for years 1901-2099
  *
  *------------------------------------------------------------------------
  */
@@ -163,53 +167,55 @@ ComputeGMT(PRTime time, PRExplodedTime *gmt)
     }
 
     /* Compute the time of day. */
-
+    
     gmt->tm_hour = rem / 3600;
     rem %= 3600;
     gmt->tm_min = rem / 60;
     gmt->tm_sec = rem % 60;
 
+    /* Compute the four-year span containing the specified time */
+
+    tmp = numDays / (4 * 365 + 1);
+    rem = numDays % (4 * 365 + 1);
+
+    if (rem < 0) {
+        tmp--;
+        rem += (4 * 365 + 1);
+    }
+
     /*
-     * Compute the year by finding the 400 year period, then working
-     * down from there.
-     *
-     * Since numDays is originally the number of days since January 1, 1970,
-     * we must change it to be the number of days from January 1, 0001.
+     * Compute the year after 1900 by taking the four-year span and
+     * adjusting for the remainder.  This works because 2000 is a 
+     * leap year, and 1900 and 2100 are out of the range.
+     */
+    
+    tmp = (tmp * 4) + 1970;
+    isLeap = 0;
+
+    /*
+     * 1970 has 365 days
+     * 1971 has 365 days
+     * 1972 has 366 days (leap year)
+     * 1973 has 365 days
      */
 
-    numDays += 719162;       /* 719162 = days from year 1 up to 1970 */
-    tmp = numDays / 146097;  /* 146097 = days in 400 years */
-    rem = numDays % 146097;
-    gmt->tm_year = tmp * 400 + 1;
-
-    /* Compute the 100 year period. */
-
-    tmp = rem / 36524;    /* 36524 = days in 100 years */
-    rem %= 36524;
-    if (tmp == 4) {       /* the 400th year is a leap year */
-        tmp = 3;
-        rem = 36524;
-    }
-    gmt->tm_year += tmp * 100;
-
-    /* Compute the 4 year period. */
-
-    tmp = rem / 1461;     /* 1461 = days in 4 years */
-    rem %= 1461;
-    gmt->tm_year += tmp * 4;
-
-    /* Compute which year in the 4. */
-
-    tmp = rem / 365;
-    rem %= 365;
-    if (tmp == 4) {       /* the 4th year is a leap year */
-        tmp = 3;
-        rem = 365;
+    if (rem >= 365) {                                /* 1971, etc. */
+        tmp++;
+        rem -= 365;
+        if (rem >= 365) {                        /* 1972, etc. */
+            tmp++;
+            rem -= 365;
+            if (rem >= 366) {                        /* 1973, etc. */
+                tmp++;
+                rem -= 366;
+            } else {
+                isLeap = 1;
+            }
+        }
     }
 
-    gmt->tm_year += tmp;
+    gmt->tm_year = tmp;
     gmt->tm_yday = rem;
-    isLeap = IsLeapYear(gmt->tm_year);
 
     /* Compute the month and day of month. */
 
@@ -257,7 +263,11 @@ PR_ExplodeTime(
  *
  *------------------------------------------------------------------------
  */
+#if defined(HAVE_WATCOM_BUG_2)
+PRTime __pascal __export __loadds
+#else
 PR_IMPLEMENT(PRTime)
+#endif
 PR_ImplodeTime(const PRExplodedTime *exploded)
 {
     PRExplodedTime copy;
@@ -500,8 +510,8 @@ PR_NormalizeTime(PRExplodedTime *time, PRTimeParamFn params)
  *     returns the time parameters for the local time zone
  *
  *     The following uses localtime() from the standard C library.
- *     (time.h)  This is our fallback implementation.  Unix, PC, and BeOS
- *     use this version.  A platform may have its own machine-dependent
+ *     (time.h)  This is our fallback implementation.  Unix and PC
+ *     use this version.  Mac has its own machine-dependent
  *     implementation of this function.
  *
  *-------------------------------------------------------------------------
@@ -528,6 +538,10 @@ PR_NormalizeTime(PRExplodedTime *time, PRTimeParamFn params)
 #define MT_safe_localtime localtime_r
 
 #else
+
+#if defined(XP_MAC)
+extern struct tm *Maclocaltime(const time_t * t);
+#endif
 
 #define HAVE_LOCALTIME_MONITOR 1  /* We use 'monitor' to serialize our calls
                                    * to localtime(). */
@@ -558,7 +572,11 @@ static struct tm *MT_safe_localtime(const time_t *clock, struct tm *result)
      * structs returned for timezones west of Greenwich when clock == 0.
      */
     
+#if defined(XP_MAC)
+    tmPtr = Maclocaltime(clock);
+#else
     tmPtr = localtime(clock);
+#endif
 
 #if defined(WIN16) || defined(XP_OS2)
     if ( (PRInt32) *clock < 0 ||
@@ -586,9 +604,6 @@ void _PR_InitTime(void)
 #ifdef HAVE_LOCALTIME_MONITOR
     monitor = PR_NewLock();
 #endif
-#ifdef WINCE
-    _MD_InitTime();
-#endif
 }
 
 void _PR_CleanupTime(void)
@@ -598,9 +613,6 @@ void _PR_CleanupTime(void)
         PR_DestroyLock(monitor);
         monitor = NULL;
     }
-#endif
-#ifdef WINCE
-    _MD_CleanupTime();
 #endif
 }
 
@@ -749,7 +761,7 @@ PR_LocalTimeParameters(const PRExplodedTime *gmt)
     return retVal;
 }
 
-#endif    /* defined(XP_UNIX) || defined(XP_PC) || defined(XP_BEOS) */
+#endif    /* defined(XP_UNIX) !! defined(XP_PC) */
 
 /*
  *------------------------------------------------------------------------
@@ -903,6 +915,10 @@ PR_USPacificTimeParameters(const PRExplodedTime *gmt)
 PR_IMPLEMENT(PRTimeParameters)
 PR_GMTParameters(const PRExplodedTime *gmt)
 {
+#if defined(XP_MAC)
+#pragma unused (gmt)
+#endif
+
     PRTimeParameters retVal = { 0, 0 };
     return retVal;
 }

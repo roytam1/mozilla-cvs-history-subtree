@@ -1077,19 +1077,11 @@ extern CERTDistNames *CERT_GetSSLCACerts(CERTCertDBHandle *handle);
 
 extern void CERT_FreeDistNames(CERTDistNames *names);
 
-/* Duplicate distinguished name array */
-extern CERTDistNames *CERT_DupDistNames(CERTDistNames *orig);
-
 /*
 ** Generate an array of Distinguished names from an array of nicknames
 */
 extern CERTDistNames *CERT_DistNamesFromNicknames
    (CERTCertDBHandle *handle, char **nicknames, int nnames);
-
-/*
-** Generate an array of Distinguished names from a list of certs.
-*/
-extern CERTDistNames *CERT_DistNamesFromCertList(CERTCertList *list);
 
 /*
 ** Generate a certificate chain from a certificate.
@@ -1533,7 +1525,7 @@ CERT_GetSPKIDigest(PLArenaPool *arena, const CERTCertificate *cert,
 
 
 SECStatus CERT_CheckCRL(CERTCertificate* cert, CERTCertificate* issuer,
-                        const SECItem* dp, PRTime t, void* wincx);
+                        SECItem* dp, PRTime t, void* wincx);
 
 
 /*
@@ -1618,25 +1610,25 @@ CERT_EncodeNoticeReference(PLArenaPool *arena,
  * Returns a pointer to a static structure.
  */
 extern const CERTRevocationFlags*
-CERT_GetPKIXVerifyNistRevocationPolicy(void);
+CERT_GetPKIXVerifyNistRevocationPolicy();
 
 /*
  * Returns a pointer to a static structure.
  */
 extern const CERTRevocationFlags*
-CERT_GetClassicOCSPEnabledSoftFailurePolicy(void);
+CERT_GetClassicOCSPEnabledSoftFailurePolicy();
 
 /*
  * Returns a pointer to a static structure.
  */
 extern const CERTRevocationFlags*
-CERT_GetClassicOCSPEnabledHardFailurePolicy(void);
+CERT_GetClassicOCSPEnabledHardFailurePolicy();
 
 /*
  * Returns a pointer to a static structure.
  */
 extern const CERTRevocationFlags*
-CERT_GetClassicOCSPDisabledPolicy(void);
+CERT_GetClassicOCSPDisabledPolicy();
 
 /*
  * Verify a Cert with libpkix
@@ -1670,7 +1662,7 @@ SECStatus CERT_SetUsePKIXForValidation(PRBool enable);
 
 /* The function return PR_TRUE if cert validation should use
  * libpkix cert validation engine. */
-PRBool CERT_GetUsePKIXForValidation(void);
+PRBool CERT_GetUsePKIXForValidation();
 
 SEC_END_PROTOS
 

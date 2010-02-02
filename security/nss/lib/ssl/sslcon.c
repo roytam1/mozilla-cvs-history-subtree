@@ -212,12 +212,10 @@ ssl2_ConstructCipherSpecs(sslSocket *ss)
     count += ssl3_count;
 
     /* Allocate memory to hold cipher specs */
-    if (count > 0) {
-	++count; /* add one for SCSV */
+    if (count > 0)
 	cs = (PRUint8*) PORT_Alloc(count * 3);
-    } else {
+    else
 	PORT_SetError(SSL_ERROR_SSL_DISABLED);
-    }
     if (cs == NULL)
     	return SECFailure;
 
@@ -240,12 +238,6 @@ ssl2_ConstructCipherSpecs(sslSocket *ss)
 	    cs += 3;
 	}
     }
-
-    /* add SCSV */
-    cs[0] = 0x00;
-    cs[1] = 0x00;
-    cs[2] = 0xff;
-    cs += 3;
 
     /* now have SSL3 add its suites onto the end */
     rv = ssl3_ConstructV2CipherSpecsHack(ss, cs, &final_count);
@@ -2739,8 +2731,7 @@ ssl2_HandleVerifyMessage(sslSocket *ss)
     DUMP_MSG(29, (ss, data, ss->gs.recordLen));
     if ((ss->gs.recordLen != 1 + SSL_CHALLENGE_BYTES) ||
 	(data[0] != SSL_MT_SERVER_VERIFY) ||
-	NSS_SecureMemcmp(data+1, ss->sec.ci.clientChallenge,
-	                 SSL_CHALLENGE_BYTES)) {
+	PORT_Memcmp(data+1, ss->sec.ci.clientChallenge, SSL_CHALLENGE_BYTES)) {
 	/* Bad server */
 	PORT_SetError(SSL_ERROR_BAD_SERVER);
 	goto loser;
@@ -3015,7 +3006,6 @@ ssl2_BeginClientHandshake(sslSocket *ss)
     unsigned int      i;
     int               sendLen, sidLen = 0;
     SECStatus         rv;
-    TLSExtensionData  *xtnData;
 
     PORT_Assert( ss->opt.noLocks || ssl_Have1stHandshakeLock(ss) );
 
@@ -3215,10 +3205,6 @@ ssl2_BeginClientHandshake(sslSocket *ss)
     if (rv < 0) {
 	goto loser;
     }
-
-    /* Since we sent the SCSV, pretend we sent empty RI extension. */
-    xtnData = &ss->xtnData;
-    xtnData->advertised[xtnData->numAdvertised++] = ssl_renegotiation_info_xtn;
 
     /* Setup to receive servers hello message */
     ssl_GetRecvBufLock(ss);

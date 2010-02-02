@@ -65,7 +65,11 @@
 #include "prerror.h"
 #include "prnetdb.h"
 
+#ifdef XP_MAC
+#include "probslet.h"
+#else
 #include "obsolete/probslet.h"
+#endif
 
 #include <stdio.h>
 #include <string.h>

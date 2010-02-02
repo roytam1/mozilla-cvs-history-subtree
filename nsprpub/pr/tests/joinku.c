@@ -65,6 +65,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef XP_MAC
+#include "prlog.h"
+#define printf PR_LogPrint
+#endif
 PRIntn failed_already=0;
 PRIntn debug_mode;
 
@@ -159,6 +163,12 @@ static PRIntn PR_CALLBACK RealMain( PRIntn argc, char **argv )
     PR_Init(PR_USER_THREAD, PR_PRIORITY_NORMAL, 0);
     PR_STDIO_INIT();
 
+#ifdef XP_MAC
+	SetupMacPrintfLog("joinku.log");
+#endif
+
+	
+	
  /* main test */
 
     if (debug_mode) printf("Kernel-User test\n");
@@ -179,7 +189,7 @@ static PRIntn PR_CALLBACK RealMain( PRIntn argc, char **argv )
 }
 
 
-int main(int argc, char **argv)
+PRIntn main(PRIntn argc, char **argv)
 {
     PRIntn rv;
     

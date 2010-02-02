@@ -66,6 +66,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef XP_MAC
+#include "prlog.h"
+#define printf PR_LogPrint
+extern void SetupMacPrintfLog(char *logFile);
+#endif
+
 PRMonitor *mon;
 #define DEFAULT_COUNT   1000
 PRInt32 count = 0;
@@ -296,6 +302,11 @@ static PRIntn PR_CALLBACK RealMain(int argc, char **argv)
 
     if (0 == count) count = DEFAULT_COUNT;
 
+#ifdef XP_MAC
+	SetupMacPrintfLog("cvar.log");
+	debug_mode = 1;
+#endif
+
     mon = PR_NewMonitor();
 
     Measure(CondWaitContextSwitchUU, "cond var wait context switch- user/user");
@@ -313,7 +324,7 @@ static PRIntn PR_CALLBACK RealMain(int argc, char **argv)
 }
 
 
-int main(int argc, char *argv[])
+PRIntn main(PRIntn argc, char *argv[])
 {
     PRIntn rv;
     

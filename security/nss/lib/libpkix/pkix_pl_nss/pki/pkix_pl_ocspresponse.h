@@ -113,7 +113,6 @@ PKIX_Error *
 pkix_pl_OcspResponse_GetStatusForCert(
         PKIX_PL_OcspCertID *cid,
         PKIX_PL_OcspResponse *response,
-        PKIX_PL_Date *validity,
         PKIX_Boolean *pPassed,
         SECErrorCodes *pReturnCode,
         void *plContext);
