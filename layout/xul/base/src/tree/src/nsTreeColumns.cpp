@@ -261,10 +261,7 @@ nsTreeColumns::nsTreeColumns(nsITreeBoxObject* aTree)
 
 nsTreeColumns::~nsTreeColumns()
 {
-  for (nsTreeColumn* currCol = mFirstColumn; currCol; currCol = currCol->GetNext()) {
-    currCol->SetColumns(nsnull);
-  }
-  NS_IF_RELEASE(mFirstColumn);
+  nsTreeColumns::InvalidateColumns();
 }
 
 // QueryInterface implementation for nsTreeColumns
@@ -439,6 +436,10 @@ nsTreeColumns::GetColumnAt(PRInt32 aIndex, nsITreeColumn** _retval)
 NS_IMETHODIMP
 nsTreeColumns::InvalidateColumns()
 {
+  for (nsTreeColumn* currCol = mFirstColumn; currCol;
+       currCol = currCol->GetNext()) {
+    currCol->SetColumns(nsnull);
+  }
   NS_IF_RELEASE(mFirstColumn);
   return NS_OK;
 }
@@ -467,7 +468,7 @@ nsTreeColumns::RestoreNaturalOrder()
     child->SetAttr(kNameSpaceID_None, nsXULAtoms::ordinal, ordinal, PR_TRUE);
   }
 
-  NS_IF_RELEASE(mFirstColumn);
+  nsTreeColumns::InvalidateColumns();
 
   mTree->Invalidate();
 
