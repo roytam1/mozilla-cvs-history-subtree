@@ -66,10 +66,14 @@
     #include <sys/statfs.h>
 #endif
 
-#ifdef HAVE_STATVFS
-    #define STATFS statvfs
+#ifdef HAVE_STATVFS64
+    #define STATFS statvfs64
 #else
-    #define STATFS statfs
+    #ifdef HAVE_STATVFS
+        #define STATFS statvfs
+    #else
+        #define STATFS statfs
+    #endif
 #endif
 
 // so we can statfs on freebsd
@@ -78,6 +82,15 @@
     #define STATFS statfs
     #include <sys/param.h>
     #include <sys/mount.h>
+#endif
+
+#if defined(HAVE_STAT64) && defined(HAVE_LSTAT64)
+    #define STAT stat64
+    #define LSTAT lstat64
+    #define HAVE_STATS64 1
+#else
+    #define STAT stat
+    #define LSTAT lstat
 #endif
 
 class NS_COM nsLocalFile : public nsILocalFile
@@ -107,7 +120,7 @@ private:
     ~nsLocalFile() {}
 
 protected:
-    struct stat  mCachedStat;
+    struct STAT  mCachedStat;
     nsCString    mPath;
     PRPackedBool mHaveCachedStat;
 
