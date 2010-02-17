@@ -599,7 +599,7 @@ CocoaPromptService::CookieDialog(nsIDOMWindow *parent, nsICookie *cookie, const 
   NS_ENSURE_ARG_POINTER(rememberDecision && _retval);
 
   NSString* dialogText = [NSString stringWithFormat:NSLocalizedString(@"CookieText",@"CookieText"),
-                           [NSString stringWith_nsACString:hostname]];
+                           PromiseFlatCString(hostname).get()];
   PRUnichar* textStr = [dialogText createNewUnicodeBuffer];
   NSString* checkboxText = NSLocalizedString(@"CookieCheckbox", @"CookieCheckbox");
   PRUnichar* checkboxStr = [checkboxText createNewUnicodeBuffer];
