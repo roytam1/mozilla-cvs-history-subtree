@@ -2903,6 +2903,8 @@ NS_IMETHODIMP nsMsgLocalMailFolder::EndMove(PRBool moveSucceeded)
 // this is the beginning of the next message copied
 NS_IMETHODIMP nsMsgLocalMailFolder::StartMessage()
 {
+  // We get crashes that we don't understand (bug 284876), so stupidly prevent that.
+  NS_ENSURE_ARG_POINTER(mCopyState);
   return WriteStartOfNewMessage();
 }
 
