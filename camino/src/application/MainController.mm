@@ -1984,8 +1984,19 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 // Close Tab/Close Window accordingly
 - (void)fixCloseMenuItemKeyEquivalents
 {
-  BrowserWindowController* browserController = [self keyWindowBrowserController];
-  BOOL windowWithMultipleTabs = (browserController && [[browserController tabBrowser] numberOfTabViewItems] > 1);
+  BrowserWindowController* keyBrowserController = [self keyWindowBrowserController];
+  BrowserTabView* tabView = nil;
+  if (keyBrowserController) {
+    tabView = [keyBrowserController tabBrowser];
+  }
+  else if (![NSApp keyWindow]) {
+    // It's possible for us to get in a state where there is no key window,
+    // but a browser window is main (e.g., Flash exiting full-screen). Key
+    // events will be delivered to the main window in that case, so we need to
+    // update based on that window's tab state.
+    tabView = [[self mainWindowBrowserController] tabBrowser];
+  }
+  BOOL windowWithMultipleTabs = tabView && [tabView numberOfTabViewItems] > 1;
   [self adjustCloseWindowMenuItemKeyEquivalent:windowWithMultipleTabs];
   [self adjustCloseTabMenuItemKeyEquivalent:windowWithMultipleTabs];
   mFileMenuUpdatePending = NO;

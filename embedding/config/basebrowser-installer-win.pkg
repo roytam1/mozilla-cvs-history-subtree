@@ -215,6 +215,9 @@ components\plugin.xpt
 components\wallet.dll
 components\wallet.xpt                  
 
+; sqlite
+sqlite3.dll
+
 ; psm2
 ; Optional - only if you need HTTPS support
 components\pipboot.dll
@@ -222,6 +225,8 @@ components\pipboot.xpt
 components\pipnss.dll
 components\pipnss.xpt
 nss3.dll
+nssutil3.dll
+nssdbm3.dll
 smime3.dll
 softokn3.chk
 softokn3.dll

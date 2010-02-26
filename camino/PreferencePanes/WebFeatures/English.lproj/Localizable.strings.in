@@ -2,3 +2,4 @@
 
 "Allow" = "Allow";
 "Deny" = "Deny";
+"JavaSuppressionExplanation" = "Camino’s Java plug-in is not compatible with Mac OS X 10.6. To learn more, visit the FAQ section of Camino Help.";

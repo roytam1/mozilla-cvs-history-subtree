@@ -48,6 +48,7 @@
 a:link[href*="/ad."] img,
 a:link[href*="/ads."] img,
 a:link[href*="/adclick/"] img,
+a:link[href*="/phpads/"] img, 
 a:link[href*="?banner"] img,
 a:link[href*="clickurl="] img,
 a:link[href*=".atwola."] img,
@@ -89,7 +90,7 @@ a:link[href*="247realmedia.com"] img,
 a:link[href*="adserv.quality-channel.de"] img,
 a:link[href*="blogads.com"] img, 
 a:link[href*="interclick.com"] img, 
-a:link[href*="anad.tacoda.net/ads"] img, 
+a:link[href*="anad.tacoda.net/ads"] img,
 a:link[href*="sw.interpolls.com"] img,
 a:link[href*="kliptracker.com"] img,
 a:link[href*="klipmart.com"] img,
@@ -104,7 +105,7 @@ a:link[href*=".burstnet.com"] img,
 a:link[href*="adpeeps"] img,
 a:link[href*="adbrite"] img,
 a:link[class*="adText"], 
-a:link[class*="adHeadline"], 
+a:link[class*="adHeadline"],
 a:link[href*="hrtrak.net"] img,
 a:link[href*="specificclick.net"] img,
 a:link[href*="adremote.timeinc.net"] img,
@@ -115,7 +116,8 @@ a:link[href*="adimp.excite.co.jp"] img,
 a:link[href*="kestrel.ospreymedialp.com"] img,
 a:link[href*="netavenir."] img,
 a:link[href*="euroclick.com"] img,
-a:link[href*="advert"] img,
+a:link[href^="http://advert."] img,
+a:link[href*="adv_"] img,
 a:link[href*=".adshuffle.com"] img,
 
 embed[src*="/us.yimg.com/a/"],
@@ -226,6 +228,9 @@ embed[type="application/x-shockwave-flash"][src*="adtechus.com"],
 embed[type="application/x-shockwave-flash"][src*="fmpub.net"],
 embed[type="application/x-shockwave-flash"][src*="splastk.com"],
 embed[type="application/x-shockwave-flash"][src*="ads.prisa.com"],
+embed[type="application/x-shockwave-flash"][src*="media.contextweb.com"],
+embed[type="application/x-shockwave-flash"][src*="adform.net"],
+embed[type="application/x-shockwave-flash"][src*="ads.mixi.jp"], 
 
 img[src*="googlesyndication.com"],
 img[src*=".doubleclick.net"],
@@ -317,12 +322,16 @@ img[src*="/ads2.msn.com"],
 img[src*=".adsdk.com"],
 img[src*=".adbureau.net"],
 img[src*=".adshuffle.com"],
+img[src*="media.adfrontiers.com"],
+img[src*="ads.mixi.jp"],
+img[src*="/openads/"],
 
 iframe[src*="/ad."],
 iframe[src*="/ads."],
 iframe[src*="/ad/"],
 iframe[src*="/ads/"],
 iframe[src*="/ads2/"],
+iframe[src*="/AdServer/"],
 iframe[src*="/jsads/"],
 iframe[src*="/ad_data/"],
 iframe[src*="?banner"],
@@ -371,7 +380,7 @@ iframe[src*=".gms1.net"],
 iframe[src*="ak.m3.net"],
 iframe[src*="adsvr.adknowledge.com"],
 iframe[src*=".pointroll.com"],
-iframe#google_ads_frame,
+iframe[id^="google_ads_frame"],
 iframe[src*="lycos.spiegel.de"],
 iframe[src*="matrix.mediavantage.de"],
 iframe[src^="http://de"][src*=".myspace.com"],
@@ -398,7 +407,7 @@ iframe[src*="adspace"],
 iframe[src*="AdPlaceholder"],
 iframe[src*="ffxcam.fairfax.com.au"],
 iframe[src*="contextweb.com"],
-iframe[src*="ads-rm.looksmart.com"], 
+iframe[src*="ads-rm.looksmart.com"],
 iframe[src*=".ru4.com"],
 iframe[src*=".kanoodle.com"],
 iframe[src*="adpeeps"],
@@ -424,6 +433,7 @@ iframe[src*=".netavenir."],
 iframe[src*="bwp.versiontracker.com"],
 iframe[src*="bwp.macfixit.com"],
 iframe[src*="bwp.cnet.com"],
+iframe[src*="bwp.news.com"],
 iframe[src*=".mercuras.com"],
 iframe[src*="api.gestionpub.com"],
 iframe[src*=".comclick.com"],
@@ -444,6 +454,9 @@ iframe[src*=".emediate.eu"],
 iframe[src*="web.adblade.com"],
 iframe[src*=".adfusion.com"],
 iframe[src*=".adshuffle.com"],
+iframe[name$="skybannerframe"],
+iframe[src*=".quantserve.com"],
+iframe[src*=".adicio.com"],
 
 table#overtureLinksWrapper,
 table.adbritetable,
@@ -458,6 +471,7 @@ td[class^="todayTopAd"],
 td[class="midAd"],
 td[id="ad_gutter"],
 span#iTt,
+span[class="advertisingctr"],
 div#omniture,
 div#cnnPartners,
 div#gB1,
@@ -467,6 +481,7 @@ div.yschspns,
 div#yschsec,
 div#sponsorsAd,
 div#leaderboardAd,
+div[id="ads"],
 div[id^="ads_"],
 div[id*="ad440x160"],
 div[id*="ad300x100"],
@@ -478,8 +493,10 @@ div.werbung,
 div[id$="_ad"],
 div[id$="_ads"],
 div[id*="ad_google"],
+div[id="google_ads_site"],
 div.top_ad_image,
 div[class*="_ad_"],
+div[class^="ad_IDS"],
 div[id*="swf_728x90"],
 div[id*="swf_171x600"],
 div[id*="swf_banner"],
@@ -494,7 +511,7 @@ div[id*="km_main_div"],
 div#ad * object > embed[type="application/x-shockwave-flash"],
 div[id*="adSpot"],
 div[id*="StripAd"],
-div[id*="konaLayers"], 
+div[id^="konaLayer"][class^="konaLayer"],
 div[class="adPanel"],
 div[id="ad-wrap"],
 div#textlinks>div[class*="sponsorship"],
@@ -531,6 +548,7 @@ div[id="topad_wrapper"],
 div[id*="google_ads_div"],
 div[id*="mTotem"]>iframe[id*="totem"],
 div[class="advertising"],
+div[class*="advertisment"],
 div[id^="ad1"],
 div[id^="ad2"],
 div[id^="ad3"],
@@ -550,22 +568,32 @@ div[id="apopBg_dju"],
 div[id*="advst_special"],
 div[class="box"][id="dropin"],
 div[class*="textAds"],
+div[class~="textAd"],
 div[id^="bbccom_"],
 div[id^="advert_"],
+div[id^="AdBroker"],
+div[id^="AdSmall"],
+div[id^="adSpace"],
+div[id="adTicker"],
 div[id="spColumnAd"],
 div[class^="adBlock"],
 div[class^="AdBorder"],
 div[class~="adcolumn"],
+div[class="adbottom"],
+div[class="adwide"],
+div[class="module adimg"],
 div[class$="_ad"],
 div[class*="publicite"],
 div[id*="blogbang"],
 div[id^="banner-ad"],
-div[class^="advert"],
+div[id="bannerad"],
 div[class~="advertisementColumnGroup"],
+div[class$="advertisement"],
 div[id="google_textadsBox"],
 div[id="rightPromoColumn"],
 div[class="topAds"],
 div[class="ad"],
+div[class^="ad1"],
 div[class="splitAd"],
 div[class="wide-text-ads"],
 div[class*="google-ads"],
@@ -573,12 +601,16 @@ div[class="ads"],
 div[class^="adSpot"],
 div[class="relatedAds"],
 div[class^="adGoogle"],
+div[class="adgoogle"],
 div[id^="p360_ad"],
+div[id^="p360-autotag"],
 div[class^="p360_"],
 div[id="adjacency"],
 div[id="adbar"],
+div[id="dcol-sponsored"],
 div[id*="sponsored_links_afc"],
 div[id="sponsored-links"],
+div[id^="sponLinkDiv"],
 div[class="marketplace-ad"],
 div[id^="ADframe"],
 div[class="singleAd"],
@@ -589,18 +621,31 @@ div[class~="textlinkads"],
 div[id*="story-sponsoredlinks"],
 div[class="blk_advert"],
 div[class$="bottomAd"],
-div[id="upperad"]
+div[id="upperad"],
+div[id="web_kelkoo"],
+div[id^="right_ad_"],
+div[class$="WerberahmenOben"],
+div[class$="anzeige"],
+div[class~="sb_adsW"],
+div[class="sb_adsN"],
+div[id="PointrollOverlay"],
+div[id="blox-peel-ad"],
+div[id="yahoo-contentmatch"],
+div[id="rightrailads"],
+div[id="right-ads"],
+div[class="sponsorArea"],
+div[class="adblock"]
 
-{ display: none ! important }
+{ display: none !important }
 
-@-moz-document domain(mail.google.com) {                                        
+@-moz-document domain(mail.google.com) {
 div#rhc>div.rh,
 div.slwyWc,
-div.oM {display: none ! important }                                    
+div.oM { display: none !important }
 }
 
 @-moz-document domain(wunderground.com) { 
-div[style*="statefarm_bg.gif"][style*="width: 300px"] {display: none ! important }
+div[style*="statefarm_bg.gif"][style*="width: 300px"] { display: none !important }
 }
 
 /* turn some false positives back off */
@@ -612,31 +657,45 @@ a:link[href*="linksynergy.com"] img[src*="phobos.apple.com"],
 img[src*="wikipedia"],
 img[src*="images.ucomics.com"],
 img[src*="buttons.googlesyndication.com"],
-iframe[src*="mozilla.org"]
+iframe[src*="mozilla.org"],
+div[id*="Player"] iframe[src*="/ads."]
 
-{ display: inline ! important }
+{ display: inline !important }
 
 @-moz-document domain(wiki.caminobrowser.org) {
-img[src*="/ad/"] {display: inline !important }
+img[src*="/ad/"] { display: inline !important }
 }
 
 @-moz-document domain(apple.com) {
-img[src*="/ads/"] {display: inline !important }
-div[id="ad"] {display:block !important;}
+img[src*="/ads/"] { display: inline !important }
+div[id="ad"] { display:block !important }
 }
 
 @-moz-document domain(nasdaq.com) {
-div[id*="panel_content_ads"] {display: block !important }
+div[id*="panel_content_ads"] { display: block !important }
 }
 
 @-moz-document domain(slatev.com) {
-embed[type="application/x-shockwave-flash"][src*="slatev.com"] {display: inline !important }
+embed[type="application/x-shockwave-flash"][src*="slatev.com"] { display: inline !important }
 }
 
 @-moz-document domain(nationalgeographic.com) {
-embed[type="application/x-shockwave-flash"][src*="adserver"] {display: inline !important }
+embed[type="application/x-shockwave-flash"][src*="adserver"] { display: inline !important }
 }
 
 @-moz-document domain(priceminister.com) {
-a:link[href^="javascript"][href*="advert"] img {display: inline !important }
+a:link[href^="javascript"][href*="advert"] img { display: inline !important }
+div[id="advert_list"] { display: block !important }
+}
+
+@-moz-document domain(mlb.com) {
+div[id="tw_secnav_mc_ad"] { display: block !important }
+}
+
+@-moz-document domain(news.cnet.com) {
+div[id="ads_backsplashSkin"] { display: block !important }
+}
+
+@-moz-document domain(lastfm.de) {
+html embed[type="application/x-shockwave-flash"][width][height] { display: inline !important }
 }

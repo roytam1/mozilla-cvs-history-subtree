@@ -210,6 +210,7 @@ WriteVersion(nsIFile* aProfileDir, const nsACString& aVersion,
 
 - (void)registerNotificationListener;
 - (void)initUpdatePrefs;
+- (void)manageJavaSuppression;
 - (void)cleanUpObsoletePrefs;
 
 - (void)termEmbedding:(NSNotification*)aNotification;
@@ -388,6 +389,7 @@ static BOOL gMadePrefManager;
     }
 
     [self initUpdatePrefs];
+    [self manageJavaSuppression];
     [self cleanUpObsoletePrefs];
     
     mDefaults = [NSUserDefaults standardUserDefaults];
@@ -729,6 +731,47 @@ static BOOL gMadePrefManager;
   if (![defaults objectForKey:SULastCheckTimeKey]) {
     [[NSUserDefaults standardUserDefaults] setObject:[NSDate date]
                                               forKey:SULastCheckTimeKey];
+  }
+}
+
+- (void)manageJavaSuppression
+{
+  // The bundled JEP is not compatible with 10.6; see if it's been replaced.
+  BOOL javaNeedsSuppression = NO;
+  if ([NSWorkspace isSnowLeopardOrHigher]) {
+    NSString* jepSubpath = @"Contents/MacOS/plugins/JavaEmbeddingPlugin.bundle";
+    NSString* jepPath =
+        [[[NSBundle mainBundle] bundlePath] stringByAppendingPathComponent:jepSubpath];
+    NSString* jepVersion =
+        [[NSBundle bundleWithPath:jepPath] objectForInfoDictionaryKey:(NSString*)kCFBundleVersionKey];
+    if ([jepVersion isEqualToString:@"0.9.6.4"])
+      javaNeedsSuppression = YES;
+  }
+  const char* kSuppressionPref = "camino.java_suppressed";
+  const char* kOldValuePref = "camino.java_enabled_pre_suppression";
+  const char* kEnableJavaPref = "security.enable_java";
+
+  // Check whether the situation has changed.
+  BOOL javaSuppressed = [self getBooleanPref:kSuppressionPref withSuccess:NULL];
+  if (javaSuppressed == javaNeedsSuppression)
+    return;
+
+  // If we have a bad combination, disable Java, otherwise undo any previous
+  // suppression we may have done.
+  if (javaNeedsSuppression) {
+    [self setPref:kSuppressionPref toBoolean:YES];
+    BOOL javaEnabled = [self getBooleanPref:kEnableJavaPref withSuccess:NULL];
+    [self setPref:kOldValuePref toBoolean:javaEnabled];
+    [self setPref:kEnableJavaPref toBoolean:NO];
+  }
+  else {
+    BOOL prefExisted = NO;
+    BOOL javaPreviouslyEnabled = [self getBooleanPref:kOldValuePref
+                                          withSuccess:&prefExisted];
+    [self clearPref:kSuppressionPref];
+    [self clearPref:kOldValuePref];
+    [self setPref:kEnableJavaPref toBoolean:(!prefExisted ||
+                                             javaPreviouslyEnabled)];
   }
 }
 

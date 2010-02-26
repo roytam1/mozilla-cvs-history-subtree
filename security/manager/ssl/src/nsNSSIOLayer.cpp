@@ -183,6 +183,7 @@ PRBool nsSSLSocketThreadData::ensure_buffer_size(PRInt32 amount)
 
 nsNSSSocketInfo::nsNSSSocketInfo()
   : mFd(nsnull),
+    mBlockingState(blocking_state_unknown),
     mSecurityState(nsIWebProgressListener::STATE_IS_INSECURE),
     mForSTARTTLS(PR_FALSE),
     mHandshakePending(PR_TRUE),
@@ -1322,37 +1323,6 @@ nsSSLIOLayerPoll(PRFileDesc *fd, PRInt16 in_flags, PRInt16 *out_flags)
   return nsSSLThread::requestPoll(socketInfo, in_flags, out_flags);
 }
 
-static PRInt32 PR_CALLBACK
-nsSSLIOLayerRead(PRFileDesc* fd, void* buf, PRInt32 amount)
-{
-  nsNSSShutDownPreventionLock locker;
-  if (!fd || !fd->lower) {
-    return PR_FAILURE;
-  }
-
-  nsNSSSocketInfo *socketInfo = (nsNSSSocketInfo*)fd->secret;
-  NS_ASSERTION(socketInfo,"nsNSSSocketInfo was null for an fd");
-
-  return nsSSLThread::requestRead(socketInfo, buf, amount);
-}
-
-static PRInt32 PR_CALLBACK
-nsSSLIOLayerWrite(PRFileDesc* fd, const void* buf, PRInt32 amount)
-{
-  nsNSSShutDownPreventionLock locker;
-  if (!fd || !fd->lower) {
-    return PR_FAILURE;
-  }
-
-#ifdef DEBUG_SSL_VERBOSE
-  DEBUG_DUMP_BUFFER((unsigned char*)buf, amount);
-#endif
-  nsNSSSocketInfo *socketInfo = (nsNSSSocketInfo*)fd->secret;
-  NS_ASSERTION(socketInfo,"nsNSSSocketInfo was null for an fd");
-
-  return nsSSLThread::requestWrite(socketInfo, buf, amount);
-}
-
 PRBool nsSSLIOLayerHelpers::nsSSLIOLayerInitialized = PR_FALSE;
 PRDescIdentity nsSSLIOLayerHelpers::nsSSLIOLayerIdentity;
 PRIOMethods nsSSLIOLayerHelpers::nsSSLIOLayerMethods;
@@ -1460,7 +1430,12 @@ static PRInt32 PR_CALLBACK PSMRecv(PRFileDesc *fd, void *buf, PRInt32 amount,
     return nsSSLThread::requestRecvMsgPeek(socketInfo, buf, amount, flags, timeout);
   }
 
-  return fd->lower->methods->recv(fd->lower, buf, amount, flags, timeout);
+  if (flags != 0) {
+    PR_SetError(PR_INVALID_ARGUMENT_ERROR, 0);
+    return -1;
+  }
+
+  return nsSSLThread::requestRead(socketInfo, buf, amount, timeout);
 }
 
 static PRInt32 PR_CALLBACK PSMSend(PRFileDesc *fd, const void *buf, PRInt32 amount,
@@ -1472,7 +1447,27 @@ static PRInt32 PR_CALLBACK PSMSend(PRFileDesc *fd, const void *buf, PRInt32 amou
     return -1;
   }
 
-  return fd->lower->methods->send(fd->lower, buf, amount, flags, timeout);
+  if (flags != 0) {
+    PR_SetError(PR_INVALID_ARGUMENT_ERROR, 0);
+    return -1;
+  }
+
+  nsNSSSocketInfo *socketInfo = (nsNSSSocketInfo*)fd->secret;
+  NS_ASSERTION(socketInfo,"nsNSSSocketInfo was null for an fd");
+
+  return nsSSLThread::requestWrite(socketInfo, buf, amount, timeout);
+}
+
+static PRInt32 PR_CALLBACK
+nsSSLIOLayerRead(PRFileDesc* fd, void* buf, PRInt32 amount)
+{
+  return PSMRecv(fd, buf, amount, 0, PR_INTERVAL_NO_TIMEOUT);
+}
+
+static PRInt32 PR_CALLBACK
+nsSSLIOLayerWrite(PRFileDesc* fd, const void* buf, PRInt32 amount)
+{
+  return PSMSend(fd, buf, amount, 0, PR_INTERVAL_NO_TIMEOUT);
 }
 
 static PRStatus PR_CALLBACK PSMConnectcontinue(PRFileDesc *fd, PRInt16 out_flags)

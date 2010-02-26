@@ -58,6 +58,7 @@
 
 // OS feature checks
 + (NSString*)osVersionString;
++ (BOOL)isSnowLeopardOrHigher;
 + (BOOL)isLeopardOrHigher;
 + (BOOL)isTigerOrHigher;
 + (BOOL)supportsSpotlight;

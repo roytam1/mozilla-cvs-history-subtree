@@ -231,8 +231,8 @@ nsAuthSSPI::Init(const char *serviceName,
 
     // if we're configured for SPNEGO (Negotiate) or Kerberos, then it's critical 
     // that the caller supply a service name to be used.
-    if (mPackage != PACKAGE_TYPE_NTLM)
-        NS_ENSURE_TRUE(serviceName && *serviceName, NS_ERROR_INVALID_ARG);
+    // For NTLM, the service principal name can no longer be null. (Bug 487872)
+    NS_ENSURE_TRUE(serviceName && *serviceName, NS_ERROR_INVALID_ARG);
 
     nsresult rv;
 
@@ -247,13 +247,25 @@ nsAuthSSPI::Init(const char *serviceName,
 
     package = (SEC_CHAR *) pTypeName[(int)mPackage];
 
-    if (mPackage != PACKAGE_TYPE_NTLM)
-    {
+    if (mPackage == PACKAGE_TYPE_NTLM) {
+        // (bug 535193) For NTLM, just use the uri host, do not do canonical host lookups.
+        // The incoming serviceName is in the format: "protocol@hostname", SSPI expects
+        // "<service class>/<hostname>", so swap the '@' for a '/'.
+        mServiceName.Assign(serviceName);
+        PRInt32 index = mServiceName.FindChar('@');
+        if (index == kNotFound)
+            return NS_ERROR_UNEXPECTED;
+        mServiceName.Replace(index, 1, '/');
+    }
+    else {
+        // Kerberos requires the canonical host, MakeSN takes care of this through a
+        // DNS lookup.
         rv = MakeSN(serviceName, mServiceName);
         if (NS_FAILED(rv))
             return rv;
-        mServiceFlags = serviceFlags;
     }
+
+    mServiceFlags = serviceFlags;
 
     SECURITY_STATUS rc;
 
@@ -338,11 +350,7 @@ nsAuthSSPI::GetNextToken(const void *inToken,
     memset(ob.pvBuffer, 0, ob.cbBuffer);
 
     SEC_CHAR *sn;
-
-    if (mPackage == PACKAGE_TYPE_NTLM)
-        sn = NULL;
-    else
-        sn = (SEC_CHAR *) mServiceName.get();
+    sn = (SEC_CHAR *) mServiceName.get();
 
     rc = (sspi->InitializeSecurityContext)(&mCred,
                                            ctxIn,
@@ -412,13 +420,22 @@ nsAuthSSPI::Unwrap(const void *inToken,
                                 );
 
     if (SEC_SUCCESS(rc)) {
-        *outToken = ib[1].pvBuffer;
+        // check if ib[1].pvBuffer is really just ib[0].pvBuffer, in which
+        // case we can let the caller free it. Otherwise, we need to
+        // clone it, and free the original
+        if (ib[0].pvBuffer == ib[1].pvBuffer) {
+            *outToken = ib[1].pvBuffer;
+        }
+        else {
+            *outToken = nsMemory::Clone(ib[1].pvBuffer, ib[1].cbBuffer);
+            nsMemory::Free(ib[0].pvBuffer);
+            if (!*outToken)
+                return NS_ERROR_OUT_OF_MEMORY;
+        }
         *outTokenLen = ib[1].cbBuffer;
     }
     else
-        nsMemory::Free(ib[1].pvBuffer);
-
-    nsMemory::Free(ib[0].pvBuffer);
+        nsMemory::Free(ib[0].pvBuffer);
 
     if (!SEC_SUCCESS(rc))
         return NS_ERROR_FAILURE;
