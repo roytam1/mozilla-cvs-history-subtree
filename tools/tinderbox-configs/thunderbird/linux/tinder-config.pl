@@ -144,7 +144,7 @@ $ConfigureOnly = 1;
 $LocalizationVersionFile = 'mail/config/version.txt';
 %WGetFiles = (
 # CONFIG:            "http://%stagingServer%/pub/mozilla.org/thunderbird/nightly/%version%-candidates/build%build%/thunderbird-%version%.en-US.linux-i686.tar.gz" => 
-"http://stage-old.mozilla.org/pub/mozilla.org/thunderbird/nightly/2.0.0.23-candidates/build1/thunderbird-2.0.0.23.en-US.linux-i686.tar.gz" => 
+"http://stage-old.mozilla.org/pub/mozilla.org/thunderbird/nightly/2.0.0.24-candidates/build1/thunderbird-2.0.0.24.en-US.linux-i686.tar.gz" => 
 # CONFIG:            "%l10n_buildDir%/%l10n_buildPlatform%/thunderbird.tar.gz"
 "/builds/tinderbox/Tb-Mozilla1.8-l10n-Release/Linux_2.4.18-14_Depend/thunderbird.tar.gz"
 	      );
@@ -166,7 +166,7 @@ $BuildTree  = 'MozillaRelease';
 
 #$BuildName = '';
 # CONFIG: $BuildTag = '%productTag%_RELEASE';
-$BuildTag = 'THUNDERBIRD_2_0_0_23_RELEASE';
+$BuildTag = 'THUNDERBIRD_2_0_0_24_RELEASE';
 #$BuildTag = 'AVIARY_1_0_1_20050124_BRANCH';
 #$BuildTag = 'FIREFOX_1_0_RELEASE';
 #$BuildConfigDir = 'mozilla/config';
@@ -210,7 +210,7 @@ $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/nightly";
 $tbox_ftp_path = "/home/ftp/pub/thunderbird/tinderbox-builds";
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/thunderbird/tinderbox-builds";
 # CONFIG: $milestone     = "thunderbird%version%-l10n";
-$milestone     = "thunderbird2.0.0.23-l10n";
+$milestone     = "thunderbird2.0.0.24-l10n";
 $notify_list   = "build-announce\@mozilla.org";
 $stub_installer = 0;
 $sea_installer = 0;

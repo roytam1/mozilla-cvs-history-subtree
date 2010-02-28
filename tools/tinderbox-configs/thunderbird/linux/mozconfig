@@ -7,7 +7,7 @@ mk_add_options LOCALES_CVSROOT=:ext:cltbld@cvs.mozilla.org:/l10n
 mk_add_options MOZ_MAKE_FLAGS="-j1"
 mk_add_options MOZ_CO_MODULE="mozilla/tools/update-packaging"
 # CONFIG: mk_add_options LOCALES_CO_TAG=%productTag%_RELEASE
-mk_add_options LOCALES_CO_TAG=THUNDERBIRD_2_0_0_23_RELEASE
+mk_add_options LOCALES_CO_TAG=THUNDERBIRD_2_0_0_24_RELEASE
 
 ac_add_options --enable-update-packaging
 ac_add_options --enable-application=mail
