@@ -257,11 +257,11 @@ MODULES_all :=                                  \
 #
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
-MOZ_CO_TAG           = THUNDERBIRD_2_0_0_24_RELEASE
-NSPR_CO_TAG          = THUNDERBIRD_2_0_0_24_RELEASE
-NSS_CO_TAG           = THUNDERBIRD_2_0_0_24_RELEASE
-LDAPCSDK_CO_TAG      = THUNDERBIRD_2_0_0_24_RELEASE
-LOCALES_CO_TAG       = THUNDERBIRD_2_0_0_24_RELEASE
+MOZ_CO_TAG           = SEAMONKEY_1_1_19_RELEASE
+NSPR_CO_TAG          = SEAMONKEY_1_1_19_RELEASE
+NSS_CO_TAG           = SEAMONKEY_1_1_19_RELEASE
+LDAPCSDK_CO_TAG      = SEAMONKEY_1_1_19_RELEASE
+LOCALES_CO_TAG       = SEAMONKEY_1_1_19_RELEASE
 
 BUILD_MODULES = all
 
