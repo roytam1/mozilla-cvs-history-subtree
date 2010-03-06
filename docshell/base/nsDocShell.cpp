@@ -3314,6 +3314,12 @@ nsDocShell::Reload(PRUint32 aReloadFlags)
 NS_IMETHODIMP
 nsDocShell::Stop(PRUint32 aStopFlags)
 {
+    if (mLoadType == LOAD_ERROR_PAGE && mLSHE) {
+        // Since error page loads never unset mLSHE, do so now
+        SetHistoryEntry(&mOSHE, mLSHE);
+        SetHistoryEntry(&mLSHE, nsnull);
+    }
+
     if (nsIWebNavigation::STOP_CONTENT & aStopFlags) {
         // Revoke any pending plevents related to content viewer restoration
         nsCOMPtr<nsIEventQueue> uiThreadQueue;
