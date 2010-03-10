@@ -1553,16 +1553,14 @@ cert_VerifySubjectAltName(CERTCertificate *cert, const char *hn)
 		*/
 		int cnLen = current->name.other.len;
 		rv = CERT_RFC1485_EscapeAndQuote(cn, cnBufLen, 
-					    (char *)current->name.other.data,
-					    cnLen);
+					    current->name.other.data, cnLen);
 		if (rv != SECSuccess && PORT_GetError() == SEC_ERROR_OUTPUT_LEN) {
 		    cnBufLen = cnLen * 3 + 3; /* big enough for worst case */
 		    cn = (char *)PORT_ArenaAlloc(arena, cnBufLen);
 		    if (!cn)
 			goto fail;
 		    rv = CERT_RFC1485_EscapeAndQuote(cn, cnBufLen, 
-					    (char *)current->name.other.data,
-					    cnLen);
+					    current->name.other.data, cnLen);
 		}
 		if (rv == SECSuccess)
 		    rv = cert_TestHostName(cn ,hn);
@@ -1741,7 +1739,7 @@ cert_GetDNSPatternsFromGeneralNames(CERTGeneralName *firstName,
               return SECFailure;
             PORT_Memcpy(cn, currentInput->name.other.data, 
                             currentInput->name.other.len);
-            cn[currentInput->name.other.len] = 0;
+            cn[currentInput->name.other.len + 1] = 0;
             break;
         case certIPAddress:
             if (currentInput->name.other.len == 4) {
@@ -1753,7 +1751,7 @@ cert_GetDNSPatternsFromGeneralNames(CERTGeneralName *firstName,
               memcpy(&addr.ipv6.ip, currentInput->name.other.data, 
                                     currentInput->name.other.len);
             }
-            if (PR_NetAddrToString(&addr, ipbuf, sizeof(ipbuf)) == PR_FAILURE)
+            if (PR_NetAddrToString(&addr, ipbuf, sizeof(ipbuf) == PR_FAILURE))
               return SECFailure;
             cn = PORT_ArenaStrdup(nickNames->arena, ipbuf);
             if (!cn)

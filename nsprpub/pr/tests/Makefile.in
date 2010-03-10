@@ -104,7 +104,6 @@ CSRCS =             \
 	lltest.c        \
 	lock.c          \
 	lockfile.c      \
-	logfile.c       \
 	logger.c		\
 	makedir.c		\
 	mbcs.c			\
@@ -148,7 +147,6 @@ CSRCS =             \
 	prpollml.c		\
 	ranfile.c       \
 	randseed.c      \
-	reinit.c        \
 	rmdir.c			\
 	rwlocktest.c    \
 	sel_spd.c  		\
@@ -206,11 +204,6 @@ CSRCS =             \
 	zerolen.c       \
 	$(NULL)
 
-ifeq ($(OS_ARCH),WINCE)
-CFLAGS += -FImozce_shunt.h -Zi -UDEBUG -DNDEBUG
-LDOPTS += -link $(DIST)/lib/mozce_shunt.lib ws2.lib -DEBUG -DEBUGTYPE:CV -INCREMENTAL:NO -PDB:$(@:.exe=.pdb)
-endif
-
 ifeq ($(OS_TARGET),OS2)
 CSRCS +=            \
 	sleep.c			\
@@ -219,12 +212,10 @@ CSRCS +=            \
 	$(NULL)
 endif
 
-ifeq (,$(filter-out WINCE WINNT OS2,$(OS_ARCH)))
+ifeq (,$(filter-out WINNT OS2,$(OS_ARCH)))
 PROG_SUFFIX = .exe
-DLL_SUFFIX = .dll
 else
 PROG_SUFFIX =
-DLL_SUFFIX = 
 endif
 
 PROGS = $(addprefix $(OBJDIR)/, $(CSRCS:.c=$(PROG_SUFFIX)))
@@ -239,8 +230,8 @@ ifdef NS_USE_GCC
 else
   EXTRA_LIBS += wsock32.lib
   LDOPTS = -NOLOGO -DEBUG -DEBUGTYPE:CV -INCREMENTAL:NO
-  ifdef PROFILE
-    LDOPTS += -PROFILE -MAP
+  ifdef PROFILE                                                                              
+    LDOPTS += -PROFILE -MAP                                                                  
   endif # profile
 endif # NS_USE_GCC
 endif
@@ -431,10 +422,6 @@ ifeq ($(OS_ARCH),BSD_OS)
 ifneq ($(OS_RELEASE),1.1)
 EXTRA_LIBS = -ldl
 endif
-endif
-
-ifeq ($(OS_ARCH),RISCOS)
-EXTRA_LIBS = -ldl
 endif
 
 ifeq ($(USE_PTHREADS),1)

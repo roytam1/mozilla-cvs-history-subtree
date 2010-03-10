@@ -114,7 +114,7 @@ extern SECStatus SGN_Begin(SGNContext *cx);
 **	"input" the input data to sign
 **	"inputLen" the length of the input data
 */
-extern SECStatus SGN_Update(SGNContext *cx, const unsigned char *input,
+extern SECStatus SGN_Update(SGNContext *cx, unsigned char *input,
 			   unsigned int inputLen);
 
 /*
@@ -137,8 +137,7 @@ extern SECStatus SGN_End(SGNContext *cx, SECItem *result);
 **	"algid" the signature/hash algorithm to sign with 
 **		(must be compatible with the key type).
 */
-extern SECStatus SEC_SignData(SECItem *result,
-			     const unsigned char *buf, int len,
+extern SECStatus SEC_SignData(SECItem *result, unsigned char *buf, int len,
 			     SECKEYPrivateKey *pk, SECOidTag algid);
 
 /*
@@ -349,8 +348,8 @@ extern SECStatus VFY_VerifyDigestWithAlgorithmID(const SECItem *dig,
 **	    the key type.
 **	"wincx" void pointer to the window context
 */
-extern SECStatus VFY_VerifyData(const unsigned char *buf, int len,
-				const SECKEYPublicKey *key, const SECItem *sig,
+extern SECStatus VFY_VerifyData(unsigned char *buf, int len,
+				SECKEYPublicKey *key, SECItem *sig,
 				SECOidTag sigAlg, void *wincx);
 /*
 ** Verify the signature on a block of data. The signature data is an RSA
@@ -392,7 +391,7 @@ extern SECStatus VFY_VerifyDataDirect(const unsigned char *buf, int len,
 */
 extern SECStatus VFY_VerifyDataWithAlgorithmID(const unsigned char *buf, 
 				int len, const SECKEYPublicKey *key,
-				const SECItem *sig,
+				 const SECItem *sig,
 				const SECAlgorithmID *algid, SECOidTag *hash,
 				void *wincx);
 

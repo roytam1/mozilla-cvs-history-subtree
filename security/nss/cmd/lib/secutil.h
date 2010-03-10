@@ -320,6 +320,7 @@ extern SECKEYLowPublicKey *SECU_ConvHighToLow(SECKEYPublicKey *pubHighKey);
 extern char *SECU_GetModulePassword(PK11SlotInfo *slot, PRBool retry, void *arg);
 
 extern SECStatus DER_PrettyPrint(FILE *out, SECItem *it, PRBool raw);
+extern void SEC_Init(void);
 
 extern char *SECU_SECModDBName(void);
 

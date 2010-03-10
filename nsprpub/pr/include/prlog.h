@@ -189,9 +189,11 @@ NSPR_API(void) PR_LogPrint(const char *fmt, ...);
 */
 NSPR_API(void) PR_LogFlush(void);
 
-NSPR_API(void) PR_Assert(const char *s, const char *file, PRIntn ln);
-
-#if defined(DEBUG) || defined(FORCE_PR_LOG)
+/*
+** Windoze 16 can't support a large static string space for all of the
+** various debugging strings so logging is not enabled for it.
+*/
+#if (defined(DEBUG) || defined(FORCE_PR_LOG)) && !defined(WIN16)
 #define PR_LOGGING 1
 
 #define PR_LOG_TEST(_module,_level) \
@@ -211,13 +213,13 @@ NSPR_API(void) PR_Assert(const char *s, const char *file, PRIntn ln);
       }                     \
     PR_END_MACRO
 
-#else /* defined(DEBUG) || defined(FORCE_PR_LOG) */
+#else /* (defined(DEBUG) || defined(FORCE_PR_LOG)) && !defined(WIN16) */
 
 #undef PR_LOGGING
 #define PR_LOG_TEST(module,level) 0
 #define PR_LOG(module,level,args)
 
-#endif /* defined(DEBUG) || defined(FORCE_PR_LOG) */
+#endif /* (defined(DEBUG) || defined(FORCE_PR_LOG)) && !defined(WIN16) */
 
 #ifndef NO_NSPR_10_SUPPORT
 
@@ -235,6 +237,7 @@ NSPR_API(void) PR_Assert(const char *s, const char *file, PRIntn ln);
 
 #if defined(DEBUG) || defined(FORCE_PR_ASSERT)
 
+NSPR_API(void) PR_Assert(const char *s, const char *file, PRIntn ln);
 #define PR_ASSERT(_expr) \
     ((_expr)?((void)0):PR_Assert(# _expr,__FILE__,__LINE__))
 

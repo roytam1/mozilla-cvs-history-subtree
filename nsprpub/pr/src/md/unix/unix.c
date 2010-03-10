@@ -78,7 +78,7 @@
 #define _PRSockLen_t int
 #elif (defined(AIX) && !defined(AIX4_1)) || defined(FREEBSD) \
     || defined(NETBSD) || defined(OPENBSD) || defined(UNIXWARE) \
-    || defined(DGUX) || defined(NTO) || defined(RISCOS)
+    || defined(DGUX) || defined(VMS) || defined(NTO) || defined(RISCOS)
 #define _PRSockLen_t size_t
 #else
 #error "Cannot determine architecture"
@@ -2649,17 +2649,7 @@ PRInt32 _MD_getopenfileinfo64(const PRFileDesc *fd, PRFileInfo64 *info)
     return rv;
 }
 
-/*
- * _md_iovector._open64 must be initialized to 'open' so that _PR_InitLog can
- * open the log file during NSPR initialization, before _md_iovector is
- * initialized by _PR_MD_FINAL_INIT.  This means the log file cannot be a
- * large file on some platforms.
- */
-#ifdef SYMBIAN
-struct _MD_IOVector _md_iovector; /* Will crash if NSPR_LOG_FILE is set. */
-#else
 struct _MD_IOVector _md_iovector = { open };
-#endif
 
 /*
 ** These implementations are to emulate large file routines on systems that
@@ -2891,18 +2881,6 @@ void _PR_UnixInit(void)
     PR_ASSERT(NULL != _pr_Xfe_mon);
 
     _PR_InitIOV();  /* one last hack */
-}
-
-void _PR_UnixCleanup(void)
-{
-    if (_pr_rename_lock) {
-        PR_DestroyLock(_pr_rename_lock);
-        _pr_rename_lock = NULL;
-    }
-    if (_pr_Xfe_mon) {
-        PR_DestroyMonitor(_pr_Xfe_mon);
-        _pr_Xfe_mon = NULL;
-    }
 }
 
 #if !defined(_PR_PTHREADS)

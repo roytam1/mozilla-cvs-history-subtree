@@ -161,7 +161,6 @@ static PRBool bypassPKCS11    = PR_FALSE;
 static PRBool disableLocking  = PR_FALSE;
 static PRBool ignoreErrors    = PR_FALSE;
 static PRBool enableSessionTickets = PR_FALSE;
-static PRBool enableCompression    = PR_FALSE;
 
 PRIntervalTime maxInterval    = PR_INTERVAL_NO_TIMEOUT;
 
@@ -180,8 +179,8 @@ Usage(const char *progName)
     fprintf(stderr, 
     	"Usage: %s [-n nickname] [-p port] [-d dbdir] [-c connections]\n"
  	"          [-23BDNTovqs] [-f filename] [-N | -P percentage]\n"
-	"          [-w dbpasswd] [-C cipher(s)] [-t threads] [-W pwfile]\n"
-        "          [-a sniHostName] hostname\n"
+	"          [-w dbpasswd] [-C cipher(s)] [-t threads] hostname\n"
+        "          [-W pwfile]\n"
 	" where -v means verbose\n"
         "       -o flag is interpreted as follows:\n"
         "          1 -o   means override the result of server certificate validation.\n"
@@ -196,8 +195,7 @@ Usage(const char *progName)
         "       -T means disable TLS\n"
         "       -U means enable throttling up threads\n"
 	"       -B bypasses the PKCS11 layer for SSL encryption and MACing\n"
-	"       -u enable TLS Session Ticket extension\n"
-	"       -z enable compression\n",
+	"       -u enable TLS Session Ticket extension\n",
 	progName);
     exit(1);
 }
@@ -229,8 +227,8 @@ errExit(char * funcString)
 void
 disableAllSSLCiphers(void)
 {
-    const PRUint16 *cipherSuites = SSL_GetImplementedCiphers();
-    int             i            = SSL_GetNumImplementedCiphers();
+    const PRUint16 *cipherSuites = SSL_ImplementedCiphers;
+    int             i            = SSL_NumImplementedCiphers;
     SECStatus       rv;
 
     /* disable all the SSL3 cipher suites */
@@ -314,11 +312,9 @@ printSecurityInfo(PRFileDesc *fd)
 	       suite.effectiveKeyBits, suite.symCipherName, 
 	       suite.macBits, suite.macAlgorithmName);
 	    FPRINTF(stderr, 
-	    "strsclnt: Server Auth: %d-bit %s, Key Exchange: %d-bit %s\n"
-	    "          Compression: %s\n",
+	    "strsclnt: Server Auth: %d-bit %s, Key Exchange: %d-bit %s\n",
 	       channel.authKeyBits, suite.authAlgorithmName,
-	       channel.keaKeyBits,  suite.keaTypeName,
-	       channel.compressionMethodName);
+	       channel.keaKeyBits,  suite.keaTypeName);
     	}
     }
 
@@ -1078,8 +1074,7 @@ client_main(
     unsigned short      port, 
     int                 connections,
     cert_and_key* Cert_And_Key,
-    const char *	hostName,
-    const char *	sniHostName)
+    const char *	hostName)
 {
     PRFileDesc *model_sock	= NULL;
     int         i;
@@ -1238,12 +1233,6 @@ client_main(
 	    errExit("SSL_OptionSet SSL_ENABLE_SESSION_TICKETS");
     }
 
-    if (enableCompression) {
-	rv = SSL_OptionSet(model_sock, SSL_ENABLE_DEFLATE, PR_TRUE);
-	if (rv != SECSuccess)
-	    errExit("SSL_OptionSet SSL_ENABLE_DEFLATE");
-    }
-
     SSL_SetURL(model_sock, hostName);
 
     SSL_AuthCertificateHook(model_sock, mySSLAuthCertificate, 
@@ -1252,9 +1241,6 @@ client_main(
 
     SSL_GetClientAuthDataHook(model_sock, StressClient_GetClientAuthData, (void*)Cert_And_Key);
 
-    if (sniHostName) {
-        SSL_SetURL(model_sock, sniHostName);
-    }
     /* I'm not going to set the HandshakeCallback function. */
 
     /* end of ssl configuration. */
@@ -1340,9 +1326,8 @@ main(int argc, char **argv)
     SECStatus            rv;
     PLOptState *         optstate;
     PLOptStatus          status;
-    cert_and_key         Cert_And_Key;
-    secuPWData           pwdata  = { PW_NONE, 0 };
-    char *               sniHostName = NULL;
+    cert_and_key Cert_And_Key;
+    secuPWData  pwdata          = { PW_NONE, 0 };
 
     /* Call the NSPR initialization routines */
     PR_Init( PR_SYSTEM_THREAD, PR_PRIORITY_NORMAL, 1);
@@ -1353,8 +1338,7 @@ main(int argc, char **argv)
     progName = progName ? progName + 1 : tmp;
  
 
-    optstate = PL_CreateOptState(argc, argv,
-                                 "23BC:DNP:TUW:a:c:d:f:in:op:qst:uvw:z");
+    optstate = PL_CreateOptState(argc, argv, "23BC:DNP:TUW:c:d:f:in:op:qst:uvw:");
     while ((status = PL_GetNextOpt(optstate)) == PL_OPT_OK) {
 	switch(optstate->option) {
 
@@ -1375,8 +1359,6 @@ main(int argc, char **argv)
 	case 'T': disableTLS = PR_TRUE; break;
             
 	case 'U': ThrottleUp = PR_TRUE; break;
-
-	case 'a': sniHostName = PL_strdup(optstate->value); break;
 
 	case 'c': connections = PORT_Atoi(optstate->value); break;
 
@@ -1415,8 +1397,6 @@ main(int argc, char **argv)
             pwdata.source = PW_FROMFILE;
             pwdata.data = PL_strdup(optstate->value);
             break;
-
-	case 'z': enableCompression = PR_TRUE; break;
 
 	case 0:   /* positional parameter */
 	    if (hostName) {
@@ -1484,8 +1464,7 @@ main(int argc, char **argv)
 
     }
 
-    client_main(port, connections, &Cert_And_Key, hostName,
-                sniHostName);
+    client_main(port, connections, &Cert_And_Key, hostName);
 
     /* clean up */
     if (Cert_And_Key.cert) {
@@ -1502,9 +1481,6 @@ main(int argc, char **argv)
     }
     if (Cert_And_Key.nickname) {
         PL_strfree(Cert_And_Key.nickname);
-    }
-    if (sniHostName) {
-        PL_strfree(sniHostName);
     }
 
     PL_strfree(hostName);

@@ -140,7 +140,7 @@ SGN_Begin(SGNContext *cx)
 }
 
 SECStatus
-SGN_Update(SGNContext *cx, const unsigned char *input, unsigned int inputLen)
+SGN_Update(SGNContext *cx, unsigned char *input, unsigned inputLen)
 {
     if (cx->hashcx == NULL) {
 	PORT_SetError(SEC_ERROR_INVALID_ARGS);
@@ -277,7 +277,7 @@ SGN_End(SGNContext *cx, SECItem *result)
 ** signature. Returns zero on success, an error code on failure.
 */
 SECStatus
-SEC_SignData(SECItem *res, const unsigned char *buf, int len,
+SEC_SignData(SECItem *res, unsigned char *buf, int len,
 	     SECKEYPrivateKey *pk, SECOidTag algid)
 {
     SECStatus rv;

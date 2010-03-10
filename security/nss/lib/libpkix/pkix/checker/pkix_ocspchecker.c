@@ -139,20 +139,6 @@ cleanup:
         PKIX_RETURN(OCSPCHECKER);
 }
 
-/*
- * FUNCTION: pkix_OcspChecker_MapResultCodeToRevStatus
- */
-PKIX_RevocationStatus
-pkix_OcspChecker_MapResultCodeToRevStatus(SECErrorCodes resultCode)
-{
-        switch (resultCode) {
-            case SEC_ERROR_REVOKED_CERTIFICATE:
-                return PKIX_RevStatus_Revoked;
-            default:
-                return PKIX_RevStatus_NoInfo;
-        }
-}
-
 /* --Public-Functions--------------------------------------------- */
 
 /*
@@ -201,7 +187,7 @@ pkix_OcspChecker_CheckLocal(
         }
 
         PKIX_CHECK(
-            PKIX_PL_OcspCertID_GetFreshCacheStatus(cid, date,
+            PKIX_PL_OcspCertID_GetFreshCacheStatus(cid, NULL,
                                                    &hasFreshStatus,
                                                    &statusIsGood,
                                                    &resultCode,
@@ -212,7 +198,7 @@ pkix_OcspChecker_CheckLocal(
                 revStatus = PKIX_RevStatus_Success;
                 resultCode = 0;
             } else {
-                revStatus = pkix_OcspChecker_MapResultCodeToRevStatus(resultCode);
+                revStatus = PKIX_RevStatus_Revoked;
             }
         }
 
@@ -265,7 +251,7 @@ pkix_OcspChecker_CheckExternal(
         PKIX_RevocationStatus revStatus = PKIX_RevStatus_NoInfo;
         void *nbioContext = NULL;
 
-        PKIX_ENTER(OCSPCHECKER, "pkix_OcspChecker_CheckExternal");
+        PKIX_ENTER(OCSPCHECKER, "pkix_OcspChecker_Check");
 
         PKIX_CHECK(
             pkix_CheckType((PKIX_PL_Object*)checkerObject,
@@ -289,6 +275,9 @@ pkix_OcspChecker_CheckExternal(
         if (uriFound == PKIX_FALSE) {
             /* no caching for certs lacking URI */
             resultCode = 0;
+            if (methodFlags & PKIX_REV_M_REQUIRE_INFO_ON_MISSING_SOURCE) {
+                revStatus = PKIX_RevStatus_Revoked;
+            }
             goto cleanup;
         }
 
@@ -335,19 +324,18 @@ pkix_OcspChecker_CheckExternal(
         }
 
         PKIX_CHECK(
-            pkix_pl_OcspResponse_GetStatusForCert(cid, response, date,
+            pkix_pl_OcspResponse_GetStatusForCert(cid, response,
                                                   &passed, &resultCode,
                                                   plContext),
             PKIX_OCSPRESPONSEGETSTATUSFORCERTFAILED);
         if (passed == PKIX_FALSE) {
-            revStatus = pkix_OcspChecker_MapResultCodeToRevStatus(resultCode);
+            revStatus = PKIX_RevStatus_Revoked;
         } else {
             revStatus = PKIX_RevStatus_Success;
         }
 
 cleanup:
-        if (revStatus == PKIX_RevStatus_NoInfo && (uriFound || 
-	    methodFlags & PKIX_REV_M_REQUIRE_INFO_ON_MISSING_SOURCE) &&
+        if (revStatus == PKIX_RevStatus_NoInfo && uriFound &&
             methodFlags & PKIX_REV_M_FAIL_ON_MISSING_FRESH_INFO) {
             revStatus = PKIX_RevStatus_Revoked;
         }

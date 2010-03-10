@@ -64,7 +64,7 @@ ldap_create_passwordpolicy_control (
 	}
 	
 	rc = nsldapi_build_control( LDAP_CONTROL_PASSWD_POLICY, 
-								NULL, 0, 0, ctrlp );
+								NULL, NULL, 0, ctrlp );
 	
 	LDAP_SET_LDERRNO( ld, rc, NULL, NULL );
 	return( rc );
@@ -104,7 +104,7 @@ ldap_create_passwordpolicy_control_ext (
 	}
 	
 	rc = nsldapi_build_control( LDAP_CONTROL_PASSWD_POLICY, 
-								NULL, 0, ctl_iscritical, ctrlp );
+								NULL, NULL, ctl_iscritical, ctrlp );
 	
 	LDAP_SET_LDERRNO( ld, rc, NULL, NULL );
 	return( rc );
@@ -197,9 +197,9 @@ ldap_parse_passwordpolicy_control (
 				ber_free( ber, 1 );
 				return( LDAP_DECODING_ERROR );
 			}
-			if ( tag == LBER_CLASS_CONTEXT ) {
+			if ( tag == ( LBER_CLASS_CONTEXT | 0x01 ) ) {
 				pp_exp = pp_warning;
-			} else if ( tag == ( LBER_CLASS_CONTEXT | 0x01 ) ) {
+			} else if ( tag == ( LBER_CLASS_CONTEXT | 0x02 ) ) {
 				pp_grace = pp_warning;
 			}
 		} else if ( tag == ( LBER_CLASS_CONTEXT | 0x01 ) ) {

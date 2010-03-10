@@ -184,7 +184,7 @@ static void ServerThread(void *arg)
     }
 }
 
-int main(int argc, char **argv)
+int main()
 {
     PRFileDesc *listenSock;
     PRThread *clientThread;

@@ -82,7 +82,6 @@ dnl ========================================================
 CFLAGS="${CFLAGS=}"
 CXXFLAGS="${CXXFLAGS=}"
 LDFLAGS="${LDFLAGS=}"
-DLLFLAGS="${DLLFLAGS=}"
 HOST_CFLAGS="${HOST_CFLAGS=}"
 HOST_LDFLAGS="${HOST_LDFLAGS=}"
 
@@ -369,7 +368,10 @@ if test -z "$NSPR_CFLAGS" -o -z "$NSPR_LIBS" ; then
    if test -n "$MOZILLA_CLIENT" ; then
        NSPR_CFLAGS='-I$(DIST)/include/nspr'
        NSPR_LIBS='-L$(DIST)/lib '"-lplds$NSPR_VERSION -lplc$NSPR_VERSION -lnspr$NSPR_VERSION"
-       if test "$_WIN32_MSVC"; then
+       dnl explicitly set libs for Visual Age C++ for OS/2
+       if test "$VACPP" = "yes"; then
+          NSPR_LIBS='$(DIST)/lib/nspr'$NSPR_VERSION'.lib $(DIST)/lib/plc'$NSPR_VERSION'.lib $(DIST)/lib/plds'$NSPR_VERSION'.lib '$_PTHREAD_LDFLAGS''
+       elif test "$_WIN32_MSVC"; then
           NSPR_LIBS='$(DIST)/lib/nspr'$NSPR_VERSION'.lib $(DIST)/lib/plc'$NSPR_VERSION'.lib $(DIST)/lib/plds'$NSPR_VERSION'.lib '
        fi
        SKIP_CYGWIN_FIXUP=1
@@ -390,11 +392,8 @@ dnl ========================================================
 
 dnl add other runtime environments that use unix style paths
 dnl *-cygwin*|*-mingw*|*-msvc*|*-mks*)
-dnl mozilla-build msys seems not to convert -L to /LIBPATH
-dnl it just converts -L to /L and link issues an error
 case "$target" in
 *-cygwin*) USE_WINDOWS_PATHS=1 ;;
-*-mingw*) CONVERT_LIBPATH=1 ;;
 esac
 
 if test -n "$_WIN32_MSVC" -a -n "$USE_WINDOWS_PATHS" ; then
@@ -420,10 +419,6 @@ if test -n "$_WIN32_MSVC" -a -n "$USE_WINDOWS_PATHS" ; then
         path=`cygpath -m $path`
         NSS_LIBS="/LIBPATH:$path"
     fi
-    if test -n "$NSS_LIBS" -a -n "$CONVERT_LIBPATH" ; then
-        path=`echo $NSS_LIBS | sed -e 's/^-L//'`
-        NSS_LIBS="/LIBPATH:$path"
-    fi
 
     if test -n "$SVRCORE_CFLAGS" ; then
         path=`echo $SVRCORE_CFLAGS | sed -e 's/^-I//'`
@@ -436,32 +431,6 @@ if test -n "$_WIN32_MSVC" -a -n "$USE_WINDOWS_PATHS" ; then
         path=`cygpath -m $path`
         SVRCORE_LIBS="/LIBPATH:$path"
     fi
-    if test -n "$SVRCORE_LIBS" -a -n "$CONVERT_LIBPATH" ; then
-        path=`echo $SVRCORE_LIBS | sed -e 's/^-L//'`
-        SVRCORE_LIBS="/LIBPATH:$path"
-    fi
-fi
-
-dnl there seems to be no way to pass /libpath:/msys/style/path
-dnl to the link command line and have that converted to
-dnl /libpath:c:\dos\style\path
-dnl i've tried -libpath, /libpath, //libpath
-dnl msys does not have the cygpath command - however, pwd -W will
-dnl return the current directory in a suitable fornat
-if test -n "$_WIN32_MSVC" -a -n "$NSPR_LIBS" -a -n "$CONVERT_LIBPATH" ; then
-    path=`echo $NSPR_LIBS | sed -e 's/^-L//'`
-    path=`cd "$path" ; pwd -W`
-    NSPR_LIBS="/LIBPATH:$path"
-fi
-if test -n "$_WIN32_MSVC" -a -n "$NSS_LIBS" -a -n "$CONVERT_LIBPATH" ; then
-    path=`echo $NSS_LIBS | sed -e 's/^-L//'`
-    path=`cd "$path" ; pwd -W`
-    NSS_LIBS="/LIBPATH:$path"
-fi
-if test -n "$_WIN32_MSVC" -a -n "$SVRCORE_LIBS" -a -n "$CONVERT_LIBPATH" ; then
-    path=`echo $SVRCORE_LIBS | sed -e 's/^-L//'`
-    path=`cd "$path" ; pwd -W`
-    SVRCORE_LIBS="/LIBPATH:$path"
 fi
 
 dnl ========================================================
@@ -1274,7 +1243,7 @@ tools are selected during the Xcode/Developer Tools installation.])
     AC_DEFINE(FREEBSD)
     AC_DEFINE(HAVE_BSD_FLOCK)
     CFLAGS="$CFLAGS $(DSO_CFLAGS) -ansi -Wall"
-    MOZ_OBJFORMAT=`test -x /usr/bin/objformat && /usr/bin/objformat || echo elf`
+    MOZ_OBJFORMAT=`test -x /usr/bin/objformat && /usr/bin/objformat || echo aout`
     if test "$MOZ_OBJFORMAT" = "elf"; then
         DLL_SUFFIX=so
     else
@@ -1543,15 +1512,11 @@ tools are selected during the Xcode/Developer Tools installation.])
                                    # combo is not yet good at debugging inlined
                                    # functions (even when using DWARF2 as the
                                    # debugging format)
-    case "$OS_TEST" in
-    i*86)
+    if echo "$OS_TEST" | grep -c 86 >/dev/null; then
         CPU_ARCH=x86
-        ;;
-    *)
+    else
         CPU_ARCH=$OS_TEST
-        ;;
-    esac
-
+    fi
     case "${target_cpu}" in
     alpha)
         AC_DEFINE(_ALPHA_)
@@ -1591,6 +1556,7 @@ tools are selected during the Xcode/Developer Tools installation.])
         # Use temp file for windres (bug 213281)
         RC="$WINDRES -O coff --use-temp-file"
     else
+        CYGWIN_WRAPPER='sh $(topsrcdir)/config/cygwin-wrapper'
         CC=cl
         CXX=cl
         LD=link
@@ -1605,22 +1571,15 @@ tools are selected during the Xcode/Developer Tools installation.])
         AR_FLAGS=
         RANLIB='echo not_ranlib'
         STRIP='echo not_strip'
-        RC=rc.exe
+        RC='$(CYGWIN_WRAPPER) rc.exe'
         GARBAGE='$(OBJDIR)/vc20.pdb $(OBJDIR)/vc40.pdb'
 	    OBJ_SUFFIX=obj
 	    LIB_SUFFIX=lib
 	    LIB_PREFIX=
 	    DLL_SUFFIX=dll
         
-        # Determine compiler version
-        CC_VERSION=`"${CC}" -v 2>&1 | grep Version | sed -e 's|.* Version ||' -e 's| .*||'`
-        _CC_MAJOR_VERSION=`echo $CC_VERSION | awk -F\. '{ print $1 }'`
-        _CC_MINOR_VERSION=`echo $CC_VERSION | awk -F\. '{ print $2 }'`
-        _MSC_VER=${_CC_MAJOR_VERSION}${_CC_MINOR_VERSION}
-
         CFLAGS="$CFLAGS -W3 -nologo -GF -Gy"
-        DLLFLAGS="$DLLFLAGS -OUT:\"\$@\""
-
+        DLLFLAGS='-OUT:"$@"'
         _DEBUG_FLAGS=-Z7
         _OPTIMIZE_FLAGS=-O2
         if test -z "$MOZ_OPTIMIZE"; then
@@ -1640,8 +1599,13 @@ tools are selected during the Xcode/Developer Tools installation.])
         fi
 
         if test -n "$MOZ_OPTIMIZE"; then
+            if test -n "$MOZ_PROFILE"; then
+                _OPTIMIZE_FLAGS="$_OPTIMIZE_FLAGS -Z7"
+            fi
             if test -n "$MOZ_DEBUG_SYMBOLS"; then
                 _OPTIMIZE_FLAGS="$_OPTIMIZE_FLAGS -Zi"
+            fi
+            if test -n "$MOZ_PROFILE" -o -n "$MOZ_DEBUG_SYMBOLS"; then
                 DLLFLAGS="$DLLFLAGS -DEBUG -OPT:REF"
                 LDFLAGS="$LDFLAGS -DEBUG -OPT:REF"
             fi
@@ -1652,11 +1616,6 @@ tools are selected during the Xcode/Developer Tools installation.])
             LDFLAGS="$LDFLAGS -DEBUG"
         fi
         
-        OS_DLLFLAGS='-nologo -DLL -SUBSYSTEM:WINDOWS'
-        if test "$_MSC_VER" -le "1200" -a -z "$MOZ_DEBUG_SYMBOLS"; then
-            OS_DLLFLAGS="$OS_DLLFLAGS -PDB:NONE"
-        fi
-
         if test "$OS_TARGET" = "WINNT"; then
             CFLAGS="$CFLAGS -GT"
             if test "$CPU_ARCH" = "x86"; then
@@ -1678,6 +1637,8 @@ tools are selected during the Xcode/Developer Tools installation.])
         AC_DEFINE(_PR_GLOBAL_THREADS_ONLY)
     fi
 
+    OS_DLLFLAGS='-nologo -DLL -SUBSYSTEM:WINDOWS -PDB:NONE'
+
     case "$OS_TARGET" in
     WINNT)
 	    ;;
@@ -1692,31 +1653,19 @@ tools are selected during the Xcode/Developer Tools installation.])
 
     case "$target_cpu" in
     i*86)
-	    if test -n "$USE_64"; then
-		AC_DEFINE(_AMD64_)
-		AC_DEFINE(_M_AMD64)
-	    else
-		AC_DEFINE(_X86_)
-	    fi
-	    ;;
+	    AC_DEFINE(_X86_)
+        ;;
     alpha)
 	    AC_DEFINE(_ALPHA_)
    	    ;;
     mips)
 	    AC_DEFINE(_MIPS_)
 	    ;;
-    x86_64)
-	    AC_DEFINE(_AMD64_)
-	    AC_DEFINE(_M_AMD64)
-	    ;;
     *)
 	    AC_DEFINE(_CPU_ARCH_NOT_DEFINED)
 	    ;;
     esac
 
-    if test -n "$USE_64"; then
-	AC_DEFINE(_WIN64)
-    fi
     ;;
 
 *-ncr-sysv*)
@@ -1845,11 +1794,8 @@ mips-sony-newsos*)
     ;;
 
 *-os2*)
-    AC_DEFINE(OS2)
     AC_DEFINE(XP_OS2)
     AC_DEFINE(XP_PC)
-#    AC_DEFINE(USE_OS2_TOOLKIT_HEADERS)
-    AC_DEFINE(TCPV40HDRS)
     AC_DEFINE(BSD_SELECT)
     AC_DEFINE(_PR_GLOBAL_THREADS_ONLY)
     RESOLVE_LINK_SYMBOLS=1
@@ -1860,30 +1806,77 @@ mips-sony-newsos*)
     DLLTOOL=''
     RC=rc.exe
     PROG_SUFFIX=.exe
-    AR=emxomfar
-    AR_FLAGS='r $@'
-    LD='$(CC)'
-    CFLAGS="$CFLAGS -Wall -Zomf"
-    CXXFLAGS="$CFLAGS -Wall -Zomf"
-    MKSHLIB='$(CC) $(DSO_LDOPTS) -o $@'
-    DSO_CFLAGS=
-    DSO_LDOPTS='-Zomf -Zdll'
-    _OPTIMIZE_FLAGS=-O3
-    _DEBUG_FLAGS="-g -fno-inline"
-    if test -n "$MOZ_OPTIMIZE"; then
-        DSO_LDOPTS="$DSO_LDOPTS -Zlinker /EXEPACK:2 -Zlinker /PACKCODE -Zlinker /PACKDATA"
-    fi
-    OS_LIBS="-lsocket"
-    IMPLIB='emximp -o'
-    FILTER='emxexp -o'
-    if test -n "$MOZ_OS2_HIGH_MEMORY"; then
-        DSO_LDOPTS="$DSO_LDOPTS -Zhigh-mem"
-        LDFLAGS="$LDFLAGS -Zhigh-mem"
-        AC_DEFINE(MOZ_OS2_HIGH_MEMORY)
-    fi
 
-    # GCC for OS/2 currently predefines these, but we don't want them
-    DEFINES="$DEFINES -Uunix -U__unix -U__unix__"
+    # EMX/GCC build
+    if test -n "$GNU_CC"; then
+#        AC_DEFINE(USE_OS2_TOOLKIT_HEADERS)
+        AC_DEFINE(XP_OS2_EMX)
+        AC_DEFINE(OS2)
+        AC_DEFINE(TCPV40HDRS)
+        AR=emxomfar
+        AR_FLAGS='r $@'
+        LD='$(CC)'
+        CFLAGS="$CFLAGS -Wall -Zomf"
+        CXXFLAGS="$CFLAGS -Wall -Zomf"
+        MKSHLIB='$(CC) $(DSO_LDOPTS) -o $@'
+        DSO_CFLAGS=
+        DSO_LDOPTS='-Zomf -Zdll'
+        _OPTIMIZE_FLAGS=-O3
+        _DEBUG_FLAGS="-g -fno-inline"
+        if test -n "$MOZ_OPTIMIZE"; then
+          DSO_LDOPTS="$DSO_LDOPTS -Zlinker /EXEPACK:2 -Zlinker /PACKCODE -Zlinker /PACKDATA"
+        fi
+        OS_LIBS="-lsocket"
+        IMPLIB='emximp -o'
+        FILTER='emxexp -o'
+        if test -n "$MOZ_OS2_HIGH_MEMORY"; then
+          DSO_LDOPTS="$DSO_LDOPTS -Zhigh-mem"
+          LDFLAGS="$LDFLAGS -Zhigh-mem"
+          AC_DEFINE(MOZ_OS2_HIGH_MEMORY)
+        fi
+
+        # GCC for OS/2 currently predefines these, but we don't want them
+        DEFINES="$DEFINES -Uunix -U__unix -U__unix__"
+
+    # Visual Age C++ build
+    elif test "$VACPP" = "yes"; then
+        MOZ_BUILD_ROOT=`pwd -D`
+        AC_DEFINE(XP_OS2_VACPP)
+        AC_DEFINE(OS2,4)
+        AC_DEFINE(TCPV40HDRS)
+        AC_DEFINE(_X86_)
+        OBJ_SUFFIX=obj
+        AS=alp
+        ASFLAGS='-Mb'
+        ASM_SUFFIX=asm
+        AR=ilib
+        AR_FLAGS='/NOL /NOI /O:$(subst /,\\,$@)'
+        CFLAGS='/Q /qlibansi /Gd+ /Gm+ /Su4 /Mp /Tl9'
+        HOST_CFLAGS="$CFLAGS"
+        OS_CFLAGS='/Q /qlibansi /Gd+ /Gm+ /Su4 /Mp /Tl9'
+        OS_EXE_CFLAGS='/Q /qlibansi /Gd+ /Gm+ /Su4 /Mp /Tl9'
+        CXXFLAGS='/Q /qlibansi /Gd+ /Gm+ /Su4 /Mp /Tl9'
+        OS_LIBS='so32dll.lib tcp32dll.lib'
+        LD='-ilink'
+        MKSHLIB='$(LD) $(DSO_LDOPTS)'
+        IMPLIB='implib -nologo -noignorecase'
+        FILTER='cppfilt -q -B -P'
+        _OPTIMIZE_FLAGS='/O+ /Gl+ /Gx+ /qtune=pentium /qarch=pentium'
+        _DEBUG_FLAGS='/Ti+ '
+        LDFLAGS='/NOL /M /L'
+        DLLFLAGS='/O:$@ /DLL /INC:_dllentry /MAP:$(@:.dll=.map) /L /NOL'
+        EXEFLAGS='/OUT:$@ /PMTYPE:VIO /MAP:$(@:.exe=.map) /L /NOL'
+        if test -n "$MOZ_DEBUG"; then
+          LDFLAGS="$LDFLAGS /DE"
+          DLLFLAGS="$DLLFLAGS /DE"
+          EXEFLAGS="$EXEFLAGS /DE"
+        fi
+        if test -n "$MOZ_OPTIMIZE"; then
+          LDFLAGS="$LDFLAGS /OPTFUNC /EXEPACK:2 /PACKCODE /PACKDATA"
+          DLLFLAGS="$DLLFLAGS /OPTFUNC /EXEPACK:2 /PACKCODE /PACKDATA"
+          EXEFLAGS="$EXEFLAGS /OPTFUNC /EXEPACK:2 /PACKCODE /PACKDATA"
+        fi
+    fi
     ;;
 
 *-osf*)
@@ -2176,7 +2169,7 @@ dnl ========================================================
 dnl Checks for library functions.
 dnl ========================================================
 AC_PROG_GCC_TRADITIONAL
-AC_CHECK_FUNCS(lchown strerror getaddrinfo getnameinfo)
+AC_CHECK_FUNCS(lchown strerror)
 
 dnl AC_FUNC_MEMCMP
 dnl AC_FUNC_MMAP
@@ -2650,7 +2643,5 @@ dnl since configure won't handle 2 levels of directory
 dnl structure for us..
 mkdir ldap > /dev/null 2>&1
 mkdir ldap/clients > /dev/null 2>&1
-
-echo $MAKEFILES > unallmakefiles
 
 AC_OUTPUT([$MAKEFILES])

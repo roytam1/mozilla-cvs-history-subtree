@@ -46,6 +46,10 @@ ifdef BUILD_LIBPKIX_TESTS
 DIRS += libpkix
 endif
 
+ifndef USE_SYSTEM_ZLIB
+ZLIB_SRCDIR = zlib  # Add the zlib directory to DIRS.
+endif
+
 INCLUDES += \
 	-I$(DIST)/../public/security \
 	-I./include \

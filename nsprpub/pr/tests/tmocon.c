@@ -72,15 +72,11 @@
 #include <direct.h>
 #endif
 
-#ifdef WINCE
-#include <windows.h>
-char *getcwd(char *buf, size_t size)
-{
-    wchar_t wpath[MAX_PATH];
-    _wgetcwd(wpath, MAX_PATH);
-    WideCharToMultiByte(CP_ACP, 0, wpath, -1, buf, size, 0, 0);
-}
+#ifdef XP_MAC
+#include "prlog.h"
+#define printf PR_LogPrint
 #endif
+
 
 #define BASE_PORT 9867
 
@@ -129,9 +125,7 @@ static PRStatus MakeReceiver(Shared *shared)
     {
         char *argv[3];
         char path[1024 + sizeof("/tmoacc")];
-
-        getcwd(path, sizeof(path));
-
+        (void)getcwd(path, sizeof(path));
         (void)strcat(path, "/tmoacc");
 #ifdef XP_PC
         (void)strcat(path, ".exe");

@@ -61,6 +61,8 @@ extern int fwrite(char *, size_t, size_t, FILE*);
 extern int fprintf(FILE *, char *, ...);
 #endif
 
+extern void SEC_Init(void);		/* XXX */
+
 
 static void
 Usage(char *progName)

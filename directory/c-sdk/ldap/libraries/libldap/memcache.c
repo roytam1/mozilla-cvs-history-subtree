@@ -62,7 +62,6 @@
 #define MEMCACHE_ACCESS_FLUSH	    7
 #define MEMCACHE_ACCESS_FLUSH_ALL   8
 #define MEMCACHE_ACCESS_FLUSH_LRU   9
-#define MEMCACHE_ACCESS_FLUSH_RESULTS 10
 
 /* Mode constants for function memcache_adj_size */
 #define MEMCACHE_SIZE_DEDUCT	    0
@@ -221,8 +220,6 @@ static int memcache_remove_all(LDAP *ld);
 #endif /* 0 */
 static int memcache_access(LDAPMemCache *cache, int mode, 
 			   void *pData1, void *pData2, void *pData3);
-static void memcache_flush(LDAPMemCache *cache, char *dn, int scope,
-			   int flushresults);
 #ifdef LDAP_DEBUG
 static void memcache_print_list( LDAPMemCache *cache, int index );
 static void memcache_report_statistics( LDAPMemCache *cache );
@@ -489,28 +486,29 @@ ldap_memcache_update( LDAPMemCache *cache )
     LDAP_MEMCACHE_MUTEX_UNLOCK( cache );
 }
 
-/* Removes specified entries from given memcache. Only clears out search
-   results that included search entries. */
+/* Removes specified entries from given memcache. */
 void
 LDAP_CALL
 ldap_memcache_flush( LDAPMemCache *cache, char *dn, int scope )
 {
     LDAPDebug( LDAP_DEBUG_TRACE,
-        "ldap_memcache_flush( cache: 0x%p, dn: %s, scope: %d)\n",
-        cache, ( dn == NULL ) ? "(null)" : dn, scope );
-    memcache_flush(cache, dn, scope, 0 /* Don't use result flush mode */);
-}
+	    "ldap_memcache_flush( cache: 0x%p, dn: %s, scope: %d)\n",
+	    cache, ( dn == NULL ) ? "(null)" : dn, scope );
 
-/* Removes specified entries from given memcache, including search
-   results that returned no entries. */
-void
-LDAP_CALL
-ldap_memcache_flush_results( LDAPMemCache *cache, char *dn, int scope )
-{
-    LDAPDebug( LDAP_DEBUG_TRACE,
-        "ldap_memcache_flush_results( cache: 0x%p, dn: %s, scope: %d)\n",
-        cache, ( dn == NULL ) ? "(null)" : dn, scope );
-    memcache_flush(cache, dn, scope, 1 /* Use result flush mode */);
+    if ( !NSLDAPI_VALID_MEMCACHE_POINTER( cache )) {
+	return;
+    }
+
+    LDAP_MEMCACHE_MUTEX_LOCK( cache );
+
+    if (!dn) {
+	memcache_access(cache, MEMCACHE_ACCESS_FLUSH_ALL, NULL, NULL, NULL);
+    } else {
+	memcache_access(cache, MEMCACHE_ACCESS_FLUSH, 
+	                (void*)dn, (void*)scope, NULL);
+    }
+
+    LDAP_MEMCACHE_MUTEX_UNLOCK( cache );
 }
 
 /* Destroys the given memcache. */
@@ -1587,8 +1585,7 @@ memcache_access(LDAPMemCache *cache, int mode,
 	cache->ldmemc_resTail[LIST_TTL] = NULL;
     }
     /* Remove cached entries in both primary and temporary cache. */
-    else if ((mode == MEMCACHE_ACCESS_FLUSH) ||
-	     (mode == MEMCACHE_ACCESS_FLUSH_RESULTS)) {
+    else if (mode == MEMCACHE_ACCESS_FLUSH) {
 
 	int i, list_id, bDone;
 	int scope = (int)pData2;
@@ -1617,8 +1614,6 @@ memcache_access(LDAPMemCache *cache, int mode,
 	    for (pRes = cache->ldmemc_resHead[list_id]; pRes != NULL; 
 		 pRes = pRes->ldmemcr_next[list_id]) {
 
-		int foundentries = 0;
-
 		if ((memcache_compare_dn(pRes->ldmemcr_basedn, dn, 
 				 LDAP_SCOPE_SUBTREE) != LDAP_COMPARE_TRUE) &&
 		    (memcache_compare_dn(dn, pRes->ldmemcr_basedn, 
@@ -1630,21 +1625,13 @@ memcache_access(LDAPMemCache *cache, int mode,
 
 		    if (!NSLDAPI_IS_SEARCH_ENTRY( pMsg->lm_msgtype ))
 			continue;
-		    foundentries = 1;
+
 		    ber = *(pMsg->lm_ber);
 		    if (ber_scanf(&ber, "{a", &dnTmp) != LBER_ERROR) {
 			bDone = (memcache_compare_dn(dnTmp, dn, scope) == 
 							    LDAP_COMPARE_TRUE);
 			ldap_memfree(dnTmp);
 		    }
-		}
-
-		/* If we're in the result flush mode, and the base matched, and
-		   there were no entries in the result, we'll flush this cache
-		   slot, as opposed to the MEMCACHE_ACCESS_FLUSH mode which does
-		   not flush negative results. */
-		if ((mode == MEMCACHE_ACCESS_FLUSH_RESULTS) && !foundentries) {
-			bDone = 1;
 		}
 
 		if (!bDone)
@@ -1690,30 +1677,6 @@ memcache_access(LDAPMemCache *cache, int mode,
     }
 
     return nRes;
-}
-
-static void
-memcache_flush( LDAPMemCache *cache, char *dn, int scope, int flushresults )
-{
-    if ( !NSLDAPI_VALID_MEMCACHE_POINTER( cache )) {
-	return;
-    }
-
-    LDAP_MEMCACHE_MUTEX_LOCK( cache );
-
-    if (!dn) {
-	memcache_access(cache, MEMCACHE_ACCESS_FLUSH_ALL, NULL, NULL, NULL);
-    } else {
-	if (flushresults) {
-		memcache_access(cache, MEMCACHE_ACCESS_FLUSH_RESULTS,
-			(void*)dn, (void*)scope, NULL);
-	} else {
-		memcache_access(cache, MEMCACHE_ACCESS_FLUSH, 
-	                (void*)dn, (void*)scope, NULL);
-	}
-    }
-
-    LDAP_MEMCACHE_MUTEX_UNLOCK( cache );
 }
 
 

@@ -52,13 +52,6 @@
 #include <string.h>
 #include <signal.h>
 
-#ifdef SYMBIAN
-/* In Open C sched_get_priority_min/max do not work properly, so we undefine
- * _POSIX_THREAD_PRIORITY_SCHEDULING here.
- */
-#undef _POSIX_THREAD_PRIORITY_SCHEDULING
-#endif
-
 /*
  * Record whether or not we have the privilege to set the scheduling
  * policy and priority of threads.  0 means that privilege is available.
@@ -1040,13 +1033,7 @@ PR_IMPLEMENT(PRStatus) PR_Cleanup(void)
         PR_Lock(pt_book.ml);
         while (pt_book.user > pt_book.this_many)
             PR_WaitCondVar(pt_book.cv, PR_INTERVAL_NO_TIMEOUT);
-        if (me->state & PT_THREAD_SYSTEM)
-            pt_book.system -= 1;
-        else
-            pt_book.user -= 1;
         PR_Unlock(pt_book.ml);
-
-        _PR_MD_EARLY_CLEANUP();
 
         _PR_CleanupMW();
         _PR_CleanupTime();
@@ -1165,7 +1152,6 @@ static void null_signal_handler(PRIntn sig);
  */
 static void init_pthread_gc_support(void)
 {
-#ifndef SYMBIAN
     PRIntn rv;
 
 #if defined(_PR_DCETHREADS)
@@ -1202,7 +1188,6 @@ static void init_pthread_gc_support(void)
     }
 #endif  /* defined(PT_NO_SIGTIMEDWAIT) */
 #endif /* defined(_PR_DCETHREADS) */
-#endif /* SYMBIAN */
 }
 
 PR_IMPLEMENT(void) PR_SetThreadGCAble(void)
@@ -1353,9 +1338,8 @@ static void suspend_signal_handler(PRIntn sig)
 	while (me->suspend & PT_THREAD_SUSPENDED)
 	{
 #if !defined(FREEBSD) && !defined(NETBSD) && !defined(OPENBSD) \
-    && !defined(BSDI) && !defined(UNIXWARE) \
-    && !defined(DARWIN) && !defined(RISCOS) \
-    && !defined(SYMBIAN) /*XXX*/
+    && !defined(BSDI) && !defined(VMS) && !defined(UNIXWARE) \
+    && !defined(DARWIN) && !defined(RISCOS) /*XXX*/
         PRIntn rv;
 	    sigwait(&sigwait_set, &rv);
 #endif
@@ -1399,9 +1383,8 @@ static void pt_SuspendSet(PRThread *thred)
     PR_LOG(_pr_gc_lm, PR_LOG_ALWAYS, 
 	   ("doing pthread_kill in pt_SuspendSet thred %p tid = %X\n",
 	   thred, thred->id));
-#if defined(SYMBIAN)
-    /* All signal group functions are not implemented in Symbian OS */
-    rv = 0;
+#if defined(VMS)
+    rv = thread_suspend(thred);
 #else
     rv = pthread_kill (thred->id, SIGUSR2);
 #endif
@@ -1456,8 +1439,8 @@ static void pt_ResumeSet(PRThread *thred)
     thred->suspend &= ~PT_THREAD_SUSPENDED;
 
 #if defined(PT_NO_SIGTIMEDWAIT)
-#if defined(SYMBIAN) 
-	/* All signal group functions are not implemented in Symbian OS */
+#if defined(VMS)
+	thread_resume(thred);
 #else
 	pthread_kill(thred->id, SIGUSR1);
 #endif

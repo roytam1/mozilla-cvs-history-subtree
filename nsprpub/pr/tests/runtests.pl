@@ -170,7 +170,7 @@ $ltimeout = shift; # timeout
         # No timeout: use blocking wait
         $ret = waitpid($lpid,0);
         # Exit and don't kill
-        $lstatus = $?;
+        $lstatus = $? % 256;
         $ltimeout = -1;
     } else {
         while ($ltimeout > 0) {
@@ -319,7 +319,6 @@ $prog = shift;  # Program to test
 "lltest",
 "lock",
 "lockfile",
-"logfile",
 "logger",
 "many_cv",
 "multiwait",
@@ -349,7 +348,6 @@ $prog = shift;  # Program to test
 "prpollml",
 "ranfile",
 "randseed",
-"reinit",
 "rwlocktest",
 "sel_spd",
 "selct_er",

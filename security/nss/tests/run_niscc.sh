@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 #
 # ***** BEGIN LICENSE BLOCK *****
 # Version: MPL 1.1/GPL 2.0/LGPL 2.1
@@ -17,7 +17,7 @@
 #
 # The Initial Developer of the Original Code is
 # Sun Microsystems, Inc..
-# Portions created by the Initial Developer are Copyright (C) 2004-2009
+# Portions created by the Initial Developer are Copyright (C) 2004-2006
 # the Initial Developer. All Rights Reserved.
 #
 # Contributor(s):

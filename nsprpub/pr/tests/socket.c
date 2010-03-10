@@ -64,7 +64,19 @@
 static int _debug_on = 0;
 static int test_cancelio = 0;
 
+#ifdef XP_MAC
+#include "prlog.h"
+#include "prsem.h"
+int fprintf(FILE *stream, const char *fmt, ...)
+{
+    PR_LogPrint(fmt);
+    return 0;
+}
+#define printf PR_LogPrint
+extern void SetupMacPrintfLog(char *logFile);
+#else
 #include "obsolete/prsem.h"
+#endif
 
 #ifdef XP_PC
 #define mode_t int
@@ -76,10 +88,6 @@ static int test_cancelio = 0;
 char *TEST_DIR = "prdir";
 char *SMALL_FILE_NAME = "prsmallf";
 char *LARGE_FILE_NAME = "prlargef";
-#elif defined(SYMBIAN)
-char *TEST_DIR = "c:\\data\\prsocket";
-char *SMALL_FILE_NAME = "c:\\data\\prsocket\\small_file";
-char *LARGE_FILE_NAME = "c:\\data\\prsocket\\large_file";
 #else
 char *TEST_DIR = "/tmp/prsocket_test_dir";
 char *SMALL_FILE_NAME = "/tmp/prsocket_test_dir/small_file";
@@ -117,10 +125,11 @@ char *LARGE_FILE_NAME = "/tmp/prsocket_test_dir/large_file";
 #define NUM_TCP_CLIENTS            5	/* for a listen queue depth of 5 */
 #define NUM_UDP_CLIENTS            10
 
-#ifdef SYMBIAN
-#define NUM_TRANSMITFILE_CLIENTS    1
-#else
+#ifndef XP_MAC
 #define NUM_TRANSMITFILE_CLIENTS    4
+#else
+/* Mac can't handle more than 2* (3Mb) allocations for large file size buffers */
+#define NUM_TRANSMITFILE_CLIENTS    2
 #endif
 
 #define NUM_TCP_CONNECTIONS_PER_CLIENT    5
@@ -129,10 +138,6 @@ char *LARGE_FILE_NAME = "/tmp/prsocket_test_dir/large_file";
 #define TCP_SERVER_PORT            10000
 #define UDP_SERVER_PORT            TCP_SERVER_PORT
 #define SERVER_MAX_BIND_COUNT        100
-
-#ifdef WINCE
-#define perror(s)
-#endif
 
 static PRInt32 num_tcp_clients = NUM_TCP_CLIENTS;
 static PRInt32 num_udp_clients = NUM_UDP_CLIENTS;
@@ -301,8 +306,6 @@ Serve_Client(void *arg)
             failed_already=1;
             goto exit;
         }
-        /* Shutdown only RCV will cause error on Symbian OS */
-#if !defined(SYMBIAN)
         /*
          * shutdown reads, after the last read
          */
@@ -310,7 +313,6 @@ Serve_Client(void *arg)
             if (PR_Shutdown(sockfd, PR_SHUTDOWN_RCV) < 0) {
                 fprintf(stderr,"prsocket_test: ERROR - PR_Shutdown\n");
             }
-#endif
         DPRINTF(("Serve_Client [0x%lx]: inbuf[0] = 0x%lx\n",PR_GetCurrentThread(),
             (*((int *) in_buf->data))));
         if (writen(sockfd, in_buf->data, bytes) < bytes) {
@@ -729,9 +731,6 @@ TCP_Client(void *arg)
          */
         if (PR_Shutdown(sockfd, PR_SHUTDOWN_BOTH) < 0) {
             fprintf(stderr,"prsocket_test: ERROR - PR_Shutdown\n");
-#if defined(SYMBIAN)
-            if (EPIPE != errno)
-#endif
             failed_already=1;
         }
         PR_Close(sockfd);
@@ -1090,7 +1089,12 @@ UDP_Socket_Client_Server_Test(void)
         /*
          * Cause every other client thread to connect udp sockets
          */
+#ifndef XP_MAC
         cparamp->udp_connect = udp_connect;
+#else
+        /* No support for UDP connects on Mac */
+        cparamp->udp_connect = 0;
+#endif
         if (udp_connect)
             udp_connect = 0;
         else
@@ -1178,8 +1182,7 @@ TransmitFile_Client(void *arg)
         failed_already=1;
         return;
     }
-#if defined(XP_UNIX) && !defined(SYMBIAN)
-    /* File transmission test can not be done because of large file's size */
+#ifdef XP_UNIX
     if (memcmp(small_file_header, small_buf, SMALL_FILE_HEADER_SIZE) != 0){
         fprintf(stderr,
             "prsocket_test: TransmitFile_Client ERROR - small file header data corruption\n");
@@ -1203,7 +1206,7 @@ TransmitFile_Client(void *arg)
         failed_already=1;
         return;
     }
-#if defined(XP_UNIX) && !defined(SYMBIAN)
+#ifdef XP_UNIX
     if (memcmp(large_file_addr, large_buf, LARGE_FILE_SIZE) != 0) {
         fprintf(stderr,
             "prsocket_test: TransmitFile_Client ERROR - large file data corruption\n");
@@ -1226,7 +1229,7 @@ TransmitFile_Client(void *arg)
         failed_already=1;
         return;
     }
-#if defined(XP_UNIX) && !defined(SYMBIAN)
+#ifdef XP_UNIX
     if (memcmp(small_file_header, small_buf, SMALL_FILE_HEADER_SIZE) != 0){
         fprintf(stderr,
             "SendFile 1. ERROR - small file header corruption\n");
@@ -1260,7 +1263,7 @@ TransmitFile_Client(void *arg)
         failed_already=1;
         return;
     }
-#if defined(XP_UNIX) && !defined(SYMBIAN)
+#ifdef XP_UNIX
     if (memcmp(large_file_header, large_buf, LARGE_FILE_HEADER_SIZE) != 0){
         fprintf(stderr,
             "SendFile 2. ERROR - large file header corruption\n");
@@ -1293,7 +1296,7 @@ TransmitFile_Client(void *arg)
         failed_already=1;
         return;
     }
-#if defined(XP_UNIX) && !defined(SYMBIAN)
+#ifdef XP_UNIX
     if (memcmp(small_file_header, small_buf, SMALL_FILE_HEADER_SIZE) != 0){
         fprintf(stderr,
             "SendFile 3. ERROR - small file header corruption\n");
@@ -1318,7 +1321,7 @@ TransmitFile_Client(void *arg)
         failed_already=1;
         return;
     }
-#if defined(XP_UNIX) && !defined(SYMBIAN)
+#ifdef XP_UNIX
     if (memcmp((char *) small_file_addr + SMALL_FILE_OFFSET_2, small_buf,
         								SMALL_FILE_LEN_2) != 0) {
         fprintf(stderr,
@@ -1344,7 +1347,7 @@ TransmitFile_Client(void *arg)
         failed_already=1;
         return;
     }
-#if defined(XP_UNIX) && !defined(SYMBIAN)
+#ifdef XP_UNIX
     if (memcmp(large_file_header, large_buf, LARGE_FILE_HEADER_SIZE) != 0){
         fprintf(stderr,
             "SendFile 5. ERROR - large file header corruption\n");
@@ -1370,7 +1373,7 @@ TransmitFile_Client(void *arg)
         failed_already=1;
         return;
     }
-#if defined(XP_UNIX) && !defined(SYMBIAN)
+#ifdef XP_UNIX
     if (memcmp(small_file_header, small_buf, SMALL_FILE_HEADER_SIZE) != 0){
         fprintf(stderr,
             "SendFile 6. ERROR - small file header corruption\n");
@@ -1408,7 +1411,7 @@ TransmitFile_Client(void *arg)
         failed_already=1;
         return;
     }
-#if defined(XP_UNIX) && !defined(SYMBIAN)
+#ifdef XP_UNIX
     if (memcmp(large_file_header, large_buf, LARGE_FILE_HEADER_SIZE) != 0){
         fprintf(stderr,
             "SendFile 7. ERROR - large file header corruption\n");
@@ -1436,7 +1439,7 @@ TransmitFile_Client(void *arg)
         failed_already=1;
         return;
     }
-#if defined(XP_UNIX) && !defined(SYMBIAN)
+#ifdef XP_UNIX
     if (memcmp(large_file_header, large_buf, LARGE_FILE_HEADER_SIZE) != 0){
         fprintf(stderr,
             "SendFile 2. ERROR - large file header corruption\n");
@@ -2025,7 +2028,7 @@ Socket_Misc_Test(void)
         }
         count += bytes;
     } while (count < LARGE_FILE_SIZE);
-#if defined(XP_UNIX) && !defined(SYMBIAN)
+#ifdef XP_UNIX
     /*
      * map the large file; used in checking for data corruption
      */
@@ -2158,7 +2161,7 @@ done:
     if (buf) {
         PR_DELETE(buf);
     }
-#if defined(XP_UNIX) && !defined(SYMBIAN)
+#ifdef XP_UNIX
     munmap((char*)small_file_addr, SMALL_FILE_SIZE);
     munmap((char*)large_file_addr, LARGE_FILE_SIZE);
 #endif
@@ -2194,7 +2197,8 @@ done:
  * Test Socket NSPR APIs
  */
 
-int main(int argc, char **argv)
+int
+main(int argc, char **argv)
 {
     /*
      * -d           debug mode
@@ -2219,6 +2223,9 @@ int main(int argc, char **argv)
     PR_Init(PR_USER_THREAD, PR_PRIORITY_NORMAL, 0);
     PR_STDIO_INIT();
 
+#ifdef XP_MAC
+    SetupMacPrintfLog("socket.log");
+#endif
     PR_SetConcurrency(4);
 
     emuSendFileIdentity = PR_GetUniqueIdentity("Emulated SendFile");
@@ -2268,9 +2275,6 @@ int main(int argc, char **argv)
     } else
         printf("TCP_Socket_Client_Server_Test Passed\n");
 	test_cancelio = 0;
-	
-#if defined(SYMBIAN) && !defined(__WINSCW__)
-	/* UDP tests only run on Symbian devices but not emulator */
     /*
      * run client-server test with UDP, IPv4/IPv4
      */
@@ -2315,15 +2319,11 @@ int main(int argc, char **argv)
         goto done;
     } else
         printf("UDP_Socket_Client_Server_Test Passed\n");
-#endif
-    
     /*
      * Misc socket tests - including transmitfile, etc.
      */
 
-    /* File transmission test can not be done in Symbian OS because of 
-     * large file's size and the incomplete mmap() implementation. */
-#if !defined(WIN16) && !defined(SYMBIAN)
+#if !defined(WIN16)
     /*
 ** The 'transmit file' test does not run because
 ** transmit file is not implemented in NSPR yet.

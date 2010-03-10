@@ -201,10 +201,6 @@ OS_LIBS		= advapi32.lib wsock32.lib winmm.lib
 endif
 endif
 
-ifeq ($(OS_ARCH),WINCE)
-OS_LIBS		= ws2.lib
-endif
-
 ifeq ($(OS_TARGET),MacOSX)
 OS_LIBS		= -framework CoreServices -framework CoreFoundation
 endif
@@ -257,7 +253,6 @@ OBJS = \
     misc/$(OBJDIR)/prlog2.$(OBJ_SUFFIX) \
     misc/$(OBJDIR)/prlong.$(OBJ_SUFFIX) \
     misc/$(OBJDIR)/prnetdb.$(OBJ_SUFFIX) \
-    misc/$(OBJDIR)/praton.$(OBJ_SUFFIX) \
     misc/$(OBJDIR)/prolock.$(OBJ_SUFFIX)	 \
     misc/$(OBJDIR)/prrng.$(OBJ_SUFFIX)	 \
     misc/$(OBJDIR)/prsystem.$(OBJ_SUFFIX) \
@@ -399,8 +394,14 @@ else
 	$(INSTALL) -m 444 $(SHARED_LIBRARY) $(dist_bindir)
 endif
 endif
+ifeq ($(MOZ_BITS),16)
+	$(INSTALL) -m 444 $(TARGETS) $(MOZ_DIST)/lib
+	$(INSTALL) -m 444 $(TARGETS) $(MOZ_DIST)/bin
+endif
 
 ifeq ($(BUILD_AIX_RTL_LIBC),1)
 $(AIX_RTL_LIBC): /usr/ccs/lib/libc.a
 	rtl_enable -o $@ $<
 endif
+
+

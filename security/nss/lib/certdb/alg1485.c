@@ -458,7 +458,7 @@ ParseRFC1485AVA(PRArenaPool *arena, char **pbp, char *endptr)
 		vt = SEC_ASN1_UTF8_STRING;
 	}
 
-	derVal.data = (unsigned char*) valBuf;
+	derVal.data = valBuf;
 	derVal.len  = valLen;
 	a = CERT_CreateAVAFromSECItem(arena, kind, vt, &derVal);
     }
@@ -757,11 +757,9 @@ CERT_GetOidString(const SECItem *oid)
 	    CASE(3, 0x7f);
 	    CASE(2, 0x7f);
 	    CASE(1, 0x7f);
-	    case 0: n |= last[0] & 0x7f;
+	    case 0: n |= last[0]; /* most significant bit is zero. */
 		break;
 	    }
-	    if (last[0] & 0x80)
-	    	goto unsupported;
       
 	    if (!rvString) {
 		/* This is the first number.. decompose it */
@@ -787,11 +785,9 @@ CERT_GetOidString(const SECItem *oid)
 	    CGET(3, 0x7f);
 	    CGET(2, 0x7f);
 	    CGET(1, 0x7f);
-	    CGET(0, 0x7f);
+	        n |= last[0]; /* most significant bit is zero. */
 		break;
 	    }
-	    if (last[0] & 0x80)
-	    	goto unsupported;
       
 	    if (!rvString) {
 		/* This is the first number.. decompose it */
@@ -909,22 +905,18 @@ get_hex_string(SECItem *data)
 static SECStatus
 AppendAVA(stringBuf *bufp, CERTAVA *ava, CertStrictnessLevel strict)
 {
-#define TMPBUF_LEN 384
     const NameToKind *pn2k   = name2kinds;
     SECItem     *avaValue    = NULL;
     char        *unknownTag  = NULL;
     char        *encodedAVA  = NULL;
     PRBool       useHex      = PR_FALSE;  /* use =#hexXXXX form */
-    PRBool       truncateName  = PR_FALSE;
-    PRBool       truncateValue = PR_FALSE;
     SECOidTag    endKind;
     SECStatus    rv;
     unsigned int len;
-    unsigned int nameLen, valueLen;
-    unsigned int maxName, maxValue;
+    int          nameLen, valueLen;
     EQMode       mode        = minimalEscapeAndQuote;
     NameToKind   n2k         = { NULL, 32767, SEC_OID_UNKNOWN, SEC_ASN1_DS };
-    char         tmpBuf[TMPBUF_LEN];
+    char         tmpBuf[384];
 
 #define tagName  n2k.name    /* non-NULL means use NAME= form */
 #define maxBytes n2k.maxLen
@@ -979,102 +971,61 @@ AppendAVA(stringBuf *bufp, CERTAVA *ava, CertStrictnessLevel strict)
 	}
     }
 
+    if (strict == CERT_N2A_READABLE) {
+    	if (maxBytes > sizeof(tmpBuf) - 4)
+	    maxBytes = sizeof(tmpBuf) - 4;
+	/* Check value length.  Must be room for "..." */
+	if (avaValue->len > maxBytes + 3) {
+	    /* avaValue is a UTF8 string, freshly allocated and returned to us 
+	    ** by CERT_DecodeAVAValue or get_hex_string just above, so we can
+	    ** modify it here.  See if we're in the middle of a multi-byte
+	    ** UTF8 character.
+	    */
+	    len = maxBytes;
+	    while (((avaValue->data[len] & 0xc0) == 0x80) && len > 0) {
+	       len--;
+	    }
+	    /* add elipsis to signify truncation. */
+	    avaValue->data[len++] = '.'; 
+	    avaValue->data[len++] = '.';
+	    avaValue->data[len++] = '.';
+	    avaValue->data[len]   = 0;
+	    avaValue->len = len;
+	}
+    }
+
     nameLen  = strlen(tagName);
     valueLen = (useHex ? avaValue->len : 
-		cert_RFC1485_GetRequiredLen((char *)avaValue->data, avaValue->len, 
+		cert_RFC1485_GetRequiredLen(avaValue->data, avaValue->len, 
 					    &mode));
     len = nameLen + valueLen + 2; /* Add 2 for '=' and trailing NUL */
 
-    maxName  = nameLen;
-    maxValue = valueLen;
     if (len <= sizeof(tmpBuf)) {
     	encodedAVA = tmpBuf;
-    } else if (strict != CERT_N2A_READABLE) {
-	encodedAVA = PORT_Alloc(len);
-	if (!encodedAVA) {
-	    SECITEM_FreeItem(avaValue, PR_TRUE);
-	    if (unknownTag) 
-		PR_smprintf_free(unknownTag);
-	    return SECFailure;
-	}
+    } else if (strict == CERT_N2A_READABLE) {
+	PORT_SetError(SEC_ERROR_OUTPUT_LEN);
     } else {
-	/* Must make output fit in tmpbuf */
-	unsigned int fair = (sizeof tmpBuf)/2 - 1; /* for = and \0 */
-
-	if (nameLen < fair) {
-	    /* just truncate the value */
-	    maxValue = (sizeof tmpBuf) - (nameLen + 6); /* for "=...\0",
-                                                           and possibly '"' */
-	} else if (valueLen < fair) {
-	    /* just truncate the name */
-	    maxName  = (sizeof tmpBuf) - (valueLen + 5); /* for "=...\0" */
-	} else {
-	    /* truncate both */
-	    maxName = maxValue = fair - 3;  /* for "..." */
-	}
-	if (nameLen > maxName) {
-	    PORT_Assert(unknownTag && unknownTag == tagName);
-	    truncateName = PR_TRUE;
-	    nameLen = maxName;
-	}
-    	encodedAVA = tmpBuf;
+	encodedAVA = PORT_Alloc(len);
     }
-
+    if (!encodedAVA) {
+	SECITEM_FreeItem(avaValue, PR_TRUE);
+	if (unknownTag) 
+	    PR_smprintf_free(unknownTag);
+	return SECFailure;
+    }
     memcpy(encodedAVA, tagName, nameLen);
-    if (truncateName) {
-	/* If tag name is too long, we know it is an OID form that was 
-	 * allocated from the heap, so we can modify it in place 
-	 */
-	encodedAVA[nameLen-1] = '.';
-	encodedAVA[nameLen-2] = '.';
-	encodedAVA[nameLen-3] = '.';
-    }
-    encodedAVA[nameLen++] = '=';
     if (unknownTag) 
     	PR_smprintf_free(unknownTag);
-
-    if (strict == CERT_N2A_READABLE && maxValue > maxBytes)
-	maxValue = maxBytes;
-    if (valueLen > maxValue) {
-    	valueLen = maxValue;
-	truncateValue = PR_TRUE;
-    }
+    encodedAVA[nameLen++] = '=';
+    
     /* escape and quote as necessary - don't quote hex strings */
     if (useHex) {
-	char * end = encodedAVA + nameLen + valueLen;
-	memcpy(encodedAVA + nameLen, (char *)avaValue->data, valueLen);
-	end[0] = '\0';
-	if (truncateValue) {
-	    end[-1] = '.';
-	    end[-2] = '.';
-	    end[-3] = '.';
-	}
+	memcpy(encodedAVA + nameLen, (char *)avaValue->data, avaValue->len);
+	encodedAVA[nameLen + avaValue->len] = '\0';
 	rv = SECSuccess;
-    } else if (!truncateValue) {
+    } else 
 	rv = escapeAndQuote(encodedAVA + nameLen, len - nameLen, 
-			    (char *)avaValue->data, avaValue->len, &mode);
-    } else {
-	/* must truncate the escaped and quoted value */
-	char bigTmpBuf[TMPBUF_LEN * 3 + 3];
-	rv = escapeAndQuote(bigTmpBuf, sizeof bigTmpBuf,
-			    (char *)avaValue->data, valueLen, &mode);
-
-	bigTmpBuf[valueLen--] = '\0'; /* hard stop here */
-	/* See if we're in the middle of a multi-byte UTF8 character */
-	while (((bigTmpBuf[valueLen] & 0xc0) == 0x80) && valueLen > 0) {
-	    bigTmpBuf[valueLen--] = '\0';
-	}
-	/* add ellipsis to signify truncation. */
-	bigTmpBuf[++valueLen] = '.';
-	bigTmpBuf[++valueLen] = '.';
-	bigTmpBuf[++valueLen] = '.';
-	if (bigTmpBuf[0] == '"')
-	    bigTmpBuf[++valueLen] = '"';
-	bigTmpBuf[++valueLen] = '\0';
-	PORT_Assert(nameLen + valueLen <= (sizeof tmpBuf) - 1);
-	memcpy(encodedAVA + nameLen, bigTmpBuf, valueLen+1);
-    }
-
+		    	    (char *)avaValue->data, avaValue->len, &mode);
     SECITEM_FreeItem(avaValue, PR_TRUE);
     if (rv == SECSuccess)
 	rv = AppendStr(bufp, encodedAVA);
@@ -1194,8 +1145,8 @@ avaToString(PRArenaPool *arena, CERTAVA *ava)
     if(!avaValue) {
 	return buf;
     }
-    valueLen = cert_RFC1485_GetRequiredLen((char *)avaValue->data,
-                                           avaValue->len, NULL) + 1;
+    valueLen = cert_RFC1485_GetRequiredLen(avaValue->data, avaValue->len, 
+					   NULL) + 1;
     if (arena) {
 	buf = (char *)PORT_ArenaZAlloc(arena, valueLen);
     } else {
@@ -1358,35 +1309,18 @@ appendStringToBuf(char *dest, char *src, PRUint32 *pRemaining)
     return dest;
 }
 
-#undef NEEDS_HEX_ESCAPE
-#define NEEDS_HEX_ESCAPE(c) (c < 0x20)
-
 static char *
 appendItemToBuf(char *dest, SECItem *src, PRUint32 *pRemaining)
 {
-    if (dest && src && src->data && src->len && src->data[0]) {
+    if (dest && src && src->data && src->len && src->data[0] && 
+        *pRemaining > src->len + 1 ) {
 	PRUint32 len = src->len;
 	PRUint32 i;
-	PRUint32 reqLen = len + 1;
-	/* are there any embedded control characters ? */
-	for (i = 0; i < len; i++) {
-	    if (NEEDS_HEX_ESCAPE(src->data[i]))
-	    	reqLen += 2;   
-	}
-	if (*pRemaining > reqLen) {
-	    for (i = 0; i < len; ++i) {
-		PRUint8 c = src->data[i];
-		if (NEEDS_HEX_ESCAPE(c)) {
-		    *dest++ = C_BACKSLASH;
-		    *dest++ = hexChars[ (c >> 4) & 0x0f ];
-		    *dest++ = hexChars[  c       & 0x0f ];
-		} else {
-		    *dest++ = tolower(c);
-	    	}
-	    }
-	    *dest++ = '\0';
-	    *pRemaining -= reqLen;
-	}
+	for (i = 0; i < len && src->data[i] ; ++i)
+	    dest[i] = tolower(src->data[i]);
+	dest[len] = 0;
+	dest        += len + 1;
+	*pRemaining -= len + 1;
     }
     return dest;
 }

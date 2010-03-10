@@ -38,7 +38,9 @@
 static const char CVS_ID[] = "@(#) $RCSfile$ $Revision$ $Date$";
 #endif /* DEBUG */
 
-#include "pkcs11.h"
+#ifndef NSSCKEPV_H
+#include "nssckepv.h"
+#endif /* NSSCKEPV_H */
 
 #ifndef DEVM_H
 #include "devm.h"

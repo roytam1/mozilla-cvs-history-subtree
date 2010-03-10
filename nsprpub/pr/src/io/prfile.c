@@ -132,6 +132,9 @@ static PROffset32 PR_CALLBACK FileSeek(PRFileDesc *fd, PROffset32 offset, PRSeek
 
 static PROffset64 PR_CALLBACK FileSeek64(PRFileDesc *fd, PROffset64 offset, PRSeekWhence whence)
 {
+#ifdef XP_MAC
+#pragma unused( fd, offset, whence )
+#endif
     PROffset64 result;
 
     result = _PR_MD_LSEEK64(fd, offset, whence);
@@ -159,6 +162,9 @@ static PRInt32 PR_CALLBACK FileAvailable(PRFileDesc *fd)
 
 static PRInt64 PR_CALLBACK FileAvailable64(PRFileDesc *fd)
 {
+#ifdef XP_MAC
+#pragma unused( fd )
+#endif
     PRInt64 result, cur, end;
     PRInt64 minus_one;
 
@@ -192,6 +198,10 @@ static PRInt64 PR_CALLBACK PipeAvailable64(PRFileDesc *fd)
 
 static PRStatus PR_CALLBACK PipeSync(PRFileDesc *fd)
 {
+#if defined(XP_MAC)
+#pragma unused (fd)
+#endif
+
 	return PR_SUCCESS;
 }
 
@@ -208,6 +218,9 @@ static PRStatus PR_CALLBACK FileGetInfo(PRFileDesc *fd, PRFileInfo *info)
 
 static PRStatus PR_CALLBACK FileGetInfo64(PRFileDesc *fd, PRFileInfo64 *info)
 {
+#ifdef XP_MAC
+#pragma unused( fd, info )
+#endif
     /* $$$$ NOT YET IMPLEMENTED */
 	PRInt32 rv;
 
@@ -248,6 +261,9 @@ static PRStatus PR_CALLBACK FileClose(PRFileDesc *fd)
 static PRInt16 PR_CALLBACK FilePoll(
     PRFileDesc *fd, PRInt16 in_flags, PRInt16 *out_flags)
 {
+#ifdef XP_MAC
+#pragma unused( fd, in_flags )
+#endif
     *out_flags = 0;
     return in_flags;
 }  /* FilePoll */
@@ -420,7 +436,7 @@ PR_IMPLEMENT(PRInt32) PR_GetSysfdTableMax(void)
     ULONG ulCurMaxFH = 0;
     DosSetRelMaxFH(&ulReqCount, &ulCurMaxFH);
     return ulCurMaxFH;
-#elif defined(XP_BEOS)
+#elif defined (XP_MAC) || defined(XP_BEOS)
     PR_SetError(PR_NOT_IMPLEMENTED_ERROR, 0);
    return -1;
 #else
@@ -469,6 +485,10 @@ PR_IMPLEMENT(PRInt32) PR_SetSysfdTableSize(int table_size)
         || defined(WIN32) || defined(WIN16) || defined(XP_BEOS)
     PR_SetError(PR_NOT_IMPLEMENTED_ERROR, 0);
     return -1;
+#elif defined (XP_MAC)
+#pragma unused (table_size)
+    PR_SetError(PR_NOT_IMPLEMENTED_ERROR, 0);
+   return -1;
 #else
     write me;
 #endif
@@ -498,6 +518,9 @@ PR_IMPLEMENT(PRStatus) PR_GetFileInfo(const char *fn, PRFileInfo *info)
 
 PR_IMPLEMENT(PRStatus) PR_GetFileInfo64(const char *fn, PRFileInfo64 *info)
 {
+#ifdef XP_MAC
+#pragma unused (fn, info)
+#endif
     PRInt32 rv;
 
     if (!_pr_initialized) _PR_ImplicitInitialization();
@@ -692,7 +715,11 @@ PR_IMPLEMENT(PRStatus) PR_CreatePipe(
     PRFileDesc **writePipe
 )
 {
-#if defined(WIN32) && !defined(WINCE)
+#if defined(XP_MAC)
+#pragma unused (readPipe, writePipe)
+#endif
+
+#ifdef WIN32
     HANDLE readEnd, writeEnd;
     SECURITY_ATTRIBUTES pipeAttributes;
 
@@ -800,6 +827,9 @@ PR_IMPLEMENT(PRFileDesc*) PR_OpenFileUTF16(
  
 PR_IMPLEMENT(PRStatus) PR_GetFileInfo64UTF16(const PRUnichar *fn, PRFileInfo64 *info)
 {
+#ifdef XP_MAC
+#pragma unused (fn, info)
+#endif
     PRInt32 rv;
 
     if (!_pr_initialized) _PR_ImplicitInitialization();

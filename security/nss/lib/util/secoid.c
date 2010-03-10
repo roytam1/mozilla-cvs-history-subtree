@@ -42,26 +42,6 @@
 #include "prenv.h"
 #include "plhash.h"
 #include "nssrwlk.h"
-#include "nssutil.h"
-
-/* Library identity and versioning */
-
-#if defined(DEBUG)
-#define _DEBUG_STRING " (debug)"
-#else
-#define _DEBUG_STRING ""
-#endif
-
-/*
- * Version information for the 'ident' and 'what commands
- *
- * NOTE: the first component of the concatenated rcsid string
- * must not end in a '$' to prevent rcs keyword substitution.
- */
-const char __nss_util_rcsid[] = "$Header: NSS " NSSUTIL_VERSION _DEBUG_STRING
-        "  " __DATE__ " " __TIME__ " $";
-const char __nss_util_sccsid[] = "@(#)NSS " NSSUTIL_VERSION _DEBUG_STRING
-        "  " __DATE__ " " __TIME__;
 
 /* MISSI Mosaic Object ID space */
 #define USGOV                   0x60, 0x86, 0x48, 0x01, 0x65
@@ -380,8 +360,6 @@ CONST_OID x509PolicyConstraints[]     		= { ID_CE_OID, 36 };
 CONST_OID x509ExtKeyUsage[]           		= { ID_CE_OID, 37 };
 CONST_OID x509FreshestCRL[]           		= { ID_CE_OID, 46 };
 CONST_OID x509InhibitAnyPolicy[]           	= { ID_CE_OID, 54 };
-
-CONST_OID x509CertificatePoliciesAnyPolicy[]    = { ID_CE_OID, 32, 0 };
 
 CONST_OID x509AuthInfoAccess[]        		= { PKIX_CERT_EXTENSIONS,  1 };
 CONST_OID x509SubjectInfoAccess[]               = { PKIX_CERT_EXTENSIONS, 11 };
@@ -1608,9 +1586,6 @@ const static SECOidData oids[SEC_OID_TOTAL] = {
     OD( seed_CBC, SEC_OID_SEED_CBC,
 	"SEED-CBC", CKM_SEED_CBC, INVALID_CERT_EXTENSION),
 
-    OD( x509CertificatePoliciesAnyPolicy, SEC_OID_X509_ANY_POLICY,
- 	"Certificate Policies AnyPolicy",
-        CKM_INVALID_MECHANISM, UNSUPPORTED_CERT_EXTENSION ),
 };
 
 /* PRIVATE EXTENDED SECOID Table
@@ -1881,9 +1856,6 @@ SECOID_Init(void)
     const SECOidData *oid;
     int i;
     char * envVal;
-    volatile char c; /* force a reference that won't get optimized away */
-
-    c = __nss_util_rcsid[0] + __nss_util_sccsid[0];
 
     if (oidhash) {
 	return SECSuccess; /* already initialized */

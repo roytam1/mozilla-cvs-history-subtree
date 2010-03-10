@@ -229,7 +229,6 @@ struct protoent* getprotobynumber(int number);
 
 #define _MD_EARLY_INIT _MD_early_init
 #define _MD_FINAL_INIT _MD_final_init
-#define _MD_EARLY_CLEANUP()
 
 /* CPU Stuff */
 

@@ -100,6 +100,17 @@ static DWORD dirAccessTable[] = {
     FILE_GENERIC_EXECUTE
 };
 
+/*
+ * The NSPR epoch (00:00:00 1 Jan 1970 UTC) in FILETIME.
+ * We store the value in a PRTime variable for convenience.
+ * This constant is used by _PR_FileTimeToPRTime().
+ */
+#ifdef __GNUC__
+static const PRTime _pr_filetime_offset = 116444736000000000LL;
+#else
+static const PRTime _pr_filetime_offset = 116444736000000000i64;
+#endif
+
 static PRBool IsPrevCharSlash(const char *str, const char *current);
 
 #define _NEED_351_FILE_LOCKING_HACK
@@ -2740,20 +2751,20 @@ void FlipSlashes(char *cp, int len)
 **
 */
 
-PRInt32
+PRStatus
 _PR_MD_CLOSE_DIR(_MDDir *d)
 {
     if ( d ) {
         if (FindClose( d->d_hdl )) {
             d->magic = (PRUint32)-1;
-            return 0;
+            return PR_SUCCESS;
         } else {
             _PR_MD_MAP_CLOSEDIR_ERROR(GetLastError());
-            return -1;
+            return PR_FAILURE;
         }
     }
     PR_SetError(PR_INVALID_ARGUMENT_ERROR, 0);
-    return -1;
+    return PR_FAILURE;
 }
 
 

@@ -173,13 +173,15 @@ typedef struct {
     uint8 length;
 } SSL3SessionID;
      
+typedef enum { compression_null = 0 } SSL3CompressionMethod;
+     
 typedef struct {
     SSL3ProtocolVersion   client_version;
     SSL3Random            random;
     SSL3SessionID         session_id;
     SECItem               cipher_suites;
     uint8                 cm_count;
-    SSLCompressionMethod  compression_methods[MAX_COMPRESSION_METHODS];
+    SSL3CompressionMethod compression_methods[MAX_COMPRESSION_METHODS];
 } SSL3ClientHello;
      
 typedef struct  {
@@ -187,7 +189,7 @@ typedef struct  {
     SSL3Random            random;
     SSL3SessionID         session_id;
     ssl3CipherSuite       cipher_suite;
-    SSLCompressionMethod  compression_method;
+    SSL3CompressionMethod compression_method;
 } SSL3ServerHello;
      
 typedef struct {
@@ -343,8 +345,19 @@ typedef struct {
     unsigned char *mac;
 } EncryptedSessionTicket;
 
-#define TLS_EX_SESS_TICKET_MAC_LENGTH       32
+/* Supported extensions. */
+/* Update MAX_EXTENSIONS whenever a new extension type is added. */
+typedef enum {
+    server_name_xtn              = 0,
+#ifdef NSS_ENABLE_ECC
+    elliptic_curves_xtn          = 10,
+    ec_point_formats_xtn         = 11,
+#endif
+    session_ticket_xtn           = 35
+} ExtensionType;
 
-#define TLS_STE_NO_SERVER_NAME        -1
+#define MAX_EXTENSIONS             4
+
+#define TLS_EX_SESS_TICKET_MAC_LENGTH       32
 
 #endif /* __ssl3proto_h_ */

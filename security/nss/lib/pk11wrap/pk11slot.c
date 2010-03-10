@@ -482,19 +482,13 @@ PRBool
 SECMOD_HasRootCerts(void)
 {
    SECMODModuleList *mlp;
-   SECMODModuleList *modules;
+   SECMODModuleList *modules = SECMOD_GetDefaultModuleList();
    SECMODListLock *moduleLock = SECMOD_GetDefaultModuleListLock();
    int i;
    PRBool found = PR_FALSE;
 
-    if (!moduleLock) {
-    	PORT_SetError(SEC_ERROR_NOT_INITIALIZED);
-	return found;
-    }
-
    /* work through all the slots */
    SECMOD_GetReadLock(moduleLock);
-   modules = SECMOD_GetDefaultModuleList();
    for(mlp = modules; mlp != NULL; mlp = mlp->next) {
 	for (i=0; i < mlp->module->slotCount; i++) {
 	    PK11SlotInfo *tmpSlot = mlp->module->slots[i];
@@ -520,22 +514,17 @@ PK11_FindSlotsByNames(const char *dllName, const char* slotName,
                         const char* tokenName, PRBool presentOnly)
 {
     SECMODModuleList *mlp;
-    SECMODModuleList *modules;
+    SECMODModuleList *modules = SECMOD_GetDefaultModuleList();
     SECMODListLock *moduleLock = SECMOD_GetDefaultModuleListLock();
     int i;
     PK11SlotList* slotList = NULL;
     PRUint32 slotcount = 0;
     SECStatus rv = SECSuccess;
 
-    if (!moduleLock) {
-    	PORT_SetError(SEC_ERROR_NOT_INITIALIZED);
-	return slotList;
-    }
-
     slotList = PK11_NewSlotList();
     if (!slotList) {
         PORT_SetError(SEC_ERROR_NO_MEMORY);
-        return slotList;
+        return NULL;
     }
 
     if ( ((NULL == dllName) || (0 == *dllName)) &&
@@ -548,7 +537,6 @@ PK11_FindSlotsByNames(const char *dllName, const char* slotName,
 
     /* work through all the slots */
     SECMOD_GetReadLock(moduleLock);
-    modules = SECMOD_GetDefaultModuleList();
     for (mlp = modules; mlp != NULL; mlp = mlp->next) {
         PORT_Assert(mlp->module);
         if (!mlp->module) {
@@ -596,22 +584,17 @@ PK11SlotInfo *
 PK11_FindSlotByName(const char *name)
 {
    SECMODModuleList *mlp;
-   SECMODModuleList *modules;
+   SECMODModuleList *modules = SECMOD_GetDefaultModuleList();
    SECMODListLock *moduleLock = SECMOD_GetDefaultModuleListLock();
    int i;
    PK11SlotInfo *slot = NULL;
 
-    if (!moduleLock) {
-    	PORT_SetError(SEC_ERROR_NOT_INITIALIZED);
-	return slot;
-    }
    if ((name == NULL) || (*name == 0)) {
 	return PK11_GetInternalKeySlot();
    }
 
    /* work through all the slots */
    SECMOD_GetReadLock(moduleLock);
-   modules = SECMOD_GetDefaultModuleList();
    for(mlp = modules; mlp != NULL; mlp = mlp->next) {
 	for (i=0; i < mlp->module->slotCount; i++) {
 	    PK11SlotInfo *tmpSlot = mlp->module->slots[i];
@@ -638,18 +621,13 @@ PK11SlotInfo *
 PK11_FindSlotBySerial(char *serial)
 {
    SECMODModuleList *mlp;
-   SECMODModuleList *modules;
+   SECMODModuleList *modules = SECMOD_GetDefaultModuleList();
    SECMODListLock *moduleLock = SECMOD_GetDefaultModuleListLock();
    int i;
    PK11SlotInfo *slot = NULL;
 
-    if (!moduleLock) {
-    	PORT_SetError(SEC_ERROR_NOT_INITIALIZED);
-	return slot;
-    }
    /* work through all the slots */
    SECMOD_GetReadLock(moduleLock);
-   modules = SECMOD_GetDefaultModuleList();
    for(mlp = modules; mlp != NULL; mlp = mlp->next) {
 	for (i=0; i < mlp->module->slotCount; i++) {
 	    PK11SlotInfo *tmpSlot = mlp->module->slots[i];
@@ -1129,8 +1107,6 @@ PK11_InitToken(PK11SlotInfo *slot, PRBool loadCerts)
 							PR_TRUE : PR_FALSE);
     slot->readOnly = ((tokenInfo.flags & CKF_WRITE_PROTECTED) ? 
 							PR_TRUE : PR_FALSE);
-	
-	 
     slot->hasRandom = ((tokenInfo.flags & CKF_RNG) ? PR_TRUE : PR_FALSE);
     slot->protectedAuthPath =
     		((tokenInfo.flags & CKF_PROTECTED_AUTHENTICATION_PATH) 
@@ -1250,33 +1226,7 @@ PK11_InitToken(PK11SlotInfo *slot, PRBool loadCerts)
 	    PK11_FreeSlot(int_slot);
 	}
     }
-    /* work around a problem in softoken where it incorrectly
-     * reports databases opened read only as read/write. */
-    if (slot->isInternal && !slot->readOnly) {
-	CK_SESSION_HANDLE session = CK_INVALID_SESSION;
 
-	/* try to open a R/W session */
-	crv =PK11_GETTAB(slot)->C_OpenSession(slot->slotID,
-	      CKF_RW_SESSION|CKF_SERIAL_SESSION, slot, pk11_notify ,&session);
-	/* what a well behaved token should return if you open 
-	 * a RW session on a read only token */
-	if (crv == CKR_TOKEN_WRITE_PROTECTED) {
-	    slot->readOnly = PR_TRUE;
-	} else if (crv == CKR_OK) {
-	    CK_SESSION_INFO sessionInfo;
-
-	    /* Because of a second bug in softoken, which silently returns
-	     * a RO session, we need to check what type of session we got. */
-	    crv = PK11_GETTAB(slot)->C_GetSessionInfo(session, &sessionInfo);
-	    if (crv == CKR_OK) {
-		if ((sessionInfo.flags & CKF_RW_SESSION) == 0) {
-		    /* session was readonly, so this softoken slot must be 			     * readonly */
-		    slot->readOnly = PR_TRUE;
-		}
-	    }
-	    PK11_GETTAB(slot)->C_CloseSession(session);
-	}
-    }
 	
     return SECSuccess;
 }
@@ -1567,22 +1517,6 @@ PK11_IsInternal(PK11SlotInfo *slot)
 }
 
 PRBool
-PK11_IsInternalKeySlot(PK11SlotInfo *slot)
-{
-    PK11SlotInfo *int_slot;
-    PRBool result;
-
-    if (!slot->isInternal) {
-	return PR_FALSE;
-    }
-
-    int_slot = PK11_GetInternalKeySlot();
-    result = (int_slot == slot) ? PR_TRUE : PR_FALSE;
-    PK11_FreeSlot(int_slot);
-    return result;
-}
-
-PRBool
 PK11_NeedLogin(PK11SlotInfo *slot)
 {
     return slot->needLogin;
@@ -1725,29 +1659,12 @@ PK11_NeedUserInit(PK11SlotInfo *slot)
     return (PRBool)((slot->flags & CKF_USER_PIN_INITIALIZED) == 0);
 }
 
-static PK11SlotInfo *pk11InternalKeySlot = NULL;
-void
-pk11_SetInternalKeySlot(PK11SlotInfo *slot)
-{
-   if (pk11InternalKeySlot) {
-	PK11_FreeSlot(pk11InternalKeySlot);
-   }
-   pk11InternalKeySlot = slot ? PK11_ReferenceSlot(slot) : NULL;
-}
-
-
 /* get the internal key slot. FIPS has only one slot for both key slots and
  * default slots */
 PK11SlotInfo *
 PK11_GetInternalKeySlot(void)
 {
-    SECMODModule *mod;
-
-    if (pk11InternalKeySlot) {
-	return PK11_ReferenceSlot(pk11InternalKeySlot);
-    }
-
-    mod = SECMOD_GetInternalModule();
+    SECMODModule *mod = SECMOD_GetInternalModule();
     PORT_Assert(mod != NULL);
     if (!mod) {
 	PORT_SetError( SEC_ERROR_NO_MODULE );
@@ -1765,9 +1682,6 @@ PK11_GetInternalSlot(void)
     if (!mod) {
 	PORT_SetError( SEC_ERROR_NO_MODULE );
 	return NULL;
-    }
-    if (mod->isFIPS) {
-	return PK11_GetInternalKeySlot();
     }
     return PK11_ReferenceSlot(mod->slots[0]);
 }
@@ -1808,16 +1722,12 @@ PRBool
 PK11_TokenExists(CK_MECHANISM_TYPE type)
 {
     SECMODModuleList *mlp;
-    SECMODModuleList *modules;
+    SECMODModuleList *modules = SECMOD_GetDefaultModuleList();
     SECMODListLock *moduleLock = SECMOD_GetDefaultModuleListLock();
     PK11SlotInfo *slot;
     PRBool found = PR_FALSE;
     int i;
 
-    if (!moduleLock) {
-    	PORT_SetError(SEC_ERROR_NOT_INITIALIZED);
-	return found;
-    }
     /* we only need to know if there is a token that does this mechanism.
      * check the internal module first because it's fast, and supports 
      * almost everything. */
@@ -1829,7 +1739,6 @@ PK11_TokenExists(CK_MECHANISM_TYPE type)
     if (found) return PR_TRUE; /* bypass getting module locks */
 
     SECMOD_GetReadLock(moduleLock);
-    modules = SECMOD_GetDefaultModuleList();
     for(mlp = modules; mlp != NULL && (!found); mlp = mlp->next) {
 	for (i=0; i < mlp->module->slotCount; i++) {
 	    slot = mlp->module->slots[i];
@@ -1855,27 +1764,18 @@ PK11SlotList *
 PK11_GetAllTokens(CK_MECHANISM_TYPE type, PRBool needRW, PRBool loadCerts, 
                   void *wincx)
 {
-    PK11SlotList *     list;
-    PK11SlotList *     loginList;
-    PK11SlotList *     friendlyList;
+    PK11SlotList *     list         = PK11_NewSlotList();
+    PK11SlotList *     loginList    = PK11_NewSlotList();
+    PK11SlotList *     friendlyList = PK11_NewSlotList();
     SECMODModuleList * mlp;
-    SECMODModuleList * modules;
-    SECMODListLock *   moduleLock;
+    SECMODModuleList * modules      = SECMOD_GetDefaultModuleList();
+    SECMODListLock *   moduleLock   = SECMOD_GetDefaultModuleListLock();
     int                i;
 #if defined( XP_WIN32 ) 
     int                j            = 0;
     PRInt32            waste[16];
 #endif
 
-    moduleLock   = SECMOD_GetDefaultModuleListLock();
-    if (!moduleLock) {
-    	PORT_SetError(SEC_ERROR_NOT_INITIALIZED);
-	return NULL;
-    }
-
-    list         = PK11_NewSlotList();
-    loginList    = PK11_NewSlotList();
-    friendlyList = PK11_NewSlotList();
     if ((list == NULL)  || (loginList == NULL) || (friendlyList == NULL)) {
 	if (list) PK11_FreeSlotList(list);
 	if (loginList) PK11_FreeSlotList(loginList);
@@ -1884,8 +1784,6 @@ PK11_GetAllTokens(CK_MECHANISM_TYPE type, PRBool needRW, PRBool loadCerts,
     }
 
     SECMOD_GetReadLock(moduleLock);
-
-    modules      = SECMOD_GetDefaultModuleList();
     for(mlp = modules; mlp != NULL; mlp = mlp->next) {
 
 #if defined( XP_WIN32 ) 
