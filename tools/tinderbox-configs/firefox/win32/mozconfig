@@ -8,7 +8,7 @@ mk_add_options MOZ_CO_MODULE="mozilla/tools/update-packaging"
 
 mk_add_options MOZ_CO_LOCALES=all
 # CONFIG: mk_add_options LOCALES_CO_TAG=%productTag%_RELEASE
-mk_add_options LOCALES_CO_TAG=FIREFOX_3_0_18_RELEASE
+mk_add_options LOCALES_CO_TAG=FIREFOX_3_0_19_RELEASE
 # CONFIG: mk_add_options LOCALES_CVSROOT=%l10nCvsroot%
 mk_add_options LOCALES_CVSROOT=cltbld@cvs.mozilla.org:/l10n
 
