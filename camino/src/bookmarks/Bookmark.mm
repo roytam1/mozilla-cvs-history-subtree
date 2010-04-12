@@ -322,6 +322,9 @@ NSString* const URLLoadSuccessKey     = @"url_bool";
 //
 - (void)writeBookmarksMetadataToPath:(NSString*)inPath
 {
+  if ([self isSeparator]) // Writing metadata for separators doesn't make sense.
+    return;
+
   NSMutableDictionary* dict = [NSMutableDictionary dictionaryWithObjectsAndKeys:
       [self savedTitle], kSpotlightBookmarkTitleKey,
         [self savedURL], kSpotlightBookmarkURLKey,
