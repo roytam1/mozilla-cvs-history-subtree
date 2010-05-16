@@ -72,6 +72,7 @@ NSString* const kHistoryViewFlat      = @"flat";
 NSString* const kNotificationNameHistoryDataSourceChanged                     = @"history_changed";
 NSString* const kNotificationHistoryDataSourceChangedUserInfoChangedItem      = @"changed_item";
 NSString* const kNotificationHistoryDataSourceChangedUserInfoChangedItemOnly  = @"item_only";
+NSString* const kNotificationNameHistoryDataSourceCleared                     = @"history_cleared";
 
 struct SortData
 {
@@ -774,6 +775,12 @@ NS_IMPL_ISUPPORTS1(nsHistoryObserver, nsIHistoryObserver);
 - (void)endBatching
 {
   [self loadLazily];
+  if ([mHistoryItems count] == 0) {
+    [[NSNotificationCenter defaultCenter]
+        postNotificationName:kNotificationNameHistoryDataSourceCleared
+                      object:self
+                    userInfo:nil];
+  }
 }
 
 - (void)itemAdded:(HistorySiteItem*)item
