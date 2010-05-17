@@ -382,12 +382,10 @@ MODULES_NS_camino :=                            \
 
 MODULES_camino :=                               \
   $(MODULES_core)                               \
-  mozilla/camino                                \
   $(NULL)
 
 BOOTSTRAP_camino :=                             \
   $(BOOTSTRAP_toolkit)                          \
-  mozilla/camino/config/mozconfig               \
   $(NULL)
 
 MODULES_tamarin :=                              \
@@ -409,8 +407,9 @@ MODULES_all :=                                  \
 #
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
-#MOZ_CO_TAG          = <tag>
-NSPR_CO_TAG          = NSPR_4_7_5_RTM
+CAMINO_CO_TAG        = CAMINO_2_0_BRANCH
+#MOZ_CO_TAG          = 
+NSPR_CO_TAG          = NSPR_4_7_6_RTM
 NSS_CO_TAG           = NSS_3_12_3_1_RTM
 LDAPCSDK_CO_TAG      = LDAPCSDK_6_0_3_CLIENT_BRANCH
 LOCALES_CO_TAG       =
@@ -585,6 +584,25 @@ else
 endif
 
 endif # MOZ_BUILD_PROJECTS
+
+####################################
+# CVS defines for Camino
+#
+CAMINO_CO_MODULE = mozilla/camino
+CAMINO_CO_FLAGS := -P
+ifdef MOZ_CO_FLAGS
+  CAMINO_CO_FLAGS := $(MOZ_CO_FLAGS)
+endif
+CAMINO_CO_FLAGS := $(CAMINO_CO_FLAGS) $(if $(CAMINO_CO_TAG),-r $(CAMINO_CO_TAG),-A)
+
+# Can only pull the tip or branch tags by date
+ifeq (,$(filter-out HEAD %BRANCH,$(CAMINO_CO_TAG)))
+CVSCO_CAMINO_BASE = $(CVS) $(CVS_FLAGS) co $(CAMINO_CO_FLAGS) $(CVS_CO_DATE_FLAGS)
+else
+CVSCO_CAMINO_BASE = $(CVS) $(CVS_FLAGS) co $(CAMINO_CO_FLAGS)
+endif
+CVSCO_CAMINO = $(CVSCO_CAMINO_BASE) $(CAMINO_CO_MODULE)
+CVSCO_CAMINO_CLIENTMK = $(CVSCO_CAMINO_BASE) mozilla/client.mk
 
 ####################################
 # CVS defines for NSS
@@ -791,9 +809,12 @@ ifdef RUN_AUTOCONF_LOCALLY
 	$(RM) -f $(CONFIGURES)
 endif
 	@echo "checkout start: "`date` | tee $(CVSCO_LOGFILE)
-	@echo '$(CVSCO) mozilla/client.mk $(MOZCONFIG_MODULES)'; \
+	@echo '$(CVSCO_CAMINO_BASE) mozilla/client.mk mozilla/camino/config/mozconfig'; \
         cd $(ROOTDIR) && \
-	$(CVSCO) mozilla/client.mk $(MOZCONFIG_MODULES)
+	$(CVSCO_CAMINO_BASE) mozilla/client.mk mozilla/camino/config/mozconfig
+	@echo '$(CVSCO) $(MOZCONFIG_MODULES)'; \
+        cd $(ROOTDIR) && \
+	$(CVSCO) $(MOZCONFIG_MODULES)
 	@cd $(ROOTDIR) && $(MAKE) -f mozilla/client.mk real_checkout
 
 #	Start the checkout. Split the output to the tty and a log file.
@@ -802,12 +823,14 @@ real_checkout:
 	@set -e; \
 	cvs_co() { set -e; echo "$$@" ; \
 	  "$$@" 2>&1 | tee -a $(CVSCO_LOGFILE); }; \
+	cvs_co $(CVSCO_CAMINO); \
 	cvs_co $(CVSCO_NSPR); \
 	cvs_co $(CVSCO_NSS); \
 	cvs_co $(CVSCO_LDAPCSDK); \
 	$(CHECKOUT_MODULES_NS); \
 	$(CHECKOUT_MODULES) \
-	$(CHECKOUT_LOCALES);
+	$(CHECKOUT_LOCALES); \
+	cvs_co $(CVSCO_CAMINO_CLIENTMK);
 	@echo "checkout finish: "`date` | tee -a $(CVSCO_LOGFILE)
 # update the NSS checkout timestamp, if we checked PSM out
 	@if test -d $(TOPSRCDIR)/security/manager -a \
@@ -840,9 +863,12 @@ ifdef RUN_AUTOCONF_LOCALLY
 	$(RM) -f $(CONFIGURES)
 endif
 	@echo "checkout start: "`date` | tee $(CVSCO_LOGFILE)
-	@echo '$(CVSCO) mozilla/client.mk $(MOZCONFIG_MODULES)'; \
+	@echo '$(CVSCO_CAMINO_BASE) mozilla/client.mk mozilla/camino/config/mozconfig'; \
         cd $(ROOTDIR) && \
-	$(CVSCO) mozilla/client.mk $(MOZCONFIG_MODULES)
+	$(CVSCO_CAMINO_BASE) mozilla/client.mk mozilla/camino/config/mozconfig
+	@echo '$(CVSCO) $(MOZCONFIG_MODULES)'; \
+        cd $(ROOTDIR) && \
+	$(CVSCO) $(MOZCONFIG_MODULES)
 	@cd $(TOPSRCDIR) && \
 	$(MAKE) -f client.mk real_fast-update
 
@@ -852,6 +878,7 @@ real_fast-update:
 	fast_update() { set -e; config/cvsco-fast-update.pl $$@ 2>&1 | tee -a $(CVSCO_LOGFILE); }; \
 	cvs_co() { set -e; echo "$$@" ; \
 	  "$$@" 2>&1 | tee -a $(CVSCO_LOGFILE); }; \
+	fast_update $(CVSCO_CAMINO); \
 	fast_update $(CVSCO_NSPR); \
 	cd $(ROOTDIR); \
 	cvs_co $(CVSCO_NSS); \
@@ -859,6 +886,7 @@ real_fast-update:
 	fast_update $(CVSCO_LDAPCSDK); \
 	$(FASTUPDATE_MODULES); \
 	$(FASTUPDATE_MODULES_NS); \
+	fast_update $(CVSCO_CAMINO_CLIENTMK); \
 	$(FASTUPDATE_LOCALES);
 	@echo "fast_update finish: "`date` | tee -a $(CVSCO_LOGFILE)
 # update the NSS checkout timestamp
