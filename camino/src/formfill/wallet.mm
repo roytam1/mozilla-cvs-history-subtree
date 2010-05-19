@@ -209,6 +209,8 @@ wallet_GetEnabledPref(void)
 enum PlacementType {DUP_IGNORE, DUP_OVERWRITE, DUP_BEFORE, DUP_AFTER, AT_END, BY_LENGTH};
 #define LIST_COUNT(list)  ((list) ? (list)->Count() : 0)
 
+MOZ_DECL_CTOR_COUNTER(wallet_Sublist)
+
 class wallet_Sublist {
 public:
   wallet_Sublist()
@@ -232,6 +234,7 @@ public:
  * item2 is a value.  Therefore this generic data structure refers to them simply as
  * item1 and item2.
  */
+MOZ_DECL_CTOR_COUNTER(wallet_MapElement)
 
 class wallet_MapElement {
 public:
@@ -267,6 +270,8 @@ public:
  * only once and left sitting on the heap
  */
 
+MOZ_DECL_CTOR_COUNTER(wallet_HelpMac)
+
 class wallet_HelpMac {
 public:
   wallet_HelpMac() {
@@ -293,6 +298,8 @@ static nsVoidArray * wallet_DistinguishedSchema_list = 0;
 
 #define NO_CAPTURE(x) x[0]
 #define NO_PREVIEW(x) x[1]
+
+MOZ_DECL_CTOR_COUNTER(wallet_PrefillElement)
 
 class wallet_PrefillElement {
 public:

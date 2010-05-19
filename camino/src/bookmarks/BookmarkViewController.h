@@ -211,5 +211,4 @@ enum
 - (BOOL)canPasteFromPasteboard:(NSPasteboard*)aPasteboard;
 - (void)copyBookmarks:(NSArray*)bookmarkItemsToCopy toPasteboard:(NSPasteboard*)aPasteboard;
 
-- (BOOL)validateActionBySelector:(SEL)action;
 @end

@@ -19,7 +19,6 @@
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
- *   Philippe Wittenbergh (phiw@l-c-n.com)
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -55,7 +54,6 @@ body {
   margin: 4em auto;
   background-color: -moz-field;
   color: -moz-fieldtext;
-  -moz-box-shadow: -4px 4px 8px rgba(0,0,0,0.12), 4px 4px 8px rgba(0,0,0,0.12);
 }
 
 h1 {
@@ -91,7 +89,6 @@ table {
   clear: both;
   width: 90%;
   margin: 0 auto;
-  border-collapse: collapse;
 }
 
 thead {
@@ -103,34 +100,13 @@ th:last-child {
   text-align: center;
 }
 
-th:first-child {
-  -moz-padding-start: 36px;
-}
-
 th:hover > a {
   text-decoration: underline;
 }
 
-tbody > tr:nth-child(even) {
-  background: -moz-oddtreerow;
-}
-
 tbody > tr:hover {
-  background-color: -moz-mac-secondaryhighlight;
-  color: inherit;
-  border: none;
-}
-
-td {
-  padding: 2px;
-}
-
-td:first-child {
-  -moz-padding-start: 16px;
-}
-
-td:last-child {
-  -moz-padding-end: 16px;
+  outline: 1px solid ThreeDLightShadow;
+  -moz-outline-radius: .3em;
 }
 
 /* let 'Size' and 'Last Modified' take only as much space as they need and 'Name' all the rest */

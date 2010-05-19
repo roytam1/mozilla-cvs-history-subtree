@@ -1712,15 +1712,6 @@ public:
     return (![self bookmarkManagerIsVisible] || [self canHideBookmarks]) &&
            ![mContentView tabThumbnailGridViewIsVisible];
   }
-  else if (action == @selector(manageHistory:)) {
-    BOOL shouldEnable = YES;
-    if ([self bookmarkManagerIsVisible]) {
-      // Let the BookmarkViewController validate based on selection.
-      shouldEnable = [[self bookmarkViewControllerForCurrentTab] validateToolbarItem:theItem];
-    }
-
-    return ![mContentView tabThumbnailGridViewIsVisible] && shouldEnable;
-  }
   else if (action == @selector(toggleTabThumbnailView:)) {
     if ([mContentView tabThumbnailGridViewIsVisible])
       [theItem setToolTip:NSLocalizedString(@"HideTabOverviewToolTip", nil)];
@@ -1826,20 +1817,6 @@ public:
   [sender setNeedsDisplay:YES];
 }
 
-//
-// -splitView:shouldCollapseSubview:forDoubleClickOnDividerAtIndex:
-// NSSplitView delegate
-//
-// Allow the user to collapse and uncollapse the search bar by double clicking.
-// NB This works on 10.5+ but is harmless on 10.4.
-//
-- (BOOL)splitView:(NSSplitView *)sender shouldCollapseSubview:(NSView *)subview forDoubleClickOnDividerAtIndex:(int)dividerIndex
-{
-  if (sender == mLocationToolbarView)
-    return (subview == mSearchBar);
-  return NO;
-}
-
 #pragma mark -
 
 
@@ -1877,18 +1854,11 @@ public:
   if (action == @selector(getInfo:)) {
     if ([self bookmarkManagerIsVisible]) {
       [aMenuItem setTitle:NSLocalizedString(@"Bookmark Info", nil)];
-      // Let the BookmarkViewController validate based on selection.
+      // let the BookmarkViewController validate based on selection
       return [[self bookmarkViewControllerForCurrentTab] validateMenuItem:aMenuItem];
     }
     else
       [aMenuItem setTitle:NSLocalizedString(@"Page Info", nil)];
-  }
-
-  if (action == @selector(manageHistory:)) {
-    if ([self bookmarkManagerIsVisible]) {
-      // Let the BookmarkViewController validate based on selection.
-      return [[self bookmarkViewControllerForCurrentTab] validateMenuItem:aMenuItem];
-    }
   }
 
   if (action == @selector(findActions:)) {
@@ -1974,12 +1944,6 @@ public:
     return (![self bookmarkManagerIsVisible] && ![[self browserWrapper] isBlockedErrorOverlayShowing]);
   }
 
-  if (action == @selector(manageHistory:)) {
-    if ([self bookmarkManagerIsVisible]) {
-      // Let the BookmarkViewController validate based on what the manager is showing.
-      return [[self bookmarkViewControllerForCurrentTab] validateActionBySelector:action];
-    }
-  }
   return YES;
 }
 

@@ -16,7 +16,7 @@
  *
  * The Initial Developer of the Original Code is
  * Stuart Morgan
- * Portions created by the Initial Developer are Copyright (C) 2009
+ * Portions created by the Initial Developer are Copyright (C) 2010
  * the Initial Developer. All Rights Reserved.
  *
  * Contributor(s):
@@ -36,19 +36,48 @@
  *
  * ***** END LICENSE BLOCK ***** */
 
-#import <Foundation/Foundation.h>
+#include <Foundation/Foundation.h>
 
+#include "SpotlightFileKeys.h"
 
-@interface BreakpadWrapper : NSObject {
-  void* mBreakpadReference;
+#if MAC_OS_X_VERSION_MAX_ALLOWED <= MAC_OS_X_VERSION_10_4
+static const CFStringRef kMDItemURL = @"kMDItemURL";
+#endif
+
+Boolean GetMetadataForFile(void* thisInterface,
+                           CFMutableDictionaryRef attributes,
+                           CFStringRef contentTypeUTI,
+                           CFStringRef pathToFile)
+{
+  NSMutableDictionary* outDict = (NSMutableDictionary*)attributes;
+  NSDictionary* fileInfo =
+      [NSDictionary dictionaryWithContentsOfFile:(NSString*)pathToFile];
+  if (!fileInfo)
+    return FALSE;
+
+  if (!([fileInfo objectForKey:kSpotlightBookmarkTitleKey] &&
+        [fileInfo objectForKey:kSpotlightBookmarkURLKey])) {
+    return FALSE;
+  }
+
+  [outDict setObject:[fileInfo objectForKey:kSpotlightBookmarkTitleKey]
+              forKey:(NSString*)kMDItemDisplayName];
+  [outDict setObject:[fileInfo objectForKey:kSpotlightBookmarkTitleKey]
+              forKey:(NSString*)kMDItemTitle];
+
+  [outDict setObject:[fileInfo objectForKey:kSpotlightBookmarkURLKey]
+              forKey:(NSString*)kMDItemURL];
+
+  if ([fileInfo objectForKey:kSpotlightBookmarkDescriptionKey]) {
+    [outDict setObject:[fileInfo objectForKey:kSpotlightBookmarkDescriptionKey]
+                forKey:(NSString*)kMDItemDescription];
+  }
+
+  if ([fileInfo objectForKey:kSpotlightBookmarkShortcutKey]) {
+    NSArray* keywords = [NSArray arrayWithObject:
+        [fileInfo objectForKey:kSpotlightBookmarkShortcutKey]];
+    [outDict setObject:keywords forKey:(NSString*)kMDItemKeywords];
+  }
+
+  return TRUE;
 }
-
-// Returns the global breakpad instance, if there is one. If breakpad has not
-// been set up, this will return nil.
-+ (BreakpadWrapper*)sharedInstance;
-
-// Sets the URL that should be sent with any crash report. This should be
-// called whenever we believe that a new URL is "active".
-- (void)setReportedURL:(NSString*)url;
-
-@end

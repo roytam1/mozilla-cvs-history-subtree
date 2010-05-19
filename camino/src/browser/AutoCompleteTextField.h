@@ -40,7 +40,10 @@
 
 #import <AppKit/AppKit.h>
 
-@class MAAttachedWindow;
+class nsIAutoCompleteSession;
+class nsIAutoCompleteResults;
+class nsIAutoCompleteListener;
+
 @class AutoCompleteDataSource;
 @class ClickMenuImageView;
 @class PageProxyIcon;
@@ -52,7 +55,7 @@ extern NSString* const kWillShowFeedMenu;
   IBOutlet PageProxyIcon*   mProxyIcon;
   IBOutlet NSMenu*          mLockIconContextMenu;
   
-  MAAttachedWindow*         mPopupWin;
+  NSWindow*                 mPopupWin;
   NSTableView*              mTableView;
   
   ClickMenuImageView*       mLock;                  // STRONG, lock that shows when a page is secure, hidden otherwise
@@ -61,6 +64,11 @@ extern NSString* const kWillShowFeedMenu;
   
   AutoCompleteDataSource*   mDataSource;
   NSString*                 mSearchString;
+  NSTimer*                  mOpenTimer;
+
+  nsIAutoCompleteSession*   mSession;   // owned
+  nsIAutoCompleteResults*   mResults;   // owned
+  nsIAutoCompleteListener*  mListener;  // owned
   
   // used to remember if backspace was pressed in complete: so we can check this in controlTextDidChange
   BOOL mBackspaced;
@@ -71,7 +79,9 @@ extern NSString* const kWillShowFeedMenu;
   BOOL mCompleteWhileTyping;
 }
 
-- (void)searchResultsAvailable;
+// get/set the autcomplete session
+- (void) setSession:(NSString *)aSession;
+- (NSString *) session;
 
 - (PageProxyIcon*)pageProxyIcon;
 - (void)setPageProxyIcon:(NSImage *)aImage;
