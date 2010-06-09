@@ -49,7 +49,7 @@ use English;
 
 use File::Spec::Functions;
 
-use MozBuild::Util qw(RunShellCommand MkdirWithPath);
+use MozBuild::Util qw(RunShellCommand MkdirWithPath HashFile);
 
 require Exporter;
 
@@ -59,6 +59,8 @@ require Exporter;
                 ValidateToolsDirectory
                 EnsureDeliverablesDir
                 SubstitutePath
+                GetSnippetDirFromChannel
+                CachedHashFile
                );
 
 use strict;
@@ -69,31 +71,75 @@ use strict;
 
 use vars qw($MAR_BIN $MBSDIFF_BIN $MAKE_BIN
             $INCREMENTAL_UPDATE_BIN $UNWRAP_FULL_UPDATE_BIN
+            $FAST_INCREMENTAL_UPDATE_BIN
             $TMPDIR_PREFIX 
             %BOUNCER_PLATFORMS %AUS2_PLATFORMS
-            $DEFAULT_PARTIAL_MAR_OUTPUT_FILE);
+            $DEFAULT_PARTIAL_MAR_OUTPUT_FILE
+            $DEFAULT_SNIPPET_BASE_DIR $DEFAULT_SNIPPET_TEST_DIR
+            $SNIPPET_CHECKSUM_HASH_CACHE);
 
 $MAR_BIN = 'dist/host/bin/mar';
 $MBSDIFF_BIN = 'dist/host/bin/mbsdiff';
 
 $INCREMENTAL_UPDATE_BIN = 'tools/update-packaging/make_incremental_update.sh';
+$FAST_INCREMENTAL_UPDATE_BIN = 'tools/update-packaging/make_incremental_updates.py';
 $UNWRAP_FULL_UPDATE_BIN = 'tools/update-packaging/unwrap_full_update.pl';
 
 $MAKE_BIN = '/usr/bin/make';
 $TMPDIR_PREFIX = '/dev/shm/tmp/MozAUSLib';
 
 %BOUNCER_PLATFORMS = ( 'win32' => 'win',
+                       'wince-arm' => 'wince',
                        'linux-i686' => 'linux',
+                       'linux-x86_64' => 'linux64',
                        'mac' => 'osx',
+                       'mac64' => 'osx64',
                        'unimac' => 'osx',
                      );
 
 %AUS2_PLATFORMS = ( 'macppc' => 'Darwin_ppc-gcc3',
                     'mac' => 'Darwin_Universal-gcc3',
+                    'mac64' => 'Darwin_x86_64-gcc3',
                     'linux-i686' => 'Linux_x86-gcc3',
-                    'win32' => 'WINNT_x86-msvc' );
+                    'linux-x86_64' => 'Linux_x86_64-gcc3',
+                    'win32' => 'WINNT_x86-msvc',
+                    'wince-arm' => 'WINCE_arm-msvc',
+                  );
 
 $DEFAULT_PARTIAL_MAR_OUTPUT_FILE = 'partial.mar';
+
+$DEFAULT_SNIPPET_BASE_DIR = 'aus2';
+$DEFAULT_SNIPPET_TEST_DIR = $DEFAULT_SNIPPET_BASE_DIR . '.test';
+
+##
+## Global, used by CachedHashFile()
+##
+
+$SNIPPET_CHECKSUM_HASH_CACHE = {};
+
+sub CachedHashFile {
+   my %args = @_;
+
+   if (! exists($args{'file'}) || !exists($args{'type'})) {
+      die("ASSERT: CachedHashFile: null file and/or type");
+   }
+
+   # Let HashFile do all the heavy error checking lifting...
+   my $file = $args{'file'};
+   my $checksumType = $args{'type'};
+
+   if (! exists($SNIPPET_CHECKSUM_HASH_CACHE->{$file})) {
+      $SNIPPET_CHECKSUM_HASH_CACHE->{$file} = {};
+   }
+
+   if (! exists($SNIPPET_CHECKSUM_HASH_CACHE->{$file}->{$checksumType})) {
+      $SNIPPET_CHECKSUM_HASH_CACHE->{$file}->{$checksumType} = 
+       HashFile(file => $file, type => $checksumType);
+   }
+
+   return $SNIPPET_CHECKSUM_HASH_CACHE->{$file}->{$checksumType};
+
+}
 
 sub EnsureDeliverablesDir
 {
@@ -124,6 +170,7 @@ sub ValidateToolsDirectory
     return (-d $binPrefix and
             -x "$binPrefix/$MAR_BIN" and
             -x "$binPrefix/$MBSDIFF_BIN" and
+            -x "$binPrefix/$FAST_INCREMENTAL_UPDATE_BIN" and
             -x "$binPrefix/$INCREMENTAL_UPDATE_BIN" and
             -x "$binPrefix/$UNWRAP_FULL_UPDATE_BIN");
 }
@@ -317,4 +364,29 @@ sub SubstitutePath
     return $string;
 }
 
+sub GetSnippetDirFromChannel {
+    my %args = @_;
+    die 'ASSERT: GetSnippetDirFromChannel(): null/invalid update config ' .
+     "object\n" if (!exists($args{'config'}) || ref($args{'config'}) ne 'HASH');
+    die "ASSERT: GetSnippetDirFromChannel(): null channel\n" if (
+     !exists($args{'channel'}));  
+
+    my $channel = $args{'channel'};
+    my $currentUpdateConfig = $args{'config'};
+
+    die "ASSERT: GetSnippetDirFromChannel(): invalid update config object\n"
+     if (! exists($currentUpdateConfig->{'to'}) || 
+     !exists($currentUpdateConfig->{'from'}));
+
+    my $snippetDirTestKey = $channel . '-dir';
+  
+    if (exists($currentUpdateConfig->{$snippetDirTestKey})) {
+        return $DEFAULT_SNIPPET_BASE_DIR . '.' . 
+         $currentUpdateConfig->{$snippetDirTestKey};
+    } elsif ($channel =~ /test(-\w+)?$/) {
+        return $DEFAULT_SNIPPET_TEST_DIR;
+    } else {
+        return $DEFAULT_SNIPPET_BASE_DIR;
+    }
+}
 1;

@@ -39,16 +39,12 @@
 MOD_DEPTH 	= ../../..
 srcdir		= @srcdir@
 topsrcdir	= @top_srcdir@
-SASL_CFLAGS     = @SASL_CFLAGS@
-SASL_LIBS       = @SASL_LIBS@
-HAVE_SASL	= @HAVE_SASL@
 
 include $(MOD_DEPTH)/config/autoconf.mk
 include $(topsrcdir)/build.mk
 
 SRCS		= abandon.c \
 		  add.c \
-		  authzidctrl.c \
 		  bind.c \
 		  cache.c \
 		  charray.c \
@@ -68,7 +64,6 @@ SRCS		= abandon.c \
 		  getattr.c \
 		  getdn.c \
 		  getdxbyname.c \
-		  geteffectiverightsctrl.c \
 		  getentry.c \
 		  getfilter.c \
 		  getoption.c \
@@ -80,8 +75,6 @@ SRCS		= abandon.c \
 		  os-ip.c \
 		  proxyauthctrl.c \
 		  psearch.c \
-		  pwmodext.c \
-		  pwpctrl.c \
 		  referral.c \
 		  regex.c \
 		  rename.c \
@@ -100,14 +93,8 @@ SRCS		= abandon.c \
 		  unbind.c \
 		  unescape.c \
 		  url.c \
-		  userstatusctrl.c \
 		  utf8.c \
-		  vlistctrl.c \
-		  whoami.c
-
-ifeq ($(HAVE_SASL), 1)
-SRCS		+= saslio.c
-endif
+		  vlistctrl.c
 
 ifeq ($(OS_ARCH),WINNT)
 SRCS		+= dllmain.c \
@@ -132,11 +119,6 @@ GARBAGE 	+= $(LIBLDAP) $(DLLLDAP)
 
 LOCAL_INCLUDES  = -I$(PUBLIC)/nspr
 INCLUDES	+= -I$(DISTHDIR) -I$(HDIR) -I$(INSTALLDIR)/public
-
-ifeq ($(HAVE_SASL), 1)
-INCLUDES        += $(SASL_CFLAGS)
-endif
-
 DEFINES		+= $(DEFS) -UMOZILLA_CLIENT
 
 ifdef USE_PTHREADS
@@ -203,19 +185,18 @@ EXTRA_LIBS = -L$(dist_libdir) -l$(LBER_LIBNAME) $(OS_LIBS) -lc
 endif
 
 ifeq ($(OS_ARCH), Linux)
-EXTRA_LIBS = -L$(dist_libdir) -l$(LBER_LIBNAME) $(SASL_LINK)
+EXTRA_LIBS = -L$(dist_libdir) -l$(LBER_LIBNAME)
 endif
 
 ifeq ($(OS_ARCH), WINNT)
 ifdef NS_USE_GCC
-EXTRA_DLL_LIBS=-L$(dist_libdir) -l$(LBER_LIBNAME) $(SASL_LINK)
+EXTRA_DLL_LIBS=-L$(dist_libdir) -l$(LBER_LIBNAME)
 else
 EXTRA_LIBS =wsock32.lib kernel32.lib user32.lib gdi32.lib winspool.lib \
             comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib \
             rpcrt4.lib uuid.lib winmm.lib
 EXTRA_LIBS += $(dist_libdir)/$(LDIF_LIBNAME).lib
 EXTRA_LIBS += $(dist_libdir)/$(LBER_LIBNAME).lib
-EXTRA_LIBS += $(SASL_LINK)
 endif
 endif
 
@@ -274,7 +255,7 @@ ifeq ($(USE_DLL_EXPORTS_FILE), 1)
 # recursive gmake rule to create exported symbols file
 $(LDAP_EXPORT_DEFS):: $(srcdir)/../libldap.ex
 ifeq ($(OS_ARCH), WINNT)
-	$(GENEXPORTS) Win32 $(srcdir)/../msdos/winsock/nsldap32.tdf $< $(GENEXPARGS) > $@
+	$(GENEXPORTS) Win32 Standard $< $(GENEXPARGS) > $@
 else
 ifeq ($(OS_ARCH), OS2)
 	echo LIBRARY $(LDAP_LIBNAME) INITINSTANCE TERMINSTANCE > $@

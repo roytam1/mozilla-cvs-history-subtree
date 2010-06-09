@@ -353,8 +353,6 @@ const SEC_ASN1Template ocsp_PointerToResponseBytesTemplate[] = {
 static const SEC_ASN1Template ocsp_BasicOCSPResponseTemplate[] = {
     { SEC_ASN1_SEQUENCE,
 	0, NULL, sizeof(ocspBasicOCSPResponse) },
-    { SEC_ASN1_ANY | SEC_ASN1_SAVE,
-	offsetof(ocspBasicOCSPResponse, tbsResponseDataDER) },
     { SEC_ASN1_POINTER,
 	offsetof(ocspBasicOCSPResponse, tbsResponseData),
 	ocsp_ResponseDataTemplate },
@@ -1282,7 +1280,7 @@ ocsp_CertStatusTypeByTag(int derTag)
  * have allocated; it expects its caller to do that.
  */
 static SECStatus
-ocsp_FinishDecodingSingleResponses(PRArenaPool *reqArena,
+ocsp_FinishDecodingSingleResponses(PRArenaPool *arena,
 				   CERTOCSPSingleResponse **responses)
 {
     ocspCertStatus *certStatus;
@@ -1292,16 +1290,10 @@ ocsp_FinishDecodingSingleResponses(PRArenaPool *reqArena,
     int i;
     SECStatus rv = SECFailure;
 
-    if (!reqArena) {
-        PORT_SetError(SEC_ERROR_INVALID_ARGS);
-        return SECFailure;
-    }
-
     if (responses == NULL)			/* nothing to do */
 	return SECSuccess;
 
     for (i = 0; responses[i] != NULL; i++) {
-        SECItem* newStatus;
 	/*
 	 * The following assert points out internal errors (problems in
 	 * the template definitions or in the ASN.1 decoder itself, etc.).
@@ -1312,16 +1304,12 @@ ocsp_FinishDecodingSingleResponses(PRArenaPool *reqArena,
 	certStatusType = ocsp_CertStatusTypeByTag(derTag);
 	certStatusTemplate = ocsp_CertStatusTemplateByType(certStatusType);
 
-	certStatus = PORT_ArenaZAlloc(reqArena, sizeof(ocspCertStatus));
+	certStatus = PORT_ArenaZAlloc(arena, sizeof(ocspCertStatus));
 	if (certStatus == NULL) {
 	    goto loser;
 	}
-        newStatus = SECITEM_ArenaDupItem(reqArena, &responses[i]->derCertStatus);
-        if (!newStatus) {
-            goto loser;
-        }
-	rv = SEC_QuickDERDecodeItem(reqArena, certStatus, certStatusTemplate,
-				newStatus);
+	rv = SEC_ASN1DecodeItem(arena, certStatus, certStatusTemplate,
+				&responses[i]->derCertStatus);
 	if (rv != SECSuccess) {
 	    if (PORT_GetError() == SEC_ERROR_BAD_DER)
 		PORT_SetError(SEC_ERROR_OCSP_MALFORMED_RESPONSE);
@@ -1459,10 +1447,8 @@ static SECStatus
 ocsp_DecodeResponseBytes(PRArenaPool *arena, ocspResponseBytes *rbytes)
 {
     PORT_Assert(rbytes != NULL);		/* internal error, really */
-    if (rbytes == NULL) {
+    if (rbytes == NULL)
 	PORT_SetError(SEC_ERROR_INVALID_ARGS);	/* XXX set better error? */
-	return SECFailure;
-    }
 
     rbytes->responseTypeTag = SECOID_FindOIDTag(&rbytes->responseType);
     switch (rbytes->responseTypeTag) {
@@ -1585,19 +1571,9 @@ loser:
  * is only used internally.  When this interface is officially exported,
  * each assertion below will need to be followed-up with setting an error
  * and returning (null).
- *
- * FUNCTION: ocsp_GetResponseData
- *   Returns ocspResponseData structure and a pointer to tbs response
- *   data DER from a valid ocsp response. 
- * INPUTS:
- *   CERTOCSPResponse *response
- *     structure of a valid ocsp response
- * RETURN:
- *   Returns a pointer to ocspResponseData structure: decoded OCSP response
- *   data, and a pointer(tbsResponseDataDER) to its undecoded data DER.
  */
 static ocspResponseData *
-ocsp_GetResponseData(CERTOCSPResponse *response, SECItem **tbsResponseDataDER)
+ocsp_GetResponseData(CERTOCSPResponse *response)
 {
     ocspBasicOCSPResponse *basic;
     ocspResponseData *responseData;
@@ -1614,13 +1590,6 @@ ocsp_GetResponseData(CERTOCSPResponse *response, SECItem **tbsResponseDataDER)
 
     responseData = basic->tbsResponseData;
     PORT_Assert(responseData != NULL);
-
-    if (tbsResponseDataDER) {
-        *tbsResponseDataDER = &basic->tbsResponseDataDER;
-
-        PORT_Assert((*tbsResponseDataDER)->data != NULL);
-        PORT_Assert((*tbsResponseDataDER)->len != 0);
-    }
 
     return responseData;
 }
@@ -2572,13 +2541,15 @@ ocsp_CertGetDefaultResponder(CERTCertDBHandle *handle,CERTOCSPCertID *certID);
  * verifying the signer's cert, or low-level problems (no memory, etc.)
  */
 static SECStatus
-ocsp_CheckSignature(ocspSignature *signature, SECItem *encodedTBS,
+ocsp_CheckSignature(ocspSignature *signature, void *tbs,
+		    const SEC_ASN1Template *encodeTemplate,
 		    CERTCertDBHandle *handle, SECCertUsage certUsage,
 		    int64 checkTime, PRBool lookupByName, void *certIndex,
 		    void *pwArg, CERTCertificate **pSignerCert,
 		    CERTCertificate *issuer)
 {
     SECItem rawSignature;
+    SECItem *encodedTBS = NULL;
     CERTCertificate *responder = NULL;
     CERTCertificate *signerCert = NULL;
     SECKEYPublicKey *signerKey = NULL;
@@ -2691,6 +2662,13 @@ ocsp_CheckSignature(ocspSignature *signature, SECItem *encodedTBS,
 	goto finish;
 
     /*
+     * Prepare the data to be verified; it needs to be DER encoded first.
+     */
+    encodedTBS = SEC_ASN1EncodeItem(NULL, NULL, tbs, encodeTemplate);
+    if (encodedTBS == NULL)
+	goto finish;
+
+    /*
      * We copy the signature data *pointer* and length, so that we can
      * modify the length without damaging the original copy.  This is a
      * simple copy, not a dup, so no destroy/free is necessary.
@@ -2727,6 +2705,9 @@ finish:
 	    *pSignerCert = CERT_DupCertificate(signerCert);
 	}
     }
+
+    if (encodedTBS != NULL)
+	SECITEM_FreeItem(encodedTBS, PR_TRUE);
 
     if (signerKey != NULL)
 	SECKEY_DestroyPublicKey(signerKey);
@@ -2775,13 +2756,12 @@ CERT_VerifyOCSPResponseSignature(CERTOCSPResponse *response,
 				 CERTCertificate *issuer)
 {
     ocspResponseData *tbsData;		/* this is what is signed */
-    SECItem *tbsResponseDataDER;
     PRBool byName;
     void *certIndex;
     int64 producedAt;
     SECStatus rv;
 
-    tbsData = ocsp_GetResponseData(response, &tbsResponseDataDER);
+    tbsData = ocsp_GetResponseData(response);
 
     PORT_Assert(tbsData->responderID != NULL);
     switch (tbsData->responderID->responderIDType) {
@@ -2811,7 +2791,7 @@ CERT_VerifyOCSPResponseSignature(CERTOCSPResponse *response,
 	return rv;
 
     return ocsp_CheckSignature(ocsp_GetResponseSignature(response),
- 			       tbsResponseDataDER,
+			       tbsData, ocsp_ResponseDataTemplate,
 			       handle, certUsageStatusResponder, producedAt,
 			       byName, certIndex, pwArg, pSignerCert, issuer);
 }
@@ -3641,7 +3621,7 @@ CERT_GetOCSPStatusForCertID(CERTCertDBHandle *handle,
     /*
      * The ResponseData part is the real guts of the response.
      */
-    responseData = ocsp_GetResponseData(response, NULL);
+    responseData = ocsp_GetResponseData(response);
     if (responseData == NULL) {
 	rv = SECFailure;
 	goto loser;
