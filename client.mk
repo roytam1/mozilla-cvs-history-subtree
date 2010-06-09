@@ -79,8 +79,7 @@
 #    clean (realclean is now the same as clean)
 #    distclean
 #
-# See http://developer.mozilla.org/en/docs/Build_Documentation for 
-# more information.
+# See http://www.mozilla.org/build/ for more information.
 #
 # Options:
 #   MOZ_BUILD_PROJECTS   - Build multiple projects in subdirectories
@@ -159,13 +158,11 @@ MODULES_core :=                                 \
   mozilla/gfx                                   \
   mozilla/parser                                \
   mozilla/layout                                \
-  mozilla/memory/jemalloc                       \
   mozilla/jpeg                                  \
   mozilla/js/src/fdlibm                         \
   mozilla/js/src/liveconnect                    \
   mozilla/js/src/xpconnect                      \
   mozilla/js/jsd/idl                            \
-  mozilla/modules/lcms                          \
   mozilla/modules/libimg                        \
   mozilla/modules/libjar                        \
   mozilla/modules/libpr0n                       \
@@ -176,7 +173,6 @@ MODULES_core :=                                 \
   mozilla/modules/staticmod                     \
   mozilla/plugin/oji                            \
   mozilla/profile                               \
-  mozilla/probes                                \
   mozilla/rdf                                   \
   mozilla/security/manager                      \
   mozilla/sun-java                              \
@@ -186,7 +182,6 @@ MODULES_core :=                                 \
   mozilla/modules/libbz2                        \
   mozilla/accessible                            \
   mozilla/other-licenses/atk-1.0                \
-  mozilla/other-licenses/ia2                    \
   mozilla/security/manager                      \
   mozilla/tools/elf-dynstr-gc                   \
   mozilla/uriloader                             \
@@ -199,7 +194,6 @@ MODULES_core :=                                 \
   mozilla/storage                               \
   mozilla/db/sqlite3                            \
   mozilla/db/morkreader                         \
-  mozilla/testing/crashtest                     \
   mozilla/testing/mochitest                     \
   $(NULL)
 
@@ -250,8 +244,8 @@ MODULES_suite :=                                \
   $(MODULES_toolkit)                            \
   mozilla/directory/xpcom                       \
   mozilla/mailnews                              \
+  mozilla/themes                                \
   mozilla/suite                                 \
-  mozilla/other-licenses/7zstub/seamonkey       \
   $(NULL)
 
 LOCALES_suite :=                                \
@@ -259,7 +253,6 @@ LOCALES_suite :=                                \
   suite                                         \
   editor/ui                                     \
   extensions/reporter                           \
-  extensions/spellcheck                         \
   $(NULL)
 
 BOOTSTRAP_suite :=                              \
@@ -383,6 +376,7 @@ MODULES_NS_camino :=                            \
 MODULES_camino :=                               \
   $(MODULES_core)                               \
   mozilla/camino                                \
+  mozilla/themes                                \
   $(NULL)
 
 BOOTSTRAP_camino :=                             \
@@ -409,10 +403,10 @@ MODULES_all :=                                  \
 #
 # For branches, uncomment the MOZ_CO_TAG line with the proper tag,
 # and commit this file on that tag.
-#MOZ_CO_TAG          = <tag>
-NSPR_CO_TAG          = NSPR_4_7_6_RTM
-NSS_CO_TAG           = NSS_3_12_3_1_RTM
-LDAPCSDK_CO_TAG      = LDAPCSDK_6_0_3_CLIENT_BRANCH
+MOZ_CO_TAG           = UPDATE_PACKAGING_R10
+NSPR_CO_TAG          = UPDATE_PACKAGING_R10
+NSS_CO_TAG           = UPDATE_PACKAGING_R10
+LDAPCSDK_CO_TAG      = ldapcsdk_5_17_client_branch
 LOCALES_CO_TAG       =
 
 #######################################################################
@@ -461,7 +455,6 @@ ifndef MAKE
 MAKE := gmake
 endif
 PERL ?= perl
-PYTHON ?= python
 
 CONFIG_GUESS_SCRIPT := $(wildcard $(TOPSRCDIR)/build/autoconf/config.guess)
 ifdef CONFIG_GUESS_SCRIPT
@@ -513,7 +506,7 @@ LOCALES_CVSROOT ?= :pserver:anonymous:anonymous@cvs-mirror.mozilla.org:/l10n
 
 MOZCONFIG_LOADER := mozilla/build/autoconf/mozconfig2client-mk
 MOZCONFIG_FINDER := mozilla/build/autoconf/mozconfig-find 
-MOZCONFIG_MODULES := mozilla/build/unix/uniq.pl
+MOZCONFIG_MODULES := mozilla/build/unix/modules.mk mozilla/build/unix/uniq.pl
 run_for_side_effects := \
   $(shell cd $(ROOTDIR); \
      if test "$(_IS_FIRST_CHECKOUT)"; then \
@@ -522,6 +515,7 @@ run_for_side_effects := \
      fi; \
      $(MOZCONFIG_LOADER) $(TOPSRCDIR) mozilla/.mozconfig.mk > mozilla/.mozconfig.out)
 include $(TOPSRCDIR)/.mozconfig.mk
+include $(TOPSRCDIR)/build/unix/modules.mk
 
 ####################################
 # Options that may come from mozconfig
@@ -635,13 +629,7 @@ ifdef MOZ_CO_FLAGS
   LDAPCSDK_CO_FLAGS := $(MOZ_CO_FLAGS)
 endif
 LDAPCSDK_CO_FLAGS := $(LDAPCSDK_CO_FLAGS) $(if $(LDAPCSDK_CO_TAG),-r $(LDAPCSDK_CO_TAG),-A)
-
-# Can only pull the tip or branch tags by date
-ifeq (,$(filter-out HEAD %BRANCH,$(LDAPCSDK_CO_TAG)))
 CVSCO_LDAPCSDK = $(CVS) $(CVS_FLAGS) co $(LDAPCSDK_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(LDAPCSDK_CO_MODULE)
-else
-CVSCO_LDAPCSDK = $(CVS) $(CVS_FLAGS) co $(LDAPCSDK_CO_FLAGS) $(LDAPCSDK_CO_MODULE)
-endif
 
 ####################################
 # Error on obsolete variables.
@@ -676,12 +664,8 @@ MOZ_MODULE_LIST_NS := $(sort $(MOZ_MODULE_LIST_NS))
 ####################################
 # Suppress standalone modules if they're not needed.
 #
-CONFIGURES := $(TOPSRCDIR)/configure
 ifeq (,$(filter mozilla/xpcom,$(MOZ_MODULE_LIST)))
   CVSCO_NSPR :=
-else
-  CONFIGURES += $(if $(wildcard $(TOPSRCDIR)/nsprpub/configure.in), \
-	$(TOPSRCDIR)/nsprpub/configure, )
 endif
 
 ifeq (,$(filter mozilla/security/manager,$(MOZ_MODULE_LIST)))
@@ -689,8 +673,6 @@ ifeq (,$(filter mozilla/security/manager,$(MOZ_MODULE_LIST)))
 endif
 ifeq (,$(filter mozilla/directory/xpcom,$(MOZ_MODULE_LIST)))
   CVSCO_LDAPCSDK :=
-else
-  CONFIGURES += $(TOPSRCDIR)/directory/c-sdk/configure
 endif
 
 MODULES_CO_FLAGS := -P
@@ -736,9 +718,9 @@ override MOZ_CO_LOCALES := $(subst $(comma), ,$(MOZ_CO_LOCALES))
 ifeq (all,$(MOZ_CO_LOCALES))
 MOZCONFIG_MODULES += $(foreach project,$(MOZ_PROJECT_LIST),mozilla/$(project)/locales/all-locales)
 
-LOCALE_CO_DIRS := $(sort $(foreach project,$(MOZ_PROJECT_LIST),$(foreach locale,$(shell cat mozilla/$(project)/locales/all-locales),l10n/$(locale)/)))
+LOCALE_CO_DIRS := $(sort $(foreach project,$(MOZ_PROJECT_LIST),$(foreach locale,$(shell cat mozilla/$(project)/locales/all-locales),$(foreach dir,$(LOCALES_$(project)),l10n/$(locale)/$(dir)))))
 else # MOZ_CO_LOCALES != all
-LOCALE_CO_DIRS = $(sort $(foreach locale,$(MOZ_CO_LOCALES),l10n/$(locale)/))
+LOCALE_CO_DIRS = $(sort $(foreach locale,$(MOZ_CO_LOCALES),$(foreach dir,$(LOCALE_DIRS),l10n/$(locale)/$(dir))))
 endif
 
 CVSCO_LOCALES := $(CVS) $(CVS_FLAGS) -d $(LOCALES_CVSROOT) co $(LOCALES_CO_FLAGS) $(CVS_CO_LOCALES_DATE_FLAGS) $(LOCALE_CO_DIRS)
@@ -788,12 +770,13 @@ checkout::
 ifdef RUN_AUTOCONF_LOCALLY
 	@echo "Removing local configures" ; \
 	cd $(ROOTDIR) && \
-	$(RM) -f $(CONFIGURES)
+	$(RM) -f mozilla/configure mozilla/nsprpub/configure \
+		mozilla/directory/c-sdk/configure
 endif
 	@echo "checkout start: "`date` | tee $(CVSCO_LOGFILE)
-	@echo '$(CVSCO) mozilla/client.mk $(MOZCONFIG_MODULES)'; \
+	@echo '$(CVSCO) $(CVS_CO_DATE_FLAGS) mozilla/client.mk $(MOZCONFIG_MODULES)'; \
         cd $(ROOTDIR) && \
-	$(CVSCO) mozilla/client.mk $(MOZCONFIG_MODULES)
+	$(CVSCO) $(CVS_CO_DATE_FLAGS) mozilla/client.mk $(MOZCONFIG_MODULES)
 	@cd $(ROOTDIR) && $(MAKE) -f mozilla/client.mk real_checkout
 
 #	Start the checkout. Split the output to the tty and a log file.
@@ -812,12 +795,8 @@ real_checkout:
 # update the NSS checkout timestamp, if we checked PSM out
 	@if test -d $(TOPSRCDIR)/security/manager -a \
 		 `egrep -c '^(U|C) mozilla/security/(nss|coreconf)' $(CVSCO_LOGFILE) 2>/dev/null` != 0; then \
-		echo `date` > $(TOPSRCDIR)/security/manager/.nss.checkout; \
+		touch $(TOPSRCDIR)/security/manager/.nss.checkout; \
 	fi
-ifdef RUN_AUTOCONF_LOCALLY
-	cd $(ROOTDIR) && \
-	$(RM) -f $(CONFIGURES)
-endif
 #	@: Check the log for conflicts. ;
 	@conflicts=`egrep "^C " $(CVSCO_LOGFILE)` ;\
 	if test "$$conflicts" ; then \
@@ -827,6 +806,12 @@ endif
 	  false; \
 	else true; \
 	fi
+ifdef RUN_AUTOCONF_LOCALLY
+	@echo Generating configures using $(AUTOCONF) ; \
+	cd $(TOPSRCDIR) && $(AUTOCONF) && \
+	cd $(TOPSRCDIR)/nsprpub && $(AUTOCONF) && \
+	cd $(TOPSRCDIR)/directory/c-sdk && $(AUTOCONF)
+endif
 
 fast-update:
 #	@: Backup the last checkout log.
@@ -837,7 +822,8 @@ fast-update:
 ifdef RUN_AUTOCONF_LOCALLY
 	@echo "Removing local configures" ; \
 	cd $(ROOTDIR) && \
-	$(RM) -f $(CONFIGURES)
+	$(RM) -f mozilla/configure mozilla/nsprpub/configure \
+		mozilla/directory/c-sdk/configure
 endif
 	@echo "checkout start: "`date` | tee $(CVSCO_LOGFILE)
 	@echo '$(CVSCO) mozilla/client.mk $(MOZCONFIG_MODULES)'; \
@@ -865,10 +851,6 @@ real_fast-update:
 	@if test `egrep -c '^(U|C) mozilla/security/(nss|coreconf)' $(CVSCO_LOGFILE) 2>/dev/null` != 0; then \
 		touch $(TOPSRCDIR)/security/manager/.nss.checkout; \
 	fi
-ifdef RUN_AUTOCONF_LOCALLY
-	cd $(ROOTDIR) && \
-	$(RM) -f $(CONFIGURES)
-endif
 #	@: Check the log for conflicts. ;
 	@conflicts=`egrep "^C " $(CVSCO_LOGFILE)` ;\
 	if test "$$conflicts" ; then \
@@ -878,6 +860,12 @@ endif
 	  false; \
 	else true; \
 	fi
+ifdef RUN_AUTOCONF_LOCALLY
+	@echo Generating configures using $(AUTOCONF) ; \
+	cd $(TOPSRCDIR) && $(AUTOCONF) && \
+	cd $(TOPSRCDIR)/nsprpub && $(AUTOCONF) && \
+	cd $(TOPSRCDIR)/directory/c-sdk && $(AUTOCONF)
+endif
 
 CVSCO_LOGFILE_L10N := $(ROOTDIR)/cvsco-l10n.log
 CVSCO_LOGFILE_L10N := $(shell echo $(CVSCO_LOGFILE_L10N) | sed s%//%/%)
@@ -889,29 +877,24 @@ l10n-checkout:
 	else true; \
 	fi
 	@echo "checkout start: "`date` | tee $(CVSCO_LOGFILE_L10N)
-	@echo '$(CVSCO) mozilla/client.mk $(MOZCONFIG_MODULES)'; \
+	@echo '$(CVSCO) $(CVS_CO_DATE_FLAGS) mozilla/client.mk $(MOZCONFIG_MODULES)'; \
         cd $(ROOTDIR) && \
-	$(CVSCO) mozilla/client.mk $(MOZCONFIG_MODULES)
+	$(CVSCO) $(CVS_CO_DATE_FLAGS) mozilla/client.mk $(MOZCONFIG_MODULES)
 	@cd $(ROOTDIR) && $(MAKE) -f mozilla/client.mk real_l10n-checkout
 
-FULL_EN_US_DIRS := toolkit \
-	extensions \
-	$(MOZ_PROJECT_LIST) \
-	$(NULL)
-
-EN_US_LOCALE_DIRS := $(foreach dir, \
-	$(filter-out toolkit extensions/% $(MOZ_PROJECT_LIST) other-licenses/%, $(LOCALE_DIRS)), \
-	mozilla/$(dir)/locales) \
-	mozilla/$(filter other-licenses/%, $(LOCALE_DIRS))
-
-EN_US_CO_DIRS := $(EN_US_LOCALE_DIRS) \
-  $(foreach mod,$(FULL_EN_US_DIRS),mozilla/$(mod)) \
+EN_US_CO_DIRS := $(sort $(foreach dir,$(LOCALE_DIRS),mozilla/$(dir)/locales)) \
+  $(foreach mod,$(MOZ_PROJECT_LIST),mozilla/$(mod)/config) \
   mozilla/client.mk        \
+  $(MOZCONFIG_MODULES)     \
   mozilla/configure        \
   mozilla/configure.in     \
   mozilla/allmakefiles.sh  \
   mozilla/build            \
   mozilla/config           \
+  $(NULL)
+
+EN_US_CO_FILES_NS :=          \
+  mozilla/toolkit/mozapps/installer \
   $(NULL)
 
 #	Start the checkout. Split the output to the tty and a log file.
@@ -920,6 +903,7 @@ real_l10n-checkout:
 	cvs_co() { set -e; echo "$$@" ; \
 	  "$$@" 2>&1 | tee -a $(CVSCO_LOGFILE_L10N); }; \
 	cvs_co $(CVS) $(CVS_FLAGS) co $(MODULES_CO_FLAGS) $(CVS_CO_DATE_FLAGS) $(EN_US_CO_DIRS); \
+	cvs_co $(CVS) $(CVS_FLAGS) co $(MODULES_CO_FLAGS) $(CVS_CO_DATE_FLAGS) -l $(EN_US_CO_FILES_NS); \
 	cvs_co $(CVSCO_LOCALES)
 	@echo "checkout finish: "`date` | tee -a $(CVSCO_LOGFILE_L10N)
 #	@: Check the log for conflicts. ;
@@ -931,30 +915,6 @@ real_l10n-checkout:
 	  false; \
 	else true; \
 	fi
-
-####################################
-# Profile-Guided Optimization
-#  To use this, you should set the following variables in your mozconfig
-#    mk_add_options PROFILE_GEN_SCRIPT=/path/to/profile-script
-#
-#  The profile script should exercise the functionality to be included
-#  in the profile feedback.
-#
-#  This is up here, outside of the MOZ_CURRENT_PROJECT logic so that this
-#  is usable in multi-pass builds, where you might not have a runnable
-#  application until all the build passes and postflight scripts have run.
-ifdef MOZ_OBJDIR
-  PGO_OBJDIR = $(MOZ_OBJDIR)
-else
-  PGO_OBJDIR := $(TOPSRCDIR)
-endif
-
-profiledbuild::
-	$(MAKE) -f $(TOPSRCDIR)/client.mk build MOZ_PROFILE_GENERATE=1
-	OBJDIR=${PGO_OBJDIR} $(PROFILE_GEN_SCRIPT)
-	$(MAKE) -f $(TOPSRCDIR)/client.mk maybe_clobber_profiledbuild
-	$(MAKE) -f $(TOPSRCDIR)/client.mk build MOZ_PROFILE_USE=1
-
 
 #####################################################
 # First Checkout
@@ -974,7 +934,7 @@ else
 ifdef MOZ_UNIFY_BDATE
 ifndef MOZ_BUILD_DATE
 ifdef MOZ_BUILD_PROJECTS
-MOZ_BUILD_DATE = $(shell $(PYTHON) $(TOPSRCDIR)/toolkit/xre/make-platformini.py --print-buildid)
+MOZ_BUILD_DATE = $(shell $(PERL) -I$(TOPSRCDIR)/config $(TOPSRCDIR)/config/bdate.pl)
 export MOZ_BUILD_DATE
 endif
 endif
@@ -983,7 +943,7 @@ endif
 #####################################################
 # Preflight, before building any project
 
-build alldep preflight_all::
+build profiledbuild alldep preflight_all::
 ifeq (,$(MOZ_CURRENT_PROJECT)$(if $(MOZ_PREFLIGHT_ALL),,1))
 # Don't run preflight_all for individual projects in multi-project builds
 # (when MOZ_CURRENT_PROJECT is set.)
@@ -991,14 +951,14 @@ ifndef MOZ_BUILD_PROJECTS
 # Building a single project, OBJDIR is usable.
 	set -e; \
 	for mkfile in $(MOZ_PREFLIGHT_ALL); do \
-	  $(MAKE) -f $(TOPSRCDIR)/$$mkfile preflight_all TOPSRCDIR=$(TOPSRCDIR) OBJDIR=$(OBJDIR) MOZ_OBJDIR=$(MOZ_OBJDIR); \
+	  $(MAKE) -f $$mkfile preflight_all TOPSRCDIR=$(TOPSRCDIR) OBJDIR=$(OBJDIR) MOZ_OBJDIR=$(MOZ_OBJDIR); \
 	done
 else
 # OBJDIR refers to the project-specific OBJDIR, which is not available at
 # this point when building multiple projects.  Only MOZ_OBJDIR is available.
 	set -e; \
 	for mkfile in $(MOZ_PREFLIGHT_ALL); do \
-	  $(MAKE) -f $(TOPSRCDIR)/$$mkfile preflight_all TOPSRCDIR=$(TOPSRCDIR) MOZ_OBJDIR=$(MOZ_OBJDIR) MOZ_BUILD_PROJECTS="$(MOZ_BUILD_PROJECTS)"; \
+	  $(MAKE) -f $$mkfile preflight_all TOPSRCDIR=$(TOPSRCDIR) MOZ_OBJDIR=$(MOZ_OBJDIR) MOZ_BUILD_PROJECTS="$(MOZ_BUILD_PROJECTS)"; \
 	done
 endif
 endif
@@ -1007,7 +967,7 @@ endif
 # loop through them.
 
 ifeq (,$(MOZ_CURRENT_PROJECT)$(if $(MOZ_BUILD_PROJECTS),,1))
-configure depend build install export libs clean realclean distclean alldep preflight postflight maybe_clobber_profiledbuild::
+configure depend build profiledbuild install export libs clean realclean distclean alldep preflight postflight::
 	set -e; \
 	for app in $(MOZ_BUILD_PROJECTS); do \
 	  $(MAKE) -f $(TOPSRCDIR)/client.mk $@ MOZ_CURRENT_PROJECT=$$app; \
@@ -1033,24 +993,18 @@ EXTRA_CONFIG_DEPS := \
 $(TOPSRCDIR)/configure: $(TOPSRCDIR)/configure.in $(EXTRA_CONFIG_DEPS)
 	@echo Generating $@ using autoconf
 	cd $(TOPSRCDIR); $(AUTOCONF)
-
-$(TOPSRCDIR)/nsprpub/configure: $(TOPSRCDIR)/nsprpub/configure.in $(EXTRA_CONFIG_DEPS)
-	@echo Generating $@ using autoconf
-	cd $(TOPSRCDIR)/nsprpub; $(AUTOCONF)
-
-$(TOPSRCDIR)/directory/c-sdk/configure: $(TOPSRCDIR)/directory/c-sdk/configure.in $(EXTRA_CONFIG_DEPS)
-	@echo Generating $@ using autoconf
-	cd $(TOPSRCDIR)/directory/c-sdk; $(AUTOCONF)
 endif
 
 CONFIG_STATUS_DEPS := \
 	$(TOPSRCDIR)/configure \
+	$(TOPSRCDIR)/allmakefiles.sh \
 	$(TOPSRCDIR)/.mozconfig.mk \
 	$(wildcard $(TOPSRCDIR)/nsprpub/configure) \
 	$(wildcard $(TOPSRCDIR)/directory/c-sdk/configure) \
+	$(wildcard $(TOPSRCDIR)/mailnews/makefiles) \
+	$(wildcard $(TOPSRCDIR)/themes/makefiles) \
 	$(wildcard $(TOPSRCDIR)/config/milestone.txt) \
 	$(wildcard $(TOPSRCDIR)/config/chrome-versions.sh) \
-  $(wildcard $(addsuffix confvars.sh,$(wildcard $(TOPSRCDIR)/*/))) \
 	$(NULL)
 
 # configure uses the program name to determine @srcdir@. Calling it without
@@ -1066,7 +1020,7 @@ ifdef MOZ_TOOLS
   CONFIGURE = $(TOPSRCDIR)/configure
 endif
 
-configure:: $(CONFIGURES)
+configure::
 ifdef MOZ_BUILD_PROJECTS
 	@if test ! -d $(MOZ_OBJDIR); then $(MKDIR) $(MOZ_OBJDIR); else true; fi
 endif
@@ -1097,11 +1051,11 @@ depend:: $(OBJDIR)/Makefile $(OBJDIR)/config.status
 ####################################
 # Preflight
 
-build alldep preflight::
+build profiledbuild alldep preflight::
 ifdef MOZ_PREFLIGHT
 	set -e; \
 	for mkfile in $(MOZ_PREFLIGHT); do \
-	  $(MAKE) -f $(TOPSRCDIR)/$$mkfile preflight TOPSRCDIR=$(TOPSRCDIR) OBJDIR=$(OBJDIR) MOZ_OBJDIR=$(MOZ_OBJDIR); \
+	  $(MAKE) -f $$mkfile preflight TOPSRCDIR=$(TOPSRCDIR) OBJDIR=$(OBJDIR) MOZ_OBJDIR=$(MOZ_OBJDIR); \
 	done
 endif
 
@@ -1112,20 +1066,35 @@ build::  $(OBJDIR)/Makefile $(OBJDIR)/config.status
 	$(MOZ_MAKE)
 
 ####################################
+# Profile-feedback build (gcc only)
+#  To use this, you should set the following variables in your mozconfig
+#    mk_add_options PROFILE_GEN_SCRIPT=/path/to/profile-script
+#
+#  The profile script should exercise the functionality to be included
+#  in the profile feedback.
+
+profiledbuild:: $(OBJDIR)/Makefile $(OBJDIR)/config.status
+	$(MOZ_MAKE) MOZ_PROFILE_GENERATE=1
+	OBJDIR=${OBJDIR} $(PROFILE_GEN_SCRIPT)
+	$(MOZ_MAKE) clobber_all
+	$(MOZ_MAKE) MOZ_PROFILE_USE=1
+	find $(OBJDIR) -name "*.da" -exec rm {} \;
+
+####################################
 # Other targets
 
 # Pass these target onto the real build system
-install export libs clean realclean distclean alldep maybe_clobber_profiledbuild:: $(OBJDIR)/Makefile $(OBJDIR)/config.status
+install export libs clean realclean distclean alldep:: $(OBJDIR)/Makefile $(OBJDIR)/config.status
 	$(MOZ_MAKE) $@
 
 ####################################
 # Postflight
 
-build alldep postflight::
+build profiledbuild alldep postflight::
 ifdef MOZ_POSTFLIGHT
 	set -e; \
 	for mkfile in $(MOZ_POSTFLIGHT); do \
-	  $(MAKE) -f $(TOPSRCDIR)/$$mkfile postflight TOPSRCDIR=$(TOPSRCDIR) OBJDIR=$(OBJDIR) MOZ_OBJDIR=$(MOZ_OBJDIR); \
+	  $(MAKE) -f $$mkfile postflight TOPSRCDIR=$(TOPSRCDIR) OBJDIR=$(OBJDIR) MOZ_OBJDIR=$(MOZ_OBJDIR); \
 	done
 endif
 
@@ -1134,7 +1103,7 @@ endif # MOZ_CURRENT_PROJECT
 ####################################
 # Postflight, after building all projects
 
-build alldep postflight_all::
+build profiledbuild alldep postflight_all::
 ifeq (,$(MOZ_CURRENT_PROJECT)$(if $(MOZ_POSTFLIGHT_ALL),,1))
 # Don't run postflight_all for individual projects in multi-project builds
 # (when MOZ_CURRENT_PROJECT is set.)
@@ -1142,14 +1111,14 @@ ifndef MOZ_BUILD_PROJECTS
 # Building a single project, OBJDIR is usable.
 	set -e; \
 	for mkfile in $(MOZ_POSTFLIGHT_ALL); do \
-	  $(MAKE) -f $(TOPSRCDIR)/$$mkfile postflight_all TOPSRCDIR=$(TOPSRCDIR) OBJDIR=$(OBJDIR) MOZ_OBJDIR=$(MOZ_OBJDIR); \
+	  $(MAKE) -f $$mkfile postflight_all TOPSRCDIR=$(TOPSRCDIR) OBJDIR=$(OBJDIR) MOZ_OBJDIR=$(MOZ_OBJDIR); \
 	done
 else
 # OBJDIR refers to the project-specific OBJDIR, which is not available at
 # this point when building multiple projects.  Only MOZ_OBJDIR is available.
 	set -e; \
 	for mkfile in $(MOZ_POSTFLIGHT_ALL); do \
-	  $(MAKE) -f $(TOPSRCDIR)/$$mkfile postflight_all TOPSRCDIR=$(TOPSRCDIR) MOZ_OBJDIR=$(MOZ_OBJDIR) MOZ_BUILD_PROJECTS="$(MOZ_BUILD_PROJECTS)"; \
+	  $(MAKE) -f $$mkfile postflight_all TOPSRCDIR=$(TOPSRCDIR) MOZ_OBJDIR=$(MOZ_OBJDIR) MOZ_BUILD_PROJECTS="$(MOZ_BUILD_PROJECTS)"; \
 	done
 endif
 endif
@@ -1169,7 +1138,7 @@ cleansrcdir:
 # (! IS_FIRST_CHECKOUT)
 endif
 
-echo-variable-%:
-	@echo $($*)
+echo_objdir:
+	@echo $(OBJDIR)
 
-.PHONY: checkout real_checkout depend build profiledbuild maybe_clobber_profiledbuild export libs alldep install clean realclean distclean cleansrcdir pull_all build_all clobber clobber_all pull_and_build_all everything configure preflight_all preflight postflight postflight_all
+.PHONY: checkout real_checkout depend build export libs alldep install clean realclean distclean cleansrcdir pull_all build_all clobber clobber_all pull_and_build_all everything configure preflight_all preflight postflight postflight_all
