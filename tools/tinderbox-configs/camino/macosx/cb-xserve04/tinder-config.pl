@@ -94,7 +94,7 @@ $StartupPerformanceTest   = 1;  # Ts
                                 # aviary directory structure?
 
 $TestsPhoneHome           = 1;  # Should test report back to server?
-#$GraphNameOverride        = ''; # Override name built from ::hostname() and $BuildTag
+$GraphNameOverride        = 'cb-xserve04.mozilla.com_MOZILLA_1_9_2_BRANCH'; # Override name built from ::hostname() and $BuildTag
 
 # $results_server
 #----------------------------------------------------------------------------
@@ -183,7 +183,7 @@ $ObjDir = '../build';
 #$SubObjDir = '';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'Cm2.1-M1.9';
+$BuildNameExtra = 'Cm2.1-M1.9.2';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -235,7 +235,7 @@ $BinaryName = 'Camino';
 $shiptalkback  = 0;
 #$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
 #$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
-$OfficialBuildMachinery = 0; # Allow official clobber nightlies.  When false, $cachebuild in post-mozilla-rel.pl can never be true.
+#$OfficialBuildMachinery = 1; # Allow official clobber nightlies.  When false, $cachebuild in post-mozilla-rel.pl can never be true.
 #$ReleaseGroup = ''; # group to set uploaded files to (if non-empty)
 $build_hour    = "0";
 $package_creation_path = "/camino/installer";
@@ -248,7 +248,7 @@ $ftp_path      = "/home/ftp/pub/camino/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/camino/nightly";
 $tbox_ftp_path = '/home/ftp/pub/camino/tinderbox-builds';
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/camino/tinderbox-builds";
-$milestone     = "2.1-M1.9";
+$milestone     = "2.1-M1.9.2";
 #$notify_list   = 'build-announce@mozilla.org';
 #$stub_installer = 1;
 #$sea_installer = 1;
@@ -318,3 +318,10 @@ $MacUniversalBinary = 1;
 # parseable format
 #$TinderboxServerURL = 'http://tinderbox.mozilla.org/showbuilds.cgi?tree=MozillaTest&quickparse=1';
 #$MatchBuildname = "Linux bl-bldlnx01 Depend Fx-Mozilla1.5.0.4-baseline-test2";
+
+$MozVCS = 'Hg';
+$Hg = 'hg';
+# Can take as long as 25min to clone mozilla-central from outside Mozilla; value in seconds.
+$HgGeckoCheckoutTimeout = 600;
+$moz_gecko_repo = 'http://hg.mozilla.org/releases/mozilla-1.9.2/';
+$moz_camino_repo = 'http://hg.mozilla.org/camino/';

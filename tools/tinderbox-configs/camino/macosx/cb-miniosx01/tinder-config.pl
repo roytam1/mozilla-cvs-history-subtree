@@ -84,7 +84,7 @@ $LayoutPerformanceTest    = 0;  # Tp
 $DHTMLPerformanceTest     = 0;  # Tdhtml
 #$QATest                   = 0;  
 #$XULWindowOpenTest        = 0;  # Txul
-#$StartupPerformanceTest   = 0;  # Ts
+$StartupPerformanceTest   = 1;  # Ts
 #$NeckoUnitTest            = 0;
 #$RenderPerformanceTest    = 0;  # Tgfx
 #$RunUnitTests             = 0;  # TUnit
@@ -94,7 +94,7 @@ $DHTMLPerformanceTest     = 0;  # Tdhtml
                                 # aviary directory structure?
 
 $TestsPhoneHome           = 1;  # Should test report back to server?
-#$GraphNameOverride        = ''; # Override name built from ::hostname() and $BuildTag
+$GraphNameOverride        = 'cb-miniosx01.sj.mozilla.com_MOZILLA_1_9_2_BRANCH'; # Override name built from ::hostname() and $BuildTag
 
 # $results_server
 #----------------------------------------------------------------------------
@@ -183,7 +183,7 @@ $ObjDir = '../build';
 #$SubObjDir = '';
 
 # Extra build name, if needed.
-$BuildNameExtra = 'Cm2.1-M1.9';
+$BuildNameExtra = 'Cm2.1-M1.9.2';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -235,7 +235,7 @@ $BinaryName = 'Camino';
 $shiptalkback  = 0;
 #$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
 #$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
-#$OfficialBuildMachinery = 1; # Allow official clobber nightlies.  When false, $cachebuild in post-mozilla-rel.pl can never be true.
+$OfficialBuildMachinery = 0; # Allow official clobber nightlies.  When false, $cachebuild in post-mozilla-rel.pl can never be true.
 #$ReleaseGroup = ''; # group to set uploaded files to (if non-empty)
 $build_hour    = "0";
 $package_creation_path = "/camino/installer";
@@ -248,7 +248,7 @@ $ftp_path      = "/home/ftp/pub/camino/nightly";
 $url_path      = "http://ftp.mozilla.org/pub/mozilla.org/camino/nightly";
 $tbox_ftp_path = '/home/ftp/pub/camino/tinderbox-builds';
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/camino/tinderbox-builds";
-$milestone     = "2.1-M1.9";
+$milestone     = "2.1-M1.9.2";
 #$notify_list   = 'build-announce@mozilla.org';
 #$stub_installer = 1;
 #$sea_installer = 1;
@@ -270,13 +270,13 @@ $archive       = 1;
 #$update_pushinfo = 0;
 #$update_aus_host = 'aus2-staging.mozilla.org';
 
-#$crashreporter_buildsymbols = 0;
-#$crashreporter_pushsymbols = 0;
-#$ENV{SYMBOL_SERVER_HOST} = '';
-#$ENV{SYMBOL_SERVER_USER}   = '';
-#$ENV{SYMBOL_SERVER_PATH}   = '';
+$crashreporter_buildsymbols = 1;
+$crashreporter_pushsymbols = 1;
+$ENV{SYMBOL_SERVER_HOST} = 'dm-symbolpush01.mozilla.org';
+$ENV{SYMBOL_SERVER_USER}   = 'caminobld';
+$ENV{SYMBOL_SERVER_PATH}   = '/mnt/netapp/breakpad/symbols_camino/';
 # this is optional, it's a full path to a ssh private key
-#$ENV{SYMBOL_SERVER_SSH_KEY} = '';
+$ENV{SYMBOL_SERVER_SSH_KEY}   = "$ENV{HOME}/.ssh/id_dsa";
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
@@ -318,3 +318,10 @@ $MacUniversalBinary = 1;
 # parseable format
 #$TinderboxServerURL = 'http://tinderbox.mozilla.org/showbuilds.cgi?tree=MozillaTest&quickparse=1';
 #$MatchBuildname = "Linux bl-bldlnx01 Depend Fx-Mozilla1.5.0.4-baseline-test2";
+
+$MozVCS = 'Hg';
+$Hg = 'hg';
+# Can take as long as 25min to clone mozilla-central from outside Mozilla; value in seconds.
+$HgGeckoCheckoutTimeout = 600;
+$moz_gecko_repo = 'http://hg.mozilla.org/releases/mozilla-1.9.2/';
+$moz_camino_repo = 'http://hg.mozilla.org/camino/';

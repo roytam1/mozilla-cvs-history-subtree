@@ -1,6 +1,6 @@
 #
 ## hostname: cb-minibinus01
-## Darwin cb-minibinus01 8.11.0 Darwin Kernel Version 8.11.0: Wed Oct 10 18:26:00 PDT 2007; root:xnu-792.24.17~1/RELEASE_PPC Power Macintosh powerpc
+## uname: cb-minibinus01 9.8.0 Darwin Kernel Version 9.8.0: Wed Jul 15 16:57:01 PDT 2009; root:xnu-1228.15.4~1/RELEASE_PPC Power Macintosh powerpc
 #
 
 #- tinder-config.pl - Tinderbox configuration file.
@@ -46,6 +46,8 @@ $BuildAdministrator = "mento, the fresh MAKEr";
 #$SkipMozilla       = 0;      # Use to debug post-mozilla.pl scripts.
 #$SkipCheckout      = 0;      # Use to debug build process without checking out new source.
 #$BuildLocales      = 0;      # Do l10n packaging?
+#$ForceRebuild      = 0;      # Do a full re-build even when in depend mode; used
+                             # internally; you probably shouldn't set this
 
 # Only used when $BuildLocales = 1
 %WGetFiles         = ();  # Pull files from the web, URL => Location
@@ -53,6 +55,10 @@ $BuildAdministrator = "mento, the fresh MAKEr";
 #$BuildLocalesArgs  = "";  # Extra attributes to add to the makefile command
                           # which builds the "installers-<locale>" target.
                           # Typically used to set ZIP_IN and WIN32_INSTALLER_IN
+# If defined, the version file used in the local l10n build tree to construct
+# a URL to download for l10n repackaging (makes it so %WGetFiles doesn't need
+# to be modified every release).
+# $LocalizationVersionFile = "browser/config/version.txt";
 
 # Tests
 $CleanProfile             = 1;
@@ -73,20 +79,22 @@ $RegxpcomTest             = 0;
 #$EmbedCodesizeTest        = 0;  # mZ, require mozilla/tools/codesigns
 #$MailBloatTest            = 0;
 #$EmbedTest                = 0;  # Assumes you wanted $BuildEmbed=1
-#$LayoutPerformanceTest    = 1;  # Tp
-#$DHTMLPerformanceTest     = 1;  # Tdhtml
+#$LayoutPerformanceTest    = 0;  # Tp
+#$LayoutPerformanceLocalTest   = 0;  # Tp2
+$DHTMLPerformanceTest     = 1;  # Tdhtml
 #$QATest                   = 0;  
 #$XULWindowOpenTest        = 0;  # Txul
 $StartupPerformanceTest   = 1;  # Ts
 #$NeckoUnitTest            = 0;
 #$RenderPerformanceTest    = 0;  # Tgfx
+#$RunUnitTests             = 0;  # TUnit
 #@CompareLocaleDirs        = (); # Run compare-locales test on these directories
 # ("network","dom","toolkit","security/manager");
 #$CompareLocalesAviary     = 0;  # Should the compare-locales commands use the
                                 # aviary directory structure?
 
 $TestsPhoneHome           = 1;  # Should test report back to server?
-#$GraphNameOverride        = ''; # Override name built from ::hostname() and $BuildTag
+$GraphNameOverride        = 'cb-minibinus01.sj.mozilla.com_MOZILLA_1_9_2_BRANCH'; # Override name built from ::hostname() and $BuildTag
 
 # $results_server
 #----------------------------------------------------------------------------
@@ -96,7 +104,7 @@ $TestsPhoneHome           = 1;  # Should test report back to server?
 # - cmp@mozilla.org
 #$results_server           = "build-graphs.mozilla.org";
 
-#$pageload_server          = "spider";  # localhost
+#$pageload_server          = "pageload.build.mozilla.org";  # localhost
 $pageload_server = "localhost";
 
 #
@@ -117,18 +125,25 @@ $AliveTestTimeout                 = 15;
 #$CodesizeTestTimeout              = 900;     # seconds
 #$CodesizeTestType                 = "auto";  # {"auto"|"base"}
 $LayoutPerformanceTestTimeout     = 450;  # entire test, seconds
+#$LayoutPerformanceLocalTestTimeout    = 1200;  # entire test, seconds
 $DHTMLPerformanceTestTimeout      = 225;  # entire test, seconds
 #$QATestTimeout                    = 1200;   # entire test, seconds
 #$LayoutPerformanceTestPageTimeout = 30000; # each page, ms
-$StartupPerformanceTestTimeout    = 50;    # seconds
+$StartupPerformanceTestTimeout    = 5;    # seconds
 #$NeckoUnitTestTimeout             = 30;    # seconds
 $XULWindowOpenTestTimeout	      = 30;   # seconds
 #$RenderTestTimeout                = 1800;  # seconds
+#$RunUnitTestsTimeout              = 600;   # seconds
 
 #$MozConfigFileName = 'mozconfig';
 
 #$UseMozillaProfile = 1;
 #$MozProfileName = 'default';
+
+# This sets the value of the XPCOM_DEBUG_BREAK environment variable.  We
+# default to 'warn', which suppresses the assertion dialogs on Windows
+# and gives platform parity.  Use 'abort' for fatal assertions.
+#$MozAssertBehavior = 'warn';
 
 #- Set these to what makes sense for your system
 #$Make          = 'gmake';       # Must be GNU make
@@ -150,6 +165,11 @@ $XULWindowOpenTestTimeout	      = 30;   # seconds
 
 $moz_cvsroot = ':ext:caminobld@cvs.mozilla.org:/cvsroot';
 
+# Used for checking out sources (e.g. Talkback) from the internal
+# Mozilla repository. If you don't have a CVS account with access,
+# just leave this set to 0.
+#$MofoRoot=':ext:cltbld@cvs.mozilla.org:/mofo';
+
 #- Set these proper values for your tinderbox server
 #$Tinderbox_server = 'tinderbox-daemon@tinderbox.mozilla.org';
 
@@ -159,8 +179,12 @@ $moz_cvsroot = ':ext:caminobld@cvs.mozilla.org:/cvsroot';
 #- Set if you want to build in a separate object tree
 $ObjDir = '../build';
 
+# If the build is a combined xulrunner+something, set the "something"
+# subdirectory: example "firefox/" - NOTE: need trailing slash!
+#$SubObjDir = '';
+
 # Extra build name, if needed.
-$BuildNameExtra = 'Cm2.1-M1.9';
+$BuildNameExtra = 'Cm2.1-M1.9.2';
 
 # User comment, eg. ip address for dhcp builds.
 # ex: $UserComment = "ip = 208.12.36.108";
@@ -183,6 +207,7 @@ $BuildTree  = 'Camino';
 #$Topsrcdir = 'mozilla';
 
 $BinaryName = 'Camino';
+#$RequireExecutableBinary = 1;
 
 #
 # For embedding app, use:
@@ -201,7 +226,7 @@ $BinaryName = 'Camino';
 # If set to a filepath, tinderbox will use the file contents (presumed to be a bz2
 # archive of a compatible Talkback extension) rather than compiling Talkback
 # from source. 
-# $UsePrebuiltTalkback = "/builds/tinderbox/Cm2-M1.9/talkback-camino-trunk-mac.tar.bz2";
+#$UsePrebuiltTalkback = "/builds/tinderbox/Cm2-M1.9/talkback-camino-trunk-mac.tar.bz2";
 
 # Release build options
 #$ReleaseBuild  = 1;
@@ -211,24 +236,24 @@ $BinaryName = 'Camino';
 $shiptalkback  = 0;
 #$ReleaseToLatest = 1; # Push the release to latest-<milestone>?
 #$ReleaseToDated = 1; # Push the release to YYYY-MM-DD-HH-<milestone>?
-#$OfficialBuildMachinery = 0; # Allow official clobber nightlies.  When false, $cachebuild in post-mozilla-rel.pl can never be true.
+$OfficialBuildMachinery = 0; # Allow official clobber nightlies.  When false, $cachebuild in post-mozilla-rel.pl can never be true.
 #$ReleaseGroup = ''; # group to set uploaded files to (if non-empty)
-$build_hour    = "22";
+$build_hour    = "0";
 $package_creation_path = "/camino/installer";
 # path to make in to recreate mac bundle, needed for mac + talkback:
 $mac_bundle_path = "/camino";
 #$ssh_version   = "2";
 $ssh_user      = "caminobld";
 #$ssh_server    = "stage.mozilla.org";
-$ftp_path      = "/home/ftp/pub/camino/nightly";
-$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/camino/nightly";
+$ftp_path      = "/home/ftp/pub/camino/experimental";
+$url_path      = "http://ftp.mozilla.org/pub/mozilla.org/camino/experimental";
 $tbox_ftp_path = '/home/ftp/pub/camino/tinderbox-builds';
 $tbox_url_path = "http://ftp.mozilla.org/pub/mozilla.org/camino/tinderbox-builds";
-$milestone     = "2.1-M1.9";
+$milestone     = "2.1-M1.9.2";
 #$notify_list   = "build-announce\@mozilla.org";
 #$stub_installer = 1;
 #$sea_installer = 1;
-$archive       = 1;
+#$archive       = 0;
 #$push_raw_xpis = 1;
 #$update_package = 0;
 #$update_product = "Firefox";
@@ -236,9 +261,23 @@ $archive       = 1;
 #$update_platform = "WINNT_x86-msvc";
 #$update_hash = "sha1";
 #$update_filehost = "ftp.mozilla.org";
+# use $update_appv and $update_extv to set app and extension version explicitly, or
+# use $update_ver_file to read a value for either/both from a file (relative to topsrcdir). 
+# The first two variables take precedence over $update_ver_file
 #$update_appv = "1.0+";
 #$update_extv = "1.0+";
-#$update_pushinfo = 1;
+# the master file for app version in Firefox, use mail instead of browser for Thunderbird
+#$update_ver_file = "browser/config/version.txt"; 
+#$update_pushinfo = 0;
+#$update_aus_host = 'aus2-staging.mozilla.org';
+
+$crashreporter_buildsymbols = 1;
+$crashreporter_pushsymbols = 1;
+$ENV{SYMBOL_SERVER_HOST} = 'dm-symbolpush01.mozilla.org';
+$ENV{SYMBOL_SERVER_USER}   = 'caminobld';
+$ENV{SYMBOL_SERVER_PATH}   = '/mnt/netapp/breakpad/symbols_camino/';
+# this is optional, it's a full path to a ssh private key
+$ENV{SYMBOL_SERVER_SSH_KEY}   = "$ENV{HOME}/.ssh/id_dsa";
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
@@ -267,6 +306,23 @@ $LogEncoding = 'base64';
 
 # Build Mac OS X universal binaries (must be used with an objdir and
 # universal support from mozilla/build/macosx/universal)
-$MacUniversalBinary = 1;
+$MacUniversalBinary = 0;
 
-$MofoRoot=':ext:cltbld@cvs.mozilla.org:/mofo';
+# If tinderbox is running in a test-only mode, it needs to be able to download
+# the latest build and unpack it rather than building it.
+#$TestOnlyTinderbox = 0;
+#$DownloadBuildFile = 'firefox-2.0a3.en-US.linux-i686.tar.gz';
+#$DownloadBuildURL = 'http://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/latest-mozilla1.8';
+#$DownloadBuildDir = 'firefox';
+
+# If TestOnlyTinderbox is enabled, fetch the latest build info from tinderbox in a 
+# parseable format
+#$TinderboxServerURL = 'http://tinderbox.mozilla.org/showbuilds.cgi?tree=MozillaTest&quickparse=1';
+#$MatchBuildname = "Linux bl-bldlnx01 Depend Fx-Mozilla1.5.0.4-baseline-test2";
+
+$MozVCS = 'Hg';
+$Hg = 'hg';
+# Can take as long as 25min to clone mozilla-central from outside Mozilla; value in seconds.
+$HgGeckoCheckoutTimeout = 600;
+$moz_gecko_repo = 'http://hg.mozilla.org/releases/mozilla-1.9.2/';
+$moz_camino_repo = 'http://hg.mozilla.org/camino/';
