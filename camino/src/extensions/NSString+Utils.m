@@ -349,14 +349,12 @@
   return ([self isEqualToString:@"about:blank"] || [self isEqualToString:@""]);
 }
 
-// Excluded character list comes from RFC2396, by examining Safari's behaviour,
-// and from the characters Firefox excluded in bug bug 397815, bug 410726, and
-// bug 452979.
+// Excluded character list comes from RFC2396 and by examining Safari's behaviour
 - (NSString*)unescapedURI
 {
   NSString *unescapedURI = (NSString*)CFURLCreateStringByReplacingPercentEscapesUsingEncoding(kCFAllocatorDefault,
                                                                             (CFStringRef)self,
-                                                                            CFSTR(" \"\';/?:@&=+$,#%\r\n\t\u200e\u200f\u202a\u202b\u202c\u202d\u202e\v\x0c\x1c\x1d\x1e\x1f\u00ad\u200b\ufeff\u2028\u2029\u2060\u2062\u2063\ufffc"),
+                                                                            CFSTR(" \"\';/?:@&=+$,#"),
                                                                             kCFStringEncodingUTF8);
   return unescapedURI ? [unescapedURI autorelease] : self;
 }
