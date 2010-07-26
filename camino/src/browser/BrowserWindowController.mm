@@ -360,6 +360,8 @@ public:
 - (void)insertNewlineIgnoringFieldEditor:(id)sender
 {
   BrowserWindowController* bwc = (BrowserWindowController *)[[self window] delegate];
+  if ([[bwc browserWrapper] isBlockedErrorOverlayShowing])
+    return;
   NSString* URLstring = [self string];
   // so that Option-return works on things like "google.com" where the scheme:// is missing
   if ([URLstring rangeOfString:@"://"].location == NSNotFound)
