@@ -4,6 +4,15 @@
 #                                                                           #
 #############################################################################
 
+VERSION 1.5.3 - Aug 2010
+========================
+This is an update release with the following goals:
+
+   - Allow PerLDAP to use the OpenLDAP client libraries behind the
+     scenes.
+   - Avoid using deprecated functions in the underlying LDAP client
+     library.
+
 VERSION 1.5.2 - Jul 2007
 ========================
 
