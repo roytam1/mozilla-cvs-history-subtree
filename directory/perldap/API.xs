@@ -75,11 +75,56 @@ typedef ber_int_t my_vlvint_t;
 
 /* SSL is only available in Binary */
 #ifdef USE_SSL
+#ifndef USE_OPENLDAP
 # include <ldap_ssl.h>
+#endif
 #endif
 
 /* AUTOLOAD methods for LDAP constants */
 #include "constant.h"
+
+/* This stuff is needed when using OpenLDAP.  Most of it is taken
+ * from the Mozilla LDAP C SDK. */
+#ifdef USE_OPENLDAP
+#define LDAP_C
+#define LDAP_CALL
+#define LDAP_CALLBACK
+
+/* Stuff for sorting entries */
+typedef int (LDAP_C LDAP_CALLBACK LDAP_CMP_CALLBACK)(const char *val1, const char *val2);
+
+typedef int (LDAP_C LDAP_CALLBACK LDAP_CHARCMP_CALLBACK)(char*, char*);
+
+static LDAP_CHARCMP_CALLBACK *perldap_et_cmp_fn;
+
+struct entrything {
+        char            **et_vals;
+        LDAPMessage     *et_msg;
+};
+
+typedef LDAPSortKey LDAPsortkey;
+
+#define LDAP_TAG_SK_MATCHRULE   0x80L   /* context specific + primitive + 0 */
+#define LDAP_TAG_SK_REVERSE     0x81L   /* context specific + primitive + 1 */
+
+/* VLV structure */
+typedef struct ldapvirtuallist {
+    ber_int_t   ldvlist_before_count;       /* # entries before target */
+    ber_int_t   ldvlist_after_count;        /* # entries after target */
+    char        *ldvlist_attrvalue;         /* jump to this value */
+    ber_int_t   ldvlist_index;              /* list offset */
+    ber_int_t   ldvlist_size;               /* number of items in vlist */
+    void        *ldvlist_extradata;         /* for use by application */
+} LDAPVirtualList;
+
+/* We don't really need/use these, but we need to define them
+ * to something to prevent compiler errors. */
+typedef char FriendlyMap;
+typedef char LDAPFiltDesc;
+typedef char LDAPFiltInfo;
+typedef char LDAPMemCache;
+typedef char LDAPVersion;
+#endif
 
 /* Prototypes */
 static int perldap_init();
@@ -91,6 +136,52 @@ static void * perldap_calloc(size_t number, size_t size);
 static void * perldap_realloc(void *ptr, size_t size);
 
 static void perldap_free(void *ptr);
+
+static int perldap_et_cmp(const void  *aa, const void  *bb);
+
+static void perldap_ldap_value_free(char **vals);
+
+static int perldap_ldap_create_persistentsearch_control(LDAP *ld, int changetypes,
+    int changesonly, int return_echg_ctrls, char ctrl_iscritical, LDAPControl **ctrlp);
+
+static int perldap_ldap_create_sort_control(LDAP *ld, LDAPsortkey **sortKeyList,
+                                            char ctrl_iscritical, LDAPControl **ctrlp);
+
+static int perldap_ldap_create_virtuallist_control(LDAP *ld, LDAPVirtualList *ldvlistp,
+                                                   LDAPControl **ctrlp);
+
+static int perldap_ldap_multisort_entries(LDAP *ld, LDAPMessage **chain,
+                                          char **attrs, LDAP_CMP_CALLBACK *cmp);
+
+static int perldap_ldap_parse_entrychange_control(LDAP *ld, LDAPControl **ctrls,
+                   ber_int_t *chgtypep, char **prevdnp, int *chgnumpresentp, ber_int_t *chgnump);
+
+static int perldap_ldap_parse_sort_control(LDAP *ld, LDAPControl **ctrls,
+                                      ber_int_t *result, char **attribute);
+
+static int perldap_ldap_parse_virtuallist_control(LDAP *ld, LDAPControl **ctrls,
+                    ber_int_t *target_posp, ber_int_t *list_sizep, int *errcodep);
+
+static void perldap_ldap_perror(LDAP *ld, const char *s);
+
+static int perldap_ldap_set_lderrno(LDAP *ld, int e, char *m, char *s);
+
+static int perldap_ldap_sort_entries(LDAP *ld, LDAPMessage **chain, char *attr,
+                                     LDAP_CMP_CALLBACK *cmp);
+
+static int perldap_ldap_url_search(LDAP *ld, char *url, int attrsonly);
+
+static int perldap_ldap_url_search_s(LDAP *ld, char *url, int attrsonly, LDAPMessage **res);
+
+static int perldap_ldap_url_search_st(LDAP *ld, char *url, int attrsonly,
+                                      struct timeval *timeout, LDAPMessage **res);
+
+static int perldap_ldapssl_client_init(const char *certdbpath, void *certdbhandle);
+
+static int perldap_ldapssl_enable_clientauth(LDAP *ld, char *keynickname,
+                                  char *keypasswd, char *certnickname);
+
+static LDAP * perldap_ldapssl_init(const char *host, const char *port, int secure);
 
 static char ** avref2charptrptr(SV *avref);
 
@@ -111,15 +202,24 @@ static int StrCaseCmp(const char *s, const char *t);
 
 static char * StrDup(const char *source);
 
+#ifdef USE_OPENLDAP
+static int LDAP_CALL internal_rebind_proc(LDAP *ld, LDAP_CONST char *url,
+            ber_tag_t request, ber_int_t msgid, void *arg);
+
+static int LDAP_CALL ldap_default_rebind_proc(LDAP *ld, LDAP_CONST char *url,
+            ber_tag_t request, ber_int_t msgid, void *arg);
+#else
 static int LDAP_CALL internal_rebind_proc(LDAP *ld,char **dnp,char **pwp,
             int *authmethodp,int freeit,void *arg);
 
 static int LDAP_CALL ldap_default_rebind_proc(LDAP *ld, char **dn, char **pswd,
             int *auth, int freeit, void *arg);
+#endif
 
 
 /* Global Definitions and Variables */
 SV *ldap_perl_rebindproc = NULL;
+
 static char *ldap_default_rebind_dn = NULL;
 static char *ldap_default_rebind_pwd = NULL;
 static int ldap_default_rebind_auth = LDAP_AUTH_SIMPLE;
@@ -135,7 +235,7 @@ SV *ldap_perl_sortcmp = NULL;
 	      EXTEND(sp,1); \
 	      PUSHs(sv_2mortal(newSVpv(cppvar[cppindex],strlen(cppvar[cppindex])))); \
 	   } \
-	   ldap_value_free(cppvar); }
+	   perldap_ldap_value_free(cppvar); }
 
 /* Return a Perl List from a berval ** in PPCODE */
 #define RET_BVPP(bvppvar) \
@@ -157,6 +257,11 @@ static
 int
 perldap_init()
 {
+#ifdef USE_OPENLDAP
+   /* OpenLDAP doesn't allow us to set our
+    * own memory allocation functions. */
+   return LDAP_OPT_SUCCESS;
+#else
    struct ldap_memalloc_fns memalloc_fns;
 
    memalloc_fns.ldapmem_malloc = perldap_malloc;
@@ -167,6 +272,7 @@ perldap_init()
    return (ldap_set_option(NULL,
                            LDAP_OPT_MEMALLOC_FN_PTRS,
                            &memalloc_fns));
+#endif
 }
 
 
@@ -207,6 +313,693 @@ perldap_free(void *ptr)
 {
    Safefree(ptr);
 }
+
+/* Helpers for using different LDAP libraries */
+static
+void
+perldap_ldap_value_free(char **vals)
+{
+#ifdef USE_OPENLDAP
+   char    **a;
+
+    if ( vals == NULL ) {
+        return;
+    }
+
+    for (a = vals; *a != NULL; a++)
+    {
+        char *tmp= *a;
+        ldap_memfree((void *)tmp);
+    }
+    ldap_memfree((void *)vals);
+#else
+   ldap_value_free(vals);
+#endif
+}
+
+static
+int
+perldap_ldap_create_persistentsearch_control(LDAP *ld, int changetypes,
+    int changesonly, int return_echg_ctrls, char ctrl_iscritical, LDAPControl **ctrlp)
+{
+    int ret = 0;
+
+#ifdef USE_OPENLDAP
+    BerElement *        ber = NULL;
+    struct berval *     berval = NULL;
+
+    if (ctrlp == NULL || (changetypes & ~(LDAP_CONTROL_PERSIST_ENTRY_CHANGE_ADD |
+        LDAP_CONTROL_PERSIST_ENTRY_CHANGE_DELETE | LDAP_CONTROL_PERSIST_ENTRY_CHANGE_MODIFY |
+        LDAP_CONTROL_PERSIST_ENTRY_CHANGE_RENAME)) != 0) {
+        ret = LDAP_PARAM_ERROR;
+        goto bail;
+    }
+
+    if ((ber = ber_alloc_t(LBER_USE_DER)) == NULL) {
+        ret = LDAP_NO_MEMORY;
+        goto bail;
+    }
+
+    if (ber_printf(ber, "{ibb}", changetypes, changesonly, return_echg_ctrls) == -1) {
+        ret = LDAP_ENCODING_ERROR;
+        goto bail;
+    }
+
+    if (ber_flatten(ber, &berval) != LDAP_SUCCESS) {
+        ret = LDAP_NO_MEMORY;
+        goto bail;
+    }
+
+    ret = ldap_control_create(LDAP_CONTROL_PERSIST_REQUEST,
+                              ctrl_iscritical, berval, 1, ctrlp);
+
+bail:
+    ber_free(ber, 1);
+    ber_bvfree(berval);
+    ldap_set_option(ld, LDAP_OPT_RESULT_CODE, &ret);
+#else
+    ret = ldap_create_persistentsearch_control(ld, changetypes, changesonly,
+                                  return_echg_ctrls, ctrl_iscritical, ctrlp);
+#endif
+
+    return ret;
+}
+
+static
+int
+perldap_ldap_create_sort_control(LDAP *ld, LDAPsortkey **sortKeyList,
+        char ctrl_iscritical, LDAPControl **ctrlp)
+{
+    int ret = 0;
+
+#ifdef USE_OPENLDAP
+    BerElement *        ber = NULL;
+    struct berval *     berval = NULL;
+    int i = 0;
+
+    if ( sortKeyList == NULL || ctrlp == NULL ) {
+        ret = LDAP_PARAM_ERROR;
+        goto bail;
+    }
+
+    if ((ber = ber_alloc_t(LBER_USE_DER)) == NULL) {
+        ret = LDAP_NO_MEMORY;
+        goto bail;
+    }
+
+    if (ber_printf(ber, "{") == -1) {
+        ret = LDAP_ENCODING_ERROR;
+        goto bail;
+    }
+
+    for(i = 0; sortKeyList[i] != NULL; i++) {
+        if (ber_printf(ber, "{s", (sortKeyList[i])->attributeType) == -1) {
+            ret = LDAP_ENCODING_ERROR;
+            goto bail;
+        }
+
+        if ((sortKeyList[i])->orderingRule != NULL ) {
+            if (ber_printf(ber, "ts", LDAP_TAG_SK_MATCHRULE,
+                            (sortKeyList[i])->orderingRule) == -1) {
+                ret = LDAP_ENCODING_ERROR;
+                goto bail;
+            }
+        }
+
+        if ((sortKeyList[i])->reverseOrder) {
+            if (ber_printf(ber, "tb}", LDAP_TAG_SK_REVERSE,
+                           (sortKeyList[i])->reverseOrder) == -1) {
+                ret = LDAP_ENCODING_ERROR;
+                goto bail;
+            }
+        } else {
+            if (ber_printf( ber, "}") == -1) {
+                ret = LDAP_ENCODING_ERROR;
+                goto bail;
+            }
+        }
+    }
+
+    if (ber_printf(ber, "}") == -1) {
+        ret = LDAP_ENCODING_ERROR;
+        goto bail;
+    }
+
+    if (ber_flatten(ber, &berval) != LDAP_SUCCESS) {
+        ret = LDAP_NO_MEMORY;
+        goto bail;
+    }
+
+    ret = ldap_control_create(LDAP_CONTROL_SORTREQUEST,
+                              ctrl_iscritical, berval, 1, ctrlp);
+
+bail:
+    ber_free(ber, 1);
+    ber_bvfree(berval);
+    ldap_set_option(ld, LDAP_OPT_RESULT_CODE, &ret);
+#else
+    ret = ldap_create_sort_control(ld, sortKeyList, ctrl_iscritical, ctrlp);
+#endif
+
+    return ret;
+}
+
+static
+int
+perldap_ldap_create_virtuallist_control(LDAP *ld, LDAPVirtualList *ldvlistp, LDAPControl **ctrlp)
+{
+    int ret = 0;
+
+#ifdef USE_OPENLDAP
+    LDAPVLVInfo ldvlvinfo;
+    struct berval attrvalue;
+
+    ldvlvinfo.ldvlv_before_count = ldvlistp->ldvlist_before_count;
+    ldvlvinfo.ldvlv_after_count = ldvlistp->ldvlist_after_count;
+    ldvlvinfo.ldvlv_offset = ldvlistp->ldvlist_index;
+    ldvlvinfo.ldvlv_count = ldvlistp->ldvlist_size;
+
+    if (ldvlistp->ldvlist_attrvalue) {
+        attrvalue.bv_val = ldvlistp->ldvlist_attrvalue;
+        attrvalue.bv_len = strlen(ldvlistp->ldvlist_attrvalue);
+        ldvlvinfo.ldvlv_attrvalue = &attrvalue;
+    }
+
+    ret = ldap_create_vlv_control(ld, &ldvlvinfo, ctrlp);
+#else
+    ret = ldap_create_virtuallist_control(ld, ldvlistp, ctrlp);
+#endif
+
+    return ret;
+}
+
+static
+int
+perldap_ldap_multisort_entries(LDAP *ld, LDAPMessage **chain,
+                          char **attrs, LDAP_CMP_CALLBACK *cmp)
+{
+/* OpenLDAP doesn't implement any sort functions.  This code is
+ * largely borrowed from MozLDAP. */
+#ifdef USE_OPENLDAP
+    int i, count;
+    struct entrything *et;
+    LDAPMessage *e, *last;
+    LDAPMessage **ep;
+
+    if (ld == NULL || chain == NULL || cmp == NULL) {
+        return( LDAP_PARAM_ERROR );
+    }
+
+    count = ldap_count_entries( ld, *chain );
+
+    if (count < 0) { /* error, usually with bad ld or malloc */
+        return( LDAP_PARAM_ERROR );
+    }
+
+    if (count < 2) { /* nothing to sort */
+        return( 0 );
+    }
+
+    if ( (et = (struct entrything *)perldap_malloc( count *
+        sizeof(struct entrything) )) == NULL ) {
+        perldap_ldap_set_lderrno(ld, LDAP_NO_MEMORY, NULL, NULL);
+        return( -1 );
+    }
+
+    e = ldap_first_message(ld, *chain);
+    for ( i = 0; i < count; i++ ) {
+        et[i].et_msg = e;
+        et[i].et_vals = NULL;
+        if ( attrs == NULL ) {
+            char    *dn;
+
+            dn = ldap_get_dn( ld, e );
+            et[i].et_vals = ldap_explode_dn( dn, 1 );
+            perldap_free( dn );
+        } else {
+            int     attrcnt;
+            struct berval    **bvals;
+
+            for ( attrcnt = 0; attrs[attrcnt] != NULL; attrcnt++ ) {
+                bvals = ldap_get_values_len( ld, e, attrs[attrcnt] );
+                if (bvals && bvals[0]) {
+                    int bv_count = 0;
+                    int j = 0;
+
+                    /* Count the number of bvals we have. */
+                    for (bv_count = 0; bvals[bv_count]; bv_count++) {
+                        ;
+                    }
+
+                    /* Advance to the end of et_vals. */
+                    for (j = 0; et[i].et_vals[j]; j++) {
+                        ;
+                    }
+
+                    /* Realloc et_vals so we can append values from bvals. */
+                    et[i].et_vals = (char **)perldap_realloc((char *)et[i].et_vals,
+                                               sizeof(char *) * (j + bv_count + 1));
+
+                    /* Copy vals from bvals to et_vals. */
+                    for (bv_count = 0; bvals[bv_count]; bv_count++) {
+                        et[i].et_vals[j + bv_count] = StrDup(bvals[bv_count]->bv_val);
+                    }
+
+                    /* Null terminate the array. */
+                    et[i].et_vals[j + bv_count] = 0;
+
+                    /* The values form bvals have been copied, so we can free bvals now. */
+                    ldap_value_free_len(bvals);
+                }
+            }
+        }
+
+        e = ldap_next_message(ld, e);
+    }
+    last = e;
+
+    perldap_et_cmp_fn = (LDAP_CHARCMP_CALLBACK *)cmp;
+    qsort( (void *) et, (size_t) count,
+            (size_t) sizeof(struct entrything), perldap_et_cmp );
+
+    ep = chain;
+
+    for ( i = 0; i < count; i++ ) {
+        *ep = et[i].et_msg;
+        e = ldap_next_message(ld, *ep);
+        ep = &e;
+
+        perldap_ldap_value_free( et[i].et_vals );
+    }
+    *ep = last;
+    perldap_free((char *) et);
+
+    return( 0 );
+#else
+    return(ldap_multisort_entries(ld, chain, attrs, cmp));
+#endif
+}
+
+static
+int
+perldap_ldap_parse_entrychange_control(LDAP *ld, LDAPControl **ctrls, ber_int_t *chgtypep,
+                                 char **prevdnp, int *chgnumpresentp, ber_int_t *chgnump)
+{
+    int ret = 0;
+
+#ifdef USE_OPENLDAP
+    LDAPControl *entchg_control = NULL;
+
+    if ((entchg_control = ldap_control_find(LDAP_CONTROL_PERSIST_ENTRY_CHANGE_NOTICE,
+                                            ctrls, NULL)) != NULL) {
+        BerElement *ber = NULL;
+        ber_int_t changetype;
+        ber_len_t len;
+        char *previousdn;
+
+        ber = ber_init(&entchg_control->ldctl_value);
+        if (ber == NULL) {
+            ret = LDAP_NO_MEMORY;
+        }
+
+        /* Get the changetype first. */
+        if ( ber_scanf( ber, "{e", &changetype ) == LBER_ERROR ) {
+            ber_free( ber, 1 );
+            ret = LDAP_DECODING_ERROR;
+            goto bail;
+        }
+
+        /* If this is a MODDN, get the previous DN. */
+        if (changetype == LDAP_CONTROL_PERSIST_ENTRY_CHANGE_RENAME) {
+            if ( ber_scanf( ber, "a", &previousdn ) == LBER_ERROR ) {
+                ber_free( ber, 1 );
+                ret = LDAP_DECODING_ERROR;
+                goto bail;
+            }
+        } else {
+            previousdn = NULL;
+        }
+
+        /* Set the return pointers for the changetype and previous DN. */
+        if ( chgtypep != NULL ) {
+            *chgtypep = changetype;
+        }
+        if ( prevdnp != NULL ) {
+            *prevdnp = previousdn;
+        } else if ( previousdn != NULL ) {
+            ber_memfree((void *)previousdn);
+        }
+
+        /* Get the optional changenumber if present. */
+        if ( chgnump != NULL ) {
+            if ( ber_peek_tag( ber, &len ) == LBER_INTEGER
+                 && ber_get_int( ber, chgnump ) != LBER_ERROR ) {
+                if ( chgnumpresentp != NULL ) {
+                    *chgnumpresentp = 1;
+                }
+            } else {
+                if ( chgnumpresentp != NULL ) {
+                    *chgnumpresentp = 0;
+                }
+            }
+        }
+
+        ber_free( ber, 1 );
+        ret = LDAP_SUCCESS;
+    } else {
+        ret = LDAP_CONTROL_NOT_FOUND;
+    }
+
+bail:
+    ldap_set_option(ld, LDAP_OPT_RESULT_CODE, &ret);
+#else
+    ret = ldap_parse_entrychange_control(ld, ctrls, chgtypep, prevdnp
+                                         chgnumpresentp, chgnump);
+#endif
+
+    return ret;
+}
+
+static
+int
+perldap_ldap_parse_sort_control(LDAP *ld, LDAPControl **ctrls,
+                          ber_int_t *result, char **attribute )
+{
+    int ret = 0;
+
+#ifdef USE_OPENLDAP
+    LDAPControl *sort_ctrl = NULL;
+
+    if ((sort_ctrl = ldap_control_find(LDAP_CONTROL_SORTRESPONSE, ctrls, NULL)) != NULL) {
+        ret = ldap_parse_sortresponse_control(ld, sort_ctrl, result, attribute);
+    } else {
+        ret = LDAP_CONTROL_NOT_FOUND;
+    }
+#else
+    ret = ldap_parse_sort_control(ld, ctrls, result, attribute);
+#endif
+
+    return ret;
+}
+
+static
+int
+perldap_ldap_parse_virtuallist_control(LDAP *ld, LDAPControl **ctrls,
+          ber_int_t *target_posp, ber_int_t *list_sizep, int *errcodep)
+{
+    int ret = 0;
+
+#ifdef USE_OPENLDAP
+    LDAPControl *   vlv_ctrl = NULL;
+
+    if ((vlv_ctrl = ldap_control_find(LDAP_CONTROL_VLVRESPONSE, ctrls, NULL)) != NULL) {
+        ret = ldap_parse_vlvresponse_control(ld, vlv_ctrl, target_posp,
+                                                list_sizep, NULL, errcodep);
+    } else {
+        ret = LDAP_CONTROL_NOT_FOUND;
+    }
+#else
+    ret = ldap_parse_virtuallist_control(ld, ctrls, target_posp, list_sizep, errcodep);
+#endif
+
+    return ret;
+}
+
+static
+void
+perldap_ldap_perror(LDAP *ld, const char *s)
+{
+#ifdef USE_OPENLDAP
+    char *  err_str = NULL;
+    char *  separator;
+    int     err;
+
+    if ( s == NULL ) {
+        s = separator = "";
+    } else {
+        separator = ": ";
+    }
+
+    ldap_get_option(ld, LDAP_OPT_RESULT_CODE, &err);
+    err_str = ldap_err2string(err);
+    printf("%s%s%s", s, separator, err_str);
+#else
+    ldap_perror(ld, s);
+#endif
+}
+
+static
+int
+perldap_ldap_set_lderrno(LDAP *ld, int e, char *m, char *s)
+{
+    int ret = 0;
+
+#ifdef USE_OPENLDAP
+    ldap_set_option(ld, LDAP_OPT_RESULT_CODE, &e);
+    if (m) {
+        ldap_set_option(ld, LDAP_OPT_MATCHED_DN, m);
+    }
+
+    if (s) {
+#ifdef LDAP_OPT_DIAGNOSTIC_MESSAGE
+        ldap_set_option(ld, LDAP_OPT_DIAGNOSTIC_MESSAGE, s);
+#else
+        ldap_set_option(ld, LDAP_OPT_ERROR_STRING, s);
+#endif
+    }
+#else  /* !USE_OPENLDAP */
+    ret = ldap_set_lderrno(ld, e, m, s);
+#endif
+
+    return ret;
+}
+
+static
+int
+perldap_ldap_sort_entries(LDAP *ld, LDAPMessage **chain,
+                          char *attr, LDAP_CMP_CALLBACK *cmp)
+{
+    int ret = 0;
+
+#ifdef USE_OPENLDAP
+    char    *attrs[2];
+
+    attrs[0] = attr;
+    attrs[1] = NULL;
+
+    ret = perldap_ldap_multisort_entries(ld, chain, attr ? attrs : NULL, cmp);
+#else
+    ret = ldap_sort_entries(ld, chain, attr, cmp);
+#endif
+
+    return ret;
+}
+
+static
+int
+perldap_ldap_url_search(LDAP *ld, char *url, int attrsonly)
+{
+    int ret = 0;
+
+#ifdef USE_OPENLDAP
+    LDAPURLDesc *url_desc = NULL;
+    char *old_urls = NULL;
+
+    /* Get old URLs to preserve them. */
+    ldap_get_option(ld, LDAP_OPT_URI, &old_urls);
+
+    /* Parse the search URL. */
+    ret = ldap_url_parse(url, &url_desc);
+    if (ret == LDAP_SUCCESS) {
+        /* Set the host/port from the URL. */
+        ret = ldap_set_option(ld, LDAP_OPT_URI, url);
+        if (ret == LDAP_OPT_SUCCESS) {
+            ldap_search_ext(ld, url_desc->lud_dn, url_desc->lud_scope,
+                    url_desc->lud_filter, url_desc->lud_attrs, attrsonly,
+                    NULL, NULL, NULL, 0, &ret);
+        }
+    }
+
+    /* Reset the original URLs. */
+    ldap_set_option(ld, LDAP_OPT_URI, old_urls);
+
+    /* Free parsed URL structure. */
+    ldap_free_urldesc(url_desc);
+#else
+    ret = ldap_url_search(ld, url, attrsonly);
+#endif
+
+    return ret;
+}
+
+static
+int
+perldap_ldap_url_search_s(LDAP *ld, char *url, int attrsonly, LDAPMessage **res)
+{
+    int ret = 0;
+
+#ifdef USE_OPENLDAP
+    LDAPURLDesc *url_desc;
+    char *old_urls = NULL;
+
+    /* Get old URLs to preserve them. */
+    ldap_get_option(ld, LDAP_OPT_URI, &old_urls);
+
+    /* Parse the search URL. */
+    ret = ldap_url_parse(url, &url_desc);
+    if (ret == LDAP_SUCCESS) {
+        /* Set the host/port from the URL. */
+        ret = ldap_set_option(ld, LDAP_OPT_URI, url);
+        if (ret == LDAP_OPT_SUCCESS) {
+            ret = ldap_search_ext_s(ld, url_desc->lud_dn, url_desc->lud_scope,
+                         url_desc->lud_filter, url_desc->lud_attrs, attrsonly,
+                         NULL, NULL, NULL, 0, res);
+        }
+    }
+
+    /* Reset the original URLs. */
+    ldap_set_option(ld, LDAP_OPT_URI, old_urls);
+
+    /* Free parsed URL structure. */
+    ldap_free_urldesc(url_desc);
+#else
+    ret = ldap_url_search_s(ld, url, attrsonly, res);
+#endif
+
+    return ret;
+}
+
+static
+int
+perldap_ldap_url_search_st(LDAP *ld, char *url, int attrsonly,
+                           struct timeval *timeout, LDAPMessage **res)
+{
+    int ret = 0;
+
+#ifdef USE_OPENLDAP
+    LDAPURLDesc *url_desc;
+    char *old_urls = NULL;
+
+    /* Get old URLs to preserve them. */
+    ldap_get_option(ld, LDAP_OPT_URI, &old_urls);
+    
+    /* Parse the search URL. */
+    ret = ldap_url_parse(url, &url_desc);
+    if (ret == LDAP_SUCCESS) {
+        /* Set the host/port from the URL. */
+        ret = ldap_set_option(ld, LDAP_OPT_URI, url);
+        if (ret == LDAP_OPT_SUCCESS) {
+            ret = ldap_search_ext_s(ld, url_desc->lud_dn, url_desc->lud_scope,
+                         url_desc->lud_filter, url_desc->lud_attrs, attrsonly,
+                         NULL, NULL, timeout, 0, res);
+        }
+    }
+
+    /* Reset the original URLs. */
+    ldap_set_option(ld, LDAP_OPT_URI, old_urls);
+
+    /* Free parsed URL structure. */
+    ldap_free_urldesc(url_desc);
+#else
+    ret = ldap_url_search_st(ld, url, attrsonly, timeout, res);
+#endif
+
+    return ret;
+}
+
+static
+int
+perldap_ldapssl_client_init(const char *certdbpath, void *certdbhandle)
+{
+    int ret = 0;
+
+#ifdef USE_OPENLDAP
+    ret = ldap_set_option(NULL, LDAP_OPT_X_TLS_CACERTDIR, certdbpath);
+#else
+    ret = ldapssl_client_init(certdbpath, certdbhandle);
+#endif
+
+    return ret;
+}
+
+static
+int
+perldap_ldapssl_enable_clientauth(LDAP *ld, char *keynickname,
+                                  char *keypasswd, char *certnickname)
+{
+    int ret = 0;
+
+#ifdef USE_OPENLDAP
+    ret = ldap_set_option(ld, LDAP_OPT_X_TLS_KEYFILE, keynickname);
+    if (ret == 0) {
+        ret = ldap_set_option(ld, LDAP_OPT_X_TLS_CERTFILE, certnickname);
+    }
+#else
+    ret = ldapssl_enable_clientauth(ld, keynickname, keypasswd, certnickname);
+#endif
+
+    return ret;
+}
+
+static
+LDAP *
+perldap_ldapssl_init(const char *host, const char *port, int secure)
+{
+    LDAP *ret = NULL;
+
+#ifdef USE_OPENLDAP
+    char *ldapurl;
+    int   ldapurl_len;
+
+    if (host && port) {
+        ldapurl_len = strlen(host) + strlen(port) + 11;
+        ldapurl = (char *)perldap_malloc(ldapurl_len);
+        snprintf(ldapurl, ldapurl_len, "ldap%s://%s:%s/",
+                 (secure != 0 ? "s" : ""), host, port);
+        ldap_initialize(&ret, ldapurl);
+        perldap_free((void *)ldapurl);
+    }
+#else
+    ret = ldapssl_init(host, atoi(port), secure);
+#endif
+
+    return ret;
+}
+
+#ifdef USE_OPENLDAP
+
+static int
+perldap_et_cmp( 
+    const void  *aa,
+    const void  *bb
+)
+{       
+        int                     i, rc;
+        struct entrything       *a = (struct entrything *)aa;
+        struct entrything       *b = (struct entrything *)bb;
+
+        if ( a->et_vals == NULL && b->et_vals == NULL )
+                return( 0 );
+        if ( a->et_vals == NULL )
+                return( -1 );
+        if ( b->et_vals == NULL )
+                return( 1 );
+
+        for ( i = 0; a->et_vals[i] && b->et_vals[i]; i++ ) {
+                if ( (rc = (*perldap_et_cmp_fn)( a->et_vals[i], b->et_vals[i] ))
+                    != 0 ) {
+                        return( rc );
+                }
+        }
+
+        if ( a->et_vals[i] == NULL && b->et_vals[i] == NULL )
+                return( 0 );
+        if ( a->et_vals[i] == NULL )
+                return( -1 );
+        return( 1 );
+}
+
+#endif
 
 
 /* Return a char ** when passed a reference to an AV */
@@ -292,7 +1085,7 @@ charptrptr2avref(char **cppval)
          SV* SVval = newSVpv(cppval[ix],0);
          av_push(tmp_av,SVval);
       }
-      ldap_value_free(cppval);
+      perldap_ldap_value_free(cppval);
    }
    return(tmp_ref);
 }
@@ -545,7 +1338,81 @@ StrDup(const char *source)
    return(dest);
 }
 
-/* internal_rebind_proc - Wrapper to call a PERL rebind process             */
+/* internal_rebind_proc - Wrapper to call a PERL rebind process.  We
+ * need separate rebind callbacks for MozLDAP and OpenLDAP. */
+#ifdef USE_OPENLDAP
+static
+int
+LDAP_CALL
+internal_rebind_proc(LDAP *ld, LDAP_CONST char *url,
+                     ber_tag_t request, ber_int_t msgid, void *arg)
+{
+    int ret;
+    struct berval         cred;
+    int count = 0;
+    int authmethod;
+    char *pwd;
+    char *dn;
+    dSP;
+
+    ENTER ;
+    SAVETMPS ;
+    count = perl_call_sv(ldap_perl_rebindproc,G_ARRAY|G_NOARGS);
+
+    SPAGAIN;
+
+    if (count != 3)
+       croak("ldap_perl_rebindproc: Expected DN, PASSWORD, and AUTHTYPE returned.\n");
+
+    authmethod = POPi;
+    pwd = StrDup(POPp);
+    dn = StrDup(POPp);
+
+    FREETMPS ;
+    LEAVE ;
+
+    cred.bv_val = pwd;
+    cred.bv_len = strlen(pwd);
+
+    ret = ldap_sasl_bind_s(ld, dn, LDAP_SASL_SIMPLE,
+                          &cred, NULL, NULL, NULL);
+
+    if (dn)
+    {
+       Safefree(dn);
+    }
+    if (pwd)
+    {
+       Safefree(pwd);
+    }
+
+    return ret;
+}
+
+/* NT and internal_rebind_proc hate each other, so they need this... */
+static
+int
+LDAP_CALL
+ldap_default_rebind_proc(LDAP *ld, LDAP_CONST char *url,
+                         ber_tag_t request, ber_int_t msgid, void *arg)
+{
+    int ret = 0;
+    struct berval cred;
+
+    if (!ldap_default_rebind_dn || !ldap_default_rebind_pwd)
+    {
+        return LDAP_OPERATIONS_ERROR;
+    }
+
+    cred.bv_val = ldap_default_rebind_pwd;
+    cred.bv_len = strlen(ldap_default_rebind_pwd);
+
+    ret = ldap_sasl_bind_s(ld, ldap_default_rebind_dn, LDAP_SASL_SIMPLE,
+                              &cred, NULL, NULL, NULL);
+
+   return ret;
+}
+#else  /* !USE_OPENLDAP */ 
 static
 int
 LDAP_CALL
@@ -608,6 +1475,7 @@ ldap_default_rebind_proc(LDAP *ld, char **dn, char **pwd,
 
   return LDAP_SUCCESS;
 }
+#endif
 
 /* internal_sortcmp_proc - Wrapper to call a PERL cmp function */
 static
@@ -661,6 +1529,10 @@ int
 ldap_abandon(ld,msgid)
 	LDAP *		ld
 	int		msgid
+	CODE:
+	RETVAL = ldap_abandon_ext(ld, msgid, NULL, NULL);
+	OUTPUT:
+	RETVAL
 
 int
 ldap_abandon_ext(ld,msgid,serverctrls,clientctrls)
@@ -674,6 +1546,10 @@ ldap_add(ld,dn,attrs)
 	LDAP *		ld
 	const char *	dn
 	LDAPMod **	attrs = hash2mod($arg,1,"$func_name");
+	CODE:
+	ldap_add_ext(ld, dn, attrs, NULL, NULL, &RETVAL);
+	OUTPUT:
+	RETVAL
 	CLEANUP:
 	
 	if (attrs)
@@ -710,6 +1586,10 @@ ldap_add_s(ld,dn,attrs)
 	LDAP *		ld
 	const char *	dn
 	LDAPMod **	attrs = hash2mod($arg,1,"$func_name");
+	CODE:
+	RETVAL = ldap_add_ext_s(ld, dn, attrs, NULL, NULL);
+	OUTPUT:
+	RETVAL
 	CLEANUP:
 	if (attrs)
 	  ldap_mods_free(attrs, 1);
@@ -722,7 +1602,7 @@ ldap_ber_free(ber,freebuf)
 	{
 	   if (ber)
 	   {
-	      ldap_ber_free(ber, freebuf);
+	      ber_free(ber, freebuf);
 	   }
 	}
 
@@ -730,22 +1610,46 @@ int
 ldap_bind(ld,dn,passwd,authmethod)
 	LDAP *		ld
 	const char *	dn
-	const char *	passwd
-	int		authmethod
+	char *		passwd
+	PREINIT:
+	struct berval	cred;
+	CODE:
+	cred.bv_val = passwd;
+	cred.bv_len = ( passwd == NULL ) ? 0 : strlen( passwd );
+	ldap_sasl_bind(ld, dn, LDAP_SASL_SIMPLE,
+	               &cred, NULL, NULL, &RETVAL);
+	OUTPUT:
+	RETVAL
 
 int
 ldap_bind_s(ld,dn,passwd,authmethod)
 	LDAP *		ld
 	const char *	dn
-	const char *	passwd
-	int		authmethod
+	char *		passwd
+	PREINIT:
+	struct berval	cred;
+	CODE:
+	cred.bv_val = passwd;
+	cred.bv_len = ( passwd == NULL ) ? 0 : strlen( passwd );
+	RETVAL = ldap_sasl_bind_s(ld, dn, LDAP_SASL_SIMPLE,
+	                          &cred, NULL, NULL, NULL);
+	OUTPUT:
+	RETVAL
 
 int
 ldap_compare(ld,dn,attr,value)
 	LDAP *		ld
 	const char *	dn
 	const char *	attr
-	const char *	value
+	char *		value
+	PREINIT:
+	struct berval	bvalue;
+	CODE:
+	bvalue.bv_val = value;
+	bvalue.bv_len = ( value == NULL ) ? 0 : strlen( value );
+	ldap_compare_ext(ld, dn, attr, &bvalue, NULL, NULL, &RETVAL);
+	OUTPUT:
+	RETVAL
 
 int
 ldap_compare_ext(ld,dn,attr,bvalue,serverctrls,clientctrls,msgidp)
@@ -774,7 +1678,15 @@ ldap_compare_s(ld,dn,attr,value)
 	LDAP *		ld
 	const char *	dn
 	const char *	attr
-	const char *	value
+	char *		value
+	PREINIT:
+	struct berval   bvalue;
+	CODE:
+	bvalue.bv_val = value;
+	bvalue.bv_len = ( value == NULL ) ? 0 : strlen( value );
+	RETVAL = ldap_compare_ext_s(ld, dn, attr, &bvalue, NULL, NULL);
+	OUTPUT:
+	RETVAL
 
 void
 ldap_control_free(ctrl)
@@ -816,9 +1728,20 @@ ldap_create_filter(buf,buflen,pattern,prefix,suffix,attr,value,valwords)
 	char *		attr
 	char *		value
 	char **		valwords
+	CODE:
+	/* This is a not implemented when using OpenLDAP. */
+#ifdef USE_OPENLDAP
+	RETVAL = LDAP_NOT_SUPPORTED;
+#else
+	RETVAL = ldap_create_filter(buf, buflen, pattern, prefix,
+	                            suffix, attr, value, valwords);
+#endif
+	OUTPUT:
+	RETVAL
+	buf
 	CLEANUP:
 	if (valwords)
-	  ldap_value_free(valwords);
+	  perldap_ldap_value_free(valwords);
 
 int
 ldap_create_persistentsearch_control(ld,changetypes,changesonly,return_echg_ctrls,ctrl_iscritical,ctrlp)
@@ -828,6 +1751,9 @@ ldap_create_persistentsearch_control(ld,changetypes,changesonly,return_echg_ctrl
 	int		return_echg_ctrls
 	char		ctrl_iscritical
 	LDAPControl **	ctrlp = NO_INIT
+	CODE:
+	RETVAL = perldap_ldap_create_persistentsearch_control(ld, changetypes, changesonly,
+	                                         return_echg_ctrls, ctrl_iscritical, ctrlp);
 	OUTPUT:
 	RETVAL
 	ctrlp
@@ -838,6 +1764,8 @@ ldap_create_sort_control(ld,sortKeyList,ctrl_iscritical,ctrlp)
 	LDAPsortkey **	sortKeyList
 	char		ctrl_iscritical
 	LDAPControl **	ctrlp = NO_INIT
+	CODE:
+	RETVAL = perldap_ldap_create_sort_control(ld, sortKeyList, ctrl_iscritical, ctrlp);
 	OUTPUT:
 	RETVAL
 	ctrlp
@@ -855,6 +1783,8 @@ ldap_create_virtuallist_control(ld,ldvlistp,ctrlp)
 	LDAP *		ld
 	LDAPVirtualList	*ldvlistp
 	LDAPControl **	ctrlp = NO_INIT
+	CODE:
+	RETVAL = perldap_ldap_create_virtuallist_control(ld, ldvlistp, ctrlp);
 	OUTPUT:
 	RETVAL
 	ctrlp
@@ -863,6 +1793,10 @@ int
 ldap_delete(ld,dn)
 	LDAP *		ld
 	const char *	dn
+	CODE:
+	ldap_delete_ext(ld, dn, NULL, NULL, &RETVAL);
+	OUTPUT:
+	RETVAL
 
 int
 ldap_delete_ext(ld,dn,serverctrls,clientctrls,msgidp)
@@ -886,6 +1820,10 @@ int
 ldap_delete_s(ld,dn)
 	LDAP *		ld
 	const char *	dn
+	CODE:
+	RETVAL = ldap_delete_ext_s(ld, dn, NULL, NULL);
+	OUTPUT:
+	RETVAL
 
 char *
 ldap_dn2ufn(dn)
@@ -971,6 +1909,11 @@ ldap_first_reference(ld,res)
 void
 ldap_free_friendlymap(map)
 	FriendlyMap *	map
+	CODE:
+	/* This is a no-op when using OpenLDAP. */
+#ifndef USE_OPENLDAP
+	ldap_free_friendlymap(map);
+#endif
 
 void
 ldap_free_sort_keylist(sortKeyList)
@@ -980,11 +1923,23 @@ void
 ldap_free_urldesc(ludp)
 	LDAPURLDesc *	ludp
 
+
 char *
 ldap_friendly_name(filename,name,map)
 	char *		filename
 	char *		name
 	FriendlyMap *	map
+	CODE:
+	/* This is not implemented when using OpenLDAP.  We just return
+	 * the original "un-friendly" name as MozLDAP does when there is
+	 * an error. */
+#ifdef USE_OPENLDAP
+	RETVAL = name;
+#else
+	RETVAL = ldap_friendly_name(filename, name, map);
+#endif
+	OUTPUT:
+	RETVAL
 
 char *
 ldap_get_dn(ld,entry)
@@ -1005,12 +1960,26 @@ ldap_get_entry_controls(ld,entry,serverctrlsp)
 void
 ldap_getfilter_free(lfdp)
 	LDAPFiltDesc *	lfdp
+	CODE:
+	/* This is a no-op when using OpenLDAP. */
+#ifndef USE_OPENLDAP
+	ldap_getfilter_free(lfdp);
+#endif
 
 LDAPFiltInfo *
 ldap_getfirstfilter(lfdp,tagpat,value)
 	LDAPFiltDesc *	lfdp
 	char *		tagpat
 	char *		value	
+	CODE:
+	/* This is not implemented when using OpenLDAP. */
+#ifdef USE_OPENLDAP
+	RETVAL = NULL;
+#else
+	RETVAL = ldap_getfirstfilter(lfdp, tagpat, value);
+#endif
+	OUTPUT:
+	RETVAL
 
 void
 ldap_get_lang_values(ld,entry,target,type)
@@ -1020,7 +1989,15 @@ ldap_get_lang_values(ld,entry,target,type)
 	char *		type
 	PPCODE:
 	{
+	/* This is not implemented when using OpenLDAP. */
+#ifdef USE_OPENLDAP
+	   int ret = LDAP_NOT_SUPPORTED;
+	   char ** MOZLDAP_VAL = NULL;
+
+	   ldap_set_option(ld, LDAP_OPT_RESULT_CODE, &ret);
+#else
 	   char ** MOZLDAP_VAL = ldap_get_lang_values(ld,entry,target,&type);
+#endif
 	   RET_CPP(MOZLDAP_VAL);
 	}
 
@@ -1032,8 +2009,16 @@ ldap_get_lang_values_len(ld,entry,target,type)
 	char *		type
 	PPCODE:
 	{
+	/* This is not implemented when using OpenLDAP. */
+#ifdef USE_OPENLDAP
+	   int ret = LDAP_NOT_SUPPORTED;
+	   struct berval ** MOZLDAP_VAL = NULL;
+
+	   ldap_set_option(ld, LDAP_OPT_RESULT_CODE, &ret);
+#else
 	   struct berval ** MOZLDAP_VAL = 
 	       ldap_get_lang_values_len(ld,entry,target,&type);
+#endif
 	   RET_BVPP(MOZLDAP_VAL);
 	}
 
@@ -1051,9 +2036,22 @@ ldap_get_lderrno(ld, ...)
 	      if (items > 2)
 	         s = ST(2);
            }
-
+#ifdef USE_OPENLDAP
+	   ldap_get_option(ld, LDAP_OPT_RESULT_CODE, &RETVAL);
+	   if (m && SvROK(m)) {
+	      ldap_get_option(ld, LDAP_OPT_MATCHED_DN, &match);
+	   }
+	   if (s && SvROK(s)) {
+#ifdef LDAP_OPT_DIAGNOSTIC_MESSAGE
+	      ldap_get_option(ld, LDAP_OPT_DIAGNOSTIC_MESSAGE, &msg);
+#else
+	      ldap_get_option(ld, LDAP_OPT_ERROR_STRING, &msg);
+#endif
+	   }
+#else  /* !USE_OPENLDAP */
 	   RETVAL = ldap_get_lderrno(ld, (m && SvROK(m)) ? &match : (char **)NULL,
 	                                 (s && SvROK(s)) ? &msg : (char **)NULL);
+#endif
 
 	   if (match)
 	   {
@@ -1075,6 +2073,15 @@ ldap_get_lderrno(ld, ...)
 LDAPFiltInfo *
 ldap_getnextfilter(lfdp)
 	LDAPFiltDesc *lfdp
+	CODE:
+	/* This is not implemented when using OpenLDAP. */
+#ifdef USE_OPENLDAP
+	RETVAL = NULL;
+#else
+	RETVAL = ldap_getnextfilter(lfdp);
+#endif
+	OUTPUT:
+	RETVAL
 
 int
 ldap_get_option(ld,option,optdata)
@@ -1092,7 +2099,15 @@ ldap_get_values(ld,entry,target)
 	const char *	target
 	PPCODE:
 	{
+	/* This is not implemented when using OpenLDAP. */
+#ifdef USE_OPENLDAP
+	   int ret = LDAP_NOT_SUPPORTED;
+	   char **MOZLDAP_VAL = NULL;
+
+	   ldap_set_option(ld, LDAP_OPT_RESULT_CODE, &ret);
+#else
 	   char **MOZLDAP_VAL = ldap_get_values(ld,entry,target);
+#endif
 	   RET_CPP(MOZLDAP_VAL);
 	}
 
@@ -1110,16 +2125,47 @@ ldap_get_values_len(ld,entry,target)
 LDAP *
 ldap_init(host,port)
 	const char *	host
-	int		port
+	const char *	port
+	PREINIT:
+	char *  url = NULL;
+	int     url_len = 0;
+	CODE:
+	RETVAL = NULL;
+	/* Create the LDAP URL */
+	if (host && port) {
+	   url_len = strlen(host) + strlen(port) + 10;
+	   url = (char *)perldap_malloc(url_len);
+	   snprintf(url, url_len, "ldap://%s:%s/", host, port);
+	   ldap_initialize(&RETVAL, url);
+	   perldap_free((void *)url);
+	}
+	OUTPUT:
+	RETVAL
 
 LDAPFiltDesc *
 ldap_init_getfilter(fname)
 	char *		fname
+	CODE:
+#ifdef USE_OPENLDAP
+	RETVAL = NULL;
+#else
+	RETVAL = ldap_init_getfilter(fname);
+#endif
+	OUTPUT:
+	RETVAL
 
 LDAPFiltDesc *
 ldap_init_getfilter_buf(buf,buflen)
 	char *		buf
 	long		buflen
+	CODE:
+#ifdef USE_OPENLDAP
+	RETVAL = NULL;
+#else
+	RETVAL = ldap_init_getfilter_buf(buf,buflen);
+#endif
+	OUTPUT:
+	RETVAL
 
 int
 ldap_is_ldap_url(url)
@@ -1128,17 +2174,34 @@ ldap_is_ldap_url(url)
 void
 ldap_memcache_destroy(cache)
 	LDAPMemCache *	cache
+	CODE:
+	/* This is a no-op when using OpenLDAP. */
+#ifndef USE_OPENLDAP
+	ldap_memcache_destroy(cache);
+#endif
 
 void
 ldap_memcache_flush(cache,dn,scope)
 	LDAPMemCache *	cache
 	char *		dn
 	int		scope
+	CODE:
+	/* This is a no-op when using OpenLDAP. */
+#ifndef USE_OPENLDAP
+	ldap_memcache_flush(cache, dn, scope);
+#endif
 
 int
 ldap_memcache_get(ld,cachep)
 	LDAP *		ld
 	LDAPMemCache **	cachep = NO_INIT
+	CODE:
+	/* This is not implemented when using OpenLDAP. */
+#ifdef USE_OPENLDAP
+	RETVAL = LDAP_NOT_SUPPORTED;
+#else
+	RETVAL = ldap_memcache_get(ld, cachep);
+#endif
 	OUTPUT:
 	RETVAL
 	cachep
@@ -1150,22 +2213,42 @@ ldap_memcache_init(ttl,size,baseDNs,cachep)
 	char **		baseDNs
 	LDAPMemCache **	cachep = NO_INIT
 	CODE:
+	/* This is not implemented when using OpenLDAP. */
+#ifdef USE_OPENLDAP
+	RETVAL = LDAP_NOT_SUPPORTED;
+#else
 	RETVAL = ldap_memcache_init(ttl,size,baseDNs,NULL,cachep);
+#endif
 	OUTPUT:
 	RETVAL
 	cachep
 	CLEANUP:
 	if (baseDNs)
-	  ldap_value_free(baseDNs);
+	  perldap_ldap_value_free(baseDNs);
 
 int
 ldap_memcache_set(ld,cache)
 	LDAP *		ld
 	LDAPMemCache *	cache
+	CODE:
+	/* This is not implemented when using OpenLDAP. */
+#ifdef USE_OPENLDAP
+	RETVAL = LDAP_NOT_SUPPORTED;
+#else
+	RETVAL = ldap_memcache_set(ld, cache);
+#endif
+	OUTPUT:
+	RETVAL
+
 
 void
 ldap_memcache_update(cache)
 	LDAPMemCache *	cache
+	CODE:
+	/* This is a no-op when using OpenLDAP. */
+#ifndef USE_OPENLDAP
+	ldap_memcache_update(cache);
+#endif
 
 void
 ldap_memfree(p)
@@ -1176,6 +2259,10 @@ ldap_modify(ld,dn,mods)
 	LDAP *		ld
 	const char *	dn
 	LDAPMod **	mods = hash2mod($arg,0,"$func_name");
+	CODE:
+	ldap_modify_ext(ld, dn, mods, NULL, NULL, &RETVAL);
+	OUTPUT:
+	RETVAL
 	CLEANUP:
 	if (mods)
 	  ldap_mods_free(mods, 1);
@@ -1211,6 +2298,10 @@ ldap_modify_s(ld,dn,mods)
 	LDAP *		ld
 	const char *	dn
 	LDAPMod **	mods = hash2mod($arg, 0, "$func_name");
+	CODE:
+	RETVAL = ldap_modify_ext_s(ld, dn, mods, NULL, NULL);
+	OUTPUT:
+	RETVAL
 	CLEANUP:
 	if (mods)
 	  ldap_mods_free(mods, 1);
@@ -1220,12 +2311,20 @@ ldap_modrdn(ld,dn,newrdn)
 	LDAP *		ld
 	const char *	dn
 	const char *	newrdn
+	CODE:
+	ldap_rename(ld, dn, newrdn, NULL, 1, NULL, NULL, &RETVAL);
+	OUTPUT:
+	RETVAL
 
 int
 ldap_modrdn_s(ld,dn,newrdn)
 	LDAP *		ld
 	const char *	dn
 	const char *	newrdn
+	CODE:
+	RETVAL = ldap_rename_s(ld, dn, newrdn, NULL, 1, NULL, NULL);
+	OUTPUT:
+	RETVAL
 
 int
 ldap_modrdn2(ld,dn,newrdn,deleteoldrdn)
@@ -1233,6 +2332,10 @@ ldap_modrdn2(ld,dn,newrdn,deleteoldrdn)
 	const char *	dn
 	const char *	newrdn
 	int		deleteoldrdn
+	CODE:
+	ldap_rename(ld, dn, newrdn, NULL, deleteoldrdn, NULL, NULL, &RETVAL);
+	OUTPUT:
+	RETVAL
 
 int
 ldap_modrdn2_s(ld,dn,newrdn,deleteoldrdn)
@@ -1240,6 +2343,10 @@ ldap_modrdn2_s(ld,dn,newrdn,deleteoldrdn)
 	const char *	dn
 	const char *	newrdn
 	int 		deleteoldrdn
+	CODE:
+	RETVAL = ldap_rename_s(ld, dn, newrdn, NULL, deleteoldrdn, NULL, NULL);
+	OUTPUT:
+	RETVAL
 
 void
 ldap_mods_free(mods,freemods)
@@ -1254,6 +2361,8 @@ ldap_msgfree(lm)
 	   if (lm)
 	   {
 	      RETVAL = ldap_msgfree(lm);
+	   } else {
+	      RETVAL = LDAP_SUCCESS;
 	   }
 	}
 	OUTPUT:
@@ -1285,14 +2394,14 @@ ldap_multisort_entries(ld,chain,attr,...)
 		 ldap_perl_sortcmp = cmp;
 	      }
 	   }
-	   RETVAL = ldap_multisort_entries(ld,&chain,attr,func);
+	   RETVAL = perldap_ldap_multisort_entries(ld,&chain,attr,func);
 	}
 	OUTPUT:
 	RETVAL
 	chain
 	CLEANUP:
 	if (attr)
-	  ldap_value_free(attr);
+	  perldap_ldap_value_free(attr);
 
 char *
 ldap_next_attribute(ld,entry,ber)
@@ -1328,6 +2437,9 @@ ldap_parse_entrychange_control(ld,ctrls,chgtypep,prevdnp,chgnumpresentp,chgnump)
 	char *			&prevdnp = NO_INIT
 	int 			&chgnumpresentp = NO_INIT
 	my_chgnum_t 	&chgnump = NO_INIT
+	CODE:
+	RETVAL = perldap_ldap_parse_entrychange_control(ld, ctrls, &chgtypep,
+	                                  &prevdnp, &chgnumpresentp, &chgnump);
 	OUTPUT:
 	RETVAL
 	chgtypep
@@ -1390,6 +2502,8 @@ ldap_parse_sort_control(ld,ctrls,result,attribute)
 	LDAPControl 	**	ctrls
 	my_result_t 	&result = NO_INIT
 	char *			&attribute = NO_INIT
+	CODE:
+	RETVAL = perldap_ldap_parse_sort_control(ld, ctrls, &result, &attribute);
 	OUTPUT:
 	RETVAL
 	result
@@ -1402,7 +2516,11 @@ ldap_parse_virtuallist_control(ld,ctrls,target_posp,list_sizep,errcodep)
 	my_vlvint_t 	&target_posp = NO_INIT
 	my_vlvint_t 	&list_sizep = NO_INIT
 	int		&errcodep = NO_INIT
+	CODE:
+	RETVAL = perldap_ldap_parse_virtuallist_control(ld, ctrls, &target_posp,
+	                                                &list_sizep, &errcodep);
 	OUTPUT:
+	RETVAL
 	target_posp
 	list_sizep
 	errcodep
@@ -1411,6 +2529,8 @@ void
 ldap_perror(ld,s)
 	LDAP *		ld
 	const char *	s
+	CODE:
+	perldap_ldap_perror(ld, s);
 
 int
 ldap_rename(ld,dn,newrdn,newparent,deleteoldrdn,serverctrls,clientctrls,msgidp)
@@ -1452,6 +2572,10 @@ ldap_result2error(ld,r,freeit)
 	LDAP *		ld
 	LDAPMessage *	r
 	int		freeit
+	CODE:
+	ldap_parse_result(ld, r, &RETVAL, NULL, NULL, NULL, NULL, freeit);
+	OUTPUT:
+	RETVAL
 
 int
 ldap_sasl_bind(ld,dn,mechanism,cred,serverctrls,clientctrls,msgidp)
@@ -1487,9 +2611,14 @@ ldap_search(ld,base,scope,filter,attrs,attrsonly)
 	const char *	filter
 	char **		attrs
 	int		attrsonly
+	CODE:
+	ldap_search_ext(ld, base, scope, filter, attrs,
+	                attrsonly, NULL, NULL, NULL, 0, &RETVAL);
+	OUTPUT:
+	RETVAL
 	CLEANUP:
 	if (attrs)
-	  ldap_value_free(attrs);
+	  perldap_ldap_value_free(attrs);
 
 int
 ldap_search_ext(ld,base,scope,filter,attrs,attrsonly,serverctrls,clientctrls,timeoutp,sizelimit,msgidp)
@@ -1509,7 +2638,7 @@ ldap_search_ext(ld,base,scope,filter,attrs,attrsonly,serverctrls,clientctrls,tim
 	msgidp
 	CLEANUP:
 	if (attrs)
-	  ldap_value_free(attrs);
+	  perldap_ldap_value_free(attrs);
 
 int
 ldap_search_ext_s(ld,base,scope,filter,attrs,attrsonly,serverctrls,clientctrls,timeoutp,sizelimit,res)
@@ -1529,7 +2658,7 @@ ldap_search_ext_s(ld,base,scope,filter,attrs,attrsonly,serverctrls,clientctrls,t
 	res
 	CLEANUP:
 	if (attrs)
-	  ldap_value_free(attrs);
+	  perldap_ldap_value_free(attrs);
 
 int
 ldap_search_s(ld,base,scope,filter,attrs,attrsonly,res)
@@ -1540,12 +2669,15 @@ ldap_search_s(ld,base,scope,filter,attrs,attrsonly,res)
 	char **		attrs
 	int		attrsonly
 	LDAPMessage *	&res = NO_INIT
+	CODE:
+	RETVAL = ldap_search_ext_s(ld, base, scope, filter, attrs, attrsonly,
+	                           NULL, NULL, NULL, 0, &res);
 	OUTPUT:
 	RETVAL
 	res
 	CLEANUP:
 	if (attrs)
-	  ldap_value_free(attrs);
+	  perldap_ldap_value_free(attrs);
 
 int
 ldap_search_st(ld,base,scope,filter,attrs,attrsonly,timeout,res)
@@ -1557,18 +2689,30 @@ ldap_search_st(ld,base,scope,filter,attrs,attrsonly,timeout,res)
 	int		attrsonly
 	struct timeval	&timeout
 	LDAPMessage *	&res = NO_INIT
+	CODE:
+	RETVAL = ldap_search_ext_s(ld, base, scope, filter, attrs,
+	                           attrsonly, NULL, NULL, &timeout, 0, &res);
 	OUTPUT:
 	RETVAL
 	res
 	CLEANUP:
 	if (attrs)
-	  ldap_value_free(attrs);
+	  perldap_ldap_value_free(attrs);
 	
 int
 ldap_set_filter_additions(lfdp,prefix,suffix)
 	LDAPFiltDesc *	lfdp
 	char *		prefix
 	char *		suffix
+	CODE:
+	/* This is not implemented when using OpenLDAP. */
+#ifdef USE_OPENLDAP
+	RETVAL = LDAP_NOT_SUPPORTED;
+#else
+	RETVAL = ldap_set_filter_additions(lfdp, prefix, suffix);
+#endif
+	OUTPUT:
+	RETVAL
 
 int
 ldap_set_lderrno(ld,e,m,s)
@@ -1576,6 +2720,10 @@ ldap_set_lderrno(ld,e,m,s)
 	int		e
 	char *		m
 	char *		s
+	CODE:
+	RETVAL = perldap_ldap_set_lderrno(ld, e, m, s);
+	OUTPUT:
+	RETVAL
 
 int
 ldap_set_option(ld,option,optdata)
@@ -1597,7 +2745,7 @@ ldap_set_rebind_proc(ld,rebindproc)
 	         ldap_perl_rebindproc = newSVsv(rebindproc);
 	      else
 	         SvSetSV(ldap_perl_rebindproc,rebindproc);
-	      ldap_set_rebind_proc(ld,internal_rebind_proc,NULL);
+	      ldap_set_rebind_proc(ld,&internal_rebind_proc,NULL);
 	   }
 	}
 
@@ -1623,21 +2771,40 @@ ldap_set_default_rebind_proc(ld, dn, pwd, auth)
           ldap_default_rebind_pwd = StrDup(pwd);
           ldap_default_rebind_auth = auth;
 
-          ldap_set_rebind_proc(ld,
-           (LDAP_REBINDPROC_CALLBACK *)&ldap_default_rebind_proc,NULL);
+          ldap_set_rebind_proc(ld,&ldap_default_rebind_proc,NULL);
         }
 
 int
 ldap_simple_bind(ld,who,passwd)
 	LDAP *		ld
 	const char *	who
-	const char *	passwd
+	char *		passwd
+	PREINIT:
+	struct berval	cred;
+	CODE:
+	cred.bv_val = passwd;
+	cred.bv_len = strlen(passwd);
+
+	ldap_sasl_bind(ld, who, LDAP_SASL_SIMPLE,
+	               &cred, NULL, NULL, &RETVAL);
+	OUTPUT:
+	RETVAL
 
 int
 ldap_simple_bind_s(ld,who,passwd)
 	LDAP *		ld
 	const char *	who
-	const char *	passwd
+	char *		passwd
+	PREINIT:
+	struct berval	cred;
+	CODE:
+	cred.bv_val = passwd;
+	cred.bv_len = strlen(passwd);
+
+	RETVAL = ldap_sasl_bind_s(ld, who, LDAP_SASL_SIMPLE,
+	                          &cred, NULL, NULL, NULL);
+	OUTPUT:
+	RETVAL
 
 int
 ldap_sort_entries(ld,chain,attr,...)
@@ -1658,7 +2825,7 @@ ldap_sort_entries(ld,chain,attr,...)
 	         ldap_perl_sortcmp = cmp;
 	      }
 	   }
-	   RETVAL = ldap_sort_entries(ld,&chain,attr,func);
+	   RETVAL = perldap_ldap_sort_entries(ld,&chain,attr,func);
 	}
 	OUTPUT:
 	RETVAL
@@ -1667,10 +2834,18 @@ ldap_sort_entries(ld,chain,attr,...)
 int
 ldap_unbind(ld)
 	LDAP *		ld
+	CODE:
+	RETVAL = ldap_unbind_ext(ld, NULL, NULL);
+	OUTPUT:
+	RETVAL
 
 int
 ldap_unbind_s(ld)
 	LDAP *		ld
+	CODE:
+	RETVAL = ldap_unbind_ext_s(ld, NULL, NULL);
+	OUTPUT:
+	RETVAL
 
 SV *
 ldap_url_parse(url)
@@ -1692,8 +2867,18 @@ ldap_url_parse(url)
 	      static char *attr_key = "attr";
 	      static char *scope_key = "scope";
 	      static char *filter_key = "filter";
+#ifdef USE_OPENLDAP
+              static char *scheme_key = "scheme";
+              static char *exts_key = "exts";
+              static char *crit_exts_key = "crit_exts";
+              SV* scheme = newSVpv(realcomp->lud_scheme,0);
+              SV* crit_exts = newSViv(realcomp->lud_crit_exts);
+              AV* extsarray = newAV();
+              SV* extsref = newRV((SV*) extsarray);
+#else
 	      static char *options_key = "options";
 	      SV* options = newSViv(realcomp->lud_options);
+#endif
 	      SV* host; /* = newSVpv(realcomp->lud_host,0); */
 	      SV* port = newSViv(realcomp->lud_port);
 	      SV* dn; /* = newSVpv(realcomp->lud_dn,0); */
@@ -1720,13 +2905,29 @@ ldap_url_parse(url)
 	            av_push(attrarray, SVval);
 	         }
 	      }
+#ifdef USE_OPENLDAP
+	      if (realcomp->lud_exts != NULL)
+	      {
+	         for (count=0; realcomp->lud_exts[count] != NULL; count++)
+	         {
+	            SV* SVval = newSVpv(realcomp->lud_exts[count],0);
+	            av_push(extsarray, SVval);
+	         }
+	      }
+#endif
 	      hv_store(FullHash,host_key,strlen(host_key),host,0);
 	      hv_store(FullHash,port_key,strlen(port_key),port,0);
 	      hv_store(FullHash,dn_key,strlen(dn_key),dn,0);
 	      hv_store(FullHash,attr_key,strlen(attr_key),attribref,0);
 	      hv_store(FullHash,scope_key,strlen(scope_key),scope,0);
 	      hv_store(FullHash,filter_key,strlen(filter_key),filter,0);
+#ifdef USE_OPENLDAP
+	      hv_store(FullHash,scheme_key,strlen(scheme_key),scheme,0);
+	      hv_store(FullHash,exts_key,strlen(exts_key),extsref,0);
+	      hv_store(FullHash,crit_exts_key,strlen(crit_exts_key),crit_exts,0);
+#else
 	      hv_store(FullHash,options_key,strlen(options_key),options,0);
+#endif
 	      ldap_free_urldesc(realcomp);
 	   } else {
 	      RETVAL = &PL_sv_undef;
@@ -1740,6 +2941,10 @@ ldap_url_search(ld,url,attrsonly)
 	LDAP *		ld
 	char *		url
 	int		attrsonly
+	CODE:
+	RETVAL = perldap_ldap_url_search(ld, url, attrsonly);
+	OUTPUT:
+	RETVAL
 
 int
 ldap_url_search_s(ld,url,attrsonly,res)
@@ -1747,6 +2952,8 @@ ldap_url_search_s(ld,url,attrsonly,res)
 	char *		url
 	int		attrsonly
 	LDAPMessage *	&res
+	CODE:
+	RETVAL = perldap_ldap_url_search_s(ld, url, attrsonly, &res);
 	OUTPUT:
 	RETVAL
 	res
@@ -1758,6 +2965,8 @@ ldap_url_search_st(ld,url,attrsonly,timeout,res)
 	int		attrsonly
 	struct timeval	&timeout
 	LDAPMessage *	&res
+	CODE:
+	RETVAL = perldap_ldap_url_search_st(ld, url, attrsonly, &timeout, &res);
 	OUTPUT:
 	RETVAL
 	res
@@ -1765,6 +2974,15 @@ ldap_url_search_st(ld,url,attrsonly,timeout,res)
 int
 ldap_version(ver)
 	LDAPVersion *	ver
+	CODE:
+	/* This is a no-op when using OpenLDAP. */
+#ifdef USE_OPENLDAP
+	RETVAL = 0;
+#else
+	RETVAL = ldap_version(ver);
+#endif
+	OUTPUT:
+	RETVAL
 
 #ifdef USE_SSL
 
@@ -1772,6 +2990,10 @@ int
 ldapssl_client_init(certdbpath,certdbhandle)
 	const char *	certdbpath
 	void *		certdbhandle
+	CODE:
+	RETVAL = perldap_ldapssl_client_init(certdbpath, certdbhandle);
+	OUTPUT:
+	RETVAL
 
 int
 ldapssl_clientauth_init(certdbpath,certdbhandle,needkeydb,keydbpath,keydbhandle)
@@ -1780,6 +3002,15 @@ ldapssl_clientauth_init(certdbpath,certdbhandle,needkeydb,keydbpath,keydbhandle)
 	int		needkeydb
 	char *		keydbpath
 	void *		keydbhandle
+	CODE:
+	/* This is a no-op when using OpenLDAP. */
+#ifdef USE_OPENLDAP
+	RETVAL = 0;
+#else
+	RETVAL = ldapssl_clientauth_init(certdbpath,certdbhandle,needkeydb,keydbpath,keydbhandle);
+#endif
+	OUTPUT:
+	RETVAL
 
 int
 ldapssl_enable_clientauth(ld,keynickname,keypasswd,certnickname)
@@ -1787,16 +3018,31 @@ ldapssl_enable_clientauth(ld,keynickname,keypasswd,certnickname)
 	char *		keynickname
 	char *		keypasswd
 	char *		certnickname
+	CODE:
+	RETVAL = perldap_ldapssl_enable_clientauth(ld, keynickname, keypasswd, certnickname);
+	OUTPUT:
+	RETVAL
 
 LDAP *
 ldapssl_init(host,port,secure)
 	const char *	host
-	int		port
+	const char *	port
 	int		secure
+	CODE:
+	RETVAL = perldap_ldapssl_init(host,port,secure);
+	OUTPUT:
+	RETVAL
 
 int
 ldapssl_install_routines(ld)
 	LDAP *		ld
+	CODE:
+	/* This is a no-op when using OpenLDAP. */
+#ifdef USE_OPENLDAP
+	RETVAL = 0;
+#else
+	RETVAL = ldapssl_install_routines(ld);
+#endif
 
 int
 ldap_start_tls_s(ld,serverctrls,clientctrls)
@@ -1807,23 +3053,53 @@ ldap_start_tls_s(ld,serverctrls,clientctrls)
 const char *
 ldapssl_err2string(prerrno)
 	const int prerrno
+	CODE:
+	/* We just return "Unknown error." when using OpenLDAP.  This
+	 * is the same string that MozLDAP returns when it has a problem
+	 * getting the error string. */
+#ifdef USE_OPENLDAP
+	RETVAL = "Unknown error.";
+#else
+	RETVAL = ldapssl_err2string(prerrno);
+#endif
+	OUTPUT:
+	RETVAL
 
 int
 ldapssl_set_strength(ld,sslstrength)
-	   LDAP *ld
-	   int sslstrength
+	LDAP *ld
+	int sslstrength
+	CODE:
+	/* This is not implemented when using OpenLDAP. */
+#ifdef USE_OPENLDAP
+        RETVAL = -1;
+#else
+	RETVAL = ldapssl_set_strength(ld, sslstrength);
+#endif
+	OUTPUT:
+	RETVAL
 
 #endif
 
 
 #ifdef PRLDAP
 
+#ifndef USE_OPENLDAP
 #include <ldappr.h>
+#endif
 
 int
 prldap_install_routines(ld, shared)
 	LDAP *		ld
 	int		shared
+	CODE:
+#ifdef USE_OPENLDAP
+	RETVAL = 0;
+#else
+	RETVAL = prldap_install_routines(ld, shared);
+#endif
+	OUTPUT:
+	RETVAL
 
 int
 prldap_set_session_option(ld, sessionarg, option, optdata)
@@ -1831,8 +3107,16 @@ prldap_set_session_option(ld, sessionarg, option, optdata)
 	void *		sessionarg
 	int		option
 	int		optdata
-
+	CODE:
+#ifdef USE_OPENLDAP
+	RETVAL = 0;
+#else
+	RETVAL = prldap_set_session_option(ld, sessionarg, option, optdata);
 #endif
+	OUTPUT:
+	RETVAL
+
+#endif  /* PRLDAP */
 
 
 

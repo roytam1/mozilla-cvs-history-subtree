@@ -67,44 +67,60 @@ $include_nspr = $ENV{"NSPRINCDIR"};       # Full Path to NSPR include dir
 $lib_nspr = $ENV{"NSPRLIBDIR"};       # Full Path to NSPR lib dir
 $nss_loc = $ENV{"NSSDIR"};       # Full Path to NSS Top-Level
 $lib_nss = $ENV{"NSSLIBDIR"};       # Full Path to NSS lib dir
+$use_openldap = $ENV{"USE_OPENLDAP"}; # Y to use OpenLDAP instead of MozLDAP
 
 $libexts = "so|sl|a|lib|dll|dylib";
 $default_root = "${dir_sep}usr";
 
 # every linux distribution has the OpenLDAP SDK in /usr/lib and /usr/include, so
 # we need to use a different default to avoid problems
-if ($osname eq "linux") {
-   $default_root = "/opt/mozldap";
-}
+if (!$use_openldap) {
+   if ($osname eq "linux") {
+      $default_root = "/opt/mozldap";
+   }
 
-# examine our build environment - see if we are being built as part of the overall
-# mozilla build process - if so, we can default a lot of things based on that
-# for example, if perldap was checked out in mozilla/directory/perldap, and
-# nspr in mozilla/nsprpub, and nss in mozilla/security, and the ldap c sdk in
-# mozilla/directory/c-sdk, and everything was built according to the usual
-# build instructions, then we can just use ../../dist/public/ldap as our
-# include file location and ../../dist/lib as our lib location
-if ( !$include_ldap && -d '../../dist/public/ldap' ) {
-   $include_ldap = "..${dir_sep}..${dir_sep}dist${dir_sep}public${dir_sep}ldap";
-}
-if ( !$lib_ldap && -d '../../dist/lib' ) {
-   $lib_ldap = "..${dir_sep}..${dir_sep}dist${dir_sep}lib";
-}
+   # examine our build environment - see if we are being built as part of the overall
+   # mozilla build process - if so, we can default a lot of things based on that
+   # for example, if perldap was checked out in mozilla/directory/perldap, and
+   # nspr in mozilla/nsprpub, and nss in mozilla/security, and the ldap c sdk in
+   # mozilla/directory/c-sdk, and everything was built according to the usual
+   # build instructions, then we can just use ../../dist/public/ldap as our
+   # include file location and ../../dist/lib as our lib location
+   if ( !$include_ldap && -d '../../dist/public/ldap' ) {
+      $include_ldap = "..${dir_sep}..${dir_sep}dist${dir_sep}public${dir_sep}ldap";
+   }
+   if ( !$lib_ldap && -d '../../dist/lib' ) {
+      $lib_ldap = "..${dir_sep}..${dir_sep}dist${dir_sep}lib";
+   }
 
-# find the path to NSPR
-if (!$nspr_loc && !$include_nspr && !$lib_nspr && -d '../../dist') {
-	require File::Find;
-	$nspr_loc = findNSPR('../../dist');
-    $include_nspr = $nspr_loc . "/include";
-    $lib_nspr = $nspr_loc . "/lib";
+   # find the path to NSPR
+   if (!$nspr_loc && !$include_nspr && !$lib_nspr && -d '../../dist') {
+      require File::Find;
+      $nspr_loc = findNSPR('../../dist');
+      $include_nspr = $nspr_loc . "/include";
+      $lib_nspr = $nspr_loc . "/lib";
+   }
+} else {
+   if ($osname eq "linux") {
+      $default_root = "/usr";
+   }
 }
 
 print "\nPerLDAP - Perl 5 Module for LDAP\n";
 print     "================================\n";
 
 $silent = 1;
-print "Directory containing 'include' and 'lib' directory of the Mozilla\n";
-print "LDAP Software Developer Kit (default: $default_root): ";
+if ($use_openldap)
+{
+   print "Directory containing 'include' and 'lib' directory of the OpenLDAP\n";
+   print "LDAP client libraries (default: $default_root, Enter \"n\" to specify\n" .
+      "explicit include and lib directories): ";
+} else {
+   print "Directory containing 'include' and 'lib' directory of the Mozilla\n";
+   print "LDAP Software Developer Kit (default: $default_root, Enter \"n\" to\n" .
+      "specify explicit include and lib directories): ";
+}
+
 if (!$ldapsdk_loc)
 {
    $silent = 0;
@@ -121,8 +137,13 @@ if (!$include_ldap && $ldapsdk_loc) {
    $include_ldap = $ldapsdk_loc . $dir_sep . "include";
 }
 if (!$ldapsdk_loc) {
-   print "Directory containing 'include' directory of the Mozilla\n";
-   print "LDAP Software Developer Kit (default: $include_ldap): ";
+   if ($use_openldap) {
+      print "Directory containing 'include' files of the OpenLDAP\n";
+      print "LDAP client libraries (default: $include_ldap): ";
+   } else {
+      print "Directory containing 'include' files of the Mozilla\n";
+      print "LDAP Software Developer Kit (default: $include_ldap): ";
+   }
    if (! -f "$include_ldap${dir_sep}ldap.h") {
       $silent = 0;
 	  chomp ($input = <STDIN>);
@@ -137,8 +158,13 @@ if (!$lib_ldap && $ldapsdk_loc) {
    $lib_ldap = $ldapsdk_loc . $dir_sep . "lib";
 }
 if (!$ldapsdk_loc) {
-   print "Directory containing 'lib' directory of the Mozilla\n";
-   print "LDAP Software Developer Kit (default: $lib_ldap): ";
+   if ($use_openldap) {
+      print "Directory containing 'lib' files of the OpenLDAP\n";
+      print "LDAP client libraries (default: $lib_ldap): ";
+   } else {
+      print "Directory containing 'lib' files of the Mozilla\n";
+      print "LDAP Software Developer Kit (default: $lib_ldap): ";
+   }
    if (! -d "$lib_ldap") {
       $silent = 0;
 	  chomp ($input = <STDIN>);
@@ -159,75 +185,79 @@ if (!$ldapsdk_ssl)
 }
 $ssl_def = "-DUSE_SSL" unless ($ldapsdk_ssl =~ /^n/i);
 
-# see if ldap and nspr files are in the same place
-if ( -f "$include_ldap${dir_sep}nspr.h" ) {
-	$nspr_loc = $ldapsdk_loc;
-}
-
-print "Directory containing NSPR API 'include' and 'lib'\n";
-print "directories for NSPR support (type 'n' or 'none' to omit) (default: $nspr_loc): ";
-if (!$ENV{NSPRDIR} && !$ENV{NSPRINCDIR} && !$ENV{NSPRLIBDIR}) {
-   $silent = 0;
-   chomp ($input = <STDIN>);
-   if ($input =~ /^n/i) {
-      $nspr_loc = undef;
-   } elsif ($input =~ /\S/) {
-       $nspr_loc = $input;
+if (!$use_openldap) {
+   # see if ldap and nspr files are in the same place
+   if ( -f "$include_ldap${dir_sep}nspr.h" ) {
+      $nspr_loc = $ldapsdk_loc;
    }
-} else {
-   print "$nspr_loc\n";
-}
 
-if ($nspr_loc) {
-   if (!$lib_nspr) {
-      $lib_nspr = $nspr_loc . ${dir_sep} . 'lib';
+   print "Directory containing NSPR API 'include' and 'lib'\n";
+   print "directories for NSPR support (type 'n' or 'none' to omit) (default: $nspr_loc): ";
+   if (!$ENV{NSPRDIR} && !$ENV{NSPRINCDIR} && !$ENV{NSPRLIBDIR}) {
+      $silent = 0;
+      chomp ($input = <STDIN>);
+      if ($input =~ /^n/i) {
+         $nspr_loc = undef;
+      } elsif ($input =~ /\S/) {
+          $nspr_loc = $input;
+      }
+   } else {
+      print "$nspr_loc\n";
    }
-   if (!$include_nspr) {
-      $include_nspr = $nspr_loc . ${dir_sep} . 'include';
-   }
-   croak("Missing required include file $include_nspr${dir_sep}nspr.h") unless -f "$include_nspr${dir_sep}nspr.h";
-   $pr_def = "-DPRLDAP"
-}
 
-print "Directory containing NSS API 'lib'\n";
-print "directories for NSS support (type 'n' or 'none' to omit) (default: $nss_loc): ";
-if (!$ENV{NSSDIR} && !$ENV{NSSLIBDIR}) {
-   $silent = 0;
-   chomp ($input = <STDIN>);
-   if ($input =~ /^n/i) {
-      $nss_loc = undef;
-   } elsif ($input =~ /\S/) {
-       $nss_loc = $input;
+   if ($nspr_loc) {
+      if (!$lib_nspr) {
+         $lib_nspr = $nspr_loc . ${dir_sep} . 'lib';
+      }
+      if (!$include_nspr) {
+         $include_nspr = $nspr_loc . ${dir_sep} . 'include';
+      }
+      croak("Missing required include file $include_nspr${dir_sep}nspr.h") unless -f "$include_nspr${dir_sep}nspr.h";
+      $pr_def = "-DPRLDAP"
    }
-} else {
-   print "$nss_loc\n";
-}
 
-if ($nss_loc) {
-   if (!$lib_nss) {
-      $lib_nss = $nss_loc . ${dir_sep} . 'lib';
+   print "Directory containing NSS API 'lib'\n";
+   print "directories for NSS support (type 'n' or 'none' to omit) (default: $nss_loc): ";
+   if (!$ENV{NSSDIR} && !$ENV{NSSLIBDIR}) {
+      $silent = 0;
+      chomp ($input = <STDIN>);
+      if ($input =~ /^n/i) {
+         $nss_loc = undef;
+      } elsif ($input =~ /\S/) {
+          $nss_loc = $input;
+      }
+   } else {
+      print "$nss_loc\n";
+   }
+
+   if ($nss_loc) {
+      if (!$lib_nss) {
+         $lib_nss = $nss_loc . ${dir_sep} . 'lib';
+      }
    }
 }
 
 opendir(DIR,$lib_ldap);
-if ($ssl_def)
+if (!$use_openldap && $ssl_def)
 {
    @libfiles = grep{/ldap\d|ssl\d|nss\d|pl[cd]\d|nspr\d|ldappr\d/} readdir(DIR);
 } else {
-   @libfiles = grep{/ldap\d/} readdir(DIR);
+   @libfiles = grep{/ldap|lber/} readdir(DIR);
 }
 closedir(DIR);
 
-if ($lib_nspr && -d $lib_nspr) {
-opendir(DIR,$lib_nspr);
-push @libfiles, grep{/pl[cd]\d|nspr\d|ssl\d|nss\d/} readdir(DIR);
-closedir(DIR);
-}
+if (!$use_openldap) {
+   if ($lib_nspr && -d $lib_nspr) {
+      opendir(DIR,$lib_nspr);
+      push @libfiles, grep{/pl[cd]\d|nspr\d|ssl\d|nss\d/} readdir(DIR);
+      closedir(DIR);
+   }
 
-if ($lib_nss && -d $lib_nss) {
-opendir(DIR,$lib_nss);
-push @libfiles, grep{/ssl\d|nss\d/} readdir(DIR);
-closedir(DIR);
+   if ($lib_nss && -d $lib_nss) {
+      opendir(DIR,$lib_nss);
+      push @libfiles, grep{/ssl\d|nss\d/} readdir(DIR);
+      closedir(DIR);
+   }
 }
 
 @libs = ();
@@ -240,28 +270,42 @@ foreach $candidate (@libfiles) {
    push(@libs, $candidate) unless grep(/^$candidate$/, @libs);
 }
 
-if ($osname =~ /mswin/i) {
-   @ldaplib = grep{/^nsldap\d.*$/} @libs;
-   @prldaplib = grep{/^nsldappr.*$/} @libs;
-   @lberlib = grep{/^nslber.*$/} @libs;
-   @ldapslib = grep{/^nsldapssl.*$/} @libs if $ssl_def;
-} else {
-   @ldaplib = grep{/^ldap\d.*$/} @libs;
-   @prldaplib = grep{/^prldap.*$/} @libs;
-   @lberlib = grep{/^lber.*$/} @libs;
-   @ldapslib = grep{/^ssldap.*$/} @libs if $ssl_def;
-}
-@ssllib = grep{/^ssl\d.*$/} @libs if $ssl_def;
-@nsslib = grep{/^nss\d.*$/} @libs if $ssl_def;
-@plclib = grep{/^plc\d.*$/} @libs if $ssl_def;
-@pldslib = grep{/^plds\d.*$/} @libs if $ssl_def;
+if (!$use_openldap) {
+   if ($osname =~ /mswin/i) {
+      @ldaplib = grep{/^nsldap\d.*$/} @libs;
+      @prldaplib = grep{/^nsldappr.*$/} @libs;
+      @lberlib = grep{/^nslber.*$/} @libs;
+      @ldapslib = grep{/^nsldapssl.*$/} @libs if $ssl_def;
+   } else {
+      @ldaplib = grep{/^ldap\d.*$/} @libs;
+      @prldaplib = grep{/^prldap.*$/} @libs;
+      @lberlib = grep{/^lber.*$/} @libs;
+      @ldapslib = grep{/^ssldap.*$/} @libs if $ssl_def;
+   }
 
-@nsprlib = grep{/^nspr\d.*$/} @libs;
+   @ssllib = grep{/^ssl\d.*$/} @libs if $ssl_def;
+   @nsslib = grep{/^nss\d.*$/} @libs if $ssl_def;
+   @plclib = grep{/^plc\d.*$/} @libs if $ssl_def;
+   @pldslib = grep{/^plds\d.*$/} @libs if $ssl_def;
+   @nsprlib = grep{/^nspr\d.*$/} @libs;
+} else {
+   # We only need to link with libldap and lilber when using OpenLDAP.
+   @ldaplib = grep{/^ldap\.*$/} @libs;
+   @lberlib = grep{/^lber\.*$/} @libs;
+   # We don't really use PRLDAP when using OpenLDAP, but we want to provide
+   # stubs for the PRLDAP functions.
+   $openldap_def = "-DUSE_OPENLDAP -DPRLDAP";
+}
 
 
 if ($#ldaplib < 0)
 {
    die "No LDAP libraries found.";
+}
+
+if ($use_openldap && ($#lberlib < 0))
+{
+   die "No LBER libraries found.";
 }
 
 if ($#ldaplib > 0)
@@ -285,6 +329,14 @@ $lline .= " -l$ldapslib[0]" if ($#ldapslib >= 0);
 #
 $lline .= " -l$prldaplib[0]" if ($#prldaplib >= 0);
 $lline .= " -l$ldaplib[0]";
+
+#
+# Add lber library if using OpenLDAP
+#
+if ($use_openldap)
+{
+   $lline .= " -l$lberlib[0]";
+}
 
 #
 # Add SSL libraries, if needed
@@ -362,7 +414,7 @@ WriteMakefile(
 	      'INC'		=> $my_includes,
 	      'LIBS'		=> [$lib_line],
 	      'MYEXTLIB'	=> $my_extlib,
-	      'DEFINE'		=> "$ssl_def $pr_def",
+	      'DEFINE'		=> "$ssl_def $pr_def $openldap_def",
 	      'XSOPT'		=> "-nolinenumbers",
 	      @extras
 );

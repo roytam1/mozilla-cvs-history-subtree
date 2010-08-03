@@ -57,11 +57,15 @@ extern "C" {
 #include <ldap.h>
 
 #ifdef PRLDAP
+#ifndef USE_OPENLDAP
 #include <ldappr.h>
+#endif
 #endif
 
 #ifdef USE_SSL
+#ifndef USE_OPENLDAP
 # include <ldap_ssl.h>
+#endif
 #endif
 
 static int
@@ -783,7 +787,11 @@ int arg;
 #endif
         if (strEQ(name, "LDAP_SASL_SIMPLE"))
 #ifdef LDAP_SASL_SIMPLE
+#ifdef USE_OPENLDAP
+            return 0;
+#else
             return LDAP_SASL_SIMPLE;
+#endif
 #else
             goto not_there;
 #endif

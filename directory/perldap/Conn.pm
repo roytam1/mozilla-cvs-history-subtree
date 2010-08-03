@@ -156,6 +156,9 @@ sub init
   return 0 unless (defined($self->{"host"}));
   return 0 unless (defined($self->{"port"}));
 
+  # Set protocol version to 3.
+  ldap_set_option(undef, LDAP_OPT_PROTOCOL_VERSION, LDAP_VERSION3);
+
   if (defined($self->{"certdb"}) && ($self->{"certdb"} ne ""))
     { #use SSL
       $ret = ldapssl_client_init($self->{"certdb"}, 0);
