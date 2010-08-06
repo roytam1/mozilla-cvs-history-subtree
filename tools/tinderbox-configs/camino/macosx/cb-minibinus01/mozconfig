@@ -9,7 +9,7 @@ export CXXFLAGS="-gdwarf-2"
 
 # symbols for NSS
 export MOZ_DEBUG_SYMBOLS=1
-ac_add_options --enable-debug-symbols="-gdwarf2"
+ac_add_options --enable-debug-symbols="-gdwarf-2"
 
 # perf-testing configuration, pseudo-boxset
 
