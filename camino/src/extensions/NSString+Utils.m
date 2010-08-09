@@ -349,12 +349,36 @@
   return ([self isEqualToString:@"about:blank"] || [self isEqualToString:@""]);
 }
 
-// Excluded character list comes from RFC2396 and by examining Safari's behaviour
+// Excluded character list comes from RFC2396, by examining Safari's behaviour,
+// and from the characters Firefox excluded in bug 397815, bug 410726, and
+// bug 452979.
 - (NSString*)unescapedURI
 {
+  // The Xcode toolchain on 10.4 does not like Unicode string literals, even as
+  // escape sequences; once we only build on 10.5+, we can replace the format
+  // string with a string using escape sequences.
+  static NSString *charactersNotToUnescape = nil;
+  if (!charactersNotToUnescape) {
+    NSString *excludedAsciiChars = @"% \"\';/?:@&=+$,#";
+    unichar excludedUnicodeChars[] = {0x0000, 0x0001, 0x0002, 0x0003, 0x0004, 0x0005, 0x0006, 0x0007, 0x0008, 0x0009,
+                                      0x000a, 0x000b, 0x000c, 0x000d, 0x000e, 0x000f, 0x0010, 0x0011, 0x0012, 0x0013,
+                                      0x0014, 0x0015, 0x0016, 0x0017, 0x0018, 0x0019, 0x001a, 0x001b, 0x001c, 0x001d,
+                                      0x001e, 0x001f, 0x00a0, 0x00ad, 0x2000, 0x2002, 0x2003, 0x2004, 0x2005, 0x2006,
+                                      0x2007, 0x2008, 0x2009, 0x200a, 0x200b, 0x200e, 0x200f, 0x2028, 0x2029, 0x202a,
+                                      0x202b, 0x202c, 0x202d, 0x202e, 0x202f, 0x205f, 0x2060, 0x2062, 0x2063, 0x3000,
+                                      0xfeff, 0xfffc, 0xfffe, 0xffff};
+    unsigned int excludedUnicodeCount = sizeof(excludedUnicodeChars) / sizeof(unichar);
+    NSMutableString *characters = [NSMutableString stringWithCapacity:(excludedUnicodeCount + [excludedAsciiChars length])];
+    [characters appendString:excludedAsciiChars];
+    for (unsigned int i = 0; i < excludedUnicodeCount; ++i) {
+      [characters appendFormat:@"%C", excludedUnicodeChars[i]];
+    }
+    charactersNotToUnescape = [characters copy];
+  }
+  
   NSString *unescapedURI = (NSString*)CFURLCreateStringByReplacingPercentEscapesUsingEncoding(kCFAllocatorDefault,
                                                                             (CFStringRef)self,
-                                                                            CFSTR(" \"\';/?:@&=+$,#"),
+                                                                            (CFStringRef)charactersNotToUnescape,
                                                                             kCFStringEncodingUTF8);
   return unescapedURI ? [unescapedURI autorelease] : self;
 }
