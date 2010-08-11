@@ -2097,7 +2097,7 @@ public:
 - (IBAction)openFeedPrefPane:(id)sender
 {
   [[MVPreferencesController sharedInstance] showPreferences:nil];
-  [[MVPreferencesController sharedInstance] selectPreferencePaneByIdentifier:@"org.mozilla.camino.preference.navigation"];
+  [[MVPreferencesController sharedInstance] selectPreferencePaneByIdentifier:@"org.mozilla.camino.preference.general"];
 }
 
 //
