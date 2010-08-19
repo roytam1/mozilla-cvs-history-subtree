@@ -43,6 +43,7 @@
 #import "NSString+Utils.h"
 #import "NSString+Gecko.h"
 #import "NSSplitView+Utils.h"
+#import "NSMenu+Gecko.h"
 #import "NSMenu+Utils.h"
 #import "NSPasteboard+Utils.h"
 #import "NSWorkspace+Utils.h"
@@ -359,6 +360,8 @@ public:
 - (void)insertNewlineIgnoringFieldEditor:(id)sender
 {
   BrowserWindowController* bwc = (BrowserWindowController *)[[self window] delegate];
+  if ([[bwc browserWrapper] isBlockedErrorOverlayShowing])
+    return;
   NSString* URLstring = [self string];
   // so that Option-return works on things like "google.com" where the scheme:// is missing
   if ([URLstring rangeOfString:@"://"].location == NSNotFound)
@@ -2094,7 +2097,7 @@ public:
 - (IBAction)openFeedPrefPane:(id)sender
 {
   [[MVPreferencesController sharedInstance] showPreferences:nil];
-  [[MVPreferencesController sharedInstance] selectPreferencePaneByIdentifier:@"org.mozilla.camino.preference.navigation"];
+  [[MVPreferencesController sharedInstance] selectPreferencePaneByIdentifier:@"org.mozilla.camino.preference.general"];
 }
 
 //
@@ -4191,6 +4194,12 @@ public:
   BOOL isFlashblock = NO;
 
   if (mDataOwner->mContextMenuNode) {
+    nsAutoString nodeName;
+    if (NS_SUCCEEDED(mDataOwner->mContextMenuNode->GetNodeName(nodeName))) {
+      if (nodeName.Equals(NS_LITERAL_STRING("popup")))
+        return [NSMenu menuFromNode:mDataOwner->mContextMenuNode];
+    }
+
     nsCOMPtr<nsIDOMDocument> ownerDoc;
     mDataOwner->mContextMenuNode->GetOwnerDocument(getter_AddRefs(ownerDoc));
 
@@ -5045,6 +5054,13 @@ public:
 
   if (oldResponderIsGecko != newResponderIsGecko && [[self window] isKeyWindow])
     [mBrowserView setBrowserActive:newResponderIsGecko];
+
+  // When the blocked page overlay shows up, Gecko causes us to lose content
+  // focus; manually restore it if that happens.
+  if (newResponder == [self window] && oldResponderIsGecko &&
+      [mBrowserView isBlockedErrorOverlayShowing]) {
+    [[self window] makeFirstResponder:[mBrowserView browserView]];
+  }
 }
 
 //
@@ -5253,16 +5269,6 @@ public:
 {
   [mContentView toggleTabThumbnailGridView];
   if ([mContentView tabThumbnailGridViewIsVisible]) {
-    // If either of the toolbar fields is in the middle of an edit, end the edit
-    // by focusing the window.
-    NSText* locationFieldEditor = [mURLBar fieldEditor];
-    NSText* searchFieldEditor = [[self window] fieldEditor:NO forObject:mSearchBar];
-    NSResponder* currentFirstResponder = [[self window] firstResponder];
-    if ((locationFieldEditor && currentFirstResponder == locationFieldEditor) ||
-        (searchFieldEditor && currentFirstResponder == searchFieldEditor))
-    {
-      [[self window] makeFirstResponder:[self window]];
-    }
     [mURLBar setEditable:NO];
     [mSearchBar setEditable:NO];
   }
@@ -5271,8 +5277,12 @@ public:
     [mSearchBar setEditable:YES];
     // If we don't have focus anywhere useful when coming out of tab overview
     // mode (due to the view shuffling) set it on the content area.
-    if ([[[self window] firstResponder] isEqual:[self window]])
-      [[self window] makeFirstResponder:[mBrowserView browserView]];
+    if ([[[self window] firstResponder] isEqual:[self window]]) {
+      if ([self bookmarkManagerIsVisible])
+        [[self bookmarkViewControllerForCurrentTab] focusSearchField];
+      else
+        [[self window] makeFirstResponder:[mBrowserView browserView]];
+    }
   }
 }
 

@@ -98,9 +98,11 @@ public:
   void SetContainer(NSView<CHBrowserListener, CHBrowserContainer>* aContainer);
 
 protected:
+  nsresult HandleXULPopupEvent(nsIDOMEvent* inEvent);
   nsresult HandleBlockedPopupEvent(nsIDOMEvent* inEvent);
   nsresult HandleLinkAddedEvent(nsIDOMEvent* inEvent);
   nsresult HandleFlashblockCheckEvent(nsIDOMEvent* inEvent);
+  nsresult HandleSilverblockCheckEvent(nsIDOMEvent* inEvent);
   void HandleFaviconLink(nsIDOMElement* inElement);
   void HandleFeedLink(nsIDOMElement* inElement);
   void HandleSearchPluginLink(nsIDOMElement* inElement);

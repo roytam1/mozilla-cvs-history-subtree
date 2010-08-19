@@ -42,6 +42,7 @@
 /* Sharable code and data for wrapper around JSObjects. */
 
 #include "xpcprivate.h"
+#include "XPCWrapper.h"
 
 NS_IMPL_THREADSAFE_ISUPPORTS1(nsXPCWrappedJSClass, nsIXPCWrappedJSClass)
 
@@ -226,6 +227,29 @@ nsXPCWrappedJSClass::~nsXPCWrappedJSClass()
     NS_IF_RELEASE(mInfo);
 }
 
+static JSBool
+PushObjectPrincipal(JSContext *cx, JSObject *obj,
+                    nsIScriptSecurityManager_1_9_2 *ssm,
+                    JSBool *popPrincipal)
+{
+    *popPrincipal = JS_FALSE;
+    nsCOMPtr<nsIPrincipal> objPrincipal;
+    ssm->GetObjectPrincipal(cx, obj, getter_AddRefs(objPrincipal));
+    if(objPrincipal)
+    {
+        JSStackFrame* fp = nsnull;
+        nsresult rv =
+            ssm->PushContextPrincipal(cx, JS_FrameIterator(cx, &fp),
+                                      objPrincipal);
+        if(NS_FAILED(rv))
+            return JS_FALSE;
+
+        *popPrincipal = JS_TRUE;
+    }
+
+    return JS_TRUE;
+}
+
 JSObject*
 nsXPCWrappedJSClass::CallQueryInterfaceOnJSObject(XPCCallContext& ccx,
                                                   JSObject* jsobj,
@@ -266,6 +290,15 @@ nsXPCWrappedJSClass::CallQueryInterfaceOnJSObject(XPCCallContext& ccx,
 
     // OK, it looks like we'll be calling into JS code.
 
+    nsIScriptSecurityManager_1_9_2 *ssm = nsnull;
+    JSBool popPrincipal = JS_FALSE;
+    if(XPCPerThreadData::IsMainThread(cx))
+    {
+        ssm = XPCWrapper::GetSecurityManager();
+        if(ssm && !PushObjectPrincipal(cx, jsobj, ssm, &popPrincipal))
+            return nsnull;
+    }
+
     AutoScriptEvaluate scriptEval(cx);
 
     // XXX we should install an error reporter that will send reports to
@@ -281,6 +314,9 @@ nsXPCWrappedJSClass::CallQueryInterfaceOnJSObject(XPCCallContext& ccx,
 
     if(success)
         success = JS_ValueToObject(cx, retval, &retObj);
+
+    if(popPrincipal)
+        ssm->PopContextPrincipal(ccx);
 
     return success ? retObj : nsnull;
 }
@@ -1122,6 +1158,8 @@ nsXPCWrappedJSClass::CallMethod(nsXPCWrappedJS* wrapper, uint16 methodIndex,
     XPCContext* xpcc;
     JSContext* cx;
     JSObject* thisObj;
+    JSBool popPrincipal = JS_FALSE;
+    nsIScriptSecurityManager_1_9_2* ssm = nsnull;
 
     // Make sure not to set the callee on ccx until after we've gone through
     // the whole nsIXPCFunctionThisTranslator bit.  That code uses ccx to
@@ -1449,8 +1487,6 @@ nsXPCWrappedJSClass::CallMethod(nsXPCWrappedJS* wrapper, uint16 methodIndex,
             *sp++ = val;
     }
 
-
-
     readyToDoTheCall = JS_TRUE;
 
 pre_call_clean_up:
@@ -1512,6 +1548,17 @@ pre_call_clean_up:
 
     JS_ClearPendingException(cx);
 
+    if(XPCPerThreadData::IsMainThread(ccx))
+    {
+        ssm = XPCWrapper::GetSecurityManager();
+        if(ssm && !PushObjectPrincipal(cx, obj, ssm, &popPrincipal))
+        {
+            JS_ReportOutOfMemory(cx);
+            retval = NS_ERROR_OUT_OF_MEMORY;
+            goto done;
+        }
+    }
+
     if(XPT_MD_IS_GETTER(info->flags))
         success = JS_GetProperty(cx, obj, name, &result);
     else if(XPT_MD_IS_SETTER(info->flags))
@@ -1548,7 +1595,10 @@ pre_call_clean_up:
         }
     }
 
-    if (!success)
+    if(popPrincipal)
+        ssm->PopContextPrincipal(ccx);
+
+    if(!success)
     {
         PRBool forceReport;
         if(NS_FAILED(mInfo->IsFunction(&forceReport)))

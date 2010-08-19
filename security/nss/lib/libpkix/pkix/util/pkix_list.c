@@ -1493,37 +1493,36 @@ PKIX_List_InsertItem(
                 PKIX_ERROR(PKIX_INPUTLISTMUSTBEHEADER);
         }
 
+        PKIX_CHECK(pkix_List_GetElement(list, index, &element, plContext),
+                    PKIX_LISTGETELEMENTFAILED);
+
         /* Create a new list object */
         PKIX_CHECK(pkix_List_Create_Internal(PKIX_FALSE, &newElem, plContext),
                     PKIX_LISTCREATEINTERNALFAILED);
 
-        if (list->length) {
-            PKIX_CHECK(pkix_List_GetElement(list, index, &element, plContext),
-                       PKIX_LISTGETELEMENTFAILED);
-            /* Copy the old element's contents into the new element */
-            newElem->item = element->item;
-            /* Add new item to the list */
-            PKIX_INCREF(item);
-            element->item = item;
-            /* Set the new element's next pointer to the old element's next */
-            newElem->next = element->next;
-            /* Set the old element's next pointer to the new element */
-            element->next = newElem;
-            newElem = NULL;
-        } else {
-            PKIX_INCREF(item);
-            newElem->item = item;
-            newElem->next = NULL;
-            list->next = newElem;
-            newElem = NULL;
-        }
-        list->length++;
+        /* Copy the old element's contents into the new element */
+        newElem->item = element->item;
+
+        /* Set the new element's next pointer to the old element's next */
+        newElem->next = element->next;
+
+        /* Set the old element's next pointer to the new element */
+        element->next = newElem;
+
+        PKIX_INCREF(item);
+        element->item = item;
 
         PKIX_CHECK(PKIX_PL_Object_InvalidateCache
                     ((PKIX_PL_Object *)list, plContext),
                     PKIX_OBJECTINVALIDATECACHEFAILED);
+
+        list->length = list->length + 1;
+
 cleanup:
-        PKIX_DECREF(newElem);
+
+        if (PKIX_ERROR_RECEIVED){
+                PKIX_DECREF(newElem);
+        }
 
         PKIX_RETURN(LIST);
 }

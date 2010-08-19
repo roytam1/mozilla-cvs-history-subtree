@@ -92,6 +92,7 @@
 #define PR_DIRECTORY_SEPARATOR_STR	"/"
 #define PR_PATH_SEPARATOR		':'
 #define PR_PATH_SEPARATOR_STR		":"
+#define GCPTR
 typedef int (*FARPROC)();
 
 /*
@@ -616,7 +617,11 @@ typedef PRInt64 _MDOff64_t;
 
 typedef PRIntn (*_MD_Fstat64)(PRIntn osfd, _MDStat64 *buf);
 typedef PRIntn (*_MD_Open64)(const char *path, int oflag, ...);
+#if defined(VMS)
+typedef PRIntn (*_MD_Stat64)(const char *path, _MDStat64 *buf, ...);
+#else
 typedef PRIntn (*_MD_Stat64)(const char *path, _MDStat64 *buf);
+#endif
 typedef _MDOff64_t (*_MD_Lseek64)(PRIntn osfd, _MDOff64_t, PRIntn whence);
 typedef void* (*_MD_Mmap64)(
     void *addr, PRSize len, PRIntn prot, PRIntn flags,

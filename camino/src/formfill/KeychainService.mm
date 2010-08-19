@@ -547,17 +547,6 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
 }
 
 //
-// addListenerToView:
-//
-// Add a listener to the view to auto fill username and passwords
-// fields if the values are stored in the Keychain.
-//
-- (void)addListenerToView:(CHBrowserView*)view
-{
-  [view addListener:[[[KeychainBrowserListener alloc] initWithBrowser:view] autorelease]];
-}
-
-//
 // hitButtonOK:
 // hitButtonCancel:
 // hitButtonOther:
@@ -1446,6 +1435,10 @@ KeychainFormSubmitObserver::Notify(nsIDOMHTMLFormElement* formNode, nsIDOMWindow
 }
 
 - (void)onFlashblockCheck:(nsIDOMEvent*)inEvent
+{
+}
+
+- (void)onSilverblockCheck:(nsIDOMEvent*)inEvent
 {
 }
 

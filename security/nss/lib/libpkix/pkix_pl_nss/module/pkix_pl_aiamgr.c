@@ -274,8 +274,6 @@ pkix_pl_AIAMgr_GetHTTPCerts(
                 /* find or create httpClient = default client */
 		httpClient = SEC_GetRegisteredHttpClient();
 		aiaMgr->client.hdata.httpClient = httpClient;
-		if (!httpClient)
-		    PKIX_ERROR(PKIX_OUTOFMEMORY);
 
 		if (httpClient->version == 1) {
 

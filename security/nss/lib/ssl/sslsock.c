@@ -1558,13 +1558,8 @@ SSL_SetSockPeerID(PRFileDesc *fd, char *peerID)
 	return SECFailure;
     }
 
-    if (ss->peerID) {
-    	PORT_Free(ss->peerID);
-	ss->peerID = NULL;
-    }
-    if (peerID)
-	ss->peerID = PORT_Strdup(peerID);
-    return (ss->peerID || !peerID) ? SECSuccess : SECFailure;
+    ss->peerID = PORT_Strdup(peerID);
+    return SECSuccess;
 }
 
 #define PR_POLL_RW (PR_POLL_WRITE | PR_POLL_READ)

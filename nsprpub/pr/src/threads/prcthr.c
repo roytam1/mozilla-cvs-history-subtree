@@ -304,6 +304,11 @@ PR_IMPLEMENT(PRInt32) PR_GetThreadAffinityMask(PRThread *thread, PRUint32 *mask)
 #ifdef HAVE_THREAD_AFFINITY
     return _PR_MD_GETTHREADAFFINITYMASK(thread, mask);
 #else
+
+#if defined(XP_MAC)
+#pragma unused (thread, mask)
+#endif
+
     return 0;
 #endif
 }
@@ -317,6 +322,11 @@ PR_IMPLEMENT(PRInt32) PR_SetThreadAffinityMask(PRThread *thread, PRUint32 mask )
 	return 0;
 #endif
 #else
+
+#if defined(XP_MAC)
+#pragma unused (thread, mask)
+#endif
+
     return 0;
 #endif
 }
@@ -342,6 +352,10 @@ PR_IMPLEMENT(PRInt32) PR_SetCPUAffinityMask(PRUint32 mask)
 
         qp = qp->next;
     }
+#endif
+
+#if defined(XP_MAC)
+#pragma unused (mask)
 #endif
 
     return 0;
@@ -383,6 +397,9 @@ PR_IMPLEMENT(PRThread*) PR_CreateThreadBound(PRThreadType type,
 PR_IMPLEMENT(PRThread*) PR_AttachThreadGCAble(
     PRThreadType type, PRThreadPriority priority, PRThreadStack *stack)
 {
+#ifdef XP_MAC
+#pragma unused (type, priority, stack)
+#endif
     /* $$$$ not sure how to finese this one */
     PR_SetError(PR_NOT_IMPLEMENTED_ERROR, 0);
     return NULL;
@@ -406,6 +423,9 @@ PR_IMPLEMENT(void) PR_ClearThreadGCAble()
 
 PR_IMPLEMENT(PRThreadScope) PR_GetThreadScope(const PRThread *thread)
 {
+#ifdef XP_MAC
+#pragma unused( thread )
+#endif
     if (!_pr_initialized) _PR_ImplicitInitialization();
 
     if (_PR_IS_NATIVE_THREAD(thread)) {

@@ -65,7 +65,7 @@ PRUint32     nsXPConnect::gReportAllJSExceptions = 0;
 
 // Global cache of the default script security manager (QI'd to
 // nsIScriptSecurityManager)
-nsIScriptSecurityManager_1_9_0_BRANCH *gScriptSecurityManager = nsnull;
+nsIScriptSecurityManager_1_9_2 *gScriptSecurityManager = nsnull;
 
 const char XPC_CONTEXT_STACK_CONTRACTID[] = "@mozilla.org/js/xpc/ContextStack;1";
 const char XPC_RUNTIME_CONTRACTID[]       = "@mozilla.org/js/xpc/RuntimeService;1";
@@ -1211,11 +1211,6 @@ nsXPConnect::InitClasses(JSContext * aJSContext, JSObject * aGlobalJSObj)
     if(!nsXPCComponents::AttachNewComponentsObject(ccx, scope, aGlobalJSObj))
         return UnexpectedFailure(NS_ERROR_FAILURE);
 
-#ifdef XPC_IDISPATCH_SUPPORT
-    // Initialize any properties IDispatch needs on the global object
-    XPCIDispatchExtension::Initialize(ccx, aGlobalJSObj);
-#endif
-
     if (!XPCNativeWrapper::AttachNewConstructorObject(ccx, aGlobalJSObj))
         return UnexpectedFailure(NS_ERROR_FAILURE);
 
@@ -1690,7 +1685,7 @@ nsXPConnect::SetDefaultSecurityManager(nsIXPCSecurityManager *aManager,
     mDefaultSecurityManager = aManager;
     mDefaultSecurityManagerFlags = flags;
 
-    nsCOMPtr<nsIScriptSecurityManager_1_9_0_BRANCH> ssm =
+    nsCOMPtr<nsIScriptSecurityManager_1_9_2> ssm =
         do_QueryInterface(mDefaultSecurityManager);
 
     // Remember the result of the above QI for fast access to the

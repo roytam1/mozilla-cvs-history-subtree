@@ -39,11 +39,6 @@
 #import <Foundation/Foundation.h>
 
 
-// Cocoa wrapper for the Breakpad framework. This is not a true singleton, in
-// that it is expected to be explicitly alloc'd and released, but there should
-// never be more than one created in an application.
-// Creating a BreakpadWrapper instance will set up Breakpad for crash reporting,
-// and releasing it will shut Breakpad down.
 @interface BreakpadWrapper : NSObject {
   void* mBreakpadReference;
 }
