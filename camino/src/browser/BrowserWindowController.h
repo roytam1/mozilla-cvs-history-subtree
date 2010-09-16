@@ -81,14 +81,6 @@ class BWCDataOwner;
 
 typedef enum
 {
-  eNewTabEmpty,
-  eNewTabAboutBlank,
-  eNewTabHomepage
-  
-} ENewTabContents;
-
-typedef enum
-{
   eAppendTabs,
   eReplaceTabs,
   eReplaceFromCurrentTab
@@ -162,7 +154,7 @@ typedef enum  {
   BOOL mClosingWindow;
 
   BOOL mShouldAutosave;
-  BOOL mShouldLoadHomePage;
+  BOOL mSuppressInitialPageLoad;
 
   BOOL mWindowClosesQuietly;  // if YES, don't warn on multi-tab window close
   
@@ -273,8 +265,6 @@ typedef enum  {
 - (BOOL)bookmarkManagerIsVisible;
 - (BOOL)canHideBookmarks;
 - (BOOL)singleBookmarkIsSelected;
-
-- (void)createNewTab:(ENewTabContents)contents;
 
 - (IBAction)newTab:(id)sender;
 - (IBAction)closeCurrentTab:(id)sender;
