@@ -1206,7 +1206,7 @@ static BookmarkManager* gBookmarkManager = nil;
 
   if ([item isKindOfClass:[Bookmark class]]) {
     // update Spotlight metadata
-    if (changeFlags & kBookmarkItemSignificantChangeFlagsMask)
+    if (changeFlags & kBookmarkItemSpotlightMetadataChangeFlagsMask)
       [item writeBookmarksMetadataToPath:mMetadataPath];
 
     // and re-register in the maps if the url changed

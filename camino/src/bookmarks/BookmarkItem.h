@@ -57,6 +57,12 @@ enum
   // flags for bookmark folder changes
   kBookmarkItemChildrenChangedMask      = (1 << 9),
 
+  // mask of flags that require updating the spotlight metadata file
+  kBookmarkItemSpotlightMetadataChangeFlagsMask = kBookmarkItemTitleChangedMask |
+                                                  kBookmarkItemDescriptionChangedMask |
+                                                  kBookmarkItemShortcutChangedMask |
+                                                  kBookmarkItemURLChangedMask,
+
   // mask of flags that require a save of the bookmarks
   kBookmarkItemSignificantChangeFlagsMask = kBookmarkItemTitleChangedMask |
                                             kBookmarkItemDescriptionChangedMask |
