@@ -63,7 +63,7 @@
 #include "secport.h"
 #include "pcert.h"
 #include "secrng.h"
-#include "softkver.h"
+#include "nss.h"
 
 #include "keydbi.h" 
 
@@ -86,7 +86,6 @@ static char libraryDescription_space[33];
  * failure so that there are at most 60 login attempts per minute.
  */
 static PRIntervalTime loginWaitTime;
-static PRUint32       minSessionObjectHandle = 1U;
 
 #define __PASTE(x,y)    x##y
 
@@ -676,10 +675,6 @@ sftk_handleCertObject(SFTKSession *session,SFTKObject *object)
 	/* get the der cert */ 
 	attribute = sftk_FindAttribute(object,CKA_VALUE);
 	PORT_Assert(attribute);
-	if (!attribute) {
-	    sftk_freeCertDB(certHandle);
-	    return CKR_ATTRIBUTE_VALUE_INVALID;
-	}
 
 	derCert.type = 0;
 	derCert.data = (unsigned char *)attribute->attrib.pValue;
@@ -820,20 +815,18 @@ sftk_handleTrustObject(SFTKSession *session,SFTKObject *object)
 	}
 
 	issuer = sftk_FindAttribute(object,CKA_ISSUER);
+	PORT_Assert(issuer);
+	issuerSN.derIssuer.data = (unsigned char *)issuer->attrib.pValue;
+	issuerSN.derIssuer.len = issuer->attrib.ulValueLen ;
+
 	serial = sftk_FindAttribute(object,CKA_SERIAL_NUMBER);
+	PORT_Assert(serial);
+	issuerSN.serialNumber.data = (unsigned char *)serial->attrib.pValue;
+	issuerSN.serialNumber.len = serial->attrib.ulValueLen ;
 
-	PORT_Assert(issuer && serial);
-	if (issuer && serial) {
-	    issuerSN.derIssuer.data = (unsigned char *)issuer->attrib.pValue;
-	    issuerSN.derIssuer.len = issuer->attrib.ulValueLen ;
-
-	    issuerSN.serialNumber.data = (unsigned char *)serial->attrib.pValue;
-	    issuerSN.serialNumber.len = serial->attrib.ulValueLen ;
-
-	    cert = nsslowcert_FindCertByIssuerAndSN(certHandle,&issuerSN);
-	}
-	if (issuer) sftk_FreeAttribute(issuer);
-	if (serial) sftk_FreeAttribute(serial);
+	cert = nsslowcert_FindCertByIssuerAndSN(certHandle,&issuerSN);
+	sftk_FreeAttribute(serial);
+	sftk_FreeAttribute(issuer);
 
 	if (cert == NULL) {
 	    sftk_freeCertDB(certHandle);
@@ -936,19 +929,13 @@ sftk_handleSMimeObject(SFTKSession *session,SFTKObject *object)
 	SECItem *pRawProfile = NULL;
 	SECItem *pRawTime = NULL;
 	char *email = NULL;
-    	SFTKAttribute *subject = NULL,
-		     *profile = NULL,
-		     *time    = NULL;
+    	SFTKAttribute *subject,*profile,*time;
 	SECStatus rv;
 	NSSLOWCERTCertDBHandle *certHandle;
-	CK_RV ck_rv = CKR_OK;
 
 	PORT_Assert(slot);
-	if (slot == NULL) {
-	    return CKR_SESSION_HANDLE_INVALID;
-	}
-
 	certHandle = sftk_getCertDB(slot);
+
 	if (certHandle == NULL) {
 	    return CKR_TOKEN_WRITE_PROTECTED;
 	}
@@ -956,11 +943,6 @@ sftk_handleSMimeObject(SFTKSession *session,SFTKObject *object)
 	/* lookup SUBJECT */
 	subject = sftk_FindAttribute(object,CKA_SUBJECT);
 	PORT_Assert(subject);
-	if (!subject) {
-	    ck_rv = CKR_ATTRIBUTE_VALUE_INVALID;
-	    goto loser;
-	}
-
 	derSubj.data = (unsigned char *)subject->attrib.pValue;
 	derSubj.len = subject->attrib.ulValueLen ;
 	derSubj.type = 0;
@@ -985,31 +967,23 @@ sftk_handleSMimeObject(SFTKSession *session,SFTKObject *object)
 
 
 	email = sftk_getString(object,CKA_NETSCAPE_EMAIL);
-	if (!email) {
-	    ck_rv = CKR_ATTRIBUTE_VALUE_INVALID;
-	    goto loser;
-	}
 
 	/* Store CRL by SUBJECT */
 	rv = nsslowcert_SaveSMimeProfile(certHandle, email, &derSubj, 
 				pRawProfile,pRawTime);
+	sftk_freeCertDB(certHandle);
+    	sftk_FreeAttribute(subject);
+    	if (profile) sftk_FreeAttribute(profile);
+    	if (time) sftk_FreeAttribute(time);
 	if (rv != SECSuccess) {
-	    ck_rv = CKR_DEVICE_ERROR;
-	    goto loser;
+    	    PORT_Free(email);
+	    return CKR_DEVICE_ERROR;
 	}
 	emailKey.data = (unsigned char *)email;
 	emailKey.len = PORT_Strlen(email)+1;
 
 	object->handle = sftk_mkHandle(slot, &emailKey, SFTK_TOKEN_TYPE_SMIME);
-
-loser:
-	sftk_freeCertDB(certHandle);
-	if (subject) sftk_FreeAttribute(subject);
-	if (profile) sftk_FreeAttribute(profile);
-	if (time)    sftk_FreeAttribute(time);
-	if (email)   PORT_Free(email);
-
-	return ck_rv;
+    	PORT_Free(email);
     }
 
     return CKR_OK;
@@ -1054,11 +1028,6 @@ sftk_handleCrlObject(SFTKSession *session,SFTKObject *object)
 	/* lookup SUBJECT */
 	subject = sftk_FindAttribute(object,CKA_SUBJECT);
 	PORT_Assert(subject);
-	if (!subject) {
-	    sftk_freeCertDB(certHandle);
-	    return CKR_ATTRIBUTE_VALUE_INVALID;
-	}
-
 	derSubj.data = (unsigned char *)subject->attrib.pValue;
 	derSubj.len = subject->attrib.ulValueLen ;
 
@@ -1433,7 +1402,7 @@ fail:
     return CKR_OK;
 }
 
-/* forward declare the DES formating function for handleSecretKey */
+/* forward delcare the DES formating function for handleSecretKey */
 void sftk_FormatDESKey(unsigned char *key, int length);
 static NSSLOWKEYPrivateKey *sftk_mkSecretKeyRep(SFTKObject *object);
 
@@ -1818,11 +1787,9 @@ CK_RV
 sftk_handleObject(SFTKObject *object, SFTKSession *session)
 {
     SFTKSlot *slot = session->slot;
-    SFTKAttribute *attribute;
-    SFTKObject *duplicateObject = NULL;
-    CK_OBJECT_HANDLE handle;
     CK_BBOOL ckfalse = CK_FALSE;
     CK_BBOOL cktrue = CK_TRUE;
+    SFTKAttribute *attribute;
     CK_RV crv;
 
     /* make sure all the base object types are defined. If not set the
@@ -1848,37 +1815,11 @@ sftk_handleObject(SFTKObject *object, SFTKSession *session)
 	return CKR_SESSION_READ_ONLY;
     }
 	
-    /* Assign a unique SESSION object handle to every new object,
-     * whether it is a session object or a token object.  
-     * At this point, all new objects are structured as session objects.
-     * Objects with the CKA_TOKEN attribute true will be turned into 
-     * token objects and will have a token object handle assigned to 
-     * them by a call to sftk_mkHandle in the handler for each object 
-     * class, invoked below.
-     *
-     * It may be helpful to note/remember that 
-     * sftk_narrowToXxxObject uses sftk_isToken,
-     * sftk_isToken examines the sign bit of the object's handle, but
-     * sftk_isTrue(...,CKA_TOKEN) examines the CKA_TOKEN attribute.
-     */
-    do {
-	PRUint32 wrappedAround;
-
-	duplicateObject = NULL;
-	PZ_Lock(slot->objectLock);
-	wrappedAround = slot->sessionObjectHandleCount &  SFTK_TOKEN_MASK;
-	handle        = slot->sessionObjectHandleCount & ~SFTK_TOKEN_MASK;
-	if (!handle) /* don't allow zero handle */
-	    handle = minSessionObjectHandle;  
-	slot->sessionObjectHandleCount = (handle + 1U) | wrappedAround;
-	/* Is there already a session object with this handle? */
-	if (wrappedAround) {
-	    sftkqueue_find(duplicateObject, handle, slot->sessObjHashTable, \
-	                   slot->sessObjHashSize);
-	}
-	PZ_Unlock(slot->objectLock);
-    } while (duplicateObject != NULL);
-    object->handle = handle;
+    /* PKCS #11 object ID's are unique for all objects on a
+     * token */
+    PZ_Lock(slot->objectLock);
+    object->handle = slot->tokenIDCount++;
+    PZ_Unlock(slot->objectLock);
 
     /* get the object class */
     attribute = sftk_FindAttribute(object,CKA_CLASS);
@@ -1888,10 +1829,8 @@ sftk_handleObject(SFTKObject *object, SFTKSession *session)
     object->objclass = *(CK_OBJECT_CLASS *)attribute->attrib.pValue;
     sftk_FreeAttribute(attribute);
 
-    /* Now handle the specific object class. 
-     * At this point, all objects are session objects, and the session
-     * number must be passed to the object class handlers.
-     */
+    /* now handle the specific. Get a session handle for these functions
+     * to use */
     switch (object->objclass) {
     case CKO_DATA:
 	crv = sftk_handleDataObject(session,object);
@@ -1927,11 +1866,7 @@ sftk_handleObject(SFTKObject *object, SFTKSession *session)
 	return crv;
     }
 
-    /* Now link the object into the slot and session structures.
-     * If the object has a true CKA_TOKEN attribute, the above object
-     * class handlers will have set the sign bit in the object handle,
-     * causing the following test to be true.
-     */
+    /* now link the object into the slot and session structures */
     if (sftk_isToken(object->handle)) {
 	sftk_convertSessionToToken(object);
     } else {
@@ -2720,11 +2655,11 @@ SFTK_SlotInit(char *configdir,sftk_token_parameters *params, int moduleIndex)
 
     slot->optimizeSpace = params->optimizeSpace;
     if (slot->optimizeSpace) {
-	slot->sessObjHashSize = SPACE_SESSION_OBJECT_HASH_SIZE;
+	slot->tokObjHashSize = SPACE_TOKEN_OBJECT_HASH_SIZE;
 	slot->sessHashSize = SPACE_SESSION_HASH_SIZE;
 	slot->numSessionLocks = 1;
     } else {
-	slot->sessObjHashSize = TIME_SESSION_OBJECT_HASH_SIZE;
+	slot->tokObjHashSize = TIME_TOKEN_OBJECT_HASH_SIZE;
 	slot->sessHashSize = TIME_SESSION_HASH_SIZE;
 	slot->numSessionLocks = slot->sessHashSize/BUCKETS_PER_SESSION_LOCK;
     }
@@ -2750,16 +2685,16 @@ SFTK_SlotInit(char *configdir,sftk_token_parameters *params, int moduleIndex)
     slot->head = PORT_ZNewArray(SFTKSession *, slot->sessHashSize);
     if (slot->head == NULL) 
 	goto mem_loser;
-    slot->sessObjHashTable = PORT_ZNewArray(SFTKObject *, slot->sessObjHashSize);
-    if (slot->sessObjHashTable == NULL) 
+    slot->tokObjects = PORT_ZNewArray(SFTKObject *, slot->tokObjHashSize);
+    if (slot->tokObjects == NULL) 
 	goto mem_loser;
-    slot->tokObjHashTable = PL_NewHashTable(64,sftk_HashNumber,PL_CompareValues,
+    slot->tokenHashTable = PL_NewHashTable(64,sftk_HashNumber,PL_CompareValues,
 					SECITEM_HashCompare, NULL, 0);
-    if (slot->tokObjHashTable == NULL) 
+    if (slot->tokenHashTable == NULL) 
 	goto mem_loser;
 
     slot->sessionIDCount = 0;
-    slot->sessionObjectHandleCount = minSessionObjectHandle;
+    slot->tokenIDCount = 1;
     slot->slotID = slotID;
     sftk_setStringName(params->slotdes ? params->slotdes : 
 	      sftk_getDefSlotName(slotID), slot->slotDescription, 
@@ -2878,9 +2813,9 @@ SFTK_ShutdownSlot(SFTKSlot *slot)
 
     /* clear all objects.. session objects are cleared as a result of
      * closing all the sessions. We just need to clear the token object
-     * cache. slot->tokObjHashTable guarentees we have the token 
+     * cache. slot->tokenHashTable guarentees we have the token 
      * infrastructure set up. */
-    if (slot->tokObjHashTable) {
+    if (slot->tokenHashTable) {
 	SFTK_ClearTokenKeyHashTable(slot);
     }
 
@@ -2902,16 +2837,16 @@ SFTK_DestroySlotData(SFTKSlot *slot)
 
     SFTK_ShutdownSlot(slot);
 
-    if (slot->tokObjHashTable) {
-	PL_HashTableDestroy(slot->tokObjHashTable);
-	slot->tokObjHashTable = NULL;
+    if (slot->tokenHashTable) {
+	PL_HashTableDestroy(slot->tokenHashTable);
+	slot->tokenHashTable = NULL;
     }
 
-    if (slot->sessObjHashTable) {
-	PORT_Free(slot->sessObjHashTable);
-	slot->sessObjHashTable = NULL;
+    if (slot->tokObjects) {
+	PORT_Free(slot->tokObjects);
+	slot->tokObjects = NULL;
     }
-    slot->sessObjHashSize = 0;
+    slot->tokObjHashSize = 0;
 
     if (slot->head) {
 	PORT_Free(slot->head);
@@ -2921,8 +2856,10 @@ SFTK_DestroySlotData(SFTKSlot *slot)
 
     /* OK everything has been disassembled, now we can finally get rid
      * of the locks */
-    PZ_DestroyLock(slot->slotLock);
-    slot->slotLock = NULL;
+    if (slot->slotLock) {
+	PZ_DestroyLock(slot->slotLock);
+	slot->slotLock = NULL;
+    }
     if (slot->sessionLock) {
 	for (i=0; i < slot->numSessionLocks; i++) {
 	    if (slot->sessionLock[i]) {
@@ -3223,8 +3160,8 @@ CK_RV  NSC_GetInfo(CK_INFO_PTR pInfo)
     pInfo->cryptokiVersion.major = 2;
     pInfo->cryptokiVersion.minor = 20;
     PORT_Memcpy(pInfo->manufacturerID,manufacturerID,32);
-    pInfo->libraryVersion.major = SOFTOKEN_VMAJOR;
-    pInfo->libraryVersion.minor = SOFTOKEN_VMINOR;
+    pInfo->libraryVersion.major = NSS_VMAJOR;
+    pInfo->libraryVersion.minor = NSS_VMINOR;
     PORT_Memcpy(pInfo->libraryDescription,libraryDescription,32);
     pInfo->flags = 0;
     return CKR_OK;
@@ -3269,8 +3206,8 @@ CK_RV NSC_GetSlotInfo(CK_SLOT_ID slotID, CK_SLOT_INFO_PTR pInfo)
     }
     /* ok we really should read it out of the keydb file. */
     /* pInfo->hardwareVersion.major = NSSLOWKEY_DB_FILE_VERSION; */
-    pInfo->hardwareVersion.major = SOFTOKEN_VMAJOR;
-    pInfo->hardwareVersion.minor = SOFTOKEN_VMINOR;
+    pInfo->hardwareVersion.major = NSS_VMAJOR;
+    pInfo->hardwareVersion.minor = NSS_VMINOR;
     return CKR_OK;
 }
 
@@ -3502,15 +3439,15 @@ CK_RV NSC_InitToken(CK_SLOT_ID slotID,CK_CHAR_PTR pPin,
     /* first, delete all our loaded key and cert objects from our 
      * internal list. */
     PZ_Lock(slot->objectLock);
-    for (i=0; i < slot->sessObjHashSize; i++) {
+    for (i=0; i < slot->tokObjHashSize; i++) {
 	do {
-	    object = slot->sessObjHashTable[i];
+	    object = slot->tokObjects[i];
 	    /* hand deque */
 	    /* this duplicates function of NSC_close session functions, but 
 	     * because we know that we are freeing all the sessions, we can
 	     * do more efficient processing */
 	    if (object) {
-		slot->sessObjHashTable[i] = object->next;
+		slot->tokObjects[i] = object->next;
 
 		if (object->next) object->next->prev = NULL;
 		object->next = object->prev = NULL;
@@ -3866,9 +3803,6 @@ CK_RV NSC_Login(CK_SESSION_HANDLE hSession, CK_USER_TYPE userType,
 
     /* get the slot */
     slot = sftk_SlotFromSessionHandle(hSession);
-    if (slot == NULL) {
-	return CKR_SESSION_HANDLE_INVALID;
-    }
 
     /* make sure the session is valid */
     session = sftk_SessionFromHandle(hSession);
@@ -3983,9 +3917,6 @@ CK_RV NSC_Logout(CK_SESSION_HANDLE hSession)
     SFTKSession *session;
     SECItem *pw = NULL;
 
-    if (slot == NULL) {
-	return CKR_SESSION_HANDLE_INVALID;
-    }
     session = sftk_SessionFromHandle(hSession);
     if (session == NULL) return CKR_SESSION_HANDLE_INVALID;
     sftk_FreeSession(session);
@@ -4114,9 +4045,6 @@ CK_RV NSC_CreateObject(CK_SESSION_HANDLE hSession,
 
     *phObject = CK_INVALID_HANDLE;
 
-    if (slot == NULL) {
-	return CKR_SESSION_HANDLE_INVALID;
-    }
     /*
      * now lets create an object to hang the attributes off of
      */
@@ -4179,9 +4107,6 @@ CK_RV NSC_CopyObject(CK_SESSION_HANDLE hSession,
     SFTKSlot *slot = sftk_SlotFromSessionHandle(hSession);
     int i;
 
-    if (slot == NULL) {
-	return CKR_SESSION_HANDLE_INVALID;
-    }
     /* Get srcObject so we can find the class */
     session = sftk_SessionFromHandle(hSession);
     if (session == NULL) {
@@ -4274,9 +4199,6 @@ CK_RV NSC_GetAttributeValue(CK_SESSION_HANDLE hSession,
     CK_RV crv;
     int i;
 
-    if (slot == NULL) {
-	return CKR_SESSION_HANDLE_INVALID;
-    }
     /*
      * make sure we're allowed
      */
@@ -4337,9 +4259,6 @@ CK_RV NSC_SetAttributeValue (CK_SESSION_HANDLE hSession,
     CK_BBOOL legal;
     int i;
 
-    if (slot == NULL) {
-	return CKR_SESSION_HANDLE_INVALID;
-    }
     /*
      * make sure we're allowed
      */
@@ -5166,9 +5085,6 @@ CK_RV NSC_FindObjectsInit(CK_SESSION_HANDLE hSession,
     CK_RV crv = CKR_OK;
     PRBool isLoggedIn;
     
-    if (slot == NULL) {
-	return CKR_SESSION_HANDLE_INVALID;
-    }
     session = sftk_SessionFromHandle(hSession);
     if (session == NULL) {
 	crv = CKR_SESSION_HANDLE_INVALID;
@@ -5199,9 +5115,9 @@ CK_RV NSC_FindObjectsInit(CK_SESSION_HANDLE hSession,
     
     /* build list of found objects in the session */
     if (!tokenOnly) {
-	crv = sftk_searchObjectList(search, slot->sessObjHashTable, 
-				    slot->sessObjHashSize, slot->objectLock, 
-				    pTemplate, ulCount, isLoggedIn);
+	crv = sftk_searchObjectList(search, slot->tokObjects, 
+				slot->tokObjHashSize, slot->objectLock, 
+					pTemplate, ulCount, isLoggedIn);
     }
     if (crv != CKR_OK) {
 	goto loser;

@@ -53,9 +53,9 @@ static char copyright[] = "@(#) Copyright (c) 1995 Regents of the University of 
 static LDAPConn *find_connection( LDAP *ld, LDAPServer *srv, int any );
 static void free_servers( LDAPServer *srvlist );
 static int chase_one_referral( LDAP *ld, LDAPRequest *lr, LDAPRequest *origreq,
-    char *refurl, char *desc, int *unknownp, int is_reference );
+    char *refurl, char *desc, int *unknownp );
 static int re_encode_request( LDAP *ld, BerElement *origber,
-    int msgid, LDAPURLDesc *ludp, BerElement **berp, int is_reference );
+    int msgid, LDAPURLDesc *ludp, BerElement **berp );
 
 #ifdef LDAP_DNS
 static LDAPServer *dn2servers( LDAP *ld, char *dn );
@@ -164,14 +164,7 @@ nsldapi_send_server_request(
 {
 	LDAPRequest	*lr;
 	int		err;
-	int		incparent; /* did we bump parent's ref count? */
-	/* EPIPE and Unsolicited Response handling variables */
-	int				res_rc     = 0;
-	int				epipe_err  = 0;
-	int				ext_res_rc = 0;
-	char			*ext_oid   = NULL;
-	struct berval	*ext_data  = NULL;
-	LDAPMessage		*ext_res   = NULL;
+	int		incparent;	/* did we bump parent's ref count? */
 
 	LDAPDebug( LDAP_DEBUG_TRACE, "nsldapi_send_server_request\n", 0, 0, 0 );
 
@@ -217,12 +210,12 @@ nsldapi_send_server_request(
 
 
 	/*
-     * return a fatal error if:
-     * 1. no connections exists
+         * return a fatal error if:
+         * 1. no connections exists
 	 * or 
-     * 2. the connection is dead
+         * 2. the connection is dead
 	 * or 
-     * 3. it is not in the connected state with normal (non async) I/O
+         * 3. it is not in the connected state with normal (non async) I/O
 	 */
 	if (   lc == NULL
                     || ( lc->lconn_status == LDAP_CONNST_DEAD )
@@ -300,18 +293,18 @@ nsldapi_send_server_request(
 		lc->lconn_status = LDAP_CONNST_CONNECTED;
 
 		LDAPDebug( LDAP_DEBUG_TRACE,
-		    "nsldapi_send_server_request: connection 0x%p -"
+		    "nsldapi_send_server_request: connection 0x%x -"
 		    " LDAP_CONNST_CONNECTING -> LDAP_CONNST_CONNECTED\n",
 		    lc, 0, 0 );
 	}
 
-    if ( lc->lconn_status == LDAP_CONNST_CONNECTING ||
+        if ( lc->lconn_status == LDAP_CONNST_CONNECTING ||
                         lc->lconn_pending_requests > 0 ) {
-       /*
-        * The connect is not yet complete, or there are existing
-        * requests that have not yet been sent to the server.
-        * Delay sending this request.
-        */
+                /*
+                 * The connect is not yet complete, or there are existing
+                 * requests that have not yet been sent to the server.
+                 * Delay sending this request.
+                 */
 		lr->lr_status = LDAP_REQST_WRITING;
                 ++lc->lconn_pending_requests;
 		nsldapi_iostatus_interest_write( ld, lc->lconn_sb );
@@ -338,102 +331,39 @@ nsldapi_send_server_request(
 
 	    } else {
 		    if (( err = nsldapi_send_ber_message( ld, lc->lconn_sb,
-				    ber, 0 /* do not free ber */, 
-				    1 /* will handle EPIPE */ )) != 0 ) {
-				    
-				epipe_err = LDAP_GET_ERRNO( ld );
-				if ( epipe_err == EPIPE ) {
-					res_rc = nsldapi_result_nolock(ld, LDAP_RES_UNSOLICITED, 1, 
-									1, (struct timeval *) NULL, &ext_res);
-					if ( ( res_rc == LDAP_RES_EXTENDED ) && ext_res ) {
-						ext_res_rc = ldap_parse_extended_result( ld, ext_res, 
-										&ext_oid, &ext_data, 0 );
-						if ( ext_res_rc != LDAP_SUCCESS ) {
-							if ( ext_res ) {
-								ldap_msgfree( ext_res );
-							}					
-							nsldapi_connection_lost_nolock( ld, lc->lconn_sb );
-						} else {
-#ifdef LDAP_DEBUG
-	LDAPDebug( LDAP_DEBUG_TRACE, 
-			   "nsldapi_send_server_request: Unsolicited response\n", 0, 0, 0 );
-	if ( ext_oid ) {
-		LDAPDebug( LDAP_DEBUG_TRACE, 
-				"nsldapi_send_server_request: Unsolicited response oid: %s\n", 
-				   ext_oid, 0, 0 );
-	}
-	if ( ext_data && ext_data->bv_len && ext_data->bv_val ) {
-		LDAPDebug( LDAP_DEBUG_TRACE, 
-				"nsldapi_send_server_request: Unsolicited response len: %d\n", 
-				   ext_data->bv_len, 0, 0 );
-		LDAPDebug( LDAP_DEBUG_TRACE, 
-				"nsldapi_send_server_request: Unsolicited response val: %s\n", 
-				   ext_data->bv_val, 0, 0 );
-	}
-	if ( !ext_oid && !ext_data ) { 					
-		LDAPDebug( LDAP_DEBUG_TRACE, 
-				"nsldapi_send_server_request: Unsolicited response is empty\n", 
-				   0, 0, 0 );
-	}
-#endif /* LDAP_DEBUG */
-							if ( ext_oid ) {
-								if ( strcmp ( ext_oid, 
-										LDAP_NOTICE_OF_DISCONNECTION ) == 0 ) {
-									if ( ext_data ) {
-										ber_bvfree( ext_data );
-									}
-									if ( ext_oid ) {
-										ldap_memfree( ext_oid );
-									}
-									if ( ext_res ) {
-										ldap_msgfree( ext_res );
-									}
-									nsldapi_connection_lost_nolock( ld, 
-														lc->lconn_sb );
-									nsldapi_free_request( ld, lr, 0 );
-									nsldapi_free_connection( ld, lc, 
-													NULL, NULL, 0, 0 );
-									LDAP_MUTEX_UNLOCK( ld, LDAP_REQ_LOCK );
-									LDAP_MUTEX_UNLOCK( ld, LDAP_CONN_LOCK );
-									return( -1 );					
-								}
-							}
-						}
-					} else {
-						if ( ext_res ) {
-							ldap_msgfree( ext_res );
-						}				
-						nsldapi_connection_lost_nolock( ld, lc->lconn_sb );
-					}
-				}
+				    ber, 0 /* do not free ber */ )) != 0 ) {
 
-                /* need to continue write later */
-                if (err == -2 ) {       
-                   	lr->lr_status = LDAP_REQST_WRITING;
-                   	++lc->lconn_pending_requests;
-                   	nsldapi_iostatus_interest_write( ld, lc->lconn_sb );
-                } else {
-					LDAP_SET_LDERRNO( ld, LDAP_SERVER_DOWN, NULL, NULL );
-					nsldapi_free_request( ld, lr, 0 );
-                    nsldapi_free_connection( ld, lc, NULL, NULL, 0, 0 );
-					LDAP_MUTEX_UNLOCK( ld, LDAP_REQ_LOCK );
-					LDAP_MUTEX_UNLOCK( ld, LDAP_CONN_LOCK );
-					return( -1 );
-				}
+                        /* need to continue write later */
+                        if (err == -2 ) {       
+                                lr->lr_status = LDAP_REQST_WRITING;
+                                ++lc->lconn_pending_requests;
+                                nsldapi_iostatus_interest_write( ld,
+                                            lc->lconn_sb );
+                        } else {
 
-			} else {
-				if ( parentreq == NULL ) {
-					ber->ber_end = ber->ber_ptr;
-					ber->ber_ptr = ber->ber_buf;
-				}
-
-				/* sent -- waiting for a response */
-				if (ld->ld_options & LDAP_BITOPT_ASYNC) {
-					lc->lconn_status = LDAP_CONNST_CONNECTED;
-				}
-
-				nsldapi_iostatus_interest_read( ld, lc->lconn_sb );
+                                LDAP_SET_LDERRNO( ld, LDAP_SERVER_DOWN,
+                                        NULL, NULL );
+				nsldapi_free_request( ld, lr, 0 );
+                                nsldapi_free_connection( ld, lc, NULL, NULL,
+                                        0, 0 );
+				LDAP_MUTEX_UNLOCK( ld, LDAP_REQ_LOCK );
+				LDAP_MUTEX_UNLOCK( ld, LDAP_CONN_LOCK );
+				return( -1 );
 			}
+
+		} else {
+			if ( parentreq == NULL ) {
+				ber->ber_end = ber->ber_ptr;
+				ber->ber_ptr = ber->ber_buf;
+			}
+
+			/* sent -- waiting for a response */
+			if (ld->ld_options & LDAP_BITOPT_ASYNC) {
+				lc->lconn_status = LDAP_CONNST_CONNECTED;
+			}
+
+			nsldapi_iostatus_interest_read( ld, lc->lconn_sb );
+		}
 	}
 	LDAP_MUTEX_UNLOCK( ld, LDAP_REQ_LOCK );
 	LDAP_MUTEX_UNLOCK( ld, LDAP_CONN_LOCK );
@@ -446,9 +376,6 @@ nsldapi_send_server_request(
 /*
  * nsldapi_send_ber_message(): Attempt to send a BER-encoded message.
  * If freeit is non-zero, ber is freed when the send succeeds.
- * If errno is EPIPE and epipe_handler is set we let the caller
- * deal with EPIPE and dont call lost_nolock here but the caller 
- * should call lost_nolock itself when done with handling EPIPE.
  *
  * Return values:
  *    0: message sent successfully.
@@ -456,8 +383,7 @@ nsldapi_send_server_request(
  *   -2: async. I/O is enabled and the send would block.
  */
 int
-nsldapi_send_ber_message( LDAP *ld, Sockbuf *sb, BerElement *ber, int freeit,
-		int epipe_handler )
+nsldapi_send_ber_message( LDAP *ld, Sockbuf *sb, BerElement *ber, int freeit )
 {
 	int	rc = 0;	/* optimistic */
 	int	async = ( 0 != (ld->ld_options & LDAP_BITOPT_ASYNC));
@@ -480,14 +406,12 @@ nsldapi_send_ber_message( LDAP *ld, Sockbuf *sb, BerElement *ber, int freeit,
 					break;
 				}
 			} else {
-				if ( !(epipe_handler && ( terrno == EPIPE )) ) {
-					nsldapi_connection_lost_nolock( ld, sb );
-				}
+				nsldapi_connection_lost_nolock( ld, sb );
 				rc = -1;	/* fatal error */
 				break;
 			}
 		}
-    }
+        }
 
 	return( rc );
 }
@@ -525,11 +449,10 @@ nsldapi_send_pending_requests_nolock( LDAP *ld, LDAPConn *lc )
 		if ( lr->lr_status == LDAP_REQST_WRITING
 		    && lr->lr_conn == lc ) {
 			err = nsldapi_send_ber_message( ld, lc->lconn_sb,
-			    lr->lr_ber, 0 /* do not free ber */, 
-			    0 /* will not handle EPIPE */ );
+			    lr->lr_ber, 0 /* do not free ber */ );
 			if ( err == 0 ) {		/* send succeeded */
 				LDAPDebug( LDAP_DEBUG_TRACE,
-				    "%s: 0x%p SENT\n", logname, lr, 0 );
+				    "%s: 0x%x SENT\n", logname, lr, 0 );
 				lr->lr_ber->ber_end = lr->lr_ber->ber_ptr;
 				lr->lr_ber->ber_ptr = lr->lr_ber->ber_buf;
 				lr->lr_status = LDAP_REQST_INPROGRESS;
@@ -537,11 +460,11 @@ nsldapi_send_pending_requests_nolock( LDAP *ld, LDAPConn *lc )
 			} else if ( err == -2 ) {	/* would block */
 				rc = 0; /* not an error */
 				LDAPDebug( LDAP_DEBUG_TRACE,
-				    "%s: 0x%p WOULD BLOCK\n", logname, lr, 0 );
+				    "%s: 0x%x WOULD BLOCK\n", logname, lr, 0 );
 				break;
 			} else {			/* fatal error */
 				LDAPDebug( LDAP_DEBUG_TRACE,
-				    "%s: 0x%p FATAL ERROR\n", logname, lr, 0 );
+				    "%s: 0x%x FATAL ERROR\n", logname, lr, 0 );
 				LDAP_SET_LDERRNO( ld, LDAP_SERVER_DOWN,
 				    NULL, NULL );
 				nsldapi_free_request( ld, lr, 0 );
@@ -559,7 +482,7 @@ nsldapi_send_pending_requests_nolock( LDAP *ld, LDAPConn *lc )
 				++waiting_for_a_response;
 			} else {
 				LDAPDebug( LDAP_DEBUG_TRACE,
-				    "%s: 0x%p NO RESPONSE EXPECTED;"
+				    "%s: 0x%x NO RESPONSE EXPECTED;"
 				    " freeing request \n", logname, lr, 0 );
 				nsldapi_free_request( ld, lr, 0 );
 				lr = NULL;
@@ -838,12 +761,6 @@ nsldapi_free_connection( LDAP *ld, LDAPConn *lc, LDAPControl **serverctrls,
 		if ( lc->lconn_binddn != NULL ) {
 			NSLDAPI_FREE( lc->lconn_binddn );
 		}
-#ifdef LDAP_SASLIO_HOOKS
-		if ( lc->lconn_sasl_ctx ) { /* the sasl connection context */
-			sasl_dispose(&lc->lconn_sasl_ctx);
-			lc->lconn_sasl_ctx = NULL;
-		}
-#endif /* LDAP_SASLIO_HOOKS */
 		NSLDAPI_FREE( lc );
 		LDAPDebug( LDAP_DEBUG_TRACE, "nsldapi_free_connection: actually freed\n",
 		    0, 0, 0 );
@@ -870,7 +787,7 @@ nsldapi_dump_connection( LDAP *ld, LDAPConn *lconns, int all )
 	ber_err_print( msg );
 	for ( lc = lconns; lc != NULL; lc = lc->lconn_next ) {
 		if ( lc->lconn_server != NULL ) {
-                        sprintf( msg, "* 0x%p - host: %s  port: %d  secure: %s%s\n",
+                        sprintf( msg, "* 0x%x - host: %s  port: %d  secure: %s%s\n",
                                 lc, ( lc->lconn_server->lsrv_host == NULL ) ? "(null)"
 			    : lc->lconn_server->lsrv_host,
 			    lc->lconn_server->lsrv_port,
@@ -917,7 +834,7 @@ nsldapi_dump_requests_and_responses( LDAP *ld )
 		ber_err_print( "   Empty\n" );
 	}
 	for ( ; lr != NULL; lr = lr->lr_next ) {
-            sprintf( msg, " * 0x%p - msgid %d,  origid %d, status %s\n",
+            sprintf( msg, " * 0x%x - msgid %d,  origid %d, status %s\n",
                 lr, lr->lr_msgid, lr->lr_origid, ( lr->lr_status ==
 		LDAP_REQST_INPROGRESS ) ? "InProgress" :
 		( lr->lr_status == LDAP_REQST_CHASINGREFS ) ? "ChasingRefs" :
@@ -940,14 +857,14 @@ nsldapi_dump_requests_and_responses( LDAP *ld )
 		ber_err_print( "   Empty\n" );
 	}
 	for ( ; lm != NULLMSG; lm = lm->lm_next ) {
-                sprintf( msg, " * 0x%p - msgid %d,  type %d\n",
+                sprintf( msg, " * 0x%x - msgid %d,  type %d\n",
                     lm, lm->lm_msgid, lm->lm_msgtype );
 		ber_err_print( msg );
 		if (( l = lm->lm_chain ) != NULL ) {
 			ber_err_print( "   chained responses:\n" );
 			for ( ; l != NULLMSG; l = l->lm_chain ) {
 				sprintf( msg,
-                                    "  * 0x%p - msgid %d,  type %d\n",
+                                    "  * 0x%x - msgid %d,  type %d\n",
                                     l, l->lm_msgid, l->lm_msgtype );
 				ber_err_print( msg );
 			}
@@ -989,7 +906,7 @@ nsldapi_free_request( LDAP *ld, LDAPRequest *lr, int free_conn )
 	LDAPRequest	*tmplr, *nextlr;
 
 	LDAPDebug( LDAP_DEBUG_TRACE,
-		"nsldapi_free_request 0x%p (origid %d, msgid %d)\n",
+		"nsldapi_free_request 0x%x (origid %d, msgid %d)\n",
 		lr, lr->lr_origid, lr->lr_msgid );
 
 	if ( lr->lr_parent != NULL ) {
@@ -1150,7 +1067,7 @@ nsldapi_chase_v2_referrals( LDAP *ld, LDAPRequest *lr, char **errstrp,
 		++*totalcountp;
 
 		rc = chase_one_referral( ld, lr, origreq, ref, "v2 referral",
-		    &unknown, 0 /* not a reference */ );
+		    &unknown );
 
 		if ( rc != LDAP_SUCCESS || unknown ) {
 			if (( tmprc = nsldapi_append_referral( ld, &unfollowed,
@@ -1207,8 +1124,7 @@ nsldapi_chase_v3_refs( LDAP *ld, LDAPRequest *lr, char **v3refs,
 	 */
 	for ( i = 0; v3refs[i] != NULL; ++i ) {
 		rc = chase_one_referral( ld, lr, origreq, v3refs[i],
-		    is_reference ? "v3 reference" : "v3 referral", &unknown,
-		    is_reference );
+		    is_reference ? "v3 reference" : "v3 referral", &unknown );
 		if ( rc == LDAP_SUCCESS && !unknown ) {
 			*chasingcountp = 1;
 			break;
@@ -1230,7 +1146,7 @@ nsldapi_chase_v3_refs( LDAP *ld, LDAPRequest *lr, char **v3refs,
  */
 static int
 chase_one_referral( LDAP *ld, LDAPRequest *lr, LDAPRequest *origreq,
-    char *refurl, char *desc, int *unknownp, int is_reference )
+    char *refurl, char *desc, int *unknownp )
 {
 	int		rc, tmprc, secure, msgid;
 	LDAPServer	*srv;
@@ -1267,7 +1183,7 @@ chase_one_referral( LDAP *ld, LDAPRequest *lr, LDAPRequest *origreq,
 	LDAP_MUTEX_UNLOCK( ld, LDAP_MSGID_LOCK );
 
 	if (( tmprc = re_encode_request( ld, origreq->lr_ber, msgid,
-	    ludp, &ber, is_reference )) != LDAP_SUCCESS ) {
+	    ludp, &ber )) != LDAP_SUCCESS ) {
 		rc = tmprc;
 		goto cleanup_and_return;
 	}
@@ -1381,20 +1297,17 @@ nsldapi_append_referral( LDAP *ld, char **referralsp, char *s )
 /* returns an LDAP error code */
 static int
 re_encode_request( LDAP *ld, BerElement *origber, int msgid, LDAPURLDesc *ludp,
-    BerElement **berp, int is_reference )
+    BerElement **berp )
 {
 /*
  * XXX this routine knows way too much about how the lber library works!
  */
-	ber_int_t origmsgid;
-	ber_tag_t tag;
-	ber_int_t ver;
+	unsigned long		along, tag;
+	long			ver;
 	int			rc;
 	BerElement		*ber;
 	struct berelement	tmpber;
 	char			*dn, *orig_dn;
-	/* extra stuff for search request */
-	ber_int_t scope = -1;
 
 	LDAPDebug( LDAP_DEBUG_TRACE,
 	    "re_encode_request: new msgid %d, new dn <%s>\n",
@@ -1410,23 +1323,17 @@ re_encode_request( LDAP *ld, BerElement *origber, int msgid, LDAPURLDesc *ludp,
 	 */
 
 	/* skip past msgid and get operation tag */
-	if ( ber_scanf( &tmpber, "{it", &origmsgid, &tag ) == LBER_ERROR ) {
+	if ( ber_scanf( &tmpber, "{it", &along, &tag ) == LBER_ERROR ) {
 		return( LDAP_DECODING_ERROR );
 	}
 
 	/*
-	 * XXXmcs: we don't support filters in search referrals yet,
-	 * so if present we return an error which is probably
+	 * XXXmcs: we don't support scope or filters in search referrals yet,
+	 * so if either were present we return an error which is probably
 	 * better than just ignoring the extra info.
-	 * XXXrichm: we now support scopes.  Supporting filters would require
-	 * a lot more additional work to be able to read the filter from
-	 * the ber original search request, convert to string, etc.  It might
-	 * be better and easier to change nsldapi_build_search_req to have
-	 * some special mode by which you could tell it to skip filter and
-	 * attrlist encoding if no filter was given - then we could just
-	 * create a new ber search request with our new filter if present.
 	 */
-	if ( ( tag == LDAP_REQ_SEARCH ) && ( ludp->lud_filter != NULL )) {
+	if ( tag == LDAP_REQ_SEARCH &&
+	    ( ludp->lud_scope != -1 || ludp->lud_filter != NULL )) {
 		return( LDAP_LOCAL_ERROR );
 	}
 
@@ -1436,58 +1343,38 @@ re_encode_request( LDAP *ld, BerElement *origber, int msgid, LDAPURLDesc *ludp,
 	} else if ( tag == LDAP_REQ_DELETE ) {
 		/* delete requests DNs are not within a sequence */
 		rc = ber_scanf( &tmpber, "a", &orig_dn );
-	} else if ( tag == LDAP_REQ_SEARCH ) {
-	    /* need scope */
-	    rc = ber_scanf( &tmpber, "{ae", &orig_dn, &scope );
 	} else {
-	    rc = ber_scanf( &tmpber, "{a", &orig_dn );
+		rc = ber_scanf( &tmpber, "{a", &orig_dn );
 	}
 
 	if ( rc == LBER_ERROR ) {
-	    return( LDAP_DECODING_ERROR );
+		return( LDAP_DECODING_ERROR );
 	}
 
 	if ( ludp->lud_dn == NULL ) {
-	    dn = orig_dn;
+		dn = orig_dn;
 	} else {
-	    dn = ludp->lud_dn;
-	    NSLDAPI_FREE( orig_dn );
-	    orig_dn = NULL;
-	}
-
-	if ( ludp->lud_scope != -1 ) {
-	    scope = ludp->lud_scope; /* scope provided by ref - use it */
-	} else if (is_reference) {
-	    /* 
-	     * RFC 4511 says that the we should use scope BASE in the
-	     * search reference if the client's original request was for scope
-	     * ONELEVEL - since the server did not include the scope in the 
-	     * search reference returned, we must provide the correct behavior
-	     * in the client (i.e. the correct behavior is implied)
-	     * see RFC 4511 section 4.5.3 for more information
-	     */
-	    if (scope == LDAP_SCOPE_ONELEVEL) {
-		scope = LDAP_SCOPE_BASE;
-	    }
+		dn = ludp->lud_dn;
+		NSLDAPI_FREE( orig_dn );
+		orig_dn = NULL;
 	}
 
 	/* allocate and build the new request */
-	if (( rc = nsldapi_alloc_ber_with_options( ld, &ber ))
+        if (( rc = nsldapi_alloc_ber_with_options( ld, &ber ))
 	    != LDAP_SUCCESS ) {
 		if ( orig_dn != NULL ) {
 			NSLDAPI_FREE( orig_dn );
 		}
-		return( rc );
-	}
+                return( rc );
+        }
 
 	if ( tag == LDAP_REQ_BIND ) {
-		rc = ber_printf( ber, "{it{is", msgid, tag, ver , dn );
+		rc = ber_printf( ber, "{it{is", msgid, tag,
+		    (int)ver /* XXX lossy cast */, dn );
 	} else if ( tag == LDAP_REQ_DELETE ) {
-	    rc = ber_printf( ber, "{its}", msgid, tag, dn );
-	} else if ( tag == LDAP_REQ_SEARCH ) {
-	    rc = ber_printf( ber, "{it{se", msgid, tag, dn, scope );
+		rc = ber_printf( ber, "{its}", msgid, tag, dn );
 	} else {
-	    rc = ber_printf( ber, "{it{s", msgid, tag, dn );
+		rc = ber_printf( ber, "{it{s", msgid, tag, dn );
 	}
 
 	if ( orig_dn != NULL ) {
