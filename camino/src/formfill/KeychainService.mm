@@ -116,6 +116,7 @@ static NSWindow* GetNSWindow(nsIDOMWindow* inWindow);
 
 @implementation KeychainService
 
+static BOOL sAlreadyDestroyed = NO;
 static KeychainService *sInstance = nil;
 static const char* const gUseKeychainPref = "chimera.store_passwords_with_keychain";
 
@@ -139,6 +140,8 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
 
 + (KeychainService*)instance
 {
+  if (sAlreadyDestroyed)
+    return nil;
   return sInstance ? sInstance : sInstance = [[self alloc] init];
 }
 
@@ -214,6 +217,7 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
     pref->UnregisterCallback(gUseKeychainPref, KeychainPrefChangedCallback, nsnull);
   
   [sInstance release];
+  sAlreadyDestroyed = YES;
 }
 
 
