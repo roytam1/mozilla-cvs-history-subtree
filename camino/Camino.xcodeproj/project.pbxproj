@@ -1113,10 +1113,8 @@
 		DE4044870ED09D1E00057E17 /* global_locale_appstrings_properties.strings in Resources */ = {isa = PBXBuildFile; fileRef = DE4044360ED09D1E00057E17 /* global_locale_appstrings_properties.strings */; };
 		DE4044880ED09D1E00057E17 /* global-platform_locale_intl_properties.strings in Resources */ = {isa = PBXBuildFile; fileRef = DE4044380ED09D1E00057E17 /* global-platform_locale_intl_properties.strings */; };
 		DE40448D0ED09D1E00057E17 /* global_locale_xslt_xslt_properties.strings in Resources */ = {isa = PBXBuildFile; fileRef = DE4044420ED09D1E00057E17 /* global_locale_xslt_xslt_properties.strings */; };
-		DE579FFE0D43FB790057C437 /* BloglinesFeedHandler.app in Copy Feed Handlers */ = {isa = PBXBuildFile; fileRef = DE579FFB0D43FB790057C437 /* BloglinesFeedHandler.app */; };
 		DE579FFF0D43FB790057C437 /* GoogleFeedHandler.app in Copy Feed Handlers */ = {isa = PBXBuildFile; fileRef = DE579FFC0D43FB790057C437 /* GoogleFeedHandler.app */; };
 		DE57A0000D43FB790057C437 /* MyYahooFeedHandler.app in Copy Feed Handlers */ = {isa = PBXBuildFile; fileRef = DE579FFD0D43FB790057C437 /* MyYahooFeedHandler.app */; };
-		DE57A0010D43FB790057C437 /* BloglinesFeedHandler.app in Copy Feed Handlers */ = {isa = PBXBuildFile; fileRef = DE579FFB0D43FB790057C437 /* BloglinesFeedHandler.app */; };
 		DE57A0020D43FB790057C437 /* GoogleFeedHandler.app in Copy Feed Handlers */ = {isa = PBXBuildFile; fileRef = DE579FFC0D43FB790057C437 /* GoogleFeedHandler.app */; };
 		DE57A0030D43FB790057C437 /* MyYahooFeedHandler.app in Copy Feed Handlers */ = {isa = PBXBuildFile; fileRef = DE579FFD0D43FB790057C437 /* MyYahooFeedHandler.app */; };
 		DE62E4300B72B3D200142851 /* libauth.dylib in Copy Component Libraries */ = {isa = PBXBuildFile; fileRef = DE62E42F0B72B3D200142851 /* libauth.dylib */; };
@@ -1783,7 +1781,6 @@
 			dstPath = FeedHandlers;
 			dstSubfolderSpec = 7;
 			files = (
-				DE579FFE0D43FB790057C437 /* BloglinesFeedHandler.app in Copy Feed Handlers */,
 				DE579FFF0D43FB790057C437 /* GoogleFeedHandler.app in Copy Feed Handlers */,
 				DE57A0000D43FB790057C437 /* MyYahooFeedHandler.app in Copy Feed Handlers */,
 			);
@@ -1796,7 +1793,6 @@
 			dstPath = FeedHandlers;
 			dstSubfolderSpec = 7;
 			files = (
-				DE57A0010D43FB790057C437 /* BloglinesFeedHandler.app in Copy Feed Handlers */,
 				DE57A0020D43FB790057C437 /* GoogleFeedHandler.app in Copy Feed Handlers */,
 				DE57A0030D43FB790057C437 /* MyYahooFeedHandler.app in Copy Feed Handlers */,
 			);
@@ -2957,7 +2953,6 @@
 		DE4044370ED09D1E00057E17 /* English */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = English; path = generated/resources/localized/English.lproj/global_locale_appstrings_properties.strings; sourceTree = "<group>"; };
 		DE4044390ED09D1E00057E17 /* English */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = English; path = "generated/resources/localized/English.lproj/global-platform_locale_intl_properties.strings"; sourceTree = "<group>"; };
 		DE4044430ED09D1E00057E17 /* English */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = English; path = generated/resources/localized/English.lproj/global_locale_xslt_xslt_properties.strings; sourceTree = "<group>"; };
-		DE579FFB0D43FB790057C437 /* BloglinesFeedHandler.app */ = {isa = PBXFileReference; lastKnownFileType = wrapper.application; name = BloglinesFeedHandler.app; path = generated/feedhandlers/BloglinesFeedHandler.app; sourceTree = SOURCE_ROOT; };
 		DE579FFC0D43FB790057C437 /* GoogleFeedHandler.app */ = {isa = PBXFileReference; lastKnownFileType = wrapper.application; name = GoogleFeedHandler.app; path = generated/feedhandlers/GoogleFeedHandler.app; sourceTree = SOURCE_ROOT; };
 		DE579FFD0D43FB790057C437 /* MyYahooFeedHandler.app */ = {isa = PBXFileReference; lastKnownFileType = wrapper.application; name = MyYahooFeedHandler.app; path = generated/feedhandlers/MyYahooFeedHandler.app; sourceTree = SOURCE_ROOT; };
 		DE59E2F50FA54EC8001F240C /* InfoPlist.strings */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.strings; name = InfoPlist.strings; path = "resources/google-breakpad/InfoPlist.strings"; sourceTree = SOURCE_ROOT; };
@@ -4394,7 +4389,6 @@
 		DE579FFA0D43FB3D0057C437 /* Feed Handlers */ = {
 			isa = PBXGroup;
 			children = (
-				DE579FFB0D43FB790057C437 /* BloglinesFeedHandler.app */,
 				DE579FFC0D43FB790057C437 /* GoogleFeedHandler.app */,
 				DE579FFD0D43FB790057C437 /* MyYahooFeedHandler.app */,
 			);
