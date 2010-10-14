@@ -473,6 +473,19 @@ const int kZoomActionsTag = 108;
 - (void)updaterWillRelaunchApplication:(SUUpdater *)updater {
   PreferenceManager* prefManager = [PreferenceManager sharedInstanceDontCreate];
   [prefManager setPref:kGeckoPrefRelaunchingForAutoupdate toBoolean:YES];
+
+  // Partially hack around bug 313700 (pluginreg.dat not udpating). Since our
+  // first-updated-launch page does plugin version checking, we want to make
+  // sure that the information is up to date.
+  NSString* profilePath =
+      [[PreferenceManager sharedInstanceDontCreate] profilePath];
+  if (profilePath) {
+    NSString* pluginRegPath =
+        [profilePath stringByAppendingPathComponent:@"pluginreg.dat"];
+    NSFileManager* fileManager = [NSFileManager defaultManager];
+    if ([fileManager fileExistsAtPath:pluginRegPath])
+      [fileManager removeFileAtPath:pluginRegPath handler:nil];
+  }
 }
 
 - (void)applicationWillTerminate:(NSNotification*)aNotification
