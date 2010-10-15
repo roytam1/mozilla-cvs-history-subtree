@@ -3105,7 +3105,7 @@ static void InitializeEventRecord(EventRecord* event)
     memset(event, 0, sizeof(EventRecord));
     ::GetGlobalMouse(&event->where);
     event->when = ::TickCount();
-    event->modifiers = ::GetCurrentEventKeyModifiers();
+    event->modifiers = ::GetCurrentKeyModifiers();
 }
 
 NPDrawingModel nsPluginInstanceOwner::GetDrawingModel()
