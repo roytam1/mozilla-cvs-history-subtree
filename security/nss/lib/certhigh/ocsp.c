@@ -730,7 +730,7 @@ ocsp_FreshenCacheItemNextFetchAttemptTime(OCSPCacheItem *cacheItem)
     }
   
     if (cacheItem->haveNextUpdate) {
-        OCSP_TRACE_TIME("have nextUpdate:", cacheItem->nextUpdate);
+        OCSP_TRACE_TIME("have nextUpdate:", cacheItem->thisUpdate);
     }
   
     if (cacheItem->haveNextUpdate &&

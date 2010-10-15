@@ -76,7 +76,6 @@ struct PKIX_ComCertSelParamsStruct {
         PKIX_PL_ByteArray *subjKeyId;
         PKIX_PL_PublicKey *subjPubKey;
         PKIX_PL_OID *subjPKAlgId;
-        PKIX_Boolean leafCertFlag;
 };
 
 /* see source file for function documentation */

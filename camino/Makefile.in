@@ -74,7 +74,7 @@ APP_UPDATE_URL = https://caminobrowser.org/update-check
 APP_UPDATES_ENABLED = true
 BREAKPAD_UPLOAD_URL = https://crash-reports.mozilla.com/submit
 else
-APP_UPDATES_ENABLED = false
+APP_UPDATES_ENABLED ?= false
 endif
 
 # For Launch Services compatibility, CFBundleVersion can be at most three
@@ -226,7 +226,7 @@ unexport CC CXX
 ABS_topsrcdir := $(shell cd $(topsrcdir); pwd)
 
 SYMBOL_ARCHIVE_BASENAME = \
-	$(APP_NAME)-$(CM_APP_VERSION)-$(PLATFORM_BUILD_ID)-$(OS_TEST)
+	$(APP_NAME)-$(CM_APP_VERSION)-$(OS_TEST)-$(PLATFORM_BUILD_ID)
 SYMBOL_OUTPUT_DIR = crashreporter-symbols/$(PLATFORM_BUILD_ID)
 SYMBOL_ZIP_FILENAME = crashreporter-symbols-$(SYMBOL_ARCHIVE_BASENAME).zip
 SYMBOL_STORE_HOME_DIR = $(topsrcdir)/../$(PLATFORM_BUILD_ID)/symbols

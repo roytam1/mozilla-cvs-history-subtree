@@ -65,3 +65,9 @@ DSO_LDOPTS = -bundle
 endif
 endif
 
+ifeq ($(OS_TARGET),SunOS)
+# The -R '$ORIGIN' linker option instructs this library to search for its
+# dependencies in the same directory where it resides.
+MKSHLIB += -R '$$ORIGIN'
+endif
+

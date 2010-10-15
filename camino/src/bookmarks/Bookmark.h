@@ -54,11 +54,13 @@
                            url:(NSString*)aURL
                      lastVisit:(NSDate*)aLastVisit;
 + (Bookmark*)bookmarkWithNativeDictionary:(NSDictionary*)aDict;
-+ (Bookmark*)bookmarkWithSafariDictionary:(NSDictionary*)aDict;
 
 - (NSString *)url;
 - (NSDate *)lastVisit;  // nil if not visited
 - (unsigned)numberOfVisits;
+
+// Alternate accessors for persisting to disk; never returns nil.
+- (NSString*)savedURL;
 
 - (NSString*)faviconURL;
 - (void)setFaviconURL:(NSString*)inURL;
