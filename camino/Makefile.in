@@ -231,6 +231,9 @@ SYMBOL_OUTPUT_DIR = crashreporter-symbols/$(PLATFORM_BUILD_ID)
 SYMBOL_ZIP_FILENAME = crashreporter-symbols-$(SYMBOL_ARCHIVE_BASENAME).zip
 SYMBOL_STORE_HOME_DIR = $(topsrcdir)/../$(PLATFORM_BUILD_ID)/symbols
 SYMBOL_REUPLOAD_SCRIPT_FILE = $(SYMBOL_STORE_HOME_DIR)/../upload-symbols-$(OS_TEST).sh
+# Export the SYMBOL_INDEX_NAME for toolit's upload_symbols.sh scrip
+# post-upload behavior
+export SYMBOL_INDEX_NAME = $(SYMBOL_ARCHIVE_BASENAME)-symbols.txt
 
 export::
 	mkdir -p wallet/tables
@@ -396,7 +399,7 @@ buildcaminosymbols:
 	  google-breakpad/src/tools/mac/dump_syms/build/Release/dump_syms \
 	  $(SYMBOL_OUTPUT_DIR) \
 	  $(CORE_SYMBOL_SOURCE_FILES) >> \
-	  $(SYMBOL_OUTPUT_DIR)/$(SYMBOL_ARCHIVE_BASENAME)-symbols.txt
+	  $(SYMBOL_OUTPUT_DIR)/$(SYMBOL_INDEX_NAME)
 
 uploadcaminosymbols:
 	@echo Zipping symbols
@@ -409,6 +412,8 @@ uploadcaminosymbols:
 	  $(SYMBOL_STORE_HOME_DIR)/$(SYMBOL_ZIP_FILENAME)
 	@echo Creating re-upload script
 	echo '#!/bin/sh\n\n \
+	  export SYMBOL_INDEX_NAME="$(SYMBOL_INDEX_NAME)"\n\n \
+	  export POST_SYMBOL_UPLOAD_CMD="$(POST_SYMBOL_UPLOAD_CMD)"\n\n \
 	  SYMBOL_SERVER_HOST=$(SYMBOL_SERVER_HOST) \
 	  SYMBOL_SERVER_USER=$(SYMBOL_SERVER_USER) \
 	  SYMBOL_SERVER_PATH=$(SYMBOL_SERVER_PATH) \
