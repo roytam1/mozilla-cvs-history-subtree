@@ -439,16 +439,18 @@ const int kOutlineViewLeftMargin = 19; // determined empirically, since it doesn
   // outliner collapse all items that are being deleted. This will cull the selection
   // for us and eliminate any children that happened to be selected.
   BOOL allCollapsed = NO;
-  id doomedItem;
-  NSEnumerator* selRows;
   while (!allCollapsed) {
     allCollapsed = YES;
-    selRows = [mBookmarksOutlineView selectedRowEnumerator];
-    while (allCollapsed && (doomedItem = [selRows nextObject])) {
-      doomedItem = [mBookmarksOutlineView itemAtRow:[doomedItem intValue]];
+    NSIndexSet* selectedIndexes = [mBookmarksOutlineView selectedRowIndexes];
+    for (unsigned int i = [selectedIndexes firstIndex];
+         i != NSNotFound;
+         i = [selectedIndexes indexGreaterThanIndex:i])
+    {
+      id doomedItem = [mBookmarksOutlineView itemAtRow:i];
       if ([mBookmarksOutlineView isItemExpanded:doomedItem]) {
-        allCollapsed = NO;
         [mBookmarksOutlineView collapseItem:doomedItem];
+        allCollapsed = NO;
+        break;
       }
     }
   }
@@ -666,11 +668,10 @@ const int kOutlineViewLeftMargin = 19; // determined empirically, since it doesn
   BookmarkFolder* pasteDestinationFolder = nil;
 
   // Work out what the selected item is and therefore where to paste the bookmark(s)
-  NSEnumerator* selRows = [mBookmarksOutlineView selectedRowEnumerator];
-  id curSelectedRow = [selRows nextObject];
+  unsigned int firstRow = [[mBookmarksOutlineView selectedRowIndexes] firstIndex];
 
-  if (curSelectedRow) {
-    BookmarkItem* item = [mBookmarksOutlineView itemAtRow:[curSelectedRow intValue]];
+  if (firstRow != NSNotFound) {
+    BookmarkItem* item = [mBookmarksOutlineView itemAtRow:firstRow];
     if ([item isKindOfClass:[BookmarkFolder class]]) {
       pasteDestinationFolder = (BookmarkFolder*) item;
       pasteDestinationIndex = [pasteDestinationFolder count];
