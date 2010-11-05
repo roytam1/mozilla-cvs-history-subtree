@@ -3130,9 +3130,11 @@ public:
 
   // When creating Bookmark items, set the last-visited time to the time that
   // the bookmark was created.  TODO: use page load time.
-  [parentFolder appendChild:[Bookmark bookmarkWithTitle:itemTitle
-                                                    url:itemURL
-                                              lastVisit:[NSDate date]]];
+  Bookmark* bookmark = [Bookmark bookmarkWithTitle:itemTitle
+                                               url:itemURL
+                                         lastVisit:[NSDate date]];
+  [parentFolder appendChild:bookmark];
+  [bookmarkManager bookmarkItemsAdded:[NSArray arrayWithObject:bookmark]];
   [bookmarkManager setLastUsedBookmarkFolder:parentFolder];
 }
 
@@ -3171,9 +3173,11 @@ public:
   [newTabGroup setTitle:[NSString stringWithFormat:NSLocalizedString(@"defaultTabGroupTitle", nil),
                                                    [newTabGroup count], 
                                                    primaryTabTitle]];
-  BookmarkFolder* parentFolder = [[BookmarkManager sharedBookmarkManager] lastUsedBookmarkFolder];
+  BookmarkManager* bookmarkManager = [BookmarkManager sharedBookmarkManager];
+  BookmarkFolder* parentFolder = [bookmarkManager lastUsedBookmarkFolder];
   [parentFolder appendChild:newTabGroup];
-  [[BookmarkManager sharedBookmarkManager] setLastUsedBookmarkFolder:parentFolder];
+  [bookmarkManager bookmarkItemsAdded:[newTabGroup allChildBookmarks]];
+  [bookmarkManager setLastUsedBookmarkFolder:parentFolder];
 }
 
 - (IBAction)addBookmarkForLink:(id)aSender

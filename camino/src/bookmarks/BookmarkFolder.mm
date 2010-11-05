@@ -678,16 +678,6 @@ static int BookmarkItemSort(id firstItem, id secondItem, void* context)
 // Adding bookmarks
 //
 
-- (Bookmark *)addBookmark
-{
-  if ([self isRoot])
-    return nil;
-
-  Bookmark* theBookmark = [[[Bookmark alloc] init] autorelease];
-  [self appendChild:theBookmark];
-  return theBookmark;
-}
-
 // adding from native plist
 - (BOOL)addBookmarkFromNativeDict:(NSDictionary *)aDict
 {

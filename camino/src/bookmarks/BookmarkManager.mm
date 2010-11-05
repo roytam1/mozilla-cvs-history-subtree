@@ -540,6 +540,38 @@ static BookmarkManager* gBookmarkManager = nil;
   return YES;
 }
 
+- (void)bookmarkItemsAdded:(NSArray*)bookmarks
+{
+  NSEnumerator* bookmarkEnumerator = [bookmarks objectEnumerator];
+  BookmarkItem* bookmarkItem;
+  while ((bookmarkItem = [bookmarkEnumerator nextObject])) {
+    if ([bookmarkItem isKindOfClass:[BookmarkFolder class]]) {
+      [self bookmarkItemsAdded:[(BookmarkFolder*)bookmarkItem allChildBookmarks]];
+    }
+    else {
+      Bookmark* bookmark = (Bookmark*)bookmarkItem;
+      [bookmark writeBookmarksMetadataToPath:mMetadataPath];
+      [self registerBookmarkForLoads:bookmark];
+    }
+  }
+}
+
+- (void)bookmarkItemsWillBeRemoved:(NSArray*)bookmarks
+{
+  NSEnumerator* bookmarkEnumerator = [bookmarks objectEnumerator];
+  Bookmark* bookmarkItem;
+  while ((bookmarkItem = [bookmarkEnumerator nextObject])) {
+    if ([bookmarkItem isKindOfClass:[BookmarkFolder class]]) {
+      [self bookmarkItemsWillBeRemoved:[(BookmarkFolder*)bookmarkItem allChildBookmarks]];
+    }
+    else {
+      Bookmark* bookmark = (Bookmark*)bookmarkItem;
+      [bookmark removeBookmarksMetadataFromPath:mMetadataPath];
+      [self unregisterBookmarkForLoads:bookmark ignoringURL:YES];
+    }
+  }
+}
+
 - (void)startSuppressingChangeNotifications
 {
   [mNotificationsSuppressedLock lockBeforeDate:[NSDate distantFuture]];
@@ -1150,17 +1182,9 @@ static BookmarkManager* gBookmarkManager = nil;
 - (void)bookmarkAdded:(NSNotification *)inNotification
 {
   // we only care about additions to non-smart folders.
-  BookmarkItem* bmItem = [[inNotification userInfo] objectForKey:BookmarkFolderChildKey];
   BookmarkFolder* parentFolder = [inNotification object];
-
   if ([parentFolder isSmartFolder])
     return;
-
-  if ([bmItem isKindOfClass:[Bookmark class]]) {
-    [bmItem writeBookmarksMetadataToPath:mMetadataPath];
-
-    [self registerBookmarkForLoads:(Bookmark*)bmItem];
-  }
 
   [self noteBookmarksChanged];
 }
@@ -1179,12 +1203,6 @@ static BookmarkManager* gBookmarkManager = nil;
   BookmarkFolder* parentFolder = [inNotification object];
   if ([parentFolder isSmartFolder])
     return;
-
-  if ([bmItem isKindOfClass:[Bookmark class]]) {
-    [bmItem removeBookmarksMetadataFromPath:mMetadataPath];
-
-    [self unregisterBookmarkForLoads:(Bookmark*)bmItem ignoringURL:YES];
-  }
 
   [self noteBookmarksChanged];
 }
@@ -1206,8 +1224,11 @@ static BookmarkManager* gBookmarkManager = nil;
 
   if ([item isKindOfClass:[Bookmark class]]) {
     // update Spotlight metadata
-    if (changeFlags & kBookmarkItemSpotlightMetadataChangeFlagsMask)
+    if (changeFlags & kBookmarkItemSpotlightMetadataChangeFlagsMask) {
+      if (changeFlags & kBookmarkItemTitleChangedMask)
+        [item removeBookmarksMetadataFromPath:mMetadataPath];
       [item writeBookmarksMetadataToPath:mMetadataPath];
+    }
 
     // and re-register in the maps if the url changed
     if (changeFlags & kBookmarkItemURLChangedMask) {
@@ -1578,8 +1599,9 @@ static BookmarkManager* gBookmarkManager = nil;
     [rootFolder appendChild:importFolder];
     [undoManager setActionName:NSLocalizedString(@"Import Bookmarks", nil)];
   }
-    [mImportDlgController finishThreadedImport:success
-                                     fromFile:[[fileArray objectAtIndex:(--currentIndex)] lastPathComponent] ];
+  [self bookmarkItemsAdded:[NSArray arrayWithObject:importFolder]];
+  [mImportDlgController finishThreadedImport:success
+                                    fromFile:[[fileArray objectAtIndex:(--currentIndex)] lastPathComponent]];
 }
 
 - (BookmarkFolder*)importPropertyListFile:(NSString *)pathToFile

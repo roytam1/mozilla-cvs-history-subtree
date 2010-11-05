@@ -426,6 +426,7 @@ const int kOutlineViewLeftMargin = 19; // determined empirically, since it doesn
     return;
 
   [self selectContainerFolder:[manager containerAtIndex:index - 1]];
+  [manager bookmarkItemsWillBeRemoved:[NSArray arrayWithObject:selectedContainer]];
   [[manager bookmarkRoot] deleteChild:selectedContainer];
 }
 
@@ -455,7 +456,8 @@ const int kOutlineViewLeftMargin = 19; // determined empirically, since it doesn
     }
   }
 
-  [[BookmarkManager sharedBookmarkManager] startSuppressingChangeNotifications];
+  BookmarkManager* bookmarkManager = [BookmarkManager sharedBookmarkManager];
+  [bookmarkManager startSuppressingChangeNotifications];
 
   // all the parents of the children we need to notify, some may overlap, but in general
   // that's pretty uncommon, so this is good enough.
@@ -463,13 +465,16 @@ const int kOutlineViewLeftMargin = 19; // determined empirically, since it doesn
 
   // Make a copy of the current search array
   NSMutableArray *currentSearchArray = nil;
-  if ([[BookmarkManager sharedBookmarkManager] searchActive])
+  if ([bookmarkManager searchActive])
     currentSearchArray = [[mSearchResultArray mutableCopy] autorelease];
 
   // delete all bookmarks that are in our array
-  NSEnumerator *e = [[mBookmarksOutlineView selectedItems] objectEnumerator];
-  BookmarkItem *doomedBookmark = nil;
+  NSArray* doomedBookmarks = [mBookmarksOutlineView selectedItems];
 
+  [bookmarkManager bookmarkItemsWillBeRemoved:doomedBookmarks];
+
+  NSEnumerator *e = [doomedBookmarks objectEnumerator];
+  BookmarkItem *doomedBookmark = nil;
   while ((doomedBookmark = [e nextObject])) {
     [currentSearchArray removeObject:doomedBookmark];
 
@@ -484,7 +489,7 @@ const int kOutlineViewLeftMargin = 19; // determined empirically, since it doesn
     [mBookmarksOutlineView reloadData];
   }
 
-  [[BookmarkManager sharedBookmarkManager] stopSuppressingChangeNotifications];
+  [bookmarkManager stopSuppressingChangeNotifications];
 
   // notify observers that the parents have changed
   e = [parentsToNotify objectEnumerator];
@@ -1006,6 +1011,9 @@ const int kOutlineViewLeftMargin = 19; // determined empirically, since it doesn
   @catch (id exception) {
   }
 
+  if (isCopy)
+    [[BookmarkManager sharedBookmarkManager] bookmarkItemsAdded:newBookmarks];
+
   mBookmarkUpdatesDisabled = NO;
   [self reloadDataForItem:nil reloadChildren:YES];
 
@@ -1043,6 +1051,8 @@ const int kOutlineViewLeftMargin = 19; // determined empirically, since it doesn
   }
   @catch (id exception) {
   }
+
+  [[BookmarkManager sharedBookmarkManager] bookmarkItemsAdded:newBookmarks];
 
   mBookmarkUpdatesDisabled = NO;
   [self reloadDataForItem:nil reloadChildren:YES];
