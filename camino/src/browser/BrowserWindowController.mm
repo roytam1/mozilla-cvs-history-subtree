@@ -1130,6 +1130,7 @@ public:
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(newTab:)
                                         name:kTabBarBackgroundDoubleClickedNotification object:mTabBrowser];
 
+    [[self window] setOneShot:NO];
 }
 
 - (NSSize)windowWillResize:(NSWindow *)sender toSize:(NSSize)proposedFrameSize
