@@ -511,6 +511,8 @@
   if (![self shouldModifyContentsByScripting]) return;
   
   [self insertChild:aItem atIndex:aIndex isMove:NO];
+  [[BookmarkManager sharedBookmarkManager]
+      bookmarkItemsAdded:[NSArray arrayWithObject:aItem]];
 }
 
 // These two methods currently treat the incoming index as an index into the filtered array of
@@ -535,6 +537,8 @@
     realIndex = 1 + [[self children] indexOfObject:aFolder];
   }
   [self insertChild:aItem atIndex:realIndex isMove:NO];
+  [[BookmarkManager sharedBookmarkManager]
+      bookmarkItemsAdded:[NSArray arrayWithObject:aItem]];
 }
 
 - (void)insertInChildBookmarks:(Bookmark *)aItem atIndex:(unsigned)aIndex
@@ -554,6 +558,8 @@
     realIndex = 1 + [[self children] indexOfObject:aBookmark];
   }
   [self insertChild:aItem atIndex:realIndex isMove:NO];
+  [[BookmarkManager sharedBookmarkManager]
+      bookmarkItemsAdded:[NSArray arrayWithObject:aItem]];
 }
 
 
@@ -568,6 +574,8 @@
   if (![self shouldModifyContentsByScripting]) return;
   
   [self appendChild:aItem];
+  [[BookmarkManager sharedBookmarkManager]
+      bookmarkItemsAdded:[NSArray arrayWithObject:aItem]];
 }
 
 - (void)insertInChildFolders:(BookmarkFolder *)aItem
@@ -576,6 +584,8 @@
   if (![self shouldModifyContentsByScripting]) return;
   
   [self insertInChildren:aItem];
+  [[BookmarkManager sharedBookmarkManager]
+      bookmarkItemsAdded:[NSArray arrayWithObject:aItem]];
 }
 
 - (void)insertInChildBookmarks:(Bookmark *)aItem
@@ -584,6 +594,8 @@
   if (![self shouldModifyContentsByScripting]) return;
   
   [self insertInChildren:aItem];
+  [[BookmarkManager sharedBookmarkManager]
+      bookmarkItemsAdded:[NSArray arrayWithObject:aItem]];
 }
 
 
@@ -596,6 +608,8 @@
   if (![self shouldModifyContentsByScripting]) return;
   
   BookmarkItem* aKid = [[self children] objectAtIndex:aIndex];
+  [[BookmarkManager sharedBookmarkManager]
+      bookmarkItemsWillBeRemoved:[NSArray arrayWithObject:aKid]];
   [self deleteChild:aKid];
 }
 
@@ -605,6 +619,8 @@
   if (![self shouldModifyContentsByScripting]) return;
   
   BookmarkFolder* aKid = [[self childFolders] objectAtIndex:aIndex];
+  [[BookmarkManager sharedBookmarkManager]
+      bookmarkItemsWillBeRemoved:[NSArray arrayWithObject:aKid]];
   [self deleteChild:aKid];
 }
 
@@ -614,6 +630,8 @@
   if (![self shouldModifyContentsByScripting]) return;
   
   Bookmark* aKid = [[self childBookmarks] objectAtIndex:aIndex];
+  [[BookmarkManager sharedBookmarkManager]
+      bookmarkItemsWillBeRemoved:[NSArray arrayWithObject:aKid]];
   [self deleteChild:aKid];
 }
 
