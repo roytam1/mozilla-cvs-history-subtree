@@ -155,7 +155,7 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
     mFormSubmitObserver = new KeychainFormSubmitObserver();
     if (mFormSubmitObserver && svc) {
       NS_ADDREF(mFormSubmitObserver);
-      svc->AddObserver(mFormSubmitObserver, NS_FORMSUBMIT_SUBJECT, PR_FALSE);
+      svc->AddObserver(mFormSubmitObserver, NS_EARLYFORMSUBMIT_SUBJECT, PR_FALSE);
     }
   
     // register for the cocoa notification posted when XPCOM shutdown so we
