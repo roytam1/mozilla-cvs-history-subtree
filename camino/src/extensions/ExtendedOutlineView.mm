@@ -110,13 +110,13 @@ static NSString* const kAutosaveSortDirectionKey        = @"sort_descending";
 - (NSArray*)selectedItems
 {
   NSMutableArray* itemsArray = [NSMutableArray arrayWithCapacity:[self numberOfSelectedRows]];
-  
-  NSEnumerator* rowEnum = [self selectedRowEnumerator];
-  NSNumber* currentRow = nil;
-  while ((currentRow = [rowEnum nextObject]))
+
+  NSIndexSet* selectedIndexes = [self selectedRowIndexes];
+  for (unsigned int i = [selectedIndexes firstIndex];
+       i != NSNotFound;
+       i = [selectedIndexes indexGreaterThanIndex:i])
   {
-    id item = [self itemAtRow:[currentRow intValue]];
-    [itemsArray addObject:item];
+    [itemsArray addObject:[self itemAtRow:i]];
   }
   
   return itemsArray;

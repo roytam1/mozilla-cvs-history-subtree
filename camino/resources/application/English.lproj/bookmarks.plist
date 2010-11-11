@@ -44,7 +44,7 @@
 							<key>Title</key>
 							<string>Mac OS X Hints</string>
 							<key>URL</key>
-							<string>http://www.macosxhints.com/</string>
+							<string>http://hints.macworld.com/</string>
 						</dict>
 					</array>
 					<key>Title</key>
@@ -61,9 +61,9 @@
 						</dict>
 						<dict>
 							<key>Title</key>
-							<string>VersionTracker</string>
+							<string>MacUpdate</string>
 							<key>URL</key>
-							<string>http://www.versiontracker.com/macosx/</string>
+							<string>http://www.macupdate.com/</string>
 						</dict>
 						<dict>
 							<key>Title</key>
@@ -249,7 +249,7 @@
 							<key>Title</key>
 							<string>BBC News</string>
 							<key>URL</key>
-							<string>http://news.bbc.co.uk/</string>
+							<string>http://www.bbc.co.uk/news/</string>
 						</dict>
 						<dict>
 							<key>Title</key>

@@ -46,6 +46,7 @@
 @class RolloverImageButton;
 @class FindBarController;
 @class SafeBrowsingBar;
+@class KeychainBrowserListener;
 
 class nsIMutableArray;
 class nsIArray;
@@ -193,6 +194,8 @@ extern NSString* const kBrowserInstanceClosedNotification;
   IBOutlet SafeBrowsingBar* mSafeBrowsingBar; // loaded on demand, can be nil, strong
   IBOutlet NSTextField*     mSafeBrowsingBarLabel;
   NSMutableDictionary*      mIgnoredBlockedSites; // strong
+
+  KeychainBrowserListener*  mPasswordAutofillListener;  // strong
 }
 
 - (id)initWithTab:(NSTabViewItem*)aTab inWindow:(NSWindow*)window;
@@ -290,6 +293,7 @@ extern NSString* const kBrowserInstanceClosedNotification;
 - (void)onShowTooltip:(NSPoint)where withText:(NSString*)text;
 - (void)onHideTooltip;
 - (void)onFlashblockCheck:(nsIDOMEvent*)inEvent;
+- (void)onSilverblockCheck:(nsIDOMEvent*)inEvent;
 - (void)onFeedDetected:(NSString*)inFeedURI feedTitle:(NSString*)inFeedTitle;
 
 // CHBrowserContainer messages

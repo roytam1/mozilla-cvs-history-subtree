@@ -591,7 +591,7 @@ nsTimeout::~nsTimeout()
 //*****************************************************************************
 
 nsGlobalWindow::nsGlobalWindow(nsGlobalWindow *aOuterWindow)
-  : nsPIDOMWindow(aOuterWindow),
+  : nsPIDOMWindow_1_9_0(aOuterWindow),
     mIsFrozen(PR_FALSE),
     mDidInitJavaProperties(PR_FALSE),
     mFullScreen(PR_FALSE),
@@ -829,6 +829,7 @@ nsGlobalWindow::CleanUp()
   }
   mArguments = nsnull;
   mArgumentsLast = nsnull;
+  mArgumentsOrigin = nsnull;
 
   CleanupCachedXBLHandlers(this);
 
@@ -947,6 +948,7 @@ NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION(nsGlobalWindow)
   NS_INTERFACE_MAP_ENTRY(nsIDOM3EventTarget)
   NS_INTERFACE_MAP_ENTRY(nsIDOMNSEventTarget)
   NS_INTERFACE_MAP_ENTRY(nsPIDOMWindow)
+  NS_INTERFACE_MAP_ENTRY(nsPIDOMWindow_1_9_0)
   NS_INTERFACE_MAP_ENTRY(nsIDOMViewCSS)
   NS_INTERFACE_MAP_ENTRY(nsIDOMAbstractView)
   NS_INTERFACE_MAP_ENTRY(nsIDOMStorageWindow)
@@ -1126,7 +1128,7 @@ nsGlobalWindow::SetScriptContext(PRUint32 lang_id, nsIScriptContext *aScriptCont
     NS_ASSERTION(script_glob, "GetNativeGlobal returned NULL!");
   }
   // for now, keep mContext real.
-  if (lang_id==nsIProgrammingLanguage::JAVASCRIPT) {
+  if (lang_id == nsIProgrammingLanguage::JAVASCRIPT) {
     mContext = aScriptContext;
     mJSObject = (JSObject *)script_glob;
   }
@@ -1970,8 +1972,12 @@ nsGlobalWindow::SetNewDocument(nsIDocument* aDocument,
       }
 
       if (mArguments) {
-        newInnerWindow->SetNewArguments(mArguments);
+        newInnerWindow->DefineArgumentsProperty(mArguments);
+        newInnerWindow->mArguments = mArguments;
+        newInnerWindow->mArgumentsOrigin = mArgumentsOrigin;
+
         mArguments = nsnull;
+        mArgumentsOrigin = nsnull;
       }
 
       // Give the new inner window our chrome event handler (since it
@@ -2074,9 +2080,10 @@ nsGlobalWindow::SetDocShell(nsIDocShell* aDocShell)
 
     if (mArguments) { 
       // We got no new document after someone called
-      // SetNewArguments(), drop our reference to the arguments.
+      // SetArguments(), drop our reference to the arguments.
       mArguments = nsnull;
-      // xxxmarkh - should we also drop mArgumentsLast?
+      mArgumentsLast = nsnull;
+      mArgumentsOrigin = nsnull;
     }
 
     PRUint32 st_ndx;
@@ -2382,39 +2389,66 @@ nsGlobalWindow::SetScriptsEnabled(PRBool aEnabled, PRBool aFireTimeouts)
 nsresult
 nsGlobalWindow::SetNewArguments(nsIArray *aArguments)
 {
-  FORWARD_TO_OUTER(SetNewArguments, (aArguments), NS_ERROR_NOT_INITIALIZED);
+  return SetArguments(aArguments, nsnull);
+}
 
-  JSContext *cx;
-  NS_ENSURE_TRUE(aArguments && mContext &&
-                 (cx = (JSContext *)mContext->GetNativeContext()),
-                 NS_ERROR_NOT_INITIALIZED);
-
-  // Note that currentInner may be non-null if someone's doing a
-  // window.open with an existing window name.
-  nsGlobalWindow *currentInner = GetCurrentInnerWindowInternal();
-  
-  nsresult rv;
-
-  if (currentInner) {
-    PRUint32 langID;
-    NS_STID_FOR_ID(langID) {
-      void *glob = currentInner->GetScriptGlobal(langID);
-      nsIScriptContext *ctx = GetScriptContext(langID);
-      if (glob && ctx) {
-        if (mIsModalContentWindow) {
-          rv = ctx->SetProperty(glob, "dialogArguments", aArguments);
-        } else {
-          rv = ctx->SetProperty(glob, "arguments", aArguments);
-        }
-        NS_ENSURE_SUCCESS(rv, rv);
-      }
-    }
-  }
+nsresult
+nsGlobalWindow::SetArguments(nsIArray *aArguments, nsIPrincipal *aOrigin)
+{
+  FORWARD_TO_OUTER(SetArguments, (aArguments, aOrigin),
+                   NS_ERROR_NOT_INITIALIZED);
 
   // Hold on to the arguments so that we can re-set them once the next
   // document is loaded.
   mArguments = aArguments;
-  mArgumentsLast = aArguments;
+  mArgumentsOrigin = aOrigin;
+
+  nsGlobalWindow *currentInner = GetCurrentInnerWindowInternal();
+
+  if (!mIsModalContentWindow) {
+    mArgumentsLast = aArguments;
+  } else if (currentInner) {
+    // SetArguments() is being called on a modal content window that
+    // already has an inner window. This can happen when loading
+    // javascript: URIs as modal content dialogs. In this case, we'll
+    // set up the dialog window, both inner and outer, before we call
+    // SetArguments() on the window, so to deal with that, make sure
+    // here that the arguments are propagated to the inner window.
+
+    currentInner->mArguments = aArguments;
+    currentInner->mArgumentsOrigin = aOrigin;
+  }
+
+  return currentInner ?
+    currentInner->DefineArgumentsProperty(aArguments) : NS_OK;
+}
+
+nsresult
+nsGlobalWindow::DefineArgumentsProperty(nsIArray *aArguments)
+{
+  JSContext *cx;
+  nsIScriptContext *ctx = GetOuterWindowInternal()->mContext;
+  NS_ENSURE_TRUE(aArguments && ctx &&
+                 (cx = (JSContext *)ctx->GetNativeContext()),
+                 NS_ERROR_NOT_INITIALIZED);
+
+  if (mIsModalContentWindow) {
+    // Modal content windows don't have an "arguments" property, they
+    // have a "dialogArguments" property which is handled
+    // separately. See nsWindowSH::NewResolve().
+
+    return NS_OK;
+  }
+
+  PRUint32 langID;
+  NS_STID_FOR_ID(langID) {
+    void *glob = GetScriptGlobal(langID);
+    ctx = GetScriptContext(langID);
+    if (glob && ctx) {
+      nsresult rv = ctx->SetProperty(glob, "arguments", aArguments);
+      NS_ENSURE_SUCCESS(rv, rv);
+    }
+  }
 
   return NS_OK;
 }
@@ -2939,7 +2973,7 @@ nsGlobalWindow::GetOpener(nsIDOMWindowInternal** aOpener)
 
   *aOpener = nsnull;
 
-  nsCOMPtr<nsIDOMWindowInternal> opener = do_QueryReferent(mOpener);
+  nsCOMPtr<nsPIDOMWindow> opener = do_QueryReferent(mOpener);
   if (!opener) {
     return NS_OK;
   }
@@ -2950,27 +2984,36 @@ nsGlobalWindow::GetOpener(nsIDOMWindowInternal** aOpener)
     return NS_OK;
   }
 
+  nsCOMPtr<nsPIDOMWindow> openerPwin(do_QueryInterface(opener));
+  if (!openerPwin) {
+    return NS_OK;
+  }
+
+  // First, ensure that we're not handing back a chrome window.
+  nsGlobalWindow *win = static_cast<nsGlobalWindow *>(openerPwin.get());
+  if (win->IsChromeWindow()) {
+    return NS_OK;
+  }
+
   // We don't want to reveal the opener if the opener is a mail window,
   // because opener can be used to spoof the contents of a message (bug 105050).
   // So, we look in the opener's root docshell to see if it's a mail window.
-  nsCOMPtr<nsPIDOMWindow> openerPwin(do_QueryInterface(opener));
-  if (openerPwin) {
-    nsCOMPtr<nsIDocShellTreeItem> docShellAsItem =
-      do_QueryInterface(openerPwin->GetDocShell());
+  nsCOMPtr<nsIDocShellTreeItem> docShellAsItem =
+    do_QueryInterface(openerPwin->GetDocShell());
 
-    if (docShellAsItem) {
-      nsCOMPtr<nsIDocShellTreeItem> openerRootItem;
-      docShellAsItem->GetRootTreeItem(getter_AddRefs(openerRootItem));
-      nsCOMPtr<nsIDocShell> openerRootDocShell(do_QueryInterface(openerRootItem));
-      if (openerRootDocShell) {
-        PRUint32 appType;
-        nsresult rv = openerRootDocShell->GetAppType(&appType);
-        if (NS_SUCCEEDED(rv) && appType != nsIDocShell::APP_TYPE_MAIL) {
-          *aOpener = opener;
-        }
+  if (docShellAsItem) {
+    nsCOMPtr<nsIDocShellTreeItem> openerRootItem;
+    docShellAsItem->GetRootTreeItem(getter_AddRefs(openerRootItem));
+    nsCOMPtr<nsIDocShell> openerRootDocShell(do_QueryInterface(openerRootItem));
+    if (openerRootDocShell) {
+      PRUint32 appType;
+      nsresult rv = openerRootDocShell->GetAppType(&appType);
+      if (NS_SUCCEEDED(rv) && appType != nsIDocShell::APP_TYPE_MAIL) {
+        *aOpener = opener;
       }
     }
   }
+
   NS_IF_ADDREF(*aOpener);
   return NS_OK;
 }
@@ -6071,11 +6114,63 @@ nsGlobalWindow::ShowModalDialog(const nsAString& aURI, nsIVariant *aArgs,
   nsCOMPtr<nsIDOMModalContentWindow> dlgInner(do_QueryInterface(inner));
 
   if (dlgInner) {
-    dlgInner->GetReturnValue(aRetVal);
+    nsCOMPtr<nsIPrincipal> subjectPrincipal;
+    rv = nsContentUtils::GetSecurityManager()->
+      GetSubjectPrincipal(getter_AddRefs(subjectPrincipal));
+    if (NS_FAILED(rv)) {
+      return rv;
+    }
+
+    PRBool canAccess = PR_TRUE;
+
+    if (subjectPrincipal) {
+      nsCOMPtr<nsIScriptObjectPrincipal> objPrincipal =
+        do_QueryInterface(dlgWin);
+      nsCOMPtr<nsIPrincipal> dialogPrincipal;
+
+      if (objPrincipal) {
+        dialogPrincipal = objPrincipal->GetPrincipal();
+
+        rv = subjectPrincipal->Subsumes(dialogPrincipal, &canAccess);
+        NS_ENSURE_SUCCESS(rv, rv);
+      } else {
+        // Uh, not sure what kind of dialog this is. Prevent access to
+        // be on the safe side...
+
+        canAccess = PR_FALSE;
+      }
+    }
+
+    if (canAccess) {
+      nsCOMPtr<nsPIDOMWindow> win(do_QueryInterface(dlgWin));
+      nsPIDOMWindow *inner = win->GetCurrentInnerWindow();
+
+      nsCOMPtr<nsIDOMModalContentWindow> dlgInner(do_QueryInterface(inner));
+
+      if (dlgInner) {
+        dlgInner->GetReturnValue(aRetVal);
+      }
+    }
   }
 
   return NS_OK;
 }
+
+class CommandDispatcher : public nsRunnable
+{
+public:
+  CommandDispatcher(nsIDOMXULCommandDispatcher* aDispatcher,
+                    const nsAString& aAction)
+  : mDispatcher(aDispatcher), mAction(aAction) {}
+
+  NS_IMETHOD Run()
+  {
+    return mDispatcher->UpdateCommands(mAction);
+  }
+
+  nsCOMPtr<nsIDOMXULCommandDispatcher> mDispatcher;
+  nsString                             mAction;
+};
 
 NS_IMETHODIMP
 nsGlobalWindow::UpdateCommands(const nsAString& anAction)
@@ -6091,7 +6186,10 @@ nsGlobalWindow::UpdateCommands(const nsAString& anAction)
     // Retrieve the command dispatcher and call updateCommands on it.
     nsCOMPtr<nsIDOMXULCommandDispatcher> xulCommandDispatcher;
     xulDoc->GetCommandDispatcher(getter_AddRefs(xulCommandDispatcher));
-    xulCommandDispatcher->UpdateCommands(anAction);
+    if (xulCommandDispatcher) {
+      nsContentUtils::AddScriptRunner(new CommandDispatcher(xulCommandDispatcher,
+                                                            anAction));
+    }
   }
 
   return NS_OK;
@@ -7296,7 +7394,7 @@ nsGlobalWindow::OpenInternal(const nsAString& aUrl, const nsAString& aName,
                   "Shouldn't have caller context when called noscript");
 
   *aReturn = nsnull;
-  
+
   nsCOMPtr<nsIWebBrowserChrome> chrome;
   GetWebBrowserChrome(getter_AddRefs(chrome));
   if (!chrome) {
@@ -8916,7 +9014,7 @@ nsGlobalChromeWindow::SetBrowserDOMWindow(nsIBrowserDOMWindow *aBrowserWindow)
 NS_IMPL_CYCLE_COLLECTION_CLASS(nsGlobalModalWindow)
 NS_IMPL_CYCLE_COLLECTION_TRAVERSE_BEGIN_INHERITED(nsGlobalModalWindow,
                                                   nsGlobalWindow)
-  NS_IMPL_CYCLE_COLLECTION_TRAVERSE_NSCOMPTR(mArguments)
+  NS_IMPL_CYCLE_COLLECTION_TRAVERSE_NSCOMPTR(mReturnValue)
 NS_IMPL_CYCLE_COLLECTION_TRAVERSE_END
 
 NS_INTERFACE_MAP_BEGIN_CYCLE_COLLECTION_INHERITED(nsGlobalModalWindow)
@@ -8940,7 +9038,14 @@ nsGlobalModalWindow::GetDialogArguments(nsIArray **aArguments)
   FORWARD_TO_INNER_MODAL_CONTENT_WINDOW(GetDialogArguments, (aArguments),
                                         NS_ERROR_NOT_INITIALIZED);
 
-  *aArguments = mArguments;
+  PRBool subsumes = PR_FALSE;
+  if (mArgumentsOrigin &&
+      NS_SUCCEEDED(mArgumentsOrigin->Subsumes(GetPrincipal(), &subsumes)) &&
+      subsumes) {
+    NS_IF_ADDREF(*aArguments = mArguments);
+  } else {
+    *aArguments = nsnull;
+  }
 
   return NS_OK;
 }
@@ -8963,6 +9068,20 @@ nsGlobalModalWindow::SetReturnValue(nsIVariant *aRetVal)
   mReturnValue = aRetVal;
 
   return NS_OK;
+}
+
+nsresult
+nsGlobalModalWindow::SetNewDocument(nsIDocument *aDocument,
+                                    nsISupports *aState,
+                                    PRBool aClearScopeHint)
+{
+  // If we're loading a new document into a modal dialog, clear the
+  // return value that was set, if any, by the current document.
+  if (aDocument) {
+    mReturnValue = nsnull;
+  }
+
+  return nsGlobalWindow::SetNewDocument(aDocument, aState, aClearScopeHint);
 }
 
 //*****************************************************************************

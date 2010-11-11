@@ -66,7 +66,7 @@ static char *child_argv[] = { "pipepong", NULL };
 
 #define NUM_ITERATIONS 10
 
-int main(int argc, char **argv)
+int main()
 {
     PRFileDesc *in_pipe[2];
     PRFileDesc *out_pipe[2];

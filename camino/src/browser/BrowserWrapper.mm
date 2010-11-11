@@ -182,8 +182,9 @@ static const NSTimeInterval kTimeIntervalToConsiderSiteBlockingStatusValid = 900
 
     [mBrowserView setContainer:self];
     [mBrowserView addListener:self];
-
-    [[KeychainService instance] addListenerToView:mBrowserView];
+    mPasswordAutofillListener = [[KeychainBrowserListener alloc]
+                                     initWithBrowser:mBrowserView];
+    [mBrowserView addListener:mPasswordAutofillListener];
 
     mIsBusy = NO;
     mListenersAttached = NO;
@@ -295,6 +296,9 @@ static const NSTimeInterval kTimeIntervalToConsiderSiteBlockingStatusValid = 900
   // when the CHBrowserListener goes away as a result of the
   // |destroyWebBrowser| call. (bug 174416)
   [mBrowserView removeListener:self];
+  [mBrowserView removeListener:mPasswordAutofillListener];
+  [mPasswordAutofillListener release];
+  mPasswordAutofillListener = nil;
   [mBrowserView destroyWebBrowser];
 
   // We don't want site icon notifications when the window has gone away
@@ -920,6 +924,20 @@ static const NSTimeInterval kTimeIntervalToConsiderSiteBlockingStatusValid = 900
   inEvent->StopPropagation();
 }
 
+//
+// - onSilverblockCheck:
+//
+// Called when Flashblock sends a notification to check whether Silverlight
+// should be allowed for a URL. Silverlight is allowed if PreventDefault() is
+// called on the event. Due to Flashblock bug 22469, which doesn't unblock
+// Silverlight movies properly, we allow them unconditionally.
+//
+- (void)onSilverblockCheck:(nsIDOMEvent*)inEvent
+{
+  inEvent->PreventDefault();
+  inEvent->StopPropagation();  
+}
+
 // Called when a "shortcut icon" link element is noticed
 - (void)onFoundShortcutIcon:(NSString*)inIconURI
 {
@@ -1074,11 +1092,17 @@ static const NSTimeInterval kTimeIntervalToConsiderSiteBlockingStatusValid = 900
       if ([characters length] > 0) {
         unichar keyChar = [characters characterAtIndex:0];
         if (keyChar == NSLeftArrowFunctionKey) {
-          [mBrowserView goBack];
+          // If someone assigns this shortcut to a menu, we want that to win.
+          if (![[NSApp mainMenu] performKeyEquivalent:theEvent])
+            [mBrowserView goBack];
+
           return YES;
         }
         else if (keyChar == NSRightArrowFunctionKey) {
-          [mBrowserView goForward];
+          // If someone assigns this shortcut to a menu, we want that to win.
+          if (![[NSApp mainMenu] performKeyEquivalent:theEvent])
+            [mBrowserView goForward];
+
           return YES;
         }
       }

@@ -279,6 +279,7 @@ static NSDictionary* PrimaryBookmarkItem(NSArray* inItems) {
                                   lastVisit:now];
       [newGroup insertChild:newItem atIndex:i isMove:NO];
     }
+    [[BookmarkManager sharedBookmarkManager] bookmarkItemsAdded:[NSArray arrayWithObject:newGroup]];
   }
   else {
     // Bookmark a single item
@@ -290,6 +291,7 @@ static NSDictionary* PrimaryBookmarkItem(NSArray* inItems) {
                                       url:itemURL
                                 lastVisit:now];
     [parentFolder insertChild:newItem atIndex:insertPosition isMove:NO];
+    [[BookmarkManager sharedBookmarkManager] bookmarkItemsAdded:[NSArray arrayWithObject:newItem]];
   }
 
   [mBookmarkViewController selectAndRevealItem:newItem byExtendingSelection:NO];

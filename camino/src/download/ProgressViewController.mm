@@ -510,6 +510,7 @@ enum {
           if (mFileExists) {
             NSDictionary* fattrs = [[NSFileManager defaultManager] fileAttributesAtPath:mDestPath traverseLink:NO];
             mDownloadSize = (long long) [fattrs fileSize];
+            mCurrentProgress = mDownloadSize; // 100% downloaded
           }
         }
 

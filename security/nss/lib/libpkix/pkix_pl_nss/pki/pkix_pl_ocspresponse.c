@@ -502,9 +502,7 @@ pkix_pl_OcspResponse_Create(
                         ocspResponse->request = request;
                         ocspResponse->httpClient = httpClient;
                         ocspResponse->serverSession = serverSession;
-                        serverSession = NULL;
                         ocspResponse->sessionRequest = sessionRequest;
-                        sessionRequest = NULL;
                         ocspResponse->verifyFcn = verifyFcn;
                         ocspResponse->handle = CERT_GetDefaultCertDB();
                         ocspResponse->encodedResponse = NULL;
@@ -524,10 +522,10 @@ pkix_pl_OcspResponse_Create(
 
                 hcv1 = &(httpClient->fcnTable.ftable1);
 
-                rv = (*hcv1->trySendAndReceiveFcn)(ocspResponse->sessionRequest,
+                rv = (*hcv1->trySendAndReceiveFcn)(sessionRequest,
                         (PRPollDesc **)&nbioContext,
                         &responseCode,
-                        (const char **)&responseContentType,
+                        &responseContentType,
                         NULL,   /* responseHeaders */
                         (const char **)&responseData,
                         &responseDataLen);
@@ -562,24 +560,26 @@ pkix_pl_OcspResponse_Create(
                             responseData, responseDataLen);
         }
         *pResponse = ocspResponse;
-        ocspResponse = NULL;
 
 cleanup:
 
         if (path != NULL) {
             PORT_Free(path);
         }
+
         if (hostname != NULL) {
             PORT_Free(hostname);
         }
-        if (ocspResponse) {
-            PKIX_DECREF(ocspResponse);
-        }
-        if (serverSession) {
-            hcv1->freeSessionFcn(serverSession);
-        }
-        if (sessionRequest) {
-            hcv1->freeFcn(sessionRequest);
+
+        if (PKIX_ERROR_RECEIVED){
+            if (ocspResponse) {
+                PKIX_DECREF(ocspResponse);
+            } else {
+                if (serverSession) 
+                    hcv1->freeSessionFcn(serverSession);
+                if (sessionRequest)
+                    hcv1->freeFcn(sessionRequest);
+            }
         }
 
         PKIX_RETURN(OCSPRESPONSE);
@@ -970,12 +970,10 @@ PKIX_Error *
 pkix_pl_OcspResponse_GetStatusForCert(
         PKIX_PL_OcspCertID *cid,
         PKIX_PL_OcspResponse *response,
-        PKIX_PL_Date *validity,
         PKIX_Boolean *pPassed,
         SECErrorCodes *pReturnCode,
         void *plContext)
 {
-        PRTime time = 0;
         SECStatus rv = SECFailure;
         SECStatus rvCache;
         PRBool certIDWasConsumed = PR_FALSE;
@@ -991,19 +989,11 @@ pkix_pl_OcspResponse_GetStatusForCert(
         PKIX_NULLCHECK_TWO(response->signerCert, response->request);
         PKIX_NULLCHECK_TWO(cid, cid->certID);
 
-        if (validity != NULL) {
-            PKIX_Error *er = pkix_pl_Date_GetPRTime(validity, &time, plContext);
-            PKIX_DECREF(er);
-        }
-        if (!time) {
-            time = PR_Now();
-        }
-
         rv = cert_ProcessOCSPResponse(response->handle,
                                       response->nssOCSPResponse,
                                       cid->certID,
                                       response->signerCert,
-                                      time,
+                                      PR_Now(),
                                       &certIDWasConsumed,
                                       &rvCache);
         if (certIDWasConsumed) {

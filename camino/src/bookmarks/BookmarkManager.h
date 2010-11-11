@@ -78,6 +78,7 @@ const int kBookmarksContextMenuArrangeSeparatorTag = 100;
   BOOL                            mBookmarksLoaded;
   BOOL                            mShowSiteIcons;
   BOOL                            mSearchActive;
+  BOOL                            mWritingSpotlightMetadata;
 
   int                             mNotificationsSuppressedCount;
   NSRecursiveLock*                mNotificationsSuppressedLock;    // make mNotificationsSuppressedCount threadsafe
@@ -113,6 +114,13 @@ const int kBookmarksContextMenuArrangeSeparatorTag = 100;
 
 - (BOOL)searchActive;
 - (void)setSearchActive:(BOOL)inSearching;
+
+// Must be called whenever any new not-smart-folder bookmarks are added.
+// Should be called at the UI operation level.
+- (void)bookmarkItemsAdded:(NSArray*)bookmarks;
+// Must be called whenever any bookmarks will be removed.
+// Should be called at the UI operation level.
+- (void)bookmarkItemsWillBeRemoved:(NSArray*)bookmarks;
 
 // returns NSNotFound if the folder is not a child of the root
 - (unsigned)indexOfContainer:(BookmarkFolder*)inFolder;

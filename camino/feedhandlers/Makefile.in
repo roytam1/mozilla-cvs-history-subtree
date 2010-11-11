@@ -45,7 +45,6 @@ DEREZ = /Developer/Tools/DeRez
 REZ   = /Developer/Tools/Rez
 
 FEED_HANDLERS = \
-	BloglinesFeedHandler \
 	GoogleFeedHandler \
 	MyYahooFeedHandler \
 	$(NULL)

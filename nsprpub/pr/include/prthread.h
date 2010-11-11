@@ -39,7 +39,7 @@
 #define prthread_h___
 
 /*
-** API for NSPR threads. On some architectures (Mac OS Classic
+** API for NSPR threads. On some architectures (MAC and WIN16
 ** notably) pre-emptibility is not guaranteed. Hard priority scheduling
 ** is not guaranteed, so programming using priority based synchronization
 ** is a no-no.

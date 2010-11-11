@@ -64,7 +64,7 @@ static void Help(void)
     PR_fprintf(err, "\t-h   This message and nothing else\n");
 }  /* Help */
 
-int main(int argc, char **argv)
+PRIntn main(PRIntn argc, char **argv)
 {
     PLOptStatus os;
     PRBool cleanup = PR_FALSE;

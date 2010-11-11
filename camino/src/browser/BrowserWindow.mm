@@ -58,11 +58,15 @@ static const int kEscapeKeyCode = 53;
 {
   // Some versions of Flash deallocate windows too early in the key window
   // transfer; artificially extend the life of those windows to prevent a crash
-  // (see bug 465178 for details). This can be removed once most users have a
-  // version of Flash that doesn't have this bug.
+  // (see bug 465178 and 577567 for details). This can be removed once most
+  // users have a version of Flash that doesn't have this bug.
   NSWindow* currentKeyWindow = [NSApp keyWindow];
-  if ([currentKeyWindow isMemberOfClass:NSClassFromString(@"NSCarbonWindow")])
+  Class FlashWindowClass = NSClassFromString(@"FP_FPWindow");
+  if ([currentKeyWindow isMemberOfClass:NSClassFromString(@"NSCarbonWindow")] ||
+      (FlashWindowClass && [currentKeyWindow isMemberOfClass:FlashWindowClass]))
+  {
     [[currentKeyWindow retain] autorelease];
+  }
   [super makeKeyAndOrderFront:sender];
 }
 

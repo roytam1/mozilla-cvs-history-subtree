@@ -284,8 +284,7 @@ NS_IMPL_RELEASE(nsTreeSelection)
 
 NS_IMETHODIMP nsTreeSelection::GetTree(nsITreeBoxObject * *aTree)
 {
-  NS_IF_ADDREF(mTree);
-  *aTree = mTree;
+  NS_IF_ADDREF(*aTree = mTree);
   return NS_OK;
 }
 
@@ -295,7 +294,10 @@ NS_IMETHODIMP nsTreeSelection::SetTree(nsITreeBoxObject * aTree)
     mSelectTimer->Cancel();
     mSelectTimer = nsnull;
   }
-  mTree = aTree; // WEAK
+
+  // Make sure aTree really implements nsITreeBoxObject!
+  mTree = do_QueryInterface(aTree);
+  NS_ENSURE_STATE(mTree || !aTree);
   return NS_OK;
 }
 
@@ -305,6 +307,7 @@ NS_IMETHODIMP nsTreeSelection::GetSingle(PRBool* aSingle)
     return NS_ERROR_NULL_POINTER;
 
   nsCOMPtr<nsIBoxObject> boxObject = do_QueryInterface(mTree);
+  NS_ENSURE_STATE(boxObject);
 
   nsCOMPtr<nsIDOMElement> element;
   boxObject->GetElement(getter_AddRefs(element));
@@ -697,7 +700,12 @@ NS_IMETHODIMP nsTreeSelection::SetCurrentColumn(nsITreeColumn* aCurrentColumn)
 
 #define ADD_NEW_RANGE(macro_range, macro_selection, macro_start, macro_end) \
   { \
-    nsTreeRange* macro_new_range = new nsTreeRange(macro_selection, (macro_start), (macro_end)); \
+    PRInt32 start = macro_start; \
+    PRInt32 end = macro_end; \
+    if (start > end) { \
+      end = start; \
+    } \
+    nsTreeRange* macro_new_range = new nsTreeRange(macro_selection, start, end); \
     if (macro_range) \
       macro_range->Insert(macro_new_range); \
     else \
@@ -859,7 +867,7 @@ nsTreeSelection::FireOnSelectHandler()
 void
 nsTreeSelection::SelectCallback(nsITimer *aTimer, void *aClosure)
 {
-  nsTreeSelection* self = static_cast<nsTreeSelection*>(aClosure);
+  nsRefPtr<nsTreeSelection> self = static_cast<nsTreeSelection*>(aClosure);
   if (self) {
     self->FireOnSelectHandler();
     aTimer->Cancel();

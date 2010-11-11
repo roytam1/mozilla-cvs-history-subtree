@@ -116,6 +116,7 @@ static NSWindow* GetNSWindow(nsIDOMWindow* inWindow);
 
 @implementation KeychainService
 
+static BOOL sAlreadyDestroyed = NO;
 static KeychainService *sInstance = nil;
 static const char* const gUseKeychainPref = "chimera.store_passwords_with_keychain";
 
@@ -139,6 +140,8 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
 
 + (KeychainService*)instance
 {
+  if (sAlreadyDestroyed)
+    return nil;
   return sInstance ? sInstance : sInstance = [[self alloc] init];
 }
 
@@ -152,7 +155,7 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
     mFormSubmitObserver = new KeychainFormSubmitObserver();
     if (mFormSubmitObserver && svc) {
       NS_ADDREF(mFormSubmitObserver);
-      svc->AddObserver(mFormSubmitObserver, NS_FORMSUBMIT_SUBJECT, PR_FALSE);
+      svc->AddObserver(mFormSubmitObserver, NS_EARLYFORMSUBMIT_SUBJECT, PR_FALSE);
     }
   
     // register for the cocoa notification posted when XPCOM shutdown so we
@@ -214,6 +217,7 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
     pref->UnregisterCallback(gUseKeychainPref, KeychainPrefChangedCallback, nsnull);
   
   [sInstance release];
+  sAlreadyDestroyed = YES;
 }
 
 
@@ -544,17 +548,6 @@ int KeychainPrefChangedCallback(const char* inPref, void* unused)
 
   // Reset the deny list as well
   [[KeychainDenyList instance] removeAllHosts];
-}
-
-//
-// addListenerToView:
-//
-// Add a listener to the view to auto fill username and passwords
-// fields if the values are stored in the Keychain.
-//
-- (void)addListenerToView:(CHBrowserView*)view
-{
-  [view addListener:[[[KeychainBrowserListener alloc] initWithBrowser:view] autorelease]];
 }
 
 //
@@ -1446,6 +1439,10 @@ KeychainFormSubmitObserver::Notify(nsIDOMHTMLFormElement* formNode, nsIDOMWindow
 }
 
 - (void)onFlashblockCheck:(nsIDOMEvent*)inEvent
+{
+}
+
+- (void)onSilverblockCheck:(nsIDOMEvent*)inEvent
 {
 }
 
