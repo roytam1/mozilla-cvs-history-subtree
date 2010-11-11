@@ -3519,6 +3519,7 @@ js_GC(JSContext *cx, JSGCInvocationKind gckind)
             JS_LOCK_GC(rt);
             JS_UNKEEP_ATOMS(rt);
             JS_POP_TEMP_ROOT(cx, &tvr);
+            cx->weakRoots = savedWeakRoots;
         } else if (gckind == GC_LAST_CONTEXT && rt->gcPoke) {
             /*
              * On shutdown iterate until JSGC_END callback stops creating
