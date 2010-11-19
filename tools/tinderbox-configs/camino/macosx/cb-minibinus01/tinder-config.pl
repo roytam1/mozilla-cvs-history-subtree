@@ -274,10 +274,11 @@ $milestone     = "2.1-M1.9.2";
 $crashreporter_buildsymbols = 1;
 $crashreporter_pushsymbols = 1;
 $ENV{SYMBOL_SERVER_HOST} = 'dm-symbolpush01.mozilla.org';
-$ENV{SYMBOL_SERVER_USER}   = 'caminobld';
-$ENV{SYMBOL_SERVER_PATH}   = '/mnt/netapp/breakpad/symbols_camino/';
+$ENV{SYMBOL_SERVER_USER} = 'caminobld';
+$ENV{SYMBOL_SERVER_PATH} = '/mnt/netapp/breakpad/symbols_camino/';
 # this is optional, it's a full path to a ssh private key
-$ENV{SYMBOL_SERVER_SSH_KEY}   = "$ENV{HOME}/.ssh/id_dsa";
+$ENV{SYMBOL_SERVER_SSH_KEY}  = "$ENV{HOME}/.ssh/id_dsa";
+$ENV{POST_SYMBOL_UPLOAD_CMD} = '/usr/local/bin/post-symbol-upload.py';
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
