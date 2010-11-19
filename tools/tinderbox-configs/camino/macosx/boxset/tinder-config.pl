@@ -280,6 +280,7 @@ $milestone     = "2.0-M1.9";
 #$ENV{SYMBOL_SERVER_PATH}   = '';
 # this is optional, it's a full path to a ssh private key
 #$ENV{SYMBOL_SERVER_SSH_KEY} = '';
+#$ENV{POST_SYMBOL_UPLOAD_CMD} = '/usr/local/bin/post-symbol-upload.py';
 
 # Reboot the OS at the end of build-and-test cycle. This is primarily
 # intended for Win9x, which can't last more than a few cycles before
