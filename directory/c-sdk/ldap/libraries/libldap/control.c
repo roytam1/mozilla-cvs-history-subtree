@@ -108,7 +108,7 @@ nsldapi_put_controls( LDAP *ld, LDAPControl **ctrls, int closeseq,
 
 		if ( c->ldctl_value.bv_val != NULL ) {
 			if ( ber_printf( ber, "o", c->ldctl_value.bv_val,
-			    c->ldctl_value.bv_len )
+			    (int)c->ldctl_value.bv_len /* XXX lossy cast */ )
 			    == -1 ) {
 				goto error_exit;
 			}
@@ -145,9 +145,8 @@ int
 nsldapi_get_controls( BerElement *ber, LDAPControl ***controlsp )
 {
 	LDAPControl		*newctrl;
-	ber_tag_t		tag;
-	ber_len_t		len;
-	int				rc, maxcontrols, curcontrols;
+	unsigned long		tag, len;
+	int			rc, maxcontrols, curcontrols;
 	char			*last;
 
 	/*
@@ -303,30 +302,7 @@ ldap_controls_free( LDAPControl **ctrls )
 	}
 }
 
-LDAPControl *
-LDAP_CALL
-ldap_find_control( const char *oid, LDAPControl **ctrls )
-{
-	int i, foundControl;
-	LDAPControl *Ctrlp = NULL;
-	
-	/* find the control in the list of controls if it exists */
-	if ( ctrls == NULL ) {
-		return ( NULL );
-	} 
-	foundControl = 0;
-	for ( i = 0; (( ctrls[i] != NULL ) && ( !foundControl )); i++ ) {
-		foundControl = !strcmp( ctrls[i]->ldctl_oid, oid );
-	}
-	if ( !foundControl ) {
-		return ( NULL );
-	} else {
-		/* let local var point to the control */
-		Ctrlp = ctrls[i-1];			
-	}
-	
-	return( Ctrlp );
-}
+
 
 #if 0
 LDAPControl **

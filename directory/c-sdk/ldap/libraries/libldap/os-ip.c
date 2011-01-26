@@ -179,9 +179,6 @@ static LBER_SOCKET nsldapi_os_socket( LDAP *ld, int secure, int domain,
 static int nsldapi_os_ioctl( LBER_SOCKET s, int option, int *statusp );
 static int nsldapi_os_connect_with_to( LBER_SOCKET s, struct sockaddr *name,
 	int namelen, int msec_timeout );
-#if defined(KERBEROS)
-char * nsldapi_host_connected_to( LDAP *ld, Sockbuf *sb );
-#endif
 
 /*
  * Function typedefs used by nsldapi_try_each_host()
@@ -775,7 +772,7 @@ nsldapi_close_connection( LDAP *ld, Sockbuf *sb )
 
 #ifdef KERBEROS
 char *
-nsldapi_host_connected_to( LDAP *ld, Sockbuf *sb )
+nsldapi_host_connected_to( Sockbuf *sb )
 {
 	struct hostent		*hp;
 	char			*p;
@@ -794,7 +791,7 @@ nsldapi_host_connected_to( LDAP *ld, Sockbuf *sb )
 	 * hostname is used as the kerberos instance.
 	 */
 #error XXXmcs: need to use DNS callbacks here
-	if (( hp = (struct hostent *)gethostbyaddr( (char *) &sin.sin_addr,
+	if (( hp = gethostbyaddr( (char *) &sin.sin_addr,
 	    sizeof( sin.sin_addr ), AF_INET )) != NULL ) {
 		if ( hp->h_name != NULL ) {
 			return( nsldapi_strdup( hp->h_name ));

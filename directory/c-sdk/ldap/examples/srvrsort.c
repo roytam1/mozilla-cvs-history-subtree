@@ -50,7 +50,7 @@ main( int argc, char **argv )
 	char			*attrfail, *matched = NULL, *errmsg = NULL;
 	char			**vals, **referrals;
 	int			rc, parse_rc, version;
-	ber_int_t		sortrc;
+	unsigned long		sortrc;
 	LDAPControl		*sortctrl = NULL;
 	LDAPControl		*requestctrls[ 2 ];
 	LDAPControl		**resultctrls = NULL;
