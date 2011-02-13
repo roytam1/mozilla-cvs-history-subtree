@@ -3190,9 +3190,15 @@ public:
   nsAutoString href;
   GeckoUtils::GetEnclosingLinkElementAndHref(mDataOwner->mContextMenuNode, getter_AddRefs(linkContent), href);
   nsAutoString linkText;
-  GeckoUtils::GatherTextUnder(linkContent, linkText);
+  if (linkContent) {
+    GeckoUtils::GatherTextUnder(linkContent, linkText);
+  }
   NSString* urlStr = [NSString stringWith_nsAString:href];
-  NSString* titleStr = [NSString stringWith_nsAString:linkText];
+  NSString* titleStr = nil;
+  if (!linkText.IsEmpty())
+    titleStr = [NSString stringWith_nsAString:linkText];
+  else
+    titleStr = urlStr;
 
   NSDictionary* itemInfo = [NSDictionary dictionaryWithObjectsAndKeys:
                                             titleStr, kAddBookmarkItemTitleKey,
