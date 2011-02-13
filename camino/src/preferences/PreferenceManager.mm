@@ -769,6 +769,8 @@ static BOOL gMadePrefManager;
 // to the "en-gb" form required for HTTP accept-language headers.
 // If the locale isn't in the expected form we return nil. (Systems upgraded
 // from 10.1 report human readable locales (e.g. "English")).
+// Apple switched to the "en-GB" format in 10.4, so once support for PPC is
+// dropped, the localeParts-handling section of this method can be removed.
 + (NSString*)convertLocaleToHTTPLanguage:(NSString*)inAppleLocale
 {
     NSString* r = nil;
@@ -782,12 +784,13 @@ static BOOL gMadePrefManager;
         [language appendString:[[localeParts objectAtIndex:1] lowercaseString]];
       }
 
-      // We accept standalone primary subtags (e.g. "en") and also
-      // a primary subtag with additional subtags of between two and eight characters long
-      // We ignore i- and x- primary subtags
+      // We accept standalone primary subtags (e.g. "en") and also a primary
+      // subtag with additional subtags of between two and eight characters
+      // long. We ignore i- and x- primary subtags. By convention the 
+      // accept-language subtags are lowercase (and some servers require this).
       if ([language length] == 2 ||
           ([language length] >= 5 && [language length] <= 13 && [language characterAtIndex:2] == '-'))
-        r = [NSString stringWithString:language];
+        r = [[NSString stringWithString:language] lowercaseString];
     }
     return r;
 }
@@ -913,9 +916,9 @@ static BOOL gMadePrefManager;
 
     // Some servers will disregard a generic 'en', causing a fallback to a
     // subsequent language (see bug 300905). So if the user has only a generic
-    // 'en', insert 'en-US' before 'en'.
+    // 'en', insert 'en-us' before 'en'.
     if ((indexOfGenericEnglish != -1) && !englishDialectExists)
-      [acceptableLanguages insertObject:@"en-US" atIndex:indexOfGenericEnglish];
+      [acceptableLanguages insertObject:@"en-us" atIndex:indexOfGenericEnglish];
 
     // If we understood all the languages in the list, set the accept-language
     // header. Note that Necko will determine quality factors itself.
