@@ -426,6 +426,7 @@ const int kOutlineViewLeftMargin = 19; // determined empirically, since it doesn
     return;
 
   [self selectContainerFolder:[manager containerAtIndex:index - 1]];
+  [manager bookmarkItemsWillBeRemoved:[NSArray arrayWithObject:selectedContainer]];
   [[manager bookmarkRoot] deleteChild:selectedContainer];
 }
 
@@ -439,21 +440,24 @@ const int kOutlineViewLeftMargin = 19; // determined empirically, since it doesn
   // outliner collapse all items that are being deleted. This will cull the selection
   // for us and eliminate any children that happened to be selected.
   BOOL allCollapsed = NO;
-  id doomedItem;
-  NSEnumerator* selRows;
   while (!allCollapsed) {
     allCollapsed = YES;
-    selRows = [mBookmarksOutlineView selectedRowEnumerator];
-    while (allCollapsed && (doomedItem = [selRows nextObject])) {
-      doomedItem = [mBookmarksOutlineView itemAtRow:[doomedItem intValue]];
+    NSIndexSet* selectedIndexes = [mBookmarksOutlineView selectedRowIndexes];
+    for (unsigned int i = [selectedIndexes firstIndex];
+         i != NSNotFound;
+         i = [selectedIndexes indexGreaterThanIndex:i])
+    {
+      id doomedItem = [mBookmarksOutlineView itemAtRow:i];
       if ([mBookmarksOutlineView isItemExpanded:doomedItem]) {
-        allCollapsed = NO;
         [mBookmarksOutlineView collapseItem:doomedItem];
+        allCollapsed = NO;
+        break;
       }
     }
   }
 
-  [[BookmarkManager sharedBookmarkManager] startSuppressingChangeNotifications];
+  BookmarkManager* bookmarkManager = [BookmarkManager sharedBookmarkManager];
+  [bookmarkManager startSuppressingChangeNotifications];
 
   // all the parents of the children we need to notify, some may overlap, but in general
   // that's pretty uncommon, so this is good enough.
@@ -461,13 +465,16 @@ const int kOutlineViewLeftMargin = 19; // determined empirically, since it doesn
 
   // Make a copy of the current search array
   NSMutableArray *currentSearchArray = nil;
-  if ([[BookmarkManager sharedBookmarkManager] searchActive])
+  if ([bookmarkManager searchActive])
     currentSearchArray = [[mSearchResultArray mutableCopy] autorelease];
 
   // delete all bookmarks that are in our array
-  NSEnumerator *e = [[mBookmarksOutlineView selectedItems] objectEnumerator];
-  BookmarkItem *doomedBookmark = nil;
+  NSArray* doomedBookmarks = [mBookmarksOutlineView selectedItems];
 
+  [bookmarkManager bookmarkItemsWillBeRemoved:doomedBookmarks];
+
+  NSEnumerator *e = [doomedBookmarks objectEnumerator];
+  BookmarkItem *doomedBookmark = nil;
   while ((doomedBookmark = [e nextObject])) {
     [currentSearchArray removeObject:doomedBookmark];
 
@@ -482,7 +489,7 @@ const int kOutlineViewLeftMargin = 19; // determined empirically, since it doesn
     [mBookmarksOutlineView reloadData];
   }
 
-  [[BookmarkManager sharedBookmarkManager] stopSuppressingChangeNotifications];
+  [bookmarkManager stopSuppressingChangeNotifications];
 
   // notify observers that the parents have changed
   e = [parentsToNotify objectEnumerator];
@@ -666,11 +673,10 @@ const int kOutlineViewLeftMargin = 19; // determined empirically, since it doesn
   BookmarkFolder* pasteDestinationFolder = nil;
 
   // Work out what the selected item is and therefore where to paste the bookmark(s)
-  NSEnumerator* selRows = [mBookmarksOutlineView selectedRowEnumerator];
-  id curSelectedRow = [selRows nextObject];
+  unsigned int firstRow = [[mBookmarksOutlineView selectedRowIndexes] firstIndex];
 
-  if (curSelectedRow) {
-    BookmarkItem* item = [mBookmarksOutlineView itemAtRow:[curSelectedRow intValue]];
+  if (firstRow != NSNotFound) {
+    BookmarkItem* item = [mBookmarksOutlineView itemAtRow:firstRow];
     if ([item isKindOfClass:[BookmarkFolder class]]) {
       pasteDestinationFolder = (BookmarkFolder*) item;
       pasteDestinationIndex = [pasteDestinationFolder count];
@@ -1005,6 +1011,9 @@ const int kOutlineViewLeftMargin = 19; // determined empirically, since it doesn
   @catch (id exception) {
   }
 
+  if (isCopy)
+    [[BookmarkManager sharedBookmarkManager] bookmarkItemsAdded:newBookmarks];
+
   mBookmarkUpdatesDisabled = NO;
   [self reloadDataForItem:nil reloadChildren:YES];
 
@@ -1042,6 +1051,8 @@ const int kOutlineViewLeftMargin = 19; // determined empirically, since it doesn
   }
   @catch (id exception) {
   }
+
+  [[BookmarkManager sharedBookmarkManager] bookmarkItemsAdded:newBookmarks];
 
   mBookmarkUpdatesDisabled = NO;
   [self reloadDataForItem:nil reloadChildren:YES];
@@ -1472,7 +1483,7 @@ const int kOutlineViewLeftMargin = 19; // determined empirically, since it doesn
 {
   // The only time this wouldn't work is the url column for folders, but that
   // cell isn't editable, so if we are here it's always safe.
-  [item takeValue:object forKey:[tableColumn identifier]];
+  [item setValue:object forKey:[tableColumn identifier]];
 }
 
 - (BOOL)outlineView:(NSOutlineView *)outlineView writeItems:(NSArray*)items toPasteboard:(NSPasteboard*)pboard

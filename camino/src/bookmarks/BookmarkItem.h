@@ -57,6 +57,12 @@ enum
   // flags for bookmark folder changes
   kBookmarkItemChildrenChangedMask      = (1 << 9),
 
+  // mask of flags that require updating the spotlight metadata file
+  kBookmarkItemSpotlightMetadataChangeFlagsMask = kBookmarkItemTitleChangedMask |
+                                                  kBookmarkItemDescriptionChangedMask |
+                                                  kBookmarkItemShortcutChangedMask |
+                                                  kBookmarkItemURLChangedMask,
+
   // mask of flags that require a save of the bookmarks
   kBookmarkItemSignificantChangeFlagsMask = kBookmarkItemTitleChangedMask |
                                             kBookmarkItemDescriptionChangedMask |
@@ -134,7 +140,6 @@ enum
 - (void)writeBookmarksMetadataToPath:(NSString*)inPath;
 - (void)removeBookmarksMetadataFromPath:(NSString*)inPath;
 - (NSDictionary *)writeNativeDictionary;
-- (NSDictionary *)writeSafariDictionary;
 
 // methods used for saving to files; are guaranteed never to return nil
 - (id)savedTitle;
@@ -154,11 +159,9 @@ enum
 
 // Bunch of Keys for reading/writing dictionaries.
 
-// Safari & Camino plist keys
+// Camino plist keys
 extern NSString* const BMTitleKey;
 extern NSString* const BMChildrenKey;
-
-// Camino plist keys
 extern NSString* const BMFolderDescKey;
 extern NSString* const BMFolderTypeKey;
 extern NSString* const BMFolderShortcutKey;
@@ -170,13 +173,3 @@ extern NSString* const BMShortcutKey;
 extern NSString* const BMLastVisitKey;
 extern NSString* const BMNumberVisitsKey;
 extern NSString* const BMLinkedFaviconURLKey;
-
-// safari keys
-extern NSString* const SafariTypeKey;
-extern NSString* const SafariLeaf;
-extern NSString* const SafariList;
-extern NSString* const SafariAutoTab;
-extern NSString* const SafariUUIDKey;
-extern NSString* const SafariURIDictKey;
-extern NSString* const SafariBookmarkTitleKey;
-extern NSString* const SafariURLStringKey;

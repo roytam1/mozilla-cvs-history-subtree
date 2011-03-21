@@ -63,7 +63,7 @@ static void PrintUsage(void)
         "Usage: parent [-d] child [options]\n");
 }
 
-int main(int argc, char **argv)
+PRIntn main (PRIntn argc, char **argv)
 {
     PRStatus rv;
     PRInt32 test_status = 1;

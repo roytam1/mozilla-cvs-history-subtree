@@ -725,16 +725,22 @@ static const int kBMBarScanningStep = 5;
 
   NSArray *draggedTypes = [[sender draggingPasteboard] types];
 
+  NSMutableArray* newBookmarks = [NSMutableArray array];
   if ([draggedTypes containsObject:kCaminoBookmarkListPBoardType]) {
     NSArray *draggedItems = [BookmarkManager bookmarkItemsFromSerializableArray:[[sender draggingPasteboard] propertyListForType:kCaminoBookmarkListPBoardType]];
     // added sequentially, so use reverse object enumerator to preserve order.
     NSEnumerator *enumerator = [draggedItems reverseObjectEnumerator];
     id aKid;
     while ((aKid = [enumerator nextObject])) {
-      if (isCopy)
-        [(BookmarkFolder*)[aKid parent] copyChild:aKid toBookmarkFolder:toolbar atIndex:index];
-      else
+      if (isCopy) {
+        BookmarkItem* childCopy = [(BookmarkFolder*)[aKid parent] copyChild:aKid
+                                                           toBookmarkFolder:toolbar
+                                                                    atIndex:index];
+        [newBookmarks addObject:childCopy];
+      }
+      else {
         [(BookmarkFolder*)[aKid parent] moveChild:aKid toBookmarkFolder:toolbar atIndex:index];
+      }
     }
     dropHandled = YES;
   }
@@ -749,14 +755,16 @@ static const int kBMBarScanningStep = 5;
       NSString* title = [titles objectAtIndex:i];
       if ([title length] == 0)
         title = url;
-      [toolbar insertChild:[Bookmark bookmarkWithTitle:title
-                                                   url:url
-                                             lastVisit:nil]
-                   atIndex:index
-                    isMove:NO];
+      Bookmark* newBookmark = [Bookmark bookmarkWithTitle:title
+                                                      url:url
+                                                lastVisit:nil];
+      [toolbar insertChild:newBookmark atIndex:index isMove:NO];
+      [newBookmarks addObject:newBookmark];
     }
     dropHandled = YES;
   }
+  
+  [[BookmarkManager sharedBookmarkManager] bookmarkItemsAdded:newBookmarks];
 
   mDragInsertionButton = nil;
   mDragInsertionPosition = CHInsertNone;

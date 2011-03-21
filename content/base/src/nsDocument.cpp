@@ -923,6 +923,7 @@ NS_INTERFACE_TABLE_HEAD(nsDocument)
     NS_INTERFACE_TABLE_ENTRY(nsDocument, nsISupportsWeakReference)
     NS_INTERFACE_TABLE_ENTRY(nsDocument, nsIRadioGroupContainer)
     NS_INTERFACE_TABLE_ENTRY(nsDocument, nsIMutationObserver)
+    NS_INTERFACE_TABLE_ENTRY(nsDocument, nsIDocument_MOZILLA_1_9_2_BRANCH)
     // nsNodeSH::PreCreate() depends on the identity pointer being the
     // same as nsINode (which nsIDocument inherits), so if you change
     // the below line, make sure nsNodeSH::PreCreate() still does the
@@ -5717,11 +5718,30 @@ nsDocument::GetLayoutHistoryState() const
 }
 
 void
+nsDocument::AsyncBlockOnload()
+{
+  while (mAsyncOnloadBlockCount) {
+    --mAsyncOnloadBlockCount;
+    BlockOnload();
+  }
+}
+
+void
 nsDocument::BlockOnload()
 {
   // If mScriptGlobalObject is null, we shouldn't be messing with the loadgroup
   // -- it's not ours.
   if (mOnloadBlockCount == 0 && mScriptGlobalObject) {
+    if (!nsContentUtils::IsSafeToRunScript()) {
+      // Because AddRequest may lead to OnStateChange calls in chrome,
+      // block onload only when there are no script blockers.
+      ++mAsyncOnloadBlockCount;
+      if (mAsyncOnloadBlockCount == 1) {
+        nsContentUtils::AddScriptRunner(
+          NS_NEW_RUNNABLE_METHOD(nsDocument, this, AsyncBlockOnload));
+      }
+      return;
+    }
     nsCOMPtr<nsILoadGroup> loadGroup = GetDocumentLoadGroup();
     if (loadGroup) {
       loadGroup->AddRequest(mOnloadBlocker, nsnull);
@@ -5733,7 +5753,7 @@ nsDocument::BlockOnload()
 void
 nsDocument::UnblockOnload(PRBool aFireSync)
 {
-  if (mOnloadBlockCount == 0) {
+  if (mOnloadBlockCount == 0 && mAsyncOnloadBlockCount == 0) {
     NS_NOTREACHED("More UnblockOnload() calls than BlockOnload() calls; dropping call");
     return;
   }
@@ -5743,7 +5763,7 @@ nsDocument::UnblockOnload(PRBool aFireSync)
   // If mScriptGlobalObject is null, we shouldn't be messing with the loadgroup
   // -- it's not ours.
   if (mOnloadBlockCount == 0 && mScriptGlobalObject) {
-    if (aFireSync) {
+    if (aFireSync && mAsyncOnloadBlockCount == 0) {
       // Increment mOnloadBlockCount, since DoUnblockOnload will decrement it
       ++mOnloadBlockCount;
       DoUnblockOnload();
@@ -5790,6 +5810,11 @@ nsDocument::DoUnblockOnload()
     // We blocked again after the last unblock.  Nothing to do here.  We'll
     // post a new event when we unblock again.
     return;
+  }
+
+  if (mAsyncOnloadBlockCount != 0) {
+    // We need to wait until the async onload block has been handled.
+    PostUnblockOnloadEvent();
   }
 
   // If mScriptGlobalObject is null, we shouldn't be messing with the loadgroup
@@ -5970,7 +5995,7 @@ nsDocument::MutationEventDispatched(nsINode* aTarget)
 
     PRInt32 realTargetCount = realTargets.Count();
     for (PRInt32 k = 0; k < realTargetCount; ++k) {
-      mozAutoRemovableBlockerRemover blockerRemover;
+      mozAutoRemovableBlockerRemover blockerRemover(this);
 
       nsMutationEvent mutation(PR_TRUE, NS_MUTATION_SUBTREEMODIFIED);
       nsEventDispatcher::Dispatch(realTargets[k], nsnull, &mutation);
@@ -6104,4 +6129,10 @@ nsDocument::SetScriptTypeID(PRUint32 aScriptType)
 {
     NS_ERROR("Can't change default script type for a document");
     return NS_ERROR_NOT_IMPLEMENTED;
+}
+
+nsISupports*
+nsDocument::GetCurrentContentSink()
+{
+  return mParser ? mParser->GetContentSink() : nsnull;
 }

@@ -53,7 +53,7 @@ static void Fail(void)
     exit(1);
 }
 
-int main(int argc, char **argv)
+int main()
 {
     int foo = 1;
     char *ptr = NULL;

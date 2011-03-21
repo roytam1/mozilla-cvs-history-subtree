@@ -818,6 +818,9 @@ CHBrowserListener::HandleEvent(nsIDOMEvent* inEvent)
   nsAutoString eventType;
   inEvent->GetType(eventType);
 
+  if (eventType.Equals(NS_LITERAL_STRING("popupshowing")))
+    return HandleXULPopupEvent(inEvent);
+
   if (eventType.Equals(NS_LITERAL_STRING("DOMPopupBlocked")))
     return HandleBlockedPopupEvent(inEvent);
 
@@ -827,12 +830,40 @@ CHBrowserListener::HandleEvent(nsIDOMEvent* inEvent)
   if (eventType.Equals(NS_LITERAL_STRING("flashblockCheckLoad")))
     return HandleFlashblockCheckEvent(inEvent);
 
+  if (eventType.Equals(NS_LITERAL_STRING("silverblockCheckLoad")))
+    return HandleSilverblockCheckEvent(inEvent);
+
   if (eventType.Equals(NS_LITERAL_STRING("command")))
     return HandleXULCommandEvent(inEvent);
 
   return NS_OK;
 }
 
+nsresult
+CHBrowserListener::HandleXULPopupEvent(nsIDOMEvent* inEvent)
+{
+  nsCOMPtr<nsIDOMNSEvent> nsEvent(do_QueryInterface(inEvent));
+  if (!nsEvent)
+    return NS_OK;
+
+  PRBool eventIsTrusted = PR_FALSE;
+  nsEvent->GetIsTrusted(&eventIsTrusted);
+  if (!eventIsTrusted)
+    return NS_OK;
+
+  nsCOMPtr<nsIDOMEventTarget> eventTarget;
+  nsresult rv = nsEvent->GetOriginalTarget(getter_AddRefs(eventTarget));
+  if (NS_FAILED(rv))
+    return NS_OK;
+
+  nsCOMPtr<nsIDOMNode> domNodeSendingEvent = do_QueryInterface(eventTarget);
+  if (!domNodeSendingEvent)
+    return NS_OK;
+
+  [mContainer onShowContextMenu:0 domEvent:inEvent domNode:domNodeSendingEvent];
+
+  return NS_OK;
+}
 
 nsresult
 CHBrowserListener::HandleBlockedPopupEvent(nsIDOMEvent* inEvent)
@@ -874,6 +905,14 @@ nsresult
 CHBrowserListener::HandleFlashblockCheckEvent(nsIDOMEvent* inEvent)
 {
   [mContainer onFlashblockCheck:inEvent];
+
+  return NS_OK;
+}
+
+nsresult
+CHBrowserListener::HandleSilverblockCheckEvent(nsIDOMEvent* inEvent)
+{
+  [mContainer onSilverblockCheck:inEvent];
 
   return NS_OK;
 }

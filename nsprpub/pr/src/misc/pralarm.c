@@ -41,7 +41,11 @@
 /******************************* PRALARM ******************************/
 /**********************************************************************/
 
+#ifdef XP_MAC
+#include "pralarm.h"
+#else
 #include "obsolete/pralarm.h"
+#endif
 
 struct PRAlarmID {                       /* typedef'd in pralarm.h       */
     PRCList list;                        /* circular list linkage        */

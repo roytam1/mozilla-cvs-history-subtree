@@ -287,7 +287,7 @@ static void ServerTwo( void )
 } /* end ServerTwo() */
 
 
-int main(int argc, char **argv)
+PRIntn main(PRIntn argc, char *argv[])
 {
     {
         /*

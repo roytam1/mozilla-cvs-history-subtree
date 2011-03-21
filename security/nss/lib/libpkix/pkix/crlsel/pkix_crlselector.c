@@ -654,9 +654,8 @@ cleanup:
  * FUNCTION: PKIX_CRLSelector_Create (see comments in pkix_crlsel.h)
  */
 PKIX_Error *
-PKIX_CRLSelector_Create(
+PKIX_CrlSelector_Create(
         PKIX_PL_Cert *issuer,
-        PKIX_List *crldpList,
         PKIX_PL_Date *date,
         PKIX_CRLSelector **pCrlSelector,
         void *plContext)
@@ -690,11 +689,6 @@ PKIX_CRLSelector_Create(
         PKIX_ComCRLSelParams_AddIssuerName(comCrlSelParams, issuerName,
                                            plContext),
         PKIX_COMCRLSELPARAMSADDISSUERNAMEFAILED);
-
-    PKIX_CHECK(
-        PKIX_ComCRLSelParams_SetCrlDp(comCrlSelParams, crldpList,
-                                      plContext),
-        PKIX_COMCRLSELPARAMSSETCERTFAILED);
 
     PKIX_CHECK(
         PKIX_ComCRLSelParams_SetDateAndTime(comCrlSelParams, nowDate,
