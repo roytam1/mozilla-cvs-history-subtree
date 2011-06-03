@@ -67,9 +67,6 @@ ssl_init()
       cd ../common
       . ./init.sh
   fi
-  if [ -z "${IOPR_SSL_SOURCED}" ]; then
-      . ../iopr/ssl_iopr.sh
-  fi
   if [ ! -r $CERT_LOG_FILE ]; then  # we need certificates here
       cd ../cert
       . ./cert.sh
@@ -200,7 +197,6 @@ kill_selfserv()
   echo "selfserv with PID ${PID} killed at `date`"
 
   rm ${SERVERPID}
-  html_detect_core "<TR><TD>kill_selfserv core detection step"
 }
 
 ########################### start_selfserv #############################
@@ -214,8 +210,7 @@ start_selfserv()
       echo "$SCRIPTNAME: $testname ----"
   fi
   sparam=`echo $sparam | sed -e 's;_; ;g'`
-  if [ -n "$NSS_ENABLE_ECC" ] && \
-     [ -z "$NO_ECC_CERTS" -o "$NO_ECC_CERTS" != "1"  ] ; then
+  if [ -n "$NSS_ENABLE_ECC" ] ; then
       ECC_OPTIONS="-e ${HOSTADDR}-ec"
   else
       ECC_OPTIONS=""
@@ -279,7 +274,7 @@ ssl_cov()
 
   while read ectype tls param testname
   do
-      p=`echo "$testname" | sed -e "s/_.*//"`   #sonmi, only run extended test on SSL3 and TLS
+      p=`echo "$testname" | sed -e "s/ .*//"`   #sonmi, only run extended test on SSL3 and TLS
       
       if [ "$p" = "SSL2" -a "$NORM_EXT" = "Extended Test" ] ; then
           echo "$SCRIPTNAME: skipping  $testname for $NORM_EXT"
@@ -799,6 +794,5 @@ if [ -z  "$DO_REM_ST" -a -z  "$DO_DIST_ST" ] ; then
     BYPASS_STRING="Server Bypass"
     ssl_run
 
-    ssl_iopr_run
     ssl_cleanup
 fi

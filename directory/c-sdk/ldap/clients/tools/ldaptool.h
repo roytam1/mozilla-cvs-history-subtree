@@ -95,8 +95,14 @@ extern int getopt (int argc, char *const *argv, const char *optstring);
 #include <ssl.h>
 #endif
 
+
 #include <portable.h>
+
 #include <ldap.h>
+#ifndef NO_LIBLCACHE
+#include <lcache.h>
+#endif
+
 #include <ldaplog.h>
 #include <ldif.h>
 
@@ -109,6 +115,7 @@ extern int getopt (int argc, char *const *argv, const char *optstring);
 #ifdef __cplusplus
 extern "C" {
 #endif
+
 
 /*
  * shared macros, structures, etc.
@@ -138,18 +145,11 @@ extern int		ldaptool_port;
 extern int		ldaptool_port2;
 extern int		ldaptool_verbose;
 extern int		ldaptool_not;
-extern int		ldaptool_nobind;
-extern int		ldaptool_noconv_passwd;
 extern char		*ldaptool_progname;
 extern FILE		*ldaptool_fp;
 extern char		*ldaptool_charset;
+extern char		*ldaptool_convdir;
 extern LDAPControl	*ldaptool_request_ctrls[];
-#ifdef LDAP_DEBUG
-extern int ldaptool_dbg_lvl;
-#define LDAPToolDebug(lvl,fmt,arg1,arg2,arg3) if (lvl & ldaptool_dbg_lvl) { fprintf(stderr,fmt,arg1,arg2,arg3); }
-#else
-#define LDAPToolDebug(lvl,fmt,arg1,arg2,arg3)
-#endif /* LDAP_DEBUG */
 
 
 /*
@@ -169,14 +169,10 @@ LDAPControl *ldaptool_create_manage_dsait_control( void );
 void ldaptool_print_referrals( char **refs );
 int ldaptool_print_extended_response( LDAP *ld, LDAPMessage *res, char *msg );
 LDAPControl *ldaptool_create_proxyauth_control( LDAP *ld );
-LDAPControl *ldaptool_create_geteffectiveRights_control ( LDAP *ld,
-        const char *authzid, const char **attrlist );
 void ldaptool_add_control_to_array( LDAPControl *ctrl, LDAPControl **array);
 void ldaptool_reset_control_array( LDAPControl **array );
 char *ldaptool_get_tmp_dir( void );
 char *ldaptool_local2UTF8( const char *s, const char *desc );
-char *ldaptool_getpass( const char *prompt );
-char *ldaptool_read_password( FILE *mod_password_fp );
 int ldaptool_berval_is_ascii( const struct berval *bvp );
 int ldaptool_sasl_bind_s( LDAP *ld, const char *dn, const char *mechanism,
         const struct berval *cred, LDAPControl **serverctrls,
