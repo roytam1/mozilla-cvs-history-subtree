@@ -1,3 +1,0 @@
-production-crazyhorse|Tb-Nightly
-bm-xserve05|Tb-Nightly
-production-patrocles|Tb-Nightly
