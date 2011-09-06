@@ -51,10 +51,9 @@
 #ifdef _WIN32
 #include <windows.h>
 #define LIB_NAME "softokn3.dll"
-#endif
+#else
 #include "prlink.h"
-#include "prprf.h"
-#include "plgetopt.h"
+#endif
 
 #include "pkcs11.h"
 
@@ -326,8 +325,7 @@ int MODE = FIPSMODE;
 CK_BBOOL true = CK_TRUE;
 CK_BBOOL false = CK_FALSE;
 static const CK_BYTE PLAINTEXT[] = {"Firefox  Rules!"};
-static const CK_BYTE PLAINTEXT_PAD[] = 
-                                  {"Firefox and thunderbird rule the world!"};
+static const CK_BYTE PLAINTEXT_PAD[] = {"Firefox and thunderbird rule the world!"};
 CK_ULONG NUMTESTS = 0;
 
 static const char * slotFlagName[] = {
@@ -464,8 +462,7 @@ CK_RV PKM_SecretKey(CK_FUNCTION_LIST_PTR pFunctionList, CK_SLOT_ID *pSlotList,
                     CK_ULONG slotID, CK_UTF8CHAR_PTR pwd, CK_ULONG pwdLen);
 CK_RV PKM_PublicKey(CK_FUNCTION_LIST_PTR pFunctionList, CK_SLOT_ID *pSlotList,
                     CK_ULONG slotID, CK_UTF8CHAR_PTR pwd, CK_ULONG pwdLen);
-CK_RV PKM_HybridMode(CK_UTF8CHAR_PTR pwd, CK_ULONG pwdLen, 
-                     CK_C_INITIALIZE_ARGS_NSS *initArgs);
+CK_RV PKM_HybridMode(CK_UTF8CHAR_PTR pwd, CK_ULONG pwdLen);
 CK_RV PKM_FindAllObjects(CK_FUNCTION_LIST_PTR pFunctionList,
                           CK_SLOT_ID * pSlotList, CK_ULONG slotID,
                           CK_UTF8CHAR_PTR pwd, CK_ULONG pwdLen);
@@ -513,8 +510,7 @@ CK_RV PKM_DualFuncDigest(CK_FUNCTION_LIST_PTR pFunctionList,
 CK_RV PKM_PubKeySign(CK_FUNCTION_LIST_PTR pFunctionList, 
                      CK_SESSION_HANDLE hRwSession,
                      CK_OBJECT_HANDLE hPubKey, CK_OBJECT_HANDLE hPrivKey,
-                     CK_MECHANISM *signMech, const CK_BYTE *  pData, 
-                     CK_ULONG dataLen);
+                     CK_MECHANISM *signMech, const CK_BYTE *  pData, CK_ULONG dataLen);
 CK_RV PKM_SecKeyCrypt(CK_FUNCTION_LIST_PTR pFunctionList, 
                       CK_SESSION_HANDLE hSession,
                       CK_OBJECT_HANDLE hSymKey, CK_MECHANISM *cryptMech,
@@ -539,10 +535,6 @@ CK_RV PKM_RecoverFunctions(CK_FUNCTION_LIST_PTR pFunctionList,
                     CK_OBJECT_HANDLE hPubKey, CK_OBJECT_HANDLE hPrivKey,
                     CK_MECHANISM *signMech, const CK_BYTE * pData, 
                     CK_ULONG pDataLen);
-void  PKM_Help(); 
-void  PKM_CheckPath(char *string);
-char  *PKM_FilePasswd(char *pwFile);
-static PRBool verbose = PR_FALSE;
 
 int main(int argc, char **argv)
 {
@@ -551,79 +543,44 @@ int main(int argc, char **argv)
     CK_RV crv = CKR_OK;
     CK_C_INITIALIZE_ARGS_NSS initArgs;
     CK_SLOT_ID *pSlotList = NULL;
+    CK_UTF8CHAR pwd[] ="1Mozilla";
     CK_TOKEN_INFO tokenInfo;
-    CK_ULONG slotID = 0; /* slotID == 0 for FIPSMODE */
+    CK_ULONG slotID;
 
-    CK_UTF8CHAR *pwd = NULL;
-    CK_ULONG pwdLen = 0;
-    char *moduleSpec = NULL;
-    char *configDir = NULL;
-    char *dbPrefix = NULL;
-
-    PLOptStatus os;
-    PLOptState *opt = PL_CreateOptState(argc, argv, "nvhf:d:p:");
-    while (PL_OPT_EOL != (os = PL_GetNextOpt(opt)))
-    {
-        if (PL_OPT_BAD == os) continue;
-       switch (opt->option)
-        {
-        case 'n':  /* non fips mode */
+    slotID = 0;
+    if (argc == 2) {
+        if (strcmp(argv[1], "FIPS") == 0) {
+            MODE = FIPSMODE;
+        } else {
             MODE = NONFIPSMODE;
             slotID = 1;
-            break;
-        case 'f':  /* password file */
-            pwd = (CK_UTF8CHAR *) PKM_FilePasswd((char *)opt->value);
-            if (!pwd) PKM_Help();
-            break;
-        case 'd':  /* opt_CertDir */
-            if (!opt->value) PKM_Help();
-            configDir = strdup(opt->value);
-            PKM_CheckPath(configDir);
-            break;
-        case 'p':  /* opt_DBPrefix */
-            if (!opt->value) PKM_Help();
-            dbPrefix = strdup(opt->value);
-            break;
-        case 'v':
-            verbose = PR_TRUE;
-            break;
-        case 'h':  /* help message */
-        default:
-            PKM_Help();
-            break;
         }
-    }
-    PL_DestroyOptState(opt);
-
-    if (!pwd) {
-        pwd = (CK_UTF8CHAR *)strdup("1Mozilla");
-    }
-    pwdLen = strlen((const char*)pwd); 
-    if (!configDir) {
-        configDir = strdup(".");
-    }
-    if (!dbPrefix) {
-        dbPrefix = strdup("");
-    }
+    } else MODE = FIPSMODE;
 
 #ifdef _WIN32
     hModule = LoadLibrary(LIB_NAME);
     if (hModule == NULL) {
         PKM_Error( "cannot load %s\n", LIB_NAME);
-        goto cleanup;
+        exit(1);
     }
     if (MODE == FIPSMODE) {
         /* FIPS mode == FC_GetFunctionList */
         pC_GetFunctionList = (CK_C_GetFunctionList)
                              GetProcAddress(hModule, "FC_GetFunctionList");
+        PKM_LogIt("loading FC_GetFunctionList for FIPS Mode; slotID %d \n",
+                  slotID);
+        PKM_LogIt("pFunctionList->C_Foo == pFunctionList->FC_Foo\n");
+
     } else {
         /* NON FIPS mode  == C_GetFunctionList */
         pC_GetFunctionList = (CK_C_GetFunctionList)
                              GetProcAddress(hModule, "C_GetFunctionList");
-     }
+        PKM_LogIt("loading C_GetFunctionList for Non FIPS Mode; slotID %d \n",
+                  slotID);
+    }
     if (pC_GetFunctionList == NULL) {
         PKM_Error( "cannot load %s\n", LIB_NAME);
-        goto cleanup;
+        exit(1);
     }
 #else
     {
@@ -648,14 +605,6 @@ int main(int argc, char **argv)
     }
 #endif
 
-    if (MODE == FIPSMODE) {
-        printf("Loaded FC_GetFunctionList for FIPS MODE; slotID %d \n",
-               (int) slotID);
-    } else {
-        printf("loaded C_GetFunctionList for NON FIPS MODE; slotID %d \n",
-                (int) slotID);
-    }
-
     crv = (*pC_GetFunctionList)(&pFunctionList);
     assert(crv == CKR_OK);
 
@@ -664,10 +613,8 @@ int main(int argc, char **argv)
     initArgs.LockMutex = NULL;
     initArgs.UnlockMutex = NULL;
     initArgs.flags = CKF_OS_LOCKING_OK;
-    moduleSpec = PR_smprintf("configdir='%s' certPrefix='%s' "
-                             "keyPrefix='%s' secmod='secmod.db' flags= ",
-                             configDir, dbPrefix, dbPrefix);
-    initArgs.LibraryParameters = (CK_CHAR_PTR *) moduleSpec;
+    initArgs.LibraryParameters = (CK_CHAR_PTR *)
+    "configdir='.' certPrefix='' keyPrefix='' secmod='secmod.db' flags= ";
     initArgs.pReserved = NULL;
 
     /*DebugBreak();*/
@@ -682,7 +629,7 @@ int main(int argc, char **argv)
     } else {
         PKM_Error( "C_Initialize failed with 0x%08X, %-26s\n", crv, 
                    PKM_CK_RVtoStr(crv));
-        goto cleanup;
+        exit(1);
     }
     crv = PKM_ShowInfo(pFunctionList, slotID);
     if (crv == CKR_OK) {
@@ -690,12 +637,12 @@ int main(int argc, char **argv)
     } else {
         PKM_Error( "PKM_ShowInfo failed with 0x%08X, %-26s\n", crv, 
                    PKM_CK_RVtoStr(crv));
-        goto cleanup;
+        exit(1);
     }
     pSlotList = PKM_GetSlotList(pFunctionList, slotID);
     if (pSlotList == NULL) {
         PKM_Error( "PKM_GetSlotList failed with \n");
-        goto cleanup;
+        exit(1);
     }
     crv = pFunctionList->C_GetTokenInfo(pSlotList[slotID], &tokenInfo);
     if (crv == CKR_OK) {
@@ -703,20 +650,13 @@ int main(int argc, char **argv)
     } else {
         PKM_Error( "C_GetTokenInfo failed with 0x%08X, %-26s\n", crv, 
                    PKM_CK_RVtoStr(crv));
-        goto cleanup;
+        exit(1);
     }
 
     if (!(tokenInfo.flags & CKF_USER_PIN_INITIALIZED)) {
         PKM_LogIt("Initing PW for DB\n");
-        crv = PKM_InitPWforDB(pFunctionList, pSlotList, slotID,
-                        pwd, pwdLen);
-        if (crv == CKR_OK) {
-            PKM_LogIt("PKM_InitPWforDB succeeded\n\n");
-        } else {
-            PKM_Error( "PKM_InitPWforDB failed with 0x%08X, %-26s\n", crv, 
-                   PKM_CK_RVtoStr(crv));
-            goto cleanup;
-        }
+        PKM_InitPWforDB(pFunctionList, pSlotList, slotID,
+                        pwd, sizeof(pwd));
     } else {
         PKM_LogIt("using existing DB\n");
     }
@@ -728,7 +668,7 @@ int main(int argc, char **argv)
     } else {
         PKM_Error( "PKM_Mechanism failed with 0x%08X, %-26s\n", crv, 
                    PKM_CK_RVtoStr(crv));
-        goto cleanup;
+        exit(1);
     } 
     /* RNG example without Login */
     crv = PKM_RNG(pFunctionList, pSlotList, slotID);
@@ -737,17 +677,17 @@ int main(int argc, char **argv)
     } else {
         PKM_Error( "PKM_RNG failed with 0x%08X, %-26s\n", crv, 
                    PKM_CK_RVtoStr(crv));
-        goto cleanup;
+        exit(1);
     }
 
     crv = PKM_SessionLogin(pFunctionList, pSlotList, slotID,
-                           pwd, pwdLen);
+                           pwd, sizeof(pwd));
     if (crv == CKR_OK) {
         PKM_LogIt("PKM_SessionLogin succeeded\n\n");
     } else {
         PKM_Error( "PKM_SessionLogin failed with 0x%08X, %-26s\n", crv, 
                    PKM_CK_RVtoStr(crv));
-        goto cleanup;
+        exit(1);
     }
 
     /*
@@ -756,63 +696,62 @@ int main(int argc, char **argv)
      * then does digest, hmac, encrypt/decrypt, signing operations. 
      */
     crv = PKM_KeyTests(pFunctionList, pSlotList, slotID,
-                            pwd, pwdLen);
+                            pwd, sizeof(pwd));
     if (crv == CKR_OK) {
         PKM_LogIt("PKM_KeyTests succeeded\n\n");
     } else {
         PKM_Error( "PKM_KeyTest failed with 0x%08X, %-26s\n", crv, 
                    PKM_CK_RVtoStr(crv));
-        goto cleanup;
+        exit(1);
     }
 
-    crv = PKM_SecretKey(pFunctionList, pSlotList, slotID, pwd, 
-                        pwdLen);
+    crv = PKM_SecretKey(pFunctionList, pSlotList, slotID, pwd, sizeof(pwd));
     if (crv == CKR_OK) {
         PKM_LogIt("PKM_SecretKey succeeded\n\n");
     } else {
         PKM_Error( "PKM_SecretKey failed with 0x%08X, %-26s\n", crv, 
                    PKM_CK_RVtoStr(crv));
-        goto cleanup;
+        exit(1);
     }
 
     crv = PKM_PublicKey(pFunctionList, pSlotList, slotID,
-                        pwd, pwdLen);
+                        pwd, sizeof(pwd));
     if (crv == CKR_OK) {
         PKM_LogIt("PKM_PublicKey succeeded\n\n");
     } else {
         PKM_Error( "PKM_PublicKey failed with 0x%08X, %-26s\n", crv, 
                    PKM_CK_RVtoStr(crv));
-        goto cleanup;
+        exit(1);
     }
     crv = PKM_OperationalState(pFunctionList, pSlotList, slotID,
-                               pwd, pwdLen);
+                               pwd, sizeof(pwd));
     if (crv == CKR_OK) {
         PKM_LogIt("PKM_OperationalState succeeded\n\n");
     } else {
         PKM_Error( "PKM_OperationalState failed with 0x%08X, %-26s\n", crv, 
                    PKM_CK_RVtoStr(crv));
-        goto cleanup;
+        exit(1);
     }
     crv = PKM_MultiObjectManagement(pFunctionList, pSlotList, slotID,
-                                    pwd, pwdLen);
+                                    pwd, sizeof(pwd));
     if (crv == CKR_OK) {
         PKM_LogIt("PKM_MultiObjectManagement succeeded\n\n");
     } else {
         PKM_Error( "PKM_MultiObjectManagement failed with 0x%08X, %-26s\n", crv, 
                    PKM_CK_RVtoStr(crv));
-        goto cleanup;
+        exit(1);
     }
     crv = PKM_LegacyFunctions(pFunctionList, pSlotList, slotID,
-                              pwd, pwdLen);
+                              pwd, sizeof(pwd));
     if (crv == CKR_OK) {
         PKM_LogIt("PKM_LegacyFunctions succeeded\n\n");
     } else {
         PKM_Error( "PKM_LegacyFunctions failed with 0x%08X, %-26s\n", crv, 
                    PKM_CK_RVtoStr(crv));
-        goto cleanup;
+        exit(1);
     }
     crv = PKM_TLSKeyAndMacDerive(pFunctionList, pSlotList, slotID,
-                                 pwd, pwdLen,
+                                 pwd, sizeof(pwd),
                                  CKM_TLS_KEY_AND_MAC_DERIVE, CORRECT);
 
     if (crv == CKR_OK) {
@@ -820,38 +759,36 @@ int main(int argc, char **argv)
     } else {
         PKM_Error( "PKM_TLSKeyAndMacDerive failed with 0x%08X, %-26s\n", crv, 
                    PKM_CK_RVtoStr(crv));
-        goto cleanup;
+        exit(1);
     }
     crv = PKM_TLSMasterKeyDerive(pFunctionList, pSlotList, slotID,
-                                 pwd, pwdLen,
-                                 CKM_TLS_MASTER_KEY_DERIVE,
+                                 pwd, sizeof(pwd),CKM_TLS_MASTER_KEY_DERIVE,
                                  CORRECT);
     if (crv == CKR_OK) {
         PKM_LogIt("PKM_TLSMasterKeyDerive succeeded\n\n");
     } else {
         PKM_Error( "PKM_TLSMasterKeyDerive failed with 0x%08X, %-26s\n", crv, 
                    PKM_CK_RVtoStr(crv));
-        goto cleanup;
+        exit(1);
     }
     crv = PKM_TLSMasterKeyDerive(pFunctionList, pSlotList, slotID,
-                                 pwd, pwdLen,
-                                 CKM_TLS_MASTER_KEY_DERIVE_DH,
+                                 pwd, sizeof(pwd),CKM_TLS_MASTER_KEY_DERIVE_DH,
                                  CORRECT);
     if (crv == CKR_OK) {
         PKM_LogIt("PKM_TLSMasterKeyDerive succeeded\n\n");
     } else {
         PKM_Error( "PKM_TLSMasterKeyDerive failed with 0x%08X, %-26s\n", crv, 
                    PKM_CK_RVtoStr(crv));
-        goto cleanup;
+        exit(1);
     }
     crv = PKM_FindAllObjects(pFunctionList, pSlotList, slotID,
-                             pwd, pwdLen);
+                             pwd, sizeof(pwd));
     if (crv == CKR_OK) {
         PKM_LogIt("PKM_FindAllObjects succeeded\n\n");
     } else {
         PKM_Error( "PKM_FindAllObjects failed with 0x%08X, %-26s\n", crv, 
                    PKM_CK_RVtoStr(crv));
-        goto cleanup;
+        exit(1);
     }
     crv = pFunctionList->C_Finalize(NULL);
     if (crv == CKR_OK) {
@@ -859,7 +796,7 @@ int main(int argc, char **argv)
     } else {
         PKM_Error( "C_Finalize failed with 0x%08X, %-26s\n", crv, 
                    PKM_CK_RVtoStr(crv));
-        goto cleanup;
+        exit(1);
     }
 
     if (pSlotList) free(pSlotList);
@@ -869,34 +806,18 @@ int main(int argc, char **argv)
     /* mode to FIPS mode */
 
     PKM_LogIt("Testing Hybrid mode \n");
-    crv = PKM_HybridMode(pwd, pwdLen, &initArgs);
+    crv = PKM_HybridMode(pwd, sizeof(pwd));
     if (crv == CKR_OK) {
         PKM_LogIt("PKM_HybridMode succeeded\n");
     } else {
         PKM_Error( "PKM_HybridMode failed with 0x%08X, %-26s\n", crv, 
                    PKM_CK_RVtoStr(crv));
-        goto cleanup;
+        exit(1);
     }
-
-    printf("**** Total number of TESTS ran in %s is %d. ****\n", 
-          ((MODE == FIPSMODE) ? "FIPS MODE" : "NON FIPS MODE"), (int) NUMTESTS);    
-    printf("**** ALL TESTS PASSED ****\n");
+    
+    PKM_LogIt("**** ALL TESTS PASSED ****\n");
+    PKM_LogIt("**** Total number of TESTS %d. ****\n", NUMTESTS);
     PKM_LogIt("unloading NSS PKCS # 11 softoken and exiting\n");
-
-cleanup:
-
-    if (pwd) {
-        free(pwd);
-    }
-    if (configDir) {
-        free(configDir);
-    }
-    if (dbPrefix) {
-        free(dbPrefix);
-    }
-    if (moduleSpec) {
-        free(moduleSpec);
-    }
 
 #ifdef _WIN32
     FreeLibrary(hModule);
@@ -904,7 +825,7 @@ cleanup:
     PR_UnloadLibrary(lib);
 #endif
 
-    return crv;
+    return 0;
 }
 
 /*
@@ -1213,7 +1134,7 @@ CK_RV PKM_KeyTests(CK_FUNCTION_LIST_PTR pFunctionList,
             PKM_Error("C_GenerateKey succeeded when not logged in.\n");
             return CKR_GENERAL_ERROR;
         } else {
-            PKM_LogIt("C_GenerateKey returned as EXPECTED with 0x%08X, %-26s\n"
+            PKM_LogIt("C_GenerateKey failed as EXPECTED with 0x%08X, %-26s\n"
                       "since not logged in\n", crv, PKM_CK_RVtoStr(crv));
         }
         crv = pFunctionList->C_GenerateKeyPair(hRwSession, &rsaKeyPairGenMech,
@@ -1226,9 +1147,8 @@ CK_RV PKM_KeyTests(CK_FUNCTION_LIST_PTR pFunctionList,
             PKM_Error("C_GenerateKeyPair succeeded when not logged in.\n");
             return CKR_GENERAL_ERROR;
         } else {
-            PKM_LogIt("C_GenerateKeyPair returned as EXPECTED with 0x%08X, "
-                      "%-26s\n since not logged in\n", crv, 
-                      PKM_CK_RVtoStr(crv));
+            PKM_LogIt("C_GenerateKeyPair failed as EXPECTED with 0x%08X, %-26s\n"
+                      "since not logged in\n", crv, PKM_CK_RVtoStr(crv));
         }
     }
 
@@ -1428,7 +1348,7 @@ CK_RV PKM_KeyTests(CK_FUNCTION_LIST_PTR pFunctionList,
     } else {
         PKM_Error( "PKM_RecoverFunctions failed with 0x%08X, %-26s\n", crv, 
                    PKM_CK_RVtoStr(crv));
-        return crv;
+        exit(1);
     }
 
     mech.pParameter = NULL;
@@ -1704,19 +1624,17 @@ CK_RV PKM_KeyTests(CK_FUNCTION_LIST_PTR pFunctionList,
 
 void PKM_LogIt(const char *fmt, ...) {
     va_list args;
-    
-    if (verbose) {
-        va_start (args, fmt);
-        if (MODE == FIPSMODE) {
-            printf("FIPS MODE: ");
-        } else if (MODE == NONFIPSMODE) {
-            printf("NON FIPS MODE: ");
-        } else if (MODE == HYBRIDMODE) {
-            printf("Hybrid MODE: ");
-        } else printf ("NO MODE: ");
-        vprintf(fmt, args);
-        va_end(args);
-    }
+    va_start (args, fmt);
+
+    if (MODE == FIPSMODE) {
+        printf("FIPS MODE: ");
+    } else if (MODE == NONFIPSMODE) {
+        printf("NON FIPS MODE: ");
+    } else if (MODE == HYBRIDMODE) {
+        printf("Hybrid MODE: ");
+    } else printf ("NO MODE: ");
+    vprintf(fmt, args);
+    va_end(args);
 }
 
 void PKM_Error(const char *fmt, ...) {
@@ -1724,7 +1642,7 @@ void PKM_Error(const char *fmt, ...) {
     va_start (args, fmt);
 
     if (MODE == FIPSMODE) {
-        fprintf(stderr, "\nFIPS MODE PKM_Error: ");
+        fprintf(stderr, "FIPS MODE PKM_Error: ");
     } else if (MODE == NONFIPSMODE) {
         fprintf(stderr, "NON FIPS MODE PKM_Error: ");
     } else if (MODE == HYBRIDMODE) {
@@ -1732,6 +1650,7 @@ void PKM_Error(const char *fmt, ...) {
     } else fprintf(stderr, "NOMODE PKM_Error: ");
     vfprintf(stderr, fmt, args);
     va_end(args);
+    exit(1);
 }
 CK_SLOT_ID *PKM_GetSlotList(CK_FUNCTION_LIST_PTR pFunctionList,
                             CK_ULONG slotID) {
@@ -1836,7 +1755,7 @@ CK_RV PKM_InitPWforDB(CK_FUNCTION_LIST_PTR pFunctionList,
     PKM_LogIt("CKU_USER 0x%08X \n", CKU_USER); 
 
     crv = pFunctionList->C_Login(hSession, CKU_USER, (CK_UTF8CHAR *) testPin,
-                                 strlen((const char *)testPin));
+                                 sizeof(testPin));
     if (crv != CKR_OK) {
         PKM_Error( "C_Login failed with 0x%08X, %-26s\n", crv, 
                    PKM_CK_RVtoStr(crv));
@@ -1845,20 +1764,20 @@ CK_RV PKM_InitPWforDB(CK_FUNCTION_LIST_PTR pFunctionList,
     if (MODE == FIPSMODE) {
         crv = pFunctionList->C_SetPIN(
                                      hSession, (CK_UTF8CHAR *) testPin, 
-                                     strlen((const char *)testPin),
+                                     sizeof(testPin),
                                      (CK_UTF8CHAR *) weakPin, 
-                                     strlen((const char *)weakPin));
+                                     sizeof(weakPin));
         if (crv == CKR_OK) {
             PKM_Error( "C_SetPIN with a weak password succeeded\n");
             return crv;
         } else {
-            PKM_LogIt("C_SetPIN with a weak password returned with "
+            PKM_LogIt("C_SetPIN with a weak password failed with "
                       "0x%08X, %-26s\n", crv, PKM_CK_RVtoStr(crv));
         }
     }
     crv = pFunctionList->C_SetPIN(
                                  hSession, (CK_UTF8CHAR *) testPin, 
-                                 strlen((const char *)testPin),
+                                 sizeof(testPin),
                                  pwd, pwdLen);
     if (crv != CKR_OK) {
         PKM_Error( "C_CSetPin failed with 0x%08X, %-26s\n", crv, 
@@ -2008,20 +1927,22 @@ CK_RV PKM_ShowInfo(CK_FUNCTION_LIST_PTR pFunctionList, CK_ULONG slotID) {
 /* is inactive.                                                           */
 /* PKM_HybridMode demostrates how an application can switch between the   */
 /* two modes: FIPS Approved mode and NONFIPS mode.                        */
-CK_RV PKM_HybridMode(CK_UTF8CHAR_PTR pwd, CK_ULONG pwdLen, 
-                     CK_C_INITIALIZE_ARGS_NSS *initArgs) {
+CK_RV PKM_HybridMode(CK_UTF8CHAR_PTR pwd, CK_ULONG pwdLen) {
 
     CK_C_GetFunctionList pC_GetFunctionList;  /* NONFIPSMode */
     CK_FUNCTION_LIST_PTR pC_FunctionList;
     CK_SLOT_ID *pC_SlotList = NULL;
     CK_ULONG slotID_C = 1;
+
     CK_C_GetFunctionList pFC_GetFunctionList; /* FIPSMode */
     CK_FUNCTION_LIST_PTR pFC_FunctionList;
     CK_SLOT_ID *pFC_SlotList = NULL;
     CK_ULONG slotID_FC = 0;
+
+
     CK_RV crv = CKR_OK;
+    CK_C_INITIALIZE_ARGS_NSS initArgs;
     CK_SESSION_HANDLE hSession;
-    int origMode = MODE; /* remember the orginal MODE value */ 
 
     NUMTESTS++; /* increment NUMTESTS */
     MODE = NONFIPSMODE;
@@ -2043,8 +1964,17 @@ CK_RV PKM_HybridMode(CK_UTF8CHAR_PTR pwd, CK_ULONG pwdLen,
     crv = (*pC_GetFunctionList)(&pC_FunctionList);
     assert(crv == CKR_OK);
 
+    initArgs.CreateMutex = NULL;
+    initArgs.DestroyMutex = NULL;
+    initArgs.LockMutex = NULL;
+    initArgs.UnlockMutex = NULL;
+    initArgs.flags = CKF_OS_LOCKING_OK;
+    initArgs.LibraryParameters = (CK_CHAR_PTR *)
+    "configdir='.' certPrefix='' keyPrefix='' secmod='secmod.db' flags= ";
+    initArgs.pReserved = NULL;
+
     /* invoke C_Initialize as pC_FunctionList->C_Initialize */
-    crv = pC_FunctionList->C_Initialize(initArgs);
+    crv = pC_FunctionList->C_Initialize(&initArgs);
     if (crv == CKR_OK) {
         PKM_LogIt("C_Initialize succeeded\n");
     } else {
@@ -2114,7 +2044,7 @@ CK_RV PKM_HybridMode(CK_UTF8CHAR_PTR pwd, CK_ULONG pwdLen,
     assert(crv == CKR_OK);
 
     /* invoke FC_Initialize as pFunctionList->C_Initialize */
-    crv = pFC_FunctionList->C_Initialize(initArgs);
+    crv = pFC_FunctionList->C_Initialize(&initArgs);
     if (crv == CKR_OK) {
         PKM_LogIt("FC_Initialize succeeded\n");
     } else {
@@ -2180,7 +2110,6 @@ CK_RV PKM_HybridMode(CK_UTF8CHAR_PTR pwd, CK_ULONG pwdLen,
     if (pC_SlotList) free(pC_SlotList);
     if (pFC_SlotList) free(pFC_SlotList);
 
-    MODE = origMode; /* set the mode back to the orginal Mode value */
     PKM_LogIt("PKM_HybridMode test Completed\n\n");
     return crv;
 }
@@ -2219,14 +2148,12 @@ CK_RV PKM_Mechanism(CK_FUNCTION_LIST_PTR pFunctionList,
         return crv;
     }
     PKM_LogIt("C_GetMechanismList returned the mechanism types:\n");
-    if (verbose) {
-        for (i = 0; i < mechanismCount; i++) {
-            printf("    0x%08lX", pMechanismList[i]);
-            if ((i != 0) && ((i % 4) == 0 )) printf("\n");
-        }
-        printf("\n");
+    for (i = 0; i < mechanismCount; i++) {
+        printf("    0x%08lX", pMechanismList[i]);
+        if ((i != 0) && ((i % 4) == 0 )) printf("\n");
     }
-    
+    printf("\n");
+
     for ( i = 0; i < mechanismCount; i++ ) {
         CK_MECHANISM_INFO minfo;
 
@@ -2347,44 +2274,42 @@ CK_RV PKM_SessionLogin(CK_FUNCTION_LIST_PTR pFunctionList,
     crv = pFunctionList->C_OpenSession(pSlotList[slotID], CKF_SERIAL_SESSION,
                                        NULL, NULL, &hSession);
     if (crv != CKR_OK) {
-        PKM_Error("C_OpenSession failed with 0x%08X, %-26s\n", crv, 
+        PKM_Error( "C_OpenSession failed with 0x%08X, %-26s\n", crv, 
                    PKM_CK_RVtoStr(crv));
         return crv;
     }
 
-    crv = pFunctionList->C_Login(hSession, CKU_USER, (unsigned char *) 
-                                 "netscape", 8);
+    crv = pFunctionList->C_Login(hSession, CKU_USER, (unsigned char *) "netscape", 8);
     if (crv == CKR_OK) {
-        PKM_Error("C_Login with wrong password succeeded\n");
-        return CKR_FUNCTION_FAILED;
+        PKM_Error( "C_Login with wrong password succeeded\n");
+        return crv;
     } else {
-        PKM_LogIt("As expected C_Login with wrong password returned 0x%08X, "
-                  "%-26s.\n ", crv, PKM_CK_RVtoStr(crv));
+        PKM_LogIt("C_Login with wrong password failed with 0x%08X, %-26s\n", crv, 
+                  PKM_CK_RVtoStr(crv));
     }
-    crv = pFunctionList->C_Login(hSession, CKU_USER, (unsigned char *) 
-                                 "red hat", 7);
+    crv = pFunctionList->C_Login(hSession, CKU_USER, (unsigned char *) "red hat", 7);
     if (crv == CKR_OK) {
-        PKM_Error("C_Login with wrong password succeeded\n");
-        return CKR_FUNCTION_FAILED;
+        PKM_Error( "C_Login with wrong password succeeded\n");
+        return crv;
     } else {
-        PKM_LogIt("As expected C_Login with wrong password returned 0x%08X, "
-                  "%-26s.\n ", crv, PKM_CK_RVtoStr(crv));
+        PKM_LogIt("C_Login with wrong password failed with 0x%08X, %-26s\n", crv, 
+                  PKM_CK_RVtoStr(crv));
     }
-    crv = pFunctionList->C_Login(hSession, CKU_USER, 
-                                 (unsigned char *) "sun", 3);
+    crv = pFunctionList->C_Login(hSession, CKU_USER, (unsigned char *) "sun", 3);
     if (crv == CKR_OK) {
-        PKM_Error("C_Login with wrong password succeeded\n");
-        return CKR_FUNCTION_FAILED;
+        PKM_Error( "C_Login with wrong password succeeded\n");
+        return crv;
+
     } else {
-        PKM_LogIt("As expected C_Login with wrong password returned 0x%08X, "
-                  "%-26s.\n ", crv, PKM_CK_RVtoStr(crv));
+        PKM_LogIt("C_Login with wrong password failed with 0x%08X, %-26s\n", crv, 
+                  PKM_CK_RVtoStr(crv));
     }
     crv = pFunctionList->C_Login(hSession, CKU_USER, pwd, pwdLen);
     if (crv == CKR_OK) {
         PKM_LogIt("C_Login with correct password succeeded\n");
     } else {
-        PKM_Error("C_Login with correct password failed "
-                  "with 0x%08X, %-26s\n", crv, PKM_CK_RVtoStr(crv));
+        PKM_Error( "C_Login with correct password failed "
+                   "with 0x%08X, %-26s\n", crv, PKM_CK_RVtoStr(crv));
         return crv;
     }
 
@@ -2565,18 +2490,17 @@ CK_RV PKM_DualFuncDigest(CK_FUNCTION_LIST_PTR pFunctionList,
         return crv;
     }
     ciphertextLen = ciphertextLen + lastLen;
-    if (verbose) {
-        printf("ciphertext = ");
-        for (i = 0; i < ciphertextLen; i++) {
-            printf("%02x", (unsigned)ciphertext[i]);
-        }
-        printf("\n");
-        printf("eDigest = ");
-        for (i = 0; i < ulDigestLen; i++) {
-            printf("%02x", (unsigned)eDigest[i]);
-        }
-        printf("\n");
+
+    printf("ciphertext = ");
+    for (i = 0; i < ciphertextLen; i++) {
+        printf("%02x", (unsigned)ciphertext[i]);
     }
+    printf("\n");
+    printf("eDigest = ");
+    for (i = 0; i < ulDigestLen; i++) {
+        printf("%02x", (unsigned)eDigest[i]);
+    }
+    printf("\n");
 
     /* Decrypt the text */
     crv = pFunctionList->C_DecryptInit(hSession, cryptMech, hSecKey);
@@ -2622,24 +2546,22 @@ CK_RV PKM_DualFuncDigest(CK_FUNCTION_LIST_PTR pFunctionList,
         return crv;
     }
 
+
     if (plaintextLen != pDataLen) {
         PKM_Error( "plaintextLen is %lu\n", plaintextLen);
         return crv;
     }
-    
-    if (verbose) {
-        printf("plaintext = ");
-        for (i = 0; i < plaintextLen; i++) {
-            printf("%02x", (unsigned)plaintext[i]);
-        }
-        printf("\n");
-        printf("dDigest = ");
-        for (i = 0; i < ulDigestLen; i++) {
-            printf("%02x", (unsigned)dDigest[i]);
-        }
-        printf("\n");
+    printf("plaintext = ");
+    for (i = 0; i < plaintextLen; i++) {
+        printf("%02x", (unsigned)plaintext[i]);
     }
-    
+    printf("\n");
+    printf("dDigest = ");
+    for (i = 0; i < ulDigestLen; i++) {
+        printf("%02x", (unsigned)dDigest[i]);
+    }
+    printf("\n");
+
     if (memcmp(eDigest, dDigest, ulDigestLen) == 0) {
         PKM_LogIt("Encrypted Digest equals Decrypted Digest\n");
     } else {
@@ -2930,8 +2852,7 @@ CK_RV PKM_SecretKey(CK_FUNCTION_LIST_PTR pFunctionList,
         return crv;
     }
     ciphertextLen = sizeof(ciphertext);
-    crv = pFunctionList->C_Encrypt(hSession, (CK_BYTE *) PLAINTEXT, 
-                                   sizeof(PLAINTEXT),
+    crv = pFunctionList->C_Encrypt(hSession, (CK_BYTE *) PLAINTEXT, sizeof(PLAINTEXT),
                                    ciphertext, &ciphertextLen);
     if (crv != CKR_OK) {
         PKM_Error( "C_Encrypt failed with 0x%08X, %-26s\n", crv, 
@@ -3133,8 +3054,7 @@ CK_RV PKM_PubKeySign(CK_FUNCTION_LIST_PTR pFunctionList,
                    PKM_CK_RVtoStr(crv));
         return crv;
     }
-    crv = pFunctionList->C_VerifyUpdate(hRwSession, (CK_BYTE * ) pData, 
-                                        pDataLen);
+    crv = pFunctionList->C_VerifyUpdate(hRwSession, (CK_BYTE * ) pData, pDataLen);
     if (crv != CKR_OK) {
         PKM_Error( "C_VerifyUpdate failed with 0x%08X, %-26s\n", crv, 
                    PKM_CK_RVtoStr(crv));
@@ -3204,6 +3124,7 @@ CK_RV PKM_PublicKey(CK_FUNCTION_LIST_PTR pFunctionList,
     CK_MECHANISM dsaWithSha1Mech = {
         CKM_DSA_SHA1, NULL, 0
     };
+    unsigned int i;
 
     NUMTESTS++; /* increment NUMTESTS */
 
@@ -3332,7 +3253,10 @@ CK_RV PKM_PublicKey(CK_FUNCTION_LIST_PTR pFunctionList,
         PKM_Error( "sha1DigestLen is %lu\n", sha1DigestLen);
         return crv;
     }
-
+    for (i = 0; i < sha1DigestLen; i++) {
+        printf("%02x", (unsigned)sha1Digest[i]);
+    }
+    printf("\n");
     if (memcmp(sha1Digest, MD, sizeof(MD)) == 0) {
         PKM_LogIt("SHA-1 SHA1ShortMsg test case Len = 136 passed\n");
     } else {
@@ -3479,7 +3403,7 @@ CK_RV PKM_PublicKey(CK_FUNCTION_LIST_PTR pFunctionList,
         PKM_Error( "C_Verify of modified data succeeded\n");
         return crv;
     } else {
-        PKM_LogIt("C_Verify of modified data returned as EXPECTED "
+        PKM_LogIt("C_Verify of modified data failed as EXPECTED "
             " with 0x%08X, %-26s\n", crv, PKM_CK_RVtoStr(crv));
     }
 
@@ -4172,8 +4096,7 @@ CK_RV PKM_OperationalState(CK_FUNCTION_LIST_PTR pFunctionList,
 
     static const CK_UTF8CHAR *plaintext = (CK_UTF8CHAR *)"Firefox rules.";
     static const CK_UTF8CHAR *plaintext_1 = (CK_UTF8CHAR *)"Thunderbird rules.";
-    static const CK_UTF8CHAR *plaintext_2 = (CK_UTF8CHAR *)
-                                            "Firefox and Thunderbird.";
+    static const CK_UTF8CHAR *plaintext_2 = (CK_UTF8CHAR *)"Firefox and Thunderbird.";
 
     char    digest[MAX_DIGEST_SZ], digest_1[MAX_DIGEST_SZ];
     char    sign[MAX_SIG_SZ];
@@ -4777,7 +4700,7 @@ PKM_TLSMasterKeyDerive( CK_FUNCTION_LIST_PTR pFunctionList,
     crv = pFunctionList->C_DeriveKey(hSession, &mk_mech, pmk_obj, NULL, 0,
                                      &mk_obj);
     if (crv != CKR_MECHANISM_PARAM_INVALID) {
-        PKM_LogIt( "C_DeriveKey returned as EXPECTED with 0x%08X, %-26s\n", crv, 
+        PKM_LogIt( "C_DeriveKey failed as EXPECTED with 0x%08X, %-26s\n", crv, 
                    PKM_CK_RVtoStr(crv));
     } else {
         PKM_Error( "C_DeriveKey did not fail  with  bad data \n" );
@@ -5273,65 +5196,3 @@ CK_RV PKM_Digest(CK_FUNCTION_LIST_PTR pFunctionList,
 
 }
 
-char * PKM_FilePasswd(char *pwFile)
-{
-    unsigned char phrase[200];
-    PRFileDesc *fd;
-    PRInt32 nb;
-    int i;
-
-    if (!pwFile)
-        return 0;
-
-    fd = PR_Open(pwFile, PR_RDONLY, 0);
-    if (!fd) {
-        fprintf(stderr, "No password file \"%s\" exists.\n", pwFile);
-        return NULL;
-    }
-
-    nb = PR_Read(fd, phrase, sizeof(phrase));
- 
-    PR_Close(fd);
-    /* handle the Windows EOL case */
-    i = 0;
-    while (phrase[i] != '\r' && phrase[i] != '\n' && i < nb) i++;
-    phrase[i] = '\0';
-    if (nb == 0) {
-        fprintf(stderr,"password file contains no data\n");
-        return NULL;
-    }
-    return (char*) strdup((char*)phrase);
-}
-
-void PKM_Help() 
-{
-    PRFileDesc *debug_out = PR_GetSpecialFD(PR_StandardError);
-    PR_fprintf(debug_out, "pk11mode test program usage:\n");
-    PR_fprintf(debug_out, "\t-f <file>   Password File : echo pw > file \n");
-    PR_fprintf(debug_out, "\t-n          Non Fips Mode \n");
-    PR_fprintf(debug_out, "\t-d <path>   Database path location)\n");
-    PR_fprintf(debug_out, "\t-p <prefix> DataBase prefix)\n");
-    PR_fprintf(debug_out, "\t-h          this help message\n");
-    exit(1);
-}
-
-void PKM_CheckPath(char *string)
-{
-   char *src;
-   char *dest;
-
-   /*
-   * windows support convert any back slashes to
-   * forward slashes.
-   */
-   for (src=string, dest=string; *src; src++,dest++) {
-       if (*src == '\\') {
-           *dest = '/';
-       }
-   }
-   dest--;
-   /* if the last char is a / set it to 0 */
-   if (*dest == '/')
-       *dest = 0;
-
-}

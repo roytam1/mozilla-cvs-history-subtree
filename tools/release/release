@@ -2,23 +2,33 @@
 use strict;
 
 use Getopt::Long;
+
 use MozBuild::Util qw(Email);
+
 use Bootstrap::Step::Tag;
+use Bootstrap::Step::TinderConfig;
 use Bootstrap::Step::Build;
 use Bootstrap::Step::Source;
 use Bootstrap::Step::Repack;
+use Bootstrap::Step::PartnerRepack;
+use Bootstrap::Step::PatcherConfig;
 use Bootstrap::Step::Updates;
 use Bootstrap::Step::Stage;
 use Bootstrap::Step::Sign;
+use Bootstrap::Step::PartnerRepack;
 
 my @allSteps = (
     'Tag',
+    'TinderConfig',
     'Build',
     'Source',
     'Repack',
+    'Sign',
+    'PartnerRepack',
+    'PatcherConfig',
     'Updates',
     'Stage',
-    'Sign',
+    'PartnerRepack'
 );
 
 my %config;
@@ -58,7 +68,6 @@ sub ProcessArgs {
 }
 
 sub DetermineSteps() {
-    my $currentStep;
     my $desiredStep;
 
     if (defined($config{'step'})) {
@@ -69,16 +78,18 @@ sub DetermineSteps() {
         $desiredStep = $config{'only'};
         print "Bootstrap only run step: $desiredStep\n";
     }
+
+    my $currentStep = -1;
     if (defined($desiredStep)) {
-        my $stepNumber = 0;
-        for my $stepName (@allSteps) {
-            if ($stepName eq "$desiredStep") {
-                $currentStep = $stepNumber;
-            } else {
-                $stepNumber += 1;
+        if (not grep(/^$desiredStep$/, @allSteps)) {
+            die("ASSERT: $desiredStep is not a valid step name.");
+        }
+        for (my $i=0; $i < scalar(@allSteps); $i++) {
+            if ($allSteps[$i] eq "$desiredStep") {
+                $currentStep = $i;
             }
         }
-        if (not defined($currentStep)) {
+        if ($currentStep == -1) {
             die("Step $desiredStep not found!\n");
         }
     } else {
@@ -88,7 +99,7 @@ sub DetermineSteps() {
 
     while ($currentStep < scalar(@allSteps)) {
         my $stepName = $allSteps[$currentStep];
-        PerformStep( 'stepName' => $stepName );
+        PerformStep( stepName => $stepName );
         $currentStep += 1;
         if (defined($config{'only'})) {
             if ($config{'only'} eq $stepName) {
@@ -127,21 +138,26 @@ sub PerformStep {
         }
     };
     if ($@) {
-        print "Step $stepName died: $@";
-        my $conf = new Bootstrap::Config;
+        my $error = $@;
+        print "Step $stepName died: $error";
+        my $conf = new Bootstrap::Config();
         my $from = $conf->Get(var => 'from');
         my $to = $conf->Get(var => 'to');
-        my $cc = $conf->Get(var => 'cc');
+        my @ccList = $conf->Exists(var => 'cc') ? split(/[,\s]+/, 
+          $conf->Get(var => 'cc')) : ();
+        my $blat = $conf->Get(var => 'blat');
+        my $sendmail = $conf->Get(var => 'sendmail');
+        my $hostname = $conf->SystemInfo(var => 'hostname');
 
-        my @ccList = split(', ', $cc);
- 
         eval {
             Email(
+              blat => $blat,
+              sendmail => $sendmail,
               from => $from,
               to => $to,
               cc => \@ccList,
-              subject => "Step $stepName died: $@",
-              message => "Step $stepName died: $@\nSee the release.log for more information.",
+              subject => "$hostname - Step $stepName died: $error",
+              message => "$hostname - Step $stepName died: $error",
             );
             exit(1);
         };
@@ -152,4 +168,4 @@ sub PerformStep {
     }
 }
 
-&main();
+main();

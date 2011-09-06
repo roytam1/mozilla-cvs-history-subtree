@@ -98,7 +98,7 @@ static void print_ldap_result( LDAP *ld, LDAPMessage *lm, char *s );
 static void print_controls( LDAPControl **ctrls, int freeit );
 static void print_referrals( char **refs, int freeit );
 static void print_search_entry( LDAP *ld, LDAPMessage *res, int onlyone );
-static char *changetype_num2string( ber_int_t chgtype );
+static char *changetype_num2string( int chgtype );
 static void print_search_reference( LDAP *ld, LDAPMessage *res, int onlyone );
 static void free_list( char **list );
 static int entry2textwrite( void *fp, char *buf, int len );
@@ -1649,10 +1649,9 @@ print_search_entry( LDAP *ld, LDAPMessage *res, int onlyone )
 		    != LDAP_SUCCESS ) {
 			ldap_perror( ld, "ldap_get_entry_controls" );
 		} else {
-			int	changenumpresent;
-            ber_int_t changetype;
+			int	changetype, changenumpresent;
 			char	*prevdn;
-			ber_int_t  changenum;
+			long	changenum;
 
 			if ( ldap_parse_entrychange_control( ld, ectrls,
 			    &changetype, &prevdn, &changenumpresent,
@@ -1680,7 +1679,7 @@ print_search_entry( LDAP *ld, LDAPMessage *res, int onlyone )
 
 
 static char *
-changetype_num2string( ber_int_t chgtype )
+changetype_num2string( int chgtype )
 {
     static char buf[ 25 ];
     char	*s;
