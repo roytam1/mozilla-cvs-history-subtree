@@ -533,6 +533,7 @@ div[id*="ad300x100"],
 div[id*="ad160x600"],
 div[class*="ad728x90"],
 div[class*="ad300x250"],
+div[class="ad300"],
 div.werbeblock,
 div.werbung,
 div[id$="_ad"],
@@ -664,6 +665,8 @@ div[id="google_ads_site"],
 div[id*="google_ads_div"],
 div[id="google_textadsBox"],
 div[class*="googleads"],
+div[id="google_flash_inline_div"],
+div[id="google_flash_div"],
 div[id^="tads"][class="c"],
 div#rhs>div#rhs_block,
 div[id^="p360_ad"],
@@ -682,6 +685,7 @@ div[class="singleAd"],
 div[id^="adsDiv"],
 div[id^="AdBanner"],
 div[id^="ad-front"],
+div[id="ad-leaderboard"],
 div[class~="textlinkads"],
 div[id*="story-sponsoredlinks"],
 div[class="blk_advert"],
@@ -772,7 +776,8 @@ img[src*="/ad/"] { display: inline !important }
 @-moz-document domain(apple.com) {
 img[src*="/ads/"],
 a:link[href*="ads."] img { display: inline !important }
-div[id="ad"] { display:block !important }
+div[id="ad"],
+div[id$="-ad"] { display: block !important }
 }
 
 @-moz-document domain(nasdaq.com) {
@@ -810,4 +815,8 @@ div[class*="advertisment"][id="spacer_58"] { display: block !important }
 
 @-moz-document domain(gamespot.com) {
 div[class*="swiff_container video_player"] { display: block !important }
+}
+
+@-moz-document domain(duesseldorf.de) {
+div[class="nur_anzeige"] { display: block !important }
 }
