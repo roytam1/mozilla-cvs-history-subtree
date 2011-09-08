@@ -22,6 +22,7 @@
  *   Simon Fraser <smfr@smfr.org> (Original Author)
  *   Smokey Ardisson <alqahira@ardisson.org>
  *   Philippe Wittenbergh <phiw@l-c-n.com>
+ *   Chris Peterson <cpeterso@cpeterso.com>
  *
  * Alternatively, the contents of this file may be used under the terms of
  * either the GNU General Public License Version 2 or later (the "GPL"), or
@@ -47,6 +48,7 @@
 
 a:link[href*="/ad."] img,
 a:link[href*="/ads."] img,
+a:link[href*="/ads/"] img,
 a:link[href*="/adclick/"] img,
 a:link[href*="/phpads/"] img, 
 a:link[href*="?banner"] img,
@@ -121,6 +123,8 @@ a:link[href*="adv_"] img,
 a:link[href*=".adshuffle.com"] img,
 a:link[href*=".linkstorm.net"] img,
 a:link[href*=".mediaforceads.com"] img,
+a:link[href*="_adsystem"] img,
+a:link[href*="atemda.com"] img,
 
 embed[src*="/us.yimg.com/a/"],
 embed[src*="/ai.yimg.jp/"],
@@ -212,7 +216,7 @@ embed[type="application/x-shockwave-flash"][src*="harvest.adgardener.com"],
 embed[type="application/x-shockwave-flash"][src="gcirm.dmp.gcion.com"],
 embed[type="application/x-shockwave-flash"][src^="http://richmedia"][src*=".yimg.com"],
 embed[type="application/x-shockwave-flash"][src*="cstatic.weborama.fr/weborama/adperf/"],
-embed[type="application/x-shockwave-flash"][src*="l3static.weborama.fr/adperf"],
+embed[type="application/x-shockwave-flash"][src*="static.weborama.fr/adperf"],
 embed[type="application/x-shockwave-flash"][src*="adtech.panthercustomer.com"],
 embed[type="application/x-shockwave-flash"][src*=".trafficmp.com"],
 object[type="application/x-shockwave-flash"][src*="ad.advertstream.com"],
@@ -238,6 +242,9 @@ embed[type="application/x-shockwave-flash"][src*="xx.openx.com"],
 embed[type="application/x-shockwave-flash"][src*="adbureau.net"],
 embed[type="application/x-shockwave-flash"][src*="adreactor.com/services/advertisements/"],
 object[type="application/x-shockwave-flash"][data*="server.cpmstar.com"],
+embed[type="application/x-shockwave-flash"][src*="checkm8.com/"],
+embed[type="application/x-shockwave-flash"][src*="247realmedia.com"],
+embed[type="application/x-shockwave-flash"][src*="game-advertising-online.com"],
 
 /* Flash trackers */
 object[data*=".clearspring.com"],
@@ -258,6 +265,7 @@ img[src*="/ad/"],
 img[src*="/adx/"],
 img[src*="/adpics/"],
 img[src*="/ads."],
+img[src*="/ad2/"],
 img[src*="/adimages/"],
 img[src*="adsfile."],
 img[src*="/adz/"],
@@ -342,6 +350,10 @@ img[src*=".linkstorm.net"],
 img[src*=".optmd.com"],
 img[src*="xx.openx.com"],
 img[src*="buysellads.com"],
+img[src*="grosbill.com/affiliation/offres/"],
+img[src*="static.weborama.fr/adperf/"],
+img[src*="media.contextweb.com"],
+img[class="ad"],
 
 iframe[src*="/ad."],
 iframe[src*="/ads."],
@@ -483,11 +495,16 @@ iframe[class="OASAdFrame"],
 iframe[src*="adreactor.com/services/advertisements/"],
 iframe[src*="tracking.drive2media.com"],
 iframe[id*="AdBriteIntermissionAdIframe"],
+iframe[id="csp-ad"],
+iframe[src*="server.gameads.com"],
+iframe[src*="game-advertising-online.com"],
+iframe[src*="impact-ad.jp"],
 
 table#overtureLinksWrapper,
 table.adbritetable,
 table.ad_table,
 table.artbannersplus,
+table.cubeAd,
 td#tdpromo,
 td[class*="blogad_"],
 td[class*="adstrip"],
@@ -506,6 +523,7 @@ div#gB2,
 div#gB3,
 div.yschspns,
 div#yschsec,
+div#videoAdPlayer,
 div#sponsorsAd,
 div#leaderboardAd,
 div[id="ads"],
@@ -562,6 +580,7 @@ div[class*="_adsys_"],
 div[id*="SendMessage_gads"],
 div[id="box-ad"],
 div[class="box-ad"],
+div[class="boxAd"],
 div[id^="adxSponLink"],
 div[id^="adxLeaderboard"],
 div[id^="adxBigAd"],
@@ -602,6 +621,7 @@ div[id^="advert_"],
 div[id^="AdBroker"],
 div[id^="AdSmall"],
 div[id^="adSpace"],
+div[id="adSlice"],
 div[id="adTicker"],
 div[id="spColumnAd"],
 div[class^="adBlock"],
@@ -615,28 +635,37 @@ div[class*="publicite"],
 div[id*="blogbang"],
 div[id^="banner-ad"],
 div[id="bannerad"],
+div[id="bannerAd"],
+div[class^="bannerAd"],
 div[class~="advertisementColumnGroup"],
 div[class$="advertisement"],
 div[id="rightPromoColumn"],
 div[class="topAds"],
-div[class="ad"],
+div[class~="ad"],
 div[class^="ad1"],
+div[class^="ad_"],
+div[class^="ads_"],
 div[class="splitAd"],
 div[class="wide-text-ads"],
-div[class="ads"],
+div[class~="ads"],
 div[class^="adSpot"],
+div[class^="ad-break"],
+div[class="adcode"],
 div[class="relatedAds"],
 div[class^="adGoogle"],
 div[class="adgoogle"],
 div[id*="ad_google"],
 div[class^="googleAdBlock"],
 div[class*="google-ads"],
+div[class*="googleAds"],
 div[id*="google-ads-container"],
 div[id="google-afc-region-one"],
 div[id="google_ads_site"],
 div[id*="google_ads_div"],
 div[id="google_textadsBox"],
 div[class*="googleads"],
+div[id^="tads"][class="c"],
+div#rhs>div#rhs_block,
 div[id^="p360_ad"],
 div[id^="p360-"],
 div[class^="p360_"],
@@ -646,6 +675,7 @@ div[id="dcol-sponsored"],
 div[id*="sponsored_links_afc"],
 div[id="sponsored-links"],
 div[id^="sponLinkDiv"],
+div[id="SponLink"],
 div[class="marketplace-ad"],
 div[id^="ADframe"],
 div[class="singleAd"],
@@ -677,24 +707,45 @@ div[class="floatedAd"],
 div[id^="Liftium_"],
 div[class*="SidebarAds"],
 div[class*="sidebarAdblock"],
+div[class^="sb_ads"],
 div[id*="dclkAdsDivID"],
 div[class~="mod-adopenx"],
 div[class="ad_header"],
 div[class="ad-footer"],
 div[class="ad-admob"],
 div[id*="scrubbuad"],
-div[class="popadtext"]
+div[class="popadtext"],
+div[id*="checkm8Cont_"],
+div[class^="bigAd"],
+div[id="specialadfeatures"],
+div[class^="adSummary"],
+div[class="adHeader"],
+div[class="cColumn-TextAdsBox"],
+div[id="fusionad"],
+div[id^="beacon_"],
+div[class=" headerAd"],
+div[id="containerSqAd"],
+div[id="containerMredAd"],
+div[id*="dhtml_advertisement"],
+div[class="miniAdContainer"],
+div[id="contentinlineAd"],
+div[class~="admarker"]
 
 { display: none !important; -moz-binding: none !important }
 
 @-moz-document domain(mail.google.com) {
 div#rhc>div.rh,
 div.slwyWc,
-div.oM { display: none !important }
+div.oM,
+div.z0DeRc { display: none !important }
 }
 
 @-moz-document domain(wunderground.com) { 
 div[style*="statefarm_bg.gif"][style*="width: 300px"] { display: none !important }
+}
+
+@-moz-document domain(facebook.com) {
+div[class^="fbEmu"] { display: none !important }
 }
 
 /* turn some false positives back off */
@@ -719,7 +770,8 @@ img[src*="/ad/"] { display: inline !important }
 }
 
 @-moz-document domain(apple.com) {
-img[src*="/ads/"] { display: inline !important }
+img[src*="/ads/"],
+a:link[href*="ads."] img { display: inline !important }
 div[id="ad"] { display:block !important }
 }
 
@@ -754,4 +806,8 @@ html embed[type="application/x-shockwave-flash"][width][height] { display: inlin
 
 @-moz-document domain(macwelt.de) {
 div[class*="advertisment"][id="spacer_58"] { display: block !important }
+}
+
+@-moz-document domain(gamespot.com) {
+div[class*="swiff_container video_player"] { display: block !important }
 }
