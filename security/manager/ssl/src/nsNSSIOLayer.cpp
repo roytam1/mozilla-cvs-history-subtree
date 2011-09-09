@@ -217,7 +217,8 @@ nsNSSSocketInfo::nsNSSSocketInfo()
     mHandshakeInProgress(PR_FALSE),
     mAllowTLSIntoleranceTimeout(PR_TRUE),
     mHandshakeStartTime(0),
-    mPort(0)
+    mPort(0),
+    mIsCertIssuerBlacklisted(PR_FALSE)
 {
   mThreadData = new nsSSLSocketThreadData;
 }
@@ -2910,6 +2911,10 @@ nsNSSBadCertHandler(void *arg, PRFileDesc *sslSocket)
                                  PR_TRUE, certificateUsageSSLServer,
                                  PR_Now(), (void*)infoObject, 
                                  verify_log, NULL);
+
+    if (infoObject->IsCertIssuerBlacklisted()) {
+      collected_errors |= nsICertOverrideService::ERROR_UNTRUSTED;
+    }
 
     // We ignore the result code of the cert verification.
     // Either it is a failure, which is expected, and we'll process the

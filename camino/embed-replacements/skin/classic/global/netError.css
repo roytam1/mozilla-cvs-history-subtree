@@ -147,8 +147,7 @@ body[dir="rtl"] #brand {
 
 /* Custom styling for 'blacklist' error class - bug 380932  */
 :root.blacklist #errorTitle, :root.blacklist #errorLongContent,
-:root.blacklist #errorShortDesc, :root.blacklist #errorLongDesc,
-:root.blacklist a {
+:root.blacklist #errorShortDesc, :root.blacklist #errorLongDesc {
   background-color: #e8e8e8;
   color: black;
 }

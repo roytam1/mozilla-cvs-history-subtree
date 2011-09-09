@@ -131,9 +131,9 @@ pref("network.protocol-handler.warn-external.nntp", false);
 // cookies: 0 = accept all, 1 = don't accept third-party, 2 = don't accept any
 pref("network.cookie.cookieBehavior", 0);
 
-// defaults for cmd-click opening windows or tabs (default to windows)
-pref("browser.tabs.opentabfor.middleclick", false);
-// ...and default to opening new pages in the foreground
+// default to opening tabs instead of windows for command-click
+pref("browser.tabs.opentabfor.middleclick", true);
+// ... and default to opening new tabs in the foreground
 pref("browser.tabs.loadInBackground", false);
 
 // hide the tab bar when only one tab is open
@@ -197,6 +197,7 @@ pref("camino.disable_bonjour", false);
 // ad-blocking and Flashblock are off by default
 pref("camino.enable_ad_blocking", false);
 pref("camino.enable_flashblock", false);
+pref("flashblock.silverlight.blocked", false);
 
 // do not override autocomplete=off
 pref("wallet.crypto.autocompleteoverride", false);
@@ -238,7 +239,7 @@ pref("browser.safebrowsing.provider.0.reportMalwareURL", "http://www.google.com/
 pref("browser.safebrowsing.provider.0.reportMalwareErrorURL", "http://google.com/safebrowsing/diagnostic?tpl={moz:client}&site=%REPORTED_URL%&hl=%LANGUAGE%");
 
 // URL the user is forwarded to after submitting an error report
-pref("browser.safebrowsing.sendToURLAfterReporting", "http://caminobrowser.org/security/report-submitted.php");
+pref("browser.safebrowsing.sendToURLAfterReporting", "http://caminobrowser.org/documentation/security/report-submitted/");
 
 // Location of more information about the safe browsing feature
 pref("browser.safebrowsing.warning.infoURL", "http://caminobrowser.org/documentation/security/#safebrowsing");

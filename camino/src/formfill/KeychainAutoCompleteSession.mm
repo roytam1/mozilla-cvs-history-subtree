@@ -95,19 +95,21 @@ void KeychainAutoCompleteDOMListener::FillPassword()
   mUsernameElement->GetValue(nsUsername);
   NSString* username = [NSString stringWith_nsAString:nsUsername];
 
-  NSString* host;
-  NSString* asciiHost;
-  UInt16 port;
-  NSString* scheme;
+  NSString* host = nil;
+  NSString* asciiHost = nil;
+  UInt16 port = kAnyPort;
+  NSString* scheme = nil;
 
   GetFormInfoForInput(mUsernameElement, &host, &asciiHost, &port, &scheme);
+  if (!host)
+    return;
 
   KeychainService* keychain = [KeychainService instance];
   KeychainItem* keychainEntry = [keychain findWebFormKeychainEntryForUsername:username
                                                                       forHost:host
                                                                          port:port
                                                                        scheme:scheme];
-  if (![asciiHost isEqualToString:host]) {
+  if (asciiHost && ![asciiHost isEqualToString:host]) {
     if (keychainEntry) {
       [keychainEntry setHost:asciiHost];
     }
@@ -198,12 +200,14 @@ void KeychainAutoCompleteDOMListener::FillPassword()
     return NO;
 
   // Get the host information so we can get the keychain entries below.
-  NSString* host;
-  NSString* asciiHost;
-  UInt16 port;
-  NSString* scheme;
+  NSString* host = nil;
+  NSString* asciiHost = nil;
+  UInt16 port = kAnyPort;
+  NSString* scheme = nil;
 
   GetFormInfoForInput(usernameElement, &host, &asciiHost, &port, &scheme);
+  if (!host)
+    return NO;
 
   // If session is not cached, default to empty session.
   [mUsernames removeAllObjects];
@@ -214,10 +218,12 @@ void KeychainAutoCompleteDOMListener::FillPassword()
   // Cache all of the usernames in the object so that the keychain
   // doesn't have to be read again.  This should be a faster way to search and sort.
   NSMutableArray* keychainEntries =
-    [NSMutableArray arrayWithArray:[keychain allWebFormKeychainItemsForHost:host port:port scheme:scheme]];
+    [NSMutableArray arrayWithArray:[keychain allWebFormKeychainItemsForHost:host
+                                                                       port:port
+                                                                     scheme:scheme]];
 
   // Fix those entries, and add the keychain items for the punycode host.
-  if (![asciiHost isEqualToString:host]) {
+  if (asciiHost && ![asciiHost isEqualToString:host]) {
     [keychainEntries makeObjectsPerformSelector:@selector(setHost:) withObject:asciiHost];
 
     [keychainEntries addObjectsFromArray:[keychain allWebFormKeychainItemsForHost:asciiHost

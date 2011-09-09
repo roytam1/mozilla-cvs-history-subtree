@@ -285,14 +285,24 @@ const char* const kHTMLMIMEType = "text/html";
                                            static_cast<nsIDOMEventListener*>(_listener), PR_FALSE);
         NS_ASSERTION(NS_SUCCEEDED(rv), "AddEventListener failed");
 
-        // Register the CHBrowserListener to listen for Flashblock whitelist checks.
-        // Need to use an nsIDOMNSEventTarget since flashblockCheckLoad is untrusted
+        rv = eventTarget->AddEventListener(NS_LITERAL_STRING("popupshowing"),
+                                           static_cast<nsIDOMEventListener*>(_listener), PR_FALSE);
+        NS_ASSERTION(NS_SUCCEEDED(rv), "AddEventListener failed");
+
+        // Register the CHBrowserListener to listen for Flashblock whitelist
+        // and Silverlight blocking checks. Need to use an nsIDOMNSEventTarget
+        // since flashblockCheckLoad and silverblockCheckLoad are untrusted.
         nsCOMPtr<nsIDOMNSEventTarget> nsEventTarget = do_QueryInterface(eventTarget);
         if (nsEventTarget) {
           rv = nsEventTarget->AddEventListener(NS_LITERAL_STRING("flashblockCheckLoad"),
                                                static_cast<nsIDOMEventListener*>(_listener),
                                                PR_TRUE, PR_TRUE);
           NS_ASSERTION(NS_SUCCEEDED(rv), "AddEventListener failed: flashblockCheckLoad");
+
+          rv = nsEventTarget->AddEventListener(NS_LITERAL_STRING("silverblockCheckLoad"),
+                                               static_cast<nsIDOMEventListener*>(_listener),
+                                               PR_TRUE, PR_TRUE);
+          NS_ASSERTION(NS_SUCCEEDED(rv), "AddEventListener failed: silverblockCheckLoad");
         }
 
         rv = eventTarget->AddEventListener(NS_LITERAL_STRING("command"),
@@ -877,22 +887,20 @@ const char* const kHTMLMIMEType = "text/html";
 
 - (void)ensurePrintSettings
 {
-  if (mPrintSettings)
-    return;
-  
+  NS_IF_RELEASE(mPrintSettings);
   nsCOMPtr<nsIPrintSettingsService> psService =
       do_GetService("@mozilla.org/gfx/printsettings-service;1");
   if (!psService)
     return;
-    
-  if (mUseGlobalPrintSettings) {
+
+  if (mUseGlobalPrintSettings)
     psService->GetGlobalPrintSettings(&mPrintSettings);
-    if (mPrintSettings)
-      psService->InitPrintSettingsFromPrefs(mPrintSettings, PR_FALSE,
-                                            nsIPrintSettings::kInitSaveNativeData);
-  }
   else
     psService->GetNewPrintSettings(&mPrintSettings);
+
+  if (mPrintSettings && mUseGlobalPrintSettings)
+    psService->InitPrintSettingsFromPrefs(mPrintSettings, PR_FALSE,
+                                          nsIPrintSettings::kInitSaveAll);
 }
 
 - (void)savePrintSettings
@@ -902,7 +910,7 @@ const char* const kHTMLMIMEType = "text/html";
         do_GetService("@mozilla.org/gfx/printsettings-service;1");
     if (psService)
       psService->SavePrintSettingsToPrefs(mPrintSettings, PR_FALSE,
-                                          nsIPrintSettings::kInitSaveNativeData);
+                                          nsIPrintSettings::kInitSaveAll);
   }
 }
 
@@ -1060,20 +1068,15 @@ const char* const kHTMLMIMEType = "text/html";
 
 - (NSString*)locationFromDOMWindow:(nsIDOMWindow*)inDOMWindow
 {
-  if (!inDOMWindow) return nil;
+  if (!inDOMWindow)
+    return nil;
   nsCOMPtr<nsIDOMDocument> domDocument;
   inDOMWindow->GetDocument(getter_AddRefs(domDocument));
   if (!domDocument)
     return nil;
-  nsCOMPtr<nsIDOMNSDocument> nsDoc(do_QueryInterface(domDocument));
-  if (!nsDoc)
-    return nil;
-  nsCOMPtr<nsIDOMLocation> location;
-  nsDoc->GetLocation(getter_AddRefs(location));
-  if (!location)
-    return nil;
   nsAutoString urlStr;
-  location->GetHref(urlStr);
+  if (!GeckoUtils::GetURIForDocument(domDocument, urlStr))
+    return nil;
   return [NSString stringWith_nsAString:urlStr];
 }
 
@@ -1177,7 +1180,8 @@ const char* const kHTMLMIMEType = "text/html";
   
   NSString* mimeType = [NSString stringWith_nsAString:contentType];
   if ([mimeType hasPrefix:@"text/"] ||
-      [mimeType hasSuffix:@"+xml"] ||
+      ([mimeType hasSuffix:@"+xml"] && 
+      ![mimeType isEqualToString:@"application/vnd.mozilla.xul+xml"]) ||
       [mimeType isEqualToString:@"application/x-javascript"] ||
       [mimeType isEqualToString:@"application/javascript"] ||
       [mimeType isEqualToString:@"application/ecmascript"] ||
@@ -1552,16 +1556,6 @@ const char* const kHTMLMIMEType = "text/html";
     return NULL;
   return privWin->GetDocShell();
 }
-
-// used for finding a blocked popup's docshell
-// addrefs the result!
-- (already_AddRefed<nsIDocShell>)findDocShellForURI:(nsIURI*)aURI
-{
-  nsIDocShell *match;
-  GeckoUtils::FindDocShellForURI(aURI, [self docShell], &match);
-  return match;
-}
-
 
 - (id<CHBrowserContainer>)browserContainer
 {

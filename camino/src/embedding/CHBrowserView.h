@@ -107,6 +107,8 @@ typedef enum {
 - (void)onPopupBlocked:(nsIDOMPopupBlockedEvent*)data;
 // Called when Flashblock whitelist is checked
 - (void)onFlashblockCheck:(nsIDOMEvent*)inEvent;
+// Called when Silverlight block preference is checked
+- (void)onSilverblockCheck:(nsIDOMEvent*)inEvent;
 // Called when a "shortcut icon" link element is noticed
 - (void)onFoundShortcutIcon:(NSString*)inIconURI;
 // Called when a feed link element is noticed
@@ -348,8 +350,6 @@ extern const char* const kHTMLMIMEType;
 // is for the currently focused frame; if not, it's for the top-level frame.
 - (already_AddRefed<nsISupports>)pageDescriptorByFocus:(BOOL)byFocus;
 - (void)setPageDescriptor:(nsISupports*)aDesc displayType:(PRUint32)aDisplayType;
-
-- (already_AddRefed<nsIDocShell>)findDocShellForURI:(nsIURI*)aURI;
 
 @end
 

@@ -59,6 +59,7 @@
 #import "SafeBrowsingBar.h"
 #import "BreakpadWrapper.h"
 
+#include "GeckoUtils.h"
 #include "CHBrowserService.h"
 #include "ContentClickListener.h"
 #import "FlashblockWhitelistManager.h"
@@ -136,7 +137,9 @@ static const NSTimeInterval kTimeIntervalToConsiderSiteBlockingStatusValid = 900
 - (void)addFindBarViewAndDisplay;
 - (void)removeFindBarViewAndDisplay;
 
-- (void)performCommandForXULElementWithID:(NSString*)elementIdentifier onPage:(NSString*)pageURI;
+- (void)performCommandForXULElementWithID:(NSString*)elementIdentifier
+                                   onPage:(NSString*)pageURI
+                                     site:(NSString*)siteURI;
 
 - (void)xpcomTerminate:(NSNotification*)aNotification;
 
@@ -179,8 +182,9 @@ static const NSTimeInterval kTimeIntervalToConsiderSiteBlockingStatusValid = 900
 
     [mBrowserView setContainer:self];
     [mBrowserView addListener:self];
-
-    [[KeychainService instance] addListenerToView:mBrowserView];
+    mPasswordAutofillListener = [[KeychainBrowserListener alloc]
+                                     initWithBrowser:mBrowserView];
+    [mBrowserView addListener:mPasswordAutofillListener];
 
     mIsBusy = NO;
     mListenersAttached = NO;
@@ -292,6 +296,9 @@ static const NSTimeInterval kTimeIntervalToConsiderSiteBlockingStatusValid = 900
   // when the CHBrowserListener goes away as a result of the
   // |destroyWebBrowser| call. (bug 174416)
   [mBrowserView removeListener:self];
+  [mBrowserView removeListener:mPasswordAutofillListener];
+  [mPasswordAutofillListener release];
+  mPasswordAutofillListener = nil;
   [mBrowserView destroyWebBrowser];
 
   // We don't want site icon notifications when the window has gone away
@@ -917,6 +924,20 @@ static const NSTimeInterval kTimeIntervalToConsiderSiteBlockingStatusValid = 900
   inEvent->StopPropagation();
 }
 
+//
+// - onSilverblockCheck:
+//
+// Called when Flashblock sends a notification to check whether Silverlight
+// should be allowed for a URL. Silverlight is allowed if PreventDefault() is
+// called on the event. Due to Flashblock bug 22469, which doesn't unblock
+// Silverlight movies properly, we allow them unconditionally.
+//
+- (void)onSilverblockCheck:(nsIDOMEvent*)inEvent
+{
+  inEvent->PreventDefault();
+  inEvent->StopPropagation();  
+}
+
 // Called when a "shortcut icon" link element is noticed
 - (void)onFoundShortcutIcon:(NSString*)inIconURI
 {
@@ -996,15 +1017,38 @@ static const NSTimeInterval kTimeIntervalToConsiderSiteBlockingStatusValid = 900
   // from -[self currentURI] if the command was send from an error overlay, for instance.
   NSString* documentURI = [self documentURI];
 
-  [self performCommandForXULElementWithID:elementID onPage:documentURI];
+  // Get the enclosing site URI as well (currentURI doesn't give us what we need
+  // on framed sites).
+  NSString* siteURI = nil;
+  nsCOMPtr<nsIDOMNode> targetNode = do_QueryInterface(eventTarget);
+  if (targetNode) {
+    nsCOMPtr<nsIDOMDocument> domDocument;
+    targetNode->GetOwnerDocument(getter_AddRefs(domDocument));
+    if (domDocument) {
+      nsAutoString urlStr;
+      if (GeckoUtils::GetURIForDocument(domDocument, urlStr))
+        siteURI = [NSString stringWith_nsAString:urlStr];
+    }
+  }
+  // If something goes wrong, fall back to the top-level URI.
+  if (!siteURI)
+    siteURI = [self currentURI];
+
+  [self performCommandForXULElementWithID:elementID
+                                   onPage:documentURI
+                                     site:siteURI];
 }
 
 // The pageURI is supplied because it might differ from -[self currentURI], particularly
-// if the command was sent from an error page overlay.
-- (void)performCommandForXULElementWithID:(NSString*)elementIdentifier onPage:(NSString*)pageURI
+// if the command was sent from an error page overlay. siteURI is the site the
+// command is ultimately coming from, which will differ from -[self currentURI]
+// if the site uses frames.
+- (void)performCommandForXULElementWithID:(NSString*)elementIdentifier
+                                   onPage:(NSString*)pageURI
+                                     site:(NSString*)siteURI
 {
   if ([elementIdentifier isEqualToString:@"exceptionDialogButton"]) {
-    [mDelegate addCertificateOverrideForSite:[self currentURI]];
+    [mDelegate addCertificateOverrideForSite:siteURI];
   }
   else if ([pageURI hasPrefix:@"about:safebrowsingblocked"]) {
     // pageURI contains an |e| parameter to indicate the type of
@@ -1048,11 +1092,17 @@ static const NSTimeInterval kTimeIntervalToConsiderSiteBlockingStatusValid = 900
       if ([characters length] > 0) {
         unichar keyChar = [characters characterAtIndex:0];
         if (keyChar == NSLeftArrowFunctionKey) {
-          [mBrowserView goBack];
+          // If someone assigns this shortcut to a menu, we want that to win.
+          if (![[NSApp mainMenu] performKeyEquivalent:theEvent])
+            [mBrowserView goBack];
+
           return YES;
         }
         else if (keyChar == NSRightArrowFunctionKey) {
-          [mBrowserView goForward];
+          // If someone assigns this shortcut to a menu, we want that to win.
+          if (![[NSApp mainMenu] performKeyEquivalent:theEvent])
+            [mBrowserView goForward];
+
           return YES;
         }
       }
@@ -1063,6 +1113,18 @@ static const NSTimeInterval kTimeIntervalToConsiderSiteBlockingStatusValid = 900
 
 - (void)keyDown:(NSEvent*)theEvent
 {
+  // We only want to handle events from Gecko; if this came from another view,
+  // don't interfere with it.
+  NSResponder* firstResponder = [[self window] firstResponder];
+  // It's possible for the Gecko key handling to have destroyed the view,
+  // in which case it's clearly been handled already.
+  if (!firstResponder)
+    return;
+  if (!([firstResponder isKindOfClass:[NSView class]] &&
+        [(NSView*)firstResponder isDescendantOf:mBrowserView])) {
+    [super keyDown:theEvent];
+    return;
+  }
   // ChildView incorrectly forwards events that should have been consumed by
   // IME, so don't trust events that came from a text field or plugin.
   if ([mBrowserView isTextFieldFocused] || [mBrowserView isPluginFocused])

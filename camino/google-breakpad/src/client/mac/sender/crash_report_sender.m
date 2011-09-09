@@ -611,8 +611,27 @@ NSString *const kDefaultServerType = @"google";
 
   // Localize the privacy policy label, and keep it right-aligned to the arrow.
   [privacyLinkLabel_ setStringValue:NSLocalizedString(@"privacyLabel", @"")];
-  float privacyLabelWidthDelta = [privacyLinkLabel_ breakpad_adjustWidthToFit];
+  float privacyLabelWidthDelta =
+      [privacyLinkLabel_ breakpad_adjustWidthToFit];
   [privacyLinkLabel_ breakpad_shiftHorizontally:(-privacyLabelWidthDelta)];
+
+  // Ensure that the email field and the privacy policy link don't overlap.
+  float kMinControlPadding = 8;
+  float maxEmailFieldWidth = NSMinX([privacyLinkLabel_ frame]) -
+                               NSMinX([emailEntryField_ frame]) -
+                               kMinControlPadding;
+  if (NSWidth([emailEntryField_ bounds]) > maxEmailFieldWidth &&
+      maxEmailFieldWidth > 0) {
+    NSSize emailSize = [emailEntryField_ frame].size;
+    emailSize.width = maxEmailFieldWidth;
+    [emailEntryField_ setFrameSize:emailSize];
+  }
+
+  // Localize the placeholder text.
+  [[commentsEntryField_ cell]
+      setPlaceholderString:NSLocalizedString(@"commentsPlaceholder", @"")];
+  [[emailEntryField_ cell]
+      setPlaceholderString:NSLocalizedString(@"emailPlaceholder", @"")];
 
   // Localize the buttons, and keep the cancel button at the right distance.
   [sendButton_ setTitle:NSLocalizedString(@"sendReportButton", @"")];
@@ -895,6 +914,8 @@ doCommandBySelector:(SEL)commandSelector {
                          forKey:@BREAKPAD_PRODUCT];
   [socorroDictionary_ setObject:@"ProductName"
                          forKey:@BREAKPAD_PRODUCT];
+  [socorroDictionary_ setObject:@"Email"
+                         forKey:@BREAKPAD_EMAIL];
 }
 
 - (NSMutableDictionary *)dictionaryForServerType:(NSString *)serverType {

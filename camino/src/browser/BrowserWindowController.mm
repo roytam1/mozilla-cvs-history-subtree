@@ -43,6 +43,7 @@
 #import "NSString+Utils.h"
 #import "NSString+Gecko.h"
 #import "NSSplitView+Utils.h"
+#import "NSMenu+Gecko.h"
 #import "NSMenu+Utils.h"
 #import "NSPasteboard+Utils.h"
 #import "NSWorkspace+Utils.h"
@@ -104,9 +105,7 @@
 #include "nsIHistoryEntry.h"
 #include "nsIHistoryItems.h"
 #include "nsIDOMDocument.h"
-#include "nsIDOMNSDocument.h"
 #include "nsIDOMNSHTMLDocument.h"
-#include "nsIDOMLocation.h"
 #include "nsIDOMElement.h"
 #include "nsIDOMEvent.h"
 #include "nsIContextMenuListener.h"
@@ -361,6 +360,8 @@ public:
 - (void)insertNewlineIgnoringFieldEditor:(id)sender
 {
   BrowserWindowController* bwc = (BrowserWindowController *)[[self window] delegate];
+  if ([[bwc browserWrapper] isBlockedErrorOverlayShowing])
+    return;
   NSString* URLstring = [self string];
   // so that Option-return works on things like "google.com" where the scheme:// is missing
   if ([URLstring rangeOfString:@"://"].location == NSNotFound)
@@ -572,10 +573,14 @@ public:
 #pragma mark -
 
 @interface BrowserWindowController(Private)
-  // open a new window or tab, but doesn't load anything into them. Must be matched
-  // with a call to do that.
+// Opens a new window or tab, but doesn't load anything into them. Must be
+// matched with a call to do that.
 - (BrowserWindowController*)openNewWindow:(BOOL)aLoadInBG;
 - (BrowserTabViewItem*)openNewTab:(BOOL)aLoadInBG;
+
+// Creates a new tab, optionally loading an initial page based on user pref
+// (e.g., home page, or about:blank).
+- (void)createNewTab:(BOOL)loadInitialPage;
 
 - (void)setupToolbar;
 - (void)setGeckoActive:(BOOL)inActive;
@@ -638,15 +643,8 @@ public:
     // we cannot rely on the OS to correctly cascade new windows (RADAR bug 2972893)
     // so we turn off the cascading. We do it at the end of |windowDidLoad|
     [self setShouldCascadeWindows:NO];
-    
-    mInitialized = NO;
-    mMoveReentrant = NO;
+
     mShouldAutosave = YES;
-    mShouldLoadHomePage = YES;
-    mChromeMask = 0;
-    mThrobberImages = nil;
-    mThrobberHandler = nil;
-    mURLFieldEditor = nil;
   
     // register for services
     NSArray* sendTypes = [NSArray arrayWithObjects:NSStringPboardType, nil];
@@ -818,7 +816,7 @@ public:
 
 -(void)disableLoadPage
 {
-  mShouldLoadHomePage = NO;
+  mSuppressInitialPageLoad = YES;
 }
 
 - (BOOL)windowShouldClose:(id)sender 
@@ -1067,16 +1065,16 @@ public:
 
     // remove the dummy tab view
     [mTabBrowser removeTabViewItem:[mTabBrowser tabViewItemAtIndex:0]];
-    
+
     // create ourselves a new tab and fill it with the appropriate content. If we
     // have a URL pending to be opened here, don't load anything in it, otherwise,
     // load the homepage if that's what the user wants (or about:blank).
-    [self createNewTab:(mPendingURL ? eNewTabEmpty : (mShouldLoadHomePage ? eNewTabHomepage : eNewTabAboutBlank))];
-    
+    [self createNewTab:!(mPendingURL || mSuppressInitialPageLoad)];
+
     // we have a url "pending" from the "open new window with link" command. Deal
     // with it now that everything is loaded.
     if (mPendingURL) {
-      if (mShouldLoadHomePage)
+      if (!mSuppressInitialPageLoad)
         [self loadURL:mPendingURL referrer:mPendingReferrer focusContent:mPendingActivate allowPopups:mPendingAllowPopups];
       [mPendingURL release];
       [mPendingReferrer release];
@@ -1132,6 +1130,7 @@ public:
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(newTab:)
                                         name:kTabBarBackgroundDoubleClickedNotification object:mTabBrowser];
 
+    [[self window] setOneShot:NO];
 }
 
 - (NSSize)windowWillResize:(NSWindow *)sender toSize:(NSSize)proposedFrameSize
@@ -2096,7 +2095,7 @@ public:
 - (IBAction)openFeedPrefPane:(id)sender
 {
   [[MVPreferencesController sharedInstance] showPreferences:nil];
-  [[MVPreferencesController sharedInstance] selectPreferencePaneByIdentifier:@"org.mozilla.camino.preference.navigation"];
+  [[MVPreferencesController sharedInstance] selectPreferencePaneByIdentifier:@"org.mozilla.camino.preference.general"];
 }
 
 //
@@ -3132,9 +3131,11 @@ public:
 
   // When creating Bookmark items, set the last-visited time to the time that
   // the bookmark was created.  TODO: use page load time.
-  [parentFolder appendChild:[Bookmark bookmarkWithTitle:itemTitle
-                                                    url:itemURL
-                                              lastVisit:[NSDate date]]];
+  Bookmark* bookmark = [Bookmark bookmarkWithTitle:itemTitle
+                                               url:itemURL
+                                         lastVisit:[NSDate date]];
+  [parentFolder appendChild:bookmark];
+  [bookmarkManager bookmarkItemsAdded:[NSArray arrayWithObject:bookmark]];
   [bookmarkManager setLastUsedBookmarkFolder:parentFolder];
 }
 
@@ -3173,9 +3174,11 @@ public:
   [newTabGroup setTitle:[NSString stringWithFormat:NSLocalizedString(@"defaultTabGroupTitle", nil),
                                                    [newTabGroup count], 
                                                    primaryTabTitle]];
-  BookmarkFolder* parentFolder = [[BookmarkManager sharedBookmarkManager] lastUsedBookmarkFolder];
+  BookmarkManager* bookmarkManager = [BookmarkManager sharedBookmarkManager];
+  BookmarkFolder* parentFolder = [bookmarkManager lastUsedBookmarkFolder];
   [parentFolder appendChild:newTabGroup];
-  [[BookmarkManager sharedBookmarkManager] setLastUsedBookmarkFolder:parentFolder];
+  [bookmarkManager bookmarkItemsAdded:[newTabGroup allChildBookmarks]];
+  [bookmarkManager setLastUsedBookmarkFolder:parentFolder];
 }
 
 - (IBAction)addBookmarkForLink:(id)aSender
@@ -3187,9 +3190,15 @@ public:
   nsAutoString href;
   GeckoUtils::GetEnclosingLinkElementAndHref(mDataOwner->mContextMenuNode, getter_AddRefs(linkContent), href);
   nsAutoString linkText;
-  GeckoUtils::GatherTextUnder(linkContent, linkText);
+  if (linkContent) {
+    GeckoUtils::GatherTextUnder(linkContent, linkText);
+  }
   NSString* urlStr = [NSString stringWith_nsAString:href];
-  NSString* titleStr = [NSString stringWith_nsAString:linkText];
+  NSString* titleStr = nil;
+  if (!linkText.IsEmpty())
+    titleStr = [NSString stringWith_nsAString:linkText];
+  else
+    titleStr = urlStr;
 
   NSDictionary* itemInfo = [NSDictionary dictionaryWithObjectsAndKeys:
                                             titleStr, kAddBookmarkItemTitleKey,
@@ -3430,16 +3439,9 @@ public:
 
   nsCOMPtr<nsIDOMDocument> ownerDoc;
   mDataOwner->mContextMenuNode->GetOwnerDocument(getter_AddRefs(ownerDoc));
-
-  nsCOMPtr<nsIDOMNSDocument> nsDoc = do_QueryInterface(ownerDoc);
-  if (!nsDoc) return @"";
-
-  nsCOMPtr<nsIDOMLocation> location;
-  nsDoc->GetLocation(getter_AddRefs(location));
-  if (!location) return @"";
-
   nsAutoString urlStr;
-  location->GetHref(urlStr);
+  if (!GeckoUtils::GetURIForDocument(ownerDoc, urlStr))
+    return @"";
   return [NSString stringWith_nsAString:urlStr];
 }
 
@@ -3540,48 +3542,51 @@ public:
   mLastBrowserView = nil;
 }
 
-- (void)createNewTab:(ENewTabContents)contents
+- (void)createNewTab:(BOOL)loadInitialPage
 {
-    BrowserTabViewItem* newTab  = [self createNewTabItem];
-    BrowserWrapper*     newView = [newTab view];
-    
-    BOOL loadHomepage = NO;
-    if (contents == eNewTabHomepage)
-    {
-      int newTabPage = [[PreferenceManager sharedInstance] getIntPref:kGeckoPrefNewTabStartPage withSuccess:NULL];
-      loadHomepage = (newTabPage == kStartPageHome);
-    }
+  BrowserTabViewItem* newTab = [self createNewTabItem];
 
-    [newTab setLabel: (loadHomepage ? NSLocalizedString(@"TabLoading", @"") : NSLocalizedString(@"UntitledPageTitle", @""))];
-    [mTabBrowser addTabViewItem: newTab];
-    
-    BOOL focusURLBar = NO;
-    if (contents != eNewTabEmpty)
-    {
-      // Focus the URL bar if we're opening a blank tab and the URL bar is visible.
-      NSToolbar* toolbar = [[self window] toolbar];
-      BOOL locationBarVisible = [toolbar isVisible] &&
-                                ([toolbar displayMode] == NSToolbarDisplayModeIconAndLabel ||
-                                 [toolbar displayMode] == NSToolbarDisplayModeIconOnly);
-                                
-      NSString* urlToLoad = @"about:blank";
-      if (loadHomepage)
-        urlToLoad = [[PreferenceManager sharedInstance] homePageUsingStartPage:NO];
+  BOOL loadHomepage = NO;
+  if (loadInitialPage) {
+    int newTabPage = [[PreferenceManager sharedInstance] getIntPref:kGeckoPrefNewTabStartPage
+                                                        withSuccess:NULL];
+    loadHomepage = (newTabPage == kStartPageHome);
+  }
 
-      focusURLBar = locationBarVisible && (!urlToLoad || [urlToLoad isBlankURL]);
+  [newTab setLabel:(loadHomepage ? NSLocalizedString(@"TabLoading", @"")
+                                 : NSLocalizedString(@"UntitledPageTitle", @""))];
+  [mTabBrowser addTabViewItem: newTab];
 
-      [newView loadURI:urlToLoad referrer:nil flags:NSLoadFlagsNone focusContent:!focusURLBar allowPopups:NO];
-    }
+  BOOL focusURLBar = NO;
+  if (loadInitialPage) {
+    // Focus the URL bar if we're opening a blank tab and the URL bar is visible.
+    NSToolbar* toolbar = [[self window] toolbar];
+    BOOL locationBarVisible = [toolbar isVisible] &&
+                              ([toolbar displayMode] == NSToolbarDisplayModeIconAndLabel ||
+                               [toolbar displayMode] == NSToolbarDisplayModeIconOnly);
 
-    [mTabBrowser selectLastTabViewItem:self];
+    NSString* urlToLoad = @"about:blank";
+    if (loadHomepage)
+      urlToLoad = [[PreferenceManager sharedInstance] homePageUsingStartPage:NO];
 
-    if (focusURLBar)
-      [self focusURLBar];
+    focusURLBar = locationBarVisible && (!urlToLoad || [urlToLoad isBlankURL]);
+
+    [[newTab view] loadURI:urlToLoad
+                  referrer:nil
+                     flags:NSLoadFlagsNone
+              focusContent:!focusURLBar
+               allowPopups:NO];
+  }
+
+  [mTabBrowser selectLastTabViewItem:self];
+
+  if (focusURLBar)
+    [self focusURLBar];
 }
 
 - (IBAction)newTab:(id)sender
 {
-  [self createNewTab:eNewTabHomepage];  // we'll look at the pref to decide whether to load the home page
+  [self createNewTab:YES];
 }
 
 -(IBAction)closeCurrentTab:(id)sender
@@ -4200,6 +4205,12 @@ public:
   BOOL isFlashblock = NO;
 
   if (mDataOwner->mContextMenuNode) {
+    nsAutoString nodeName;
+    if (NS_SUCCEEDED(mDataOwner->mContextMenuNode->GetNodeName(nodeName))) {
+      if (nodeName.Equals(NS_LITERAL_STRING("popup")))
+        return [NSMenu menuFromNode:mDataOwner->mContextMenuNode];
+    }
+
     nsCOMPtr<nsIDOMDocument> ownerDoc;
     mDataOwner->mContextMenuNode->GetOwnerDocument(getter_AddRefs(ownerDoc));
 
@@ -5054,6 +5065,13 @@ public:
 
   if (oldResponderIsGecko != newResponderIsGecko && [[self window] isKeyWindow])
     [mBrowserView setBrowserActive:newResponderIsGecko];
+
+  // When the blocked page overlay shows up, Gecko causes us to lose content
+  // focus; manually restore it if that happens.
+  if (newResponder == [self window] && oldResponderIsGecko &&
+      [mBrowserView isBlockedErrorOverlayShowing]) {
+    [[self window] makeFirstResponder:[mBrowserView browserView]];
+  }
 }
 
 //
@@ -5262,22 +5280,20 @@ public:
 {
   [mContentView toggleTabThumbnailGridView];
   if ([mContentView tabThumbnailGridViewIsVisible]) {
-    // If either of the toolbar fields is in the middle of an edit, end the edit
-    // by focusing the window.
-    NSText* locationFieldEditor = [mURLBar fieldEditor];
-    NSText* searchFieldEditor = [[self window] fieldEditor:NO forObject:mSearchBar];
-    NSResponder* currentFirstResponder = [[self window] firstResponder];
-    if ((locationFieldEditor && currentFirstResponder == locationFieldEditor) ||
-        (searchFieldEditor && currentFirstResponder == searchFieldEditor))
-    {
-      [[self window] makeFirstResponder:[self window]];
-    }
     [mURLBar setEditable:NO];
     [mSearchBar setEditable:NO];
   }
   else {
     [mURLBar setEditable:YES];
     [mSearchBar setEditable:YES];
+    // If we don't have focus anywhere useful when coming out of tab overview
+    // mode (due to the view shuffling) set it on the content area.
+    if ([[[self window] firstResponder] isEqual:[self window]]) {
+      if ([self bookmarkManagerIsVisible])
+        [[self bookmarkViewControllerForCurrentTab] focusSearchField];
+      else
+        [[self window] makeFirstResponder:[mBrowserView browserView]];
+    }
   }
 }
 

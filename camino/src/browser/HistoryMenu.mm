@@ -144,7 +144,7 @@ static const unsigned int kMaxTitleLength = 50;
 
 - (NSString*)menuItemTitleForHistoryItem:(HistoryItem*)inItem;
 
-- (void)setupHistoryMenu;
+- (void)setUpHistoryMenu;
 - (void)menuWillBeDisplayed;
 - (void)clearHistoryItems;
 - (void)rebuildHistoryItems;
@@ -172,13 +172,13 @@ static const unsigned int kMaxTitleLength = 50;
 {
   if ((self = [super initWithTitle:inTitle])) {
     mHistoryItemsDirty = YES;
-    [self setupHistoryMenu];
+    [self setUpHistoryMenu];
   }
   return self;
 }
 
 // this should only be called after app launch, when the data source is available
-- (void)setupHistoryMenu
+- (void)setUpHistoryMenu
 {
   // set ourselves up to listen for history changes
   [[NSNotificationCenter defaultCenter] addObserver:self
@@ -423,9 +423,21 @@ static const unsigned int kMaxTitleLength = 50;
 - (void)appLaunchFinished:(NSNotification*)inNotification
 {
   mAppLaunchDone = YES;
-  // setup the history menu after a delay, so that other app launch stuff
+  // set up the history menu after a delay, so that other app launch stuff
   // finishes first
-  [self performSelector:@selector(setupHistoryMenu) withObject:nil afterDelay:0];
+  [self performSelector:@selector(setUpHistoryMenu) withObject:nil afterDelay:0];
+}
+
+- (void)setUpHistoryMenu
+{
+  // Listen for history being cleared.
+  [[NSNotificationCenter defaultCenter]
+      addObserver:self
+         selector:@selector(historyCleared:)
+             name:kNotificationNameHistoryDataSourceCleared
+           object:[HistoryMenuDataSourceOwner sharedHistoryDataSource]];
+
+  [super setUpHistoryMenu];
 }
 
 - (void)browserClosed:(NSNotification*)inNotification
@@ -581,15 +593,6 @@ static const unsigned int kMaxTitleLength = 50;
   if (!rootChangedItem) {
     [mTodayItem release];
     mTodayItem = nil;
-    // We can get here either when the history is being cleared (in which case
-    // we will already have an mRootItem) or when we are doing the lazy
-    // construction of the root item as the menu is shown (in which case
-    // mRootItem is still |nil|). If it's the former, clear the recently closed
-    // pages as well.
-    if (mRootItem) {
-      [mRecentlyClosedMenu release];
-      mRecentlyClosedMenu = [[NSMenu alloc] initWithTitle:NSLocalizedString(@"RecentlyClosed", nil)];
-    }
   }
   else if (mTodayItem == rootChangedItem ||
            mTodayItem == [rootChangedItem parentItem])
@@ -598,6 +601,11 @@ static const unsigned int kMaxTitleLength = 50;
   }
 
   [super historyChanged:inNotification];
+}
+
+- (void)historyCleared:(NSNotification*)inNotification {
+  [mRecentlyClosedMenu release];
+  mRecentlyClosedMenu = [[NSMenu alloc] initWithTitle:NSLocalizedString(@"RecentlyClosed", nil)];
 }
 
 @end

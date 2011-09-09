@@ -74,7 +74,7 @@ APP_UPDATE_URL = https://caminobrowser.org/update-check
 APP_UPDATES_ENABLED = true
 BREAKPAD_UPLOAD_URL = https://crash-reports.mozilla.com/submit
 else
-APP_UPDATES_ENABLED = false
+APP_UPDATES_ENABLED ?= false
 endif
 
 # For Launch Services compatibility, CFBundleVersion can be at most three
@@ -176,7 +176,7 @@ CAMINO_SYMBOL_SOURCE_FILES = \
 	$(XCODE_PRODUCT_DIR)/*.dSYM/Contents/Resources/DWARF/* \
 	google-breakpad/src/client/mac/build/Release/Breakpad.framework.dSYM/Contents/Resources/DWARF/Breakpad \
 	google-breakpad/src/client/mac/build/Release/breakpadUtilities.dylib.dSYM/Contents/Resources/DWARF/breakpadUtilities.dylib \
-	growl/build/Deployment/Growl.framework.dSYM/Contents/Resources/DWARF/Growl \
+	growl/build/Release/Growl.framework.dSYM/Contents/Resources/DWARF/Growl \
 	sparkle/build/Release/Sparkle.framework.dSYM/Contents/Resources/DWARF/Sparkle \
 	$(NULL)
 
@@ -226,11 +226,14 @@ unexport CC CXX
 ABS_topsrcdir := $(shell cd $(topsrcdir); pwd)
 
 SYMBOL_ARCHIVE_BASENAME = \
-	$(APP_NAME)-$(CM_APP_VERSION)-$(PLATFORM_BUILD_ID)-$(OS_TEST)
+	$(APP_NAME)-$(CM_APP_VERSION)-$(OS_TEST)-$(PLATFORM_BUILD_ID)
 SYMBOL_OUTPUT_DIR = crashreporter-symbols/$(PLATFORM_BUILD_ID)
 SYMBOL_ZIP_FILENAME = crashreporter-symbols-$(SYMBOL_ARCHIVE_BASENAME).zip
 SYMBOL_STORE_HOME_DIR = $(topsrcdir)/../$(PLATFORM_BUILD_ID)/symbols
 SYMBOL_REUPLOAD_SCRIPT_FILE = $(SYMBOL_STORE_HOME_DIR)/../upload-symbols-$(OS_TEST).sh
+# Export the SYMBOL_INDEX_NAME for toolit's upload_symbols.sh scrip
+# post-upload behavior
+export SYMBOL_INDEX_NAME = $(SYMBOL_ARCHIVE_BASENAME)-symbols.txt
 
 export::
 	mkdir -p wallet/tables
@@ -396,7 +399,7 @@ buildcaminosymbols:
 	  google-breakpad/src/tools/mac/dump_syms/build/Release/dump_syms \
 	  $(SYMBOL_OUTPUT_DIR) \
 	  $(CORE_SYMBOL_SOURCE_FILES) >> \
-	  $(SYMBOL_OUTPUT_DIR)/$(SYMBOL_ARCHIVE_BASENAME)-symbols.txt
+	  $(SYMBOL_OUTPUT_DIR)/$(SYMBOL_INDEX_NAME)
 
 uploadcaminosymbols:
 	@echo Zipping symbols
@@ -409,6 +412,8 @@ uploadcaminosymbols:
 	  $(SYMBOL_STORE_HOME_DIR)/$(SYMBOL_ZIP_FILENAME)
 	@echo Creating re-upload script
 	echo '#!/bin/sh\n\n \
+	  export SYMBOL_INDEX_NAME="$(SYMBOL_INDEX_NAME)"\n\n \
+	  export POST_SYMBOL_UPLOAD_CMD="$(POST_SYMBOL_UPLOAD_CMD)"\n\n \
 	  SYMBOL_SERVER_HOST=$(SYMBOL_SERVER_HOST) \
 	  SYMBOL_SERVER_USER=$(SYMBOL_SERVER_USER) \
 	  SYMBOL_SERVER_PATH=$(SYMBOL_SERVER_PATH) \
