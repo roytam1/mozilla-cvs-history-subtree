@@ -410,7 +410,7 @@ MODULES_all :=                                  \
 CAMINO_CO_TAG        = CAMINO_2_0_8_RELEASE
 MOZ_CO_TAG           = CAMINO_2_0_8_RELEASE
 NSPR_CO_TAG          = NSPR_4_7_6_RTM
-NSS_CO_TAG           = NSS_3_12_3_1_RTM
+NSS_CO_TAG           = CAMINO_2_0_8_RELEASE
 LDAPCSDK_CO_TAG      = LDAPCSDK_6_0_3_CLIENT_BRANCH
 LOCALES_CO_TAG       =
 
