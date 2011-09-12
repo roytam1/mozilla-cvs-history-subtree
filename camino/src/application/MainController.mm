@@ -1083,9 +1083,20 @@ const int kZoomActionsTag = 108;
   return NO;
 }
 
+// TODO: Figure out if this is still necessary; see bug 647365. If it is, it
+// should probably be moved into CHBrowserView via listening for
+// NSApplicationDidChangeScreenParametersNotification
 - (void)applicationDidChangeScreenParameters:(NSNotification*)aNotification
 {
-  [NSApp makeWindowsPerform:@selector(display) inOrder:YES];
+  NSEnumerator* windowEnum = [[NSApp orderedWindows] objectEnumerator];
+  NSWindow* curWindow;
+  while ((curWindow = [windowEnum nextObject])) {
+    if ([[curWindow windowController] isKindOfClass:[BrowserWindowController class]] &&
+        [curWindow isVisible])
+    {
+      [curWindow display];
+    }
+  }
 }
 
 - (void)windowLayeringDidChange:(NSNotification*)inNotification
