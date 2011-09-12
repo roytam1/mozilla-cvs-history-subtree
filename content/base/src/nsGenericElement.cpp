@@ -2714,14 +2714,14 @@ nsGenericElement::doInsertChildAt(nsIContent* aKid, PRUint32 aIndex,
     }
   }
 
-  PRUint32 childCount = aChildArray.ChildCount();
-  NS_ENSURE_TRUE(aIndex <= childCount, NS_ERROR_ILLEGAL_VALUE);
-
   nsMutationGuard::DidMutate();
 
-  PRBool isAppend = (aIndex == childCount);
-
+  // Do this before checking the child-count since this could cause mutations
   mozAutoDocUpdate updateBatch(aDocument, UPDATE_CONTENT_MODEL, aNotify);
+
+  PRUint32 childCount = aChildArray.ChildCount();
+  NS_ENSURE_TRUE(aIndex <= childCount, NS_ERROR_ILLEGAL_VALUE);
+  PRBool isAppend = (aIndex == childCount);
 
   rv = aChildArray.InsertChildAt(aKid, aIndex);
   NS_ENSURE_SUCCESS(rv, rv);
@@ -2752,7 +2752,7 @@ nsGenericElement::doInsertChildAt(nsIContent* aKid, PRUint32 aIndex,
 
     if (nsContentUtils::HasMutationListeners(aKid,
           NS_EVENT_BITS_MUTATION_NODEINSERTED, container)) {
-      mozAutoRemovableBlockerRemover blockerRemover;
+      mozAutoRemovableBlockerRemover blockerRemover(container->GetOwnerDoc());
       
       nsMutationEvent mutation(PR_TRUE, NS_MUTATION_NODEINSERTED);
       mutation.mRelatedNode = do_QueryInterface(container);
@@ -2822,7 +2822,7 @@ nsGenericElement::doRemoveChildAt(PRUint32 aIndex, PRBool aNotify,
   if (aNotify &&
       nsContentUtils::HasMutationListeners(aKid,
         NS_EVENT_BITS_MUTATION_NODEREMOVED, container)) {
-    mozAutoRemovableBlockerRemover blockerRemover;
+    mozAutoRemovableBlockerRemover blockerRemover(container->GetOwnerDoc());
 
     nsMutationEvent mutation(PR_TRUE, NS_MUTATION_NODEREMOVED);
     mutation.mRelatedNode = do_QueryInterface(container);
@@ -3194,6 +3194,8 @@ nsGenericElement::doReplaceOrInsertBefore(PRBool aReplace,
 
   nsINode* container = NODE_FROM(aParent, aDocument);
 
+  mozAutoDocConditionalContentUpdateBatch batch(aDocument, PR_TRUE);
+
   // Figure out which index to insert at
   if (aRefChild) {
     refContent = do_QueryInterface(aRefChild);
@@ -3242,11 +3244,6 @@ nsGenericElement::doReplaceOrInsertBefore(PRBool aReplace,
       NS_ASSERTION(adoptedKid == aNewChild, "Uh, adopt node changed nodes?");
     }
   }
-
-  // We want an update batch when we expect several mutations to be performed,
-  // which is when we're replacing a node, or when we're inserting a fragment.
-  mozAutoDocConditionalContentUpdateBatch(aDocument,
-    aReplace || nodeType == nsIDOMNode::DOCUMENT_FRAGMENT_NODE);
 
   // If we're replacing
   if (aReplace) {
@@ -3798,7 +3795,7 @@ nsGenericElement::SetAttrAndNotify(PRInt32 aNamespaceID,
   }
   
   if (aFireMutation) {
-    mozAutoRemovableBlockerRemover blockerRemover;
+    mozAutoRemovableBlockerRemover blockerRemover(GetOwnerDoc());
     
     nsMutationEvent mutation(PR_TRUE, NS_MUTATION_ATTRMODIFIED);
 
@@ -4055,7 +4052,7 @@ nsGenericElement::UnsetAttr(PRInt32 aNameSpaceID, nsIAtom* aName,
   }
 
   if (hasMutationListeners) {
-    mozAutoRemovableBlockerRemover blockerRemover;
+    mozAutoRemovableBlockerRemover blockerRemover(GetOwnerDoc());
 
     nsCOMPtr<nsIDOMEventTarget> node =
       do_QueryInterface(static_cast<nsIContent *>(this));

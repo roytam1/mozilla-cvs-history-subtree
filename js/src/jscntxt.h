@@ -240,14 +240,6 @@ struct JSRuntime {
      */
     JSSetSlotRequest    *setSlotRequests;
 
-    /* Random number generator state, used by jsmath.c. */
-    JSBool              rngInitialized;
-    int64               rngMultiplier;
-    int64               rngAddend;
-    int64               rngMask;
-    int64               rngSeed;
-    jsdouble            rngDscale;
-
     /* Well-known numbers held for use by this runtime's contexts. */
     jsdouble            *jsNaN;
     jsdouble            *jsNegativeInfinity;
@@ -792,6 +784,9 @@ struct JSContext {
 
     /* Debug hooks associated with the current context. */
     JSDebugHooks        *debugHooks;
+
+    /* Random number generator state, used by jsmath.cpp. */
+    int64               rngSeed;
 };
 
 #ifdef JS_THREADSAFE

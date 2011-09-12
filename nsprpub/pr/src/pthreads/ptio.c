@@ -211,7 +211,7 @@ static PRBool _pr_ipv6_v6only_on_by_default;
     || defined(HPUX10_30) || defined(HPUX11) \
     || defined(LINUX) || defined(__GNU__) || defined(__GLIBC__) \
     || defined(FREEBSD) || defined(NETBSD) || defined(OPENBSD) \
-    || defined(BSDI) || defined(NTO) || defined(DARWIN) \
+    || defined(BSDI) || defined(VMS) || defined(NTO) || defined(DARWIN) \
     || defined(UNIXWARE) || defined(RISCOS) || defined(SYMBIAN)
 #define _PRSelectFdSetArg_t fd_set *
 #else
@@ -295,7 +295,8 @@ static PRBool IsValidNetAddrLen(const PRNetAddr *addr, PRInt32 addr_len)
 #if defined(HAVE_SOCKLEN_T) \
     || (defined(__GLIBC__) && __GLIBC__ >= 2)
 typedef socklen_t pt_SockLen;
-#elif (defined(AIX) && !defined(AIX4_1)) 
+#elif (defined(AIX) && !defined(AIX4_1)) \
+    || defined(VMS)
 typedef PRSize pt_SockLen;
 #else
 typedef PRIntn pt_SockLen;
@@ -2096,21 +2097,21 @@ static PRInt32 pt_RecvFrom(PRFileDesc *fd, void *buf, PRInt32 amount,
         bytes = pt_Continue(&op);
         syserrno = op.syserrno;
     }
+#ifdef _PR_HAVE_SOCKADDR_LEN
     if (bytes >= 0)
     {
-#ifdef _PR_HAVE_SOCKADDR_LEN
         /* ignore the sa_len field of struct sockaddr */
         if (addr)
         {
             addr->raw.family = ((struct sockaddr*)addr)->sa_family;
         }
+    }
 #endif /* _PR_HAVE_SOCKADDR_LEN */
 #ifdef _PR_INET6
-        if (addr && (AF_INET6 == addr->raw.family))
-            addr->raw.family = PR_AF_INET6;
+	if (addr && (AF_INET6 == addr->raw.family))
+        addr->raw.family = PR_AF_INET6;
 #endif
-    }
-    else
+    if (bytes < 0)
         pt_MapError(_PR_MD_MAP_RECVFROM_ERROR, syserrno);
     return bytes;
 }  /* pt_RecvFrom */
@@ -3269,7 +3270,7 @@ static PRIOMethods _pr_socketpollfd_methods = {
 #if defined(HPUX) || defined(OSF1) || defined(SOLARIS) || defined (IRIX) \
     || defined(LINUX) || defined(__GNU__) || defined(__GLIBC__) \
     || defined(AIX) || defined(FREEBSD) || defined(NETBSD) \
-    || defined(OPENBSD) || defined(BSDI) || defined(NTO) \
+    || defined(OPENBSD) || defined(BSDI) || defined(VMS) || defined(NTO) \
     || defined(DARWIN) || defined(UNIXWARE) || defined(RISCOS) \
     || defined(SYMBIAN)
 #define _PR_FCNTL_FLAGS O_NONBLOCK
@@ -4703,7 +4704,7 @@ PR_IMPLEMENT(PRStatus) PR_UnlockFile(PRFileDesc *fd)
 
 PR_IMPLEMENT(PRInt32) PR_GetSysfdTableMax(void)
 {
-#if defined(AIX) || defined(SYMBIAN)
+#if defined(AIX) || defined(VMS) || defined(SYMBIAN)
     return sysconf(_SC_OPEN_MAX);
 #else
     struct rlimit rlim;
@@ -4717,7 +4718,7 @@ PR_IMPLEMENT(PRInt32) PR_GetSysfdTableMax(void)
 
 PR_IMPLEMENT(PRInt32) PR_SetSysfdTableSize(PRIntn table_size)
 {
-#if defined(AIX) || defined(SYMBIAN)
+#if defined(AIX) || defined(VMS) || defined(SYMBIAN)
     return -1;
 #else
     struct rlimit rlim;

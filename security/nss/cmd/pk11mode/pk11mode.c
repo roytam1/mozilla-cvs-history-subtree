@@ -780,7 +780,7 @@ cleanup:
         free(dbPrefix);
     }
     if (moduleSpec) {
-        PR_smprintf_free(moduleSpec);
+        free(moduleSpec);
     }
 
 #ifdef _WIN32
@@ -5275,14 +5275,13 @@ CK_RV PKM_ForkCheck(int expected, CK_FUNCTION_LIST_PTR fList,
     CK_RV crv = CKR_OK;
 #ifndef NO_FORK_CHECK
     int rc = -1;
-    pid_t child, ret;
     NUMTESTS++; /* increment NUMTESTS */
     if (forkAssert) {
 	putenv("NSS_STRICT_NOFORK=1");
     } else {
 	putenv("NSS_STRICT_NOFORK=0");
     }
-    child = fork();
+    pid_t child = fork();
     switch (child) {
     case -1:
         PKM_Error("Fork failed.\n");
@@ -5317,7 +5316,7 @@ CK_RV PKM_ForkCheck(int expected, CK_FUNCTION_LIST_PTR fList,
         exit(expected & 255);
     default:
         PKM_LogIt("Fork succeeded.\n");
-        ret = wait(&rc);
+        pid_t ret = wait(&rc);
         if (ret != child || (!WIFEXITED(rc)) ||
             ( (expected & 255) != (WEXITSTATUS(rc) & 255)) ) {
             int retStatus = -1;

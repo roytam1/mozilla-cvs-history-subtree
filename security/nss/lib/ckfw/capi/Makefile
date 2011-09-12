@@ -54,9 +54,6 @@ EXTRA_LIBS += \
 	-lplc4 \
 	-lplds4 \
 	-lnspr4 \
-	-lcrypt32 \
-	-ladvapi32 \
-	-lrpcrt4 \
 	$(NULL)
 else 
 EXTRA_SHARED_LIBS += \

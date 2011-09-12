@@ -57,6 +57,12 @@
 #include "plerror.h"
 #include "plgetopt.h"
 
+#ifdef XP_MAC
+#include "prlog.h"
+#define printf PR_LogPrint
+#else
+#endif
+
 static PRFileDesc *t1;
 PRIntn error_code;
 
@@ -82,6 +88,10 @@ int main(int argc, char **argv)
 	}
 	nameTooLong[TOO_LONG - 1] = 0;
 
+#ifdef XP_MAC
+	SetupMacPrintfLog("pr_open_re.log");
+#endif
+	
     PR_STDIO_INIT();
 	t1 = PR_Open(nameTooLong, PR_RDWR, 0666);
 	if (t1 == NULL) {

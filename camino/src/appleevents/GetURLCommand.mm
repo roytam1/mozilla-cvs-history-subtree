@@ -42,6 +42,7 @@
 #import <AppKit/AppKit.h>
 
 #import "MainController.h"
+#import "NSString+Utils.h"
 #import "NSURL+Utils.h"
 
 static NSString* const kMainControllerIsInitializedKey = @"initialized";
@@ -56,7 +57,48 @@ static NSString* const kMainControllerIsInitializedKey = @"initialized";
   // session is restored.  We want to avoid opening URLs before that happens.
   if ([mainController isInitialized]) {
     NSString* urlString = [self directParameter];
+    // If the string has a shell tilde-prefix, standardize the path.
+    if ([urlString hasPrefix:@"~"])
+      urlString = [urlString stringByStandardizingPath];
+
     NSURL* url = [NSURL URLWithString:urlString];
+    NSString* urlScheme = [url scheme];
+    // NSURL will fail to generate schemes from URLs that are not strictly 
+    // RFC-compliant, which would allow, e.g., a creative mailto: to bypass
+    // the supported protocol check below.  If NSURL does not provide a scheme,
+    // fall back to a manual attempt to determine a scheme.
+    //
+    // Ensure that the string contains a colon (thus the string before the
+    // colon is a probable scheme) and that the probable scheme does not
+    // contain a slash (which could occur if the colon were in a filename or
+    // path component of a POSIX file or a website-like string).
+    if (!urlScheme) {
+      unsigned int colonLocation = [urlString rangeOfString:@":"].location;
+      if ((colonLocation != NSNotFound) &&
+          ([urlString rangeOfString:@"/"
+                            options:0
+                              range:NSMakeRange(0, colonLocation)].location == NSNotFound))
+      {
+        urlScheme = [urlString substringToIndex:colonLocation];
+      }
+    }
+    urlScheme = [urlScheme lowercaseString];
+    // Setting Camino as the default app for protocols we do not handle creates
+    // an infinite loop when those URIs are opened; avoid that by only handling
+    // supported protocols.  However, we want to make sure to allow
+    // website-like strings (www.apple.com) and raw POSIX paths to bypass the
+    // protocol check so that they still load (see bug 629850); these will have
+    // null schemes and will fail the scheme check unless explicitly excluded.
+    if (urlScheme && !([urlScheme isEqualToString:@"http"] ||
+                       [urlScheme isEqualToString:@"https"] ||
+                       [urlScheme isEqualToString:@"ftp"] ||
+                       [urlScheme isEqualToString:@"file"] ||
+                       [urlScheme isEqualToString:@"data"] ||
+                       [urlScheme isEqualToString:@"about"] ||
+                       [urlScheme isEqualToString:@"view-source"]))
+    {
+      return nil;
+    }
     if ([url isFileURL])
       urlString = [[NSURL decodeLocalFileURL:url] absoluteString];
     [mainController showURL:urlString];

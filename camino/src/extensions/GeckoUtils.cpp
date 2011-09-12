@@ -79,6 +79,10 @@ void GeckoUtils::GatherTextUnder(nsIDOMNode* aNode, nsString& aResult)
 {
   nsAutoString text;
   nsCOMPtr<nsIDOMNode> node;
+  if (!aNode) {
+    aResult = NS_LITERAL_STRING("");
+    return;
+  }
   aNode->GetFirstChild(getter_AddRefs(node));
   PRUint32 depth = 1;
   while (node && depth) {

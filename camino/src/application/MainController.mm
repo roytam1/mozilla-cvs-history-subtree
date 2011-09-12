@@ -105,6 +105,13 @@ NSString* const kPreviousSessionTerminatedNormallyKey = @"PreviousSessionTermina
 
 const int kZoomActionsTag = 108;
 
+// Once we are 10.5+ this can use a constant instead of the raw OS value.
+#if MAC_OS_X_VERSION_MAX_ALLOWED <= 1050
+@interface NSApplication(SnowLeopardSDKDeclarations)
+- (void)setHelpMenu:(NSMenu *)helpMenu;
+@end
+#endif
+
 @interface MainController(Private)<NetworkServicesClient>
 
 - (void)ensureGeckoInitted;
@@ -357,6 +364,17 @@ const int kZoomActionsTag = 108;
 
 - (void)applicationDidFinishLaunching:(NSNotification*)aNotification
 {
+  // Make sure the help menu is identified correctly, since it may be localized.
+  // TODO: Add a reference to the Help menu once we aren't nib-frozen, rather
+  // than getting it by position.
+  if ([NSApp respondsToSelector:@selector(setHelpMenu:)]) {
+    NSMenu* mainMenu = [NSApp mainMenu];
+    unsigned int helpMenuIndex =
+        [mainMenu indexOfItemWithSubmenu:[NSApp windowsMenu]] + 1;
+    if (helpMenuIndex < [[mainMenu itemArray] count])
+      [NSApp setHelpMenu:[[mainMenu itemAtIndex:helpMenuIndex] submenu]];
+  }
+
   [self ensureInitializationCompleted];
 
   [self checkForProblemAddOns];
@@ -455,6 +473,19 @@ const int kZoomActionsTag = 108;
 - (void)updaterWillRelaunchApplication:(SUUpdater *)updater {
   PreferenceManager* prefManager = [PreferenceManager sharedInstanceDontCreate];
   [prefManager setPref:kGeckoPrefRelaunchingForAutoupdate toBoolean:YES];
+
+  // Partially hack around bug 313700 (pluginreg.dat not udpating). Since our
+  // first-updated-launch page does plugin version checking, we want to make
+  // sure that the information is up to date.
+  NSString* profilePath =
+      [[PreferenceManager sharedInstanceDontCreate] profilePath];
+  if (profilePath) {
+    NSString* pluginRegPath =
+        [profilePath stringByAppendingPathComponent:@"pluginreg.dat"];
+    NSFileManager* fileManager = [NSFileManager defaultManager];
+    if ([fileManager fileExistsAtPath:pluginRegPath])
+      [fileManager removeFileAtPath:pluginRegPath handler:nil];
+  }
 }
 
 - (void)applicationWillTerminate:(NSNotification*)aNotification
@@ -1052,9 +1083,20 @@ const int kZoomActionsTag = 108;
   return NO;
 }
 
+// TODO: Figure out if this is still necessary; see bug 647365. If it is, it
+// should probably be moved into CHBrowserView via listening for
+// NSApplicationDidChangeScreenParametersNotification
 - (void)applicationDidChangeScreenParameters:(NSNotification*)aNotification
 {
-  [NSApp makeWindowsPerform:@selector(display) inOrder:YES];
+  NSEnumerator* windowEnum = [[NSApp orderedWindows] objectEnumerator];
+  NSWindow* curWindow;
+  while ((curWindow = [windowEnum nextObject])) {
+    if ([[curWindow windowController] isKindOfClass:[BrowserWindowController class]] &&
+        [curWindow isVisible])
+    {
+      [curWindow display];
+    }
+  }
 }
 
 - (void)windowLayeringDidChange:(NSNotification*)inNotification

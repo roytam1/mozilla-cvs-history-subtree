@@ -673,20 +673,31 @@ static BOOL gMadePrefManager;
   // This block can be removed in some later release, after we can assume that
   // everyone has run something later than 1.6.x
   NSString* const kSparkleCheckIntervalKey = @"SUScheduledCheckInterval";
+  NSString* const kSparkleUpdateChecksEnabled = @"SUEnableAutomaticChecks";
   NSUserDefaults* defaults = [NSUserDefaults standardUserDefaults];
   if ([defaults objectForKey:kSparkleCheckIntervalKey]) {
     BOOL wasEnabled = [defaults integerForKey:kSparkleCheckIntervalKey] > 0;
     [defaults removeObjectForKey:kSparkleCheckIntervalKey];
     if (wasEnabled)
-      [defaults removeObjectForKey:@"SUEnableAutomaticChecks"];
+      [defaults removeObjectForKey:kSparkleUpdateChecksEnabled];
     else
       [[SUUpdater sharedUpdater] setAutomaticallyChecksForUpdates:NO];
   }
 
-  // If updates are disabled for this build, don't bother setting up the manifest URL.
   NSBundle* mainBundle = [NSBundle mainBundle];
-  if (![[mainBundle objectForInfoDictionaryKey:@"SUEnableAutomaticChecks"] boolValue])
+  if (![[mainBundle objectForInfoDictionaryKey:kSparkleUpdateChecksEnabled] boolValue]) {
+    // If SUEnableAutomaticChecks is set to YES in the user's prefs, that will
+    // override our plist setting, and Sparkle will check for updates anyway,
+    // which shouldn't happen. In the 2.0+ setup, SUEnableAutomaticChecks should
+    // never be set to YES at the defaults level (the options are NO at the
+    // defaults level, or YES at the plist level and nothing at the user level),
+    // so just unconditionally clear it if that somehow happens.
+    if ([[defaults objectForKey:kSparkleUpdateChecksEnabled] boolValue])
+      [defaults removeObjectForKey:kSparkleUpdateChecksEnabled];
+    // If updates are disabled for this build, don't bother setting up the
+    // manifest URL.
     return;
+  }
 
   // Get the base auto-update manifest URL.
   NSString* baseURL = [self getStringPref:kGeckoPrefUpdateURLOverride
@@ -758,6 +769,8 @@ static BOOL gMadePrefManager;
 // to the "en-gb" form required for HTTP accept-language headers.
 // If the locale isn't in the expected form we return nil. (Systems upgraded
 // from 10.1 report human readable locales (e.g. "English")).
+// Apple switched to the "en-GB" format in 10.4, so once support for PPC is
+// dropped, the localeParts-handling section of this method can be removed.
 + (NSString*)convertLocaleToHTTPLanguage:(NSString*)inAppleLocale
 {
     NSString* r = nil;
@@ -771,12 +784,13 @@ static BOOL gMadePrefManager;
         [language appendString:[[localeParts objectAtIndex:1] lowercaseString]];
       }
 
-      // We accept standalone primary subtags (e.g. "en") and also
-      // a primary subtag with additional subtags of between two and eight characters long
-      // We ignore i- and x- primary subtags
+      // We accept standalone primary subtags (e.g. "en") and also a primary
+      // subtag with additional subtags of between two and eight characters
+      // long. We ignore i- and x- primary subtags. By convention the 
+      // accept-language subtags are lowercase (and some servers require this).
       if ([language length] == 2 ||
           ([language length] >= 5 && [language length] <= 13 && [language characterAtIndex:2] == '-'))
-        r = [NSString stringWithString:language];
+        r = [[NSString stringWithString:language] lowercaseString];
     }
     return r;
 }
@@ -902,9 +916,9 @@ static BOOL gMadePrefManager;
 
     // Some servers will disregard a generic 'en', causing a fallback to a
     // subsequent language (see bug 300905). So if the user has only a generic
-    // 'en', insert 'en-US' before 'en'.
+    // 'en', insert 'en-us' before 'en'.
     if ((indexOfGenericEnglish != -1) && !englishDialectExists)
-      [acceptableLanguages insertObject:@"en-US" atIndex:indexOfGenericEnglish];
+      [acceptableLanguages insertObject:@"en-us" atIndex:indexOfGenericEnglish];
 
     // If we understood all the languages in the list, set the accept-language
     // header. Note that Necko will determine quality factors itself.

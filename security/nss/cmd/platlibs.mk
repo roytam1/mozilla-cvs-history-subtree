@@ -51,18 +51,10 @@ endif
 endif
 
 ifeq ($(OS_ARCH), Linux)
-ifeq ($(BUILD_SUN_PKG), 1)
-ifeq ($(USE_64), 1)
-EXTRA_SHARED_LIBS += -Wl,-rpath,'$$ORIGIN/../lib64:/opt/sun/private/lib64:$$ORIGIN/../lib'
-else
-EXTRA_SHARED_LIBS += -Wl,-rpath,'$$ORIGIN/../lib:/opt/sun/private/lib'
-endif
-else
 ifeq ($(USE_64), 1)
 EXTRA_SHARED_LIBS += -Wl,-rpath,'$$ORIGIN/../lib64:$$ORIGIN/../lib'
 else
 EXTRA_SHARED_LIBS += -Wl,-rpath,'$$ORIGIN/../lib'
-endif
 endif
 endif
 
@@ -91,11 +83,18 @@ endif
 ifdef USE_STATIC_LIBS
 
 # can't do this in manifest.mn because OS_ARCH isn't defined there.
-ifeq (,$(filter-out WINNT WINCE,$(OS_ARCH))) 
+ifeq ($(OS_ARCH), WINNT)
 
 DEFINES += -DNSS_USE_STATIC_LIBS
 # $(PROGRAM) has explicit dependencies on $(EXTRA_LIBS)
-CRYPTOLIB=$(SOFTOKEN_LIB_DIR)/$(LIB_PREFIX)freebl.$(LIB_SUFFIX)
+CRYPTOLIB=$(DIST)/lib/$(LIB_PREFIX)freebl.$(LIB_SUFFIX)
+ifdef MOZILLA_SECURITY_BUILD
+	CRYPTOLIB=$(DIST)/lib/crypto.lib
+endif
+ifdef MOZILLA_BSAFE_BUILD
+	CRYPTOLIB+=$(DIST)/lib/bsafe$(BSAFEVER).lib
+	CRYPTOLIB+=$(DIST)/lib/freebl.lib
+endif
 
 PKIXLIB = \
 	$(DIST)/lib/$(LIB_PREFIX)pkixcertsel.$(LIB_SUFFIX) \
@@ -144,7 +143,14 @@ EXTRA_LIBS += \
 else
 
 # $(PROGRAM) has explicit dependencies on $(EXTRA_LIBS)
-CRYPTOLIB=$(SOFTOKEN_LIB_DIR)/$(LIB_PREFIX)freebl.$(LIB_SUFFIX)
+CRYPTOLIB=$(DIST)/lib/$(LIB_PREFIX)freebl.$(LIB_SUFFIX)
+ifdef MOZILLA_SECURITY_BUILD
+	CRYPTOLIB=$(DIST)/lib/$(LIB_PREFIX)crypto.$(LIB_SUFFIX)
+endif
+ifdef MOZILLA_BSAFE_BUILD
+	CRYPTOLIB+=$(DIST)/lib/$(LIB_PREFIX)bsafe.$(LIB_SUFFIX)
+	CRYPTOLIB+=$(DIST)/lib/$(LIB_PREFIX)freebl.$(LIB_SUFFIX)
+endif
 
 PKIXLIB = \
 	$(DIST)/lib/$(LIB_PREFIX)pkixtop.$(LIB_SUFFIX) \
@@ -196,7 +202,6 @@ endif
 EXTRA_SHARED_LIBS += \
 	-L$(DIST)/lib \
 	$(SQLITE) \
-	-L$(NSSUTIL_LIB_DIR) \
 	-lnssutil3 \
 	-L$(NSPR_LIB_DIR) \
 	-lplc4 \
@@ -211,7 +216,7 @@ endif
 
 else # USE_STATIC_LIBS
 # can't do this in manifest.mn because OS_ARCH isn't defined there.
-ifeq (,$(filter-out WINNT WINCE,$(OS_ARCH))) 
+ifeq ($(OS_ARCH), WINNT)
 
 # $(PROGRAM) has explicit dependencies on $(EXTRA_LIBS)
 EXTRA_LIBS += \
@@ -248,7 +253,6 @@ EXTRA_SHARED_LIBS += \
 	-lssl3 \
 	-lsmime3 \
 	-lnss3 \
-	-L$(NSSUTIL_LIB_DIR) \
 	-lnssutil3 \
 	-L$(NSPR_LIB_DIR) \
 	-lplc4 \

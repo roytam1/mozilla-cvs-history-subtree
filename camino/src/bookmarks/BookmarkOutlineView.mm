@@ -80,6 +80,7 @@
     NSPasteboard* pboard = [NSPasteboard pasteboardWithName:NSDragPboard];
     NSArray* bookmarks = [BookmarkManager bookmarkItemsFromSerializableArray:[pboard propertyListForType:kCaminoBookmarkListPBoardType]];
     if (bookmarks) {
+      [[BookmarkManager sharedBookmarkManager] bookmarkItemsWillBeRemoved:bookmarks];
       for (unsigned int i = 0; i < [bookmarks count]; ++i) {
         BookmarkItem* item = [bookmarks objectAtIndex:i];
         [[item parent] deleteChild:item];
