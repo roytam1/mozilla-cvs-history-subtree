@@ -2060,7 +2060,7 @@ NS_IMETHODIMP nsChildView::GetToggledKeyState(PRUint32 aKeyCode,
     default:
       return NS_ERROR_NOT_IMPLEMENTED;
   }
-  PRUint32 modifierFlags = ::GetCurrentEventKeyModifiers();
+  PRUint32 modifierFlags = ::GetCurrentKeyModifiers();
   *aLEDState = (modifierFlags & key) != 0;
   return NS_OK;
 
@@ -3037,7 +3037,7 @@ NSEvent* gLastDragEvent = nil;
   macEvent.message = 0;
   macEvent.when = ::TickCount();
   ::GetGlobalMouse(&macEvent.where);
-  macEvent.modifiers = ::GetCurrentEventKeyModifiers();
+  macEvent.modifiers = ::GetCurrentKeyModifiers();
   geckoEvent.nativeMsg = &macEvent;
 
   mGeckoChild->DispatchMouseEvent(geckoEvent);
@@ -3077,7 +3077,7 @@ NSEvent* gLastDragEvent = nil;
   macEvent.message = 0;
   macEvent.when = ::TickCount();
   ::GetGlobalMouse(&macEvent.where);
-  macEvent.modifiers = ::GetCurrentEventKeyModifiers();
+  macEvent.modifiers = ::GetCurrentKeyModifiers();
   geckoEvent.nativeMsg = &macEvent;
 
   mGeckoChild->DispatchMouseEvent(geckoEvent);
@@ -3108,7 +3108,7 @@ static nsEventStatus SendGeckoMouseEnterOrExitEvent(PRBool isTrusted,
   macEvent.message = 0;
   macEvent.when = ::TickCount();
   ::GetGlobalMouse(&macEvent.where);
-  macEvent.modifiers = ::GetCurrentEventKeyModifiers();
+  macEvent.modifiers = ::GetCurrentKeyModifiers();
   event.nativeMsg = &macEvent;
 
   event.exit = type;
@@ -3243,7 +3243,7 @@ static nsEventStatus SendGeckoMouseEnterOrExitEvent(PRBool isTrusted,
   macEvent.message = 0;
   macEvent.when = ::TickCount();
   ::GetGlobalMouse(&macEvent.where);
-  macEvent.modifiers = ::GetCurrentEventKeyModifiers();
+  macEvent.modifiers = ::GetCurrentKeyModifiers();
   geckoEvent.nativeMsg = &macEvent;
 
   mGeckoChild->DispatchMouseEvent(geckoEvent);
@@ -3280,7 +3280,7 @@ static nsEventStatus SendGeckoMouseEnterOrExitEvent(PRBool isTrusted,
   macEvent.message = 0;
   macEvent.when = ::TickCount();
   ::GetGlobalMouse(&macEvent.where);
-  macEvent.modifiers = btnState | ::GetCurrentEventKeyModifiers();
+  macEvent.modifiers = btnState | ::GetCurrentKeyModifiers();
   geckoEvent.nativeMsg = &macEvent;
 
   mGeckoChild->DispatchMouseEvent(geckoEvent);
@@ -3692,7 +3692,7 @@ static void ConvertCocoaKeyEventToMacEvent(NSEvent* cocoaEvent, EventRecord& mac
     macEvent.message = (charCode & 0x00FF) | ([cocoaEvent keyCode] << 8);
     macEvent.when = ::TickCount();
     ::GetGlobalMouse(&macEvent.where);
-    macEvent.modifiers = ::GetCurrentEventKeyModifiers();
+    macEvent.modifiers = ::GetCurrentKeyModifiers();
 
   NS_OBJC_END_TRY_ABORT_BLOCK;
 }
