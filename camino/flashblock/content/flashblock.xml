@@ -685,7 +685,7 @@ event = document.createEvent("UIEvents");
 
 if(event) {
 	event.initEvent("flashblockCheckLoad", true, true);
-	document.dispatchEvent(event);
+	this.dispatchEvent(event);
 	if(event.getPreventDefault() == true) {
 		// Whitelisted
 		return;
@@ -712,7 +712,7 @@ var event = document.createEvent("UIEvents");
 
 if(event) {
 	event.initEvent("flashblockCheckLoad", true, true);
-	document.dispatchEvent(event);
+	this.dispatchEvent(event);
 	if(event.getPreventDefault() == true) {
 		// Whitelisted
 		return;
