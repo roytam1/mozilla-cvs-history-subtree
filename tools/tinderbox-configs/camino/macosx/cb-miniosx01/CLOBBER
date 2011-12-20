@@ -1,1 +1,1 @@
-Clobbering AGAIN to get rid of existing feedhandlers unify doesn't like (bug 355748)
+Clobber the depend-only builds to clean out cruft.
