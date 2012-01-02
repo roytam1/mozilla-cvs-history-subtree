@@ -324,6 +324,6 @@ $MacUniversalBinary = 0;
 $MozVCS = 'Hg';
 $Hg = 'hg';
 # Can take as long as 25min to clone mozilla-central from outside Mozilla; value in seconds.
-$HgGeckoCheckoutTimeout = 600;
+$HgGeckoCheckoutTimeout = 800;
 $moz_gecko_repo = 'http://hg.mozilla.org/releases/mozilla-1.9.2/';
 $moz_camino_repo = 'http://hg.mozilla.org/camino/';
