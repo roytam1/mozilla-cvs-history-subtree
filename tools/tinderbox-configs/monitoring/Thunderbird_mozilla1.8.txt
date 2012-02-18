@@ -1,8 +1,0 @@
-# VERSION_URL http://mxr.mozilla.org/mozilla1.8/source/mail/config/version.txt?raw=1
-/pub/mozilla.org/thunderbird/nightly/latest-mozilla1.8/thunderbird-@VER@.en-US.mac.dmg
-/pub/mozilla.org/thunderbird/nightly/latest-mozilla1.8/thunderbird-@VER@.en-US.mac.complete.mar
-/pub/mozilla.org/thunderbird/nightly/latest-mozilla1.8/thunderbird-@VER@.en-US.linux-i686.complete.mar
-/pub/mozilla.org/thunderbird/nightly/latest-mozilla1.8/thunderbird-@VER@.en-US.linux-i686.tar.gz
-/pub/mozilla.org/thunderbird/nightly/latest-mozilla1.8/thunderbird-@VER@.en-US.win32.installer.exe
-/pub/mozilla.org/thunderbird/nightly/latest-mozilla1.8/thunderbird-@VER@.en-US.win32.complete.mar
-/pub/mozilla.org/thunderbird/nightly/latest-mozilla1.8/thunderbird-@VER@.en-US.win32.zip
