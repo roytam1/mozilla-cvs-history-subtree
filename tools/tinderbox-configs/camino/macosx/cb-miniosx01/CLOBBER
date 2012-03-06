@@ -1,1 +1,1 @@
-Clobber the depend-only builds to clean out cruft.
+Clobber to see if it fixes the bustage from bug 723808 / http://hg.mozilla.org/releases/mozilla-1.9.2/rev/855980ed722d.
