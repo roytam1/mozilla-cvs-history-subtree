@@ -273,7 +273,7 @@ $archive       = 1;
 
 $crashreporter_buildsymbols = 1;
 $crashreporter_pushsymbols = 1;
-$ENV{SYMBOL_SERVER_HOST} = 'dm-symbolpush01.mozilla.org';
+$ENV{SYMBOL_SERVER_HOST} = 'symbolpush.mozilla.org';
 $ENV{SYMBOL_SERVER_USER} = 'caminobld';
 $ENV{SYMBOL_SERVER_PATH} = '/mnt/netapp/breakpad/symbols_camino/';
 # this is optional, it's a full path to a ssh private key
