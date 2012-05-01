@@ -11,6 +11,7 @@ STAGING_DIR=/opt/aus2/snippets/staging
 RSYNC=/usr/bin/rsync
 SED=/bin/sed
 
+## Reincarnate when SCL3 has aus dist setup, ignore for now
 if [[ 'dm-ausstage01.mozilla.org' == `uname -n` ]]; then
   UPDATE_PHX=1
   PHX_HOST=dp-ausstage01.phx.mozilla.com
@@ -34,13 +35,16 @@ fi
 
 # publish the new snippets
 echo "---------------------------------------------------------------------------"
-echo Updating MPT:
-echo Running /usr/bin/time -p -o $STAGING_DIR/$1.time $RSYNC -PaO $STAGING_DIR/$1/ $LIVE_SNIPPET_DIR
-/usr/bin/time -p -o $STAGING_DIR/$1.time $RSYNC -PaO $STAGING_DIR/$1/ $LIVE_SNIPPET_DIR
+echo Updating PHX1:
+echo Running /usr/bin/time -p -o $STAGING_DIR/$1.time $RSYNC -PaO $STAGING_DIR/$1/* $LIVE_SNIPPET_DIR
+/usr/bin/time -p -o $STAGING_DIR/$1.time $RSYNC -PaO $STAGING_DIR/$1/* $LIVE_SNIPPET_DIR
 echo
-echo Touching $LIVE_SNIPPET_DIR
-touch $LIVE_SNIPPET_DIR
+for d in `ls $STAGING_DIR/$1/`; do
+  echo Touching $LIVE_SNIPPET_DIR/$d
+  touch $LIVE_SNIPPET_DIR/$d
+done
 
+## Reincarnate when SCL3 has aus dist setup, ignore for now
 if [[ $UPDATE_PHX -eq 1 ]]; then
   echo "---------------------------------------------------------------------------"
   echo Updating PHX:
