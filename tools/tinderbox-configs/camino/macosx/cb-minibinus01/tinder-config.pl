@@ -202,7 +202,8 @@ $BuildSleep = 5;
 $BuildTree  = 'Camino';
 
 #$BuildName = '';
-#$BuildTag = '';
+$BuildTag = 'CAMINO_2_1_SECBRANCH';
+#$CmBuildTag = '';
 #$BuildConfigDir = 'mozilla/config';
 #$Topsrcdir = 'mozilla';
 
