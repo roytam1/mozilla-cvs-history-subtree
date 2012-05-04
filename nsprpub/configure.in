@@ -1222,42 +1222,6 @@ case "$target" in
     RESOLVE_LINK_SYMBOLS=1
     ;;
         
-*-android*|*-linuxandroid*)
-    if test -z "$USE_NSPR_THREADS"; then
-        USE_PTHREADS=1
-        IMPL_STRATEGY=_PTH
-    fi
-    AC_DEFINE(XP_UNIX)
-    AC_DEFINE(_GNU_SOURCE)
-    AC_DEFINE(HAVE_FCNTL_FILE_LOCKING)
-    AC_DEFINE(LINUX)
-    CFLAGS="$CFLAGS -Wall"
-    CXXFLAGS="$CXXFLAGS -Wall"
-    MDCPUCFG_H=_linux.cfg
-    PR_MD_CSRCS=linux.c
-    MKSHLIB='$(CC) $(DSO_LDOPTS) -o $@'
-    DSO_CFLAGS=-fPIC
-    DSO_LDOPTS='-shared -Wl,-soname -Wl,$(notdir $@)'
-    _OPTIMIZE_FLAGS=-O2
-    _DEBUG_FLAGS="-g -fno-inline"  # most people on linux use gcc/gdb, and that
-                                   # combo is not yet good at debugging inlined
-                                   # functions (even when using DWARF2 as the
-                                   # debugging format)
-    case "$target" in
-    arm*-*)
-      CPU_ARCH=arm
-      ;;
-    i*86-*)
-      CPU_ARCH=x86
-      PR_MD_ASFILES=os_Linux_x86.s
-      ;;
-    esac
-
-    COMPILER_TAG=_glibc
-    CPU_ARCH_TAG=_${CPU_ARCH}
-    OS_TARGET=Android
-    ;;
-
 *-beos*)
     AC_DEFINE(XP_BEOS)
     AC_DEFINE(BeOS)
@@ -1792,7 +1756,7 @@ tools are selected during the Xcode/Developer Tools installation.])
 	esac
     ;;
 
-*-linux*|*-gnu*|*-k*bsd*-gnu)
+*-linux*|*-gnu*|*-k*bsd*-gnu|*-android*|*-linuxandroid*)
     if test -z "$USE_NSPR_THREADS"; then
         USE_PTHREADS=1
         IMPL_STRATEGY=_PTH
@@ -1801,6 +1765,10 @@ tools are selected during the Xcode/Developer Tools installation.])
     AC_DEFINE(_GNU_SOURCE)
     AC_DEFINE(HAVE_FCNTL_FILE_LOCKING)
     case "${target_os}" in
+    *android*)
+        OS_TARGET=Android
+        AC_DEFINE(LINUX)
+        ;;
     linux*)
         AC_DEFINE(LINUX)
         ;;
