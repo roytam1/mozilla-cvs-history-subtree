@@ -4401,15 +4401,15 @@ EOF
 #define HAVE_FCNTL_FILE_LOCKING 1
 EOF
 
-    case "${target_os}" in
-    *android*)
+    case "${target}" in
+    *-android*|*-linuxandroid*)
         OS_TARGET=Android
         cat >> confdefs.h <<\EOF
 #define LINUX 1
 EOF
 
         ;;
-    linux*)
+    *-linux*)
         cat >> confdefs.h <<\EOF
 #define LINUX 1
 EOF

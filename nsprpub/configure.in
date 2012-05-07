@@ -1764,12 +1764,12 @@ tools are selected during the Xcode/Developer Tools installation.])
     AC_DEFINE(XP_UNIX)
     AC_DEFINE(_GNU_SOURCE)
     AC_DEFINE(HAVE_FCNTL_FILE_LOCKING)
-    case "${target_os}" in
-    *android*)
+    case "${target}" in
+    *-android*|*-linuxandroid*)
         OS_TARGET=Android
         AC_DEFINE(LINUX)
         ;;
-    linux*)
+    *-linux*)
         AC_DEFINE(LINUX)
         ;;
     esac
