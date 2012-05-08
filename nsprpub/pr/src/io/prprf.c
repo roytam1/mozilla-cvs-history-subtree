@@ -633,7 +633,7 @@ static struct NumArg* BuildArgArray( const char *fmt, va_list ap, int* rv, struc
 
 #ifdef WIN32
 	case TYPE_WSTRING:
-	    nas[cn].u.s = va_arg( ap, WCHAR* );
+	    nas[cn].u.ws = va_arg( ap, WCHAR* );
 	    break;
 #endif
 
@@ -675,7 +675,7 @@ static int dosprintf(SprintfState *ss, const char *fmt, va_list ap)
 	const char *s;
 	int *ip;
 #ifdef WIN32
-	WCHAR *ws;
+	const WCHAR *ws;
 #endif
     } u;
     const char *fmt0;
