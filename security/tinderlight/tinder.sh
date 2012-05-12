@@ -13,6 +13,9 @@ proc_args()
             "--opt")
                 RUN_OPT="${VAL}"
                 ;;
+            "--branches")
+                RUN_BRANCHES="${VAL}"
+                ;;
             "--once")
                 RUN_ONCE=1
                 ;;
@@ -24,6 +27,10 @@ proc_args()
                 ;;
             "--nocvs")
                 NO_CVS=1
+                ;;
+            "--permcvs")
+                PERM_CVS=1
+                PERM_CVS_DIR="${VAL}"
                 ;;
             "--nobuild")
                 NO_BUILD=1
@@ -37,18 +44,31 @@ proc_args()
             "--nojss")
                 NO_JSS=1
                 ;;
+	    "--pidfile")
+		echo " $$" >>  ${VAL}
+		;;
+            "--memtest")
+                NSS_TESTS="memleak"
+                export NSS_TESTS
+                ;;
+            "--nojsssign")
+                NO_JSS_SIGN=1
+                ;;
             *)
                 echo "Usage: $0 [--bits=BITS] [--opt=OPT] [--once] ..."
                 echo "    --bits      - bits mode (32 or 64)"
                 echo "    --opt       - debug/opt mode (DBG or OPT)"
+                echo "    --branches  - branches to build (trunk or stable)"
                 echo "    --once      - run only once"
                 echo "    --cycles    - run cycles (pkix, shared db,..) in separate runs"
+                echo "    --memtest   - run the memory leak tests"
                 echo "    --nomail    - don't send e-mail"
                 echo "    --nocvs     - skip CVS checkout (work with old data)"
                 echo "    --nobuild   - skip build"
                 echo "    --notest    - skip testing"
                 echo "    --nomove    - don't move old data directory after testing"
                 echo "    --nojss     - don't build/test JSS (NSS only)"
+                echo "    --nojsssign - try to sign jss"
                 exit 0
                 ;;
         esac 
@@ -60,20 +80,15 @@ proc_args()
 set_env()
 {
     TESTDIR=$(pwd)
-    DATADIR=$(pwd)$(echo "/data/${HOST}_${RUN_BITS}_${RUN_OPT}" | sed "s/ /_/g")
+    TESTSET=standard
+    MEM_LEAK=
+    if [ "${NSS_TESTS}" = "memleak" ]; then
+	TESTSET=memleak
+	MEM_LEAK="_MEMLEAK"
+    fi
+    DATADIR=$(pwd)$(echo "/data/${HOST}_${BRANCH}_${BITS}_${OPT}${MEM_LEAK}" | sed "s/ /_/g")
     LOG_ALL="${DATADIR}/all.log"
     LOG_TMP="${DATADIR}/tmp.log"
-
-    if [ "${BRANCH}" = "stable" ]; then 
-        CVS_LIST="${CVS_STABLE}"
-        TB_TREE="NSS-Stable-Branch"
-    else
-        CVS_LIST="${CVS_TRUNK}"
-        TB_TREE="NSS"
-    fi
-
-    TESTSET=standard
-    [ "${NSS_TESTS}" = "memleak" ] && TESTSET=memleak
 }
 
 print_log()
@@ -104,7 +119,8 @@ print_env()
     if [ -e "/etc/redhat-release" ]; then
         cat "/etc/redhat-release" | tee -a ${LOG_ALL}
     fi
-    env | tee -a ${LOG_ALL}
+    # don't print the MAIL command, it might contain a password    
+    env | grep -v "^MAIL=" | tee -a ${LOG_ALL}
 }
 
 print_mail_header()
@@ -127,25 +143,33 @@ print_mail_header()
 
 mail_start()
 {
-    print_mail_header "${TB_TREE}" "${BUILD_DATE}" building "${BRANCH} ${TESTSET} ${HOST} ${ARCH} ${RUN_BITS}bit ${RUN_OPT}" > ${LOG_TMP}
-    ${MAIL} ${TB_SERVER} < ${LOG_TMP}
+    print_mail_header "${TB_TREE}" "${BUILD_DATE}" building "${BRANCH} ${TESTSET} ${HOST} ${ARCH} ${BITS}bit ${OPT}" > ${LOG_TMP}
+    cat ${LOG_TMP} | tr -cd '\12\40-\176' | ${MAIL} ${TB_SERVER}
 }
 
 mail_finish()
 {
     STATUS=$1
 
-    print_mail_header "${TB_TREE}" "${BUILD_DATE}" "${STATUS}" "${BRANCH} ${TESTSET} ${HOST} ${ARCH} ${RUN_BITS}bit ${RUN_OPT}" > ${LOG_TMP}
+    print_mail_header "${TB_TREE}" "${BUILD_DATE}" "${STATUS}" "${BRANCH} ${TESTSET} ${HOST} ${ARCH} ${BITS}bit ${OPT}" > ${LOG_TMP}
     cat ${LOG_ALL} >> ${LOG_TMP}
-    ${MAIL} ${TB_SERVER} < ${LOG_TMP}
+    cat ${LOG_TMP} | tr -cd '\12\40-\176' | ${MAIL} ${TB_SERVER}
 }
 
 cvs_checkout()
 {
     print_log "######## CVS checkout ########"
 
-    print_log "$ cd ${DATADIR}"
-    cd ${DATADIR}
+    if [ -z "${PERM_CVS}" ]; then
+      # fresh checkout inside datadir
+      print_log "$ cd ${DATADIR}"
+      cd ${DATADIR}
+    else
+      # checkout/update perm_cvs_dir
+      print_log "$ cd ${PERM_CVS_DIR}-${BRANCH}"
+      mkdir -p ${PERM_CVS_DIR}-${BRANCH} >/dev/null
+      cd ${PERM_CVS_DIR}-${BRANCH}
+    fi
 
     for CVS_FILE in ${CVS_LIST}; do
         CVS_FILE=$(echo ${CVS_FILE} | sed "s/:/ /g")
@@ -172,6 +196,13 @@ cvs_checkout()
     fi
 
     mv ${LOG_TMP} ${DATADIR}.cvs
+
+    if [ -n "${PERM_CVS}" ]; then
+      cp -r -p ${PERM_CVS_DIR}-${BRANCH}/* ${DATADIR}/
+    fi
+
+    print_log "$ cd ${DATADIR}"
+    cd ${DATADIR}
 
     return 0
 }
@@ -202,6 +233,7 @@ set_cycle()
     BITS=$1
     OPT=$2
     CYCLE_CNT=$3
+    BRANCH=$4
 
     if [ "${BITS}" = "64" ]; then
         USE_64=1
@@ -235,6 +267,18 @@ set_cycle()
     export PORT
     export PORT_JSS_SERVER
     export PORT_JSSE_SERVER
+
+    if [ "${BRANCH}" = "stable" ]; then 
+        CVS_LIST="${CVS_STABLE}"
+        TB_TREE="NSS-Stable-Branch"
+    else
+        CVS_LIST="${CVS_TRUNK}"
+        TB_TREE="NSS"
+    fi
+
+    export BRANCH
+    export CVS_LIST
+    export TB_TREE
 
     [ -z ${RUN_CYCLES} ] && return 0
 
@@ -291,12 +335,13 @@ build_jss()
     print_log "$ cd ${DATADIR}/mozilla/dist"
     cd ${DATADIR}/mozilla/dist
 
-    print_log "cat ${TESTDIR}/keystore.pw | ${JAVA_HOME}/bin/jarsigner -keystore ${TESTDIR}/keystore -internalsf ${XPCLASS} jssdsa"
-    cat ${TESTDIR}/keystore.pw | ${JAVA_HOME}/bin/jarsigner -keystore ${TESTDIR}/keystore -internalsf ${XPCLASS} jssdsa >> ${LOG_ALL} 2>&1
-    RET=$?
-    print_result "JSS - sign JAR files - ${BITS} bits - ${OPT}" ${RET} 0
-    [ ${RET} -eq 0 ] || return ${RET}
-
+    if [ -z "${NO_JSS_SIGN}" ]; then
+	print_log "cat ${TESTDIR}/keystore.pw | ${JAVA_HOME}/bin/jarsigner -keystore ${TESTDIR}/keystore -internalsf ${XPCLASS} jssdsa"
+	cat ${TESTDIR}/keystore.pw | ${JAVA_HOME}/bin/jarsigner -keystore ${TESTDIR}/keystore -internalsf ${XPCLASS} jssdsa >> ${LOG_ALL} 2>&1
+	RET=$?
+	print_result "JSS - sign JAR files - ${BITS} bits - ${OPT}" ${RET} 0
+	[ ${RET} -eq 0 ] || return ${RET}
+    fi
     print_log "${JAVA_HOME}/bin/jarsigner -verify -certs ${XPCLASS}"
     ${JAVA_HOME}/bin/jarsigner -verify -certs ${XPCLASS} >> ${LOG_ALL} 2>&1
     RET=$?
@@ -319,7 +364,7 @@ test_nss()
     ./all.sh > ${LOG_TMP} 2>&1 
     cat ${LOG_TMP} >> ${LOG_ALL}
 
-    tail -2 ${DATADIR}/mozilla/tests_results/security/${HOST}.1/results.html | grep END_OF_TEST >> ${LOG_ALL}
+    tail -n2 ${DATADIR}/mozilla/tests_results/security/${HOST}.1/results.html | grep END_OF_TEST >> ${LOG_ALL}
     RET=$?
 
     grep FAIL ${LOG_TMP}
@@ -347,7 +392,7 @@ test_jss()
     perl all.pl dist ${DATADIR}/mozilla/dist/${PLATFORM} > ${LOG_TMP} 2>&1
     cat ${LOG_TMP} >> ${LOG_ALL}
 
-    tail -2 ${LOG_TMP} | grep JSSTEST_RATE > /dev/null
+    tail -n2 ${LOG_TMP} | grep JSSTEST_RATE > /dev/null
     RET=$?
 
     grep FAIL ${LOG_TMP} 
@@ -432,7 +477,7 @@ run_all()
  
     mkdir -p ${DATADIR}
 
-    set_cycle ${BITS} ${OPT} ${CYCLE_CNT}
+    set_cycle ${BITS} ${OPT} ${CYCLE_CNT} ${BRANCH}
     run_cycle
 
     CYCLE_ID=$(expr ${CYCLE_CNT} % ${CYCLE_MAX} + 1)
@@ -446,8 +491,6 @@ run_all()
         cp -r ${DATADIR} ${DATADIR}.last.${CYCLE_ID}
     fi 
 
-    CYCLE_CNT=$(expr ${CYCLE_CNT} + 1)
-
     FINISH_TIME=$(${AWK} 'BEGIN{ srand(); print srand(); }')
     TESTING_TIME=$(expr ${FINISH_TIME} - ${START_TIME})
     TESTING_TIME=$(expr ${TESTING_TIME} / 60)
@@ -456,8 +499,6 @@ run_all()
     else
         SLEEP_TIME=$(expr ${CYCLE_TIME} - ${TESTING_TIME})
     fi
-
-    [ -n "${RUN_ONCE}" ] && RUN=0
 }
 
 main()
@@ -475,12 +516,22 @@ main()
                 echo ${RUN_OPT} | grep ${OPT} > /dev/null
                 [ $? -eq 0 ] || continue
 
-                if [ ${RUN} -eq 1 ]; then
-                    VALID=1 
-                    run_all 
-                fi
+                for BRANCH in trunk stable; do
+                    echo ${RUN_BRANCHES} | grep ${BRANCH} > /dev/null
+                    [ $? -eq 0 ] || continue
+
+                    if [ ${RUN} -eq 1 ]; then
+                        VALID=1 
+                        set_env
+                        run_all 
+                    fi
+                done
             done
         done
+
+        CYCLE_CNT=$(expr ${CYCLE_CNT} + 1)
+
+        [ -n "${RUN_ONCE}" ] && RUN=0
 
         if [ ${VALID} -ne 1 ]; then
             echo "Need to set valid bits/opt values."
@@ -491,8 +542,8 @@ main()
     return 0
 }
 
+echo "tinderbox args: $0 $@"
 . env.sh
 proc_args "$@"
-set_env
 main
 
