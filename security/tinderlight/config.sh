@@ -12,13 +12,6 @@ if [ "${NSS_TESTS}" = "memleak" ]; then
     PORT_32_OPT=8550
 fi
 
-# if your machine's IP isn't registered in DNS,
-# you must set appropriate environment variables
-# that can be resolved locally.
-# For example, if localhost.localdomain works on your system, set:
-#HOST=localhost
-#DOMSUF=localdomain
-
 # example configuration
 case ${HOST} in
 host1) 

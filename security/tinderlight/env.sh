@@ -1,6 +1,16 @@
 #! /bin/bash
 
 HOST=$(hostname | cut -d. -f1)
+export HOST
+
+# if your machine's IP isn't registered in DNS,
+# you must set appropriate environment variables
+# that can be resolved locally.
+# For example, if localhost.localdomain works on your system, set:
+#HOST=localhost
+#DOMSUF=localdomain
+#export DOMSUF
+
 ARCH=$(uname -s)
 
 ulimit -c unlimited 2> /dev/null
@@ -45,7 +55,7 @@ if [ "${ARCH}" = "SunOS" ]; then
 fi
 
 if [ "${ARCH}" = "Linux" -a -f /etc/system-release ]; then
-   VERSION=`sed -e 's; release ;;' -e 's; (.*)$;;' -e 's;Red Hat Enterprise Linux Server;RHEL;' /etc/system-release`
+   VERSION=`sed -e 's; release ;;' -e 's; (.*)$;;' -e 's;Red Hat Enterprise Linux Server;RHEL;' -e 's;Red Hat Enterprise Linux Workstation;RHEL;' /etc/system-release`
    ARCH=Linux/${VERSION}
    echo ${ARCH}
 fi
