@@ -6662,6 +6662,7 @@ MAKEFILES="
     config/nsprincl.mk
     config/nsprincl.sh
     config/nspr-config
+    config/nspr.pc
     lib/Makefile
     lib/ds/Makefile
     lib/libc/Makefile
