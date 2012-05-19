@@ -129,6 +129,9 @@ arm-linux*-android*|*-linuxandroid*)
 i?86-*android*)
     android_tool_prefix="i686-android-linux"
     ;;
+mipsel-*android*)
+    android_tool_prefix="mipsel-linux-android"
+    ;;
 *)
     android_tool_prefix="$target_os"
     ;;
@@ -181,6 +184,9 @@ case "$target" in
         i?86)
             target_name=x86-4.4.3
             ;;
+        mipsel)
+            target_name=mipsel-linux-android-4.4.3
+            ;;
         esac
         android_toolchain="$android_ndk"/toolchains/$target_name/prebuilt/$kernel_name-x86
 
@@ -200,6 +206,9 @@ case "$target" in
             ;;
         i?86)
             target_name=x86
+            ;;
+        mipsel)
+            target_name=mips
             ;;
         esac
 
