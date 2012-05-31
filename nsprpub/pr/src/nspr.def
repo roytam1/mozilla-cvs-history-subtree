@@ -446,7 +446,7 @@ EXPORTS ;-
 ;+      global:
                 PR_GetVersion;
 ;+} NSPR_4.8;
-;+NSPR_4.9.1 {
+;+NSPR_4.9.2 {
 ;+      global:
 		PR_GetThreadName;
 		PR_SetThreadName;
