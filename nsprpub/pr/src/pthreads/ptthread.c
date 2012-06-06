@@ -1615,7 +1615,7 @@ PR_IMPLEMENT(void*)PR_GetSP(PRThread *thred)
 
 #endif /* !defined(_PR_DCETHREADS) */
 
-PR_IMPLEMENT(PRStatus) PR_SetThreadName(const char *name)
+PR_IMPLEMENT(PRStatus) PR_SetCurrentThreadName(const char *name)
 {
     PRThread *thread;
     size_t nameLen;
@@ -1678,11 +1678,8 @@ PR_IMPLEMENT(PRStatus) PR_SetThreadName(const char *name)
     return PR_SUCCESS;
 }
 
-PR_IMPLEMENT(const char *) PR_GetThreadName()
+PR_IMPLEMENT(const char *) PR_GetThreadName(const PRThread *thread)
 {
-    PRThread *thread;
-
-    thread = PR_GetCurrentThread();
     if (!thread)
         return NULL;
     return thread->name;
