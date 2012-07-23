@@ -189,6 +189,8 @@ public class JSSE_SSLClient {
                 //For JSS SSLServer don't test
                 if ((ciphersuite.indexOf("_DHE_") != -1)||
                         (ciphersuite.indexOf("_DES40_") != -1) ||
+                        (ciphersuite.indexOf("TLS_EMPTY_RENEGOTIATION_INFO_SCSV") != -1) ||
+                        (ciphersuite.indexOf("SHA256") != -1) || // reenable in bug 776597
                         (ciphersuite.indexOf("_anon_") != -1) ||
                         (ciphersuite.indexOf("_KRB5_") != -1)) {
                     if (bVerbose) System.out.print(" -");
