@@ -57,6 +57,6 @@ if [[ $UPDATE_PHX -eq 1 ]]; then
   echo "---------------------------------------------------------------------------"
 fi
 
-mv $1 $PUSHED_DIR/
+mv $STAGING_DIR/$1 $PUSHED_DIR/
 
 exit 0
