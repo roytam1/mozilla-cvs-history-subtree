@@ -523,6 +523,11 @@ PR_IMPLEMENT(PRStatus) PR_PushIOLayer(
 		*stack = *fd;
 		*fd = copy;
 		fd->higher = stack;
+		if (fd->lower)
+		{
+			PR_ASSERT(fd->lower->higher == stack);
+			fd->lower->higher = fd;
+		}
 		stack->lower = fd;
 		stack->higher = NULL;
 	} else {
