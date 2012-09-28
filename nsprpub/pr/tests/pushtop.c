@@ -48,6 +48,17 @@ int main()
 
     top = PR_PopIOLayer(fd, topId);
     top->dtor(top);
+
+    middle = fd;
+    bottom = middle->lower;
+
+    /* Verify that the higher pointer is correct. */
+    if (bottom->higher != middle) {
+        fprintf(stderr, "bottom->higher is wrong\n");
+        fprintf(stderr, "FAILED\n");
+        exit(1);
+    }
+
     middle = PR_PopIOLayer(fd, middleId);
     middle->dtor(middle);
     if (fd->identity != bottomId) {

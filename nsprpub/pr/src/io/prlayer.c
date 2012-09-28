@@ -566,6 +566,10 @@ PR_IMPLEMENT(PRFileDesc*) PR_PopIOLayer(PRFileDesc *stack, PRDescIdentity id)
         *stack = *extract;
         *extract = copy;
         stack->higher = NULL;
+        if (stack->lower) {
+            PR_ASSERT(stack->lower->higher == extract);
+            stack->lower->higher = stack;
+        }
 	} else if ((PR_IO_LAYER_HEAD == stack->identity) &&
 					(extract == stack->lower) && (extract->lower == NULL)) {
 			/*
