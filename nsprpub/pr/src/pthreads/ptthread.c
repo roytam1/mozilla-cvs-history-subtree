@@ -975,7 +975,8 @@ void _PR_Fini(void)
         rv = pthread_setspecific(pt_book.key, NULL);
         PR_ASSERT(0 == rv);
     }
-    pthread_key_delete(pt_book.key);
+    rv = pthread_key_delete(pt_book.key);
+    PR_ASSERT(0 == rv);
     /* TODO: free other resources used by NSPR */
     /* _pr_initialized = PR_FALSE; */
 }  /* _PR_Fini */
