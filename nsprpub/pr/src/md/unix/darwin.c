@@ -5,8 +5,39 @@
 
 #include "primpl.h"
 
+#include <mach/mach_time.h>
+
 void _MD_EarlyInit(void)
 {
+}
+
+static mach_timebase_info_data_t machTimebaseInfo;
+
+void _PR_Mach_IntervalInit(void)
+{
+    kern_return_t rv;
+
+    rv = mach_timebase_info(&machTimebaseInfo);
+    PR_ASSERT(rv == KERN_SUCCESS);
+}
+
+PRIntervalTime _PR_Mach_GetInterval(void)
+{
+    uint64_t time;
+
+    /*
+     * mach_absolute_time returns the number of nanoseconds since boot.
+     * Convert it to the number of 10-microseconds. See Mac Technical Q&A
+     * QA1398.
+     */
+    time = mach_absolute_time();
+    time = time / 10000 * machTimebaseInfo.numer / machTimebaseInfo.denom;
+    return (PRIntervalTime)time;
+}  /* _PR_Mach_GetInterval */
+
+PRIntervalTime _PR_Mach_TicksPerSecond(void)
+{
+    return 100000;
 }
 
 PRWord *_MD_HomeGCRegisters(PRThread *t, int isCurrent, int *np)
