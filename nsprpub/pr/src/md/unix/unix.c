@@ -3041,7 +3041,7 @@ PRIntervalTime _PR_UNIX_TicksPerSecond()
 }
 #endif
 
-#if defined(HAVE_MONOTONIC_CLOCK)
+#if defined(HAVE_CLOCK_MONOTONIC)
 PRIntervalTime _PR_UNIX_GetInterval2()
 {
     struct timespec time;
@@ -3052,14 +3052,14 @@ PRIntervalTime _PR_UNIX_GetInterval2()
         abort();
     }
 
-    ticks = (PRUint32)time.tv_sec * 100000;
-    ticks += (PRUint32)time.tv_nsec / 10000;
+    ticks = (PRUint32)time.tv_sec * PR_MSEC_PER_SEC;
+    ticks += (PRUint32)time.tv_nsec / PR_NSEC_PER_MSEC;
     return ticks;
 }
 
 PRIntervalTime _PR_UNIX_TicksPerSecond2()
 {
-    return 100000;
+    return 1000;
 }
 #endif
 

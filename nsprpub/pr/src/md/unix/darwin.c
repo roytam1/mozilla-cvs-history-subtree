@@ -11,6 +11,10 @@ void _MD_EarlyInit(void)
 {
 }
 
+/*
+ * The multiplier (as a fraction) for converting the Mach absolute time
+ * unit to nanoseconds.
+ */
 static mach_timebase_info_data_t machTimebaseInfo;
 
 void _PR_Mach_IntervalInit(void)
@@ -26,18 +30,18 @@ PRIntervalTime _PR_Mach_GetInterval(void)
     uint64_t time;
 
     /*
-     * mach_absolute_time returns the number of nanoseconds since boot.
-     * Convert it to the number of 10-microseconds. See Mac Technical Q&A
-     * QA1398.
+     * mach_absolute_time returns the time in the Mach absolute time unit.
+     * Convert it to milliseconds. See Mac Technical Q&A QA1398.
      */
     time = mach_absolute_time();
-    time = time / 10000 * machTimebaseInfo.numer / machTimebaseInfo.denom;
+    time = time * machTimebaseInfo.numer / machTimebaseInfo.denom /
+           PR_NSEC_PER_MSEC;
     return (PRIntervalTime)time;
 }  /* _PR_Mach_GetInterval */
 
 PRIntervalTime _PR_Mach_TicksPerSecond(void)
 {
-    return 100000;
+    return 1000;
 }
 
 PRWord *_MD_HomeGCRegisters(PRThread *t, int isCurrent, int *np)
