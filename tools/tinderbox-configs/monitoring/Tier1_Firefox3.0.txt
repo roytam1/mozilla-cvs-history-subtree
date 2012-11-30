@@ -1,6 +1,0 @@
-fx-linux-tbox|Depend
-bm-xserve08|Depend Universal
-fx-win32-tbox|Depend
-fxdbug-linux-tbox|Depend
-bm-xserve08|Depend Debug
-fxdbug-win32-tb|Depend
