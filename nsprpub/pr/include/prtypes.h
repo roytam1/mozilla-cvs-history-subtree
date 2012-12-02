@@ -205,22 +205,6 @@
 
 PR_BEGIN_EXTERN_C
 
-/*
- * <stdint.h> first appeared in Visual C++ 2010.
- * _MSC_VER values:
- * Visual Studio 2008: 1500
- * Visual Studio 2010: 1600
- * Visual Studio 2012: 1700
- */
-#if defined(_MSC_VER) && _MSC_VER < 1600
-/* Visual C++ 2008 and older don't have <stdint.h>. */
-#elif defined(RC_INVOKED)
-/* Not applicable to the Windows resource compiler. */
-#else
-#include <stdint.h>
-#define _PR_HAVE_STDINT_H
-#endif
-
 /************************************************************************
 ** TYPES:       PRUint8
 **              PRInt8
@@ -228,10 +212,7 @@ PR_BEGIN_EXTERN_C
 **  The int8 types are known to be 8 bits each. There is no type that
 **      is equivalent to a plain "char".
 ************************************************************************/
-#ifdef _PR_HAVE_STDINT_H
-typedef uint8_t PRUint8;
-typedef int8_t PRInt8;
-#elif PR_BYTES_PER_BYTE == 1
+#if PR_BYTES_PER_BYTE == 1
 typedef unsigned char PRUint8;
 /*
 ** Some cfront-based C++ compilers do not like 'signed char' and
@@ -270,10 +251,7 @@ typedef signed char PRInt8;
 ** DESCRIPTION:
 **  The int16 types are known to be 16 bits each.
 ************************************************************************/
-#ifdef _PR_HAVE_STDINT_H
-typedef uint16_t PRUint16;
-typedef int16_t PRInt16;
-#elif PR_BYTES_PER_SHORT == 2
+#if PR_BYTES_PER_SHORT == 2
 typedef unsigned short PRUint16;
 typedef short PRInt16;
 #else
@@ -298,12 +276,7 @@ typedef short PRInt16;
 ** DESCRIPTION:
 **  The int32 types are known to be 32 bits each.
 ************************************************************************/
-#ifdef _PR_HAVE_STDINT_H
-typedef uint32_t PRUint32;
-typedef int32_t PRInt32;
-#define PR_INT32(x)  INT32_C(x)
-#define PR_UINT32(x) UINT32_C(x)
-#elif PR_BYTES_PER_INT == 4
+#if PR_BYTES_PER_INT == 4
 typedef unsigned int PRUint32;
 typedef int PRInt32;
 #define PR_INT32(x)  x
@@ -358,12 +331,12 @@ typedef long PRInt32;
 ************************************************************************/
 #ifdef HAVE_LONG_LONG
 /* Keep this in sync with prlong.h. */
-#ifdef _PR_HAVE_STDINT_H
-typedef int64_t PRInt64;
-typedef uint64_t PRUint64;
-#define PR_INT64(x)  INT64_C(x)
-#define PR_UINT64(x) UINT64_C(x)
-#elif PR_BYTES_PER_LONG == 8
+/*
+ * On 64-bit Mac OS X, uint64 needs to be defined as unsigned long long to
+ * match uint64_t, otherwise our uint64 typedef conflicts with the uint64
+ * typedef in cssmconfig.h, which CoreServices.h includes indirectly.
+ */
+#if PR_BYTES_PER_LONG == 8 && !defined(__APPLE__)
 typedef long PRInt64;
 typedef unsigned long PRUint64;
 #define PR_INT64(x)  x ## L
@@ -378,7 +351,7 @@ typedef long long PRInt64;
 typedef unsigned long long PRUint64;
 #define PR_INT64(x)  x ## LL
 #define PR_UINT64(x) x ## ULL
-#endif /* _PR_HAVE_STDINT_H */
+#endif /* PR_BYTES_PER_LONG == 8 */
 
 #define PR_INT64_MAX PR_INT64(0x7fffffffffffffff)
 #define PR_INT64_MIN (-PR_INT64_MAX - 1)
